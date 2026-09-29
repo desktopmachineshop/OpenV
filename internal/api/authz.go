@@ -21,8 +21,9 @@ import (
 // act as owners; members pass when their effective role (direct grant or
 // people-team grant, whichever is highest) meets minRole; agent runs pass as
 // editor-equivalent inside their own project only; workers pass only for
-// projects belonging to their own org, and a member's personal runner key
-// above a viewer's read only where its holder would (personalKeyAccess).
+// projects belonging to their own org, a workspace key as an editor there and
+// a member's personal runner key above a viewer's read only where its holder
+// would (personalKeyAccess).
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
 	if !h.projectAccess(w, r, projectID, minRole) {
 		return false
@@ -56,11 +57,16 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 	}
 
 	if run := CurrentRun(r); run != nil {
-		if run.ProjectID != nil && *run.ProjectID == projectID && members.RoleAtLeast(members.RoleEditor, minRole) {
-			return true
+		if run.ProjectID == nil || *run.ProjectID != projectID {
+			writeJSONError(w, http.StatusForbidden, "agent run is not scoped to this project")
+			return false
 		}
-		writeJSONError(w, http.StatusForbidden, "agent run is not scoped to this project")
-		return false
+		// In its own project a run is an editor, never an owner.
+		if !members.RoleAtLeast(members.RoleEditor, minRole) {
+			writeJSONError(w, http.StatusForbidden, "agent runs act at most as a project editor")
+			return false
+		}
+		return true
 	}
 
 	user := CurrentUser(r)
@@ -95,15 +101,23 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 
 // personalKeyAccess decides a worker key of the project's own workspace. A
 // workspace key (no holder) carries workspace-wide editor rights (OpenV
-// REQ-42) and passes. A member's personal runner key (a session key among
-// them) is its holder acting, so anything above a viewer's read needs what
-// the holder's own session would: admin of the workspace, or an effective
-// project role that meets minRole (REQ-16, REQ-79). A viewer's read still
-// passes for any project of the workspace, since the runner reads a claimed
-// ownerless run's repository connections with the key.
+// REQ-42): it passes up to an editor's guard and is refused an owner's with
+// the 403 a project editor gets. A member's personal runner key (a session
+// key among them) is its holder acting, so anything above a viewer's read
+// needs what the holder's own session would: admin of the workspace, or an
+// effective project role that meets minRole (REQ-16, REQ-79). A viewer's read
+// still passes for any project of the workspace, since the runner reads a
+// claimed ownerless run's repository connections with the key.
 func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgID, projectID, minRole string) bool {
 	holder := WorkerUser(r)
-	if holder == "" || members.RoleAtLeast(members.RoleViewer, minRole) {
+	if holder == "" {
+		if members.RoleAtLeast(members.RoleEditor, minRole) {
+			return true
+		}
+		writeJSONError(w, http.StatusForbidden, "you do not have access to this project")
+		return false
+	}
+	if members.RoleAtLeast(members.RoleViewer, minRole) {
 		return true
 	}
 	if h.orgService != nil {

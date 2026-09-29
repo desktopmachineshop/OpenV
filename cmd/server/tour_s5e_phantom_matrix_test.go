@@ -37,7 +37,10 @@ import (
 //   - the order of guard, lookup and decode: a 400 "invalid request body"
 //     where a column should have been refused is a decode before the guard
 //     (POST /artifacts, /links, /chatter, /projects, /templates... to every
-//     column past the middleware, bearers included); a workspace-admin guard
+//     column past the middleware, bearers included, but for the run token on
+//     the three project creates, POST /projects, /projects/import and
+//     /templates/{id}/projects, which refuse it first with 403 "agent runs
+//     cannot create projects", REQ-42); a workspace-admin guard
 //     before the decode shows as the viewer's and editor's 403 beside the
 //     owner's and outsider's 400; a lookup first as the lookup's 404 to all;
 //   - the credential-scoped routes: the worker routes refuse everyone but a

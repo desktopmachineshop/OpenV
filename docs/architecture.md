@@ -478,8 +478,9 @@ Every API request authenticates as one of four principals; only `/health`,
   is the highest of their direct grant (`project_members`) and any people-team
   grant (`org_teams` via `project_team_access`).
 - Agent runs count as editor within their own project, except that they never
-  approve or reject a proposal; workers pass for any project in their org, a
-  personal key above a viewer's read only where its holder would.
+  approve or reject a proposal, and create no project; workers pass for any
+  project in their org, a workspace key as an editor, a personal key above a
+  viewer's read only where its holder would.
 
 ### Transport & hardening
 - **CORS** is restricted to the configured frontend origin (`CORS_ORIGIN`),

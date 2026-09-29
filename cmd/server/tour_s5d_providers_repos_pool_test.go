@@ -56,9 +56,10 @@ import (
 //     (the admin cancels it as setup), another workspace's sign-in (404 for
 //     the user and for the worker), a phantom id and one that is not a UUID;
 //   - repository connections: none (null, Q14), two made by P's owner (the
-//     default branch main, credential_strategy host), the refusals, one made
-//     and deleted by W's worker key (a worker of the project's workspace
-//     passes the owner guard), the member's own local path (trimmed), the
+//     default branch main, credential_strategy host), the refusals, W's
+//     worker key refused a connection and a removal as an editor of P is
+//     (a workspace key carries an editor's rights, REQ-42, and the owner
+//     guard asks more), the member's own local path (trimmed), the
 //     list as the owner (no path), as the member (its path), as the member's
 //     runner key (the member's paths, through the key's user) and as the
 //     workspace key (none); an update (an empty branch back to main), the
@@ -377,9 +378,9 @@ func providersReposPoolRepos(tr *tour, o, m, m2, box, runner *tourActor) {
 	tr.step("connect one with a body that does not decode", o, create, inP, jsonBody(`{`))
 	tr.step("the member, a viewer of P, connects one: P's owner guard", m, create, inP,
 		jsonBody(`{"name":"Mine","remote_url":"https://git.example.com/mine.git"}`))
-	tr.step("the box key connects one: a worker of P's workspace passes the owner guard, 201", box, create, inP,
-		jsonBody(`{"name":"Worker repo","remote_url":"https://git.example.com/worker.git"}`)).capture("repo3", "/id")
-	tr.step("the box key removes it: 204", box, remove, repo("repo3"))
+	tr.step("the box key connects one: a workspace key is an editor of P, refused P's owner guard as an editor is",
+		box, create, inP, jsonBody(`{"name":"Worker repo","remote_url":"https://git.example.com/worker.git"}`))
+	tr.step("the box key removes the first: P's owner guard", box, remove, repo("repo1"))
 
 	// Each member's own local path.
 	tr.step("the member sets its local path to the first: 200, the connection with my_local_path, trimmed", m,

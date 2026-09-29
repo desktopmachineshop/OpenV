@@ -2909,7 +2909,7 @@
     },
     {
       "n": 75,
-      "title": "the box key connects one: a worker of P's workspace passes the owner guard, 201",
+      "title": "the box key connects one: a workspace key is an editor of P, refused P's owner guard as an editor is",
       "actor": "box",
       "route": "POST /api/v1/projects/{id}/repo-connections",
       "request": {
@@ -2920,44 +2920,44 @@
         ],
         "body": "{\"name\":\"Worker repo\",\"remote_url\":\"https://git.example.com/worker.git\"}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 51,
       "kind": "json",
       "body": [
-        "{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Worker repo\",\"remote_url\":\"https://git.example.com/worker.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 75>\",\"updated_at\":\"<time@step 75>\"}"
+        "{\"error\":\"you do not have access to this project\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<repo3>",
-        "project_id": "<p>",
-        "name": "Worker repo",
-        "remote_url": "https://git.example.com/worker.git",
-        "default_branch": "main",
-        "credential_strategy": "host",
-        "created_at": "<time@step 75>",
-        "updated_at": "<time@step 75>"
+        "error": "you do not have access to this project"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 76,
-      "title": "the box key removes it: 204",
+      "title": "the box key removes the first: P's owner guard",
       "actor": "box",
       "route": "DELETE /api/v1/repo-connections/{id}",
       "request": {
         "method": "DELETE",
-        "path": "/api/v1/repo-connections/<repo3>"
+        "path": "/api/v1/repo-connections/<repo1>"
       },
-      "status": 204,
-      "content_type": null,
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": null,
-      "kind": "empty",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
