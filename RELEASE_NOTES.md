@@ -11,6 +11,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A runner no longer prints its keys in its help or on a flag error.**
+  `agentd` showed the worker key and the runner pool key, from
+  `WORKER_API_KEY` and `RUNNER_POOL_KEY`, as the defaults of `--worker-key`
+  and `--pool-key`. It printed them in `agentd -h`, and in the usage it
+  prints on any flag error, such as a mistyped flag, so both keys could
+  land in a container log or in help output someone shared. The runner now
+  names those variables and never prints their values, and `--pool` and
+  `--node-name` no longer show two defaults when `RUNNER_POOL` or
+  `RUNNER_NODE_NAME` is set. A runner still reads all four from the
+  environment when the flag is not given. If a runner's help or flag-error
+  output may have reached anyone, or a log others can read, replace the
+  keys it showed. *Rotate* a personal runner key under *My personal runner*
+  in your settings, which stops the old key at once. For a workspace key,
+  use *Create key* on the workspace's *Runners* tab, move the runner to the
+  new key, then *Revoke* the old one, which keeps working until you do. If
+  you run your own OpenV, also set a new `RUNNER_POOL_KEY` on the server and
+  its pool nodes, and a new `WORKER_API_KEY` on the server if the runner
+  used the deployment's own key, then restart them.
+
 - **A runner no longer hands its own keys to the agents it runs.** Every
   program a runner started for a run (the agent's CLI, its sign-in and
   version checks, and git in the run's workspace) inherited
