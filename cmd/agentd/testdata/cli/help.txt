@@ -1,0 +1,36 @@
+# The command line of agentd (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/agentd/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/agentd -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ agentd -h
+exit 0
+--- stdout
+--- stderr
+Usage of agentd:
+  -api string
+    	OpenV API base URL (default "http://localhost:8080")
+  -child-concurrency int
+    	extra slots reserved for child/interview runs (default 2)
+  -concurrency int
+    	concurrent normal runs (default 1)
+  -hosted
+    	token-mode hosted runner: no CLI sign-in, no repo-access runs
+  -mcp-binary string
+    	path to the openv-mcp binary (default "$BINDIR/openv-mcp")
+  -node-name string
+    	stable name for this pool node (default: hostname)
+  -pool string
+    	pool this node belongs to (default "default")
+  -pool-key string
+    	transient runner pool key: run as a pre-warmed pool node instead of a fixed runner
+  -session-root string
+    	parent directory for per-lease HOME directories (pool mode)
+  -worker-key string
+    	worker API key (required)
+  -workspace-retention duration
+    	how long finished run workspaces are kept before cleanup (default 24h0m0s)
+  -workspaces string
+    	base directory for run workspaces (default "$HOME/.openv/workspaces")

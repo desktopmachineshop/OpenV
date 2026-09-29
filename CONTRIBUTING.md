@@ -230,6 +230,13 @@ prints:
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`
+- env vars and command lines (S8): `UPDATE_GOLDEN=1 go test ./internal/archtest -count=1 -run '^TestEnvInventory$'`
+  for the inventory, `internal/archtest/testdata/env_vars.txt`;
+  `UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/api ./internal/billing ./internal/domain/users ./internal/hosting ./internal/notify`
+  for the parse table beside it, `env_parse.txt`, which each package's
+  `TestEnvParse` writes its sections of (a failure prints the command for
+  its own package); and `UPDATE_GOLDEN=1 go test -count=1 -run '^TestCLI$' ./cmd/agentd ./cmd/openv-connector ./cmd/openv-mcp ./cmd/openv-vapid`
+  for the command lines under `cmd/<command>/testdata/cli/`
 - frontend snapshots (S12): `cd frontend && npx vitest run src/arch -u`
 
 For `UPDATE_GOLDEN` only the value `1` regenerates; any other value

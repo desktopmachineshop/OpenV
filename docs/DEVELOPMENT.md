@@ -53,7 +53,8 @@ Key environment variables (see `cmd/server/main.go` and
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`PUBLIC_URL` (Google sign-in),
 `FRONTEND_URL`, `CORS_ORIGIN`, `SECURE_COOKIES`, and the hosted-runner
 settings (`HOSTED_RUNNERS`, `RUNNER_IMAGE`, `RUNNER_NETWORK`,
-`RUNNER_API_URL`, `CONNECTOR_DIST_DIR`).
+`RUNNER_API_URL`, `CONNECTOR_DIST_DIR`). Every variable the Go code reads,
+with its default, is listed in `internal/archtest/testdata/env_vars.txt`.
 
 ## Adding a schema migration
 
@@ -365,6 +366,31 @@ the slice with `-run '^TestTourS5e'`, and every slice's `coverage.txt` with
 the union, alone and with no database, with
 `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'`.
 The tour reaches all 341 routes, 337 of them with a 2xx or 3xx answer.
+
+The environment and the command lines are frozen too (refactor plan step
+S8). `TestEnvInventory` in `internal/archtest` type-checks the module and
+lists every environment variable the Go code reads, with the getter it goes
+through and its default, in `internal/archtest/testdata/env_vars.txt`; it
+fails on a read whose variable name is not a constant (pass the name as a
+constant, or through a getter each call gives a constant and that is called
+directly, not through an interface or a function value, and never rewrites
+the name it is given) unless an exemption in `env_inventory_test.go` gives
+the reason. Beside it,
+`env_parse.txt` records what each getter returns for unset, empty, blank,
+`TRUE`, invalid and valid values: each package with a getter writes its own
+sections from `env_parse_test.go`, which calls the real helpers, next to a
+copy of `env_parse_helpers_test.go`. A new variable, a renamed one, a new
+default or a helper that parses differently changes them; a new getter
+needs its `TestEnvParse` section. Regenerate in the same pull request with
+`UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/api ./internal/billing ./internal/domain/users ./internal/hosting ./internal/notify`.
+`TestCLI` in `cmd/agentd`, `cmd/openv-connector`, `cmd/openv-mcp` and
+`cmd/openv-vapid` builds the command and snapshots what it prints, run with
+an empty environment and fresh home and config directories, under
+`cmd/<command>/testdata/cli/`: a new or renamed flag, subcommand or message
+changes them; regenerate with
+`UPDATE_GOLDEN=1 go test -count=1 -run '^TestCLI$' ./cmd/agentd ./cmd/openv-connector ./cmd/openv-mcp ./cmd/openv-vapid`.
+Every scenario ends on its own without the network: stdin is empty, so a
+prompt reads end of input, and none gets as far as a request.
 
 ### The vulnerability gate
 
