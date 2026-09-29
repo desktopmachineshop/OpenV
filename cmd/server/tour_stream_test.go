@@ -51,6 +51,10 @@ const tourStreamQuiet = 300 * time.Millisecond
 // tourStream is how an event stream is read: the frames the area expects.
 type tourStream struct {
 	frames int
+	// head (S5e, tour_matrix_test.go's streamHead) reads nothing past the
+	// answer's head: the stream is closed as soon as its status and headers
+	// are in, for a probe that records only those. eventStream never sets it.
+	head bool
 }
 
 // eventStream reads the answer, when it is an event stream, frame by frame:
@@ -86,6 +90,10 @@ func isEventStream(h http.Header) bool {
 // than the area expects fails the area, and the golden shows what it sent.
 func (tr *tour) readStreamAnswer(r *tourReq, body io.Reader, cancel context.CancelFunc) []byte {
 	tr.t.Helper()
+	if r.stream.head {
+		cancel()
+		return nil
+	}
 	data, err := readStream(body, r.stream.frames, tourStreamWithin, tourStreamQuiet)
 	cancel()
 	if err != nil {

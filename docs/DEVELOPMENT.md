@@ -323,6 +323,49 @@ or the slice with `-run '^TestTourS5d'`. With it the tour reaches all 341
 routes, 337 of them with a 2xx or 3xx answer; the four that answer only
 errors are the hosted runner's, whose success needs Docker.
 
+S5e, the fifth slice (`cmd/server/testdata/tour/s5e/`, areas
+`tour_s5e_*_test.go`, tests `TestTourS5e<Area>`), is the authorization
+matrix (refactor plan invariant I3: 401, 403 or 404 per route and identity,
+and the order of guard, lookup and decode). `phantom_matrix` sends every
+route of `internal/api/testdata/routes.txt` to eight columns (anonymous; a
+viewer, an editor and the owner of a project P in the owner's shared
+workspace W; an outsider acting in its own workspace; W's worker key; the
+token of a running run in P; the platform admin), every path id a
+well-formed id no row has and every write the body `{`, then the routes
+whose scope is in the query or the body, with a well-formed body naming the
+phantom. `real_id_reads` sends every GET route with a path variable, the
+list reads a query scopes, the writes that decode before they write, the
+list reads that take no query (once the owner has a project to itself), the
+creates, and last the launches and creates of a proposal-mode run's token,
+with the real ids of fixtures in W and P. A matrix cell records
+the status and the error envelope's code and message, or the kind of answer
+(`200 json[3]`), never the body, which the earlier slices pin; after each
+section the events every column's workspace published are listed, and a
+section that must leave them quiet fails if one published.
+`over_plan_tiers_on` and `over_plan_self_hosted` are step areas under the
+S4b profiles: a workspace over its plan is read-only (`plan_read_only`) for
+a write of every guard kind that carries the gate, the nine always-writable
+routes answer as on a writable workspace, export and import work on it
+(REQ-113), only `POST /api/v1/projects` counts projects (Q13), and the
+hosted claim's plan flag. `tour_s5e_phantom_matrix_test.go` is the worked
+example of a matrix. It added to the framework: `tour.matrix` with its
+sections, `row`, `rowAs`, `rowCounting`, `countLists`, `expectRoutes` and
+`readSectionEvents` (`tour_matrix_test.go`); the golden's `matrix`,
+`tourChanges` naming each changed cell by section, row and column, and
+coverage counted from the cells (`tour_matrix_golden_test.go`); the columns
+the matrix areas share (`tour.matrixCast`, `tour_matrix_cast_test.go`);
+their no-database check, `TestTourMatrix` (`tour_matrix_check_test.go`);
+and the union of the slices' coverage, `cmd/server/testdata/tour/coverage.txt`
+(`tour_coverage_union_test.go`), which `TestTourCoverage` holds to the
+plan's floor, at least 90% of the routes answering a 2xx or 3xx in some
+slice; and `tour.slugPattern` now checks only the slugs its pattern
+rewrites. Regenerate one area with
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5e<Area>$'`,
+the slice with `-run '^TestTourS5e'`, and every slice's `coverage.txt` with
+the union, alone and with no database, with
+`UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'`.
+The tour reaches all 341 routes, 337 of them with a 2xx or 3xx answer.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull

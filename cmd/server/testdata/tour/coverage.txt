@@ -1,0 +1,355 @@
+# The routes the API tour reached, across its slices (refactor plan §6.4
+# S5a-S5e), derived by TestTourCoverage (cmd/server/tour_coverage_union_test.go)
+# from every slice's area goldens, with no database. Regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'
+# (regenerating an area rewrites it too). A line is a route of
+# internal/api/testdata/routes.txt, in that file's order: the slices whose
+# recorded steps or matrix cells reached it (an answer other than 401, which
+# the auth middleware gives before routing), then those where it answered a
+# 2xx or 3xx. A route reached with errors alone is marked "errors only", one
+# no slice reached "not reached". The plan's floor, which TestTourCoverage
+# holds: at least 90% of the routes answer a 2xx or 3xx in some slice.
+
+DELETE /api/v1/agents/{slug}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/artifacts/{id}: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
+DELETE /api/v1/attachments/{id}: s5a, s5e; 2xx or 3xx in s5a
+DELETE /api/v1/attribute-definitions/{id}: s5a, s5e; 2xx or 3xx in s5a
+DELETE /api/v1/automations/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/baselines/{id}: s5a, s5e; 2xx or 3xx in s5a
+DELETE /api/v1/crew-edges/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/crew-nodes/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/crews/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/evidence-bundles/{id}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/evidence-files/{id}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/links/{id}: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
+DELETE /api/v1/me/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/notifications/cleared: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/org-teams/{id}: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/org-teams/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/orgs/{id}: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/orgs/{id}/hosted-runner: s5c, s5e (errors only)
+DELETE /api/v1/orgs/{id}/invitations/{invId}: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/orgs/{id}/logo: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/orgs/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/orgs/{id}/my-runner-key: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/orgs/{id}/runner-session: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+DELETE /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/projects/{id}/team-access/{teamId}: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/repo-connections/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/share-links/{id}: s5a, s5e; 2xx or 3xx in s5a
+DELETE /api/v1/shared-products/{id}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/shared-products/{id}/vote: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/team-edges/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/team-nodes/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
+DELETE /api/v1/test-results/{id}/citations/{bundleId}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
+GET /api/v1/admin/users: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/admin/workspaces: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/agent-runs: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agent-runs/delegate/{id}: s5d, s5e; 2xx or 3xx in s5d
+GET /api/v1/agent-runs/{id}: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
+GET /api/v1/agent-runs/{id}/logs: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agent-runs/{id}/stream: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agent-runs/{id}/tree: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agents: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agents/{slug}: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agents/{slug}/raw: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/artifacts: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/artifacts/{artifactID}/attachments: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/artifacts/{id}: s5a, s5b, s5d, s5e; 2xx or 3xx in s5a, s5b, s5d, s5e
+GET /api/v1/artifacts/{id}/links: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/artifacts/{id}/quality: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/artifacts/{id}/versions: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/attachments/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/attachments/{id}/download: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/attachments/{id}/versions: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/auth/config: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/auth/google: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/auth/google/callback: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/auth/me: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/auth/oidc/callback: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/auth/oidc/login: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/auth/policy: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/automations: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/automations/{id}: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/baselines/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/baselines/{id}/diff: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/chatter: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/crew-templates: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/crews: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/crews/{id}: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/crews/{id}/export: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/events: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
+GET /api/v1/evidence-bundles/{id}: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/evidence-files/{id}/download: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/guided-sessions: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/guided-sessions/{id}: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/guided-sessions/{id}/chat/stream: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/guided-sessions/{id}/messages: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
+GET /api/v1/interview-sessions/{id}/transcript: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
+GET /api/v1/interviews/{id}/invites: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/interviews/{id}/sessions: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/links: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/me/push/config: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/meta/artifact-types: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/meta/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/meta/link-types: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/notifications: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/notifications/stream: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/billing: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/orgs/{id}/features: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/hosted-runner: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/invitations: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/limits: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/logo: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/members: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/my-runner-key: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/orgs/{id}/runner-pool: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/runner-session: s5c, s5d, s5e; 2xx or 3xx in s5c, s5d, s5e
+GET /api/v1/orgs/{id}/teams: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/usage: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/worker-keys: s5c, s5d, s5e; 2xx or 3xx in s5c, s5d, s5e
+GET /api/v1/orgs/{id}/worker-status: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/projects: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/ai-map: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/projects/{id}/baselines: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/children: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/download/csv: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/download/docx: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/projects/{id}/download/excel: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/download/json: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/download/options: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/download/pdf: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/projects/{id}/download/reqif: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/duplicates: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/evidence-bundles: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/export: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
+GET /api/v1/projects/{id}/impact: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/interview-sessions: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/linked-artifacts: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/members: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/quality: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/repo-connections: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/projects/{id}/report: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/review-queue: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/share-links: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/team-access: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/projects/{id}/test-runs: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/vv/coverage: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/vv/gaps: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/vv/matrix: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/vv/report: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/work-items: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{projectID}/attachments: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/proposals: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/provider-logins/{id}: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/provider-logins/{id}/full: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/provider-settings: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/public/build: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/public/connector/download: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/public/interviews/{token}: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/public/interviews/{token}/stream: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/public/open-source/projects: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/public/open-source/projects/{id}: s5a, s5e; 2xx or 3xx in s5a
+GET /api/v1/public/open-source/projects/{id}/page: s5a, s5e; 2xx or 3xx in s5a
+GET /api/v1/public/open-source/projects/{id}/preview.png: s5a, s5e; 2xx or 3xx in s5a
+GET /api/v1/public/plans: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/public/release: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/public/share/{token}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/public/share/{token}/page: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/public/share/{token}/preview.png: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/release: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/search: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/shared-products: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/teams: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/teams/{id}/export: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/templates: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/test-results/{id}/citations: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/test-runs/{id}/citations: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/test-runs/{id}/results: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/users: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/users/{id}/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/work-items/{id}: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
+GET /health: s5c, s5e; 2xx or 3xx in s5c, s5e
+HEAD /api/v1/public/connector/download: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/admin/users/{id}/password-reset: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/agent-runs/claim: s5c, s5d, s5e; 2xx or 3xx in s5c, s5d, s5e
+POST /api/v1/agent-runs/delegate: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/agent-runs/{id}/cancel: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/agent-runs/{id}/finish: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/agent-runs/{id}/logs: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/agent-runs/{id}/release: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/agent-runs/{id}/retry: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/agent-runs/{id}/start: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/agents: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/agents/sync: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/agents/{slug}/runs: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/artifacts: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d, s5e
+POST /api/v1/artifacts/{id}/restore: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/attachments/upload: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/attachments/{id}/versions: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/attachments/{id}/versions/{version}/restore: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a, s5e
+POST /api/v1/auth/invitations/accept: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/invitations/preview: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/login: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/logout: s5c, s5e; 2xx or 3xx in s5c, s5e
+POST /api/v1/auth/password-reset: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/password-reset/confirm: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/register: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/share/accept: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/auth/verify-email: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/verify-email/change: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/verify-email/resend: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/automations: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/automations/{id}/run-now: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/chatter: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/crews: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/crews/import: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/crews/{id}/clone: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/crews/{id}/edges: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/crews/{id}/nodes: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/crews/{id}/runs: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/evidence-bundles/{id}/files: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/guided-sessions: s5b, s5e; 2xx or 3xx in s5b, s5e
+POST /api/v1/guided-sessions/{id}/abandon: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/guided-sessions/{id}/chat/kickoff: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/guided-sessions/{id}/chat/nudge: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/guided-sessions/{id}/commit: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/guided-sessions/{id}/drafts: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/guided-sessions/{id}/messages: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/interview-invites/{id}/revoke: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/interviews/{id}/close: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/interviews/{id}/invites: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/links: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
+POST /api/v1/me/avatar: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/notifications/clear: s5c, s5e; 2xx or 3xx in s5c, s5e
+POST /api/v1/notifications/read: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/notifications/read-all: s5c, s5e; 2xx or 3xx in s5c, s5e
+POST /api/v1/org-teams/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs: s5c, s5e; 2xx or 3xx in s5c, s5e
+POST /api/v1/orgs/{id}/activate: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/billing/change: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/billing/checkout: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/billing/portal: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/billing/refresh: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/connector-pairing: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/hosted-runner: s5c, s5e (errors only)
+POST /api/v1/orgs/{id}/hosted-runner/start: s5c, s5e (errors only)
+POST /api/v1/orgs/{id}/hosted-runner/stop: s5c, s5e (errors only)
+POST /api/v1/orgs/{id}/invitations: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/logo: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/members: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/my-runner-key: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/restore: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/runner-session: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/runner-session/extend: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/teams: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/worker-keys: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/projects: s5a, s5e; 2xx or 3xx in s5a, s5e
+POST /api/v1/projects/import: s5a, s5e; 2xx or 3xx in s5a, s5e
+POST /api/v1/projects/{id}/baselines: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/projects/{id}/draft-test-cases: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/projects/{id}/evidence-bundles: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/projects/{id}/members: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/projects/{id}/reindex-embeddings: s5a, s5e; 2xx or 3xx in s5a, s5e
+POST /api/v1/projects/{id}/repo-connections: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/projects/{id}/review-round: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/projects/{id}/share-links: s5a, s5c, s5e; 2xx or 3xx in s5a, s5c
+POST /api/v1/projects/{id}/test-runs: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/projects/{id}/work-items: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/proposals/bulk: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/proposals/{id}/approve: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/proposals/{id}/reject: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/provider-logins: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/provider-logins/claim: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/provider-logins/{id}/cancel: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/provider-logins/{id}/code: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/provider-logins/{id}/progress: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/provider-settings/detect: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/public/connector/pair: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/public/interviews/{token}/finish: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/public/interviews/{token}/messages: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/runner-pool/nodes: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/runner-pool/nodes/{id}/heartbeat: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/runner-pool/nodes/{id}/release: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/shared-products: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/shared-products/{id}/report: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/teams: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/teams/import: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/teams/{id}/clone: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/teams/{id}/edges: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/teams/{id}/nodes: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/teams/{id}/runs: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/templates: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/templates/{id}/projects: s5a, s5e; 2xx or 3xx in s5a, s5e
+POST /api/v1/test-results/{id}/citations: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/test-runs/{id}/agent-run: s5b, s5d, s5e; 2xx or 3xx in s5b
+POST /api/v1/test-runs/{id}/results: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/work-items/{id}/comments: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/work-items/{id}/move: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/admin/users/{id}/admin: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/agents/{slug}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/agents/{slug}/raw: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/artifacts/{id}: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
+PUT /api/v1/artifacts/{id}/status: s5a, s5d, s5e; 2xx or 3xx in s5a
+PUT /api/v1/attachments/{id}: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/attribute-definitions/{id}: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/automations/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/crew-edges/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/crew-nodes/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/crews/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/evidence-bundles/{id}: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/guided-sessions/{id}/step: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/interviews/{id}/persona: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/links/{id}/confirm: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/me/password: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/notifications/{id}/flag: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/org-teams/{id}: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/orgs/{id}: s5c, s5e; 2xx or 3xx in s5c, s5e
+PUT /api/v1/orgs/{id}/members/me/preview: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/orgs/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/orgs/{id}/plan: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/orgs/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/team-access: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/provider-settings: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/repo-connections/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/repo-connections/{id}/my-path: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/shared-products/{id}/vote: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/team-edges/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/team-nodes/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
+PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
+
+the tour: 341 of 341 routes reached (100.0%), 337 with a 2xx or 3xx answer (98.8%); the floor is 90%, 307 routes

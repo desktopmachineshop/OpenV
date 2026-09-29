@@ -34,8 +34,8 @@ the Phase 3 consolidations that give quirks their names.
   despite its name.
 - **Pinned by, named as:** S5 (S5a for the requirements core, S5b for V&V
   and the suite, S5c for identity and the workspace, S5d for agents and the
-  worker wire); `writeJSONBare` (X1) *(planned)*. Pain points api-core-3,
-  api-suite-org-8.
+  worker wire, S5e per identity); `writeJSONBare` (X1) *(planned)*. Pain
+  points api-core-3, api-suite-org-8.
 - **Pinned today:** S1 counts the raw encodes, so none is added. Every step
   of the S5a tour records whether its answer, and the gzip variant of each
   GET, carries a `Content-Type`, so a handler that starts or stops setting
@@ -76,7 +76,13 @@ the Phase 3 consolidations that give quirks their names.
   and the provider settings (step 1 of `agents_automations.json`, step 101
   of `worker_wire.json`, steps 1 and 3 of `crews_teams.json`, step 28 of
   `orchestration_budget.json`, steps 32 and 54 of `proposals_events.json`,
-  step 1 of `providers_repos_pool.json`).
+  step 1 of `providers_repos_pool.json`). The S5e matrices record the same
+  per route and identity, without the gzip variant: each cell of a 2xx
+  names its kind, `json` for a typed answer and `text` for a bare encode
+  that net/http sniffed, so a route that gains or loses its type for one
+  identity changes a cell (133 `text` cells of
+  `cmd/server/testdata/tour/s5e/phantom_matrix.json`, 233 of
+  `real_id_reads.json`); no refusal of either matrix is a bare encode.
 
 ## Q2. A mid-request delete answers 500
 
@@ -86,8 +92,9 @@ the Phase 3 consolidations that give quirks their names.
   `case errors.Is(err, artifacts.ErrNotFound)` in `ChangeArtifactStatus`
   (`internal/api/handlers.go:952`) never matches and the request falls to
   `respondInternal`.
-- **Pinned by, named as:** documented here; X13 keeps each repository's
-  not-found convention *(planned)*. Pain point domain-requirements-11.
+- **Pinned by, named as:** documented here, S5a–S5e for its neighbours;
+  X13 keeps each repository's not-found convention *(planned)*. Pain point
+  domain-requirements-11.
 - **Pinned today:** the delete landing mid-request cannot be timed from
   outside, so no test reaches the 500 itself. The S5a tour pins its
   deterministic neighbours: `PUT /api/v1/artifacts/{id}` and
@@ -114,7 +121,13 @@ the Phase 3 consolidations that give quirks their names.
   `agents_automations.json`), releasing a pool node no one has, as its
   heartbeat does (steps 122 and 123 of `providers_repos_pool.json`), and a
   delegation from a run whose crew node was removed, the run still naming
-  the node (step 9 of `orchestration_budget.json`).
+  the node (step 9 of `orchestration_budget.json`). The S5e matrix pins the
+  first two neighbours for every identity: with a well-formed body, `PUT
+  /api/v1/artifacts/{id}` and `POST /api/v1/artifacts/{id}/restore` on an id
+  no artifact has answer 500 `failed to load artifact` to every column the
+  auth middleware lets through, the worker key and the run token among them,
+  where `DELETE /api/v1/artifacts/{id}` answers 404, in the words `project
+  not found` (the sections of `cmd/server/testdata/tour/s5e/phantom_matrix.json`).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
@@ -353,12 +366,22 @@ the Phase 3 consolidations that give quirks their names.
 - **Where:** `checkProjectCount` (`internal/api/limits.go:326`) has one
   caller, `CreateProject` (`internal/api/handlers.go:1618`); the other
   project-creation paths do not count.
-- **Pinned by, named as:** S5e's over-plan pass *(planned)* under the S4
-  tiers-on profile. Pain point api-requirements-v1.
-- **Pinned today:** nothing beyond this entry. The tiers-on profile exists
-  since S4b (`OPENV_BILLING_GRANDFATHER_BEFORE` set;
-  `cmd/server/testdata/boot/tiers_on.txt`), and its one project create
-  answers 201; the over-plan pass is S5e's.
+- **Pinned by, named as:** S5e's over-plan pass under the S4 tiers-on
+  profile, and under the self-hosted profile with `OPENV_LIMITS`. Pain
+  point api-requirements-v1.
+- **Pinned today:** the S5e tour. At the single plan's 200 projects,
+  `POST /api/v1/projects` is refused 403 `limit_reached` with the Billing
+  tab's remedy, while a project from a template and an import answer 201
+  and take the workspace to 202 of 200, read-only and over `max_projects`,
+  where a project's rename is refused `plan_read_only` and
+  `POST /api/v1/projects` still answers `limit_reached`, the count's
+  refusal, since the route asks no plan gate (steps 60–66 of
+  `cmd/server/testdata/tour/s5e/over_plan_tiers_on.json`). A workspace
+  read-only for its seats, under the project maximum, takes a new project
+  and a template's project with 201 (steps 28 and 29). On a self-hosted
+  deployment at `OPENV_LIMITS`'s seven projects the same holds, the
+  `limit_reached` remedy naming `OPENV_LIMITS` (steps 4–7, 12 and 13 of
+  `over_plan_self_hosted.json`).
 
 ## Q14. Some list endpoints encode `null` for an empty list
 
@@ -410,7 +433,15 @@ the Phase 3 consolidations that give quirks their names.
   `proposals_events.json`, steps 90 and 96 of `worker_wire.json`, steps 68,
   100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log and
   the events before a cursor no event has (step 53 of `worker_wire.json`,
-  step 61 of `proposals_events.json`).
+  step 61 of `proposals_events.json`). The S5e matrix counts each list its
+  real-id reads answer, per identity (`[n]` or `null`): a workspace's teams,
+  a project's repository connections and team grants and a project's
+  proposals answer `null` to every column that reads them, the platform
+  admin's read of a project's runs `null` where its members read two, and,
+  with no query, a plain member's runs, none of which it launched, and the
+  automations of a workspace with none (the sections "real ids, GET", "real
+  ids in the query, GET" and "real ids, lists with no query" of
+  `cmd/server/testdata/tour/s5e/real_id_reads.json`).
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 
@@ -502,8 +533,9 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api` pass `err.Error()` through (the same count as at
   `d11dee8`); 58 sites map any error to 404 (the plan's count at `d11dee8`,
   not re-counted here).
-- **Pinned by, named as:** S5 (S5a, S5b, S5c and S5d for their routes);
-  `decodeJSONMsg` (X1) *(planned)*; the other call sites stay untouched.
+- **Pinned by, named as:** S5 (S5a, S5b, S5c and S5d for their routes, S5e
+  per identity); `decodeJSONMsg` (X1) *(planned)*; the other call sites stay
+  untouched.
 - **Pinned today:** S1's `invalid_request_body_literals` ratchet counts the
   lowercase literal (106). The S5a tour pins every error message its routes
   answer, byte for byte: the capital `"Invalid request body"` of
@@ -549,7 +581,14 @@ the Phase 3 consolidations that give quirks their names.
   `providers_repos_pool.json`), and a proposal's (step 40 of
   `proposals_events.json`). "crew not found" answers the export, where
   every other crew route answers "team not found" (step 84 of
-  `crews_teams.json`).
+  `crews_teams.json`). The S5e matrix pins every refusal's message per route
+  and identity, and among them the driver's text passed through as a 400
+  for the platform admin, whom the guards pass for a workspace or agent no
+  row has: the foreign key's refusal of a runner key minted for a phantom
+  workspace (`worker_keys_org_id_fkey`) and of an automation naming a
+  phantom agent (`automations_agent_id_fkey`) (the rows
+  `POST /api/v1/orgs/{id}/my-runner-key` and `POST /api/v1/automations` of
+  `cmd/server/testdata/tour/s5e/phantom_matrix.json`).
 
 ## Q20. Inline error chains render string bodies differently
 
