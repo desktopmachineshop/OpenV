@@ -93,17 +93,18 @@ import (
 //   - the reads: the run guard (the launcher, the project's roles, a
 //     workspace admin for an unscoped run), a key's 401, the id "claim" (GET
 //     matches {id}), the member's own runs and null when none match (Q14), the
-//     filters, an agent_id that is not a UUID (500, the cast fails in SQL),
-//     and every run of W, newest first, compressed with no Content-Type (Q1);
+//     filters, an agent_id that is not a UUID (null, as for an agent no row
+//     has), and every run of W, newest first, compressed with no
+//     Content-Type (Q1);
 //   - last, a personal key never takes, nor reads, what its member could not
 //     see (fixed under R7, OpenV REQ-16 and REQ-42; the maintainer's answer to
 //     #379's first S5d question): the member's runner key is refused a run no
 //     one launched in P, where the member has no role, and P's repository
-//     connections with the member's own 403, and lists no project; once the
-//     owner makes the member a viewer of P (setup), the key claims that run
-//     and lists P; a run no one launched with no project, which only W's
-//     admins may see, it is refused, and the owner's personal key, as W's
-//     admin, claims it.
+//     connections with the member's own 404, as for a project no row has
+//     (I3), and lists no project; once the owner makes the member a viewer of
+//     P (setup), the key claims that run and lists P; a run no one launched
+//     with no project, which only W's admins may see, it is refused, and the
+//     owner's personal key, as W's admin, claims it.
 //
 // Every 2xx JSON answer of the wire is a bare encode (text/plain by sniffing,
 // Q1); errors are application/json; the stream is text/event-stream with
@@ -342,7 +343,7 @@ func workerWireTour(tr *tour) {
 	runB := tr.takeRun(box, "tour-box", "run_b", "run_b's token, a run with no project that W's box key claimed; "+
 		"the member's runner key does not take it, since only W's admins see a run with no project that no one launched")
 	tr.step("the member reads run_b, unscoped and not its own: the workspace admin guard", m, get, run("run_b"))
-	tr.step("run_b's token launches in P: 403, the run is not scoped to P", runB, launch, agent,
+	tr.step("run_b's token launches in P: 404, the run is not scoped to P", runB, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Help."}`))
 	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by and run_b as "+
 		"its parent", runB, launch, agent, jsonBody(`{"prompt":"Help with W."}`)).capture("run_t", "/id")
@@ -427,7 +428,7 @@ func workerWireTour(tr *tour) {
 	tr.step("the member lists P's runs: P's guard", m, list, query("project_id={{p}}"))
 	tr.step("K's runs, newest first", o, list, query("project_id={{k}}"))
 	tr.step("tour-repo's runs", o, list, query("agent_id={{repo.agent}}"))
-	tr.step("agent_id x: 500, the cast to a UUID fails in SQL", o, list, query("agent_id=x"))
+	tr.step("agent_id x: none, as for an agent no row has", o, list, query("agent_id=x"))
 	tr.step("every run of W, as its admin: newest first, compressed and then sent with no Content-Type (Q1)", o, list)
 
 	// (q) A personal key never takes, nor reads, what its member could not
@@ -436,7 +437,7 @@ func workerWireTour(tr *tour) {
 	tr.step("the member's runner key claims: 204, run_o, which no one launched, is in P, where the member has no role",
 		runner, claim, as("tour-runner"), note("the box key launched run_o in P just before (setup), so no one launched "+
 			"it; a personal key takes such a run only where its member could see it"))
-	tr.step("the member's runner key reads P's repository connections: P's guard, the 403 the member's own session "+
+	tr.step("the member's runner key reads P's repository connections: P's guard, the 404 the member's own session "+
 		"gets", runner, "GET /api/v1/projects/{id}/repo-connections", at("id", "{{p}}"))
 	tr.step("the member's runner key lists W's projects: none, the member has a role in neither P nor K", runner,
 		"GET /api/v1/projects")

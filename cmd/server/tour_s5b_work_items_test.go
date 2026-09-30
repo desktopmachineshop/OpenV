@@ -160,7 +160,7 @@ func workItemsTour(tr *tour) {
 		jsonBody(`{"title":"Viewer item"}`))
 	tr.step("create in a project that does not exist", o, "POST /api/v1/projects/{id}/work-items",
 		at("id", "{{phantom}}"), jsonBody(`{"title":"Nowhere"}`),
-		note("the project guard runs before any lookup, so an id no project has answers 403, not 404"))
+		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("create with a title only, which JSON escapes: the backlog, sort_order 0, assignee_type user with no "+
 		"one named, artifact_ids [], created_by: workitem.created", o, "POST /api/v1/projects/{id}/work-items",
 		at("id", "{{p}}"), jsonBody(`{"title":"Draft the <limits> & margins"}`),
@@ -251,7 +251,7 @@ func workItemsTour(tr *tour) {
 		jsonBody(`{"content":"Started on <the rig> & the script"}`))
 	tr.step("the viewer comments: the route's minimum role is viewer", viewer, "POST /api/v1/work-items/{id}/comments",
 		at("id", "{{w_second}}"), jsonBody(`{"content":"Looks right to me."}`))
-	tr.step("the outsider comments with a malformed body: 403, the guard before the decode", outsider,
+	tr.step("the outsider comments with a malformed body: 404, the guard before the decode", outsider,
 		"POST /api/v1/work-items/{id}/comments", at("id", "{{w_second}}"), jsonBody(`"text"`),
 		note("the comment route's guard is the viewer's, so only an account with no access to P shows that it "+
 			"runs before the decode"))

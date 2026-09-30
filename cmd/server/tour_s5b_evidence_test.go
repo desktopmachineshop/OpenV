@@ -228,14 +228,13 @@ func evidenceTour(tr *tour) {
 	tr.step("read B1: captured_at as the column holds it, the wall time with no offset", o,
 		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"))
 	tr.step("the viewer reads B1", viewer, "GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"))
-	tr.step("the outsider reads B1: 403, not the 404 evidenceBundleChecked's comment promises", outsider,
+	tr.step("the outsider reads B1: the 404 of a bundle no row has, as evidenceBundleChecked's comment promises", outsider,
 		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"),
-		note("the handler's doc comment says a bundle the caller may not see answers 404; the project guard answers "+
-			"403"))
+		note("the guard answers a bundle the caller cannot reach with the 404 of one no row has (I3)"))
 	tr.step("the viewer reads BQ, a bundle of a project it is not a member of", viewer,
 		"GET /api/v1/evidence-bundles/{id}", at("id", "{{bq}}"))
 	tr.step("read a bundle that does not exist", o, "GET /api/v1/evidence-bundles/{id}", at("id", "{{phantom}}"))
-	tr.step("read a bundle by an id that is not a UUID: the driver's error, answered 500", o,
+	tr.step("read a bundle by an id that is not a UUID: 404, as an id no bundle has", o,
 		"GET /api/v1/evidence-bundles/{id}", at("id", "not-a-uuid"))
 	tr.step("the outsider lists P's bundles", outsider, "GET /api/v1/projects/{id}/evidence-bundles",
 		at("id", "{{p}}"))
@@ -310,16 +309,15 @@ func evidenceTour(tr *tour) {
 	tr.step("download the 2,000-byte log: its gzip variant is compressed and loses its Content-Length", o,
 		"GET /api/v1/evidence-files/{id}/download", at("id", "{{log}}"))
 	tr.step("the viewer downloads the CSV", viewer, "GET /api/v1/evidence-files/{id}/download", at("id", "{{csv}}"))
-	tr.step("the outsider downloads the CSV: 403, not the 404 the doc comment claims", outsider,
+	tr.step("the outsider downloads the CSV: the 404 of a file no row has, as the doc comment says", outsider,
 		"GET /api/v1/evidence-files/{id}/download", at("id", "{{csv}}"))
 	tr.step("download with no session", tr.anon, "GET /api/v1/evidence-files/{id}/download", at("id", "{{csv}}"),
 		note("the auth middleware answers before routing"))
 	tr.step("download a file that does not exist", o, "GET /api/v1/evidence-files/{id}/download",
 		at("id", "{{phantom}}"))
-	tr.step("download by an id that is not a UUID: the driver's error, answered 500", o,
+	tr.step("download by an id that is not a UUID: 404, as an id no file has", o,
 		"GET /api/v1/evidence-files/{id}/download", at("id", "not-a-uuid"),
-		note("evidence and citation lookups send a malformed id's driver error to respondInternal, where the test run "+
-			"lookups answer 404 for any error"))
+		note("the store reads an id that is not a UUID as one no row has"))
 
 	// Citing: the result's guard, the decode, bundle_id, the bundle's
 	// guard, then the service.
@@ -338,7 +336,7 @@ func evidenceTour(tr *tour) {
 		jsonBody(`{"bundle_id":"{{phantom}}"}`))
 	tr.step("cite from a result that does not exist", o, "POST /api/v1/test-results/{id}/citations",
 		at("id", "{{phantom}}"), jsonBody(`{"bundle_id":"{{b1}}"}`))
-	tr.step("cite from a result id that is not a UUID: 500", o, "POST /api/v1/test-results/{id}/citations",
+	tr.step("cite from a result id that is not a UUID: 404, as an id no result has", o, "POST /api/v1/test-results/{id}/citations",
 		at("id", "not-a-uuid"), jsonBody(`{"bundle_id":"{{b1}}"}`))
 	tr.step("the viewer cites B1 from res1", viewer, "POST /api/v1/test-results/{id}/citations", at("id", "{{res1}}"),
 		jsonBody(`{"bundle_id":"{{b1}}"}`))
@@ -389,7 +387,7 @@ func evidenceTour(tr *tour) {
 		"DELETE /api/v1/test-results/{id}/citations/{bundleId}", at("id", "{{res1}}", "bundleId", "{{bq}}"))
 	tr.step("uncite a bundle that does not exist: 204, nothing looks the bundle up", o,
 		"DELETE /api/v1/test-results/{id}/citations/{bundleId}", at("id", "{{res1}}", "bundleId", "{{phantom}}"))
-	tr.step("uncite by a bundle id that is not a UUID: the driver's error, answered 500", o,
+	tr.step("uncite by a bundle id that is not a UUID: 204, as a bundle that does not exist", o,
 		"DELETE /api/v1/test-results/{id}/citations/{bundleId}", at("id", "{{res1}}", "bundleId", "not-a-uuid"))
 	tr.step("uncite from a result that does not exist", o, "DELETE /api/v1/test-results/{id}/citations/{bundleId}",
 		at("id", "{{phantom}}", "bundleId", "{{b1}}"))
@@ -402,7 +400,7 @@ func evidenceTour(tr *tour) {
 	tr.step("delete the CSV: its bytes leave UPLOADS_DIR", o, "DELETE /api/v1/evidence-files/{id}", at("id", "{{csv}}"))
 	tr.step("delete it again", o, "DELETE /api/v1/evidence-files/{id}", at("id", "{{csv}}"))
 	tr.step("download it once deleted", o, "GET /api/v1/evidence-files/{id}/download", at("id", "{{csv}}"))
-	tr.step("delete a file by an id that is not a UUID: 500", o, "DELETE /api/v1/evidence-files/{id}",
+	tr.step("delete a file by an id that is not a UUID: 404, as an id no file has", o, "DELETE /api/v1/evidence-files/{id}",
 		at("id", "not-a-uuid"))
 	tr.setup("delete run R1 (the test runs area pins the route)", o, "DELETE /api/v1/test-runs/{id}",
 		at("id", "{{r1}}"), expect(204))

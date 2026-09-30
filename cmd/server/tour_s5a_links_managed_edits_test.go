@@ -81,7 +81,7 @@ func linksManagedEditsTour(tr *tour) {
 	tr.step("P's links before any exists: null (Q14)", owner, "GET /api/v1/links", query("project_id={{p}}"))
 	tr.step("links with no project_id", owner, "GET /api/v1/links")
 	tr.step("the links of a project that does not exist", owner, "GET /api/v1/links", query("project_id={{phantom}}"),
-		note("the project guard answers before any lookup: 403, not 404"))
+		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("the requirement's current links before any exists: []", owner, "GET /api/v1/artifacts/{id}/links",
 		at("id", "{{req}}"))
 	tr.step("the requirement's version 1 carries no links_snapshot: null (Q14)", owner,

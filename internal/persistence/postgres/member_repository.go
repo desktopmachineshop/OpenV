@@ -16,20 +16,24 @@ func NewMemberRepository(db *sql.DB) *MemberRepository {
 	return &MemberRepository{db: db}
 }
 
-// Upsert inserts or updates a membership.
+// Upsert inserts or updates a membership. An account no row has, or an id
+// that is not a UUID, is members.ErrUnknownUser.
 func (r *MemberRepository) Upsert(m *members.Member) error {
 	_, err := r.db.Exec(`
 		INSERT INTO project_members (project_id, user_id, role, created_at)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role
 	`, m.ProjectID, m.UserID, m.Role, m.CreatedAt)
+	if malformedID(err) || foreignKeyViolation(err, "project_members_user_id_fkey") {
+		return members.ErrUnknownUser
+	}
 	return err
 }
 
 // Remove deletes a membership.
 func (r *MemberRepository) Remove(projectID, userID string) error {
 	_, err := r.db.Exec(`DELETE FROM project_members WHERE project_id = $1 AND user_id = $2`, projectID, userID)
-	return err
+	return matchedNone(err)
 }
 
 // Find returns a membership, or nil.
@@ -39,7 +43,7 @@ func (r *MemberRepository) Find(projectID, userID string) (*members.Member, erro
 		SELECT project_id, user_id, role, created_at
 		FROM project_members WHERE project_id = $1 AND user_id = $2
 	`, projectID, userID).Scan(&m.ProjectID, &m.UserID, &m.Role, &m.CreatedAt)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -108,6 +112,9 @@ func (r *MemberRepository) RolesFor(projectID, userID string) ([]string, error) 
 		JOIN org_team_members otm ON otm.org_team_id = pta.org_team_id
 		WHERE pta.project_id = $1 AND otm.user_id = $2
 	`, projectID, userID)
+	if malformedID(err) {
+		return nil, nil // no role in a project no row has
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +144,7 @@ func (r *MemberRepository) UpsertTeamGrant(g *members.TeamGrant) error {
 // RemoveTeamGrant deletes a team grant.
 func (r *MemberRepository) RemoveTeamGrant(projectID, orgTeamID string) error {
 	_, err := r.db.Exec(`DELETE FROM project_team_access WHERE project_id = $1 AND org_team_id = $2`, projectID, orgTeamID)
-	return err
+	return matchedNone(err)
 }
 
 // ListTeamGrants returns a project's team grants with team names.

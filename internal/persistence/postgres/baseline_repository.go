@@ -84,7 +84,7 @@ func (r *BaselineRepository) GetByID(id string) (*baselines.Baseline, error) {
 		&baseline.CreatedBy,
 		&baseline.CreatedByName,
 	); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, errors.New("baseline not found")
 		}
 		return nil, err

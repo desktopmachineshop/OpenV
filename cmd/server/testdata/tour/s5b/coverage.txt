@@ -12,55 +12,55 @@
 # 90% floor counts only the routes with a 2xx or 3xx answer.
 
 DELETE /api/v1/evidence-bundles/{id}: 204, 403, 404; evidence
-DELETE /api/v1/evidence-files/{id}: 204, 403, 404, 500; evidence
-DELETE /api/v1/shared-products/{id}: 204, 403, 404, 500; shared_products
+DELETE /api/v1/evidence-files/{id}: 204, 403, 404; evidence
+DELETE /api/v1/shared-products/{id}: 204, 403, 404; shared_products
 DELETE /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
-DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404, 500; evidence
+DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404; evidence
 DELETE /api/v1/test-runs/{id}: 204, 403, 404; test_runs_results
 DELETE /api/v1/work-items/{id}: 204, 403, 404; work_items
 GET /api/v1/agent-runs/{id}: 200; guided_sessions, interviews
 GET /api/v1/artifacts: 200; guided_sessions
 GET /api/v1/artifacts/{id}: 200; guided_sessions
 GET /api/v1/artifacts/{id}/links: 200; guided_sessions
-GET /api/v1/artifacts/{id}/quality: 200, 400, 403, 404; quality_profile_parties
+GET /api/v1/artifacts/{id}/quality: 200, 400, 404; quality_profile_parties
 GET /api/v1/chatter: 200; guided_sessions, test_runs_results, work_items
 GET /api/v1/events: 200; work_items
-GET /api/v1/evidence-bundles/{id}: 200, 403, 404, 500; evidence
-GET /api/v1/evidence-files/{id}/download: 200, 206, 304, 401, 403, 404, 416, 500; evidence
-GET /api/v1/guided-sessions: 200, 403, 404; guided_sessions
-GET /api/v1/guided-sessions/{id}: 200, 403, 404; guided_sessions
-GET /api/v1/guided-sessions/{id}/chat/stream: 200, 403, 404; guided_sessions
-GET /api/v1/guided-sessions/{id}/messages: 200, 403, 404; guided_sessions
-GET /api/v1/interview-sessions/{id}/transcript: 200, 403, 404; interviews
-GET /api/v1/interviews/{id}/invites: 200, 403, 404; interviews
-GET /api/v1/interviews/{id}/sessions: 200, 403, 404; interviews
-GET /api/v1/orgs/{id}/quality-rules: 200, 403; quality_profile_parties
+GET /api/v1/evidence-bundles/{id}: 200, 404; evidence
+GET /api/v1/evidence-files/{id}/download: 200, 206, 304, 401, 404, 416; evidence
+GET /api/v1/guided-sessions: 200, 404; guided_sessions
+GET /api/v1/guided-sessions/{id}: 200, 404; guided_sessions
+GET /api/v1/guided-sessions/{id}/chat/stream: 200, 404; guided_sessions
+GET /api/v1/guided-sessions/{id}/messages: 200, 404; guided_sessions
+GET /api/v1/interview-sessions/{id}/transcript: 200, 404; interviews
+GET /api/v1/interviews/{id}/invites: 200, 404; interviews
+GET /api/v1/interviews/{id}/sessions: 200, 404; interviews
+GET /api/v1/orgs/{id}/quality-rules: 200, 404; quality_profile_parties
 GET /api/v1/projects/{id}/ai-map: 200; quality_profile_parties
 GET /api/v1/projects/{id}/download/docx: 200; vv_coverage_report
 GET /api/v1/projects/{id}/download/pdf: 200; vv_coverage_report
-GET /api/v1/projects/{id}/evidence-bundles: 200, 403; evidence
+GET /api/v1/projects/{id}/evidence-bundles: 200, 404; evidence
 GET /api/v1/projects/{id}/export: 200; quality_profile_parties
-GET /api/v1/projects/{id}/impact: 200, 400, 403, 404; vv_coverage_report
-GET /api/v1/projects/{id}/interview-sessions: 200, 400, 403; interviews
-GET /api/v1/projects/{id}/interviews: 200, 403; interviews
-GET /api/v1/projects/{id}/parties: 200, 403; quality_profile_parties
-GET /api/v1/projects/{id}/profile: 200, 403; quality_profile_parties
-GET /api/v1/projects/{id}/quality: 200, 403, 404; quality_profile_parties
-GET /api/v1/projects/{id}/quality-rules: 200, 403; quality_profile_parties
-GET /api/v1/projects/{id}/test-runs: 200, 403; test_runs_results
-GET /api/v1/projects/{id}/vv/coverage: 200, 403, 404; vv_coverage_report
-GET /api/v1/projects/{id}/vv/gaps: 200, 403, 404; vv_coverage_report
-GET /api/v1/projects/{id}/vv/matrix: 200, 403, 404; vv_coverage_report
-GET /api/v1/projects/{id}/vv/report: 200, 403, 404; vv_coverage_report
-GET /api/v1/projects/{id}/work-items: 200, 403; work_items
+GET /api/v1/projects/{id}/impact: 200, 400, 404; vv_coverage_report
+GET /api/v1/projects/{id}/interview-sessions: 200, 400, 404; interviews
+GET /api/v1/projects/{id}/interviews: 200, 404; interviews
+GET /api/v1/projects/{id}/parties: 200, 404; quality_profile_parties
+GET /api/v1/projects/{id}/profile: 200, 404; quality_profile_parties
+GET /api/v1/projects/{id}/quality: 200, 404; quality_profile_parties
+GET /api/v1/projects/{id}/quality-rules: 200, 404; quality_profile_parties
+GET /api/v1/projects/{id}/test-runs: 200, 404; test_runs_results
+GET /api/v1/projects/{id}/vv/coverage: 200, 404; vv_coverage_report
+GET /api/v1/projects/{id}/vv/gaps: 200, 404; vv_coverage_report
+GET /api/v1/projects/{id}/vv/matrix: 200, 404; vv_coverage_report
+GET /api/v1/projects/{id}/vv/report: 200, 404; vv_coverage_report
+GET /api/v1/projects/{id}/work-items: 200, 404; work_items
 GET /api/v1/public/interviews/{token}: 200, 404, 429; interviews
 GET /api/v1/public/interviews/{token}/stream: 200, 404, 429; interviews
 GET /api/v1/shared-products: 200, 400, 401; shared_products
-GET /api/v1/test-results/{id}/citations: 200, 403, 404; evidence
-GET /api/v1/test-runs/{id}: 200, 403, 404; test_runs_results
-GET /api/v1/test-runs/{id}/citations: 200, 403, 404; evidence
-GET /api/v1/test-runs/{id}/results: 200, 403, 404; test_runs_results
-GET /api/v1/work-items/{id}: 200, 403, 404; work_items
+GET /api/v1/test-results/{id}/citations: 200, 404; evidence
+GET /api/v1/test-runs/{id}: 200, 404; test_runs_results
+GET /api/v1/test-runs/{id}/citations: 200, 404; evidence
+GET /api/v1/test-runs/{id}/results: 200, 404; test_runs_results
+GET /api/v1/work-items/{id}: 200, 404; work_items
 POST /api/v1/evidence-bundles/{id}/files: 201, 400, 403, 404, 413; evidence
 POST /api/v1/guided-sessions: 201, 400, 403, 404; guided_sessions
 POST /api/v1/guided-sessions/{id}/abandon: 200, 403, 404; guided_sessions
@@ -72,27 +72,27 @@ POST /api/v1/guided-sessions/{id}/messages: 200, 400, 403, 404; guided_sessions
 POST /api/v1/interview-invites/{id}/revoke: 204, 403, 404; interviews
 POST /api/v1/interviews/{id}/close: 200, 403, 404; interviews
 POST /api/v1/interviews/{id}/invites: 201, 400, 403, 404; interviews
-POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403; evidence
+POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
-POST /api/v1/projects/{id}/test-runs: 201, 400, 403; test_runs_results
-POST /api/v1/projects/{id}/work-items: 201, 400, 403; work_items
+POST /api/v1/projects/{id}/test-runs: 201, 400, 403, 404; test_runs_results
+POST /api/v1/projects/{id}/work-items: 201, 400, 403, 404; work_items
 POST /api/v1/public/interviews/{token}/finish: 204, 404; interviews
 POST /api/v1/public/interviews/{token}/messages: 200, 400, 404, 429; interviews
 POST /api/v1/shared-products: 201, 400, 403, 409, 429; shared_products
-POST /api/v1/shared-products/{id}/report: 204, 403, 404, 500; shared_products
-POST /api/v1/test-results/{id}/citations: 201, 400, 403, 404, 500; evidence
+POST /api/v1/shared-products/{id}/report: 204, 403, 404; shared_products
+POST /api/v1/test-results/{id}/citations: 201, 400, 403, 404; evidence
 POST /api/v1/test-runs/{id}/agent-run: 201, 400, 403, 404; test_runs_results
-POST /api/v1/test-runs/{id}/results: 200, 400, 403, 404, 500; test_runs_results
-POST /api/v1/work-items/{id}/comments: 201, 400, 403, 404; work_items
+POST /api/v1/test-runs/{id}/results: 200, 400, 403, 404; test_runs_results
+POST /api/v1/work-items/{id}/comments: 201, 400, 404; work_items
 POST /api/v1/work-items/{id}/move: 200, 400, 403, 404; work_items
 PUT /api/v1/evidence-bundles/{id}: 200, 400, 403, 404; evidence
 PUT /api/v1/guided-sessions/{id}/step: 200, 400, 403, 404; guided_sessions
 PUT /api/v1/interviews/{id}/persona: 200, 400, 403, 404; interviews
 PUT /api/v1/orgs/{id}/quality-rules: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/parties: 200, 400, 403; quality_profile_parties
-PUT /api/v1/projects/{id}/profile: 200, 400, 403; quality_profile_parties
+PUT /api/v1/projects/{id}/profile: 200, 400, 403, 404; quality_profile_parties
 PUT /api/v1/projects/{id}/quality-rules: 200, 400, 403; quality_profile_parties
-PUT /api/v1/shared-products/{id}/vote: 200, 403, 404, 500; shared_products
+PUT /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 PUT /api/v1/test-runs/{id}: 200, 400, 403, 404, 409; test_runs_results
 PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
 

@@ -209,7 +209,7 @@ func interviewsTour(tr *tour) {
 		"GET /api/v1/projects/{id}/interviews", at("id", "{{p}}"))
 	tr.step("the viewer lists P's interviews", viewer, "GET /api/v1/projects/{id}/interviews", at("id", "{{p}}"))
 	tr.step("the interviews of a project that does not exist", o, "GET /api/v1/projects/{id}/interviews",
-		at("id", "{{phantom}}"), note("the project guard runs before any lookup, so an id no project has answers 403, not 404"))
+		at("id", "{{phantom}}"), note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 
 	// Invites: created (the answer carries the token once; the invite hides
 	// its hash), refused, listed and revoked.

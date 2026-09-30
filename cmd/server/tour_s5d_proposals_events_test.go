@@ -27,8 +27,8 @@ import (
 //     prompt names P and each id once (trimmed and deduplicated, never looked
 //     up: an id no artifact has launches too), by the owner and by a worker
 //     key (no launched_by: requireProjectRole lets a worker of the project's
-//     workspace through, and refuses it another workspace's project with 403
-//     and a project no one has with 404, where a person gets 403); refused
+//     workspace through, and answers it another workspace's project as a
+//     project no one has, 404, as it answers a person with no role: I3); refused
 //     (403) to the proposal-mode run's own token, as a status change is,
 //     since no proposal can carry a launch; in a second workspace L whose
 //     author was deleted, 404, and still 404 after a sync, since the delete
@@ -230,9 +230,9 @@ func proposalsEventsTour(tr *tour) {
 		jsonBody(`{"requirement_ids":["{{r2}}","{{phantom}}"]}`))
 	second.capture("author2", "/id")
 	second.capture("author2.card", "/work_item_id")
-	tr.step("the box key drafts in H, a project of the owner's personal workspace: 403", box, draft, on("h"),
+	tr.step("the box key drafts in H, a project of the owner's personal workspace: 404, as a project no row has", box, draft, on("h"),
 		jsonBody(`{"requirement_ids":["{{rh}}"]}`))
-	tr.step("the box key drafts in a project no one has: 404, where a person's answer is 403", box, draft,
+	tr.step("the box key drafts in a project no one has: 404, as a person's is", box, draft,
 		on("phantom"), jsonBody(`{"requirement_ids":["{{r1}}"]}`))
 	tr.setup("delete L's test-case author", o, "DELETE /api/v1/agents/{slug}", at("slug", "test-case-author"), inL,
 		expect(http.StatusNoContent))
@@ -254,7 +254,7 @@ func proposalsEventsTour(tr *tour) {
 		jsonBody(`{"from_id":"tc1","to_id":"{{r1}}","type":"verifies"}`)).capture("l1", "/proposal_id")
 	tr.step("a ref no proposal of the run holds: 400", author, link,
 		jsonBody(`{"from_id":"tc9","to_id":"{{r1}}","type":"verifies"}`))
-	tr.step("a write into Q: 403, the run is scoped to P", author, artifact,
+	tr.step("a write into Q: 404, the run is scoped to P", author, artifact,
 		jsonBody(`{"project_id":"{{q}}","type":"test-case","title":"Elsewhere"}`))
 	tr.step("the run changes R1's status: 403", author, status, on("r1"), jsonBody(`{"status":"approved"}`))
 	tr.step("the run's token drafts in P: 403, as a status change is; no proposal can carry a launch, so a "+
@@ -273,9 +273,9 @@ func proposalsEventsTour(tr *tour) {
 		query("status=pending"))
 	tr.step("the author's proposals", o, list, query("run_id={{author}}"))
 	tr.step("P's rejected proposals: none, null (Q14)", o, list, query("project_id={{p}}&status=rejected"))
-	tr.step("run_id x: 500, the cast to a UUID fails in SQL", o, list, query("run_id=x"))
+	tr.step("run_id x: none, as for a run no row has", o, list, query("run_id=x"))
 	tr.step("the member lists P's proposals, as its viewer", m, list, query("project_id={{p}}"))
-	tr.step("the member lists with no project: 403", m, list)
+	tr.step("the member lists with no project: 400, project_id is required", m, list)
 	tr.step("the member lists Q's proposals: Q's guard", m, list, query("project_id={{q}}"))
 	tr.step("the box key lists: the handler's 401, a key is no user", box, list, query("project_id={{p}}"))
 	tr.step("every proposal, as L's admin with no project: none in L, null (Q14), however many other workspaces "+

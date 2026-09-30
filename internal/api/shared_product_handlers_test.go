@@ -135,7 +135,7 @@ func TestPublishSharedProductRequiresAPerson(t *testing.T) {
 		}, http.StatusForbidden},
 		{"non-member of the active workspace", func(r *http.Request) *http.Request {
 			return inOrg(r, "stranger")
-		}, http.StatusForbidden},
+		}, http.StatusNotFound},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

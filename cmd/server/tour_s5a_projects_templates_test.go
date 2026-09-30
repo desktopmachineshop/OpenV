@@ -85,13 +85,15 @@ func projectsTemplatesTour(tr *tour) {
 		at("id", "{{tour_project}}"), jsonBody(`{"parent_project_id":"{{phantom}}"}`))
 	tr.setup("the admin's project, in the admin's own workspace", tr.admin, "POST /api/v1/projects",
 		jsonBody(`{"name":"Admin elsewhere"}`)).capture("admin_project", "/id")
-	tr.step("file a project under one in another workspace", owner, "PUT /api/v1/projects/{id}",
-		at("id", "{{child_project}}"), jsonBody(`{"parent_project_id":"{{admin_project}}"}`))
+	tr.step("file a project under one in a workspace the owner is not in: as one that does not exist", owner,
+		"PUT /api/v1/projects/{id}", at("id", "{{child_project}}"), jsonBody(`{"parent_project_id":"{{admin_project}}"}`),
+		note("a parent the caller cannot reach answers as one no row has (I3); one it reaches in another workspace "+
+			"is refused as such"))
 	tr.step("the tour project's children", owner, "GET /api/v1/projects/{id}/children", at("id", "{{tour_project}}"))
 	tr.step("a project with no children", owner, "GET /api/v1/projects/{id}/children", at("id", "{{child_project}}"))
 	tr.step("the children of a project that does not exist", owner, "GET /api/v1/projects/{id}/children",
-		at("id", "{{phantom}}"), note("the project guard runs before any lookup here, so an id no project has "+
-			"answers 403, where GET /api/v1/projects/{id} looks the project up first and answers 404"))
+		at("id", "{{phantom}}"), note("the project guard runs before any lookup here, as it does for GET "+
+			"/api/v1/projects/{id}, and answers an id no project has as one the caller cannot reach: 404 (I3)"))
 
 	// Content for the template: one heading with two children and a link,
 	// so the snapshot's order is fixed (artifact lists order by parent_id
@@ -128,7 +130,8 @@ func projectsTemplatesTour(tr *tour) {
 		at("id", "{{guided_template}}"), jsonBody(`{"name":"From the default"}`)).capture("from_default_project", "/id")
 	tr.step("a project from the seeded default template, by its key", owner,
 		"POST /api/v1/templates/{id}/projects", at("id", "guided-product-skeleton"), jsonBody(`{"name":"By key"}`),
-		note("a key resolves only among the example files; a database template is looked up by id"))
+		note("a key resolves only among the example files; a database template is looked up by id, and one that is not "+
+			"an id answers as an id no template has"))
 	tr.step("a project from the example file template, by key", owner, "POST /api/v1/templates/{id}/projects",
 		at("id", "example-openv-platform"), jsonBody(`{"name":"From the example","description":"The example project"}`)).
 		capture("from_example_project", "/id")
@@ -145,7 +148,7 @@ func projectsTemplatesTour(tr *tour) {
 
 	// Delete.
 	tr.step("delete a project that does not exist", owner, "DELETE /api/v1/projects/{id}", at("id", "{{phantom}}"),
-		note("as for its children, the owner guard runs first: 403, not 404"))
+		note("as for its children, the owner guard runs first: 404, as for a project the caller cannot reach"))
 	tr.step("delete the project made from the default template", owner, "DELETE /api/v1/projects/{id}",
 		at("id", "{{from_default_project}}"))
 	tr.step("read the deleted project", owner, "GET /api/v1/projects/{id}", at("id", "{{from_default_project}}"))

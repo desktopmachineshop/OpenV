@@ -172,7 +172,7 @@ func qualityProfilePartiesProfile(tr *tour, a qualityProfilePartiesActors) {
 		jsonBody(`{"vision":"Viewer vision"}`))
 	tr.step("replace the profile of a project that does not exist", o, "PUT /api/v1/projects/{id}/profile",
 		at("id", "{{phantom}}"), jsonBody(`{"vision":"Nowhere"}`),
-		note("the project guard runs before any lookup, so an id no project has answers 403, not 404"))
+		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("replace it with an empty object: a full replace clears every field to \"\", [] and {}", o,
 		"PUT /api/v1/projects/{id}/profile", at("id", "{{p}}"), jsonBody(`{}`))
 }
@@ -196,7 +196,7 @@ func qualityProfilePartiesLint(tr *tour, a qualityProfilePartiesActors) {
 	tr.step("the report from a baseline_id that is not a UUID: any lookup error is not found", o,
 		"GET /api/v1/projects/{id}/quality", at("id", "{{p}}"), query("baseline_id=not-a-uuid"))
 	tr.step("the report of a project that does not exist", o, "GET /api/v1/projects/{id}/quality",
-		at("id", "{{phantom}}"), note("the project guard runs before any lookup, so an id no project has answers 403"))
+		at("id", "{{phantom}}"), note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("the report of the empty project: entries [], and every band counted", o,
 		"GET /api/v1/projects/{id}/quality", at("id", "{{e}}"))
 	tr.step("the outsider reads P's report", a.outsider, "GET /api/v1/projects/{id}/quality", at("id", "{{p}}"))
@@ -234,7 +234,7 @@ func qualityProfilePartiesRules(tr *tour, a qualityProfilePartiesActors) {
 		"GET /api/v1/projects/{id}/quality-rules", at("id", "{{p}}"))
 	tr.step("the viewer reads P's rules", a.viewer, "GET /api/v1/projects/{id}/quality-rules", at("id", "{{p}}"))
 	tr.step("the rules of a project that does not exist", o, "GET /api/v1/projects/{id}/quality-rules",
-		at("id", "{{phantom}}"), note("the project guard runs before any lookup, so an id no project has answers 403"))
+		at("id", "{{phantom}}"), note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("P writes RFC 2119 and switches weak-word off", o, "PUT /api/v1/projects/{id}/quality-rules",
 		at("id", "{{p}}"), jsonBody(`{"convention":"rfc2119","severities":{"weak-word":"off"}}`))
 	tr.step("P's report under its rules: should and may are keywords now, shall is off-convention", o,
@@ -280,7 +280,7 @@ func qualityProfilePartiesRules(tr *tour, a qualityProfilePartiesActors) {
 	tr.step("the viewer, no member of the workspace, reads its rules", a.viewer, "GET /api/v1/orgs/{id}/quality-rules",
 		at("id", "{{studio}}"))
 	tr.step("the rules of a workspace that does not exist", o, "GET /api/v1/orgs/{id}/quality-rules",
-		at("id", "{{phantom}}"), note("no role in a workspace no row has: 403, not 404"))
+		at("id", "{{phantom}}"), note("no role in a workspace no row has: 404, as for a workspace the caller is not in (I3)"))
 	tr.step("the owner sends the house style a malformed body", o, "PUT /api/v1/orgs/{id}/quality-rules",
 		at("id", "{{studio}}"), jsonBody(`{`))
 	tr.step("the owner sends the house style an unknown convention: the project level's check", o,

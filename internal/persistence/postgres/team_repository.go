@@ -83,7 +83,7 @@ func (r *TeamRepository) UpdateTeam(t *teams.Team) error {
 func (r *TeamRepository) FindTeamByID(id string) (*teams.Team, error) {
 	row := r.db.QueryRow(`SELECT `+teamColumns+` FROM agent_teams WHERE id = $1`, id)
 	t, err := scanTeam(row.Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -96,6 +96,11 @@ func (r *TeamRepository) FindTeamByID(id string) (*teams.Team, error) {
 // plus global-in-org (project_id IS NULL) teams. An empty projectID lists
 // all the org's teams.
 func (r *TeamRepository) ListTeams(orgID, projectID string) ([]*teams.Team, error) {
+	if projectID != "" && !isUUID(projectID) {
+		// No project has it: the workspace-wide crews alone, as for a
+		// well-formed id no row has.
+		projectID = noSuchID
+	}
 	rows, err := r.db.Query(`
 		SELECT `+teamColumns+`
 		FROM agent_teams
@@ -135,7 +140,7 @@ func (r *TeamRepository) MarkDefault(teamID string) error {
 func (r *TeamRepository) FindDefaultTeam(orgID string) (*teams.Team, error) {
 	row := r.db.QueryRow(`SELECT `+teamColumns+` FROM agent_teams WHERE org_id = NULLIF($1, '')::uuid AND is_default ORDER BY created_at LIMIT 1`, orgID)
 	t, err := scanTeam(row.Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -217,7 +222,7 @@ func (r *TeamRepository) FindNodeByID(id string) (*teams.Node, error) {
 		WHERE n.id = $1
 	`, id)
 	n, err := scanTeamNode(row.Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -304,7 +309,7 @@ func (r *TeamRepository) FindEdgeByID(id string) (*teams.Edge, error) {
 		WHERE id = $1
 	`, id)
 	e, err := scanTeamEdge(row.Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {

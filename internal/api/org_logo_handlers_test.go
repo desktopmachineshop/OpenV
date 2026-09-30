@@ -189,7 +189,7 @@ func TestUploadOrgLogoRequiresAdmin(t *testing.T) {
 		want   int
 	}{
 		{"member", "member", http.StatusForbidden},
-		{"non-member", "stranger", http.StatusForbidden},
+		{"non-member", "stranger", http.StatusNotFound},
 		{"unauthenticated", "", http.StatusUnauthorized},
 	}
 	for _, tc := range cases {
@@ -245,11 +245,11 @@ func TestGetOrgLogoServesBytes(t *testing.T) {
 		}
 	}
 
-	// A stranger cannot fetch it.
+	// A stranger cannot fetch it: to it the workspace is not there.
 	w = httptest.NewRecorder()
 	h.GetOrgLogo(w, logoReqAs(httptest.NewRequest(http.MethodGet, "/api/v1/orgs/"+logoOrgID+"/logo", nil), "stranger"))
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("stranger status = %d, want 403", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("stranger status = %d, want 404", w.Code)
 	}
 }
 

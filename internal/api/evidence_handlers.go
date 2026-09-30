@@ -110,8 +110,9 @@ func (h *Handler) evidenceStorageLimitBytes(orgID string) int64 {
 // evidenceBundleChecked loads a bundle and enforces the caller's role on its
 // project. It answers 404 for a bundle that does not exist and for one the
 // caller may not see, so the endpoint cannot be used to discover that a
-// bundle exists in a project they have no access to.
-func (h *Handler) evidenceBundleChecked(w http.ResponseWriter, r *http.Request, id, minRole string) *evidence.Bundle {
+// bundle exists in a project they have no access to: absent is the answer of
+// the id the handler was given, the bundle's or that of a file in it.
+func (h *Handler) evidenceBundleChecked(w http.ResponseWriter, r *http.Request, id, minRole string, absent notFound) *evidence.Bundle {
 	if h.evidenceService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return nil
@@ -125,11 +126,14 @@ func (h *Handler) evidenceBundleChecked(w http.ResponseWriter, r *http.Request, 
 		respondInternal(w, r, "failed to load the evidence bundle", err)
 		return nil
 	}
-	if !h.requireProjectRole(w, r, bundle.ProjectID, minRole) {
+	if !h.requireProjectRoleFor(w, r, bundle.ProjectID, minRole, absent) {
 		return nil
 	}
 	return bundle
 }
+
+// bundleNotFound answers an evidence bundle no row has.
+var bundleNotFound = notFound{http.StatusNotFound, "evidence bundle not found"}
 
 // writeEvidenceError maps the domain's errors onto status codes once, so every
 // handler answers the same way.
@@ -200,7 +204,7 @@ func (h *Handler) CreateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 // GetEvidenceBundle returns one bundle with its files and the results citing
 // it.
 func (h *Handler) GetEvidenceBundle(w http.ResponseWriter, r *http.Request) {
-	bundle := h.evidenceBundleChecked(w, r, mux.Vars(r)["id"], members.RoleViewer)
+	bundle := h.evidenceBundleChecked(w, r, mux.Vars(r)["id"], members.RoleViewer, bundleNotFound)
 	if bundle == nil {
 		return
 	}
@@ -212,7 +216,7 @@ func (h *Handler) GetEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 // every document quoting it.
 func (h *Handler) UpdateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	if h.evidenceBundleChecked(w, r, id, members.RoleEditor) == nil {
+	if h.evidenceBundleChecked(w, r, id, members.RoleEditor, bundleNotFound) == nil {
 		return
 	}
 	var req evidence.UpdateRequest
@@ -234,7 +238,7 @@ func (h *Handler) UpdateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 // first.
 func (h *Handler) DeleteEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	if h.evidenceBundleChecked(w, r, id, members.RoleEditor) == nil {
+	if h.evidenceBundleChecked(w, r, id, members.RoleEditor, bundleNotFound) == nil {
 		return
 	}
 	files, err := h.evidenceService.Delete(id)
@@ -257,7 +261,7 @@ func (h *Handler) DeleteEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 // the size of somebody's dataset.
 func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 	bundleID := mux.Vars(r)["id"]
-	bundle := h.evidenceBundleChecked(w, r, bundleID, members.RoleEditor)
+	bundle := h.evidenceBundleChecked(w, r, bundleID, members.RoleEditor, bundleNotFound)
 	if bundle == nil {
 		return
 	}
@@ -371,7 +375,7 @@ func (h *Handler) DownloadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 		h.writeEvidenceError(w, r, "failed to load the evidence file", err)
 		return
 	}
-	bundle := h.evidenceBundleChecked(w, r, file.BundleID, members.RoleViewer)
+	bundle := h.evidenceBundleChecked(w, r, file.BundleID, members.RoleViewer, missing("evidence file not found"))
 	if bundle == nil {
 		return
 	}
@@ -391,7 +395,7 @@ func (h *Handler) DeleteEvidenceFile(w http.ResponseWriter, r *http.Request) {
 		h.writeEvidenceError(w, r, "failed to load the evidence file", err)
 		return
 	}
-	if h.evidenceBundleChecked(w, r, file.BundleID, members.RoleEditor) == nil {
+	if h.evidenceBundleChecked(w, r, file.BundleID, members.RoleEditor, missing("evidence file not found")) == nil {
 		return
 	}
 	removed, err := h.evidenceService.DeleteFile(file.ID)
@@ -433,7 +437,7 @@ func (h *Handler) ListRunCitations(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "test run not found")
 		return
 	}
-	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
 	byResult, err := h.evidenceService.CitationsForRun(runID)
@@ -467,7 +471,7 @@ func (h *Handler) CiteEvidence(w http.ResponseWriter, r *http.Request) {
 	}
 	// The bundle has to be one the caller may edit, or citing would be a way
 	// to attach evidence from a project they have no part in.
-	if h.evidenceBundleChecked(w, r, req.BundleID, members.RoleViewer) == nil {
+	if h.evidenceBundleChecked(w, r, req.BundleID, members.RoleViewer, bundleNotFound) == nil {
 		return
 	}
 	citation, err := h.evidenceService.Cite(resultID, req.BundleID, req.Note)
@@ -508,7 +512,7 @@ func (h *Handler) evidenceResultAllowed(w http.ResponseWriter, r *http.Request, 
 		writeJSONError(w, http.StatusNotFound, "test result not found")
 		return false
 	}
-	return h.requireProjectRole(w, r, projectID, minRole)
+	return h.requireProjectRoleFor(w, r, projectID, minRole, missing("test result not found"))
 }
 
 // removeEvidenceFiles unlinks stored bytes after their rows have gone. A

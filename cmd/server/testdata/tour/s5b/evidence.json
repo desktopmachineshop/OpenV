@@ -284,18 +284,18 @@
         ],
         "body": "{\"title\":\"Outsider capture\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -549,7 +549,7 @@
     },
     {
       "n": 14,
-      "title": "the outsider reads B1: 403, not the 404 evidenceBundleChecked's comment promises",
+      "title": "the outsider reads B1: the 404 of a bundle no row has, as evidenceBundleChecked's comment promises",
       "actor": "outsider",
       "route": "GET /api/v1/evidence-bundles/{id}",
       "request": {
@@ -557,20 +557,20 @@
         "path": "/api/v1/evidence-bundles/<b1>"
       },
       "notes": [
-        "the handler's doc comment says a bundle the caller may not see answers 404; the project guard answers 403"
+        "the guard answers a bundle the caller cannot reach with the 404 of one no row has (I3)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 38,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"evidence bundle not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "evidence bundle not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -583,18 +583,18 @@
         "method": "GET",
         "path": "/api/v1/evidence-bundles/<bq>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 38,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"evidence bundle not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "evidence bundle not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -624,25 +624,25 @@
     },
     {
       "n": 17,
-      "title": "read a bundle by an id that is not a UUID: the driver's error, answered 500",
+      "title": "read a bundle by an id that is not a UUID: 404, as an id no bundle has",
       "actor": "owner",
       "route": "GET /api/v1/evidence-bundles/{id}",
       "request": {
         "method": "GET",
         "path": "/api/v1/evidence-bundles/not-a-uuid"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 47,
+      "content_length": 38,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to load the evidence bundle\"}"
+        "{\"error\":\"evidence bundle not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to load the evidence bundle"
+        "error": "evidence bundle not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -655,18 +655,18 @@
         "method": "GET",
         "path": "/api/v1/projects/<p>/evidence-bundles"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1687,25 +1687,25 @@
     },
     {
       "n": 43,
-      "title": "the outsider downloads the CSV: 403, not the 404 the doc comment claims",
+      "title": "the outsider downloads the CSV: the 404 of a file no row has, as the doc comment says",
       "actor": "outsider",
       "route": "GET /api/v1/evidence-files/{id}/download",
       "request": {
         "method": "GET",
         "path": "/api/v1/evidence-files/<csv>/download"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 36,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"evidence file not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "evidence file not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1762,7 +1762,7 @@
     },
     {
       "n": 46,
-      "title": "download by an id that is not a UUID: the driver's error, answered 500",
+      "title": "download by an id that is not a UUID: 404, as an id no file has",
       "actor": "owner",
       "route": "GET /api/v1/evidence-files/{id}/download",
       "request": {
@@ -1770,20 +1770,20 @@
         "path": "/api/v1/evidence-files/not-a-uuid/download"
       },
       "notes": [
-        "evidence and citation lookups send a malformed id's driver error to respondInternal, where the test run lookups answer 404 for any error"
+        "the store reads an id that is not a UUID as one no row has"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 45,
+      "content_length": 36,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to load the evidence file\"}"
+        "{\"error\":\"evidence file not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to load the evidence file"
+        "error": "evidence file not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1981,7 +1981,7 @@
     },
     {
       "n": 54,
-      "title": "cite from a result id that is not a UUID: 500",
+      "title": "cite from a result id that is not a UUID: 404, as an id no result has",
       "actor": "owner",
       "route": "POST /api/v1/test-results/{id}/citations",
       "request": {
@@ -1992,18 +1992,18 @@
         ],
         "body": "{\"bundle_id\":\"<b1>\"}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 46,
+      "content_length": 34,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to resolve the test result\"}"
+        "{\"error\":\"test result not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to resolve the test result"
+        "error": "test result not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2050,18 +2050,18 @@
         ],
         "body": "{\"bundle_id\":\"<b1>\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 34,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"test result not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "test result not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2279,18 +2279,18 @@
         "method": "GET",
         "path": "/api/v1/test-results/<res1>/citations"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 34,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"test result not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "test result not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2436,18 +2436,18 @@
         "method": "GET",
         "path": "/api/v1/test-runs/<r1>/citations"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"test run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "test run not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2804,26 +2804,19 @@
     },
     {
       "n": 77,
-      "title": "uncite by a bundle id that is not a UUID: the driver's error, answered 500",
+      "title": "uncite by a bundle id that is not a UUID: 204, as a bundle that does not exist",
       "actor": "owner",
       "route": "DELETE /api/v1/test-results/{id}/citations/{bundleId}",
       "request": {
         "method": "DELETE",
         "path": "/api/v1/test-results/<res1>/citations/not-a-uuid"
       },
-      "status": 500,
-      "content_type": "application/json",
+      "status": 204,
+      "content_type": null,
       "headers": [],
       "security_headers": "standard",
-      "content_length": 42,
-      "kind": "json",
-      "body": [
-        "{\"error\":\"failed to remove the citation\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "error": "failed to remove the citation"
-      },
+      "content_length": null,
+      "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
@@ -2983,25 +2976,25 @@
     },
     {
       "n": 84,
-      "title": "delete a file by an id that is not a UUID: 500",
+      "title": "delete a file by an id that is not a UUID: 404, as an id no file has",
       "actor": "owner",
       "route": "DELETE /api/v1/evidence-files/{id}",
       "request": {
         "method": "DELETE",
         "path": "/api/v1/evidence-files/not-a-uuid"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 45,
+      "content_length": 36,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to load the evidence file\"}"
+        "{\"error\":\"evidence file not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to load the evidence file"
+        "error": "evidence file not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

@@ -47,11 +47,11 @@ import (
 //     the row, its one-time link, emailed false with no mail server;
 //     org.invitation_sent), with a bad role (400, the invitation path's text,
 //     which does not quote it), and not an address at all; the owner's
-//     personal workspace (400 on both branches); a plain member's and an
-//     outsider's adds (403, in the guard's words); the list as m (by name,
-//     then address), as x (403), with W's worker key (401: the guard wants
-//     an account), and of a workspace no row has (403, not 404) or an id
-//     that is not a UUID (500, the role lookup's error, Q19);
+//     personal workspace (400 on both branches); a plain member's add (403,
+//     in the guard's words) and an outsider's (404: to x, W is a workspace no
+//     row has, I3); the list as m (by name, then address), as x (404), with
+//     W's worker key (401: the guard wants an account), and of a workspace no
+//     row has or an id that is not a UUID (the same 404);
 //   - roles: the owner, W's only admin, can neither be demoted (400 with
 //     SetMemberRole's ErrLastAdmin text, Q19) nor leave (400 with
 //     RemoveMember's text, Q19); a2 is made an admin
@@ -65,13 +65,13 @@ import (
 //     name trimmed, no members key while it has none; the second with a
 //     description long enough to put the lists over the compressor's floor),
 //     a blank name (400,
-//     the domain's text), a malformed body, a member's and an outsider's
-//     (403); the list by name; a rename (200 with the team as stored, its
+//     the domain's text), a malformed body, a member's (403) and an
+//     outsider's (404); the list by name; a rename (200 with the team as stored, its
 //     members left out), a blank name that keeps the old one, a malformed
 //     body; the guard's order (orgTeamChecked looks the team up first, so a
 //     member renaming a real team gets 403, and anyone naming a team no row
-//     has, or an id that is not a UUID, 404 "team not found", I3); a member
-//     renaming V's team (403); the team's members (201 with no body, twice
+//     has, or an id that is not a UUID, 404 "team not found", as does x, not
+//     in W, and a member renaming V's team, not in V: I3); the team's members (201 with no body, twice
 //     for the same account, which the store ignores; an account outside W and
 //     an id no account has, 400 with the domain's text; m into V's team,
 //     400; a member's add, 403; a team no row has, 404), the list with each
@@ -88,10 +88,11 @@ import (
 //     workspace); m made an editor (204, project.member_role_changed); a bad
 //     role, a malformed body, m's change of its own role (403); a role given
 //     to a2, who is not a member of P, which adds it (from ""), and to an id
-//     no account has (the store's refusal, a 500, Q19); a2, an admin of W
+//     no account has (404 "user not found"); a2, an admin of W
 //     and so an owner of P, leaving P (204, project.member_removed, self
 //     true); x removed (self false), and removed again (204 and an event all
-//     the same); m removing the owner (403); x reading P once gone (403);
+//     the same); m removing the owner (403); x reading P once gone (404, as a
+//     project no row has);
 //   - P's team grants: none (null); a team granted (201 with no body), a
 //     second, the first again with another role (201, replaced); V's team
 //     (400 "team belongs to a different workspace"), a team no row has and
@@ -107,7 +108,7 @@ import (
 //     alone), a worker key (401 "authentication required", the handler's)
 //     and no session (the middleware's 401);
 //   - leaving W last: m removing a2 (403), x leaving W, which it is not in
-//     (403), an id no account has (400 with ErrNotMember's words, as its
+//     (404), an id no account has (400 with ErrNotMember's words, as its
 //     role change, and no event), m leaving (204, self true), the owner
 //     removing a2, then one of two admins (204, self false); W's members
 //     afterwards; t, which still lists m with an empty role (its members are
@@ -206,12 +207,12 @@ func membersTeamsTour(tr *tour) {
 	tr.step("invite an address no account has to it: the same 400, from the invitation path", o, members,
 		at("id", "{{owner.workspace}}"), membersTeamsMember("tour-invitee@example.com", "member"))
 	tr.step("m, a plain member, adds somebody: 403", m, members, inW, membersTeamsMember(x.email, "member"))
-	tr.step("x, not in W, adds itself: 403", x, members, inW, membersTeamsMember(x.email, "member"))
+	tr.step("x, not in W, adds itself: 404, as for a workspace no row has", x, members, inW, membersTeamsMember(x.email, "member"))
 	tr.step("W's members as m: by name, then address", m, "GET /api/v1/orgs/{id}/members", inW)
-	tr.step("W's members as x, not in W: 403", x, "GET /api/v1/orgs/{id}/members", inW)
-	tr.step("the members of a workspace no row has: 403, the same words, not 404", o, "GET /api/v1/orgs/{id}/members",
+	tr.step("W's members as x, not in W: 404", x, "GET /api/v1/orgs/{id}/members", inW)
+	tr.step("the members of a workspace no row has: 404, the answer x gets for W", o, "GET /api/v1/orgs/{id}/members",
 		at("id", "{{phantom}}"))
-	tr.step("the members of a workspace id that is not a UUID: the role lookup's error is a 500 (Q19)", o,
+	tr.step("the members of a workspace id that is not a UUID: the same 404", o,
 		"GET /api/v1/orgs/{id}/members", at("id", "not-a-workspace"))
 	tr.step("W's members with W's worker key: 401, the guard wants an account", worker, "GET /api/v1/orgs/{id}/members", inW)
 
@@ -244,7 +245,7 @@ func membersTeamsTour(tr *tour) {
 	tr.step("a blank name: 400 with the domain's text", o, teams, inW, jsonBody(`{"name":"   "}`))
 	tr.step("a malformed body", o, teams, inW, jsonBody(`{`))
 	tr.step("m, a plain member, makes a team: 403", m, teams, inW, jsonBody(`{"name":"Tour Members"}`))
-	tr.step("x, not in W, makes one: 403", x, teams, inW, jsonBody(`{"name":"Tour Outsiders"}`))
+	tr.step("x, not in W, makes one: 404", x, teams, inW, jsonBody(`{"name":"Tour Outsiders"}`))
 	tr.step("W's teams as m: by name; over 1,400 bytes, so the gzip variant is compressed, and then has no "+
 		"Content-Type at all (Q1)", m, "GET /api/v1/orgs/{id}/teams", inW)
 	tr.step("rename the first team: 200 with the team as stored, its members left out", o, team, at("id", "{{t}}"),
@@ -258,8 +259,8 @@ func membersTeamsTour(tr *tour) {
 	tr.step("the owner renames a team no row has: the same 404", o, team, at("id", "{{phantom}}"),
 		jsonBody(`{"name":"Mine"}`))
 	tr.step("an id that is not a UUID: 404 too", o, team, at("id", "not-a-team"), jsonBody(`{"name":"Mine"}`))
-	tr.step("x, not in W, renames W's team: 403", x, team, at("id", "{{t}}"), jsonBody(`{"name":"Mine"}`))
-	tr.step("m renames V's team: 403, not a member of V", m, team, at("id", "{{tv}}"), jsonBody(`{"name":"Mine"}`))
+	tr.step("x, not in W, renames W's team: 404, as a team no row has", x, team, at("id", "{{t}}"), jsonBody(`{"name":"Mine"}`))
+	tr.step("m renames V's team: 404, not a member of V", m, team, at("id", "{{tv}}"), jsonBody(`{"name":"Mine"}`))
 	tr.step("add m to the team: 201 with no body", o, teamMember, at("id", "{{t}}", "userId", "{{m}}"))
 	tr.step("add m again: 201, the store ignores the repeat", o, teamMember, at("id", "{{t}}", "userId", "{{m}}"))
 	tr.step("add a2", o, teamMember, at("id", "{{t}}", "userId", "{{a2}}"))
@@ -301,14 +302,14 @@ func membersTeamsTour(tr *tour) {
 	tr.step("m makes itself an owner: 403", m, pRole, at("id", "{{p}}", "userId", "{{m}}"), membersTeamsRole("owner"))
 	tr.step("give a2, not a member of P, a role: 204, which adds it (from \"\")", o, pRole,
 		at("id", "{{p}}", "userId", "{{a2}}"), membersTeamsRole("viewer"))
-	tr.step("give an id no account has a role: the store refuses it, a 500 (Q19)", o, pRole,
+	tr.step("give an id no account has a role: 404, user not found", o, pRole,
 		at("id", "{{p}}", "userId", "{{phantom}}"), membersTeamsRole("viewer"))
 	tr.step("a2, an admin of W and so an owner of P, leaves P: 204; project.member_removed, self true", a2, pLeave,
 		at("id", "{{p}}", "userId", "{{a2}}"))
 	tr.step("remove x: 204, self false", o, pLeave, at("id", "{{p}}", "userId", "{{x}}"))
 	tr.step("remove x again: 204, and an event all the same", o, pLeave, at("id", "{{p}}", "userId", "{{x}}"))
 	tr.step("m, an editor, removes the owner: 403", m, pLeave, at("id", "{{p}}", "userId", "{{owner}}"))
-	tr.step("P's members as x, gone from P: 403", x, "GET /api/v1/projects/{id}/members", inP)
+	tr.step("P's members as x, gone from P: 404", x, "GET /api/v1/projects/{id}/members", inP)
 	tr.step("P's members: the owner and m", o, "GET /api/v1/projects/{id}/members", inP)
 
 	// P's team grants. No grant route publishes an event.
@@ -350,7 +351,7 @@ func membersTeamsTour(tr *tour) {
 	// Leaving W.
 	const leave = "DELETE /api/v1/orgs/{id}/members/{userId}"
 	tr.step("m removes a2: 403", m, leave, at("id", "{{w}}", "userId", "{{a2}}"))
-	tr.step("x leaves W, which it is not in: 403", x, leave, at("id", "{{w}}", "userId", "{{x}}"))
+	tr.step("x leaves W, which it is not in: 404", x, leave, at("id", "{{w}}", "userId", "{{x}}"))
 	tr.step("remove an id no account has: 400 with ErrNotMember's words, as its role change, and no event", o, leave,
 		at("id", "{{w}}", "userId", "{{phantom}}"))
 	tr.step("m leaves W: 204; org.member_removed, self true", m, leave, at("id", "{{w}}", "userId", "{{m}}"))

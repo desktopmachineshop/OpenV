@@ -324,7 +324,7 @@ func vvCoverageReportCoverage(tr *tour, viewer, supplier *tourActor) {
 	tr.step("the owner reads C's coverage: no rights on C", o, "GET /api/v1/projects/{id}/vv/coverage",
 		at("id", "{{c}}"))
 	tr.step("the coverage of a project that does not exist", o, "GET /api/v1/projects/{id}/vv/coverage",
-		at("id", "{{phantom}}"), note("the project guard runs before any lookup, so an id no project has answers 403"))
+		at("id", "{{phantom}}"), note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 }
 
 // vvCoverageReportMatrixGaps pins GET /vv/matrix and GET /vv/gaps.

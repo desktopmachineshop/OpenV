@@ -1580,7 +1580,7 @@
     },
     {
       "n": 38,
-      "title": "mark read with an id that is not a UUID: the database refuses the cast, a 500",
+      "title": "mark read with an id that is not a UUID: none marked, as for an id no notification has",
       "actor": "member",
       "acting_in": "<w>",
       "route": "POST /api/v1/notifications/read",
@@ -1592,18 +1592,19 @@
         ],
         "body": "{\"ids\":[\"not-a-notification\"]}"
       },
-      "status": 500,
+      "status": 200,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 46,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to mark notifications read\"}"
+        "{\"unread_count\":4,\"updated\":0}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to mark notifications read"
+        "unread_count": 4,
+        "updated": 0
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1827,7 +1828,7 @@
     },
     {
       "n": 44,
-      "title": "flag an id that is not a UUID: the database refuses the cast, a 500",
+      "title": "flag an id that is not a UUID: 404, as an id no notification has",
       "actor": "member",
       "acting_in": "<w>",
       "route": "PUT /api/v1/notifications/{id}/flag",
@@ -1839,18 +1840,18 @@
         ],
         "body": "{\"flagged\":true}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 40,
+      "content_length": 35,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to flag notification\"}"
+        "{\"error\":\"notification not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to flag notification"
+        "error": "notification not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

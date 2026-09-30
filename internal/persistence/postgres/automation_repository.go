@@ -145,7 +145,7 @@ func (r *AutomationRepository) Update(a *automations.Automation) error {
 func (r *AutomationRepository) FindByID(id string) (*automations.Automation, error) {
 	row := r.db.QueryRow(`SELECT `+automationColumns+` FROM automations WHERE id = $1`, id)
 	a, err := scanAutomation(row)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -164,6 +164,9 @@ func (r *AutomationRepository) List(orgID, projectID string) ([]*automations.Aut
 		  AND ($2 = '' OR project_id = NULLIF($2, '')::uuid)
 		ORDER BY created_at DESC
 	`, orgID, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -104,7 +104,7 @@ func (r *GuidedRepository) TakePendingNudge(sessionID string) (*guided.PendingNu
 		WHERE g.id = $1 AND old.id = g.id AND g.pending_nudge IS NOT NULL
 		RETURNING old.pending_nudge
 	`, sessionID).Scan(&payload)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -207,7 +207,7 @@ func (r *GuidedRepository) FindByID(id string) (*guided.Session, error) {
 	row := r.db.QueryRow(query, id)
 	session, err := scanGuidedSession(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, guided.ErrSessionNotFound
 		}
 		return nil, err

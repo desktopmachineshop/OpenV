@@ -53,7 +53,7 @@ func (r *ProviderLoginRepository) UpdateLogin(l *providers.LoginRequest) error {
 // FindLoginByID returns a login request, or nil.
 func (r *ProviderLoginRepository) FindLoginByID(id string) (*providers.LoginRequest, error) {
 	l, err := scanLogin(r.db.QueryRow(`SELECT `+loginColumns+` FROM provider_logins WHERE id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return l, err
@@ -78,7 +78,7 @@ func (r *ProviderLoginRepository) FindActiveLogin(orgID, provider, target string
 	}
 	query += ` ORDER BY created_at DESC LIMIT 1`
 	l, err := scanLogin(r.db.QueryRow(query, args...))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return l, err
@@ -102,7 +102,7 @@ func (r *ProviderLoginRepository) ClaimPendingLogin(orgID, workerUserID string) 
 		)
 		RETURNING `+loginColumns, orgID, workerUserID)
 	l, err := scanLogin(row)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return l, err

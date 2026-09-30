@@ -47,6 +47,15 @@ type guardHelper struct {
 //   - scoped-write: project:editor for a crew, automation or attribute
 //     definition pinned to a project, else org:admin (an attribute
 //     definition with neither scope is refused with 400).
+//   - project-visible: the caller reaches a project the request names at
+//     all, the project role ladder at viewer, with no plan read-only gate;
+//     else the not-found of what the request names there (I3).
+//   - org-visible: membership of a workspace the request names, or a
+//     platform admin, with no plan read-only gate; else the not-found of
+//     what the request names there (I3).
+//   - crew-visible: the caller may know of the crew: a member, a worker key
+//     or a run of its workspace (a run only in a pinned crew's project), or
+//     a caller who reaches its pinned project; else the crew's not-found.
 //   - no-proposal-run: the request is not a proposal-mode agent run's, else
 //     403 (a route that sets a run going).
 //   - unscoped-launch: a launch with no project: org:member for a signed-in
@@ -70,11 +79,16 @@ var guardHelpers = map[string]guardHelper{
 	"requireRunnerSessions":           {kind: "runner-sessions"},
 	"requireWritable":                 {kind: "plan-writable"},
 	"requireProjectRole":              {kind: "project", roleParam: "minRole"},
+	"requireProjectRoleFor":           {kind: "project", roleParam: "minRole"},
 	"requireOrgRole":                  {kind: "org", roleParam: "minRole"},
+	"requireOrgRoleFor":               {kind: "org", roleParam: "minRole"},
 	"requireRunAccess":                {kind: "run", roleParam: "minRole"},
 	"requireTeamWrite":                {kind: "scoped-write"},
 	"requireAutomationWrite":          {kind: "scoped-write"},
 	"requireAttributeDefinitionWrite": {kind: "scoped-write"},
+	"requireProjectVisible":           {kind: "project-visible"},
+	"requireOrgVisible":               {kind: "org-visible"},
+	"requireTeamVisible":              {kind: "crew-visible"},
 	"requireNoProposalRunLaunch":      {kind: "no-proposal-run"},
 	"requireUnscopedLaunch":           {kind: "unscoped-launch"},
 	"requireProjectCreate":            {kind: "project-create"},

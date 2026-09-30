@@ -499,13 +499,14 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	// Scope the listing to the active workspace in SQL (so a busy sibling
-	// workspace can never starve the page before LIMIT applies); without a
-	// project filter, non-admin members only see the runs they launched
-	// themselves.
+	// Scope the listing to a workspace in SQL (so a busy sibling workspace
+	// can never starve the page before LIMIT applies): the named project's,
+	// whose runs the guard just let the caller read, whatever workspace it
+	// acts in, else the active one; without a project filter, non-admin
+	// members only see the runs they launched themselves.
 	activeOrg := ActiveOrg(r)
 	filter := agentruns.ListFilter{
-		OrgID:     activeOrg,
+		OrgID:     h.listOrg(r, projectID),
 		AgentID:   q.Get("agent_id"),
 		ProjectID: projectID,
 		Status:    q.Get("status"),
@@ -1038,6 +1039,12 @@ func (h *Handler) DelegateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if child.ParentRunID == nil || *child.ParentRunID != run.ID {
+		// A run outside the caller's project, of its workspace or another,
+		// is one no row has (I3); one of its own project is not its child.
+		if child.OrgID != run.OrgID || !sameProject(child.ProjectID, run.ProjectID) {
+			writeJSONError(w, http.StatusNotFound, "agent run not found")
+			return
+		}
 		writeJSONError(w, http.StatusForbidden, "not your delegated run")
 		return
 	}
@@ -1074,7 +1081,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 	}
 	req.OrgID = ActiveOrg(r)
 	req.CreatedBy = CurrentUserID(r)
-	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID) {
+	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID, notFound{}) {
 		return
 	}
 	automation, err := h.automationService.Create(req)
@@ -1095,7 +1102,7 @@ func (h *Handler) GetAutomation(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
 	}
-	if !h.requireOrgRole(w, r, automation.OrgID, orgs.RoleMember) {
+	if !h.requireOrgRoleFor(w, r, automation.OrgID, orgs.RoleMember, missing("automation not found")) {
 		return
 	}
 	json.NewEncoder(w).Encode(automation)
@@ -1110,7 +1117,7 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
 	}
-	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID) {
+	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID, missing("automation not found")) {
 		return
 	}
 	var req automations.UpdateAutomationRequest
@@ -1135,7 +1142,7 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
 	}
-	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID) {
+	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID, missing("automation not found")) {
 		return
 	}
 	if err := h.automationService.Delete(automation.ID); err != nil {
@@ -1158,7 +1165,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
 	}
-	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID) {
+	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID, missing("automation not found")) {
 		return
 	}
 	agentID, teamID, teamNodeID, err := scheduler.ResolveTarget(automation, h.teamService)
@@ -1210,8 +1217,9 @@ func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if orgID = ActiveOrg(r); orgID == "" || !h.isOrgAdmin(r, orgID) {
-		// Non-admin members must scope the listing to a project they can view.
-		writeJSONError(w, http.StatusForbidden, "project_id is required")
+		// Non-admin members must scope the listing to a project they can
+		// view: a parameter missing from the request, not a refusal.
+		writeJSONError(w, http.StatusBadRequest, "project_id is required")
 		return
 	}
 	list, err := h.proposalService.List(orgID, projectID, q.Get("status"), q.Get("run_id"))
@@ -1236,7 +1244,7 @@ func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve
 		respondError(w, r, http.StatusNotFound, "proposal not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, proposal.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, proposal.ProjectID, members.RoleEditor, missing("proposal not found")) {
 		return
 	}
 	var req struct {
@@ -1351,7 +1359,13 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if !h.hasProjectRole(r, proposal.ProjectID, members.RoleEditor) {
-			results = append(results, bulkOutcome{ID: id, Error: "you do not have access to this project"})
+			// A proposal in a project the caller cannot reach at all is
+			// reported as one no row has (I3).
+			msg := "you do not have access to this project"
+			if !h.reachesProject(r, proposal.ProjectID) {
+				msg = "proposal not found"
+			}
+			results = append(results, bulkOutcome{ID: id, Error: msg})
 			continue
 		}
 		if req.Action == "approve" {
@@ -1453,7 +1467,7 @@ func (h *Handler) SetMyRepoPath(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "repo connection not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, conn.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, conn.ProjectID, members.RoleViewer, missing("repo connection not found")) {
 		return
 	}
 	var req struct {
@@ -1499,7 +1513,7 @@ func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "repo connection not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, conn.ProjectID, members.RoleOwner) {
+	if !h.requireProjectRoleFor(w, r, conn.ProjectID, members.RoleOwner, missing("repo connection not found")) {
 		return
 	}
 	var req repoconns.UpdateRequest
@@ -1522,7 +1536,7 @@ func (h *Handler) DeleteRepoConnection(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "repo connection not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, conn.ProjectID, members.RoleOwner) {
+	if !h.requireProjectRoleFor(w, r, conn.ProjectID, members.RoleOwner, missing("repo connection not found")) {
 		return
 	}
 	if err := h.repoConnService.Delete(id); err != nil {
@@ -1845,10 +1859,14 @@ func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A project-pinned crew must belong to a project in the same workspace.
+	// A project the caller cannot reach at all is one no row has (I3).
 	if req.ProjectID != nil && *req.ProjectID != "" {
+		if !h.requireProjectVisible(w, r, *req.ProjectID, crewPinNotFound) {
+			return
+		}
 		project, err := h.projectService.GetProject(*req.ProjectID)
 		if err != nil || project == nil {
-			writeJSONError(w, http.StatusBadRequest, "project not found")
+			crewPinNotFound.write(w)
 			return
 		}
 		if project.OrgID != ActiveOrg(r) {
@@ -1879,21 +1897,23 @@ func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return
 	}
-	if !h.requireOrgRole(w, r, graph.Team.OrgID, orgs.RoleMember) {
+	if !h.requireOrgRoleFor(w, r, graph.Team.OrgID, orgs.RoleMember, missing("team not found")) {
 		return
 	}
 	json.NewEncoder(w).Encode(graph)
 }
 
-// teamWriteChecked loads a crew and enforces the crew-write guard. Returns
-// nil when the response has already been written.
-func (h *Handler) teamWriteChecked(w http.ResponseWriter, r *http.Request, teamID string) *teams.Team {
+// teamWriteChecked loads a crew and enforces the crew-write guard, whose
+// caller with no access at all gets absent: the crew's own 404, or that of
+// the node or edge the handler looked up first. Returns nil when the
+// response has already been written.
+func (h *Handler) teamWriteChecked(w http.ResponseWriter, r *http.Request, teamID string, absent notFound) *teams.Team {
 	graph, err := h.teamService.GetTeam(teamID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return nil
 	}
-	if !h.requireTeamWrite(w, r, graph.Team) {
+	if !h.requireTeamWrite(w, r, graph.Team, absent) {
 		return nil
 	}
 	return graph.Team
@@ -1903,7 +1923,7 @@ func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	if h.teamWriteChecked(w, r, mux.Vars(r)["id"]) == nil {
+	if h.teamWriteChecked(w, r, mux.Vars(r)["id"], missing("team not found")) == nil {
 		return
 	}
 	var req struct {
@@ -1927,7 +1947,7 @@ func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	if h.teamWriteChecked(w, r, mux.Vars(r)["id"]) == nil {
+	if h.teamWriteChecked(w, r, mux.Vars(r)["id"], missing("team not found")) == nil {
 		return
 	}
 	if err := h.teamService.DeleteTeam(mux.Vars(r)["id"]); err != nil {
@@ -1941,7 +1961,7 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	source := h.teamWriteChecked(w, r, mux.Vars(r)["id"])
+	source := h.teamWriteChecked(w, r, mux.Vars(r)["id"], missing("team not found"))
 	if source == nil {
 		return
 	}
@@ -1957,9 +1977,12 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 	// as CreateTeam checks a new crew: a pin must name a project of that
 	// workspace, which the caller edits; no pin needs workspace admin rights.
 	if req.ProjectID != nil && *req.ProjectID != "" {
+		if !h.requireProjectVisible(w, r, *req.ProjectID, crewPinNotFound) {
+			return
+		}
 		project, err := h.projectService.GetProject(*req.ProjectID)
 		if err != nil || project == nil {
-			writeJSONError(w, http.StatusBadRequest, "project not found")
+			crewPinNotFound.write(w)
 			return
 		}
 		if project.OrgID != source.OrgID {
@@ -1993,7 +2016,7 @@ func (h *Handler) ExportCrew(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "crew not found", err)
 		return
 	}
-	if !h.requireOrgRole(w, r, graph.Team.OrgID, orgs.RoleMember) {
+	if !h.requireOrgRoleFor(w, r, graph.Team.OrgID, orgs.RoleMember, missing("crew not found")) {
 		return
 	}
 	portable, err := crewtemplates.Serialize(graph, h.agentService)
@@ -2019,9 +2042,12 @@ func (h *Handler) ImportCrew(w http.ResponseWriter, r *http.Request) {
 	orgID := ActiveOrg(r)
 	projectID := optionalProjectID(r)
 	if projectID != nil {
+		if !h.requireProjectVisible(w, r, *projectID, crewPinNotFound) {
+			return
+		}
 		project, err := h.projectService.GetProject(*projectID)
 		if err != nil || project == nil {
-			writeJSONError(w, http.StatusBadRequest, "project not found")
+			crewPinNotFound.write(w)
 			return
 		}
 		if project.OrgID != orgID {
@@ -2059,6 +2085,10 @@ func (h *Handler) ListCrewTemplates(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(crewtemplates.BuiltinCrewTemplates())
 }
 
+// crewPinNotFound answers a crew pin, in a create's body or an import's
+// query, naming a project no row has, or one the caller cannot reach at all.
+var crewPinNotFound = notFound{http.StatusBadRequest, "project not found"}
+
 // optionalProjectID reads an optional ?project_id= pin from the request.
 func optionalProjectID(r *http.Request) *string {
 	v := strings.TrimSpace(r.URL.Query().Get("project_id"))
@@ -2090,7 +2120,7 @@ func (h *Handler) AddTeamNode(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	if h.teamWriteChecked(w, r, mux.Vars(r)["id"]) == nil {
+	if h.teamWriteChecked(w, r, mux.Vars(r)["id"], missing("team not found")) == nil {
 		return
 	}
 	var req struct {
@@ -2130,7 +2160,7 @@ func (h *Handler) UpdateTeamNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "team node not found")
 		return
 	}
-	if h.teamWriteChecked(w, r, node.TeamID) == nil {
+	if h.teamWriteChecked(w, r, node.TeamID, missing("team node not found")) == nil {
 		return
 	}
 	var req struct {
@@ -2161,7 +2191,7 @@ func (h *Handler) RemoveTeamNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "team node not found")
 		return
 	}
-	if h.teamWriteChecked(w, r, node.TeamID) == nil {
+	if h.teamWriteChecked(w, r, node.TeamID, missing("team node not found")) == nil {
 		return
 	}
 	if err := h.teamService.RemoveNode(mux.Vars(r)["id"]); err != nil {
@@ -2175,7 +2205,7 @@ func (h *Handler) AddTeamEdge(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	if h.teamWriteChecked(w, r, mux.Vars(r)["id"]) == nil {
+	if h.teamWriteChecked(w, r, mux.Vars(r)["id"], missing("team not found")) == nil {
 		return
 	}
 	var req struct {
@@ -2206,7 +2236,7 @@ func (h *Handler) UpdateTeamEdge(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "team edge not found")
 		return
 	}
-	if h.teamWriteChecked(w, r, edge.TeamID) == nil {
+	if h.teamWriteChecked(w, r, edge.TeamID, missing("team edge not found")) == nil {
 		return
 	}
 	var req struct {
@@ -2233,7 +2263,7 @@ func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "team edge not found")
 		return
 	}
-	if h.teamWriteChecked(w, r, edge.TeamID) == nil {
+	if h.teamWriteChecked(w, r, edge.TeamID, missing("team edge not found")) == nil {
 		return
 	}
 	if err := h.teamService.RemoveEdge(mux.Vars(r)["id"]); err != nil {
@@ -2251,6 +2281,11 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
+		return
+	}
+	// The checks below tell of the crew, so a caller who may not know of it
+	// hears first what a crew no row has answers (I3).
+	if !h.requireTeamVisible(w, r, graph.Team, missing("team not found")) {
 		return
 	}
 	if graph.Team.EntryNodeID == nil {
@@ -2337,73 +2372,4 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(run)
-}
-
-// --- Domain events ---
-
-func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
-	if !requireUser(w, r) {
-		return
-	}
-	q := r.URL.Query()
-	projectID := q.Get("project_id")
-	if projectID != "" && !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
-		return
-	}
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	if limit <= 0 || limit > 500 {
-		limit = 100
-	}
-	// "before" is a keyset cursor (an event ID from a previous page): the
-	// repo returns only events strictly older than it, so "load more" pages
-	// stay stable while new events keep arriving. It is cast to uuid in SQL,
-	// so a malformed value would otherwise surface as a 500 — validate it here
-	// and reject bad input with 400 instead.
-	before := q.Get("before")
-	if before != "" {
-		if _, err := uuid.Parse(before); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid before cursor")
-			return
-		}
-	}
-	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), before, limit)
-	if err != nil {
-		respondInternal(w, r, "failed to list events", err)
-		return
-	}
-	// Advertise the next cursor from the RAW page (before membership
-	// filtering below): a full page means there may be older events. Using
-	// the raw tail keeps the cursor monotonic even when the visibility filter
-	// drops the trailing rows for non-admin members.
-	if len(list) >= limit {
-		w.Header().Set("X-Next-Cursor", list[len(list)-1].ID)
-	}
-	// Without a project filter, org admins see the whole workspace audit;
-	// plain members only see events for projects they can access (mirrors
-	// ListAgentRuns).
-	if projectID == "" && !h.isOrgAdmin(r, ActiveOrg(r)) {
-		user := CurrentUser(r)
-		allowed := map[string]bool{}
-		if h.memberService != nil {
-			ids, err := h.memberService.ProjectIDsForUser(user.ID)
-			if err != nil {
-				respondInternal(w, r, "failed to resolve project memberships", err)
-				return
-			}
-			for _, id := range ids {
-				allowed[id] = true
-			}
-		}
-		visible := list[:0]
-		for _, e := range list {
-			if e.ProjectID != "" && allowed[e.ProjectID] {
-				visible = append(visible, e)
-			}
-		}
-		list = visible
-	}
-	// Decorate only what survived the visibility filter: naming an event
-	// dereferences the IDs it carries, so events the caller may not see are
-	// never looked up.
-	json.NewEncoder(w).Encode(h.decorateEvents(list))
 }

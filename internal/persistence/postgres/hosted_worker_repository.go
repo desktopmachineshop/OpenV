@@ -57,7 +57,7 @@ func (r *HostedWorkerRepository) Update(w *hostedworkers.HostedWorker) error {
 // FindByOrg returns the org's hosted worker, or nil.
 func (r *HostedWorkerRepository) FindByOrg(orgID string) (*hostedworkers.HostedWorker, error) {
 	w, err := scanHostedWorker(r.db.QueryRow(`SELECT `+hostedWorkerColumns+` FROM hosted_workers WHERE org_id = $1`, orgID))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return w, err
@@ -66,7 +66,7 @@ func (r *HostedWorkerRepository) FindByOrg(orgID string) (*hostedworkers.HostedW
 // FindByID returns a hosted worker, or nil.
 func (r *HostedWorkerRepository) FindByID(id string) (*hostedworkers.HostedWorker, error) {
 	w, err := scanHostedWorker(r.db.QueryRow(`SELECT `+hostedWorkerColumns+` FROM hosted_workers WHERE id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return w, err

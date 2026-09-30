@@ -334,7 +334,9 @@ workspace W; an outsider acting in its own workspace; W's worker key; the
 token of a running run in P; the platform admin), every path id a
 well-formed id no row has and every write the body `{`, then the routes
 whose scope is in the query or the body, with a well-formed body naming the
-phantom. `real_id_reads` sends every GET route with a path variable, the
+phantom; each row that names an id is sent again with `not-a-uuid`, then
+with `%FF` (a byte that is not UTF-8) and `a%00b` (a NUL), in its place, and
+must answer every column exactly as the phantom did, or the area fails. `real_id_reads` sends every GET route with a path variable, the
 list reads a query scopes, the writes that decode before they write, the
 list reads that take no query (once the owner has a project to itself), the
 creates, and last the launches and creates of a proposal-mode run's token,
@@ -342,7 +344,10 @@ with the real ids of fixtures in W and P. A matrix cell records
 the status and the error envelope's code and message, or the kind of answer
 (`200 json[3]`), never the body, which the earlier slices pin; after each
 section the events every column's workspace published are listed, and a
-section that must leave them quiet fails if one published.
+section that must leave them quiet fails if one published. With no
+database, `TestTourExistenceHiding` holds the two matrices to I3's existence
+hiding: the outsider's cell for each real id of W and P must be the one the
+phantom matrix records for an id no row has.
 `over_plan_tiers_on` and `over_plan_self_hosted` are step areas under the
 S4b profiles: a workspace over its plan is read-only (`plan_read_only`) for
 a write of each project role's guard, the workspace admin's and member's

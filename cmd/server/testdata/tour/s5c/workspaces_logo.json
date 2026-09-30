@@ -402,7 +402,7 @@
     },
     {
       "n": 8,
-      "title": "read a workspace that does not exist: the guard's 403, before any lookup (I3)",
+      "title": "read a workspace that does not exist: the guard's 404, before any lookup (I3)",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}",
@@ -410,24 +410,24 @@
         "method": "GET",
         "path": "/api/v1/orgs/<phantom>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
       "n": 9,
-      "title": "read a workspace by something that is not an id: the role lookup fails, a 500",
+      "title": "read a workspace by something that is not an id: the same 404",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}",
@@ -435,18 +435,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/not-a-workspace"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 47,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to resolve workspace access\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to resolve workspace access"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -459,18 +459,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/<w>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -973,18 +973,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/<w>/features"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1541,18 +1541,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/<w>/limits"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2324,18 +2324,18 @@
         ],
         "body": "{\"enabled\":true}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2499,18 +2499,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/<w>/logo"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3349,18 +3349,18 @@
         "method": "POST",
         "path": "/api/v1/orgs/<w>/activate"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3637,25 +3637,25 @@
     },
     {
       "n": 87,
-      "title": "a workspace that does not exist: the guard's 403",
+      "title": "a workspace that does not exist: the guard's 404",
       "actor": "owner",
       "route": "DELETE /api/v1/orgs/{id}",
       "request": {
         "method": "DELETE",
         "path": "/api/v1/orgs/<phantom>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3699,18 +3699,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/<w>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3843,18 +3843,18 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3965,18 +3965,18 @@
         "method": "POST",
         "path": "/api/v1/orgs/<phantom>/restore"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 66,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"only workspace admins can restore a deleted workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "only workspace admins can restore a deleted workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

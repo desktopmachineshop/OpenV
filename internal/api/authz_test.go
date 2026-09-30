@@ -379,7 +379,7 @@ func (f *fakeArtifactService) GetArtifact(id string) (*artifacts.Artifact, error
 	if a, ok := f.byID[id]; ok {
 		return a, nil
 	}
-	return nil, errors.New("artifact not found")
+	return nil, artifacts.ErrNotFound
 }
 
 func (f *fakeArtifactService) UpdateArtifact(id string, req artifacts.UpdateArtifactRequest) (*artifacts.Artifact, error) {
@@ -524,11 +524,13 @@ func TestRequireProjectRole(t *testing.T) {
 			wantCode: http.StatusForbidden,
 		},
 		{
-			name:     "non-member gets 403",
+			// No role at all: the project answers as one no row has (I3).
+			name:     "non-member gets 404",
 			request:  reqWithUser(&users.User{ID: "stranger"}),
 			minRole:  members.RoleViewer,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
 			name:     "unauthenticated gets 401",
@@ -560,11 +562,12 @@ func TestRequireProjectRole(t *testing.T) {
 			wantErr:  "you do not have access to this project",
 		},
 		{
-			name:     "worker foreign org gets 403",
+			name:     "worker foreign org gets 404",
 			request:  reqWithWorker("org-other"),
 			minRole:  members.RoleViewer,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
 			name:     "editor's personal key meets editor",
@@ -600,22 +603,26 @@ func TestRequireProjectRole(t *testing.T) {
 			wantPass: true,
 		},
 		{
-			name:     "roleless member's personal key fails editor",
+			// A project its holder has no role in answers the key as one
+			// no row has (I3), as it answers the holder's session.
+			name:     "roleless member's personal key fails editor with 404",
 			request:  reqWithPersonalKey(orgID, "org-member"),
 			minRole:  members.RoleEditor,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
 			// A personal key reads only where its holder's own session
 			// would: a member with no role in the project is refused a
-			// viewer's read with the project's 403, as their session is.
-			name:     "roleless member's personal key is refused a viewer's read",
+			// viewer's read as their session is, as for a project no row
+			// has (I3).
+			name:     "roleless member's personal key is refused a viewer's read with 404",
 			request:  reqWithPersonalKey(orgID, "org-member"),
 			minRole:  members.RoleViewer,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
-			wantErr:  "you do not have access to this project",
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
 			name:     "viewer's personal key reads as a viewer",
@@ -630,11 +637,12 @@ func TestRequireProjectRole(t *testing.T) {
 			wantPass: true,
 		},
 		{
-			name:     "personal key foreign org gets 403",
+			name:     "personal key foreign org gets 404",
 			request:  reqWithPersonalKey("org-other", "org-admin"),
 			minRole:  members.RoleViewer,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
 			name:     "run token own project passes editor",
@@ -643,20 +651,20 @@ func TestRequireProjectRole(t *testing.T) {
 			wantPass: true,
 		},
 		{
-			name:     "run token foreign project gets 403",
+			name:     "run token foreign project gets 404",
 			request:  reqWithRun(&agentruns.Run{ID: "run-2", OrgID: orgID, ProjectID: &foreignProject}),
 			minRole:  members.RoleEditor,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
-			wantErr:  "agent run is not scoped to this project",
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
-			name:     "run token with no project gets 403",
+			name:     "run token with no project gets 404",
 			request:  reqWithRun(&agentruns.Run{ID: "run-4", OrgID: orgID}),
 			minRole:  members.RoleViewer,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
-			wantErr:  "agent run is not scoped to this project",
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
 			// In its own project the run is refused for its role, not its
@@ -805,8 +813,8 @@ func linkTestHandler(linkSvc *fakeLinkService) *Handler {
 		}},
 		orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
 		memberService: &fakeMemberService{roles: map[string]map[string]string{
-			"proj-a": {"editor-a": members.RoleEditor, "editor-both": members.RoleEditor},
-			"proj-b": {"editor-both": members.RoleEditor},
+			"proj-a": {"editor-a": members.RoleEditor, "editor-both": members.RoleEditor, "editor-a-viewer-b": members.RoleEditor},
+			"proj-b": {"editor-both": members.RoleEditor, "editor-a-viewer-b": members.RoleViewer},
 		}},
 		artifactService: &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"art-a": {ID: "art-a", ProjectID: "proj-a", Type: "requirement"},
@@ -819,24 +827,37 @@ func linkTestHandler(linkSvc *fakeLinkService) *Handler {
 
 // TestCreateLinkCrossProject locks in that creating a link whose target
 // artifact lives in another project requires editor rights on that project
-// too — the target gets a version bump and chatter written.
+// too — the target gets a version bump and chatter written. A target in a
+// project the caller has no role in at all answers as a target no row has
+// (I3), so the refusal tells nothing of whether it exists.
 func TestCreateLinkCrossProject(t *testing.T) {
 	body := `{"from_id":"art-a","to_id":"art-b","type":"relates-to"}`
 
-	t.Run("editor on source project only is denied", func(t *testing.T) {
-		linkSvc := &fakeLinkService{}
-		h := linkTestHandler(linkSvc)
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodPost, "/api/v1/links", strings.NewReader(body))
-		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "editor-a"}))
-		h.CreateLink(w, r)
-		if w.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want %d (body %q)", w.Code, http.StatusForbidden, w.Body.String())
-		}
-		if len(linkSvc.created) != 0 {
-			t.Fatalf("link was created despite missing rights on the target project")
-		}
-	})
+	for _, tc := range []struct {
+		name, user string
+		wantCode   int
+		wantBody   string
+	}{
+		{"editor on source project only is told the target is not there", "editor-a",
+			http.StatusBadRequest, `{"error":"target artifact not found"}`},
+		{"viewer of the target project is denied", "editor-a-viewer-b",
+			http.StatusForbidden, `{"error":"you do not have access to this project"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			linkSvc := &fakeLinkService{}
+			h := linkTestHandler(linkSvc)
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, "/api/v1/links", strings.NewReader(body))
+			r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: tc.user}))
+			h.CreateLink(w, r)
+			if w.Code != tc.wantCode || strings.TrimSpace(w.Body.String()) != tc.wantBody {
+				t.Fatalf("answer = %d %q, want %d %s", w.Code, w.Body.String(), tc.wantCode, tc.wantBody)
+			}
+			if len(linkSvc.created) != 0 {
+				t.Fatalf("link was created despite missing rights on the target project")
+			}
+		})
+	}
 
 	t.Run("editor on both projects passes", func(t *testing.T) {
 		linkSvc := &fakeLinkService{}

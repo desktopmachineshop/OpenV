@@ -41,7 +41,7 @@ func (r *ProductProfileRepository) Get(projectID string) (*products.ProductProfi
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, nil
 		}
 		return nil, err

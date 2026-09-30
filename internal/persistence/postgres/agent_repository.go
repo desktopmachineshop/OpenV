@@ -99,7 +99,7 @@ func (r *AgentRepository) Update(a *agents.Agent) error {
 // FindByID returns an agent by id, or nil.
 func (r *AgentRepository) FindByID(id string) (*agents.Agent, error) {
 	a, err := scanAgent(r.db.QueryRow(`SELECT `+agentColumns+` FROM agents WHERE id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return a, err
@@ -108,7 +108,7 @@ func (r *AgentRepository) FindByID(id string) (*agents.Agent, error) {
 // FindBySlug returns an agent by slug within an org, or nil.
 func (r *AgentRepository) FindBySlug(orgID, slug string) (*agents.Agent, error) {
 	a, err := scanAgent(r.db.QueryRow(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid AND slug = $2`, orgID, slug))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return a, err

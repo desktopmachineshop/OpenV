@@ -66,7 +66,7 @@ func (r *ChatterRepository) FindByID(id string) (*chatter.ChatterEntry, error) {
 		&entry.CreatedAt,
 		&entry.UpdatedAt,
 	)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, chatter.ErrNotFound
 	}
 	if err != nil {

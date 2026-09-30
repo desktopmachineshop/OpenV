@@ -13,8 +13,9 @@ import (
 // TestTourS5cWorkspacesLogo is the S5c tour's workspaces area (refactor plan
 // §6.4 S5c, before M9, which moves these handlers out of org_handlers.go
 // into org_ and org_logo_handlers.go, and before X8 and X12, which read the
-// effective limits and plan gates it pins; invariants I3 (a guard's 403
-// before a lookup's 404), I4, I8 (the logo's Cache-Control and
+// effective limits and plan gates it pins; invariants I3 (a guard's answer
+// before a lookup's, and a workspace the caller is not in answered as one no
+// row has), I4, I8 (the logo's Cache-Control and
 // Content-Disposition), I16 (the logo's file under UPLOADS_DIR); quirks Q1,
 // Q5, Q14 and Q19; OpenV REQ-18, REQ-136, REQ-137, REQ-138, REQ-154). Its
 // golden is testdata/tour/s5c/workspaces_logo.json.
@@ -24,8 +25,8 @@ import (
 // read that resolves it; each refusal of the create; the workspace list
 // (the personal workspace first, then by name, and the deleted ones,
 // written null while there are none, Q14); reading a workspace as a member,
-// and the guard's answer to a workspace that does not exist (403, not 404:
-// I3) and to an id that is not one; the settings a workspace admin changes
+// and the guard's answer to a workspace that does not exist (404, as to a
+// workspace the caller is not in: I3) and to an id that is not one (the same); the settings a workspace admin changes
 // on the single plan (a rename, the monthly budget as a number, null and a
 // string, and the release channel and upgrade window that plan locks), with
 // a rename sent with a budget refused, which stores nothing either; the
@@ -191,9 +192,9 @@ func workspacesLogoTour(tr *tour) {
 		o, "GET /api/v1/orgs")
 	tr.step("the owner's deleted workspaces: none, written null (Q14)", o, "GET /api/v1/orgs", query("deleted=true"))
 	tr.step("a member reads W", m, "GET /api/v1/orgs/{id}", at("id", w))
-	tr.step("read a workspace that does not exist: the guard's 403, before any lookup (I3)", o, "GET /api/v1/orgs/{id}",
+	tr.step("read a workspace that does not exist: the guard's 404, before any lookup (I3)", o, "GET /api/v1/orgs/{id}",
 		at("id", "{{phantom}}"))
-	tr.step("read a workspace by something that is not an id: the role lookup fails, a 500", o,
+	tr.step("read a workspace by something that is not an id: the same 404", o,
 		"GET /api/v1/orgs/{id}", at("id", "not-a-workspace"))
 	tr.step("a non-member reads W", outsider, "GET /api/v1/orgs/{id}", at("id", w))
 
@@ -346,7 +347,7 @@ func workspacesLogoTour(tr *tour) {
 	tr.actIn(o, "{{owner.workspace}}")
 	tr.step("delete the personal workspace: refused", o, "DELETE /api/v1/orgs/{id}", at("id", "{{owner.workspace}}"))
 	tr.step("a member deletes W: admins only", m, "DELETE /api/v1/orgs/{id}", at("id", w))
-	tr.step("a workspace that does not exist: the guard's 403", o, "DELETE /api/v1/orgs/{id}", at("id", "{{phantom}}"))
+	tr.step("a workspace that does not exist: the guard's 404", o, "DELETE /api/v1/orgs/{id}", at("id", "{{phantom}}"))
 	deleted := tr.step("delete W: when, and when it is purged (30 days on)", o, "DELETE /api/v1/orgs/{id}", at("id", w),
 		note("the route is alwaysWritable, so a workspace over its plan may still be deleted (S5e's over-plan pass)"),
 		note("purge_after is a time to come, so the golden writes <time>; the area checks it is 30 days after "+

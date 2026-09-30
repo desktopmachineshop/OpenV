@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -45,6 +46,10 @@ func (h *Handler) DownloadOptions(w http.ResponseWriter, r *http.Request) {
 	}
 	opts, err := h.downloadService.Options(projectID, r.URL.Query().Get("baseline_id"))
 	if err != nil {
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
 		respondInternal(w, r, "failed to read download options", err)
 		return
 	}
@@ -101,6 +106,12 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 	if err != nil {
 		if errors.Is(err, downloads.ErrUnsupportedFormat) || errors.Is(err, exports.ErrUnsupportedFormat) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		// A baseline no row has, a malformed id or another project's among
+		// them, answers as the report and the V&V reads answer it.
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
 			return
 		}
 		respondInternal(w, r, "failed to build download", err)

@@ -100,7 +100,7 @@ func (r *InterviewRepository) FindInterviewByID(id string) (*interviews.Intervie
 	row := r.db.QueryRow(query, id)
 	interview, err := scanInterview(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, interviews.ErrInterviewNotFound
 		}
 		return nil, err
@@ -187,7 +187,7 @@ func (r *InterviewRepository) FindInviteByID(id string) (*interviews.Invite, err
 	row := r.db.QueryRow(query, id)
 	invite, err := scanInvite(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, nil
 		}
 		return nil, err
@@ -206,7 +206,7 @@ func (r *InterviewRepository) FindInviteByTokenHash(tokenHash string) (*intervie
 	row := r.db.QueryRow(query, tokenHash)
 	invite, err := scanInvite(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, nil
 		}
 		return nil, err
@@ -337,7 +337,7 @@ func (r *InterviewRepository) FindSessionByID(id string) (*interviews.Session, e
 	row := r.db.QueryRow(query, id)
 	session, err := scanInterviewSession(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, interviews.ErrSessionNotFound
 		}
 		return nil, err
@@ -359,7 +359,7 @@ func (r *InterviewRepository) FindActiveSessionByInvite(inviteID string) (*inter
 	row := r.db.QueryRow(query, inviteID)
 	session, err := scanInterviewSession(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, nil
 		}
 		return nil, err

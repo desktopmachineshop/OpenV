@@ -24,7 +24,7 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, baseline.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, baseline.ProjectID, members.RoleViewer, missing("baseline not found")) {
 		return
 	}
 

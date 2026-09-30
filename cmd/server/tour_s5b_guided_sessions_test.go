@@ -98,7 +98,7 @@ func guidedSessionsTour(tr *tour) {
 		note("the body is decoded before the project guard, so a malformed body answers 400 whatever it names"))
 	tr.step("start a session with no project_id", o, "POST /api/v1/guided-sessions", jsonBody(`{}`))
 	tr.step("start a session on a project that does not exist", o, "POST /api/v1/guided-sessions",
-		jsonBody(`{"project_id":"{{phantom}}"}`), note("the project guard runs before any lookup: 403, not 404"))
+		jsonBody(`{"project_id":"{{phantom}}"}`), note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("the viewer starts a session", viewer, "POST /api/v1/guided-sessions", jsonBody(`{"project_id":"{{p}}"}`))
 	tr.step("start session S on P: step 0, answers {} and draft_artifact_ids []", o, "POST /api/v1/guided-sessions",
 		jsonBody(`{"project_id":"{{p}}"}`)).capture("s", "/id")

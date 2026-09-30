@@ -80,7 +80,7 @@ func TestImportCrewAuthz(t *testing.T) {
 	}{
 		{"org admin imports workspace-wide", "org-admin", "", 0},
 		{"plain member denied workspace-wide", "org-member", "", http.StatusForbidden},
-		{"non-member denied", "stranger", "", http.StatusForbidden},
+		{"non-member told the workspace is not there", "stranger", "", http.StatusNotFound},
 		{"project editor imports project-pinned", "editor", project, 0},
 		{"project viewer denied project-pinned", "viewer", project, http.StatusForbidden},
 	}

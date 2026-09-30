@@ -123,7 +123,7 @@ func (h *Handler) RevokeShareLink(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "share link not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, link.ProjectID, members.RoleOwner) {
+	if !h.requireProjectRoleFor(w, r, link.ProjectID, members.RoleOwner, missing("share link not found")) {
 		return
 	}
 	if err := h.shareLinkService.Revoke(link.ID); err != nil {

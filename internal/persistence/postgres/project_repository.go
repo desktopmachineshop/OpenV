@@ -41,7 +41,7 @@ func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 	project := &projects.Project{}
 	err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, fmt.Errorf("project not found")
 		}
 		return nil, fmt.Errorf("failed to retrieve project: %w", err)

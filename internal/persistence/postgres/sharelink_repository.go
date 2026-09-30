@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
@@ -52,7 +51,7 @@ func (r *ShareLinkRepository) Create(link *sharelinks.Link, tokenHash string) er
 // Get reads one link by id.
 func (r *ShareLinkRepository) Get(id string) (*sharelinks.Link, error) {
 	l, err := scanShareLink(r.db.QueryRow(`SELECT `+shareLinkColumns+` FROM project_share_links WHERE id = $1`, id))
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return nil, sharelinks.ErrNotFound
 	}
 	return l, err
@@ -80,7 +79,7 @@ func (r *ShareLinkRepository) ListByProject(projectID string) ([]*sharelinks.Lin
 // FindByTokenHash reads the link a token hash names.
 func (r *ShareLinkRepository) FindByTokenHash(hash string) (*sharelinks.Link, error) {
 	l, err := scanShareLink(r.db.QueryRow(`SELECT `+shareLinkColumns+` FROM project_share_links WHERE token_hash = $1`, hash))
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return nil, sharelinks.ErrNotFound
 	}
 	return l, err

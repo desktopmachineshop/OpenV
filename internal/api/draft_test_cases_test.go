@@ -66,7 +66,7 @@ func TestDraftTestCasesAuthz(t *testing.T) {
 		{"editor launches", "editor", 0, true},
 		{"org admin launches", "org-admin", 0, true},
 		{"viewer is denied", "viewer", http.StatusForbidden, false},
-		{"non-member is denied", "stranger", http.StatusForbidden, false},
+		{"non-member is told the project is not there", "stranger", http.StatusNotFound, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

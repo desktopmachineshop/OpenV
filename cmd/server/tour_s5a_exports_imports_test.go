@@ -176,7 +176,7 @@ func exportsImportsTour(tr *tour) {
 	tr.step("export as PDF, which only the download and the report render", o, "GET /api/v1/projects/{id}/export",
 		at("id", "{{p}}"), query("format=pdf"))
 	tr.step("export a project that does not exist", o, "GET /api/v1/projects/{id}/export", at("id", "{{phantom}}"),
-		note("the project guard runs before any lookup, so an id no project has answers 403"))
+		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("export with no session", tr.anon, "GET /api/v1/projects/{id}/export", at("id", "{{p}}"))
 
 	// The download options.
@@ -192,9 +192,10 @@ func exportsImportsTour(tr *tour) {
 		"GET /api/v1/projects/{id}/download/json", at("id", "{{p}}"))
 	tr.step("download P's baseline as JSON: before the refines link", o, "GET /api/v1/projects/{id}/download/json",
 		at("id", "{{p}}"), query("baseline_id={{baseline}}"))
-	tr.step("download from a baseline that does not exist: 500", o, "GET /api/v1/projects/{id}/download/json",
+	tr.step("download from a baseline that does not exist: 404", o, "GET /api/v1/projects/{id}/download/json",
 		at("id", "{{p}}"), query("baseline_id={{phantom}}"),
-		note("the report route answers the same baseline 404 (the next step): the download maps every load error to 500"))
+		note("as the report route answers the same baseline (the next step); fixed under R7, the download mapped "+
+			"every load error to 500"))
 	tr.step("the report of a baseline that does not exist: 404", o, "GET /api/v1/projects/{id}/report",
 		at("id", "{{p}}"), query("baseline_id={{phantom}}"))
 	tr.step("download requirements and test cases, no headings: a link survives only with both ends", o,

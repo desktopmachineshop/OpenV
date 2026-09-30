@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"strings"
 	"time"
 
@@ -161,8 +160,8 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("artifact not found")
+		if noRow(err) {
+			return nil, artifacts.ErrNotFound
 		}
 		return nil, err
 	}

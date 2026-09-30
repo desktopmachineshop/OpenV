@@ -49,8 +49,8 @@ import (
 // read while no notification is pending); who may call these routes (a
 // worker key on each of the 13 answers the handler's 401, a request with no
 // session the middleware's); the actions (read by id, scoped to the caller,
-// so another account's id and a phantom update nothing, and a malformed id is
-// the database's 500; flag and unflag, 404 for another account's id; read-all;
+// so another account's id, a phantom and a malformed id update nothing; flag
+// and unflag, 404 for another account's id and a malformed one; read-all;
 // clear, which archives into the cleared view, keeps a flag, and marks the
 // rows read; delete what is cleared); the preferences (their defaults, a
 // partial update that changes only the keys sent); and web push: the server's
@@ -319,7 +319,7 @@ func notificationsPushTour(tr *tour) {
 	tr.step("mark read with an empty list", m, "POST /api/v1/notifications/read", jsonBody(`{"ids":[]}`))
 	tr.step("mark read with no list", m, "POST /api/v1/notifications/read", jsonBody(`{}`))
 	tr.step("mark read with a malformed body", m, "POST /api/v1/notifications/read", jsonBody(`{"ids":`))
-	tr.step("mark read with an id that is not a UUID: the database refuses the cast, a 500", m,
+	tr.step("mark read with an id that is not a UUID: none marked, as for an id no notification has", m,
 		"POST /api/v1/notifications/read", jsonBody(`{"ids":["not-a-notification"]}`))
 	tr.step("unread only: the four left", m, "GET /api/v1/notifications", query("unread=true"))
 
@@ -332,7 +332,7 @@ func notificationsPushTour(tr *tour) {
 		jsonBody(`{"flagged":"yes"}`))
 	tr.step("flag a notification that does not exist", m, "PUT /api/v1/notifications/{id}/flag",
 		at("id", "{{phantom}}"), jsonBody(`{"flagged":true}`))
-	tr.step("flag an id that is not a UUID: the database refuses the cast, a 500", m,
+	tr.step("flag an id that is not a UUID: 404, as an id no notification has", m,
 		"PUT /api/v1/notifications/{id}/flag", at("id", "not-a-notification"), jsonBody(`{"flagged":true}`))
 	tr.step("the owner flags the member's notification: the same 404 as a missing one", o,
 		"PUT /api/v1/notifications/{id}/flag", at("id", "{{note.mention}}"), jsonBody(`{"flagged":true}`))

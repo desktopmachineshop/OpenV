@@ -129,11 +129,11 @@ func TestListProjectInterviewSessions(t *testing.T) {
 		}
 	})
 
-	t.Run("non-member gets 403", func(t *testing.T) {
+	t.Run("non-member gets 404", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{sessions: sessions}
 		w := getProjectSessions(newProjectSessionsHandler(fake), "stranger", "")
-		if w.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want 403 (body %q)", w.Code, w.Body.String())
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 		}
 		if fake.calls != 0 {
 			t.Fatalf("service called %d times on a denied request, want 0", fake.calls)

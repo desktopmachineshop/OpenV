@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,25 +28,28 @@ import (
 // views a project approved a proposal there, or created an artifact, with
 // the key their own session is refused (OpenV REQ-16, REQ-79, REQ-21 with
 // TC-7). A personal key is its holder acting: an editor's key and a
-// workspace admin's key pass, a viewer's and a roleless member's are
-// refused with the project's 403 and reach nothing. A workspace runner key
-// has no holder and keeps REQ-42's workspace-wide editor rights.
+// workspace admin's key pass, a viewer's is refused with the project's 403,
+// and a roleless member's is answered as its holder's session is, as for
+// what no row has (I3: the proposal's or the project's 404), and neither
+// reaches anything. A workspace runner key has no holder and keeps REQ-42's
+// workspace-wide editor rights.
 func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 	const (
 		org     = "o1" // copyHandler's p1 is in o1
 		project = "p1"
-		denied  = `{"error":"you do not have access to this project"}`
+		denied  = `403 {"error":"you do not have access to this project"}`
 	)
 	keys := []struct {
 		name     string
 		holder   string // "" for a workspace runner key
 		wantPass bool
+		roleless bool // the holder has no role in the project: its 404
 	}{
-		{"a viewer's personal key", "val", false},
-		{"a roleless member's personal key", "mo", false},
-		{"an editor's personal key", "eve", true},
-		{"a workspace admin's personal key", "ada", true},
-		{"a workspace runner key", "", true},
+		{"a viewer's personal key", "val", false, false},
+		{"a roleless member's personal key", "mo", false, true},
+		{"an editor's personal key", "eve", true, false},
+		{"a workspace admin's personal key", "ada", true, false},
+		{"a workspace runner key", "", true, false},
 	}
 	roles := func() (*fakeOrgService, *fakeMemberService) {
 		return &fakeOrgService{roles: map[string]map[string]string{
@@ -61,7 +65,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 		}
 		return r.WithContext(ctx)
 	}
-	check := func(t *testing.T, w *httptest.ResponseRecorder, wantPass bool, okCode int, reached int) {
+	check := func(t *testing.T, w *httptest.ResponseRecorder, wantPass bool, okCode int, reached int, refusal string) {
 		t.Helper()
 		if wantPass {
 			if w.Code != okCode || reached != 1 {
@@ -69,8 +73,8 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 			}
 			return
 		}
-		if w.Code != http.StatusForbidden || strings.TrimSpace(w.Body.String()) != denied {
-			t.Fatalf("status = %d, body %q: want 403 %s", w.Code, w.Body.String(), denied)
+		if got := strconv.Itoa(w.Code) + " " + strings.TrimSpace(w.Body.String()); got != refusal {
+			t.Fatalf("answer = %s: want %s", got, refusal)
 		}
 		if reached != 0 {
 			t.Fatalf("a refused key reached the service %d times, want none", reached)
@@ -92,7 +96,11 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 				r = mux.SetURLVars(keyCtx(r, key.holder), map[string]string{"id": "pr-1"})
 				w := httptest.NewRecorder()
 				review(h, w, r)
-				check(t, w, key.wantPass, http.StatusOK, len(svc.approved)+len(svc.rejected))
+				refusal := denied
+				if key.roleless {
+					refusal = `404 {"error":"proposal not found"}`
+				}
+				check(t, w, key.wantPass, http.StatusOK, len(svc.approved)+len(svc.rejected), refusal)
 			})
 		}
 		t.Run("create an artifact with "+key.name, func(t *testing.T) {
@@ -102,7 +110,11 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 				strings.NewReader(`{"project_id":"p1","type":"requirement","title":"New","body":"x"}`))
 			w := httptest.NewRecorder()
 			h.CreateArtifact(w, keyCtx(r, key.holder))
-			check(t, w, key.wantPass, http.StatusCreated, len(h.artifactService.(*copyArtifactFake).created))
+			refusal := denied
+			if key.roleless {
+				refusal = `404 {"error":"project not found"}`
+			}
+			check(t, w, key.wantPass, http.StatusCreated, len(h.artifactService.(*copyArtifactFake).created), refusal)
 		})
 	}
 }
@@ -158,11 +170,11 @@ func personalKeyReadsHandler() (*Handler, *fakeRepoConnService) {
 // key their own session is refused (OpenV REQ-16, REQ-42). A personal key is
 // its holder acting, reads included: a viewer's key reads the project it
 // views, a workspace admin's every project, and a member with no role in a
-// project gets the project's 403 there and does not see it in the list. A
-// workspace runner key has no holder and keeps REQ-42's workspace-wide
-// rights.
+// project gets there what their session gets, the 404 of a project no row
+// has (I3), and does not see it in the list. A workspace runner key has no
+// holder and keeps REQ-42's workspace-wide rights.
 func TestPersonalRunnerKeyReadsOnlyWhereItsHolderCan(t *testing.T) {
-	const denied = `{"error":"you do not have access to this project"}`
+	const denied = `{"error":"project not found"}`
 	keyCtx := func(r *http.Request, holder string) *http.Request {
 		ctx := context.WithValue(r.Context(), ctxWorkerOrg, "o1")
 		if holder != "" {
@@ -189,8 +201,8 @@ func TestPersonalRunnerKeyReadsOnlyWhereItsHolderCan(t *testing.T) {
 			w := httptest.NewRecorder()
 			h.ListRepoConnections(w, r)
 			if key.reads == "" {
-				if w.Code != http.StatusForbidden || strings.TrimSpace(w.Body.String()) != denied {
-					t.Fatalf("status = %d, body %q: want 403 %s, as the holder's own session gets", w.Code, w.Body.String(), denied)
+				if w.Code != http.StatusNotFound || strings.TrimSpace(w.Body.String()) != denied {
+					t.Fatalf("status = %d, body %q: want 404 %s, as the holder's own session gets", w.Code, w.Body.String(), denied)
 				}
 				if len(conns.reads) != 0 {
 					t.Fatalf("a refused key read %v, want nothing", conns.reads)
@@ -242,9 +254,9 @@ func TestRunTokenReadsItsProjectsRepoConnections(t *testing.T) {
 			&agentruns.Run{ID: "run-1", OrgID: "o1", ProjectID: &p1, ClaimedBy: &val}, "p1 as val", "/home/val/firmware", ""},
 		{"a run in p1 a workspace key holds: no member, so no path",
 			&agentruns.Run{ID: "run-2", OrgID: "o1", ProjectID: &p1}, "p1", "", ""},
-		{"a run in p2: another project's connections are refused",
+		{"a run in p2: another project's connections answer as a project no row has",
 			&agentruns.Run{ID: "run-3", OrgID: "o1", ProjectID: &p2, ClaimedBy: &val}, "", "",
-			`{"error":"agent run is not scoped to this project"}`},
+			`{"error":"project not found"}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -254,8 +266,8 @@ func TestRunTokenReadsItsProjectsRepoConnections(t *testing.T) {
 			w := httptest.NewRecorder()
 			h.ListRepoConnections(w, r)
 			if tc.read == "" {
-				if w.Code != http.StatusForbidden || strings.TrimSpace(w.Body.String()) != tc.refusal || len(conns.reads) != 0 {
-					t.Fatalf("status = %d, body %q, reads %v: want 403 %s and nothing read", w.Code, w.Body.String(), conns.reads, tc.refusal)
+				if w.Code != http.StatusNotFound || strings.TrimSpace(w.Body.String()) != tc.refusal || len(conns.reads) != 0 {
+					t.Fatalf("status = %d, body %q, reads %v: want 404 %s and nothing read", w.Code, w.Body.String(), conns.reads, tc.refusal)
 				}
 				return
 			}

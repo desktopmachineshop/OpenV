@@ -259,7 +259,7 @@ func sessionsAuthTour(tr *tour, google *tourGoogle) {
 		jsonBody(`{"org_id":"{{phantom}}"}`))
 	tr.step("choose a workspace the member is not in: the same answer", m, "PUT /api/v1/me/default-workspace",
 		jsonBody(`{"org_id":"{{owner.workspace}}"}`))
-	tr.step("choose something that is not an id: the lookup's error is a 500 (Q19)", m,
+	tr.step("choose something that is not an id: 404, as a workspace no row has", m,
 		"PUT /api/v1/me/default-workspace", jsonBody(`{"org_id":"not-a-workspace"}`))
 	tr.step("choose with a malformed body", m, "PUT /api/v1/me/default-workspace", jsonBody(`{`))
 	tr.step("choose W again", m, "PUT /api/v1/me/default-workspace", jsonBody(`{"org_id":" {{w}} "}`),

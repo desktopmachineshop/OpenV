@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/openv/requirements-platform/internal/domain/evidence"
@@ -90,7 +89,7 @@ func (r *EvidenceRepository) Create(b *evidence.Bundle) error {
 // FindByID returns one bundle, or (nil, nil) when no row matches.
 func (r *EvidenceRepository) FindByID(id string) (*evidence.Bundle, error) {
 	b, err := scanBundle(r.db.QueryRow(`SELECT `+bundleColumns+` FROM evidence_bundles WHERE id = $1`, id))
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -215,7 +214,7 @@ func scanFile(row interface{ Scan(...interface{}) error }) (*evidence.File, erro
 // FindFileByID returns one file row, or (nil, nil) when no row matches.
 func (r *EvidenceRepository) FindFileByID(id string) (*evidence.File, error) {
 	f, err := scanFile(r.db.QueryRow(`SELECT `+fileColumns+` FROM evidence_files WHERE id = $1`, id))
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -247,7 +246,7 @@ func (r *EvidenceRepository) ListFiles(bundleID string) ([]*evidence.File, error
 // the bytes. (nil, nil) when no row matched.
 func (r *EvidenceRepository) DeleteFile(id string) (*evidence.File, error) {
 	f, err := scanFile(r.db.QueryRow(`DELETE FROM evidence_files WHERE id = $1 RETURNING `+fileColumns, id))
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -280,7 +279,7 @@ func (r *EvidenceRepository) RemoveCitation(bundleID, testResultID string) error
 	_, err := r.db.Exec(`
 		DELETE FROM evidence_citations WHERE bundle_id = $1 AND test_result_id = $2
 	`, bundleID, testResultID)
-	return err
+	return matchedNone(err)
 }
 
 // citationSelect joins through the result to the test case and the run, so a
@@ -380,7 +379,7 @@ func (r *EvidenceRepository) ProjectForResult(testResultID string) (string, erro
 		JOIN test_runs tr ON tr.id = res.run_id
 		WHERE res.id = $1
 	`, testResultID).Scan(&projectID)
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return "", nil
 	}
 	return projectID, err
@@ -390,7 +389,7 @@ func (r *EvidenceRepository) ProjectForResult(testResultID string) (string, erro
 func (r *EvidenceRepository) ProjectOrg(projectID string) (string, error) {
 	var orgID sql.NullString
 	err := r.db.QueryRow(`SELECT org_id FROM projects WHERE id = $1`, projectID).Scan(&orgID)
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return "", nil
 	}
 	if err != nil {

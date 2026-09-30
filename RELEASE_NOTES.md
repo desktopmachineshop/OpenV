@@ -450,7 +450,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   through the API, and list them all, even projects that member could not
   open in the app. It now reads and lists only the projects its owner can
   open, as a workspace admin or with a role in the project, and anything
-  else is refused (`403`), as it is for the member. Workspace runner keys are
+  else is refused as it is for the member. Workspace runner keys are
   unchanged.
 
 - **A personal runner takes only the work its owner could see.** A member's
@@ -487,6 +487,67 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   run launched outside any project: the cancel was refused as a change to
   the workspace, although the person who launched the run could cancel it.
   Everyone who may cancel a run can now cancel it there.
+
+- **Something you cannot reach answers exactly as something that does not
+  exist.** Through the API, a project, a workspace, or anything in them
+  that your account cannot open answered `403` saying you had no access,
+  and some of them told another workspace's runner key or agent that it
+  needed to sign in, while one that did not exist answered `404`, so the
+  answer told anyone who guessed an id that it existed. Both now get the
+  same `404` and the same message: *project not found*, *workspace not
+  found*, or the item's own, such as *baseline not found*, *team not found*
+  or *agent run not found*. This holds for people outside the workspace,
+  for another workspace's runner keys and agents, for an agent working in
+  another project, and for a workspace member with no role in the project.
+  A crew is launched only by someone who may see it: a member of its
+  workspace, that workspace's runner keys and agents, or someone who can
+  open the project it is pinned to; an agent sees a crew pinned to a
+  project only if it works in that project. An editor of a project who is
+  not a member of its workspace, launching one of that workspace's crews
+  there, is now told *team not found*. Something a request names in a
+  project or workspace you cannot open is refused as if it did not exist
+  too: a link from or to an artifact there answers `400` *source artifact
+  not found* or *target artifact not found*, a crew pinned to such a
+  project `400` *project not found*, a parent project `400` *parent project
+  not found*, an interview's persona `400` *persona artifact not found*,
+  and giving a people-team of such a workspace access to your project `404`
+  *team not found*. A project you can open but may not change still
+  answers `403`. A deleted workspace now
+  answers *workspace not found* to its own members too. Its admins can
+  still restore it, a member who is not its admin is still told that only
+  admins can, and restoring a workspace you are not a member of answers
+  *workspace not found*. In the app, a link to a project you cannot open
+  still takes you back to your projects.
+
+- **A platform admin's event and run lists for a project show that
+  project's.** Through the API, `GET /api/v1/events?project_id=` and
+  `GET /api/v1/agent-runs?project_id=` answered a platform admin an empty
+  list unless the admin's own active workspace was the project's. They now
+  list that project's events and runs, as every other read of it does, and
+  so they do for a member of the project working in another workspace.
+
+- **Listing proposals without naming a project says what is missing.**
+  Through the API, `GET /api/v1/proposals` with no `project_id` refused a
+  workspace member who is not its admin with `403`, as if forbidden. It now
+  answers `400` *project_id is required*. Workspace admins still get the
+  proposals of their whole workspace.
+
+- **An id that is not an id is answered as one that does not exist.**
+  Through the API, a request that named something by a malformed id, one
+  that is not a UUID, failed with a server error (`500`) in many places:
+  reading or managing a workspace or a project, choosing your default
+  workspace, marking notifications read or flagging one, a platform admin's
+  password reset link or admin standing, a template, evidence, a shared
+  product, the agent and run filters of the run and proposal lists, and the
+  runner pool's nodes; an id holding a byte that is not text, such as `%FF`
+  or `%00`, failed so on every project and workspace. Each now answers as
+  for an id nobody has: `404` with the usual *not found*, an empty list, or
+  nothing changed. Updating or restoring an artifact, recording a test
+  result for a test case, and downloading a project from a baseline failed
+  with a server error for an id nobody has, and so for a malformed one;
+  they now answer `404` *artifact not found* or *baseline not found*.
+  Giving a project role to an account that does not exist now answers `404`
+  *user not found*, where it failed with a server error.
 
 ## 0.15.0 — 2026-09-22
 

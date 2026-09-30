@@ -52,13 +52,16 @@ import (
 // the work item each launch put on P's board.
 //
 // What the golden pins, per route and identity (I3), among others:
-//   - the outsider: 403 "you do not have access to this project" on every
-//     project route and every child resource of P, 403 "you are not a member of
-//     this workspace" on W's, its automation's and its crew's; 404 on
-//     /agents/{slug} and /provider-logins/{id}, which are looked up in the
-//     workspace the caller acts in; and the decode's 400 on the writes that
-//     decode first (PUT /artifacts/{id}, /links/{id}, the status and the
-//     restore), as for a phantom;
+//   - the outsider: every real id of W and P answered exactly as part (1)'s
+//     phantom, the same 404 and the same message (existence hiding, I3; no
+//     database's TestTourExistenceHiding compares the two goldens): 404
+//     "project not found" on every project route, "workspace not found" on
+//     W's, and each child resource's own not-found ("baseline not found",
+//     "team not found"...); 404 on /agents/{slug} and /provider-logins/{id},
+//     which are looked up in the workspace the caller acts in; and the
+//     decode's 400 on the writes that decode first (PUT /artifacts/{id},
+//     /links/{id}, the status and the restore), as for a phantom; only a
+//     public link's token and an account's picture open for it;
 //   - the worker key: every read of P and its children, as a workspace-wide
 //     editor (REQ-42), and, as the editor is, 403 "you do not have access to
 //     this project" on P's owner routes (its share links, and in "body {" its
@@ -67,7 +70,7 @@ import (
 //     /provider-logins/{id}/full;
 //   - the run token: P's reads as an editor of P, and 403 "agent runs act at
 //     most as a project editor" on P's owner routes, where a run outside P is
-//     told it is not scoped to the project; 403 "not your delegated run" on
+//     told the project is not there (404); 403 "not your delegated run" on
 //     delegate/{id} with its own id, where every other column needs a run
 //     token;
 //   - viewer, editor, owner: the workspace-admin reads (billing, hosted runner,
@@ -80,16 +83,17 @@ import (
 //     write, including a workspace-wide crew's (so a project guard's role, a
 //     requireProjectRole editor lowered to viewer on PUT /projects/{id}, say,
 //     shows here, which part (1) cannot show on a phantom);
-//   - the platform admin passes every guard; its lists filtered by the
-//     workspace it acts in (/events and /agent-runs of P) are empty;
+//   - the platform admin passes every guard, and a list a project scopes
+//     (/events and /agent-runs of P) holds P's rows, filtered by P's
+//     workspace rather than the one the admin acts in (fixed under R7);
 //   - the lists with no query: P's viewer and editor list P alone, the owner
 //     (W's admin) P and Q, the worker key both, having no user to filter by,
-//     and the run token P alone, the one project it acts in; the plain members read P's events alone (12) and
-//     none of the runs, which they did not launch, where the owner reads W's
-//     15 events and 2 runs; search finds R1 in P for them, in P and Q for the
-//     owner, nothing for the outsider and the admin in their own workspaces;
-//     automations, crews, agents and members are the workspace's, whoever
-//     reads them;
+//     and the run token P alone, the one project it acts in; the plain
+//     members read P's events alone (12) and none of the runs, which they did
+//     not launch, where the owner reads W's 15 events and 2 runs; search
+//     finds R1 in P for them, in P and Q for the owner, nothing for the
+//     outsider and the admin in their own workspaces; automations, crews,
+//     agents and members are the workspace's, whoever reads them;
 //   - the proposal-mode run: refused the draft of test cases ("proposal-mode
 //     agent runs cannot draft test cases"), where a direct run reaches the
 //     decode, and every other route that sets a run going ("proposal-mode
@@ -114,10 +118,7 @@ import (
 //   - GET /users/{id}/avatar serves an account's picture to any signed-in
 //     account, the outsider included, which shares no workspace with it
 //     (GetUserAvatar, avatar_handlers.go: by its comment, "any signed-in
-//     member"; S5c pinned it too);
-//   - the platform admin passes P's guard on GET /events?project_id= and
-//     /agent-runs?project_id=, then reads an empty list, filtered by the
-//     workspace it acts in, where every other route answers it P's rows.
+//     member"; S5c pinned it too).
 func TestTourS5eRealIdReads(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5e",

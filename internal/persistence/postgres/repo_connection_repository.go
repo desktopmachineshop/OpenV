@@ -59,7 +59,7 @@ func (r *RepoConnectionRepository) FindByID(id string) (*repoconns.RepoConnectio
 		&c.ID, &c.ProjectID, &c.Name, &c.RemoteURL, &c.DefaultBranch,
 		&c.CredentialStrategy, &c.CreatedAt, &c.UpdatedAt,
 	)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {

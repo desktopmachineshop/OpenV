@@ -365,11 +365,12 @@ func TestALaunchWithNoProjectAsksTheWorkspace(t *testing.T) {
 	noProject := launchRoutes[1]
 	worker := func(ctx context.Context) context.Context { return context.WithValue(ctx, ctxWorkerOrg, "org-1") }
 
+	// A workspace the person is no member of answers as one no row has (I3).
 	t.Run("a person who is not a member of the workspace is refused", func(t *testing.T) {
 		h, runs, _ := launchFixture()
 		w := launchAs(noProject, h, asPerson("stranger", "org-1"))
-		if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "you are not a member of this workspace") {
-			t.Fatalf("status = %d, body %q: want 403 not a member", w.Code, w.Body.String())
+		if w.Code != http.StatusNotFound || !strings.Contains(w.Body.String(), "workspace not found") {
+			t.Fatalf("status = %d, body %q: want 404 workspace not found", w.Code, w.Body.String())
 		}
 		if len(runs.launchReqs) != 0 {
 			t.Fatalf("a stranger launched %d runs", len(runs.launchReqs))

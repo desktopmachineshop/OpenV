@@ -86,7 +86,7 @@ func (r *UserRepository) SetPasswordHash(userID, hash string, at time.Time) erro
 func (r *UserRepository) FindUserByEmail(email string) (*users.User, error) {
 	row := r.db.QueryRow(`SELECT `+userColumns+` FROM users WHERE LOWER(email) = LOWER($1)`, email)
 	u, err := scanUser(row)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return u, err
@@ -96,7 +96,7 @@ func (r *UserRepository) FindUserByEmail(email string) (*users.User, error) {
 func (r *UserRepository) FindUserByID(id string) (*users.User, error) {
 	row := r.db.QueryRow(`SELECT `+userColumns+` FROM users WHERE id = $1`, id)
 	u, err := scanUser(row)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return u, err
@@ -203,7 +203,7 @@ func (r *UserRepository) ConsumeEmailVerification(tokenHash string, now time.Tim
 		WHERE token_hash = $1 AND NOT used AND expires_at > $2
 		RETURNING user_id, email
 	`, tokenHash, now).Scan(&userID, &email)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -260,7 +260,7 @@ func (r *UserRepository) ConsumePasswordReset(tokenHash string, now time.Time) (
 		WHERE token_hash = $1 AND NOT used AND expires_at > $2
 		RETURNING id, user_id, delivery, issued_by, expires_at, created_at
 	`, tokenHash, now).Scan(&v.ID, &v.UserID, &v.Delivery, &issuedBy, &v.ExpiresAt, &v.CreatedAt)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -303,7 +303,7 @@ func (r *UserRepository) FindSessionByTokenHash(hash string) (*users.Session, er
 		SELECT id, user_id, token_hash, COALESCE(active_org_id::text, ''), expires_at, created_at, last_seen_at
 		FROM sessions WHERE token_hash = $1
 	`, hash).Scan(&s.ID, &s.UserID, &s.TokenHash, &s.ActiveOrgID, &s.ExpiresAt, &s.CreatedAt, &s.LastSeenAt)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {

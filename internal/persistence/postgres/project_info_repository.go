@@ -34,7 +34,7 @@ func (r *ProjectInfoRepository) FindByID(id string) (*exports.ProjectInfo, error
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, errors.New("project not found")
 		}
 		return nil, err
