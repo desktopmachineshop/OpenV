@@ -522,7 +522,7 @@
     },
     {
       "n": 10,
-      "title": "refresh X from a checkout the provider does not know: its 404 is answered as the provider not answering",
+      "title": "refresh X from a checkout the provider does not know: its 404 is answered 404, with no Retry-After, since the provider answered",
       "actor": "owner",
       "acting_in": "<x>",
       "route": "POST /api/v1/orgs/{id}/billing/refresh",
@@ -534,21 +534,18 @@
         ],
         "body": "{\"session_id\":\"cs_tour_missing\"}"
       },
-      "status": 503,
+      "status": 404,
       "content_type": "application/json",
-      "headers": [
-        "Retry-After: 30"
-      ],
+      "headers": [],
       "security_headers": "standard",
-      "content_length": 108,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"the billing provider did not answer; the workspace was left as it was\",\"code\":\"billing_upstream\"}"
+        "{\"error\":\"checkout not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "the billing provider did not answer; the workspace was left as it was",
-        "code": "billing_upstream"
+        "error": "checkout not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [],

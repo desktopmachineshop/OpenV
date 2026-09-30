@@ -31,6 +31,8 @@ type fakeLoginService struct {
 	// must not fail the registration they hang off.
 	verified  []string
 	verifyErr error
+	// registerErr, when set, is Register's refusal, with nothing created.
+	registerErr error
 }
 
 // MarkEmailVerified mirrors the real service: the account's own address is
@@ -73,6 +75,9 @@ func (f *fakeLoginService) Login(email, password string) (*users.User, string, e
 }
 
 func (f *fakeLoginService) Register(email, password, name string) (*users.User, error) {
+	if f.registerErr != nil {
+		return nil, f.registerErr
+	}
 	f.registered++
 	f.lastRegistered = &users.User{ID: "u2", Email: strings.ToLower(strings.TrimSpace(email))}
 	return f.lastRegistered, nil

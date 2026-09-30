@@ -1455,6 +1455,38 @@ func TestRegisterReportsWhatTheInviteTokenDid(t *testing.T) {
 	})
 }
 
+// Registration refuses a password under the minimum with the code a
+// password change and a reset give that refusal, weak_password, in the
+// domain's words (#379's bug 20, OpenV REQ-18), where it gave it no code.
+// Its other refusals keep theirs, none, and create nothing.
+func TestRegisterRefusesAShortPasswordWithItsCode(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		code string
+	}{
+		{"a password under the minimum", users.ErrWeakPassword, ErrCodeWeakPassword},
+		{"an address already registered", users.ErrEmailTaken, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, svc, _ := newRegistrationHandler("")
+			svc.registerErr = tc.err
+			rec := httptest.NewRecorder()
+			h.Register(rec, registerReq("new@example.com"))
+			var body errorBody
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatalf("decode %q: %v", rec.Body.String(), err)
+			}
+			if rec.Code != http.StatusBadRequest || body.Error != tc.err.Error() || body.Code != tc.code {
+				t.Errorf("status %d, body %+v; want 400 %q with code %q", rec.Code, body, tc.err.Error(), tc.code)
+			}
+			if svc.registered != 0 || len(rec.Result().Cookies()) != 0 {
+				t.Errorf("a refused registration created an account (%d) or a session (%v)", svc.registered, rec.Result().Cookies())
+			}
+		})
+	}
+}
+
 // The revoke race, end to end. The token is resolved ONCE — opening the door
 // and naming the membership — and the membership is claimed afterwards. An
 // admin who revokes the invitation in that window leaves an account that was

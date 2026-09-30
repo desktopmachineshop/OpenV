@@ -230,6 +230,33 @@ func TestBindCheckoutSessionAppliesAndRecordsTheTrial(t *testing.T) {
 	}
 }
 
+// A checkout the provider answers 404 for is ErrCheckoutNotFound, which the
+// API answers 404 (#379's bug 19): the provider answered, so it is no
+// outage. Any other failure of the read, and a 404 for the subscription a
+// completed checkout names, stay the provider's error, which the API answers
+// 503. None of them changes the workspace.
+func TestBindCheckoutSessionTellsAnUnknownCheckoutFromAnOutage(t *testing.T) {
+	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle, Billing: orgs.Billing{CustomerRef: "cus_1", Currency: "gbp"}}}}
+	s, p, _ := newPurchaseService(t, o)
+	p.sessions["cs_lost"] = &CheckoutSession{ID: "cs_lost", ClientReferenceID: "o1", SubscriptionID: "sub_lost", Status: "complete"}
+	before := o.orgs["o1"].Billing
+
+	if _, err := s.BindCheckoutSession(context.Background(), "o1", "cs_unknown"); !errors.Is(err, ErrCheckoutNotFound) {
+		t.Errorf("a checkout the provider does not have: %v, want ErrCheckoutNotFound", err)
+	}
+	if _, err := s.BindCheckoutSession(context.Background(), "o1", "cs_lost"); err == nil ||
+		errors.Is(err, ErrCheckoutNotFound) || !errors.Is(err, ErrNotFound) {
+		t.Errorf("a subscription the provider does not have: %v, want the provider's not-found", err)
+	}
+	p.sessionErr = errors.New("timeout")
+	if _, err := s.BindCheckoutSession(context.Background(), "o1", "cs_unknown"); err == nil || errors.Is(err, ErrCheckoutNotFound) {
+		t.Errorf("a read the provider failed: %v, want the provider's error", err)
+	}
+	if o.orgs["o1"].Billing != before {
+		t.Fatalf("a refused bind changed the workspace: %+v", o.orgs["o1"].Billing)
+	}
+}
+
 func TestASecondCompletedCheckoutLosesToTheHeldSubscription(t *testing.T) {
 	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanBusiness,
 		Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1", CustomerRef: "cus_1"}}}}

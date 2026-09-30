@@ -549,6 +549,35 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Giving a project role to an account that does not exist now answers `404`
   *user not found*, where it failed with a server error.
 
+- **A profile picture is shown only to people who share a workspace with its
+  owner.** Anyone signed in could fetch any account's uploaded profile
+  picture by the account's id, including someone who shares no workspace
+  with it. A picture is now served to the account itself, to members of the
+  workspaces it belongs to, and to platform admins. Anyone else is answered
+  `404` *user has no uploaded picture*, exactly as for an account with no
+  picture or no account at all, so the answer no longer tells them the
+  account exists. Where OpenV lists someone whose picture you may not see,
+  such as a project member from outside your workspace, it shows their
+  initial in its place.
+
+- **Returning from a checkout the billing provider has no record of says
+  so.** Through the API, `POST /api/v1/orgs/{id}/billing/refresh` with a
+  `session_id` the billing provider does not know answered `503` *the
+  billing provider did not answer*, with a `Retry-After`, as if the provider
+  were down and trying again could help. It now answers `404` *checkout not
+  found*, with no `Retry-After`, and still leaves the workspace as it was.
+  When the provider really does not answer, the refresh still answers `503`
+  with a `Retry-After`, as before.
+
+- **Signing up with a password that is too short gives the same error code
+  as changing or resetting one.** Through the API,
+  `POST /api/v1/auth/register` refused a password under 8 characters with
+  *password must be at least 8 characters* but no error code, where
+  changing or resetting a password gives that refusal the code
+  `weak_password`. Signing up now gives it the same code and the same
+  message. Signing in is unchanged: a wrong password, however short, is
+  refused with one message that does not say whether the account exists.
+
 - **A closed test run no longer takes new results, and a run takes results
   only for its own project's test cases.** A result recorded in a test run
   that had been completed or aborted was accepted, so a closed run's record

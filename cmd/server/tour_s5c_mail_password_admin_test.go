@@ -54,8 +54,9 @@ import (
 // invitation mailed within the hour handed back without a second mail, and
 // an unverified account's address invited rather than added); the profile
 // picture (each raster type replacing the last, the file served as
-// stored to any signed-in account, the refusals, an image of a type other
-// than the one declared among them, and removal); and last the
+// stored, to an account that shares no workspace with its owner the 404 of
+// an account with no picture, the refusals, an image of a type other than
+// the one declared among them, and removal); and last the
 // authIPLimiter bucket that a reset request spends only when the server has
 // a mailer, drained through reset requests and refused on sign-in,
 // confirmation and verification, and drained through sign-ins and refused
@@ -448,11 +449,11 @@ func mailPasswordAdminTour(tr *tour) {
 	upload("upload a WebP", o, mailPasswordAdminPicture("me.webp", "image/webp", mailPasswordAdminWebP))
 	avatar("the WebP", o, "{{owner}}")
 	avatar("the WebP with a Range header: ignored, the whole file", o, "{{owner}}", withHeader("Range", "bytes=0-9"))
-	avatar("the owner's picture read by an account that shares no workspace with it: any signed-in account may", v,
-		"{{owner}}")
+	avatar("the owner's picture read by an account that shares no workspace with it: the 404 of an account with no "+
+		"picture, since only the owner, W's members and a platform admin may know of it", v, "{{owner}}")
 	avatar("the picture with a worker key as the bearer: no account, the handler's 401", worker, "{{owner}}")
 	avatar("the picture with no session: the middleware's 401", anon, "{{owner}}")
-	avatar("the picture of an account that uploaded none", o, "{{admin}}")
+	avatar("the picture of an account that uploaded none", o, "{{muted}}")
 	avatar("the picture of an account that does not exist", o, "{{phantom}}")
 	avatar("the picture of something that is not an id: the same 404", o, "not-an-id")
 	upload("upload an SVG: not a raster type", o, mailPasswordAdminPicture("me.svg", "image/svg+xml", tourSVG))
