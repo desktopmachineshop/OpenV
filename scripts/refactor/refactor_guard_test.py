@@ -236,7 +236,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14e"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -329,6 +329,25 @@ class DataTest(unittest.TestCase):
         for path in ("cmd/newcmd/sub/cli_test.go", "frontend/env_parse_test.go", "internal/archtest/env_parse_test.go"):
             with self.subTest(path=path):
                 self.assertNotEqual(rg.guard_code_step(path), "S8")
+
+    def test_s14e_row_covers_splittools(self):
+        # splittools's sources and tests are guard code of S14e's row, the
+        # pattern matches tracked files, and a Go file added beside them is
+        # covered with no edit to the row. M11a's spec is not guard code, so
+        # the class B commit that regenerates M11a on a newer master may edit
+        # it; the fixtures under testdata/ are frozen data instead.
+        files = subprocess.run(["git", "ls-files", "internal/tools/splittools"], cwd=REPO, capture_output=True,
+                               text=True, check=True).stdout.split()
+        sources = [f for f in files if f.endswith(".go") and "/testdata/" not in f]
+        self.assertTrue(sources)
+        for path in sources + ["internal/tools/splittools/main_test.go", "internal/tools/splittools/new.go"]:
+            with self.subTest(path=path):
+                self.assertEqual(rg.guard_code_step(path), "S14e")
+        for path in ("internal/tools/splittools/specs/M11a.json", "internal/tools/splittools/testdata/fixture/table.go",
+                     "internal/tools/splittools/testdata/d11dee8/tools.go", "internal/tools/declmove/main.go"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertTrue(rg.matches("internal/tools/splittools/testdata/d11dee8/tools.go", [p for _, p in rg.FROZEN_DATA]))
 
     def test_classification(self):
         self.assertEqual(rg.guard_code_step("internal/archtest/graph_test.go"), "S1")

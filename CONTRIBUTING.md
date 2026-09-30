@@ -144,7 +144,8 @@ On a **refactor** pull request, also:
    `openv-nginx/**`, `Dockerfile.prod`, `railway.json`, `vite.config.ts`).
    Guard code (`GUARD_CODE`: the Phase 0 guard tests, `internal/archtest/**`,
    `frontend/src/arch/**`, the boundary rules in `frontend/eslint.config.js`,
-   and the move proofs and this guard) may be modified or deleted only in a
+   the move proofs, M11a's split proof `internal/tools/splittools` and this
+   guard) may be modified or deleted only in a
    class C or T commit that modifies or deletes no golden. The plan asks such
    an edit to be green against the production code of its parent; since a C
    or T commit cannot change production code, that is what the pull

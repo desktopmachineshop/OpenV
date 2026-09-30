@@ -402,6 +402,19 @@ changes them; regenerate with
 Every scenario ends on its own without the network: stdin is empty, so a
 prompt reads end of input, and none gets as far as a request.
 
+Until refactor step M11a splits it, the MCP tool table (`Tools()` in
+`internal/mcp/tools.go`) is also split, on a copy of the module, by
+`TestM11aOnTheWorkingTree` in `internal/tools/splittools` (step S14e), as
+M11a will be generated from `internal/tools/splittools/specs/M11a.json`.
+A new tool needs no edit there: it joins the constructor of the tool
+before it. If splittools then refuses the split for a reason the spec
+settles, such as a constructor that would pass 100 lines, the test skips
+and names it (`go test -v` shows why); that is for M11a to fix when it
+regenerates the split, not for your pull request. The test also
+regenerates the MCP goldens on the split and compares them with the
+committed ones, so a change to the tools commits its regenerated goldens
+(step S7's command) as usual, and the split agrees.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull

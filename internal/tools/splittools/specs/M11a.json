@@ -1,0 +1,122 @@
+{
+  "description": "Refactor step M11a, class B (docs/plans/codebase-refactor.md §6.5): the entries of Tools() in internal/mcp/tools.go move into per-area constructors of at most 100 lines each, in tools_<area>.go, and Tools() concatenates them in today's order. Preview with: go run ./internal/tools/splittools -n -spec internal/tools/splittools/specs/M11a.json",
+  "package": "internal/mcp",
+  "headers": {
+    "tools_projects.go": "// The MCP tools over the projects an agent can see. Tools, in tools.go,\n// concatenates each area's constructor in the table's order.",
+    "tools_artifacts.go": "// The MCP tools that read, search, create and update artifacts. Tools, in\n// tools.go, concatenates each area's constructor in the table's order.",
+    "tools_links.go": "// The MCP tools over trace links between artifacts. Tools, in tools.go,\n// concatenates each area's constructor in the table's order.",
+    "tools_comments.go": "// The MCP tool that comments on an artifact. Tools, in tools.go,\n// concatenates each area's constructor in the table's order.",
+    "tools_baselines.go": "// The MCP tools over baselines. Tools, in tools.go, concatenates each\n// area's constructor in the table's order.",
+    "tools_reviews.go": "// The MCP tool that starts a project review round. Tools, in tools.go,\n// concatenates each area's constructor in the table's order.",
+    "tools_testruns.go": "// The MCP tools over test runs and their results. Tools, in tools.go,\n// concatenates each area's constructor in the table's order.",
+    "tools_quality.go": "// The MCP tools over requirement quality rules and findings. Tools, in\n// tools.go, concatenates each area's constructor in the table's order.",
+    "tools_vv.go": "// The MCP tools over verification coverage and gaps. Tools, in tools.go,\n// concatenates each area's constructor in the table's order.",
+    "tools_workitems.go": "// The MCP tools over kanban work items. Tools, in tools.go, concatenates\n// each area's constructor in the table's order.",
+    "tools_interviews.go": "// The MCP tool an interviewer records a candidate user need with. Tools,\n// in tools.go, concatenates each area's constructor in the table's order.",
+    "tools_delegation.go": "// The MCP tool that delegates a task to a team delegate. Tools, in\n// tools.go, concatenates each area's constructor in the table's order."
+  },
+  "constructors": [
+    {
+      "func": "projectTools",
+      "file": "tools_projects.go",
+      "doc": "// projectTools returns the project tools, in Tools() order.",
+      "tools": ["list_projects"]
+    },
+    {
+      "func": "artifactReadTools",
+      "file": "tools_artifacts.go",
+      "doc": "// artifactReadTools returns the tools that list a project's artifacts and\n// read one, in Tools() order.",
+      "tools": ["list_artifacts", "get_artifact"]
+    },
+    {
+      "func": "artifactOverviewTools",
+      "file": "tools_artifacts.go",
+      "doc": "// artifactOverviewTools returns the tools that read a project's artifacts\n// as a map or a tree, or one artifact with its context, in Tools() order.",
+      "tools": ["get_project_map", "get_context", "get_project_tree"]
+    },
+    {
+      "func": "artifactSearchTools",
+      "file": "tools_artifacts.go",
+      "doc": "// artifactSearchTools returns the artifact search tool.",
+      "tools": ["search_artifacts"]
+    },
+    {
+      "func": "artifactCreateTools",
+      "file": "tools_artifacts.go",
+      "doc": "// artifactCreateTools returns the artifact create tool.",
+      "tools": ["create_artifact"]
+    },
+    {
+      "func": "artifactUpdateTools",
+      "file": "tools_artifacts.go",
+      "doc": "// artifactUpdateTools returns the artifact update tool.",
+      "tools": ["update_artifact"]
+    },
+    {
+      "func": "linkTools",
+      "file": "tools_links.go",
+      "doc": "// linkTools returns the trace link tools, in Tools() order.",
+      "tools": ["create_link", "delete_link", "confirm_link", "list_links_for_artifact"]
+    },
+    {
+      "func": "commentTools",
+      "file": "tools_comments.go",
+      "doc": "// commentTools returns the comment tool.",
+      "tools": ["add_comment"]
+    },
+    {
+      "func": "baselineTools",
+      "file": "tools_baselines.go",
+      "doc": "// baselineTools returns the baseline tools, in Tools() order.",
+      "tools": ["list_baselines", "get_baseline", "create_baseline"]
+    },
+    {
+      "func": "reviewTools",
+      "file": "tools_reviews.go",
+      "doc": "// reviewTools returns the review round tool.",
+      "tools": ["start_project_review"]
+    },
+    {
+      "func": "testRunTools",
+      "file": "tools_testruns.go",
+      "doc": "// testRunTools returns the test run tools, in Tools() order.",
+      "tools": ["create_test_run", "record_test_result", "close_test_run"]
+    },
+    {
+      "func": "qualityTools",
+      "file": "tools_quality.go",
+      "doc": "// qualityTools returns the requirement quality tools, in Tools() order.",
+      "tools": ["get_quality_rules", "get_quality_findings"]
+    },
+    {
+      "func": "vvTools",
+      "file": "tools_vv.go",
+      "doc": "// vvTools returns the verification coverage and gap tools, in Tools()\n// order.",
+      "tools": ["get_vv_coverage", "get_vv_gaps"]
+    },
+    {
+      "func": "workItemListTools",
+      "file": "tools_workitems.go",
+      "doc": "// workItemListTools returns the tool that lists a project's work items.",
+      "tools": ["list_work_items"]
+    },
+    {
+      "func": "workItemTools",
+      "file": "tools_workitems.go",
+      "doc": "// workItemTools returns the tools that read and update one work item, in\n// Tools() order.",
+      "tools": ["get_work_item", "get_work_item_history", "update_work_item"]
+    },
+    {
+      "func": "interviewTools",
+      "file": "tools_interviews.go",
+      "doc": "// interviewTools returns the interview tool.",
+      "tools": ["record_candidate_need"]
+    },
+    {
+      "func": "delegationTools",
+      "file": "tools_delegation.go",
+      "doc": "// delegationTools returns the delegation tool.",
+      "tools": ["delegate_to_agent"]
+    }
+  ]
+}

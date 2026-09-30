@@ -167,11 +167,11 @@ PROTECTED_PATHS = [
 # (2) Guard code (§6.4 S14b): M or D only in a class C or T commit that
 # modifies or deletes no golden. (owning step, patterns). An empty list is a
 # slot: the plan names no file for that step's guard code yet, and the step
-# fills its slot in a class T commit when it lands. S14a and S14b are not in
-# the plan's list: they are the tools that prove class A and this guard, so a
-# commit of another class may not edit them either. Since the job runs the
-# base's copy of this script, a pull request that also drops rows here is
-# still judged by the rows it started from.
+# fills its slot in a class T commit when it lands. S14a, S14b and S14e are
+# not in the plan's list: they are the tools that prove class A, this guard
+# and M11a's class B, so a commit of another class may not edit them either.
+# Since the job runs the base's copy of this script, a pull request that also
+# drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
     ("S1", ["internal/archtest/**"]),
     ("I1, S2", ["internal/api/route_inventory_test.go", "internal/api/route_binding_test.go",
@@ -222,6 +222,13 @@ GUARD_CODE = [
     ("S14a", ["internal/tools/declhash/**", "frontend/scripts/tsdeclhash.mjs", "frontend/scripts/tsmovecheck.mjs"]),
     ("S14b", [".github/workflows/refactor-guard.yml", "scripts/refactor/refactor_guard.py",
               "scripts/refactor/refactor_guard_test.py"]),
+    # S14e's splittools generates M11a and, with -check, proves its class B
+    # commit (every entry of Tools() unchanged and in order, and every other
+    # declaration of the package unchanged); its tests prove the generator
+    # on d11dee8's table and on the working tree. Its sources and tests
+    # only: M11a may still edit its spec (specs/*.json) in any class, and
+    # its testdata/ is frozen data like every other.
+    ("S14e", ["internal/tools/splittools/*.go"]),
 ]
 # Under a guard-code pattern but governed by the ratchet rule instead.
 GUARD_CODE_EXCEPT = ["internal/archtest/ratchets.json"]
