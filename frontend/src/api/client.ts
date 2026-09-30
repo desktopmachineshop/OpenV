@@ -304,6 +304,10 @@ export interface DownloadTemplate {
 /** What a download contains. Empty lists mean "everything". */
 export interface DownloadSelection {
   sections: string[];
+  /**
+   * Types to keep. Empty means every type, or a preset's types when a
+   * template is named; `['all']` every type whatever the preset keeps.
+   */
   types: string[];
   /** Owners to keep; empty means everyone (REQ-148). */
   owners: string[];
@@ -959,6 +963,8 @@ export interface TestRun {
   name: string;
   description: string;
   baseline_id?: string | null;
+  /** The baseline `baseline_id` names was deleted since; the run keeps the reference as history. */
+  baseline_deleted?: boolean;
   status: 'in-progress' | 'completed' | 'aborted';
   started_at: string;
   completed_at?: string | null;

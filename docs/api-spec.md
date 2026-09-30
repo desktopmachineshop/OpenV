@@ -439,12 +439,16 @@ project.
   the report, the V&V reads and report, the quality report, the impact
   read, the AI map, a baseline's read, diff and delete, and the diff's
   `against`; `/export` takes none);
-  `sections`, `types`, `owners` (a comma-separated list of owner names: only
+  `sections`, `types` (a comma-separated list of artifact types, or `all`),
+  `owners` (a comma-separated list of owner names: only
   the artifacts whose `owner` attribute is one of them, plus the headings,
   so one party's share of a project can be handed over on its own — REQ-148),
-  `headings=0`, `attachments` narrow it (REQ-56). The
-  PDF and Word documents also read `template` (`standard`,
-  `requirements-review`, `test-planning`, `vv`), `toc`, `traceability`,
+  `headings=0`, `attachments` narrow it (REQ-56). A `template` (`standard`,
+  `requirements-review`, `test-planning`, `vv`) sets the types when `types`
+  is left out, in every format, and `types=all` keeps every type whatever
+  the template keeps, as the wizard sends it once every type is ticked
+  (REQ-131). The PDF and Word documents also take the template's content,
+  and read `toc`, `traceability`,
   `figures`, `vv`, `results` (`0|1`) and `fields` (`all`, `none`, or a
   comma-separated list of attribute keys); an explicit parameter wins over
   the template. Each requirement's V&V status is in a document by default
@@ -823,13 +827,13 @@ hidden entry is out of every list and cannot be voted for either.
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/profile` | Product profile (vision, users, constraints) | viewer |
 | PUT | `/api/v1/projects/{id}/profile` | Update product profile | editor |
-| POST | `/api/v1/projects/{id}/test-runs` | Create test run. A `baseline_id` names one of the project's baselines: one no row has, a malformed id or another project's answers `404` `baseline not found`, after the project guard and the body's decode, and no run is created | editor |
-| GET | `/api/v1/projects/{id}/test-runs` | List test runs | viewer |
-| GET | `/api/v1/test-runs/{id}` | Test run details | viewer |
-| PUT | `/api/v1/test-runs/{id}` | Update test run | editor |
+| POST | `/api/v1/projects/{id}/test-runs` | Create test run. A `baseline_id` names one of the project's baselines: one no row has, a deleted one, a malformed id or another project's answers `404` `baseline not found`, after the project guard and the body's decode, and no run is created | editor |
+| GET | `/api/v1/projects/{id}/test-runs` | List test runs. A run whose `baseline_id` names no baseline of its project, as when the baseline was deleted after the run named it (a baseline delete goes ahead, and the run keeps the id as history, REQ-13), carries `baseline_deleted: true`; the field is left out when the baseline exists or no baseline is named. It is read from the baselines on every read, as in every answer below that holds a run | viewer |
+| GET | `/api/v1/test-runs/{id}` | Test run details, `baseline_deleted` as in the list | viewer |
+| PUT | `/api/v1/test-runs/{id}` | Update test run: `{status}`, `completed` or `aborted`, from `in-progress`; the answer marks `baseline_deleted` as the list does. No route changes a run's `baseline_id` | editor |
 | DELETE | `/api/v1/test-runs/{id}` | Delete a test run that holds no result. `409` for one that holds results, which are kept (REQ-13): `a test run that holds results is kept: complete or abort it instead of deleting it` for a run in progress, and `a test run that holds results is kept: this one is already completed` (or `aborted`) for a closed one | editor |
 | POST | `/api/v1/test-runs/{id}/results` | Record a test result `{test_case_id, status, notes?, evidence?}`. Recording a case again adds a result with an id of its own rather than overwriting the earlier one, which stays in the run's history; the one recorded last is the case's current result wherever a result is read, its times always after those of the result it supersedes, an omitted `evidence` carries the current one's, and the current one's evidence citations move to it (REQ-13, REQ-121). `404` `artifact not found` for a `test_case_id` no artifact of the run's project has; `409` `this test run is completed; only in-progress runs accept new results` (or `aborted`) for a closed run | editor |
-| POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run | editor |
+| POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run, and `409` for a closed run, before the body is read, as a result there is: `this test run is completed; only in-progress runs accept new results` (or `aborted`) | editor |
 | GET | `/api/v1/test-runs/{id}/results` | The run's current result per test case, the latest recorded first; `?history=true` lists every result recorded in the run, those later results superseded included, newest first | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |

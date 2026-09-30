@@ -66,10 +66,20 @@ func (r *VVRepository) UpdateRun(run *vv.TestRun) error {
 	return err
 }
 
+// runBaselineDeleted is the select-list column behind vv.TestRun's
+// BaselineDeleted: a run names a baseline its project no longer has. A run
+// keeps a deleted baseline's id as history (REQ-13), since baseline_id has no
+// foreign key, and every read marks it here rather than a stored flag. It asks
+// the run's own project alone, as the create does (REQ-6), so a run never
+// tells whether another project's baseline exists.
+const runBaselineDeleted = `test_runs.baseline_id IS NOT NULL AND NOT EXISTS (
+			SELECT 1 FROM baselines b WHERE b.id = test_runs.baseline_id AND b.project_id = test_runs.project_id)`
+
 // FindRunByID retrieves a test run by ID
 func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
 	query := `
-		SELECT id, project_id, name, description, baseline_id, status, started_at, completed_at, created_by, created_at, updated_at
+		SELECT id, project_id, name, description, baseline_id, ` + runBaselineDeleted + `,
+			status, started_at, completed_at, created_by, created_at, updated_at
 		FROM test_runs
 		WHERE id = $1
 	`
@@ -81,6 +91,7 @@ func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
 		&run.Name,
 		&run.Description,
 		&run.BaselineID,
+		&run.BaselineDeleted,
 		&run.Status,
 		&run.StartedAt,
 		&run.CompletedAt,
@@ -102,7 +113,8 @@ func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
 // ListRunsByProject retrieves all test runs for a project, newest first
 func (r *VVRepository) ListRunsByProject(projectID string) ([]*vv.TestRun, error) {
 	query := `
-		SELECT id, project_id, name, description, baseline_id, status, started_at, completed_at, created_by, created_at, updated_at
+		SELECT id, project_id, name, description, baseline_id, ` + runBaselineDeleted + `,
+			status, started_at, completed_at, created_by, created_at, updated_at
 		FROM test_runs
 		WHERE project_id = $1
 		ORDER BY started_at DESC
@@ -123,6 +135,7 @@ func (r *VVRepository) ListRunsByProject(projectID string) ([]*vv.TestRun, error
 			&run.Name,
 			&run.Description,
 			&run.BaselineID,
+			&run.BaselineDeleted,
 			&run.Status,
 			&run.StartedAt,
 			&run.CompletedAt,
@@ -214,8 +227,8 @@ func (r *VVRepository) AddResult(result *vv.TestResult) error {
 	if err != nil {
 		return err
 	}
-	if status != vv.RunStatusInProgress {
-		return fmt.Errorf("this test run is %s; %w", status, vv.ErrRunClosed)
+	if err := vv.CheckAcceptsResults(status); err != nil {
+		return err
 	}
 
 	// The newest result is the one this supersedes, and this one must be

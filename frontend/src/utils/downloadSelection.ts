@@ -205,6 +205,12 @@ export const applyTemplate = (
   };
 };
 
+/**
+ * The `types` value that names every type, over whatever a preset keeps. No
+ * artifact type is called this.
+ */
+export const ALL_TYPES = 'all';
+
 /** Add or remove one value from a ticked list. */
 export const toggle = (list: string[], value: string): string[] =>
   list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -232,6 +238,10 @@ export const selectsNothing = (
  * A list with everything ticked is left out, because "all of them" and "no
  * filter" are the same download and the shorter request is the one that keeps
  * working when the project gains a section.
+ *
+ * The types are the exception beside a preset: the server reads no types as
+ * the preset's types, so every type ticked travels as `all`, which keeps every
+ * type whatever the preset keeps. Without a preset, no types is every type.
  */
 export const toWire = (
   selection: FormSelection,
@@ -241,9 +251,10 @@ export const toWire = (
   const allTypes = (options?.types || []).map((t) => t.type);
   const complete = (ticked: string[], all: string[]) =>
     all.length === 0 || ticked.length >= all.length;
+  const everyType = selection.template ? [ALL_TYPES] : [];
   return {
     sections: complete(selection.sections, allSections) ? [] : selection.sections,
-    types: complete(selection.types, allTypes) ? [] : selection.types,
+    types: complete(selection.types, allTypes) ? everyType : selection.types,
     owners: selection.owners,
     includeHeadings: selection.includeHeadings,
     attachments: selection.attachments,
@@ -267,9 +278,10 @@ export const toWire = (
  * implies is sent as itself, so what the reader saw ticked is what the server
  * builds even if the preset changes underneath them. The server builds a
  * named preset from the preset's own content, not from its defaults, so with
- * a template every switch and the field choice travel, a switch that matches
- * the defaults too: V&V status ticked on the Requirements review preset,
- * which leaves it out, would otherwise never reach it (REQ-6).
+ * a template every switch, the field choice and the type choice travel, a
+ * switch that matches the defaults too: V&V status ticked on the Requirements
+ * review preset, which leaves it out, would otherwise never reach it (REQ-6),
+ * nor every type ticked on it (`types=all`, from toWire).
  */
 export const downloadQuery = (selection: DownloadSelection, baselineId?: string): string => {
   const defaults = SERVER_CONTENT_DEFAULTS;

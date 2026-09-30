@@ -324,7 +324,9 @@ Messages are the copilot chat transcript (`session_id`, `role`, `content`);
 copilot turns run as agent runs linked via `agent_runs.guided_session_id`.
 
 ### test_runs / test_results
-Test execution: runs (`project_id`, `name`, optional `baseline_id`,
+Test execution: runs (`project_id`, `name`, optional `baseline_id`, with no
+foreign key: a run keeps the id of a baseline deleted after it named it, and
+every read marks it `baseline_deleted`, computed against `baselines`;
 `status`, `started_at`/`completed_at`) and one result per
 `(run_id, test_case_id)`: `test_case_version`, `status`, `notes`, `evidence`
 JSONB, `executed_at`/`executed_by`, `executed_by_agent_run_id` (set when an

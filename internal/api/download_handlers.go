@@ -143,13 +143,21 @@ func selectionFromQuery(r *http.Request) exports.Selection {
 		Content:         exports.DefaultContent(),
 	}
 
+	// types: absent keeps the template's; "all" keeps every type, whatever
+	// the template keeps, so a reader who ticks every type gets every type;
+	// otherwise the listed types. No artifact type is called "all".
+	allTypes := len(sel.Types) == 1 && strings.EqualFold(sel.Types[0], "all")
+	if allTypes {
+		sel.Types = nil
+	}
+
 	// A template is a starting point: it sets the types and the content
 	// switches, and anything the query names explicitly wins over it.
 	if key := strings.TrimSpace(q.Get("template")); key != "" {
 		if tmpl, ok := exports.TemplateByKey(key); ok {
 			sel.Content = tmpl.Content
 			sel.Content.Template = tmpl.Key
-			if sel.Types == nil && tmpl.Types != nil {
+			if !allTypes && sel.Types == nil && tmpl.Types != nil {
 				sel.Types = append([]string(nil), tmpl.Types...)
 			}
 		} else {

@@ -886,6 +886,35 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   will refuse the credential; a Stripe, embeddings or VAPID key that is only
   spaces still leaves its feature off.
 
+- **A test run whose baseline was deleted says so.** A test run can be
+  pinned to a baseline, and a project owner can still delete that baseline
+  later. The run keeps the baseline as part of its record, but the runs
+  table on the V&V dashboard then showed a long id where the baseline's
+  name had been. It now says *Baseline deleted*. Through the API, a run
+  read with `GET /api/v1/test-runs/{id}`, or in a project's list of test
+  runs, carries `baseline_deleted: true` when the baseline it names has been
+  deleted, and leaves the field out otherwise. A new run still cannot be
+  pinned to a deleted baseline.
+
+- **Starting an agent on a closed test run answers 409, as recording a
+  result there does.** Through the API, starting an agent on a completed or
+  aborted run with `POST /api/v1/test-runs/{id}/agent-run` answered `400`,
+  while recording a result in the same run answers `409` with the same
+  message. The launch now answers `409` with the same body, *this test run
+  is completed; only in-progress runs accept new results* (or *aborted*),
+  so a client can treat both refusals alike. No agent starts, as before,
+  and the app offers the launch only on a run in progress.
+
+- **Ticking every artifact type after choosing a download template now
+  gets every type.** In the download wizard, a template such as
+  *Requirements review* ticks only its own types, user needs and
+  requirements. Ticking the other types as well still gave a document with
+  the template's types alone, while the wizard said it would hold the whole
+  project. The download now holds every type you tick. Through the API,
+  `types=all` beside a `template` keeps every type whatever the template
+  keeps; a request that leaves `types` out still gets the template's types,
+  and a download with no template is unchanged.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

@@ -54,7 +54,9 @@ A **test run** is one execution campaign: run your test cases and record the
 results.
 
 1. Click **New Run** — name it (e.g. "Design verification — rev B"), add a
-   description, and optionally pin it to a **baseline**.
+   description, and optionally pin it to a **baseline**. A project owner can
+   still delete that baseline later: the run keeps the reference as part of
+   its record, and the runs table shows **Baseline deleted** for it.
 2. Open the run from the table. Every *test-case* artifact in the project gets
    a row with:
    - **Status** — pass, fail, blocked, or not-run (colored dropdown).

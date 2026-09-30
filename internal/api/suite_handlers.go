@@ -371,28 +371,33 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r), agentRunID)
 	if err != nil {
-		// Domain sentinels are the caller's problem and keep their text; any
-		// other failure is ours and must answer 5xx — a test-executing agent
-		// retries on 5xx, and its recorded outcome must not be lost to a DB
-		// blip mislabeled as a 4xx.
-		switch {
-		case errors.Is(err, vv.ErrNotAgentExecutable):
-			writeJSONError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, vv.ErrInvalidStatus), errors.Is(err, vv.ErrNotTestCase):
-			writeJSONError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, vv.ErrRunClosed):
-			writeJSONError(w, http.StatusConflict, err.Error())
-		case errors.Is(err, vv.ErrRunNotFound), errors.Is(err, artifacts.ErrNotFound):
-			// The run exists (checked above); ErrNotFound here means the
-			// referenced test case id does not resolve to an artifact of the
-			// run's project (another project's is answered as none).
-			writeJSONError(w, http.StatusNotFound, err.Error())
-		default:
-			respondInternal(w, r, "failed to record test result", err)
-		}
+		respondResultError(w, r, err)
 		return
 	}
 	json.NewEncoder(w).Encode(result)
+}
+
+// respondResultError answers a refused result, and an agent launched to record
+// results in a closed run, which a result there would meet. Domain sentinels
+// are the caller's problem and keep their text; any other failure is ours and
+// must answer 5xx — a test-executing agent retries on 5xx, and its recorded
+// outcome must not be lost to a DB blip mislabeled as a 4xx.
+func respondResultError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, vv.ErrNotAgentExecutable):
+		writeJSONError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, vv.ErrInvalidStatus), errors.Is(err, vv.ErrNotTestCase):
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, vv.ErrRunClosed):
+		writeJSONError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, vv.ErrRunNotFound), errors.Is(err, artifacts.ErrNotFound):
+		// The run exists (checked by the caller); ErrNotFound here means the
+		// referenced test case id does not resolve to an artifact of the
+		// run's project (another project's is answered as none).
+		writeJSONError(w, http.StatusNotFound, err.Error())
+	default:
+		respondInternal(w, r, "failed to record test result", err)
+	}
 }
 
 func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
@@ -436,8 +441,10 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, testRun.ProjectID, members.RoleEditor, missing("test run not found")) {
 		return
 	}
-	if testRun.Status != vv.RunStatusInProgress {
-		writeJSONError(w, http.StatusBadRequest, "this test run is "+testRun.Status+"; only in-progress runs accept new results")
+	// A closed run takes no result, so no agent is launched to record one:
+	// the 409 a result there gets (REQ-13, REQ-74).
+	if err := vv.CheckAcceptsResults(testRun.Status); err != nil {
+		respondResultError(w, r, err)
 		return
 	}
 

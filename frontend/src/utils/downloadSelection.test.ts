@@ -1,5 +1,6 @@
 import { DownloadOptions, DownloadTemplate } from '../api/client';
 import {
+  ALL_TYPES,
   DOWNLOAD_FORMATS,
   FormSelection,
   SERVER_CONTENT_DEFAULTS,
@@ -225,8 +226,35 @@ describe('downloadQuery', () => {
   it('names the preset but sends its switches as themselves', () => {
     const query = downloadQuery(toWire(selectAll(withTemplates), withTemplates));
     // The server starts from a named preset's own content, not from its
-    // defaults, so every switch travels beside the name.
-    expect(query).toBe('template=standard&traceability=1&figures=1&toc=1&results=0&vv=1&fields=all');
+    // defaults, so every switch, and every type ticked, travels beside the
+    // name.
+    expect(query).toBe('types=all&template=standard&traceability=1&figures=1&toc=1&results=0&vv=1&fields=all');
+  });
+
+  // #379 bug 51 (REQ-131): the server reads no types beside a preset as the
+  // preset's types, so a reader who picked a narrowing preset and then ticked
+  // every type got the preset's types alone.
+  it("sends every type ticked on a narrowing preset, so the reader's ticks win", () => {
+    const review: DownloadTemplate = { ...vv, key: 'requirements-review', types: ['requirement'] };
+    const presets: DownloadOptions = { ...withTemplates, templates: [standard, review] };
+    const picked = applyTemplate(selectAll(presets), review, presets);
+    expect(picked.types).toEqual(['requirement']);
+    const everyType: FormSelection = { ...picked, types: toggle(picked.types, 'test-case') };
+
+    const wire = toWire(everyType, presets);
+    expect(wire.types).toEqual([ALL_TYPES]);
+    const params = new URLSearchParams(downloadQuery(wire));
+    expect(params.get('template')).toBe('requirements-review');
+    expect(params.get('types')).toBe('all');
+
+    // The preset's own types still travel as themselves.
+    expect(new URLSearchParams(downloadQuery(toWire(picked, presets))).get('types')).toBe('requirement');
+  });
+
+  it('keeps a request with no preset as short as before when every type is ticked', () => {
+    const noPreset: FormSelection = { ...selectAll(withTemplates), template: '' };
+    expect(toWire(noPreset, withTemplates).types).toEqual([]);
+    expect(new URLSearchParams(downloadQuery(toWire(noPreset, withTemplates))).has('types')).toBe(false);
   });
 
   it('spells out the V&V preset as what it switches on', () => {

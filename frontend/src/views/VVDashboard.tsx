@@ -13,6 +13,7 @@ import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { gapLabel } from './vvGapLabels';
+import { runBaselineLabel } from '../utils/baselines';
 
 // ---------------------------------------------------------------------------
 // Shared color helpers for V&V rollup statuses
@@ -466,9 +467,7 @@ export const VVDashboard: React.FC = () => {
                       {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
                     </td>
                     <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {run.baseline_id
-                        ? baselines.find((b) => b.id === run.baseline_id)?.name || run.baseline_id
-                        : 'Live'}
+                      {runBaselineLabel(run, baselines)}
                     </td>
                   </>
                 )}
