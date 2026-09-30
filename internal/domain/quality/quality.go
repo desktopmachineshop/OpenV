@@ -502,7 +502,10 @@ func LintProject(export *exports.ProjectExport, rs RuleSet) *Report {
 // project report and fine on the artifact's own page would be worse than no
 // rule at all.
 func LinkedRefsByArtifact(export *exports.ProjectExport) map[string]map[string]bool {
-	refByID := make(map[string]string, len(export.Artifacts)+len(export.LinkedArtifacts))
+	// Sized by the project's own artifacts; the linked ones from other
+	// projects grow it as needed (a summed hint is an allocation-size
+	// computation CodeQL flags as able to overflow).
+	refByID := make(map[string]string, len(export.Artifacts))
 	for _, a := range export.Artifacts {
 		if a != nil {
 			refByID[a.ID] = a.Ref
