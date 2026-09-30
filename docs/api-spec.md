@@ -167,9 +167,9 @@ Enforced per-handler via `internal/api/authz.go`:
 - **Existence hiding** (I3, OpenV REQ-17): a resource the caller cannot
   reach at all answers exactly as one that does not exist, the same status
   and the same message. A project where the caller has no role (and is no
-  admin of its workspace), a personal runner key's holder included, another
-  org's project to a worker key, and another project to an agent run answer
-  `404` `project not found`; a
+  admin of its workspace), a project where a personal runner key's holder has
+  none, another org's project to a worker key, and another project to an agent
+  run answer `404` `project not found`; a
   workspace the caller is no member of (a deleted one to its former members
   included) answers `404` `workspace not found`; a resource looked up by its
   own id (a baseline, a run, a crew, a work item...) whose project or
