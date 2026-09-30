@@ -69,9 +69,12 @@ import (
 //     foreign key; the board's move of that card only logs);
 //   - launches by a worker key and by a run's token (201 with no launched_by:
 //     the handler has no user check, and the project guard lets a worker of
-//     the project's workspace and a run scoped to the project through), the
-//     key's run with no project claimed by the box key (since R7's fix a
-//     personal key no longer takes it: only W's admins see such a run);
+//     the project's workspace and a run scoped to the project through, a
+//     launch with no project the workspace's plan gate alone), the key's run
+//     with no project claimed by the box key (since R7's fix a personal key
+//     no longer takes it: only W's admins see such a run); the run's launch
+//     records the launching run as its parent (parent_run_id), as a
+//     delegation does;
 //   - the auto-retry of a retryable failure (worker_error): attempt 2 queued
 //     behind a 30 s backoff that the claim honours (204), a manual retry
 //     claimable at once, and a failure of class agent_error, which is not
@@ -341,8 +344,8 @@ func workerWireTour(tr *tour) {
 	tr.step("the member reads run_b, unscoped and not its own: the workspace admin guard", m, get, run("run_b"))
 	tr.step("run_b's token launches in P: 403, the run is not scoped to P", runB, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Help."}`))
-	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by", runB, launch,
-		agent, jsonBody(`{"prompt":"Help with W."}`)).capture("run_t", "/id")
+	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by and run_b as "+
+		"its parent", runB, launch, agent, jsonBody(`{"prompt":"Help with W."}`)).capture("run_t", "/id")
 	tr.setup("cancel run_t, so that no later claim takes it", o, cancel, run("run_t"))
 
 	// (k) The auto-retry and its backoff.

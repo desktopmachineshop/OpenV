@@ -1,0 +1,39 @@
+# The command line of agentd (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/agentd/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/agentd -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ agentd -concurrency=x
+env WORKER_API_KEY="wk-example"
+env RUNNER_POOL_KEY="pk-example"
+exit 2
+--- stdout
+--- stderr
+invalid value "x" for flag -concurrency: parse error
+Usage of agentd:
+  -api string
+    	OpenV API base URL (default "http://localhost:8080")
+  -child-concurrency int
+    	extra slots reserved for child/interview runs (default 2)
+  -concurrency int
+    	concurrent normal runs (default 1)
+  -hosted
+    	token-mode hosted runner: no CLI sign-in, no repo-access runs
+  -mcp-binary string
+    	path to the openv-mcp binary (default "$BINDIR/openv-mcp")
+  -node-name string
+    	stable name for this pool node (read from RUNNER_NODE_NAME when not given; the hostname when neither sets it)
+  -pool string
+    	pool this node belongs to (read from RUNNER_POOL when not given; "default" when neither sets it)
+  -pool-key string
+    	transient runner pool key: run as a pre-warmed pool node instead of a fixed runner (read from RUNNER_POOL_KEY when not given)
+  -session-root string
+    	parent directory for per-lease HOME directories (pool mode)
+  -worker-key string
+    	worker API key (required; read from WORKER_API_KEY when not given)
+  -workspace-retention duration
+    	how long finished run workspaces are kept before cleanup (default 24h0m0s)
+  -workspaces string
+    	base directory for run workspaces (default "$HOME/.openv/workspaces")

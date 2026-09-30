@@ -45,9 +45,26 @@ project's routes answer it `403` `agent run is not scoped to this project`,
 its own project's owner routes `403` `agent runs act at most as a project
 editor`, and it creates no project (`POST /projects`, `/projects/import` and
 `/templates/{id}/projects` answer it `403` `agent runs cannot create
-projects`, REQ-42). Runs with
+projects`, REQ-42); `GET /projects` lists it its own project alone (`[]` for
+a run with no project). Runs with
 `write_mode: proposal` have their writes diverted into the proposal queue
-(HTTP 202 with a proposal receipt) instead of being applied. Each claim hands
+(HTTP 202 with a proposal receipt) instead of being applied, and launch no
+run: every route that sets one going, or arms one, answers them `403`
+`proposal-mode agent runs cannot launch agent runs` before any lookup
+(`POST /agents/{slug}/runs`, `/crews/{id}/runs` and `/teams/{id}/runs`,
+`/test-runs/{id}/agent-run`, `/agent-runs/{id}/retry`,
+`/automations/{id}/run-now`, a guided session's chat message, kickoff and
+nudge, and `/projects/{id}/interviews` and `/interviews/{id}/invites`,
+since an interview names the interviewer whose run each message its
+invite's participant posts launches), and `/projects/{id}/draft-test-cases`
+`403` `proposal-mode agent runs cannot draft test cases` (REQ-21, REQ-75),
+while `POST /agent-runs/delegate` still starts the delegates a crew's design
+gives a proposal-mode crew agent. A run another run's token launches records
+the launching run as its `parent_run_id`, as a delegation does, so the
+launching run's `/agent-runs/{id}/tree` lists it to a reader who could open
+it by itself: the tree leaves out a run below its root that its reader
+could not open, such as the unscoped run a project's run launched, which
+only the workspace's admins read, and every run below that one. Each claim hands
 the worker a freshly minted token, and the token stops authenticating (`401`)
 as soon as the run finishes, is finalised after review, or is released back to
 the queue; a released run's next claim issues a new one. A run token never
@@ -88,7 +105,10 @@ owner's, as a project editor does, while a personal key (a session key among
 them) is its holder acting, reads included: it passes only where its holder
 would, as an admin of the workspace or with a project role that meets the
 route's (REQ-16); otherwise it gets the project's `403`, and the project list
-(`GET /projects`) gives it the projects its holder's own session lists.
+(`GET /projects`) gives it the projects its holder's own session lists. No
+worker key creates a project: `POST /projects`, `/projects/import` and
+`/templates/{id}/projects` answer it `403` `runner keys cannot create
+projects`, since only a person owns what it creates.
 
 ### 3a. Runner pool nodes — Bearer `RUNNER_POOL_KEY`
 
@@ -123,7 +143,8 @@ Enforced per-handler via `internal/api/authz.go`:
   (`POST /chatter`), and is refused every write an editor makes; it is the
   role a reviewer share link grants (`docs/sharing.md`).
 - **Agent runs** count as editor within their own project, except that they
-  never approve or reject a proposal, and create no project; **workers** pass
+  never approve or reject a proposal, and create no project, and a
+  proposal-mode run launches no run; **workers** create no project either, and pass
   for any project in their org, a workspace key as an editor, a personal key
   only where its holder would, reads included; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
@@ -250,8 +271,8 @@ their own project, workers pass within their org, a workspace key up to
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner). An agent run's token is refused (`403`) | user |
-| GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can) | user |
+| POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner). An agent run's token and a runner key are refused (`403`) before the body is read; then `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum | user |
+| GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can); an agent run's token, its own project alone | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
 | PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `400` for a parent in another workspace, the project itself or one of its descendants) | editor |
 | DELETE | `/api/v1/projects/{id}` | Delete project | owner |
@@ -260,7 +281,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
 | PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
-| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token is refused (`403`) | user |
+| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token and a runner key are refused (`403`). Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
 | GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
 | GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
@@ -273,7 +294,7 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template | editor |
-| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token is refused (`403`) | user |
+| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token and a runner key are refused (`403`); `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum, as `POST /projects` | user |
 
 **Baselines** carry `created_by` (the capturing account) and
 `created_by_name` (its display name, resolved server-side so a client never
@@ -697,6 +718,7 @@ hidden entry is out of every list and cannot be voted for either.
 | PUT | `/api/v1/test-runs/{id}` | Update test run | editor |
 | DELETE | `/api/v1/test-runs/{id}` | Delete test run | editor |
 | POST | `/api/v1/test-runs/{id}/results` | Record/overwrite a test result | editor |
+| POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run | editor |
 | GET | `/api/v1/test-runs/{id}/results` | List results | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
@@ -959,7 +981,7 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | POST | `/api/v1/guided-sessions/{id}/commit` | Commit session: each of its drafts is approved through the review states (`draft` → `in_review` → `approved`, a version and a `status-change` note per step), and the session closes. Each approval publishes the `artifact.status_changed` event a status change does, with the committing user as actor and the session id as `guided_session`; the step into review publishes none, so editors are not asked to review it. Refused `403` for a proposal-mode agent run, like a status change | editor |
 | POST | `/api/v1/guided-sessions/{id}/abandon` | Abandon session | editor |
 | GET | `/api/v1/guided-sessions/{id}/messages` | Assistant chat history | viewer |
-| POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches an assistant turn; optional `artifact_id`) | editor |
+| POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches an assistant turn; optional `artifact_id`). Refused `403` for a proposal-mode agent run, as are kickoff and nudge | editor |
 | POST | `/api/v1/guided-sessions/{id}/chat/kickoff` | First assistant greeting (optional `artifact_id`) | editor |
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
 | GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
@@ -986,11 +1008,11 @@ when the next `message` arrives.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/interviews` | Create interview | editor |
+| POST | `/api/v1/projects/{id}/interviews` | Create interview. Refused `403` for a proposal-mode agent run, since each participant message launches the interviewer's run | editor |
 | GET | `/api/v1/projects/{id}/interviews` | List interviews | viewer |
 | POST | `/api/v1/interviews/{id}/close` | Close interview | editor |
 | PUT | `/api/v1/interviews/{id}/persona` | Link/unlink a persona artifact | editor |
-| POST | `/api/v1/interviews/{id}/invites` | Mint an invite link | editor |
+| POST | `/api/v1/interviews/{id}/invites` | Mint an invite link. Refused `403` for a proposal-mode agent run, as is the interview | editor |
 | GET | `/api/v1/interviews/{id}/invites` | List invites | viewer |
 | POST | `/api/v1/interview-invites/{id}/revoke` | Revoke invite | editor |
 | GET | `/api/v1/interviews/{id}/sessions` | List participant sessions | viewer |
@@ -1012,7 +1034,7 @@ when the next `message` arrives.
 | DELETE | `/api/v1/agents/{slug}` | Delete agent; `404` for a slug no agent of the workspace has, a deleted one's among them | org admin |
 | GET | `/api/v1/agents/{slug}/raw` | Raw markdown (frontmatter + prompt) | user |
 | PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown | org admin |
-| POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent | editor (project-scoped) / user |
+| POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent: in the body's `project_id`, or, with none, in the agent's workspace, where a person must be a member (a worker key or run token of that workspace launches there), past the workspace's read-only gate either way. Refused `403` for a proposal-mode agent run | editor (project-scoped) / org member |
 | POST | `/api/v1/projects/{id}/draft-test-cases` | `{requirement_ids}`: launch the seeded test-case author on them, in proposal mode. Refused `403` for a proposal-mode agent run, like a status change: a launch is no write a proposal can carry | editor |
 
 **`allowed_tools` is required.** `POST /api/v1/agents` and
@@ -1049,7 +1071,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 | POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
-| GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree | launcher / viewer |
+| GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree, less each run below the root the caller could not open by itself and the runs below it | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/logs` | Run log entries | launcher / viewer |
 | POST | `/api/v1/agent-runs/{id}/logs` | Worker appends log entries (returns cancel flag) | worker |
 | GET | `/api/v1/agent-runs/{id}/stream` | SSE live log stream | launcher / viewer |
@@ -1063,6 +1085,7 @@ returned with the run, cleared whenever the run stops being live — at finish
 worker releases it back to the queue — and broadcast as `partial` on the run's
 own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
+| POST | `/api/v1/agent-runs/{id}/retry` | Re-enqueue a failed, cancelled or timed-out run as a new one (`retried_from_run_id`); `409` otherwise. Refused `403` for a proposal-mode agent run, `401` for any other run token | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
 | POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. `204` also when nothing was released | worker |
@@ -1078,7 +1101,7 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | DELETE | `/api/v1/crews/{id}` | Delete crew | editor / org admin |
 | POST | `/api/v1/crews/{id}/clone` | Clone crew (the source's write guard, then the copy's: `project_id` a project of the crew's workspace the caller edits, or none for an org admin) | editor / org admin |
 | POST | `/api/v1/crews/{id}/nodes` | Add node (agent or human) | editor / org admin |
-| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node (in the body's `project_id`, else in a pinned crew's project); `400` for a project outside the crew's workspace. A pin that no longer names a project of the crew's workspace counts as none, for launches and for every crew write | editor / org admin |
+| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node (in the body's `project_id`, else in a pinned crew's project); `400` for a project outside the crew's workspace. A pin that no longer names a project of the crew's workspace counts as none, for launches and for every crew write. Refused `403` for a proposal-mode agent run | editor / org admin |
 | PUT | `/api/v1/crew-nodes/{id}` | Update node | editor / org admin |
 | DELETE | `/api/v1/crew-nodes/{id}` | Remove node | editor / org admin |
 | POST | `/api/v1/crews/{id}/edges` | Add edge (delegates-to, hands-off-to, reviews) | editor / org admin |
@@ -1099,7 +1122,7 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | GET | `/api/v1/automations/{id}` | Details | org member |
 | PUT | `/api/v1/automations/{id}` | Update | editor / org admin |
 | DELETE | `/api/v1/automations/{id}` | Delete | editor / org admin |
-| POST | `/api/v1/automations/{id}/run-now` | Launch immediately | editor / org admin |
+| POST | `/api/v1/automations/{id}/run-now` | Launch immediately. Refused `403` for a proposal-mode agent run, `401` for any other run token | editor / org admin |
 | GET | `/api/v1/proposals` | List agent proposals, newest first, at most 500: `?project_id=` (viewer), or without it the active workspace's (org admin); `status`, `run_id` narrow either | viewer (project) / org admin |
 | POST | `/api/v1/proposals/{id}/approve` | Apply a proposed write; a run token is refused (`403`) | editor |
 | POST | `/api/v1/proposals/{id}/reject` | Reject it; a run token is refused (`403`) | editor |

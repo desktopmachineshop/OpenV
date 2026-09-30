@@ -1,0 +1,163 @@
+# Environment variables the Go code reads (refactor plan S8, invariants I13
+# and K8), found by a go/types scan of the module root and of every package
+# under cmd/ and internal/, test files excluded. Written by TestEnvInventory
+# (internal/archtest/env_inventory_test.go); regenerate with
+#   UPDATE_GOLDEN=1 go test ./internal/archtest -count=1 -run '^TestEnvInventory$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+#
+# One row per variable, read and default, sorted, tab-separated:
+#   NAME     the variable
+#   read     how it is read: os.Getenv or os.LookupEnv directly, or
+#            <package>:<func>(<param>) through a getter, a function whose
+#            string parameter reaches an env read or whose function-typed
+#            parameter a call binds to os.Getenv; with a comparison after it,
+#            such as =="true", when the value is only compared with that
+#            string
+#   default  the getter's fallback where the call passes a constant (text
+#            quoted, a duration as time.Duration prints it), (computed) where
+#            it passes anything else, - where the read has none
+# testdata/env_parse.txt says what each read returns. Where each read sits
+# (file:line, function, binaries) is in the report that
+# go test -v -run '^TestEnvInventory$' ./internal/archtest logs.
+AGENTS_DIR	cmd/server:envOr(key)	(computed)
+AGENT_CHILD_CONCURRENCY	cmd/agentd:envIntOr(key)	2
+AGENT_CONCURRENCY	cmd/agentd:envIntOr(key)	1
+AGENT_WORKSPACE_RETENTION	cmd/agentd:envDurationOr(key)	24h0m0s
+ANTHROPIC_API_KEY	os.Getenv !=""	-
+CLOUD_SHELL	os.Getenv !=""	-
+CODEX_HOME	os.Getenv	-
+CONNECTOR_DIST_DIR	cmd/server:envOr(key)	"./dist"
+CORS_ORIGIN	cmd/server:envOr(key)	"http://localhost:3000"
+CROSS_SITE_COOKIES	os.Getenv =="true"	-
+DATABASE_URL	os.Getenv	-
+DB_HOST	cmd/server:envOr(key)	"localhost"
+DB_NAME	cmd/server:envOr(key)	"openv"
+DB_PASSWORD	cmd/server:envOr(key)	"postgres"
+DB_PORT	cmd/server:envOr(key)	"5432"
+DB_USER	cmd/server:envOr(key)	"postgres"
+FRONTEND_URL	cmd/server:envOr(key)	"http://localhost:3000"
+FRONTEND_URL	cmd/server:envOr(key)	(computed)
+GEMINI_API_KEY	os.Getenv !=""	-
+GEMINI_CLI_USE_COMPUTE_ADC	os.Getenv !=""	-
+GOOGLE_API_KEY	os.Getenv !=""	-
+GOOGLE_CLIENT_ID	os.Getenv	-
+GOOGLE_CLIENT_SECRET	os.Getenv	-
+GOOGLE_GEMINI_BASE_URL	os.Getenv !=""	-
+GOOGLE_GENAI_USE_GCA	os.Getenv !=""	-
+GOOGLE_GENAI_USE_VERTEXAI	os.Getenv !=""	-
+HOME	os.Getenv	-
+HOSTED_RUNNERS	os.Getenv	-
+HOSTED_RUNNER_PIDS_LIMIT	os.Getenv	-
+OPENAI_API_KEY	os.Getenv !=""	-
+OPENV_API_TOKEN	cmd/openv-mcp:resolveToken(env)	-
+OPENV_API_URL	cmd/agentd:envOr(key)	"http://localhost:8080"
+OPENV_API_URL	os.Getenv	-
+OPENV_AUTH_ACCOUNT_BURST	internal/api:newRateLimiterFromEnv(burstVar)	5
+OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	20
+OPENV_AUTH_IP_BURST	internal/api:newRateLimiterFromEnv(burstVar)	30
+OPENV_AUTH_IP_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	120
+OPENV_BILLING_GRANDFATHER_BEFORE	os.Getenv	-
+OPENV_BILLING_MAX_SEATS	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_BILLING_PORTAL_CONFIG	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_BILLING_RECONCILE_MINUTES	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_BILLING_REFRESH_BURST	internal/api:newRateLimiterFromEnv(burstVar)	10
+OPENV_BILLING_REFRESH_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	120
+OPENV_BILLING_RETURN_URL	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_BILLING_TRIAL_DAYS	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_BILLING_WRITE_BURST	internal/api:newRateLimiterFromEnv(burstVar)	5
+OPENV_BILLING_WRITE_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	20
+OPENV_BUDGET_ENFORCE	os.Getenv =="true"	-
+OPENV_BUILD_SHA	cmd/server:envOr(key)	(computed)
+OPENV_CLIENT_IP_HEADER	os.Getenv	-
+OPENV_DATA_DIR	cmd/server:envOr(key)	"./data"
+OPENV_DEPLOYMENT	cmd/server:envOr(key)	"shared"
+OPENV_EMAIL_NOTIFICATION_TYPES	internal/notify:typeListFromEnv(key)	(computed)
+OPENV_EMAIL_VERIFICATION	os.Getenv	-
+OPENV_EMBEDDING_API_KEY	os.Getenv	-
+OPENV_EMBEDDING_BASE_URL	os.Getenv	-
+OPENV_EMBEDDING_MODEL	os.Getenv	-
+OPENV_HOSTED	cmd/agentd:envOr(key) =="true"	""
+OPENV_INTERVIEW_IP_BURST	internal/api:newRateLimiterFromEnv(burstVar)	20
+OPENV_INTERVIEW_IP_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	60
+OPENV_INTERVIEW_MSG_BURST	internal/api:newRateLimiterFromEnv(burstVar)	5
+OPENV_INTERVIEW_MSG_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	20
+OPENV_INTERVIEW_STREAM_BURST	internal/api:newRateLimiterFromEnv(burstVar)	30
+OPENV_INTERVIEW_STREAM_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	120
+OPENV_INVITE_BURST	internal/api:newRateLimiterFromEnv(burstVar)	20
+OPENV_INVITE_PREVIEW_BURST	internal/api:newRateLimiterFromEnv(burstVar)	60
+OPENV_INVITE_PREVIEW_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	240
+OPENV_INVITE_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	60
+OPENV_LIMITS	os.Getenv	-
+OPENV_LOG_LEVEL	os.Getenv	-
+OPENV_MAX_BODY_MB	os.Getenv	-
+OPENV_MAX_EVIDENCE_MB	os.Getenv	-
+OPENV_MAX_UPLOAD_MB	os.Getenv	-
+OPENV_MCP_TOOLS	os.LookupEnv	-
+OPENV_METRICS_TOKEN	os.Getenv	-
+OPENV_OIDC_CLIENT_ID	os.Getenv	-
+OPENV_OIDC_CLIENT_SECRET	os.Getenv	-
+OPENV_OIDC_ISSUER	os.Getenv	-
+OPENV_OIDC_NAME	cmd/server:envOr(key)	"SSO"
+OPENV_OIDC_REDIRECT_URL	cmd/server:envOr(key)	(computed)
+OPENV_OIDC_SCOPES	os.Getenv	-
+OPENV_PASSWORD_RESET_BURST	internal/api:newRateLimiterFromEnv(burstVar)	3
+OPENV_PASSWORD_RESET_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	6
+OPENV_PLAN_DEFAULT	cmd/server:envOr(key)	""
+OPENV_PUSH_ENDPOINT_HOSTS	os.Getenv	-
+OPENV_PUSH_NOTIFICATION_TYPES	internal/notify:typeListFromEnv(key)	(computed)
+OPENV_REGISTER_IP_BURST	internal/api:newRateLimiterFromEnv(burstVar)	5
+OPENV_REGISTER_IP_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	10
+OPENV_REGISTRATION	os.Getenv	-
+OPENV_RELEASE_FEED_URL	cmd/server:envOr(key)	"https://api.openv.app/api/v1/public/release"
+OPENV_RUN_AUTO_RETRY	os.Getenv	-
+OPENV_RUN_MAX_ATTEMPTS	os.Getenv	-
+OPENV_RUN_TOKEN	cmd/openv-mcp:resolveToken(env)	-
+OPENV_SELF_HOSTED	os.Getenv =="true"	-
+OPENV_SESSION_IDLE	internal/domain/users:envDuration(name)	168h0m0s
+OPENV_SESSION_MAX_AGE	internal/domain/users:envDuration(name)	720h0m0s
+OPENV_SHARED_PRODUCT_DAILY_LIMIT	cmd/server:envInt(key)	20
+OPENV_SHARED_PRODUCT_POOL_LIMIT	cmd/server:envInt(key)	5000
+OPENV_SMTP_FROM	os.Getenv	-
+OPENV_SMTP_HOST	os.Getenv	-
+OPENV_SMTP_PASSWORD	os.Getenv	-
+OPENV_SMTP_PORT	internal/notify:envDefault(key)	"587"
+OPENV_SMTP_USER	os.Getenv	-
+OPENV_SSO_IP_BURST	internal/api:newRateLimiterFromEnv(burstVar)	20
+OPENV_SSO_IP_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	60
+OPENV_STRIPE_API_VERSION	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_STRIPE_PRICES	internal/billing:ConfigFromEnv(getenv)	-
+OPENV_TRUSTED_PROXY_HOPS	os.Getenv	-
+OPENV_TRUST_PROXY	os.Getenv =="1"	-
+OPENV_VAPID_PRIVATE_KEY	os.Getenv	-
+OPENV_VAPID_PUBLIC_KEY	os.Getenv	-
+OPENV_VAPID_SUBJECT	os.Getenv	-
+OPENV_VERIFY_RESEND_BURST	internal/api:newRateLimiterFromEnv(burstVar)	3
+OPENV_VERIFY_RESEND_REFILL_PER_HOUR	internal/api:newRateLimiterFromEnv(refillVar)	6
+PORT	cmd/server:envOr(key)	"8080"
+PUBLIC_URL	cmd/server:envOr(key)	"http://localhost:3000"
+PUBLIC_URL	cmd/server:envOr(key)	(computed)
+RAILWAY_GIT_COMMIT_SHA	os.Getenv	-
+RUNNER_API_URL	internal/hosting:envOr(key)	"http://api:8080"
+RUNNER_IMAGE	internal/hosting:envOr(key)	"openv-worker:latest"
+RUNNER_NETWORK	os.Getenv	-
+RUNNER_NODE_NAME	cmd/agentd:envOr(key)	""
+RUNNER_POOL	cmd/agentd:envOr(key)	""
+RUNNER_POOL_KEY	os.Getenv	-
+RUNNER_SESSION_ROOT	cmd/agentd:envOr(key)	""
+SECURE_COOKIES	os.Getenv =="true"	-
+STRIPE_SECRET_KEY	internal/billing:ConfigFromEnv(getenv)	-
+UPLOADS_DIR	cmd/server:envOr(key)	"./uploads"
+UPLOADS_DIR	os.Getenv	-
+WORKER_API_KEY	os.Getenv	-
+
+# The exemptions: reads no constant names (unresolved, with ? for names;
+# environ, the whole environment, *) and named reads that stay where they are
+# when X10 moves configuration to internal/config (placement), K8's list.
+# exemption	kind	names	reason
+connector-agentd-environ	environ	*	agentd, which the connector starts, inherits the connector's environment plus WORKER_API_KEY, which goes through the environment rather than argv so that other processes cannot read it
+mcp-tool-allowlist	placement	OPENV_MCP_TOOLS	a set but empty value means no tools, which only os.LookupEnv tells apart; openv-mcp applies it to its tool table
+per-request	placement	OPENV_CLIENT_IP_HEADER,OPENV_MAX_EVIDENCE_MB,OPENV_MAX_UPLOAD_MB,OPENV_PUSH_ENDPOINT_HOSTS,OPENV_TRUSTED_PROXY_HOPS,OPENV_TRUST_PROXY,UPLOADS_DIR	read on every request (the client address, an upload or evidence size cap, a push endpoint, a report's attachment path), so a changed value applies without a restart
+runner-child-environ	environ	*	every process the runner starts (a provider CLI's run, sign-in or version probe, and git) inherits the runner's environment, less the runner's own WORKER_API_KEY and RUNNER_POOL_KEY, with a run's variables layered on top, which is how a provider CLI finds its own settings
+runner-gemini-auth-probe	placement	CLOUD_SHELL,GEMINI_API_KEY,GEMINI_CLI_USE_COMPUTE_ADC,GOOGLE_API_KEY,GOOGLE_GEMINI_BASE_URL,GOOGLE_GENAI_USE_GCA,GOOGLE_GENAI_USE_VERTEXAI	per run: before adding GOOGLE_GENAI_USE_GCA, the runner checks each Gemini auth-mode variable the run's own environment leaves unset in the process environment the CLI will inherit
+runner-probe	placement	ANTHROPIC_API_KEY,CODEX_HOME,GEMINI_API_KEY,GOOGLE_API_KEY,OPENAI_API_KEY	a provider's detection probes, run at registration and on each lease, see the environment the provider CLI will see, HOME included, which a pool lease changes
+runner-provider-api-key	unresolved	?	per run: the claimed run's API-key variable, named by the API or the provider's default and limited by providers.IsAllowedAPIKeyEnv to ANTHROPIC_API_KEY, GEMINI_API_KEY, GOOGLE_API_KEY and OPENAI_API_KEY

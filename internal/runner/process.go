@@ -93,11 +93,11 @@ type procHandle struct {
 func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procHandle, error) {
 	cmd := exec.Command(cfg.Command, cfg.Args...)
 	cmd.Dir = cfg.Dir
-	env := os.Environ()
+	extra := make([]string, 0, len(cfg.Env))
 	for k, v := range cfg.Env {
-		env = append(env, k+"="+v)
+		extra = append(extra, k+"="+v)
 	}
-	cmd.Env = env
+	cmd.Env = childEnv(extra...)
 	if cfg.Stdin != "" {
 		cmd.Stdin = strings.NewReader(cfg.Stdin)
 	}
@@ -290,7 +290,9 @@ func killTree(cmd *exec.Cmd) {
 	}
 	pid := cmd.Process.Pid
 	if runtime.GOOS == "windows" {
-		_ = exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid)).Run()
+		kill := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
+		kill.Env = childEnv()
+		_ = kill.Run()
 		return
 	}
 	_ = cmd.Process.Signal(os.Interrupt)
@@ -305,7 +307,9 @@ func killTree(cmd *exec.Cmd) {
 func runVersion(ctx context.Context, bin string, args ...string) (string, error) {
 	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(cctx, bin, args...).CombinedOutput()
+	cmd := exec.CommandContext(cctx, bin, args...)
+	cmd.Env = childEnv()
+	out, err := cmd.CombinedOutput()
 	text := strings.TrimSpace(string(out))
 	if err != nil {
 		if text != "" {

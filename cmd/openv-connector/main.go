@@ -363,8 +363,8 @@ func start(cfg *connectorConfig, orgHint string) {
 
 	// The worker key goes through the environment, not argv: command lines
 	// are visible to every process on the machine (ps, Task Manager), the
-	// environment of a child we spawn is not. agentd reads WORKER_API_KEY as
-	// the default for its --worker-key flag.
+	// environment of a child we spawn is not. agentd reads WORKER_API_KEY
+	// when its --worker-key flag is not given.
 	cmd := exec.Command(agentd, "--api", cfg.APIURL, "--mcp-binary", mcp)
 	cmd.Env = append(os.Environ(), "WORKER_API_KEY="+cfg.WorkerKey)
 	cmd.Stdout = os.Stdout
