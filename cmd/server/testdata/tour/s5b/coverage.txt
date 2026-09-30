@@ -81,7 +81,7 @@ POST /api/v1/public/interviews/{token}/messages: 200, 400, 404, 429; interviews
 POST /api/v1/shared-products: 201, 400, 403, 409, 429; shared_products
 POST /api/v1/shared-products/{id}/report: 204, 403, 404; shared_products
 POST /api/v1/test-results/{id}/citations: 201, 400, 403, 404; evidence
-POST /api/v1/test-runs/{id}/agent-run: 201, 400, 403, 404; test_runs_results
+POST /api/v1/test-runs/{id}/agent-run: 201, 400, 403, 404, 409; test_runs_results
 POST /api/v1/test-runs/{id}/results: 200, 400, 403, 404, 409; test_runs_results
 POST /api/v1/work-items/{id}/comments: 201, 400, 404; work_items
 POST /api/v1/work-items/{id}/move: 200, 400, 403, 404; work_items

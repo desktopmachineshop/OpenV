@@ -10,8 +10,9 @@ import "testing"
 // (its options and its JSON, CSV, Excel and ReqIF renderers, narrowed by
 // every filter the query takes, from a baseline, and bundled with the
 // figures in a zip), and the import of JSON and ReqIF, each imported
-// project read back to show what the import carried. Its golden is
-// testdata/tour/s5a/exports_imports.json.
+// project read back to show what the import carried, and last a template's
+// download whose types=all keeps every type the template would not. Its
+// golden is testdata/tour/s5a/exports_imports.json.
 //
 // The owner, an ordinary account, works in its personal workspace, which
 // defines an enum attribute (risk: low|high) for requirements. Project P
@@ -272,4 +273,11 @@ func exportsImportsTour(tr *tour) {
 		note("the message passes encoding/xml's error text through (Q19)"))
 	tr.step("import a ReqIF document whose enum value is outside its datatype", o, "POST /api/v1/projects/import",
 		rawBody("application/json", []byte(exportsImportsReqIF("EV-other-0"))))
+
+	// The reader's ticks win over a template's types: every type ticked
+	// travels as types=all (#379 bug 51, REQ-131).
+	tr.step("download CSV from the requirements-review template with types=all: every type, as the plain CSV", o,
+		"GET /api/v1/projects/{id}/download/csv", at("id", "{{p}}"), query("template=requirements-review&types=all"),
+		note("fixed under R7 (#379 bug 51): the wizard sent no types once every type was ticked, so the template's "+
+			"types stood, and types=all named the type \"all\", which kept none"))
 }

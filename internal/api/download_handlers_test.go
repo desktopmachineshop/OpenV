@@ -138,3 +138,33 @@ func TestSelectionFromQueryReadsFields(t *testing.T) {
 		t.Errorf("switches not honoured: %+v", c)
 	}
 }
+
+// A reader who picks a template and then ticks every type gets every type:
+// the wizard sends types=all beside the template, which keeps every type
+// whatever the template keeps, where the query leaving types out keeps the
+// template's (#379 bug 51; REQ-131: a member changes any choice a template
+// made, and an explicit parameter wins over it). With no template, "all" is
+// every type, as no types parameter is; "all" in a list is no type at all.
+func TestSelectionFromQueryTypesAllWinsOverTheTemplate(t *testing.T) {
+	if got := selectionFromQuery(queryRequest(t, "template=requirements-review")); len(got.Types) != 2 {
+		t.Fatalf("the requirements-review preset keeps types %v, want its two", got.Types)
+	}
+	for _, tc := range []struct{ query, template string }{
+		{"template=requirements-review&types=all", "requirements-review"},
+		{"template=vv&types=ALL", "vv"},
+		{"types=all", ""},
+		{"template=standard&types=all", "standard"},
+	} {
+		got := selectionFromQuery(queryRequest(t, tc.query))
+		if got.Types != nil {
+			t.Errorf("%s: types = %v, want every type (nil)", tc.query, got.Types)
+		}
+		if got.Content.Template != tc.template {
+			t.Errorf("%s: the template is %q, want %q still recorded", tc.query, got.Content.Template, tc.template)
+		}
+	}
+	got := selectionFromQuery(queryRequest(t, "template=requirements-review&types=all,test-case"))
+	if len(got.Types) != 2 || got.Types[0] != "all" || got.Types[1] != "test-case" {
+		t.Errorf("types = %v, want the explicit list as sent", got.Types)
+	}
+}

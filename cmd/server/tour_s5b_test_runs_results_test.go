@@ -38,7 +38,9 @@ import (
 // aborted, the refused transitions, a result refused by the completed and the
 // aborted run; the deletes (a run that holds results kept, an empty one
 // deleted); the editor's launch on a run of its own, with P's workspace's
-// V&V engineer; R1's history; and, last, a run on Q's baseline, refused.
+// V&V engineer; R1's history; a run on Q's baseline, refused; and, last, a
+// run whose baseline is deleted, read back and listed with the reference
+// marked baseline_deleted, and a run on the deleted baseline, refused.
 // Every answer of these handlers but a refusal is a
 // bare encode with no Content-Type (Q1): sniffed as text/plain, and sent
 // with none once compressed, which a long description and long notes make
@@ -283,8 +285,9 @@ func testRunsResultsTour(tr *tour) {
 		jsonBody(`{"status":"completed"}`))
 	tr.step("abort the run on P's baseline", o, "PUT /api/v1/test-runs/{id}",
 		at("id", "{{run_baselined}}"), jsonBody(`{"status":"aborted"}`))
-	tr.step("launch an agent on the completed R1", o, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"),
-		jsonBody(`{"agent_slug":"vv-engineer"}`))
+	tr.step("launch an agent on the completed R1: 409, as a result there", o, "POST /api/v1/test-runs/{id}/agent-run",
+		at("id", "{{r1}}"), jsonBody(`{"agent_slug":"vv-engineer"}`),
+		note("fixed under R7 (#379 bug 50): it answered 400, in the words of the next step's 409"))
 	tr.step("record the physical case in the completed R1: 409, a closed run takes no result", o,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
 		jsonBody(`{"test_case_id":"{{tc_rig}}","status":"blocked","notes":"Rig booked"}`),
@@ -335,4 +338,21 @@ func testRunsResultsTour(tr *tour) {
 		jsonBody(`{"name":"Borrowed baseline","baseline_id":"{{bq}}"}`),
 		note("fixed under R7 (#379's decision on REQ-6): it was accepted, the run naming a baseline of "+
 			"another project"))
+
+	// A baseline a run names can still be deleted (REQ-5); the run keeps its
+	// id as history, and every read marks it (#379's question 23, REQ-13).
+	tr.setup("a run on P's baseline, which the owner then deletes", o, "POST /api/v1/projects/{id}/test-runs",
+		at("id", "{{p}}"), jsonBody(`{"name":"Run on a deleted baseline","baseline_id":"{{bp}}"}`), expect(201)).
+		capture("run_deleted_baseline", "/id")
+	tr.setup("the owner deletes P's baseline: the delete goes ahead", o, "DELETE /api/v1/baselines/{id}",
+		at("id", "{{bp}}"), expect(204))
+	tr.step("read the run back: its baseline_id kept, marked baseline_deleted", o, "GET /api/v1/test-runs/{id}",
+		at("id", "{{run_deleted_baseline}}"),
+		note("fixed under R7 (#379's question 23): the run kept the id with nothing to say the baseline was gone, "+
+			"so the V&V dashboard showed the bare id"))
+	tr.step("P's runs: the run on the deleted baseline marked, the others not", o,
+		"GET /api/v1/projects/{id}/test-runs", at("id", "{{p}}"))
+	tr.step("create a run on the deleted baseline: 404, as a baseline no row has", o,
+		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"),
+		jsonBody(`{"name":"Deleted baseline","baseline_id":"{{bp}}"}`))
 }

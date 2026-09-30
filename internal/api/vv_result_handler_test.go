@@ -165,3 +165,41 @@ func TestDeleteTestRunKeepsARunWithResults(t *testing.T) {
 		})
 	}
 }
+
+// TestLaunchingAnAgentOnAClosedRunAnswersAsAResultThere: an agent launched on
+// a completed or aborted run would record results a closed run refuses, so
+// the launch is refused as such a result is, 409 in the same words and the
+// same body (#379 bug 50; REQ-13, REQ-74). It answered 400, in the words the
+// result's 409 used.
+func TestLaunchingAnAgentOnAClosedRunAnswersAsAResultThere(t *testing.T) {
+	send := func(t *testing.T, path string, serve http.HandlerFunc) *httptest.ResponseRecorder {
+		t.Helper()
+		body := `{"agent_slug":"vv-engineer","test_case_id":"tc-1","status":"pass"}`
+		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true}))
+		r = mux.SetURLVars(r, map[string]string{"id": "trun-1"})
+		w := httptest.NewRecorder()
+		serve(w, r)
+		return w
+	}
+	for _, status := range []string{vv.RunStatusCompleted, vv.RunStatusAborted} {
+		t.Run(status, func(t *testing.T) {
+			run := &vv.TestRun{ID: "trun-1", ProjectID: "proj-1", Status: status}
+			// The result's refusal is the store's, which the service repeats.
+			results := &fakeVVService{run: run, upsertErr: vv.CheckAcceptsResults(status)}
+			result := send(t, "/api/v1/test-runs/trun-1/results", vvHandler(results).UpsertTestResult)
+			launch := send(t, "/api/v1/test-runs/trun-1/agent-run", vvHandler(&fakeVVService{run: run}).LaunchTestRunAgent)
+
+			want := `{"error":"this test run is ` + status + `; only in-progress runs accept new results"}` + "\n"
+			if result.Code != http.StatusConflict || result.Body.String() != want {
+				t.Fatalf("the result answered %d %q, want 409 %q", result.Code, result.Body.String(), want)
+			}
+			if launch.Code != result.Code || launch.Body.String() != result.Body.String() ||
+				launch.Header().Get("Content-Type") != result.Header().Get("Content-Type") {
+				t.Fatalf("the launch answered %d %q (%s), want the result's %d %q (%s)",
+					launch.Code, launch.Body.String(), launch.Header().Get("Content-Type"),
+					result.Code, result.Body.String(), result.Header().Get("Content-Type"))
+			}
+		})
+	}
+}

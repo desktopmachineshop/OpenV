@@ -1,4 +1,4 @@
-import { Baseline } from '../api/client';
+import { Baseline, TestRun } from '../api/client';
 
 /**
  * Reading a baseline in a list.
@@ -36,3 +36,20 @@ export const baselineLabel = (baseline: Baseline): string =>
   [baseline.name, baselineDate(baseline.created_at), baselineAuthor(baseline)]
     .filter((part) => part !== '')
     .join(' · ');
+
+/**
+ * What a test run's baseline reads as in the runs list: "Live" for a run on
+ * the project as it stood, the baseline's name while the project has it, and
+ * "Baseline deleted" once it is gone. A run keeps the id of a baseline
+ * deleted after it named it, as history (REQ-13), and the server marks it
+ * `baseline_deleted`, so the list says what happened rather than showing an
+ * id that leads nowhere.
+ */
+export const runBaselineLabel = (
+  run: Pick<TestRun, 'baseline_id' | 'baseline_deleted'>,
+  baselines: Baseline[]
+): string => {
+  if (!run.baseline_id) return 'Live';
+  if (run.baseline_deleted) return 'Baseline deleted';
+  return baselines.find((b) => b.id === run.baseline_id)?.name || run.baseline_id;
+};

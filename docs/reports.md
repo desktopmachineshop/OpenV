@@ -58,7 +58,7 @@ The wizard's Content step, for the PDF and Word formats:
 | Choice | Query parameter | Default |
 |---|---|---|
 | Template preset | `template=standard\|requirements-review\|test-planning\|vv` | none |
-| Sections, artifact types, headings, attachment files | `sections`, `types`, `headings=0`, `attachments` | everything, headings in, no files |
+| Sections, artifact types, headings, attachment files | `sections`, `types` (a list, or `all`), `headings=0`, `attachments` | everything, headings in, no files |
 | One party's share of the project (REQ-148) | `owners=Landing gear supplier` | everyone |
 | Table of contents | `toc=0\|1` | on |
 | Traceability rows under each artifact | `traceability=0\|1` | on |
@@ -68,10 +68,12 @@ The wizard's Content step, for the PDF and Word formats:
 | Fields (attributes) shown per artifact | `fields=all\|none\|key,key` | all |
 
 A template sets the types and the switches; any parameter given explicitly
-wins over it, and the wizard sends every switch it shows, and its field
-choice, beside the template, a switch that matches the defaults too, since
-the server starts a named preset from the preset's content: the cover
-records the starting point while the document does what the reader chose.
+wins over it, and the wizard sends every switch it shows, its field choice
+and its type choice beside the template, a switch that matches the defaults
+too, since the server starts a named preset from the preset's content: the
+cover records the starting point while the document does what the reader
+chose. Every type ticked travels as `types=all`, which keeps every type
+whatever the template keeps; left out, the template's types stand (REQ-131).
 `GET /projects/{id}/download/options` lists the presets, the fields the
 project holds (standard keys first, custom definitions and discovered keys
 after, each with a count) and the defaults, so the wizard offers only what

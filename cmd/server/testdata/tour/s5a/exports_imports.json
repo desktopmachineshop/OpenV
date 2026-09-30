@@ -7868,6 +7868,113 @@
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
+    },
+    {
+      "n": 48,
+      "title": "download CSV from the requirements-review template with types=all: every type, as the plain CSV",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/download/csv",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/download/csv",
+        "query": "template=requirements-review&types=all"
+      },
+      "notes": [
+        "fixed under R7 (#379 bug 51): the wizard sent no types once every type was ticked, so the template's types stood, and types=all named the type \"all\", which kept none"
+      ],
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8",
+      "headers": [
+        "Content-Disposition: attachment; filename=\"project_Tour export <ab> & c_<stamp>.csv\""
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "csv",
+      "body": [
+        "id,type,title,body,status,version,parent_id,links,created_at,updated_at",
+        "<heading>,heading,Scope,What the tour covers.,draft,1,,,<time>,<time>",
+        "<design>,design-item,Fast path,A cache in front of the store.,draft,2,,satisfies:<req>,<time>,<time>",
+        "<need>,user-need,Operators need speed,Operators wait for answers.,draft,2,<heading>,,<time>,<time>",
+        "<req>,requirement,Answer in time,\"The system shall answer within 2 s.",
+        "The system shall log each answer.\",draft,6,<heading>,derives-from:<need>,<time>,<time>",
+        "<test>,test-case,Time the answer,Measure the answer time.,draft,2,<heading>,verifies:<req>,<time>,<time>"
+      ],
+      "trailing_newline": true,
+      "rows": [
+        [
+          "id",
+          "type",
+          "title",
+          "body",
+          "status",
+          "version",
+          "parent_id",
+          "links",
+          "created_at",
+          "updated_at"
+        ],
+        [
+          "<heading>",
+          "heading",
+          "Scope",
+          "What the tour covers.",
+          "draft",
+          "1",
+          "",
+          "",
+          "<time>",
+          "<time>"
+        ],
+        [
+          "<design>",
+          "design-item",
+          "Fast path",
+          "A cache in front of the store.",
+          "draft",
+          "2",
+          "",
+          "satisfies:<req>",
+          "<time>",
+          "<time>"
+        ],
+        [
+          "<need>",
+          "user-need",
+          "Operators need speed",
+          "Operators wait for answers.",
+          "draft",
+          "2",
+          "<heading>",
+          "",
+          "<time>",
+          "<time>"
+        ],
+        [
+          "<req>",
+          "requirement",
+          "Answer in time",
+          "The system shall answer within 2 s.\nThe system shall log each answer.",
+          "draft",
+          "6",
+          "<heading>",
+          "derives-from:<need>",
+          "<time>",
+          "<time>"
+        ],
+        [
+          "<test>",
+          "test-case",
+          "Time the answer",
+          "Measure the answer time.",
+          "draft",
+          "2",
+          "<heading>",
+          "verifies:<req>",
+          "<time>",
+          "<time>"
+        ]
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
     }
   ],
   "uploads": [

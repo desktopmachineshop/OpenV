@@ -1,4 +1,4 @@
-import { baselineAuthor, baselineDate, baselineLabel } from './baselines';
+import { baselineAuthor, baselineDate, baselineLabel, runBaselineLabel } from './baselines';
 import { Baseline } from '../api/client';
 
 const baseline = (over: Partial<Baseline> = {}): Baseline => ({
@@ -37,5 +37,28 @@ describe('reading a baseline in a list', () => {
     expect(baselineDate('not a date')).toBe('');
     const label = baselineLabel(baseline({ created_at: 'not a date', created_by_name: 'Ada' }));
     expect(label).toBe('Design freeze — rev A · Ada');
+  });
+});
+
+// #379's question 23: deleting a baseline leaves the runs that named it with
+// its id, as history (REQ-13), marked baseline_deleted by the server. The
+// runs list said the bare id, which leads nowhere; it now says the baseline
+// was deleted.
+describe("reading a test run's baseline", () => {
+  const baselines = [baseline()];
+
+  it('says Live for a run on no baseline', () => {
+    expect(runBaselineLabel({}, baselines)).toBe('Live');
+    expect(runBaselineLabel({ baseline_id: null }, baselines)).toBe('Live');
+  });
+
+  it("names a baseline the project still has", () => {
+    expect(runBaselineLabel({ baseline_id: 'b1' }, baselines)).toBe('Design freeze — rev A');
+  });
+
+  it('says the baseline was deleted, not its id', () => {
+    const label = runBaselineLabel({ baseline_id: 'b-gone', baseline_deleted: true }, baselines);
+    expect(label).toBe('Baseline deleted');
+    expect(label).not.toContain('b-gone');
   });
 });

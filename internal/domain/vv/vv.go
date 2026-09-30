@@ -91,8 +91,9 @@ var (
 	ErrInvalidStatus     = errors.New("invalid status value")
 	ErrInvalidTransition = errors.New("invalid run status transition")
 	ErrNotTestCase       = errors.New("artifact is not a test case")
-	// ErrRunClosed refuses a result for a completed or aborted run: closing
-	// a run is what makes its results a record (REQ-13).
+	// ErrRunClosed refuses a result for a completed or aborted run, and an
+	// agent launched to record results in one: closing a run is what makes
+	// its results a record (REQ-13). CheckAcceptsResults words it.
 	ErrRunClosed = errors.New("only in-progress runs accept new results")
 	// ErrRunHasResults refuses to delete a run that holds results: they are
 	// the record REQ-13 keeps, so such a run is closed, not deleted. The
@@ -101,19 +102,34 @@ var (
 	ErrRunHasResults = errors.New("a test run that holds results is kept")
 )
 
+// CheckAcceptsResults answers nil for a run in progress, and for a completed
+// or aborted one ErrRunClosed in words that name its status. A result and an
+// agent launched to record results are refused alike.
+func CheckAcceptsResults(status string) error {
+	if status == RunStatusInProgress {
+		return nil
+	}
+	return fmt.Errorf("this test run is %s; %w", status, ErrRunClosed)
+}
+
 // TestRun represents a verification test execution campaign.
 type TestRun struct {
-	ID          string     `json:"id"`
-	ProjectID   string     `json:"project_id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	BaselineID  *string    `json:"baseline_id,omitempty"`
-	Status      string     `json:"status"`
-	StartedAt   time.Time  `json:"started_at"`
-	CompletedAt *time.Time `json:"completed_at,omitempty"`
-	CreatedBy   *string    `json:"created_by,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          string  `json:"id"`
+	ProjectID   string  `json:"project_id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	BaselineID  *string `json:"baseline_id,omitempty"`
+	// BaselineDeleted marks a BaselineID its project no longer has: the
+	// baseline was deleted after the run named it (REQ-5), and the run keeps
+	// the reference as history (REQ-13). The store computes it on every read;
+	// nothing stores it.
+	BaselineDeleted bool       `json:"baseline_deleted,omitempty"`
+	Status          string     `json:"status"`
+	StartedAt       time.Time  `json:"started_at"`
+	CompletedAt     *time.Time `json:"completed_at,omitempty"`
+	CreatedBy       *string    `json:"created_by,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 // TestResult records the outcome of one test case within a run.
@@ -311,8 +327,8 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 	if err != nil {
 		return nil, err
 	}
-	if run.Status != RunStatusInProgress {
-		return nil, fmt.Errorf("this test run is %s; %w", run.Status, ErrRunClosed)
+	if err := CheckAcceptsResults(run.Status); err != nil {
+		return nil, err
 	}
 
 	testCase, err := s.artifactService.GetArtifact(req.TestCaseID)
