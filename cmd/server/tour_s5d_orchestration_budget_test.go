@@ -11,7 +11,7 @@ import (
 // area (refactor plan §6.4 S5d, before M3, which moves main.go's budget guard
 // closure, and M7, which splits agent_handlers.go; invariants I2's
 // same-method overlap, I3, I4, I5, I10, I12; quirks Q1, Q9, Q14; OpenV
-// REQ-21, REQ-23, REQ-91, REQ-143). Its golden is
+// REQ-21, REQ-23, REQ-76, REQ-81, REQ-91, REQ-143). Its golden is
 // testdata/tour/s5d/orchestration_budget.json.
 //
 // The tour plays the runner (tour_worker_test.go), so no run reaches a model:
@@ -46,11 +46,15 @@ import (
 //     claim bytes; its finish, which the parent's poll then shows; the
 //     parent's finish, inside which the run service's synchronous subscriber
 //     (the orchestration hooks) launches Checker's run with the edge's
-//     template rendered, Critic's with the reviews copy, and a card assigned
-//     to m, "Handoff from Lead" with the run's text and "(from agent run
-//     <id>)" (REQ-23), each successor moving the parent's card back to To Do;
-//     the run tree, breadth first, children by created_at; its refusals; and
-//     the finished parent's token, revoked (the middleware's 401);
+//     template rendered and Critic's with the reviews copy, each successor
+//     moving the parent's card back to To Do, and refuses the hand-off to m,
+//     who has no role in P and could not open a card there (REQ-23, REQ-81;
+//     handoff_reach_test.go pins the rest of who may be handed one): no card
+//     is made, the reason is noted at the end of the parent's log and on its
+//     card, and m is granted nothing, so m still cannot read the parent's
+//     card; the run tree, breadth first, children by created_at; its
+//     refusals; and the finished parent's token, revoked (the middleware's
+//     401);
 //   - the conversational replies S5b left to S5d: the guided copilot's run
 //     (priority 20, guided_session_id in its claim bytes) finished with an
 //     answer the session's chat then holds, and a failed turn, whose failure
@@ -61,10 +65,13 @@ import (
 //     test-case drafting answer 402, run-now, a crew launch and a test run's
 //     agent run 400, delegation 500, and, beyond Q9's six, a retry 500, all
 //     with the guard's text where they show it; a crew run finished over
-//     budget launches no agent successor (the refusal is only logged, the tree
-//     shows it) but still hands off to m, since a card is no run; and with the
-//     budget cleared a launch, run-now, a crew launch and the retry pass
-//     again, so that each refusal above was the guard's.
+//     budget launches no agent successor (the tree shows it) and publishes
+//     agentrun.successors_skipped, naming them and the budget, with a note on
+//     the run saying the same (REQ-76), but still hands off to m, since a
+//     card is no run, once the owner has made m a viewer of P (setup); and
+//     with the budget cleared a launch, run-now, a crew launch and the retry
+//     pass again, so that each refusal above was the guard's. A last step
+//     reads the over-budget run's log, which ends with that note.
 //
 // Every 2xx JSON answer is a bare encode (text/plain by sniffing, and no
 // Content-Type once compressed: the run tree, Q1); errors are
@@ -84,9 +91,10 @@ func TestTourS5dOrchestrationBudget(t *testing.T) {
 		slice: "s5d",
 		key:   "orchestration_budget",
 		about: "Crew orchestration and the workspace budget: delegation and the parent's poll (with I2's delegate/{id} " +
-			"overlap), hand-offs to agents and to a person when a crew run finishes, the run tree, the guided " +
-			"copilot's and the interviewer's replies over the worker wire, and Q9's refusals of every launch path once " +
-			"the workspace is over its monthly budget.",
+			"overlap), hand-offs to agents and to a person when a crew run finishes, refused to a person who cannot " +
+			"open the project, the run tree, the guided copilot's and the interviewer's replies over the worker wire, " +
+			"and Q9's refusals of every launch path once the workspace is over its monthly budget, with the skipped " +
+			"successors of a crew run recorded.",
 		run: orchestrationBudgetTour,
 		env: map[string]string{
 			// Wires main.go's budget guard (an M3 closure): launches are
@@ -94,7 +102,8 @@ func TestTourS5dOrchestrationBudget(t *testing.T) {
 			"OPENV_BUDGET_ENFORCE": "true",
 		},
 		accounts: []tourAccount{{name: "member", display: "Tour Member", about: "m, a plain member of W with no role " +
-			"in P: the human node of crew C, to whom its Lead hands off, and a refusal of the run tree"}},
+			"in P until the owner makes m a viewer of it before the over-budget finish: the human node of crew C, " +
+			"to whom its Lead's hand-off is refused, and then made, and a refusal of the run tree"}},
 	})
 }
 
@@ -283,16 +292,17 @@ func orchestrationBudgetTour(tr *tour) {
 	tr.step("the box key finishes child with its answer", box, finish, run("child"),
 		jsonBody(`{"status":"succeeded","final_text":"P lacks two tests."}`))
 	tr.step("lead polls its child: succeeded, with its answer", leadTok, poll, run("child"))
-	tr.step("the box key finishes lead: Checker's and Critic's runs and m's card are launched inside the request",
-		box, finish, run("lead"), jsonBody(`{"status":"succeeded","final_text":"Plan: add the two tests, then ship."}`),
+	tr.step("the box key finishes lead: Checker's and Critic's runs are launched inside the request, and the "+
+		"hand-off to m, who has no role in P, is refused", box, finish, run("lead"),
+		jsonBody(`{"status":"succeeded","final_text":"Plan: add the two tests, then ship."}`),
 		note("hands-off-to edges first, then reviews, each in the order the edges were made; each successor "+
-			"inherits lead's card and moves it back to To Do as itself; m's card is created as agent:<lead>"))
-	orchestrationBudgetCard(tr, "handoff", "Handoff from Lead")
-	tr.step("m's card: assigned to m, the run's answer and (from agent run <lead>) (REQ-23)", o,
-		"GET /api/v1/work-items/{id}", at("id", "{{handoff}}"), note("an S5b route, read to show the hand-off"))
-	tr.step("m, the card's assignee, reads it: P's guard, since m has no role in P", m, "GET /api/v1/work-items/{id}",
-		at("id", "{{handoff}}"))
-	tr.step("lead's card: its activity ends with the hand-off to Member M", o, "GET /api/v1/work-items/{id}",
+			"inherits lead's card and moves it back to To Do as itself; m could not open a card in P, so none is made"))
+	tr.step("lead's log: the refused hand-off, noted at its end, since m has no role in P (REQ-23)", o,
+		"GET /api/v1/agent-runs/{id}/logs", run("lead"),
+		note("the tour sent no log for lead, so the note is its first entry"))
+	tr.step("m reads lead's card: P's guard, since m has no role in P and the refused hand-off granted none", m,
+		"GET /api/v1/work-items/{id}", at("id", "{{lead.card}}"))
+	tr.step("lead's card: its activity records the refused hand-off to Member M", o, "GET /api/v1/work-items/{id}",
 		at("id", "{{lead.card}}"), note("the child's and the successors' moves are logged on it as theirs"))
 	res := tr.step("lead's tree: lead, then its children by created_at (child, Checker's, Critic's)", o, tree,
 		run("lead"), note("Checker's prompt is its edge's template rendered; Critic's is the reviews copy"))
@@ -399,9 +409,12 @@ func orchestrationBudgetTour(tr *tour) {
 	tr.step("lead2 delegates over budget: 500 (Q9)", lead2Tok, delegate,
 		jsonBody(`{"role_label":"Analyst","prompt":"Analyse P."}`))
 	tr.step("retry the failed run over budget: 500, beyond Q9's six", o, retry, run("failed"))
-	tr.step("the box key finishes lead2 over budget: 200, no agent successor is launched (the refusal is only "+
-		"logged), but m still gets a card", box, finish, run("lead2"),
-		jsonBody(`{"status":"succeeded","final_text":"Plan: ship as is."}`))
+	tr.setup("the owner makes m a viewer of P, so that a hand-off may go to m", o, "POST /api/v1/projects/{id}/members",
+		at("id", "{{p}}"), jsonBody(`{"email":"tour-member@example.com","role":"viewer"}`), expect(201))
+	tr.step("the box key finishes lead2 over budget: 200, no agent successor is launched, an event names them and "+
+		"the budget (REQ-76), and m, now a viewer of P, still gets a card", box, finish, run("lead2"),
+		jsonBody(`{"status":"succeeded","final_text":"Plan: ship as is."}`),
+		note("the owner made m a viewer of P just before (setup: POST /api/v1/projects/{id}/members)"))
 	orchestrationBudgetCard(tr, "handoff2", "Handoff from Lead")
 	tr.step("lead2's tree: lead2 alone, no successor", o, tree, run("lead2"))
 	tr.setup("W's monthly budget: none", o, "PUT /api/v1/orgs/{id}", at("id", "{{w}}"),
@@ -425,4 +438,7 @@ func orchestrationBudgetTour(tr *tour) {
 		res.capture(again.name, "/id")
 		res.capture(again.name+".card", "/work_item_id")
 	}
+	tr.step("lead2's log: the note that Checker and Critic were not launched, and why (REQ-76)", o,
+		"GET /api/v1/agent-runs/{id}/logs", run("lead2"),
+		note("the tour sent no log for lead2, so the note is its only entry"))
 }

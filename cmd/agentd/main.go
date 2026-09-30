@@ -60,6 +60,24 @@ func defaultMCPBinary() string {
 	return filepath.Join(filepath.Dir(exe), name)
 }
 
+// keyFlagWarnings names each key flag the command line gave a value: ps
+// shows a process's arguments to every user of the machine, so a key there
+// is no secret. The flags keep working; the warning names the variable to
+// use instead and never the key (issue #379's question 18).
+func keyFlagWarnings(given map[string]bool, workerKey, poolKey string) []string {
+	var out []string
+	for _, k := range []struct{ flag, env, value string }{
+		{"worker-key", "WORKER_API_KEY", workerKey},
+		{"pool-key", "RUNNER_POOL_KEY", poolKey},
+	} {
+		if given[k.flag] && k.value != "" {
+			out = append(out, "agentd: --"+k.flag+" puts the key on the command line, where ps shows it to every "+
+				"user of this machine; set "+k.env+" in agentd's environment instead")
+		}
+	}
+	return out
+}
+
 // runPool serves leases until the process is interrupted.
 func runPool(apiURL, poolKey, pool, nodeName, sessionRoot, workspaces, mcpBinary string, concurrency, childConcurrency int) {
 	if sessionRoot == "" {
@@ -127,6 +145,9 @@ func main() {
 	}
 	if !given["node-name"] {
 		*nodeName = envOr("RUNNER_NODE_NAME", "")
+	}
+	for _, warning := range keyFlagWarnings(given, *workerKey, *poolKey) {
+		log.Print(warning)
 	}
 
 	// Pool mode: this process holds no workspace credential of its own. It

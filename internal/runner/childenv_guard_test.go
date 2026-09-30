@@ -5,32 +5,38 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-// TestEveryCommandGetsChildEnv keeps the runner's own keys out of every
-// process it starts, whichever file or build tag starts it: each
-// exec.Command or exec.CommandContext in the package's code is assigned to
-// a variable whose Env the same function sets from childEnv, since a nil
+// TestEveryCommandGetsChildEnv keeps the credentials childEnv drops out of
+// every process the runner starts, whichever file or build tag starts it:
+// each exec.Command or exec.CommandContext in the package's code is assigned
+// to a variable whose Env the same function sets from childEnv, since a nil
 // Env inherits the whole environment, and nothing starts a process another
 // way (os.StartProcess, syscall's ForkExec, Exec or StartProcess, an
-// exec.Cmd literal).
+// exec.Cmd literal). agentd's own code, which cannot call childEnv, starts
+// no process at all.
 func TestEveryCommandGetsChildEnv(t *testing.T) {
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatal(err)
-	}
 	fset := token.NewFileSet()
 	var problems []string
 	commands := 0
-	for _, e := range entries {
-		name := e.Name()
-		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
+	var files []string
+	for _, dir := range []string{".", filepath.Join("..", "..", "cmd", "agentd")} {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
 		}
+		for _, e := range entries {
+			if name := e.Name(); !e.IsDir() && strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+				files = append(files, filepath.Join(dir, name))
+			}
+		}
+	}
+	for _, name := range files {
 		f, err := parser.ParseFile(fset, name, nil, 0)
 		if err != nil {
 			t.Fatal(err)

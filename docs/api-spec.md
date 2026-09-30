@@ -136,8 +136,14 @@ key like any other runner.
 
 A raw `WORKER_API_KEY` in the API server environment keeps old deployments
 working: at startup it is registered as a workspace key for the bootstrap
-org, and the middleware also accepts the raw env value directly (resolving it
-to the bootstrap org).
+org, named `env-bootstrap`, once a personal workspace exists to hold it, and
+until then the middleware accepts the raw env value directly (resolving it
+to the bootstrap org). Once a key row holds the value, the row decides:
+revoked on the Runners tab (`DELETE /orgs/{id}/worker-keys/{keyId}`), the
+value answers `401` `invalid token`, as any revoked key does, even while the
+environment still holds it. A restart with the same value leaves the key
+revoked, registers nothing and logs a warning; only a new value registers a
+new key.
 
 ## Authorization model
 
@@ -335,7 +341,7 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
 | GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and a `pool_load` band — `green` / `amber` / `red` / `unavailable`, never a count) | org member |
-| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner (409-free: an existing lease is returned; 503 when the pool is full) | org member |
+| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner: `201` with a new lease; the lease the caller already holds is returned with `200` and the same payload, rather than a second node or a `409`; `503` when the pool is full | org member |
 | POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
 | DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |
 | GET | `/api/v1/orgs/{id}/runner-pool` | Pool occupancy and the workspace's live leases | org admin |
@@ -1187,7 +1193,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree, less each run below the root the caller could not open by itself and the runs below it | launcher / viewer |
-| GET | `/api/v1/agent-runs/{id}/logs` | Run log entries | launcher / viewer |
+| GET | `/api/v1/agent-runs/{id}/logs` | Run log entries: the worker's, then any note the server keeps on the finished run (`kind` `marker`, below) | launcher / viewer |
 | POST | `/api/v1/agent-runs/{id}/logs` | Worker appends log entries (returns cancel flag) | worker |
 | GET | `/api/v1/agent-runs/{id}/stream` | SSE live log stream | launcher / viewer |
 
@@ -1204,6 +1210,41 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
 | POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. `204` also when nothing was released | worker |
+
+A run that finishes with proposals pending review waits in
+`awaiting_approval` until its last proposal is reviewed, then succeeds, or
+fails when an approved proposal could not be applied: its `error` is then
+`one or more approved proposals failed to apply` and its `error_class`
+`agent_error`, which is never retried automatically; a member may still
+retry it (REQ-79, REQ-84).
+
+When a crew run succeeds (for one awaiting approval, once it is finalised),
+each `hands-off-to` and `reviews` edge of its crew node starts what it leads
+to: an agent's run, or, for a person, a card on the run's project board
+assigned to them. That card goes only to an admin of the project's
+workspace, or a member of it with a role in the project, directly or
+through a people team. That is stricter than what the person's own session
+opens: a platform admin who is neither, and someone who has left the
+workspace but kept a role in the project, are refused too. Anyone refused
+is granted nothing: no card is made, and the run keeps a note saying why,
+which its card's activity repeats (`run-failed`) (REQ-23, REQ-81). The
+reason names the rule that refused: a member of the workspace with no role
+in the project "has no role in this project", to be given one, and anyone
+outside the workspace, such as a former member who kept a role in the
+project, "is no longer a member of this workspace", to be added back to it
+with a role in the project; a check that fails says the person's access
+"could not be checked".
+When the workspace's budget refuses the agent successors
+(`OPENV_BUDGET_ENFORCE`), none is launched: the run publishes
+`agentrun.successors_skipped`, with `agent_id`, `team_id`, `successors` (the
+skipped nodes' labels), `team_node_ids` and `reason` (the budget refusal,
+which names the budget and the month's spend), and keeps a note saying the
+same (REQ-76); a person's hand-off, which starts no run, is still made. A
+note is an entry the server appends at the end of the finished run's log,
+`kind` `marker`, whose payload carries `marker` (`handoff_refused` or
+`successors_skipped`), `message`, the sentence the run panel shows, and the
+detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
+`successors`, `team_node_ids` and `reason` for skipped successors.
 
 ### Crews (agent org charts) — canonical
 

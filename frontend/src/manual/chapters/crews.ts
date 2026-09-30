@@ -57,7 +57,18 @@ connection type:
 **Human targets are special**: you can't delegate to a person. "Hands off to"
 and "Reviews" edges pointing at a person instead create a **Board card
 assigned to that person** when the work reaches them — so human review steps
-show up on the kanban board.
+show up on the kanban board. The person must be a member of the workspace
+with a role in the project, or an admin of the workspace. Otherwise the
+hand-off is refused, no card is made, and the run's log and its card say
+why; give them a role in the project to hand work to them. Someone who has
+left the workspace is refused even if they kept a role in the project, and
+the reason says they are no longer a member: add them back to the
+workspace, with a role in the project, to hand work to them.
+
+If the workspace has reached an enforced monthly AI budget when a run
+finishes, the agents it hands off to or is reviewed by are not started. The
+run's log names them and the budget, and the project's Activity page shows
+an \`agentrun.successors_skipped\` event. Hand-offs to people still happen.
 
 ## Crews elsewhere in the app
 

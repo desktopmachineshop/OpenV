@@ -14,6 +14,13 @@ agentrun.finished             (org)              org-1                    POST /
 agentrun.finished             agent_id           string                   POST /api/v1/agent-runs/{id}/finish
 agentrun.finished             launched_by        string                   POST /api/v1/agent-runs/{id}/finish
 agentrun.finished             status             string                   POST /api/v1/agent-runs/{id}/finish
+agentrun.successors_skipped   (actor)            agent:run-live           crew run finished over budget (orchestration hooks)
+agentrun.successors_skipped   (org)              org-1                    crew run finished over budget (orchestration hooks)
+agentrun.successors_skipped   agent_id           string                   crew run finished over budget (orchestration hooks)
+agentrun.successors_skipped   reason             string                   crew run finished over budget (orchestration hooks)
+agentrun.successors_skipped   successors         []string                 crew run finished over budget (orchestration hooks)
+agentrun.successors_skipped   team_id            string                   crew run finished over budget (orchestration hooks)
+agentrun.successors_skipped   team_node_ids      []string                 crew run finished over budget (orchestration hooks)
 artifact.created              (actor)            system                   proposal applier CreateArtifact
 artifact.created              (actor)            user:u-admin             POST /api/v1/artifacts
 artifact.created              (org)              org-1                    POST /api/v1/artifacts
