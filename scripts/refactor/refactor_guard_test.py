@@ -236,7 +236,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14d"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -329,6 +329,31 @@ class DataTest(unittest.TestCase):
         for path in ("cmd/newcmd/sub/cli_test.go", "frontend/env_parse_test.go", "internal/archtest/env_parse_test.go"):
             with self.subTest(path=path):
                 self.assertNotEqual(rg.guard_code_step(path), "S8")
+
+    def test_merged_s14d_generator_is_guarded(self):
+        # S14d's generator (internal/tools/liftmigrations: the tool, its
+        # tests, its fixture and goldens) is guard code of its row, every
+        # tracked file of it, so M10's class A and B commits cannot edit what
+        # proves them; the sibling tools declmove and movecheck are not
+        # (S14a's row holds declhash only), and neither is M10's declmove
+        # spec, which its class A commit adds.
+        files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
+                               check=True).stdout.split("\n")
+        mine = [f for f in files if f.startswith("internal/tools/liftmigrations/")]
+        for f in ("internal/tools/liftmigrations/main.go", "internal/tools/liftmigrations/lift.go",
+                  "internal/tools/liftmigrations/verify.go"):
+            self.assertIn(f, mine)
+        for f in mine + ["internal/tools/liftmigrations/main_test.go", "internal/tools/liftmigrations/worktree_test.go",
+                         "internal/tools/liftmigrations/testdata/fixture/migrations.go",
+                         "internal/tools/liftmigrations/testdata/want/lift/migrations.go.golden"]:
+            with self.subTest(path=f):
+                self.assertEqual(rg.guard_code_step(f), "S14d")
+        for f in ("internal/tools/declmove/main.go", "internal/tools/movecheck/main.go",
+                  "internal/tools/declmove/specs/M10.json", "internal/persistence/postgres/migrations.go",
+                  "internal/tools/liftmigrationsx/main.go"):
+            with self.subTest(path=f):
+                self.assertNotEqual(rg.guard_code_step(f), "S14d")
+        self.assertTrue(rg.matches("internal/tools/declmove/specs/M10.json", rg.A_PATHS))
 
     def test_classification(self):
         self.assertEqual(rg.guard_code_step("internal/archtest/graph_test.go"), "S1")

@@ -17,6 +17,11 @@ freezes the module's import edges, so they cannot import a common package);
 `declhash`'s `TestSharedFileIsIdentical` keeps the copies equal. Edit
 the files under `declhash/` and copy them over the other two.
 
+`liftmigrations` (step S14d) is a window generator: it produces refactor
+step M10 from the migration registry, so that move is regenerated on the
+latest `master`, never rebased (R4). It shares no file with the three tools
+above; its own tests prove its output with `declhash`.
+
 ## declhash
 
 ```
@@ -85,6 +90,96 @@ changed lines, so it does not by itself prove that only renames differ.
 Normalising those renames and failing on any remaining difference is an
 open follow-up for S14c, before M4. Used by M4 (with S14c's
 `stageextract`), and by M6–M9 for their maps.
+
+## liftmigrations
+
+```
+go run ./internal/tools/liftmigrations -spec internal/tools/declmove/specs/M10.json [-n] [dir]
+go run ./internal/tools/liftmigrations [-n] [-build=false] [dir]
+```
+
+Generates M10, one file per migration, from `var migrations = []Migration{...}`
+in `internal/persistence/postgres` (or `dir`), in two commits. Used by M10,
+and after it to move a migration written the old way into its own file:
+
+1. **Class A, the helper and runner move.** `-spec` writes the `declmove`
+   spec and changes nothing else: every declaration of the registry's file
+   but the registry and its element type (`Migration`, with any methods)
+   leaves it, in source order. What a registry entry reaches, directly or
+   through other declarations, goes to `migration_helpers.go`
+   (`backfillRefPrefix` and `embeddingDimensions` today); the rest, the
+   runner, the ledger, the locks and the reconcile, to `migrate_runner.go`.
+   Then `go run ./internal/tools/declmove -spec
+   internal/tools/declmove/specs/M10.json` moves them, proves the package's
+   `declhash` manifest unchanged and tidies imports with the pinned
+   goimports. The spec goes in the commit.
+2. **Class B, the lift.** Without `-spec`, each entry whose `Run` is a
+   function literal becomes `func m00NN<Name>(tx *sql.Tx) error` in
+   `migration_00NN_<name>.go` (`unique_personal_org_per_user` becomes
+   `m0002UniquePersonalOrgPerUser` in
+   `migration_0002_unique_personal_org_per_user.go`), with the comment
+   above the entry, and the entry becomes one line naming it. The registry
+   stays an explicit, ordered list, with no `init()`. An entry that already
+   names a package-level function (the 0001 baseline's `RunDB: InitSchema`,
+   or one lifted before) is left as it is, with its comment, so a second
+   run changes nothing, and a migration still written as a literal, such as
+   one on a branch that merges `master` after M10, is lifted on its own.
+
+The lifted body is the literal's source text, re-indented by gofmt: code
+lines move one tab left, and raw strings keep every byte, so the SQL inside
+them keeps its old indentation (the S3 freeze hashes literals byte for
+byte). The comment above an entry becomes the function's doc comment,
+except where gofmt would reword a doc comment: it turns two single quotes,
+SQL's empty string, into a typographic quote, so the comments of 0014 and
+0017 stay above their functions word for word, separated by a blank line.
+The imports only the lifted bodies used leave the registry's file.
+
+Before it stops, the lift re-reads the package and checks that nothing but
+the layout changed, restoring every file and exiting 1 if not: the registry
+holds the same entries in the same order; each lifted function is its
+literal token for token, comments and raw-string bytes included, and its
+go/printer text without comments, what the S3 freeze hashes, is the
+literal's; the comment above it is the entry's, line for line; each new
+file declares its function alone, imports exactly what its body uses, and
+has no other comment; the registry's file, outside its imports, is the
+original with only the lift's edits, token for token; every comment the
+registry's file had is still there, in order, in it or in the lifted file
+of the entry it was above or inside (a check that reads the files, not the
+lift's plan, so a planning fault that loses or reorders a comment cannot
+hide behind it; one that hands a comment to the neighbouring migration in
+the same order is not caught); every other
+declaration of the package is byte-identical; and `go build` passes
+(`-build=false` skips that). It refuses, writing nothing, what it cannot
+carry: a `Run` that is neither a literal nor a function's name, a name that
+cannot be part of a file name, a name whose file the go command would read
+as a test or build for one platform only (one ending in `test` or in an
+operating system or architecture: `_test`, `_linux`, `_windows`, `_amd64`,
+`_arm`), a function or file that exists, versions out of order, a comment
+inside an entry but outside its function, two entries on a line, build
+constraints or a dot import in the registry's file. `-n` prints the
+function-to-file map (what the heads-up on the tracking issue posts, §6.9)
+or the spec, and writes nothing.
+
+After each commit, run `UPDATE_RATCHETS=1 go test ./internal/archtest`
+and commit `ratchets.json` with it: the move lowers `migrations.go`'s
+ceiling, and the lift, which leaves it about 110 lines, removes it. Nothing
+is added: every new file and function fits the K14 budgets.
+
+The tests run on `testdata/fixture`, a registry in each shape the real one
+has, against the goldens under `testdata/want`
+(`UPDATE_GOLDEN=1 go test ./internal/tools/liftmigrations -count=1 -run '^(TestLiftFixture|TestSpecFixture)$'`
+regenerates them when the tool changes on purpose), plant each fault the
+self-check must catch, and, without `-short`, run the whole recipe on a copy
+of this repository (`TestLiftTheWorkingTree`): `declhash` identical after
+the move and different only in the registry and the new functions after the
+lift, the module building, `go test ./internal/archtest` passing with
+`ratchets.json` as it is, the S3 freeze passing against its goldens, and
+with `OPENV_TEST_DATABASE_URL` set the schema and purge goldens and the
+migration tests too; `migrations.go` ends at most 150 lines, one line per
+entry in its registry. Once M10 has landed the working-tree test skips,
+since there is nothing left to lift, even when a later change has put a
+declaration beside the registry for `-spec` to move (`TestRecipeAfterM10`
+runs that case on the fixture).
 
 ## frontend/scripts/tsdeclhash.mjs
 
