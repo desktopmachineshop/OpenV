@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -150,7 +149,7 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 	}
 
 	cmd := exec.CommandContext(runCtx, flow.command[0], flow.command[1:]...)
-	cmd.Env = append(os.Environ(), flow.env...)
+	cmd.Env = childEnv(flow.env...)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -267,7 +266,7 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 // window on the worker host and reports completion when it exits.
 func (w *Worker) handleInteractiveLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
 	cmd := exec.Command(flow.command[0], flow.command[1:]...)
-	cmd.Env = append(os.Environ(), flow.env...)
+	cmd.Env = childEnv(flow.env...)
 	configureInteractiveConsole(cmd)
 
 	if err := cmd.Start(); err != nil {

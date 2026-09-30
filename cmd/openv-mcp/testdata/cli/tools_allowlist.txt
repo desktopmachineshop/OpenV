@@ -1,0 +1,19 @@
+# The command line of openv-mcp (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/openv-mcp/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/openv-mcp -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ openv-mcp
+env OPENV_API_TOKEN="key-example"
+env OPENV_API_URL="http://127.0.0.1:9"
+env OPENV_MCP_TOOLS="list_projects"
+--- stdin
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"s8","version":"0"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+exit 0
+--- stdout
+{"jsonrpc":"2.0","id":1,"result":{"capabilities":{"tools":{}},"protocolVersion":"2024-11-05","serverInfo":{"name":"openv-mcp","version":"0.1.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"tools":[{"description":"List all projects visible to this agent.","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"list_projects"}]}}
+--- stderr

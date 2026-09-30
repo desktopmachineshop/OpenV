@@ -5,8 +5,10 @@ plan (`docs/plans/codebase-refactor.md`, whose rule and step names, such as
 K7, R6 or M6, this README uses). They freeze the import graph, check the
 layering, cap file and function sizes, ban a few constructs, and hold
 count ratchets on legacy idioms, so each can shrink but never spread. The
-package has only `_test.go` files, this README and `ratchets.json`; it
-builds nothing and imports nothing from the module.
+package has only `_test.go` files, this README, `ratchets.json` and the
+goldens of step S8 under `testdata/`; it imports nothing from the module.
+The architecture rules build nothing; the
+[env var inventory (S8)](#env-var-inventory-s8) type-checks the module.
 
 ## Running
 
@@ -26,6 +28,8 @@ How the code is read:
   command skips them.
 - **Syntax only.** Files are parsed with `go/parser`; nothing is built or
   type-checked, so a run is fast and gives the same answer on every OS.
+  The env var inventory, which is not a rule of `TestArchitecture`, is the
+  one exception.
   Files count whatever their build constraints (a `_windows.go` file counts
   on Linux), except files no build selects (`//go:build ignore`).
 - **Production code** means files not named `*_test.go`. Packages are
@@ -459,3 +463,96 @@ asset would break only the Docker build.
 embedded asset, add its path to the Dockerfile's `COPY` list.
 
 **Regenerate.** Nothing to regenerate: the `COPY` list is the allowlist.
+
+## Env var inventory (S8)
+
+**Enforces.** `TestEnvInventory` lists every environment variable the
+production code of the module root, `cmd/` and `internal/` reads, and
+freezes the list in `testdata/env_vars.txt`: one row per variable, the way
+it is read and its default. It is a test of its own, not a rule of
+`TestArchitecture`, and it never reads `UPDATE_RATCHETS`. Unlike the rules
+above it type-checks: it runs `go list -export -deps` once and checks every
+module package with `go/types` (about 1.5 s warm; a cold build cache
+compiles export data first).
+
+A getter is found by data flow, not by its name: any function whose string
+parameter reaches `os.Getenv` or `os.LookupEnv`, directly or through another
+getter, and any function-typed parameter that a call binds to `os.Getenv`
+(`billing.ConfigFromEnv(os.Getenv)`, `resolveToken(os.Getenv)`). A function
+that assigns to its name parameter or takes its address (an alias table, a
+default) is no getter: its read does not resolve. At each call site the name
+must resolve: a constant or a constant expression, a concatenation of those,
+a local assigned exactly once and never address-taken, or the element of a
+range over a package-level table of string constants that nothing but range
+statements uses (the Gemini auth probe's). The read column is `os.Getenv`,
+`os.LookupEnv` or `<package>:<getter>(<param>)`, followed by the comparison
+when the value is only compared with a string constant
+(`os.Getenv =="true"`); the default is the argument that pairs with the
+name, the i-th name parameter with the i-th other parameter, printed when it
+is a constant. The rate-limit variables and their defaults are included.
+Where each read sits (file and line, function, the binaries that link it) is
+not frozen: `go test -v -run '^TestEnvInventory$' ./internal/archtest` logs
+the report, and `ENV_INVENTORY_REPORT=<file>` writes it there.
+
+The test fails on a name that does not resolve and no exemption covers; on
+an env reader, a getter or an interface method a getter implements used as a
+value, which the scan cannot follow; on a call through such an interface
+method, whose target the scan cannot tell; on a getter that no call the scan
+follows reaches (called only through an interface or a value, or not at
+all); on a read outside a function declaration; on a read in a production
+file this build leaves out (a `_windows.go` file, a build tag), found in
+S1's syntax trees; and on a stale exemption. The exemptions are
+`envExemptions` in `env_inventory_test.go`, each with its reason, and the
+golden lists them by id: `unresolved` (the run's provider API key in
+`Worker.execute`) and `environ` (child processes that inherit the whole
+environment) must match exactly one read in each function they name;
+`placement` names the named reads K8 keeps where they are when X10 moves
+configuration to `internal/config` (`OPENV_MCP_TOOLS`, the per-request
+reads, the runner's probes), and fails when one of its names is no longer
+read there. The functions an exemption covers live only in the test, so
+moving a read edits the test, not the golden.
+
+`testdata/env_parse.txt` says what each read column returns for the same
+list of inputs (unset, empty, blank, `TRUE`, invalid and valid values), for
+X10a to rerun against `internal/config`. Each package with a getter has an
+`env_parse_test.go` whose `TestEnvParse` calls its real, unexported getters
+and writes its `<package>:` sections, and an `env_parse_helpers_test.go`, the
+same in every package apart from the package clause; `TestEnvInventory`
+writes the `os.*` and comparison sections and fails when a read column has
+no section (or, where the parse depends on the variable, one per variable),
+when a section is stale or tries other inputs, when a getter's package has
+no `TestEnvParse` that calls it, or when a copy of the helpers differs.
+`TestEnvScanForms` proves the scan on a fixture: the forms it resolves, and
+a local assigned twice, a package variable, a getter fed a non-constant, a
+getter that reassigns its name parameter or takes its address, a function
+literal's parameter, a mutable table, values, calls through an interface
+method a getter implements, a getter no followed call reaches, reads at
+package initialisation, stale exemptions and a Windows-only read, which it
+refuses.
+
+**Why.** I13 and K8: the platform's configuration surface is its
+environment, which no other guard sees whole. A refactor that renames a
+variable, drops one, changes a default or a parse, or adds a read no one can
+name fails here. X10 moves the reads into `internal/config` and reruns the
+parse table against it; D1 generates `docs/env-vars.md` from the inventory.
+
+**Fix.** Name the variable with a constant where it is read, or pass the
+name through a getter whose parameter each call fills with a constant. A
+new getter needs a `TestEnvParse` section: add `env_parse_test.go` to its
+package, with a copy of `env_parse_helpers_test.go`. A read no constant can
+name, or one that must stay where it is, is an exemption with its reason,
+argued in review.
+
+**Regenerate.** Only for a deliberate behavior change:
+
+```sh
+UPDATE_GOLDEN=1 go test ./internal/archtest -count=1 -run '^TestEnvInventory$'
+UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest \
+  ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/api ./internal/billing \
+  ./internal/domain/users ./internal/hosting ./internal/notify
+```
+
+The first rewrites `env_vars.txt` (it refuses while the scan fails); the
+second also rewrites every section of `env_parse.txt`, whose writers take a
+lock, so they may run in parallel. Only `UPDATE_GOLDEN=1` regenerates; any
+other value compares.
