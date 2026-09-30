@@ -25,7 +25,7 @@ func (h *Handler) registerRunnerSessionRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/runner-session", h.GetRunnerSession).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/runner-session", h.StartRunnerSession).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/runner-session/extend", h.ExtendRunnerSession).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/runner-session", h.EndRunnerSession).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/runner-session", h.alwaysWritable(h.EndRunnerSession)).Methods("DELETE")
 
 	// Workspace admins: who is holding what.
 	router.HandleFunc("/api/v1/orgs/{id}/runner-pool", h.GetRunnerPool).Methods("GET")

@@ -71,7 +71,7 @@ import (
 // plan. So a project guard's role (editor for viewer, say) and a dropped
 // alwaysWritable exemption do not show here. Part (2) shows the role of the
 // 45 writes its section "real ids, body {" sends, and part (3) that of the
-// writes its over-plan steps send as a lower role, and the nine exemptions;
+// writes its over-plan steps send as a lower role, and the exemptions;
 // the role of every other guarded write (every DELETE and every write with no
 // body among them) is pinned only statically, by S2's frozen
 // internal/api/testdata/route_guards.txt, which names every route's guard.

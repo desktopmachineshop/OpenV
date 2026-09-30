@@ -53,7 +53,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/agent-runs/{id}/logs", h.GetAgentRunLogs).Methods("GET")
 	router.HandleFunc("/api/v1/agent-runs/{id}/logs", h.AppendAgentRunLogs).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/stream", h.StreamAgentRun).Methods("GET")
-	router.HandleFunc("/api/v1/agent-runs/{id}/cancel", h.CancelAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/cancel", h.alwaysWritable(h.CancelAgentRun)).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/retry", h.RetryAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/start", h.StartAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/release", h.ReleaseAgentRun).Methods("POST")

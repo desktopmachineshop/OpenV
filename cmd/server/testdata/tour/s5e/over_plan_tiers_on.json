@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5e/over_plan_tiers_on.json",
   "test": "TestTourS5eOverPlanTiersOn",
-  "about": "The over-plan pass under the tiers: a workspace over its single plan's seats is read-only (403 plan_read_only) for a write of every guard kind that carries the gate, passes the writes that ask no gate, the export and every document download (REQ-113) and the nine always-writable routes; the hosted claim's plan flag, refused on single and taken on Business Lite (REQ-176); and every project create refused at the tier's 200 projects. The grandfather step runs at boot over workspaces created before the grandfather date, which a tour on an empty database never has: internal/persistence/postgres's TestGrandfatherBeforeKeepsTheAlphaTerms covers it.",
+  "about": "The over-plan pass under the tiers: a workspace over its single plan's seats is read-only (403 plan_read_only) for a write of each project role's guard, the workspace admin's and member's and a scoped write's, and for the project creates and a launch with no project (the gated writes left to runner sessions and a run's editor, and a DELETE, are refused by internal/api's plan_read_only_exemptions_test.go instead), passes the writes that ask no gate, the export and every document download (REQ-113) and the sixteen always-writable routes; the hosted claim's plan flag, refused on single and taken on Business Lite (REQ-176); and every project create refused at the tier's 200 projects. The grandfather step runs at boot over workspaces created before the grandfather date, which a tour on an empty database never has: internal/persistence/postgres's TestGrandfatherBeforeKeepsTheAlphaTerms covers it.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5eOverPlanTiersOn$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -73,6 +73,10 @@
     {
       "name": "k",
       "about": "W's workspace worker key (a workspace runner)"
+    },
+    {
+      "name": "k2",
+      "about": "W's spare workspace worker key, never sent: the owner revokes it on the read-only workspace, where revoking k would cut the worker wire's steps off"
     },
     {
       "name": "rk",
@@ -631,7 +635,7 @@
     },
     {
       "n": 9,
-      "title": "403 plan_read_only: project:owner, revoke P's public share link",
+      "title": "always writable, beside the gate's refusals: project:owner, revoke P's public share link",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/share-links/{id}",
@@ -639,24 +643,12 @@
         "method": "DELETE",
         "path": "/api/v1/share-links/<sl>"
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 204,
+      "content_type": null,
       "headers": [],
       "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
+      "content_length": null,
+      "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
@@ -802,32 +794,20 @@
     },
     {
       "n": 14,
-      "title": "403 plan_read_only: org:admin, revoke W's worker key",
+      "title": "always writable, beside the gate's refusals: org:admin, revoke W's spare worker key k2",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
       "request": {
         "method": "DELETE",
-        "path": "/api/v1/orgs/<w>/worker-keys/<k.key>"
+        "path": "/api/v1/orgs/<w>/worker-keys/<k2.key>"
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 204,
+      "content_type": null,
       "headers": [],
       "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
+      "content_length": null,
+      "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
@@ -899,7 +879,7 @@
     },
     {
       "n": 17,
-      "title": "403 plan_read_only: org:member, m1 makes W its session's active workspace",
+      "title": "always writable, beside the gate's refusals: org:member, m1 makes W its session's active workspace",
       "actor": "m1",
       "acting_in": "<w>",
       "route": "POST /api/v1/orgs/{id}/activate",
@@ -907,30 +887,18 @@
         "method": "POST",
         "path": "/api/v1/orgs/<w>/activate"
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 204,
+      "content_type": null,
       "headers": [],
       "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
+      "content_length": null,
+      "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 18,
-      "title": "403 plan_read_only: org:member, m1 revokes its own runner key",
+      "title": "always writable, beside the gate's refusals: org:member, m1 revokes its own runner key",
       "actor": "m1",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/my-runner-key",
@@ -938,30 +906,18 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/my-runner-key"
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 204,
+      "content_type": null,
       "headers": [],
       "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
+      "content_length": null,
+      "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 19,
-      "title": "403 plan_read_only: org:member, m1 turns the stable preview on for itself",
+      "title": "always writable, beside the gate's refusals: org:member, m1 turns the stable preview on for itself: the single plan always runs nightly",
       "actor": "m1",
       "acting_in": "<w>",
       "route": "PUT /api/v1/orgs/{id}/members/me/preview",
@@ -973,23 +929,18 @@
         ],
         "body": "{\"enabled\":true}"
       },
-      "status": 403,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 745,
+      "content_length": 54,
       "kind": "json",
       "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
+        "{\"error\":\"this plan always runs the nightly channel\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+        "error": "this plan always runs the nightly channel"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1062,7 +1013,7 @@
     },
     {
       "n": 22,
-      "title": "403 plan_read_only: runner-sessions, m1 ends its cloud runner lease (it holds none: the gate answers first)",
+      "title": "always writable, beside the gate's refusals: runner-sessions, m1 ends its cloud runner lease: this deployment runs no transient runners",
       "actor": "m1",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/runner-session",
@@ -1070,23 +1021,18 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/runner-session"
       },
-      "status": 403,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 745,
+      "content_length": 65,
       "kind": "json",
       "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
+        "{\"error\":\"transient runners are not enabled on this deployment\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+        "error": "transient runners are not enabled on this deployment"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1163,39 +1109,8 @@
     },
     {
       "n": 25,
-      "title": "403 plan_read_only: run:editor, m1 cancels run2, which the owner launched in P (the project's ladder)",
+      "title": "always writable, beside the gate's refusals: run:editor, m1 cancels run2, which the owner launched in P (the project's ladder)",
       "actor": "m1",
-      "acting_in": "<w>",
-      "route": "POST /api/v1/agent-runs/{id}/cancel",
-      "request": {
-        "method": "POST",
-        "path": "/api/v1/agent-runs/<run2>/cancel"
-      },
-      "status": 403,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
-      "n": 26,
-      "title": "the owner cancels run2, which it launched: requireRunAccess passes a launcher before the project's ladder, so no gate",
-      "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/agent-runs/{id}/cancel",
       "request": {
@@ -1209,7 +1124,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 26>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 25>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1222,7 +1137,7 @@
         "cancel_requested": true,
         "priority": 0,
         "prompt": "Summarise P again.",
-        "finished_at": "<time@step 26>",
+        "finished_at": "<time@step 25>",
         "final_text": "",
         "error": "",
         "attempt_count": 1,
@@ -1250,6 +1165,53 @@
           }
         }
       ]
+    },
+    {
+      "n": 26,
+      "title": "always writable: the owner cancels run2, which it launched and m1 has cancelled: the run as it is",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "POST /api/v1/agent-runs/{id}/cancel",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/agent-runs/<run2>/cancel"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 25>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<run2>",
+        "org_id": "<w>",
+        "agent_id": "<agent>",
+        "project_id": "<p>",
+        "work_item_id": "<uuid:1>",
+        "status": "cancelled",
+        "cancel_requested": true,
+        "priority": 0,
+        "prompt": "Summarise P again.",
+        "finished_at": "<time@step 25>",
+        "final_text": "",
+        "error": "",
+        "attempt_count": 1,
+        "max_attempts": 3,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "artifacts_touched": [],
+        "launched_by": "<owner>",
+        "created_at": "<time@before step 1>",
+        "agent_content_hash": "<hex64:1>",
+        "agent_name": "Tour Over",
+        "agent_provider": "claude-code"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
     },
     {
       "n": 27,
