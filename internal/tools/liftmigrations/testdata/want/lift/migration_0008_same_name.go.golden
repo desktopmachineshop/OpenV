@@ -1,0 +1,11 @@
+package store
+
+import "database/sql"
+
+// Positional entries follow.
+//
+// 0008: positional fields; the comment above it is two groups.
+func m0008SameName(tx *sql.Tx) error {
+	_, err := tx.Exec(`SELECT 1`)
+	return err
+}

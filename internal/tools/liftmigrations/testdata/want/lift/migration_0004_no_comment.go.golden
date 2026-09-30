@@ -1,0 +1,11 @@
+package store
+
+import (
+	"database/sql"
+	"errors"
+)
+
+func m0004NoComment(tx *sql.Tx) error {
+	// Only a comment inside, and an import nothing else uses.
+	return errors.Join()
+}

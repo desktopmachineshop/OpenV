@@ -167,9 +167,10 @@ PROTECTED_PATHS = [
 # (2) Guard code (§6.4 S14b): M or D only in a class C or T commit that
 # modifies or deletes no golden. (owning step, patterns). An empty list is a
 # slot: the plan names no file for that step's guard code yet, and the step
-# fills its slot in a class T commit when it lands. S14a, S14b and S14e are
-# not in the plan's list: they are the tools that prove class A, this guard
-# and M11a's class B, so a commit of another class may not edit them either.
+# fills its slot in a class T commit when it lands. S14a, S14b, S14d and S14e
+# are not in the plan's list: they are the tools that prove class A, this
+# guard and M10's and M11a's class B, so a commit of another class may not
+# edit them either.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -220,6 +221,13 @@ GUARD_CODE = [
     ("S12b", ["frontend/src/**/cssOrder.test.ts", "frontend/scripts/bundle-check.mjs"]),
     ("S13", []),  # slot: the Go vocabulary writer and the vitest parity test
     ("S14a", ["internal/tools/declhash/**", "frontend/scripts/tsdeclhash.mjs", "frontend/scripts/tsmovecheck.mjs"]),
+    # S14d's migration generator, its tests and their fixture and goldens.
+    # M10 is what it writes; the S3 freeze and the generator's own self-check
+    # (every lifted body its literal token for token, comments included,
+    # everything else byte for byte) are M10's proof, so a refactor pull
+    # request changes the generator only in a class C or T commit, never in
+    # the commits it proves. M10's declmove spec is not under it.
+    ("S14d", ["internal/tools/liftmigrations/**"]),
     ("S14b", [".github/workflows/refactor-guard.yml", "scripts/refactor/refactor_guard.py",
               "scripts/refactor/refactor_guard_test.py"]),
     # S14e's splittools generates M11a and, with -check, proves its class B

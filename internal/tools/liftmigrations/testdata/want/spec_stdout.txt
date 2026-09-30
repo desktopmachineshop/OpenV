@@ -1,0 +1,3 @@
+migration_helpers.go: widgetSQL, suffix
+migrate_runner.go: lockKey, Migrate, apply
+liftmigrations: wrote <dir>/M10.json; apply it with: go run ./internal/tools/declmove -spec <dir>/M10.json

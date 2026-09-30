@@ -1,0 +1,6 @@
+package store
+
+import "database/sql"
+
+// 0007 and 0008 share a name.
+func m0007SameName(tx *sql.Tx) error { return nil }
