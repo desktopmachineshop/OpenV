@@ -350,7 +350,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	var conns []*repoconns.RepoConnection
 	if run.ProjectID != nil && claim.Agent.RepoAccess {
 		var err error
-		conns, err = w.client.ListRepoConnections(*run.ProjectID)
+		conns, err = w.client.ListRepoConnections(*run.ProjectID, claim.RunToken)
 		if err != nil {
 			log.Printf("run %s: listing repo connections failed: %v", run.ID, err)
 		}

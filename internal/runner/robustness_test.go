@@ -41,11 +41,13 @@ func (a *fakeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error
 }
 
 // recordingServer captures which worker lifecycle endpoints were hit and the
-// finish request body when one arrives.
+// finish request body when one arrives, and the credential each read of a
+// project's repository connections presented (answered null).
 type recordingServer struct {
 	mu         sync.Mutex
 	hits       map[string]int
 	finishBody agentruns.FinishRequest
+	repoAuth   []string
 	srv        *httptest.Server
 }
 
@@ -72,6 +74,14 @@ func newRecordingServer() *recordingServer {
 		default:
 			w.WriteHeader(http.StatusOK)
 		}
+	})
+	mux.HandleFunc("/api/v1/projects/", func(w http.ResponseWriter, r *http.Request) {
+		rs.mu.Lock()
+		defer rs.mu.Unlock()
+		if has(r.URL.Path, "/repo-connections") {
+			rs.repoAuth = append(rs.repoAuth, r.Header.Get("Authorization"))
+		}
+		w.Write([]byte("null\n"))
 	})
 	rs.srv = httptest.NewServer(mux)
 	return rs

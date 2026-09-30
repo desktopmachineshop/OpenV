@@ -49,11 +49,14 @@ the next run time.
 
 - **Run now** launches immediately and jumps you to the Runs page focused on
   the new run.
-- Scheduled and event-triggered runs are **ownerless**: any live runner in
-  the workspace can claim them, including the hosted runner. A **Run now**
-  launch counts as yours, so — like any manual launch — it's briefly reserved
-  for your personal runner first. If the target agent uses *proposal* write
-  mode, its output still waits for your approval on the Runs page.
+- Scheduled and event-triggered runs are **ownerless**: the workspace's
+  hosted and workspace runners can claim them, and so can the personal runner
+  of any member with a role in the automation's project, or of a workspace
+  admin; a run with no project goes only to an admin's runner or the shared
+  runners (see *Runs & runners*). A **Run now** launch counts as yours, so —
+  like any manual launch — it's briefly reserved for your personal runner
+  first. If the target agent uses *proposal* write mode, its output still
+  waits for your approval on the Runs page.
 
 ## Example uses
 

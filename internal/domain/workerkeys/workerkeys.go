@@ -14,8 +14,9 @@ var ErrNotFound = errors.New("worker key not found")
 
 // Key is an org-scoped credential for a host worker (agentd).
 // UserID nil = a workspace runner key; set = a member's personal runner key
-// (claims only runs that user launched). The plaintext is shown once at
-// creation; only the hash is stored.
+// (claims the runs that user launched, and ownerless ones only where that
+// user could see them). The plaintext is shown once at creation; only the
+// hash is stored.
 //
 // SessionID marks a key minted for a transient runner lease. Such a key is
 // still personal — it routes the member's runs and sign-ins exactly like

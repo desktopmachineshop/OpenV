@@ -448,9 +448,10 @@ the Phase 3 consolidations that give quirks their names.
   42, 43, 73 and 74 of `cmd/server/testdata/tour/s5d/agents_automations.json`,
   steps 11 and 116 of `crews_teams.json`, steps 23 and 29 of
   `proposals_events.json`, steps 90 and 96 of `worker_wire.json`, steps 68,
-  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log and
-  the events before a cursor no event has (step 53 of `worker_wire.json`,
-  step 61 of `proposals_events.json`). The S5e matrix counts each list its
+  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log, the
+  events before a cursor no event has, and the project list of a personal
+  runner key whose member has a role in no project (steps 53 and 104 of
+  `worker_wire.json`, step 61 of `proposals_events.json`). The S5e matrix counts each list its
   real-id reads answer, per identity (`[n]` or `null`): a workspace's teams,
   a project's repository connections and team grants and a project's
   proposals answer `null` to every column that reads them, the platform

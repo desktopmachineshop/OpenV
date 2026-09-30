@@ -358,15 +358,17 @@ func wireGetLoginFullCases() []wireCase {
 
 // --- Repository connections ---
 
+// The client holds the worker key, and reads a claimed run's connections
+// with the run's own token, which the call passes.
 func wireListRepoConnectionsCases() []wireCase {
-	call := wireCall{`ListRepoConnections("<project-id>")`, func(c *Client) (interface{}, error) {
-		return c.ListRepoConnections(wireID("<project-id>"))
+	call := wireCall{`ListRepoConnections("<project-id>", "<run-token>")`, func(c *Client) (interface{}, error) {
+		return c.ListRepoConnections(wireID("<project-id>"), wireID("<run-token>"))
 	}}
 	conns := `[{"id":"<repo-id>","project_id":"<project-id>","name":"firmware","remote_url":"git@github.com:acme/firmware.git",` +
 		`"default_branch":"main","credential_strategy":"host","created_at":"<time>","updated_at":"<time>","my_local_path":"/home/dev/firmware"}]` + "\n"
 	return []wireCase{
 		{
-			name:      "a project's connections, with the caller's checkout path",
+			name:      "a claimed run's project's connections, read with the run's token, with its claimant's checkout path",
 			responses: []wireResponse{{200, conns}},
 			calls:     []wireCall{call},
 		},

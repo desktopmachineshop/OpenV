@@ -79,8 +79,10 @@ an agent's output, check there first.
 
 ## Whose AI subscription pays for a run?
 
-- Runs on your **personal runner** use your own CLI subscription, and your
-  runner only ever claims runs you launched.
+- Runs on your **personal runner** use your own CLI subscription. Your
+  runner claims the runs you launched, never a teammate's, and ownerless
+  work (automations, board triggers) only in projects you have a role in,
+  or anywhere in the workspace if you are its admin.
 - Runs on the **hosted runner** bill against the org's provider API keys.
 - Projects set to **API key** auth (Project Settings → Agents) always use the
   workspace's key regardless of who launches.

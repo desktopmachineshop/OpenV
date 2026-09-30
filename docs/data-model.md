@@ -248,7 +248,10 @@ queue), `run_token_hash` (the run's own API credential), `worker_id`,
 `exit_code`, `final_text`, `error`, `tokens_in`/`tokens_out`, `cost_usd`,
 `artifacts_touched` JSONB, `launched_by`. Routing: `preferred_user_id` +
 `hosted_after` give the launcher's personal runner first refusal before the
-hosted/workspace pool takes over.
+hosted/workspace pool takes over; `claimed_by` names the member whose
+personal runner key claimed the run (NULL for a workspace key; cleared by a
+release, kept once the run ends), whose local checkout paths the run's token
+reads the project's repository connections with.
 
 ### agent_run_logs
 Append-only run output: `(run_id, seq)` unique, `kind`, `payload` JSONB.

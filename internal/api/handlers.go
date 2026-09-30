@@ -1652,9 +1652,10 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListProjects lists the projects visible to the caller within the active
-// workspace: all of the org's projects for platform admins and org admins,
-// membership-filtered otherwise, and to an agent run's token its own project
-// alone, the one project it acts in (requireProjectRole).
+// workspace: all of the org's projects for platform admins, org admins and
+// workspace runner keys, membership-filtered otherwise (a personal runner key
+// by its holder's), and to an agent run's token its own project alone, the
+// one project it acts in (requireProjectRole).
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	// Scope to the active workspace in SQL, and fail closed: a caller whose
 	// active org could not be resolved (empty) sees no projects rather than
@@ -1683,16 +1684,23 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		projectList = own
 	}
 
-	if user := CurrentUser(r); user != nil && !user.IsAdmin && h.memberService != nil {
+	// A member sees the projects they have a role in, and so does their
+	// personal runner key, which is its holder acting (REQ-16); a platform
+	// admin's session and a workspace key (REQ-42) see them all.
+	person := WorkerUser(r)
+	if user := CurrentUser(r); user != nil && !user.IsAdmin {
+		person = user.ID
+	}
+	if person != "" && h.memberService != nil {
 		// Org admins of the active workspace see all of its projects.
 		isOrgAdmin := false
 		if h.orgService != nil {
-			if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
+			if role, err := h.orgService.RoleInOrg(activeOrg, person); err == nil && role == orgs.RoleAdmin {
 				isOrgAdmin = true
 			}
 		}
 		if !isOrgAdmin {
-			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+			ids, err := h.memberService.ProjectIDsForUser(person)
 			if err != nil {
 				respondInternal(w, r, "failed to list projects", err)
 				return
