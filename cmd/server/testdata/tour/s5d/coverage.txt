@@ -25,7 +25,7 @@ DELETE /api/v1/teams/{id}: 204, 404; crews_teams
 GET /api/v1/agent-runs: 200, 404; agents_automations, orchestration_budget, proposals_events, worker_wire
 GET /api/v1/agent-runs/delegate/{id}: 200, 403, 404; orchestration_budget
 GET /api/v1/agent-runs/{id}: 200, 401, 403, 404; agents_automations, proposals_events, worker_wire
-GET /api/v1/agent-runs/{id}/logs: 200, 401, 404; worker_wire
+GET /api/v1/agent-runs/{id}/logs: 200, 401, 404; orchestration_budget, worker_wire
 GET /api/v1/agent-runs/{id}/stream: 200, 401, 404; worker_wire
 GET /api/v1/agent-runs/{id}/tree: 200, 401, 404; orchestration_budget
 GET /api/v1/agents: 200; agents_automations

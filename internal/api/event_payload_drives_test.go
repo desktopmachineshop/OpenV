@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -201,6 +202,17 @@ func payloadDrives() []payloadDrive {
 		// A worker finishing a run, through the real run service.
 		httpDrive("POST /api/v1/agent-runs/{id}/finish", "/api/v1/agent-runs/run-live/finish",
 			`{"status":"succeeded","final_text":"Done.","tokens_in":10,"tokens_out":20}`, asWorkerOf(payloadOrg)),
+		// A crew run that finished over its workspace's budget: the
+		// orchestration hooks record the agent successors the budget refused
+		// through the run service, which no route calls directly.
+		callDrive("crew run finished over budget (orchestration hooks)", func(t *testing.T, fx *payloadFixture) {
+			project, team := payloadProject, "team-1"
+			run := &agentruns.Run{ID: "run-live", OrgID: payloadOrg, AgentID: "agent-1", ProjectID: &project, TeamID: &team}
+			refusal := fmt.Errorf("%w: this workspace has reached its $1.00 monthly budget ($5.00 spent)", agentruns.ErrBudgetExceeded)
+			if err := fx.h.runService.SuccessorsSkipped(run, []agentruns.Successor{{NodeID: "node-2", Label: "Checker"}}, refusal); err != nil {
+				t.Fatalf("SuccessorsSkipped: %v", err)
+			}
+		}),
 	}
 }
 
@@ -426,6 +438,10 @@ func (f *payloadRuns) FindByID(id string) (*agentruns.Run, error) {
 }
 
 func (f *payloadRuns) CountPendingProposals(runID string) (int, error) { return 0, nil }
+func (f *payloadRuns) AppendNote(runID string, e agentruns.LogEntry) (agentruns.LogEntry, error) {
+	e.RunID, e.Seq = runID, 1
+	return e, nil
+}
 func (f *payloadRuns) UpdateTerminal(r *agentruns.Run) (bool, error) {
 	f.run.Status = r.Status
 	f.run.FinishedAt = &time.Time{}

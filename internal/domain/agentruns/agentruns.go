@@ -90,8 +90,9 @@ const (
 	LogSystem     = "system"
 	LogError      = "error"
 	// LogMarker flags an operational marker injected by the worker itself
-	// (e.g. a notice that streamed events were dropped), as opposed to
-	// output parsed from the agent CLI.
+	// (e.g. a notice that streamed events were dropped), or a note the
+	// server keeps on a run (NoteRun), as opposed to output parsed from the
+	// agent CLI.
 	LogMarker = "marker"
 )
 
@@ -419,6 +420,11 @@ type Repository interface {
 	// was applied.
 	UpdatePartialText(runID string, text string) (bool, error)
 	ListLogs(runID string, afterSeq int) ([]LogEntry, error)
+	// AppendNote writes one entry at the end of a run's log, numbered after
+	// the last entry there, and returns it as stored: a note the server
+	// keeps on a run (NoteRun), where AppendLogs stores what a worker
+	// numbered itself.
+	AppendNote(runID string, entry LogEntry) (LogEntry, error)
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	CountPendingProposals(runID string) (int, error)
 	// CountApplyFailedProposals counts a run's approved proposals whose write
@@ -427,10 +433,10 @@ type Repository interface {
 	CountApplyFailedProposals(runID string) (int, error)
 	// FinalizeApproval transitions an awaiting_approval run to a terminal
 	// status (succeeded/failed) once its proposals are resolved, storing
-	// errMsg as the run's error, but only while it is still awaiting approval
-	// so a concurrent resolver can never double-finalize; reports whether the
-	// transition was applied.
-	FinalizeApproval(runID, status, errMsg string, at time.Time) (bool, error)
+	// errMsg and errorClass as the run's error and error class, but only
+	// while it is still awaiting approval so a concurrent resolver can never
+	// double-finalize; reports whether the transition was applied.
+	FinalizeApproval(runID, status, errMsg, errorClass string, at time.Time) (bool, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
 	// Usage aggregates an org's runs created at/after since, grouped by
@@ -486,6 +492,15 @@ type Service interface {
 	// A no-op for runs that are not awaiting approval or still have pending
 	// proposals. Called wherever a proposal is resolved.
 	FinalizeIfResolved(runID string) (*Run, error)
+	// NoteRun keeps a note on a run: an entry of kind marker at the end of
+	// its log, whose payload carries the note's marker, message and detail,
+	// sent to the log's subscribers as a worker's batch is.
+	NoteRun(runID, marker, message string, detail map[string]interface{}) error
+	// SuccessorsSkipped records that a finished crew run's agent successors
+	// were not launched because the workspace's budget refused them: a note
+	// on the run and a RunSuccessorsSkipped event, each naming the skipped
+	// successors and the budget.
+	SuccessorsSkipped(run *Run, skipped []Successor, refusal error) error
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
@@ -1190,12 +1205,17 @@ func (s *DefaultService) FinalizeIfResolved(runID string) (*Run, error) {
 	}
 
 	// A failed run keeps the reason it failed, stored as a worker's failure
-	// is, so that it reads back as its status broadcast told it.
-	if status == StatusFailed && run.Error == "" {
-		run.Error = applyFailedError
+	// is, so that it reads back as its status broadcast told it. Its class
+	// is agent_error, which is not retried: the agent's approved writes did
+	// not apply, and a second attempt proposes them again (OpenV REQ-84).
+	if status == StatusFailed {
+		if run.Error == "" {
+			run.Error = applyFailedError
+		}
+		run.ErrorClass = ErrorClassAgentError
 	}
 	now := time.Now()
-	applied, err := s.repo.FinalizeApproval(runID, status, run.Error, now)
+	applied, err := s.repo.FinalizeApproval(runID, status, run.Error, run.ErrorClass, now)
 	if err != nil {
 		return nil, err
 	}

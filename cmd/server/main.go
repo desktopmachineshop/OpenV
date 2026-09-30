@@ -525,7 +525,7 @@ func main() {
 	sseHub := api.NewSSEHub()
 	runService.AddSubscriber(sseHub)
 	metricsCollector.WatchSSEConnections(sseHub.ActiveConnections)
-	hooks := orchestration.NewHooks(runService, teamService, workItemService, interviewService, guidedService, projectService, sseHub)
+	hooks := orchestration.NewHooks(runService, teamService, workItemService, interviewService, guidedService, projectService, sseHub, handoffReach(projectService, orgService, memberService))
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 
