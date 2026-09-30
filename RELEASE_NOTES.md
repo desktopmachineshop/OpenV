@@ -671,11 +671,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   untick *V&V status* under *Document* in the download wizard to leave them
   out. The Requirements review and Test planning templates still leave
   them out, and test results are still included only when chosen. A box
-  you tick or untick after choosing a template now always reaches the
-  document: before, one ticked to match what a download has without a
-  template, such as *Figures* on the Test planning template or every
-  field on Requirements review, was lost, and the document followed the
-  template instead.
+  you tick or untick under *Document*, or the fields you choose, after
+  choosing a template now always reaches the document: before, one ticked
+  to match what a download has without a template, such as *Figures* on
+  the Test planning template or every field on Requirements review, was
+  lost, and the document followed the template instead.
 
 - **A ReqIF download types list attributes as the ReqIF export does.** A
   project downloaded as ReqIF wrote an attribute with a fixed list of
