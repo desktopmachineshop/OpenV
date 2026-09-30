@@ -1,0 +1,4 @@
+# Byte-compared test input (refactor plan step S14e): splittools moves these
+# lines byte for byte, and d11dee8/ is compared with git's copy, so a checkout
+# with CRLF line endings would fail; they stay LF on every platform.
+* text eol=lf

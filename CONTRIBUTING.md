@@ -145,7 +145,9 @@ On a **refactor** pull request, also:
    Guard code (`GUARD_CODE`: the Phase 0 guard tests, `internal/archtest/**`,
    `frontend/src/arch/**`, the boundary rules in `frontend/eslint.config.js`,
    the move proofs, the migration generator that writes M10
-   (`internal/tools/liftmigrations/**`, S14d) and this guard) may be modified or deleted only in a
+   (`internal/tools/liftmigrations/**`, S14d), M11a's split proof
+   `internal/tools/splittools` (S14e) and this guard) may be modified or
+   deleted only in a
    class C or T commit that modifies or deletes no golden. The plan asks such
    an edit to be green against the production code of its parent; since a C
    or T commit cannot change production code, that is what the pull
