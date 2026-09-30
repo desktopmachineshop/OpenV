@@ -377,7 +377,7 @@ table evidence_bundles rows 0
   column ref character varying(32) NOT NULL
   column title character varying(200) NOT NULL
   column summary text NOT NULL DEFAULT ''::text
-  column captured_at timestamp without time zone
+  column captured_at timestamp with time zone
   column captured_by character varying(200) NOT NULL DEFAULT ''::character varying
   column conditions jsonb NOT NULL DEFAULT '{}'::jsonb
   column created_by uuid
@@ -386,7 +386,7 @@ table evidence_bundles rows 0
   constraint evidence_bundles_pkey PRIMARY KEY (id)
   constraint evidence_bundles_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index evidence_bundles_pkey CREATE UNIQUE INDEX evidence_bundles_pkey ON public.evidence_bundles USING btree (id)
-  index idx_evidence_bundles_project CREATE INDEX idx_evidence_bundles_project ON public.evidence_bundles USING btree (project_id, COALESCE(captured_at, created_at) DESC)
+  index idx_evidence_bundles_project CREATE INDEX idx_evidence_bundles_project ON public.evidence_bundles USING btree (project_id, COALESCE(captured_at, (created_at AT TIME ZONE 'UTC'::text)) DESC)
   index idx_evidence_bundles_ref CREATE UNIQUE INDEX idx_evidence_bundles_ref ON public.evidence_bundles USING btree (project_id, ref)
 table evidence_citations rows 0
   column id uuid NOT NULL
@@ -460,7 +460,7 @@ table interview_invites rows 0
   column interview_id uuid NOT NULL
   column token_hash character varying(128) NOT NULL
   column invitee_label character varying(255) NOT NULL DEFAULT ''::character varying
-  column expires_at timestamp without time zone
+  column expires_at timestamp with time zone
   column revoked boolean NOT NULL DEFAULT false
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   constraint interview_invites_interview_id_fkey FOREIGN KEY (interview_id) REFERENCES interviews(id) ON DELETE CASCADE
@@ -565,7 +565,7 @@ table org_invitations rows 0
   column role character varying(32) NOT NULL DEFAULT 'member'::character varying
   column token_hash character varying(128) NOT NULL
   column invited_by uuid
-  column expires_at timestamp without time zone NOT NULL
+  column expires_at timestamp with time zone NOT NULL
   column accepted_at timestamp without time zone
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column last_emailed_at timestamp without time zone
@@ -834,7 +834,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 48
+table schema_migrations rows 50
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -920,7 +920,7 @@ table test_results rows 0
   constraint test_results_pkey PRIMARY KEY (id)
   constraint test_results_run_id_fkey FOREIGN KEY (run_id) REFERENCES test_runs(id) ON DELETE CASCADE
   index idx_test_results_case CREATE INDEX idx_test_results_case ON public.test_results USING btree (test_case_id)
-  index idx_test_results_run_case CREATE UNIQUE INDEX idx_test_results_run_case ON public.test_results USING btree (run_id, test_case_id)
+  index idx_test_results_run_case CREATE INDEX idx_test_results_run_case ON public.test_results USING btree (run_id, test_case_id)
   index test_results_pkey CREATE UNIQUE INDEX test_results_pkey ON public.test_results USING btree (id)
 table test_runs rows 0
   column id uuid NOT NULL
@@ -991,7 +991,7 @@ table work_items rows 0
   column assignee_id uuid
   column agent_run_id uuid
   column artifact_ids jsonb NOT NULL DEFAULT '[]'::jsonb
-  column due_date timestamp without time zone
+  column due_date timestamp with time zone
   column source_chatter_id uuid
   column created_by uuid
   column created_at timestamp without time zone NOT NULL DEFAULT now()
@@ -1067,3 +1067,5 @@ ledger 0045 organizations_billing
 ledger 0046 users_billing_trial
 ledger 0047 organizations_minutes_alert
 ledger 0048 agent_runs_claimed_by
+ledger 0049 test_results_history
+ledger 0050 timestamptz_client_times

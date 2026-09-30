@@ -172,6 +172,7 @@ func scanInvite(scan func(dest ...interface{}) error) (*interviews.Invite, error
 	if err != nil {
 		return nil, err
 	}
+	invite.ExpiresAt = inUTC(invite.ExpiresAt)
 	return invite, nil
 }
 

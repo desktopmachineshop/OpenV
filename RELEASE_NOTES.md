@@ -578,6 +578,39 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   message. Signing in is unchanged: a wrong password, however short, is
   refused with one message that does not say whether the account exists.
 
+- **A closed test run no longer takes new results, and a run takes results
+  only for its own project's test cases.** A result recorded in a test run
+  that had been completed or aborted was accepted, so a closed run's record
+  could still change. It is now refused with `409` and the message *this
+  test run is completed; only in-progress runs accept new results*. A
+  result for a test case of another project was accepted into a run too;
+  it is now answered as for a test case that does not exist, `404`
+  *artifact not found*, whether or not you can open that project. An
+  approved agent proposal that records a result follows the same rules.
+
+- **Recording a test result again keeps the earlier one.** Recording a
+  result for a test case a run already had one for overwrote it, so only
+  the automatic note on the test case said what it had been. Each result is
+  now kept: the newest is the case's result wherever OpenV shows one (the
+  run's grid, V&V coverage and gaps, reports and documents), evidence cited
+  for the case moves with it, and API clients list every result a run holds
+  with `GET /api/v1/test-runs/{id}/results?history=true`, newest first. A
+  result recorded again has an id of its own. Deleting a test run that
+  holds results, which deleted them with it, is now refused with `409`,
+  and the run is kept: complete or abort a run still in progress instead.
+  A run with no results can still be deleted.
+
+- **A time sent with a time zone offset keeps its moment.** An evidence
+  capture's date, a to-do's due date and an interview invite's expiry were
+  stored without their offset, so a time sent as `2026-01-15T09:30:00+01:00`
+  read back as `2026-01-15T09:30:00Z`, an hour late, and an invite with such
+  an expiry expired at the wrong time. They are now stored as the moment
+  sent and read back in UTC, `2026-01-15T08:30:00Z` for that example, as a
+  workspace invitation's expiry is too. Times stored before this release
+  read as the UTC times OpenV wrote. The app already sends these dates in
+  UTC, so what it shows is unchanged; API and MCP clients that send an
+  offset now get the moment they meant.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

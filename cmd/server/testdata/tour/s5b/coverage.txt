@@ -16,7 +16,7 @@ DELETE /api/v1/evidence-files/{id}: 204, 403, 404; evidence
 DELETE /api/v1/shared-products/{id}: 204, 403, 404; shared_products
 DELETE /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404; evidence
-DELETE /api/v1/test-runs/{id}: 204, 403, 404; test_runs_results
+DELETE /api/v1/test-runs/{id}: 204, 403, 409; test_runs_results
 DELETE /api/v1/work-items/{id}: 204, 403, 404; work_items
 GET /api/v1/agent-runs/{id}: 200; guided_sessions, interviews
 GET /api/v1/artifacts: 200; guided_sessions
@@ -82,7 +82,7 @@ POST /api/v1/shared-products: 201, 400, 403, 409, 429; shared_products
 POST /api/v1/shared-products/{id}/report: 204, 403, 404; shared_products
 POST /api/v1/test-results/{id}/citations: 201, 400, 403, 404; evidence
 POST /api/v1/test-runs/{id}/agent-run: 201, 400, 403, 404; test_runs_results
-POST /api/v1/test-runs/{id}/results: 200, 400, 403, 404; test_runs_results
+POST /api/v1/test-runs/{id}/results: 200, 400, 403, 404, 409; test_runs_results
 POST /api/v1/work-items/{id}/comments: 201, 400, 404; work_items
 POST /api/v1/work-items/{id}/move: 200, 400, 403, 404; work_items
 PUT /api/v1/evidence-bundles/{id}: 200, 400, 403, 404; evidence

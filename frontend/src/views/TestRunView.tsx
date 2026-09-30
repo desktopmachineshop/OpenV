@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, ICellRendererParams } from 'ag-grid-community';
@@ -19,6 +19,7 @@ import {
   vvAPI,
 } from '../api/client';
 import { EvidencePicker } from '../components/EvidencePicker';
+import { moveCitations } from './testRunCitations';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
@@ -82,6 +83,10 @@ export const TestRunView: React.FC = () => {
   const [run, setRun] = useState<TestRun | null>(null);
   const [testCases, setTestCases] = useState<Artifact[]>([]);
   const [results, setResults] = useState<TestResult[]>([]);
+  // The results as last rendered, for upsert to find the one a new result
+  // supersedes without being re-created on every change.
+  const resultsRef = useRef<TestResult[]>([]);
+  resultsRef.current = results;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -146,12 +151,18 @@ export const TestRunView: React.FC = () => {
   const upsert = useCallback(
     async (testCaseId: string, status: string, notes: string) => {
       if (!runId) return;
+      const superseded = resultsRef.current.find((r) => r.test_case_id === testCaseId);
       try {
         const res = await vvAPI.upsertResult(runId, {
           test_case_id: testCaseId,
           status,
           notes,
         });
+        // A result recorded again is a new result, and the server moved the
+        // superseded one's citations onto it; the evidence column follows.
+        if (superseded) {
+          setCitations((prev) => moveCitations(prev, superseded.id, res.data.id));
+        }
         setResults((prev) => {
           const idx = prev.findIndex((r) => r.test_case_id === testCaseId);
           if (idx >= 0) {

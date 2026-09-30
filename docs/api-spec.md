@@ -11,6 +11,17 @@ http://localhost:8080/api/v1
 All requests and responses use `application/json` unless noted (attachment
 upload/download, connector bundle download, SSE streams).
 
+## Times
+
+Times are RFC 3339. A time sent with an offset as an evidence bundle's
+`captured_at`, a work item's `due_date` or an interview invite's
+`expires_at` is stored as the instant it names and read back in UTC:
+`2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`, though the
+create's own answer echoes it as sent. A workspace invitation's
+`expires_at`, which the server sets, is stored the same way. A share link's
+`expires_at` still keeps the wall clock sent and drops its offset, so send
+it in UTC.
+
 ## Authentication
 
 Every request is authenticated by the middleware in
@@ -182,7 +193,11 @@ Enforced per-handler via `internal/api/authz.go`:
   artifact not found`, `project not found`, `parent project not found`,
   `persona artifact not found`), and a people-team granted a project the
   `404` `team not found`, while one the caller does reach in another
-  workspace or project is refused as such (`400`). An artifact's update
+  workspace or project is refused as such (`400`). A result's
+  `test_case_id` outside its run's project answers `404` `artifact not
+  found`, as one no row has, whether or not the caller reaches it, and
+  before its type is read: a run verifies its own project's test cases.
+  An artifact's update
   and restore, which look the artifact up before their guard, answer an
   artifact the caller cannot reach, as one no row has, `404` `artifact not
   found`, and a crew's launch answers a caller who may not know of the crew
@@ -777,10 +792,10 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/test-runs` | List test runs | viewer |
 | GET | `/api/v1/test-runs/{id}` | Test run details | viewer |
 | PUT | `/api/v1/test-runs/{id}` | Update test run | editor |
-| DELETE | `/api/v1/test-runs/{id}` | Delete test run | editor |
-| POST | `/api/v1/test-runs/{id}/results` | Record/overwrite a test result; `404` `artifact not found` for a `test_case_id` no artifact has | editor |
+| DELETE | `/api/v1/test-runs/{id}` | Delete a test run that holds no result. `409` for one that holds results, which are kept (REQ-13): `a test run that holds results is kept: complete or abort it instead of deleting it` for a run in progress, and `a test run that holds results is kept: this one is already completed` (or `aborted`) for a closed one | editor |
+| POST | `/api/v1/test-runs/{id}/results` | Record a test result `{test_case_id, status, notes?, evidence?}`. Recording a case again adds a result with an id of its own rather than overwriting the earlier one, which stays in the run's history; the one recorded last is the case's current result wherever a result is read, its times always after those of the result it supersedes, an omitted `evidence` carries the current one's, and the current one's evidence citations move to it (REQ-13, REQ-121). `404` `artifact not found` for a `test_case_id` no artifact of the run's project has; `409` `this test run is completed; only in-progress runs accept new results` (or `aborted`) for a closed run | editor |
 | POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run | editor |
-| GET | `/api/v1/test-runs/{id}/results` | List results | viewer |
+| GET | `/api/v1/test-runs/{id}/results` | The run's current result per test case, the latest recorded first; `?history=true` lists every result recorded in the run, those later results superseded included, newest first | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |

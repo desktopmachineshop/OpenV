@@ -22,7 +22,7 @@
     "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from",
     "2020-01-01T00:00:00Z kept as it is: an invite's expiry the tour sends, in the past",
     "2099-01-01T00:00:00+01:00 kept as it is: an invite's expiry the tour sends, to come, with an offset",
-    "2099-01-01T00:00:00Z kept as it is: that expiry read back: expires_at is a TIMESTAMP column, which keeps the wall clock and drops the offset",
+    "2098-12-31T23:00:00Z kept as it is: that expiry read back: the instant sent, in UTC (a TIMESTAMPTZ since migration 0050; a TIMESTAMP kept the wall clock and dropped the offset)",
     "<retry-after 180 s>: Retry-After on the sixth quick message to one invite: ceil(180 s less the seconds since the first of the six), so 180 while they take under a second and 179 under two (they take some 30 ms) (the area's own pattern ^(179|180)$, in the Retry-After header only)",
     "<retry-after 60 s>: Retry-After on the 21st intro from one network: ceil(60 s less the seconds since the first of them), as above (the area's own pattern ^(59|60)$, in the Retry-After header only)",
     "<retry-after 30 s>: Retry-After on the 31st stream from one network: ceil(30 s less the seconds since the first of them), as above (the area's own pattern ^(29|30)$, in the Retry-After header only)"
@@ -1145,13 +1145,16 @@
     },
     {
       "n": 36,
-      "title": "I1's invites, newest first: no token, the 2099 expiry read back without its offset, one revoked",
+      "title": "I1's invites, newest first: no token, the 2099 expiry read back as the instant sent, in UTC, one revoked",
       "actor": "owner",
       "route": "GET /api/v1/interviews/{id}/invites",
       "request": {
         "method": "GET",
         "path": "/api/v1/interviews/<i1>/invites"
       },
+      "notes": [
+        "fixed under R7 (#379 bug 4): the TIMESTAMP column kept the wall clock sent and dropped its offset, so the instant moved by the offset"
+      ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
@@ -1159,7 +1162,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<inv_revoked>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Withdrawn\",\"revoked\":true,\"created_at\":\"<time@step 30>\"},{\"id\":\"<inv_future>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Next year\",\"expires_at\":\"2099-01-01T00:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 29>\"},{\"id\":\"<inv_expired>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Late\",\"expires_at\":\"2020-01-01T00:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 28>\"},{\"id\":\"<inv1>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Dana \\u003cdesign\\u003e \\u0026 co\",\"revoked\":false,\"created_at\":\"<time@step 24>\"}]"
+        "[{\"id\":\"<inv_revoked>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Withdrawn\",\"revoked\":true,\"created_at\":\"<time@step 30>\"},{\"id\":\"<inv_future>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Next year\",\"expires_at\":\"2098-12-31T23:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 29>\"},{\"id\":\"<inv_expired>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Late\",\"expires_at\":\"2020-01-01T00:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 28>\"},{\"id\":\"<inv1>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Dana \\u003cdesign\\u003e \\u0026 co\",\"revoked\":false,\"created_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1174,7 +1177,7 @@
           "id": "<inv_future>",
           "interview_id": "<i1>",
           "invitee_label": "Next year",
-          "expires_at": "2099-01-01T00:00:00Z",
+          "expires_at": "2098-12-31T23:00:00Z",
           "revoked": false,
           "created_at": "<time@step 29>"
         },
@@ -1212,7 +1215,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<inv_revoked>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Withdrawn\",\"revoked\":true,\"created_at\":\"<time@step 30>\"},{\"id\":\"<inv_future>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Next year\",\"expires_at\":\"2099-01-01T00:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 29>\"},{\"id\":\"<inv_expired>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Late\",\"expires_at\":\"2020-01-01T00:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 28>\"},{\"id\":\"<inv1>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Dana \\u003cdesign\\u003e \\u0026 co\",\"revoked\":false,\"created_at\":\"<time@step 24>\"}]"
+        "[{\"id\":\"<inv_revoked>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Withdrawn\",\"revoked\":true,\"created_at\":\"<time@step 30>\"},{\"id\":\"<inv_future>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Next year\",\"expires_at\":\"2098-12-31T23:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 29>\"},{\"id\":\"<inv_expired>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Late\",\"expires_at\":\"2020-01-01T00:00:00Z\",\"revoked\":false,\"created_at\":\"<time@step 28>\"},{\"id\":\"<inv1>\",\"interview_id\":\"<i1>\",\"invitee_label\":\"Dana \\u003cdesign\\u003e \\u0026 co\",\"revoked\":false,\"created_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1227,7 +1230,7 @@
           "id": "<inv_future>",
           "interview_id": "<i1>",
           "invitee_label": "Next year",
-          "expires_at": "2099-01-01T00:00:00Z",
+          "expires_at": "2098-12-31T23:00:00Z",
           "revoked": false,
           "created_at": "<time@step 29>"
         },
