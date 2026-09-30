@@ -222,7 +222,7 @@
           "GET /api/v1/test-runs/{id} | 401: authentication required | 200 text | 200 text | 200 text | 404: test run not found | 200 text | 200 text | 200 text",
           "GET /api/v1/test-runs/{id}/citations | 401: authentication required | 200 json | 200 json | 200 json | 404: test run not found | 200 json | 200 json | 200 json",
           "GET /api/v1/test-runs/{id}/results | 401: authentication required | 200 text[1] | 200 text[1] | 200 text[1] | 404: test run not found | 200 text[1] | 200 text[1] | 200 text[1]",
-          "GET /api/v1/users/{id}/avatar | 401: authentication required | 200 png | 200 png | 200 png | 200 png | 401: authentication required | 401: authentication required | 200 png",
+          "GET /api/v1/users/{id}/avatar | 401: authentication required | 200 png | 200 png | 200 png | 404: user has no uploaded picture | 401: authentication required | 401: authentication required | 200 png",
           "GET /api/v1/work-items/{id} | 401: authentication required | 200 text | 200 text | 200 text | 404: work item not found | 200 text | 200 text | 200 text"
         ]
       },

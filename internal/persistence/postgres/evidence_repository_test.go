@@ -76,7 +76,7 @@ func newEvidenceFixture(t *testing.T) *evidenceFixture {
 			CreatedAt:       time.Now().UTC(),
 			UpdatedAt:       time.Now().UTC(),
 		}
-		if err := f.vvRepo.UpsertResult(result); err != nil {
+		if err := f.vvRepo.AddResult(result); err != nil {
 			t.Fatalf("seed result: %v", err)
 		}
 		f.resultIDs = append(f.resultIDs, result.ID)
@@ -154,8 +154,9 @@ func TestOneBundleSupportsSeveralTestCases(t *testing.T) {
 // The defect this design removes. Evidence used to live in an array ON the
 // result row, and the result upsert wrote that column every time — so editing
 // a status or a note silently discarded it. A citation is a row of its own,
-// keyed to a result id that the upsert preserves, so re-recording the outcome
-// cannot touch the evidence behind it.
+// and re-recording the outcome, which adds a result beside the first (REQ-13),
+// moves the citation to the new, current result intact: its id, note and time
+// unchanged, while the first result stays in the run's history.
 func TestCitationsSurviveReRecordingTheResult(t *testing.T) {
 	f := newEvidenceFixture(t)
 	svc := evidence.NewDefaultService(f.repo)
@@ -164,7 +165,8 @@ func TestCitationsSurviveReRecordingTheResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create bundle: %v", err)
 	}
-	if _, err := svc.Cite(f.resultIDs[0], bundle.ID, "channel 2 from 00:12"); err != nil {
+	cited, err := svc.Cite(f.resultIDs[0], bundle.ID, "channel 2 from 00:12")
+	if err != nil {
 		t.Fatalf("cite: %v", err)
 	}
 
@@ -180,22 +182,29 @@ func TestCitationsSurviveReRecordingTheResult(t *testing.T) {
 		CreatedAt:       time.Now().UTC(),
 		UpdatedAt:       time.Now().UTC(),
 	}
-	if err := f.vvRepo.UpsertResult(again); err != nil {
+	if err := f.vvRepo.AddResult(again); err != nil {
 		t.Fatalf("re-record result: %v", err)
 	}
-	// The upsert conflicts on (run_id, test_case_id) and returns the ORIGINAL
-	// id — which is what the citation is keyed to.
-	if again.ID != f.resultIDs[0] {
-		t.Fatalf("re-recording changed the result id from %s to %s; citations would be orphaned",
-			f.resultIDs[0], again.ID)
-	}
 
-	still, err := svc.CitationsForResult(f.resultIDs[0])
+	still, err := svc.CitationsForResult(again.ID)
 	if err != nil {
 		t.Fatalf("citations for result: %v", err)
 	}
-	if len(still) != 1 || still[0].Note != "channel 2 from 00:12" {
-		t.Fatalf("after re-recording, the result cites %+v; the evidence was lost", still)
+	if len(still) != 1 || still[0].ID != cited.ID || still[0].Note != "channel 2 from 00:12" ||
+		!still[0].CreatedAt.Equal(cited.CreatedAt) {
+		t.Fatalf("after re-recording, the current result has %d citations, want the one cited (%s, its note and "+
+			"time) intact; the evidence was lost", len(still), cited.ID)
+	}
+	if left, err := svc.CitationsForResult(f.resultIDs[0]); err != nil || len(left) != 0 {
+		t.Fatalf("the superseded result %s still has %d citations (%v), want none: the citation moves to the "+
+			"new result %s, it is not copied", f.resultIDs[0], len(left), err, again.ID)
+	}
+	byResult, err := svc.CitationsForRun(f.runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(byResult[again.ID]) != 1 || len(byResult[f.resultIDs[0]]) != 0 {
+		t.Fatalf("the run grid's citations are keyed %v; want the one under the current result", byResult)
 	}
 }
 

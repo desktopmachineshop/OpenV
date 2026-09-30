@@ -31,6 +31,7 @@ func scanBundle(row interface{ Scan(...interface{}) error }) (*evidence.Bundle, 
 		&b.CapturedBy, &conditionsJSON, &createdBy, &b.CreatedAt, &b.UpdatedAt); err != nil {
 		return nil, err
 	}
+	b.CapturedAt = inUTC(b.CapturedAt)
 	if createdBy.Valid {
 		id := createdBy.String
 		b.CreatedBy = &id
@@ -101,7 +102,9 @@ func (r *EvidenceRepository) FindByID(id string) (*evidence.Bundle, error) {
 // ListByProject returns the project's bundles newest capture first, each
 // carrying its file count and total size so the list view needs no second
 // query. A bundle whose capture date was never recorded sorts by when it was
-// written, which is the closest thing to the truth available.
+// written, which is the closest thing to the truth available: created_at, a
+// TIMESTAMP holding a UTC wall clock, read as UTC beside the TIMESTAMPTZ
+// captured_at, as idx_evidence_bundles_project orders them.
 func (r *EvidenceRepository) ListByProject(projectID string) ([]*evidence.Bundle, error) {
 	rows, err := r.db.Query(`
 		SELECT b.id, b.project_id, b.ref, b.title, b.summary, b.captured_at,
@@ -111,7 +114,7 @@ func (r *EvidenceRepository) ListByProject(projectID string) ([]*evidence.Bundle
 		LEFT JOIN evidence_files f ON f.bundle_id = b.id
 		WHERE b.project_id = $1
 		GROUP BY b.id
-		ORDER BY COALESCE(b.captured_at, b.created_at) DESC, b.id DESC
+		ORDER BY COALESCE(b.captured_at, b.created_at AT TIME ZONE 'UTC') DESC, b.id DESC
 	`, projectID)
 	if err != nil {
 		return nil, err
@@ -128,6 +131,7 @@ func (r *EvidenceRepository) ListByProject(projectID string) ([]*evidence.Bundle
 			&b.FileCount, &b.TotalSize); err != nil {
 			return nil, err
 		}
+		b.CapturedAt = inUTC(b.CapturedAt)
 		if createdBy.Valid {
 			id := createdBy.String
 			b.CreatedBy = &id

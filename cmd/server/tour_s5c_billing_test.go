@@ -43,8 +43,8 @@ import (
 // The area walks, in order: the public catalogue; the billing read (an
 // admin, a plain member, a workspace that does not exist, no session, the
 // personal workspace, a workspace on a granted plan); the refresh (no body,
-// a malformed body, a checkout the provider does not know, which is reported
-// as the provider not answering, and one whose read the provider answers
+// a malformed body, a checkout the provider does not know, which is answered
+// as one, 404 with no Retry-After, and one whose read the provider answers
 // 503, retried three times); the purchase path's refusals, each before any
 // provider call (a plan or interval not for sale, a currency not offered, a
 // malformed body, no subscription to change, a plain member, Business for a
@@ -364,8 +364,8 @@ func billingTour(tr *tour, stripe *billingStripe) {
 	tr.step("refresh X with no body: X holds no subscription, so there is nothing to re-read and no provider call", o,
 		refresh, at("id", "{{x}}"))
 	tr.step("refresh X with a malformed body", o, refresh, at("id", "{{x}}"), jsonBody(`{"session_id":`))
-	tr.step("refresh X from a checkout the provider does not know: its 404 is answered as the provider not answering",
-		o, refresh, at("id", "{{x}}"), jsonBody(`{"session_id":"cs_tour_missing"}`))
+	tr.step("refresh X from a checkout the provider does not know: its 404 is answered 404, with no Retry-After, "+
+		"since the provider answered", o, refresh, at("id", "{{x}}"), jsonBody(`{"session_id":"cs_tour_missing"}`))
 	tr.step("refresh X from a checkout whose read the provider answers 503: read three times, then 503 with "+
 		"Retry-After", o, refresh, at("id", "{{x}}"), jsonBody(`{"session_id":"`+billingOutageSession+`"}`),
 		note("the Stripe client retries a read the provider answered 5xx, three attempts in all, after a jittered "+

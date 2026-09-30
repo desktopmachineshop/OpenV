@@ -273,7 +273,8 @@ func newPayloadFixture(t *testing.T) *payloadFixture {
 		"wi-open": {ID: "wi-open", ProjectID: payloadProject, Title: "Open", Column: workitems.ColumnTodo,
 			AssigneeType: workitems.AssigneeUser, ArtifactIDs: []string{}},
 	}}, bus)
-	deps.VVService = vv.NewDefaultService(&payloadTestRuns{run: &vv.TestRun{ID: "tr-1", ProjectID: payloadProject, Name: "Run 1"}},
+	deps.VVService = vv.NewDefaultService(&payloadTestRuns{run: &vv.TestRun{ID: "tr-1", ProjectID: payloadProject, Name: "Run 1",
+		Status: vv.RunStatusInProgress}},
 		arts, chatterSvc, bus)
 	launchedBy := "u-launcher"
 	deps.RunService = agentruns.NewDefaultService(&payloadRuns{run: &agentruns.Run{
@@ -434,7 +435,7 @@ func (f *payloadTestRuns) FindResultByCase(runID, testCaseID string) (*vv.TestRe
 	return nil, nil
 }
 
-func (f *payloadTestRuns) UpsertResult(*vv.TestResult) error { return nil }
+func (f *payloadTestRuns) AddResult(*vv.TestResult) error { return nil }
 
 // payloadRuns is the slice of agentruns.Repository Finish reaches.
 type payloadRuns struct {

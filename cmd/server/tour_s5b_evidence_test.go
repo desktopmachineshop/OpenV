@@ -34,8 +34,9 @@ import (
 // malformed id); results citing bundles (the refusals, a repeat that answers
 // with the citation already stored, a bundle of another project) and the
 // citation reads by result, by run and by bundle; the citations removed; and
-// the deletes, which unlink the stored bytes, and a run's delete, which takes
-// its citations with it. No evidence route publishes an event; every write
+// the deletes, which unlink the stored bytes, and a run's delete, refused
+// since the run holds results, which keeps its citations. No evidence route
+// publishes an event; every write
 // step records that as an empty events list.
 //
 // Formats: every answer but the download is respondJSON's (application/json,
@@ -180,8 +181,8 @@ func evidenceTour(tr *tour) {
 	tr.keep(evidenceDigest(evidenceLog), "the SHA-256 of the 2,000-byte log the area uploads, in the file JSON and "+
 		"X-Evidence-SHA256")
 	tr.keep("2026-09-12T10:00:00+02:00", "a captured_at the tour sends with an offset, which the create echoes as sent")
-	tr.keep("2026-09-12T10:00:00Z", "that captured_at as read back: the column is TIMESTAMP (no zone), which keeps "+
-		"the wall time and drops the offset")
+	tr.keep("2026-09-12T08:00:00Z", "that captured_at as read back: the instant sent, in UTC (a TIMESTAMPTZ since "+
+		"migration 0050; a TIMESTAMP kept the wall time and dropped the offset)")
 	tr.keep("2026-09-01T08:30:00Z", "a captured_at the tour sends in UTC, echoed and read back alike")
 	conditions51 := make([]string, 51)
 	for i := range conditions51 {
@@ -225,8 +226,10 @@ func evidenceTour(tr *tour) {
 		"GET /api/v1/projects/{id}/evidence-bundles", at("id", "{{p}}"),
 		note("ordered by COALESCE(captured_at, created_at) DESC, then id DESC; a list entry carries file_count and "+
 			"total_size, never files"))
-	tr.step("read B1: captured_at as the column holds it, the wall time with no offset", o,
-		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"))
+	tr.step("read B1: captured_at the instant sent, in UTC", o,
+		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"),
+		note("fixed under R7 (#379 bug 4): the TIMESTAMP column kept the wall time sent and dropped its offset, "+
+			"so the instant moved by the offset"))
 	tr.step("the viewer reads B1", viewer, "GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"))
 	tr.step("the outsider reads B1: the 404 of a bundle no row has, as evidenceBundleChecked's comment promises", outsider,
 		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"),
@@ -394,19 +397,20 @@ func evidenceTour(tr *tour) {
 	tr.step("res1's citations after the uncite: B1's alone", o, "GET /api/v1/test-results/{id}/citations",
 		at("id", "{{res1}}"))
 
-	// Deletes: a file, a run (its results' citations go with it), a bundle
-	// (its files' bytes and its citations go with it).
+	// Deletes: a file, a run (refused: it holds results, whose citations
+	// stay), a bundle (its files' bytes and its citations go with it).
 	tr.step("the viewer deletes the CSV", viewer, "DELETE /api/v1/evidence-files/{id}", at("id", "{{csv}}"))
 	tr.step("delete the CSV: its bytes leave UPLOADS_DIR", o, "DELETE /api/v1/evidence-files/{id}", at("id", "{{csv}}"))
 	tr.step("delete it again", o, "DELETE /api/v1/evidence-files/{id}", at("id", "{{csv}}"))
 	tr.step("download it once deleted", o, "GET /api/v1/evidence-files/{id}/download", at("id", "{{csv}}"))
 	tr.step("delete a file by an id that is not a UUID: 404, as an id no file has", o, "DELETE /api/v1/evidence-files/{id}",
 		at("id", "not-a-uuid"))
-	tr.setup("delete run R1 (the test runs area pins the route)", o, "DELETE /api/v1/test-runs/{id}",
-		at("id", "{{r1}}"), expect(204))
-	tr.step("read B1 once R1 is deleted: res1's citation went with its result, res3's stays", o,
-		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"))
-	tr.step("res1's citations once R1 is deleted: the result is gone", o, "GET /api/v1/test-results/{id}/citations",
+	tr.setup("delete run R1, refused since it holds results (the test runs area pins the route)", o,
+		"DELETE /api/v1/test-runs/{id}", at("id", "{{r1}}"), expect(409))
+	tr.step("read B1 once R1's delete is refused: res1's citation stays with its result, and res3's", o,
+		"GET /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"),
+		note("fixed under R7 (OpenV REQ-13): R1 was deleted, and res1 and its citation with it"))
+	tr.step("res1's citations once R1's delete is refused: still there", o, "GET /api/v1/test-results/{id}/citations",
 		at("id", "{{res1}}"))
 	tr.step("the viewer deletes B1", viewer, "DELETE /api/v1/evidence-bundles/{id}", at("id", "{{b1}}"))
 	tr.step("delete B1: its log's bytes leave UPLOADS_DIR, its citations go", o, "DELETE /api/v1/evidence-bundles/{id}",

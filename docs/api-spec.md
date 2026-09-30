@@ -11,6 +11,17 @@ http://localhost:8080/api/v1
 All requests and responses use `application/json` unless noted (attachment
 upload/download, connector bundle download, SSE streams).
 
+## Times
+
+Times are RFC 3339. A time sent with an offset as an evidence bundle's
+`captured_at`, a work item's `due_date` or an interview invite's
+`expires_at` is stored as the instant it names and read back in UTC:
+`2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`, though the
+create's own answer echoes it as sent. A workspace invitation's
+`expires_at`, which the server sets, is stored the same way. A share link's
+`expires_at` still keeps the wall clock sent and drops its offset, so send
+it in UTC.
+
 ## Authentication
 
 Every request is authenticated by the middleware in
@@ -182,7 +193,11 @@ Enforced per-handler via `internal/api/authz.go`:
   artifact not found`, `project not found`, `parent project not found`,
   `persona artifact not found`), and a people-team granted a project the
   `404` `team not found`, while one the caller does reach in another
-  workspace or project is refused as such (`400`). An artifact's update
+  workspace or project is refused as such (`400`). A result's
+  `test_case_id` outside its run's project answers `404` `artifact not
+  found`, as one no row has, whether or not the caller reaches it, and
+  before its type is read: a run verifies its own project's test cases.
+  An artifact's update
   and restore, which look the artifact up before their guard, answer an
   artifact the caller cannot reach, as one no row has, `404` `artifact not
   found`, and a crew's launch answers a caller who may not know of the crew
@@ -193,8 +208,11 @@ Enforced per-handler via `internal/api/authz.go`:
   a run token polling a run outside its project (`GET
   /agent-runs/delegate/{id}`) gets `404` `agent run not found`. A caller who
   reaches the project or workspace but lacks the role a route needs gets
-  `403`. A public link's token and an account's picture are not hidden (the
-  picture: #379's decision 14, to come).
+  `403`. An account's uploaded picture is read only by the account itself,
+  a member of a workspace it is a member of and a platform admin; anyone
+  else gets `404` `user has no uploaded picture`, as for an account with no
+  picture or none at all (#379's decision 14). A public link's token is not
+  hidden: whoever holds the link opens it.
 - **Malformed ids**: an id that is not a UUID, in a path, a query or a body
   field that names something to look up, answers exactly as a well-formed id
   no row has: the same `404`, an empty list, or nothing changed; never a
@@ -233,7 +251,7 @@ their own project, workers pass within their org, a workspace key up to
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address) | open |
+| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address). `400 weak_password` for a password under 8 characters, as a password change and a reset answer it; an invalid or already registered address is a `400` with no code. Sign-in's refusal stays one generic `401` whatever the password, so it never tells which accounts exist | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
@@ -245,7 +263,7 @@ their own project, workers pass within their org, a workspace key up to
 | PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
 | POST | `/api/v1/me/avatar` | Upload the account's profile picture: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes are the declared type (an image of another type is `400`), at most 2 MiB (`413` beyond). Replaces any previous picture; returns the user with `has_avatar:true` and an `avatar_url` on the API (`/api/v1/users/{id}/avatar?v=<upload time>`, relative to the API origin) that from then on outranks the identity provider's picture at sign-in | user |
 | DELETE | `/api/v1/me/avatar` | Remove the uploaded picture; returns the user with `has_avatar:false` and an empty `avatar_url` (an identity provider's picture returns at the next sign-in) | user |
-| GET | `/api/v1/users/{id}/avatar` | An account's uploaded picture (served as its stored type, `Content-Disposition: inline`, cached a day — the URL changes on every upload); `404` when none is uploaded | user |
+| GET | `/api/v1/users/{id}/avatar` | An account's uploaded picture (served as its stored type, `Content-Disposition: inline`, cached a day — the URL changes on every upload), to the account itself, a member of a workspace it is a member of, and a platform admin; `404` when none is uploaded, and the same `404` to anyone else, so the answer does not say whether the account exists or has a picture | user |
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
@@ -799,10 +817,10 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/test-runs` | List test runs | viewer |
 | GET | `/api/v1/test-runs/{id}` | Test run details | viewer |
 | PUT | `/api/v1/test-runs/{id}` | Update test run | editor |
-| DELETE | `/api/v1/test-runs/{id}` | Delete test run | editor |
-| POST | `/api/v1/test-runs/{id}/results` | Record/overwrite a test result; `404` `artifact not found` for a `test_case_id` no artifact has | editor |
+| DELETE | `/api/v1/test-runs/{id}` | Delete a test run that holds no result. `409` for one that holds results, which are kept (REQ-13): `a test run that holds results is kept: complete or abort it instead of deleting it` for a run in progress, and `a test run that holds results is kept: this one is already completed` (or `aborted`) for a closed one | editor |
+| POST | `/api/v1/test-runs/{id}/results` | Record a test result `{test_case_id, status, notes?, evidence?}`. Recording a case again adds a result with an id of its own rather than overwriting the earlier one, which stays in the run's history; the one recorded last is the case's current result wherever a result is read, its times always after those of the result it supersedes, an omitted `evidence` carries the current one's, and the current one's evidence citations move to it (REQ-13, REQ-121). `404` `artifact not found` for a `test_case_id` no artifact of the run's project has; `409` `this test run is completed; only in-progress runs accept new results` (or `aborted`) for a closed run | editor |
 | POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run | editor |
-| GET | `/api/v1/test-runs/{id}/results` | List results | viewer |
+| GET | `/api/v1/test-runs/{id}/results` | The run's current result per test case, the latest recorded first; `?history=true` lists every result recorded in the run, those later results superseded included, newest first | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
@@ -913,6 +931,9 @@ seats, period end, cancel-at-period-end, grandfathered, synced-at). Provider
 object ids never reach a client. A refresh reads from the provider and can
 grant nothing it does not hold; a provider failure is `503` with
 `code: "billing_upstream"` and `Retry-After`, the workspace left as it was.
+A `session_id` the provider does not know is its answer, not a failure:
+`404` *checkout not found*, with no `Retry-After`, the workspace left as it
+was.
 The limits response likewise carries `entitled_plan`, `plan_status` and
 `grandfathered`, so a member can see there is a payment problem without
 seeing anything about money. Each flag (`hosted_automation`, `teams`,

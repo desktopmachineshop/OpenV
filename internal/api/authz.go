@@ -173,6 +173,43 @@ func (h *Handler) requireOrgVisible(w http.ResponseWriter, r *http.Request, orgI
 	return h.orgAccess(w, r, orgID, orgs.RoleMember, absent)
 }
 
+// requireUserVisible asks, of an account a request names by id, whether the
+// signed-in caller may know of it: the account itself, a platform admin, or
+// a member of a live workspace the account is a member of may (#379's
+// decision 14, OpenV REQ-17). Anyone else gets absent, as for an account no
+// row has (I3), and a caller with no session the 401. It asks before the
+// handler's lookup, so an account that exists and one that does not cost
+// the refused caller the same queries.
+func (h *Handler) requireUserVisible(w http.ResponseWriter, r *http.Request, userID string, absent notFound) bool {
+	caller := CurrentUser(r)
+	if caller == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return false
+	}
+	if caller.IsAdmin || caller.ID == userID {
+		return true
+	}
+	mine, err := h.orgService.ListForUser(caller.ID)
+	if err != nil {
+		respondInternal(w, r, "failed to resolve account access", err)
+		return false
+	}
+	for _, org := range mine {
+		// RoleInOrg answers "" for an id no account has, a malformed one
+		// among them, as for an account that is no member.
+		role, err := h.orgService.RoleInOrg(org.ID, userID)
+		if err != nil {
+			respondInternal(w, r, "failed to resolve account access", err)
+			return false
+		}
+		if role != "" {
+			return true
+		}
+	}
+	absent.write(w)
+	return false
+}
+
 // requireTeamVisible reports whether the request may know of the crew: a
 // member of its workspace, its workspace's worker keys, its workspace's runs
 // (of a pinned crew only a run of the pinned project, the one project a run
