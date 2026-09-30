@@ -137,7 +137,7 @@
           "GET /api/v1/artifacts/{id} | 401: authentication required | 200 json | 200 json | 200 json | 404: artifact not found | 200 json | 200 json | 200 json",
           "GET /api/v1/artifacts/{id}/links | 401: authentication required | 200 json[1] | 200 json[1] | 200 json[1] | 404: project not found | 200 json[1] | 200 json[1] | 200 json[1]",
           "GET /api/v1/artifacts/{id}/quality | 401: authentication required | 200 json | 200 json | 200 json | 404: artifact not found | 200 json | 200 json | 200 json",
-          "GET /api/v1/artifacts/{id}/versions | 401: authentication required | 200 json[2] | 200 json[2] | 200 json[2] | 404: project not found | 200 json[2] | 200 json[2] | 200 json[2]",
+          "GET /api/v1/artifacts/{id}/versions | 401: authentication required | 200 json[3] | 200 json[3] | 200 json[3] | 404: project not found | 200 json[3] | 200 json[3] | 200 json[3]",
           "GET /api/v1/attachments/{id} | 401: authentication required | 200 json | 200 json | 200 json | 404: Attachment not found | 200 json | 200 json | 200 json",
           "GET /api/v1/attachments/{id}/download | 401: authentication required | 200 png | 200 png | 200 png | 404: Attachment not found | 200 png | 200 png | 200 png",
           "GET /api/v1/attachments/{id}/versions | 401: authentication required | 200 json[1] | 200 json[1] | 200 json[1] | 404: Attachment not found | 200 json[1] | 200 json[1] | 200 json[1]",
@@ -222,7 +222,7 @@
           "GET /api/v1/test-runs/{id} | 401: authentication required | 200 text | 200 text | 200 text | 404: test run not found | 200 text | 200 text | 200 text",
           "GET /api/v1/test-runs/{id}/citations | 401: authentication required | 200 json | 200 json | 200 json | 404: test run not found | 200 json | 200 json | 200 json",
           "GET /api/v1/test-runs/{id}/results | 401: authentication required | 200 text[1] | 200 text[1] | 200 text[1] | 404: test run not found | 200 text[1] | 200 text[1] | 200 text[1]",
-          "GET /api/v1/users/{id}/avatar | 401: authentication required | 200 png | 200 png | 200 png | 200 png | 401: authentication required | 401: authentication required | 200 png",
+          "GET /api/v1/users/{id}/avatar | 401: authentication required | 200 png | 200 png | 200 png | 404: user has no uploaded picture | 401: authentication required | 401: authentication required | 200 png",
           "GET /api/v1/work-items/{id} | 401: authentication required | 200 text | 200 text | 200 text | 404: work item not found | 200 text | 200 text | 200 text"
         ]
       },

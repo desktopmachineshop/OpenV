@@ -22,8 +22,10 @@ import (
 // project (the copied_from note); the list with its filters, pages and the
 // Q8 limit parser (over a third project of 201 imported artifacts); updates (attributes carried forward, replaced by {}, a
 // retype that re-mints the ref, a status the mirror refuses, a move to the
-// root); the versions; a restore, which re-mints the ref too and publishes
-// no event; and deletes. Then attribute definitions: the scope, key and type
+// root); the versions; a restore, which keeps the ref and publishes
+// artifact.restored, and one of a version the artifact never had, which is
+// not found (both fixed under R7, REQ-4); and deletes, after which the
+// deleted artifact's versions stay readable. Then attribute definitions: the scope, key and type
 // refusals, the raw and effective lists, a required enum enforced on create
 // only when an attributes map is sent, and updates and deletes.
 //
@@ -192,19 +194,21 @@ func artifactsAttributesArtifacts(tr *tour) {
 	tr.step("the requirement's versions, newest first, each older one closed by valid_to", owner,
 		"GET /api/v1/artifacts/{id}/versions", at("id", "{{requirement}}"))
 	tr.step("the versions of an artifact that does not exist", owner, "GET /api/v1/artifacts/{id}/versions",
-		at("id", "{{phantom}}"), note("the guard looks the project up through the artifact and finds none"))
+		at("id", "{{phantom}}"), note("the guard looks the project up through the artifact's versions and finds none"))
 	tr.step("restore with a malformed body", owner, "POST /api/v1/artifacts/{id}/restore", at("id", "{{requirement}}"),
 		jsonBody(`{"version":"one"}`))
-	tr.step("restore a version the artifact never had", owner, "POST /api/v1/artifacts/{id}/restore",
-		at("id", "{{requirement}}"), jsonBody(`{"version":99}`))
+	tr.step("restore a version the artifact never had: not found", owner, "POST /api/v1/artifacts/{id}/restore",
+		at("id", "{{requirement}}"), jsonBody(`{"version":99}`),
+		note("404 artifact version not found, as a version's links answer it (fixed under R7, REQ-4: it answered 500)"))
 	tr.step("restore an artifact that does not exist", owner, "POST /api/v1/artifacts/{id}/restore",
 		at("id", "{{phantom}}"), jsonBody(`{"version":1}`),
 		note("the handler loads the artifact before its guard and answers an id no artifact has 404, as the "+
 			"update does (fixed under R7: Q2's neighbour, it answered 500)"))
-	tr.step("restore version 1: version 5, a new ref, and no event", owner, "POST /api/v1/artifacts/{id}/restore",
+	tr.step("restore version 1: version 5, the ref kept, and artifact.restored", owner, "POST /api/v1/artifacts/{id}/restore",
 		at("id", "{{requirement}}"), jsonBody(`{"version":1}`),
-		note("the restored version is built without the current ref, so the repository mints the next one; "+
-			"the handler publishes no event"))
+		note("the restored version carries the artifact's ref, REQ-1, and the handler publishes artifact.restored "+
+			"with the version written and the one brought back (fixed under R7, REQ-4: the repository minted the "+
+			"next ref, and no event was published)"))
 	tr.step("the requirement's notes, newest first: the restore, then each update's change summary", owner,
 		"GET /api/v1/chatter", query("artifact_id={{requirement}}"))
 	tr.step("the requirement's versions after the restore", owner, "GET /api/v1/artifacts/{id}/versions",
@@ -215,7 +219,9 @@ func artifactsAttributesArtifacts(tr *tour) {
 		note("the guard looks the project up through the artifact: 404 project not found"))
 	tr.step("delete the persona", owner, "DELETE /api/v1/artifacts/{id}", at("id", "{{persona}}"))
 	tr.step("read the deleted persona", owner, "GET /api/v1/artifacts/{id}", at("id", "{{persona}}"))
-	tr.step("the deleted persona's versions", owner, "GET /api/v1/artifacts/{id}/versions", at("id", "{{persona}}"))
+	tr.step("the deleted persona's versions: its history stays readable", owner, "GET /api/v1/artifacts/{id}/versions",
+		at("id", "{{persona}}"), note("the guard asks the project of the versions, which the delete closes and keeps "+
+			"(fixed under R7, REQ-4: it looked the project up through the current row, and answered 404)"))
 	tr.step("delete it again", owner, "DELETE /api/v1/artifacts/{id}", at("id", "{{persona}}"))
 	tr.step("the project's artifacts after the updates, the restore and the delete", owner, "GET /api/v1/artifacts",
 		query("project_id={{project}}"))
@@ -405,4 +411,7 @@ func artifactsAttributesGates(tr *tour) {
 	tr.step("the editor restores version 1", editor, "POST /api/v1/artifacts/{id}/restore", at("id", "{{team_req}}"),
 		jsonBody(`{"version":1}`))
 	tr.step("the editor deletes", editor, "DELETE /api/v1/artifacts/{id}", at("id", "{{team_dated}}"))
+	tr.step("the viewer reads the versions of the requirement the editor deleted", viewer,
+		"GET /api/v1/artifacts/{id}/versions", at("id", "{{team_dated}}"),
+		note("a deleted artifact's history reads as the artifact did, to its project's viewers (REQ-4)"))
 }

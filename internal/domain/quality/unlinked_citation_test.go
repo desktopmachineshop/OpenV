@@ -176,3 +176,52 @@ func TestLintProjectJudgesCitationsAgainstTheLinkGraph(t *testing.T) {
 		t.Errorf("flagged = %v, want only ##REQ-3 — REQ-2 is linked", flagged)
 	}
 }
+
+// TestLintProjectCountsACrossProjectLinkAsTheLintDoes pins OpenV REQ-164's
+// last sentence for a link into another project (REQ-145): the project
+// report names such a link's other end from the export's linked_artifacts,
+// as one artifact's lint names it by reading it, so a citation of it counts
+// as linked in both. The report used to name ends from the project's own
+// artifacts only, and flagged the citation that the lint of the same
+// artifact accepted; a citation of an artifact it holds no link to is
+// flagged in both, as before.
+func TestLintProjectCountsACrossProjectLinkAsTheLintDoes(t *testing.T) {
+	export := &exports.ProjectExport{
+		ProjectID: "c",
+		Artifacts: []*artifacts.Artifact{
+			{ID: "a", Ref: "REQ-1", Type: artifacts.TypeRequirement,
+				Title: "Archive", Body: "The archive shall keep each record #req-4 names, as ##REQ-7 does."},
+		},
+		Links: []*links.Link{{FromID: "a", ToID: "far", Type: "refines"}},
+		LinkedArtifacts: []*exports.LinkedArtifact{
+			{ID: "far", ProjectID: "p", ProjectName: "Other", Ref: "REQ-4", Type: artifacts.TypeRequirement},
+		},
+	}
+	if got := LinkedRefsByArtifact(export); !got["a"]["REQ-4"] || !got["far"]["REQ-1"] {
+		t.Fatalf("linked refs = %v, want a linked to REQ-4 and the far end to REQ-1", got)
+	}
+	var flagged []string
+	for _, entry := range LintProject(export, DefaultRuleSet()).Entries {
+		for _, f := range entry.Findings {
+			if f.Rule == RuleUnlinkedCitation {
+				flagged = append(flagged, f.Match)
+			}
+		}
+	}
+	// What the artifact's own lint gets: the refs of the ends it reads.
+	alone := findingsFor(export.Artifacts[0], Context{
+		LinkedRefs: LinkedRefs([]LinkEnds{{FromID: "a", ToID: "far"}}, func(id string) string {
+			if id == "far" {
+				return "REQ-4"
+			}
+			return ""
+		})["a"],
+		LinksKnown: true,
+	})
+	if len(flagged) != 1 || flagged[0] != "##REQ-7" {
+		t.Errorf("the report flagged %v, want only ##REQ-7: #req-4 cites the linked REQ-4 of another project", flagged)
+	}
+	if len(alone) != 1 || alone[0].Match != flagged[len(flagged)-1] {
+		t.Errorf("the lint flagged %+v, the report %v: the two must agree", alone, flagged)
+	}
+}

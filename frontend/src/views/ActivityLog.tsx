@@ -9,11 +9,13 @@ import { ErrorBanner } from '../components/ui';
 const EVENT_TYPES = [
   'artifact.created',
   'artifact.updated',
+  'artifact.restored',
   'artifact.deleted',
   'link.created',
   'link.updated',
   'link.deleted',
   'baseline.captured',
+  'baseline.deleted',
   'chatter.created',
   'testrun.recorded',
   'workitem.created',

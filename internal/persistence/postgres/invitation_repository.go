@@ -44,6 +44,7 @@ func scanInvitation(row interface{ Scan(...interface{}) error }) (*invitations.I
 	if err != nil {
 		return nil, err
 	}
+	inv.ExpiresAt = inv.ExpiresAt.UTC() // a TIMESTAMPTZ (inUTC)
 	if invitedBy.Valid {
 		v := invitedBy.String
 		inv.InvitedBy = &v

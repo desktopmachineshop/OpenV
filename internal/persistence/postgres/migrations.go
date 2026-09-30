@@ -1464,6 +1464,51 @@ var migrations = []Migration{
 		_, err := tx.Exec(`ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS claimed_by UUID`)
 		return err
 	}},
+	// 0049: a test result's history (REQ-13). A result recorded again for a
+	// case its run already has one for is a row of its own, and the newest
+	// is the case's current result, where the upsert on (run_id, test_case_id)
+	// wrote over the row and kept no trace of the outcome it replaced.
+	//
+	// The pair stays indexed under the same name, no longer unique. The name
+	// matters: the 0001 baseline re-runs on every boot and creates
+	// idx_test_results_run_case UNIQUE ... IF NOT EXISTS, which checks the
+	// name only, so keeping it is what stops a reboot from putting the
+	// constraint back (and failing on the history it would then meet).
+	{Version: 49, Name: "test_results_history", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`DROP INDEX IF EXISTS idx_test_results_run_case`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`CREATE INDEX idx_test_results_run_case ON test_results(run_id, test_case_id)`)
+		return err
+	}},
+	// 0050: an instant a client sends is stored as one (#379 bug 4). An
+	// evidence bundle's captured_at, a work item's due_date and an
+	// invitation's expires_at, both an interview invite's and a workspace
+	// invitation's, were TIMESTAMP, which drops the offset a time was sent
+	// with and keeps its wall clock, so the instant moved by the offset. The
+	// values stored so far are the UTC wall clock the server writes, and
+	// are read as UTC.
+	//
+	// The evidence list's index orders by COALESCE(captured_at, created_at);
+	// with captured_at a TIMESTAMPTZ and created_at still a TIMESTAMP, the
+	// implicit cast between them depends on the session's TimeZone, which an
+	// index may not, so the index is rebuilt over created_at read as UTC.
+	{Version: 50, Name: "timestamptz_client_times", Run: func(tx *sql.Tx) error {
+		for _, stmt := range []string{
+			`DROP INDEX IF EXISTS idx_evidence_bundles_project`,
+			`ALTER TABLE evidence_bundles ALTER COLUMN captured_at TYPE TIMESTAMPTZ USING captured_at AT TIME ZONE 'UTC'`,
+			`CREATE INDEX idx_evidence_bundles_project
+				ON evidence_bundles (project_id, COALESCE(captured_at, created_at AT TIME ZONE 'UTC') DESC)`,
+			`ALTER TABLE work_items ALTER COLUMN due_date TYPE TIMESTAMPTZ USING due_date AT TIME ZONE 'UTC'`,
+			`ALTER TABLE interview_invites ALTER COLUMN expires_at TYPE TIMESTAMPTZ USING expires_at AT TIME ZONE 'UTC'`,
+			`ALTER TABLE org_invitations ALTER COLUMN expires_at TYPE TIMESTAMPTZ USING expires_at AT TIME ZONE 'UTC'`,
+		} {
+			if _, err := tx.Exec(stmt); err != nil {
+				return err
+			}
+		}
+		return nil
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

@@ -24,16 +24,18 @@ import (
 // or removed one does not compile) and the literal its value must equal.
 type pinnedConst struct{ name, got, want string }
 
-// pinnedEventTypes lists the 25 event types in declaration order.
+// pinnedEventTypes lists the 27 event types in declaration order.
 var pinnedEventTypes = []pinnedConst{
 	{"ArtifactCreated", ArtifactCreated, "artifact.created"},
 	{"ArtifactUpdated", ArtifactUpdated, "artifact.updated"},
 	{"ArtifactDeleted", ArtifactDeleted, "artifact.deleted"},
 	{"ArtifactStatusChanged", ArtifactStatusChanged, "artifact.status_changed"},
+	{"ArtifactRestored", ArtifactRestored, "artifact.restored"},
 	{"LinkCreated", LinkCreated, "link.created"},
 	{"LinkUpdated", LinkUpdated, "link.updated"},
 	{"LinkDeleted", LinkDeleted, "link.deleted"},
 	{"BaselineCaptured", BaselineCaptured, "baseline.captured"},
+	{"BaselineDeleted", BaselineDeleted, "baseline.deleted"},
 	{"ReviewRoundStarted", ReviewRoundStarted, "project.review_round_started"},
 	{"ChatterCreated", ChatterCreated, "chatter.created"},
 	{"TestRunRecorded", TestRunRecorded, "testrun.recorded"},
@@ -60,7 +62,7 @@ var pinnedActors = []pinnedConst{
 }
 
 // pinnedEventTypeCount is the size of the vocabulary the refactor plan names.
-const pinnedEventTypeCount = 25
+const pinnedEventTypeCount = 27
 
 // TestEventTypesArePinned checks each pinned constant's value against its
 // literal, and that the package declares no constant the lists leave out.

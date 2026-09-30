@@ -15,10 +15,17 @@ const (
 	// stream is the sign-off history (issue #127 keeps approval audit in
 	// events rather than a dedicated table).
 	ArtifactStatusChanged = "artifact.status_changed"
-	LinkCreated           = "link.created"
-	LinkUpdated           = "link.updated"
-	LinkDeleted           = "link.deleted"
-	BaselineCaptured      = "baseline.captured"
+	// ArtifactRestored fires when an earlier version is brought back as a
+	// new one; payload carries {artifact_type, title, version,
+	// restored_version}, the version written and the one it copies (REQ-4).
+	ArtifactRestored = "artifact.restored"
+	LinkCreated      = "link.created"
+	LinkUpdated      = "link.updated"
+	LinkDeleted      = "link.deleted"
+	BaselineCaptured = "baseline.captured"
+	// BaselineDeleted fires when a project owner deletes a baseline; payload
+	// carries {name}, since the baseline it names is gone (REQ-5).
+	BaselineDeleted = "baseline.deleted"
 	// ReviewRoundStarted fires once per run of a project's review process
 	// (the bulk form of ArtifactStatusChanged); payload carries the round's
 	// counts and its type scope. EntityID is the project: the round is not a

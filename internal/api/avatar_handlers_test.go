@@ -43,18 +43,27 @@ func (f *fakeAvatarUsers) ClearAvatar(userID string) (*users.User, error) {
 	return f.SetAvatar(userID, "", "", "")
 }
 
+// avatarFixture is a handler over three accounts: u1 and u2 share the
+// workspace w1, and u3 is alone in w2, sharing none with them.
 func avatarFixture(t *testing.T) (*Handler, *fakeAvatarUsers) {
 	t.Helper()
 	svc := &fakeAvatarUsers{byID: map[string]*users.User{
 		"u1": {ID: "u1", Email: "u1@example.com", AvatarURL: "https://idp.example/u1.png"},
 		"u2": {ID: "u2", Email: "u2@example.com"},
+		"u3": {ID: "u3", Email: "u3@example.com"},
 	}}
-	return &Handler{uploadsDir: t.TempDir(), userService: svc}, svc
+	workspaces := &fakeOrgService{roles: map[string]map[string]string{
+		"w1": {"u1": "admin", "u2": "member"},
+		"w2": {"u3": "admin"},
+	}}
+	return &Handler{uploadsDir: t.TempDir(), userService: svc, orgService: workspaces}, svc
 }
 
+// avatarReqAs is r as the signed-in account userID, a platform admin when
+// userID is "root"; as no one when it is "".
 func avatarReqAs(r *http.Request, userID string) *http.Request {
 	if userID != "" {
-		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: userID}))
+		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: userID, IsAdmin: userID == "root"}))
 	}
 	return r
 }
@@ -169,8 +178,18 @@ func TestUploadAvatarRejects(t *testing.T) {
 	}
 }
 
-// TestGetUserAvatarServesStoredBytes: another signed-in member fetches the
-// picture as its stored type; an account with none is 404; no session is 401.
+// getAvatar is GET /api/v1/users/{target}/avatar as the account userID.
+func getAvatar(h *Handler, userID, target string) *httptest.ResponseRecorder {
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/users/"+target+"/avatar", nil)
+	r = mux.SetURLVars(avatarReqAs(r, userID), map[string]string{"id": target})
+	w := httptest.NewRecorder()
+	h.GetUserAvatar(w, r)
+	return w
+}
+
+// TestGetUserAvatarServesStoredBytes: a member of a workspace the account is
+// in fetches the picture as its stored type; an account with none is 404; no
+// session is 401.
 func TestGetUserAvatarServesStoredBytes(t *testing.T) {
 	h, _ := avatarFixture(t)
 	png := smallPNG(t)
@@ -180,13 +199,7 @@ func TestGetUserAvatarServesStoredBytes(t *testing.T) {
 		t.Fatalf("upload status = %d (body %q)", w.Code, w.Body.String())
 	}
 
-	get := func(userID, target string) *httptest.ResponseRecorder {
-		r := httptest.NewRequest(http.MethodGet, "/api/v1/users/"+target+"/avatar", nil)
-		r = mux.SetURLVars(avatarReqAs(r, userID), map[string]string{"id": target})
-		w := httptest.NewRecorder()
-		h.GetUserAvatar(w, r)
-		return w
-	}
+	get := func(userID, target string) *httptest.ResponseRecorder { return getAvatar(h, userID, target) }
 
 	w = get("u2", "u1")
 	if w.Code != http.StatusOK {
@@ -206,6 +219,43 @@ func TestGetUserAvatarServesStoredBytes(t *testing.T) {
 	}
 	if w := get("", "u1"); w.Code != http.StatusUnauthorized {
 		t.Fatalf("no session: status = %d, want 401", w.Code)
+	}
+}
+
+// TestAnAccountsPictureIsHiddenFromWhoSharesNoWorkspaceWithIt: an account's
+// picture is read by the account itself, by a member of a workspace it is in
+// and by a platform admin; to anyone else it answers exactly as an account
+// with no picture, or none at all, does (#379's decision 14, OpenV REQ-17
+// and REQ-133), where any signed-in account read it.
+func TestAnAccountsPictureIsHiddenFromWhoSharesNoWorkspaceWithIt(t *testing.T) {
+	h, _ := avatarFixture(t)
+	png := smallPNG(t)
+	w := httptest.NewRecorder()
+	h.UploadAvatar(w, avatarUploadReq(t, "u1", "image/png", png))
+	if w.Code != http.StatusOK {
+		t.Fatalf("upload status = %d (body %q)", w.Code, w.Body.String())
+	}
+	for _, reader := range []string{"u1", "u2", "root"} {
+		if w := getAvatar(h, reader, "u1"); w.Code != http.StatusOK || !bytes.Equal(w.Body.Bytes(), png) {
+			t.Errorf("%s reads u1's picture: status = %d (body %q), want 200 and the picture", reader, w.Code, w.Body.String())
+		}
+	}
+	const absent = "{\"error\":\"user has no uploaded picture\"}\n"
+	for _, tc := range []struct{ reader, target, why string }{
+		{"u3", "u1", "an account that shares no workspace with u1"},
+		{"u3", "u2", "the same outsider, of an account with no picture"},
+		{"u3", "nobody", "the same outsider, of an account that does not exist"},
+		{"u3", "not-a-uuid", "the same outsider, of something that is not an id"},
+		{"u1", "u2", "a member of u2's workspace, of an account with no picture"},
+		{"root", "nobody", "a platform admin, of an account that does not exist"},
+	} {
+		w := getAvatar(h, tc.reader, tc.target)
+		if w.Code != http.StatusNotFound || w.Body.String() != absent {
+			t.Errorf("%s: status = %d (body %q), want 404 %q", tc.why, w.Code, w.Body.String(), absent)
+		}
+		if got := w.Header().Get("Content-Type"); got != "application/json" {
+			t.Errorf("%s: Content-Type = %q, want the JSON error's", tc.why, got)
+		}
 	}
 }
 

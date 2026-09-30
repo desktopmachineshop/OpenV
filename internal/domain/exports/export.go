@@ -61,9 +61,10 @@ type ProjectExport struct {
 	Attachments    []*attachments.Attachment `json:"attachments"`
 	ProductProfile *products.ProductProfile  `json:"product_profile,omitempty"`
 	// AttributeDefs carries the org/project attribute definitions effective for
-	// the project. It is populated only for the ReqIF export (to type enum
-	// attributes as ReqIF enumerations); JSON/CSV exports leave it nil so their
-	// output is unchanged.
+	// the project (Definitions). The ReqIF export and download load them to
+	// type enum attributes as ReqIF enumerations, and a baseline's snapshot
+	// keeps them (Snapshot, REQ-5); the live JSON, CSV and Excel exports leave
+	// it nil. A snapshot captured before baselines kept them has none.
 	AttributeDefs []*attributes.Definition `json:"attribute_definitions,omitempty"`
 	// LinkedArtifacts describes the far end of every link that crosses into
 	// another project (REQ-145): enough to name a parent requirement a local
@@ -119,6 +120,14 @@ type Service interface {
 	// PrepareExport assembles the snapshot every output reads; RenderExport
 	// turns one into bytes. Downloads narrow the snapshot between the two.
 	PrepareExport(projectID string, withAttributeDefs bool) (*ProjectExport, error)
+	// Definitions are the attribute definitions in effect for a project,
+	// which every ReqIF document of it is typed by: the export's (through
+	// PrepareExport), a download's of the live project, and a baseline's,
+	// which keeps the ones in effect when it was captured (REQ-6).
+	Definitions(projectID string) []*attributes.Definition
+	// Snapshot is the JSON a baseline stores: the JSON export with the
+	// attribute definitions in effect beside it (REQ-5).
+	Snapshot(projectID string) ([]byte, error)
 	// LinkedArtifacts resolves the far end of every link that crosses out of
 	// the project, the same list PrepareExport embeds.
 	LinkedArtifacts(projectID string) ([]*LinkedArtifact, error)
@@ -152,9 +161,9 @@ func (s *DefaultService) SetProductService(ps products.Service) {
 }
 
 // SetAttributeService wires an optional attribute-definition service. When set,
-// the ReqIF export types enum attributes as ReqIF enumerations using the
-// project's effective definitions. Optional: nil degrades gracefully to
-// free-form string attributes.
+// a ReqIF export or download types enum attributes as ReqIF enumerations using
+// the project's effective definitions, and a baseline keeps them. Optional:
+// nil degrades gracefully to free-form string attributes.
 func (s *DefaultService) SetAttributeService(as attributes.Service) {
 	s.attributeService = as
 }
@@ -205,7 +214,8 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 // PrepareExport assembles the project snapshot that every export, report and
 // download is rendered from: artifacts, links, attachment metadata and the
 // product profile. withAttributeDefs additionally loads the effective
-// attribute definitions, which only ReqIF needs.
+// attribute definitions (Definitions), which ReqIF and a baseline's snapshot
+// need.
 func (s *DefaultService) PrepareExport(projectID string, withAttributeDefs bool) (*ProjectExport, error) {
 	// Get project info
 	project, err := s.projectRepo.FindByID(projectID)
@@ -271,22 +281,45 @@ func (s *DefaultService) PrepareExport(projectID string, withAttributeDefs bool)
 	}
 
 	// Attach the effective attribute definitions so ReqIF can type enum
-	// attributes as enumerations. Best-effort: definitions are optional
-	// fidelity, so failures degrade to free-form string attributes rather than
-	// fail the export.
-	if withAttributeDefs && s.attributeService != nil {
-		orgID := ""
-		if s.projectService != nil {
-			if p, err := s.projectService.GetProject(projectID); err == nil && p != nil {
-				orgID = p.OrgID
-			}
-		}
-		if defs, err := s.attributeService.EffectiveForProject(orgID, projectID); err == nil {
-			exportData.AttributeDefs = defs
-		}
+	// attributes as enumerations.
+	if withAttributeDefs {
+		exportData.AttributeDefs = s.Definitions(projectID)
 	}
 
 	return exportData, nil
+}
+
+// Definitions implements Service: the workspace's definitions and the
+// project's own, merged. Best-effort: definitions are optional fidelity, so
+// a failure to read them, or no attribute service, degrades a ReqIF document
+// to free-form string attributes rather than fail it.
+func (s *DefaultService) Definitions(projectID string) []*attributes.Definition {
+	if s.attributeService == nil {
+		return nil
+	}
+	orgID := ""
+	if s.projectService != nil {
+		if p, err := s.projectService.GetProject(projectID); err == nil && p != nil {
+			orgID = p.OrgID
+		}
+	}
+	defs, err := s.attributeService.EffectiveForProject(orgID, projectID)
+	if err != nil {
+		return nil
+	}
+	return defs
+}
+
+// Snapshot implements Service. Attachment files stay out of it, as out of
+// every export: it keeps their metadata (name, type, size, the artifact
+// each belongs to) alone.
+func (s *DefaultService) Snapshot(projectID string) ([]byte, error) {
+	data, err := s.PrepareExport(projectID, true)
+	if err != nil {
+		return nil, err
+	}
+	raw, _, err := s.RenderExport(data, FormatJSON)
+	return raw, err
 }
 
 // LinkedArtifacts implements Service.

@@ -549,6 +549,185 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Giving a project role to an account that does not exist now answers `404`
   *user not found*, where it failed with a server error.
 
+- **A profile picture is shown only to people who share a workspace with its
+  owner.** Anyone signed in could fetch any account's uploaded profile
+  picture by the account's id, including someone who shares no workspace
+  with it. A picture is now served to the account itself, to members of the
+  workspaces it belongs to, and to platform admins. Anyone else is answered
+  `404` *user has no uploaded picture*, exactly as for an account with no
+  picture or no account at all, so the answer no longer tells them the
+  account exists. Where OpenV lists someone whose picture you may not see,
+  such as a project member from outside your workspace, it shows their
+  initial in its place.
+
+- **Returning from a checkout the billing provider has no record of says
+  so.** Through the API, `POST /api/v1/orgs/{id}/billing/refresh` with a
+  `session_id` the billing provider does not know answered `503` *the
+  billing provider did not answer*, with a `Retry-After`, as if the provider
+  were down and trying again could help. It now answers `404` *checkout not
+  found*, with no `Retry-After`, and still leaves the workspace as it was.
+  When the provider really does not answer, the refresh still answers `503`
+  with a `Retry-After`, as before.
+
+- **Signing up with a password that is too short gives the same error code
+  as changing or resetting one.** Through the API,
+  `POST /api/v1/auth/register` refused a password under 8 characters with
+  *password must be at least 8 characters* but no error code, where
+  changing or resetting a password gives that refusal the code
+  `weak_password`. Signing up now gives it the same code and the same
+  message. Signing in is unchanged: a wrong password, however short, is
+  refused with one message that does not say whether the account exists.
+
+- **A closed test run no longer takes new results, and a run takes results
+  only for its own project's test cases.** A result recorded in a test run
+  that had been completed or aborted was accepted, so a closed run's record
+  could still change. It is now refused with `409` and the message *this
+  test run is completed; only in-progress runs accept new results*. A
+  result for a test case of another project was accepted into a run too;
+  it is now answered as for a test case that does not exist, `404`
+  *artifact not found*, whether or not you can open that project. An
+  approved agent proposal that records a result follows the same rules.
+
+- **Recording a test result again keeps the earlier one.** Recording a
+  result for a test case a run already had one for overwrote it, so only
+  the automatic note on the test case said what it had been. Each result is
+  now kept: the newest is the case's result wherever OpenV shows one (the
+  run's grid, V&V coverage and gaps, reports and documents), evidence cited
+  for the case moves with it, and API clients list every result a run holds
+  with `GET /api/v1/test-runs/{id}/results?history=true`, newest first. A
+  result recorded again has an id of its own. Deleting a test run that
+  holds results, which deleted them with it, is now refused with `409`,
+  and the run is kept: complete or abort a run still in progress instead.
+  A run with no results can still be deleted.
+
+- **A time sent with a time zone offset keeps its moment.** An evidence
+  capture's date, a to-do's due date and an interview invite's expiry were
+  stored without their offset, so a time sent as `2026-01-15T09:30:00+01:00`
+  read back as `2026-01-15T09:30:00Z`, an hour late, and an invite with such
+  an expiry expired at the wrong time. They are now stored as the moment
+  sent and read back in UTC, `2026-01-15T08:30:00Z` for that example, as a
+  workspace invitation's expiry is too. Times stored before this release
+  read as the UTC times OpenV wrote. The app already sends these dates in
+  UTC, so what it shows is unchanged; API and MCP clients that send an
+  offset now get the moment they meant.
+
+- **Restoring an earlier version of an artifact keeps its reference, and the
+  activity log records it.** Restoring a version from an artifact's History
+  gave the artifact a new reference, so REQ-3 might become REQ-9 and every
+  citation of REQ-3, in documents, notes and other artifacts, stopped
+  pointing at it; figures added afterwards were numbered under the new
+  reference. A restore now keeps the artifact's reference, as every other
+  edit does. Only a restore that brings back a different type of artifact,
+  such as a heading over what is now a requirement, takes a new reference
+  of the matching kind, as changing the type does. Each restore now also
+  appears in the project's activity log as *artifact.restored*, with the
+  version it brought back, and the log's filter offers it. An artifact a
+  restore already renumbered keeps the reference it has now.
+
+- **Restoring a version an artifact never had says so.** Through the API,
+  restoring an artifact to a version it never had failed with a server
+  error (`500`). It now answers `404` *artifact version not found*, and
+  nothing is written.
+
+- **A deleted artifact's history can still be read.** Through the API, the
+  version history of a deleted artifact answered `404` even to the
+  project's members, although OpenV keeps every version. Anyone who can
+  view the project can now read a deleted artifact's versions, and the
+  links of any one of them. Someone with no access to the project still
+  gets `404`, as for an artifact that does not exist.
+
+- **Adding a figure to an artifact creates a new version of it.** Uploading
+  a new file for a figure, or renaming one, already took the artifact to a
+  new version, but adding a figure did not, so the History did not show
+  when a drawing first appeared. Adding a figure now creates a version too.
+  As with the other figure changes, that version does not send an approved
+  artifact back to draft or mark its links suspect.
+
+- **Deleting a baseline is recorded in the activity log.** A project owner
+  could delete a baseline and nothing recorded that it had existed. The
+  deletion now appears in the project's activity log as
+  *baseline.deleted*, with the baseline's name and who deleted it, and the
+  log's filter offers it. Deleting a baseline is still for the project's
+  owners alone.
+
+- **A baseline keeps the project's attribute definitions.** A baseline kept
+  a project's artifacts, links and the details of its attachments, but not
+  the custom attributes defined for it, so what a baseline's values meant
+  could change after it was taken. A new baseline also keeps the attribute
+  definitions in effect when it is captured, the workspace's and the
+  project's, and its ReqIF download types list attributes by them. Its
+  PDF and Word downloads, and the fields the download wizard offers for
+  it, name each custom attribute as it was defined then, where the live
+  project's downloads name it after its key. Attachment files are still
+  not copied into a baseline, and each attachment's name, type and size
+  are still kept. Baselines captured before this release are unchanged and
+  read as before.
+
+- **PDF and Word downloads include V&V status unless you turn it off.** A
+  downloaded specification carried each requirement's verification status,
+  the coverage summary and the gaps only when *V&V status* was ticked or
+  the Verification & Validation template chosen. Every PDF and Word
+  download, and the Specification template, now carries them by default;
+  untick *V&V status* under *Document* in the download wizard to leave them
+  out. The Requirements review and Test planning templates still leave
+  them out, and test results are still included only when chosen. A box
+  you tick or untick under *Document*, or the fields you choose, after
+  choosing a template now always reaches the document: before, one ticked
+  to match what a download has without a template, such as *Figures* on
+  the Test planning template or every field on Requirements review, was
+  lost, and the document followed the template instead.
+
+- **A ReqIF download types list attributes as the ReqIF export does.** A
+  project downloaded as ReqIF wrote an attribute with a fixed list of
+  values, such as a *risk* of low or high, as free text, while the ReqIF
+  export wrote it as a list of values, so DOORS, Polarion and an OpenV
+  import saw two different documents. The download now writes it as the
+  export does, from the same attribute definitions, and the two files
+  match. As in the export, a value that is not in its attribute's list,
+  such as one left behind when the list was edited, is left out of the
+  file. A download of a baseline uses the definitions the baseline kept;
+  one captured before this release still writes such attributes as text.
+
+- **A test run can only name a baseline of its own project.** Through the
+  API, creating a test run with a `baseline_id` no baseline has, or one of
+  another project, stored that reference anyway, and an id that is not a
+  UUID failed with a database error (`400`). Each now answers `404`
+  *baseline not found*, as every other request that names a baseline
+  does, and no run is created. A run on one of the project's own
+  baselines, or on none, is created as before.
+
+- **A card on the board is assigned only to a person, an agent or an
+  existing crew, and the board's cards list in the order its columns
+  flow.** Through the API, creating or editing a work item with an
+  `assignee_type` other than `user`, `agent` or `team` saved it as sent,
+  and assigning a card to a crew (`assignee_type` `team`) that does not
+  exist saved that too, so the card named an assignee nobody could find.
+  The first now answers `400` *invalid assignee_type: must be user, agent
+  or team*, the second `404` *team not found*, and neither saves anything.
+  A crew you may not see is refused as one that does not exist, and one
+  you can see in another workspace than the card's project answers `400`
+  *team belongs to a different workspace*. An edit that sends no
+  `assignee_type` keeps the card's, and the assignee it sends is checked
+  against that; an edit that sends the card's own assignee back unchanged
+  is not checked again, so it saves as before. A person's or an agent's id
+  is not looked up. Cards already assigned so are left as they are. The
+  list of a project's cards, which agents read through the
+  `list_work_items` tool, gave the columns in alphabetical order, with Done
+  before In Progress and To Do; it now gives them as the board shows them,
+  Backlog, To Do, In Progress, Review and Done, each column's cards in
+  their order on the board. The board itself looks as it did.
+
+- **The quality report accepts a citation of a linked artifact in another
+  project.** A requirement that cites an artifact of another project it is
+  linked to, such as the requirement it refines, was flagged in the
+  project's quality report as citing something it has no traceability link
+  to, and its score in the requirements list was lowered for it, while the
+  requirement's own quality check found nothing wrong. The report now
+  judges every citation as that check does, so a citation of any artifact
+  the requirement is linked to, in whichever project, counts as linked in
+  both. A citation of an artifact it is not linked to is still flagged in
+  both.
+
 - **A run whose approved changes could not be applied is marked an agent
   error.** When you approved an agent's proposed changes and one of them
   could not be applied, the run was marked failed with no failure class, so

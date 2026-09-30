@@ -28,6 +28,18 @@ type fakeExportService struct {
 	// exported records the projects asked for.
 	byProject map[string][]byte
 	exported  []string
+	// snapshot, when set, is what Snapshot answers: a baseline's snapshot is
+	// the JSON export with the attribute definitions beside it.
+	snapshot []byte
+}
+
+// Snapshot answers snapshot when set, and otherwise the JSON export's bytes.
+func (f *fakeExportService) Snapshot(projectID string) ([]byte, error) {
+	if f.snapshot != nil {
+		return f.snapshot, nil
+	}
+	data, _, err := f.ExportProject(projectID, exports.FormatJSON)
+	return data, err
 }
 
 func (f *fakeExportService) ExportProject(projectID string, format exports.ExportFormat) ([]byte, string, error) {

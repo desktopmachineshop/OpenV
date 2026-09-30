@@ -3,9 +3,11 @@ package api
 // Profile pictures. An account may upload its own picture, which then stands
 // in for whatever its identity provider supplied. It is stored the way a
 // workspace logo is — one raster file per account under the uploads
-// directory — and served from the API to any signed-in member, since a
-// picture is shown wherever the account is: member lists, crew nodes, the
-// account menu.
+// directory — and served from the API wherever the account is shown to
+// someone who may know of it: member lists, crew nodes, the account menu.
+// That is the account itself, a member of a workspace it is a member of, or
+// a platform admin (requireUserVisible); anyone else is answered as for an
+// account with no picture.
 
 import (
 	"encoding/json"
@@ -112,25 +114,28 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(updated)
 }
 
-// GetUserAvatar serves an account's uploaded picture to any signed-in
-// member; 404 when none is uploaded (a provider-supplied picture is a URL
-// elsewhere, not a file here). The bytes are served as the stored type
-// only, never sniffed, and cached briefly: the URL changes on every upload,
-// so a cached copy is never stale.
+// GetUserAvatar serves an account's uploaded picture to whoever may know of
+// the account (requireUserVisible); 404 when none is uploaded (a
+// provider-supplied picture is a URL elsewhere, not a file here), and the
+// same 404 to anyone else, so the answer tells an outsider nothing of
+// whether the account exists or has a picture (#379's decision 14). The
+// bytes are served as the stored type only, never sniffed, and cached
+// briefly: the URL changes on every upload, so a cached copy is never stale.
 func (h *Handler) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	id := mux.Vars(r)["id"]
+	absent := missing("user has no uploaded picture")
+	if !h.requireUserVisible(w, r, id, absent) {
 		return
 	}
-	owner, err := h.userService.GetByID(mux.Vars(r)["id"])
+	owner, err := h.userService.GetByID(id)
 	if err != nil || owner == nil || owner.AvatarPath == "" {
-		writeJSONError(w, http.StatusNotFound, "user has no uploaded picture")
+		absent.write(w)
 		return
 	}
 	f, err := os.Open(owner.AvatarPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			writeJSONError(w, http.StatusNotFound, "user has no uploaded picture")
+			absent.write(w)
 			return
 		}
 		respondInternal(w, r, "Failed to read picture", err)

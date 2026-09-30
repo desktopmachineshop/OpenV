@@ -86,8 +86,13 @@ func (f CoverageFunc) compute(data *exports.ProjectExport, latest map[string]*vv
 	return f(data, latest)
 }
 
-// defaultRenderOptions is what the legacy report route and a caller with no
-// preference get: the specification document.
+// defaultRenderOptions is what the legacy report route gets: the
+// specification document as that route has always rendered it, without the
+// V&V status a download carries by default. The route reads no test evidence
+// (a download does, through its EvidenceSource), and a status computed
+// without it would report every tested requirement as never run.
 func defaultRenderOptions(snapshot Snapshot) RenderOptions {
-	return RenderOptions{Snapshot: snapshot, Content: exports.DefaultContent()}
+	content := exports.DefaultContent()
+	content.VVStatus = false
+	return RenderOptions{Snapshot: snapshot, Content: content}
 }

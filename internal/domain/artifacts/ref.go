@@ -18,7 +18,10 @@ import (
 // it under the type it used to be (e.g. a heading created by mistake and
 // retyped to a requirement). ArtifactRepository.Update then mints a
 // replacement from the new prefix's counter exactly as Save would for a new
-// artifact; the retired number is never reused.
+// artifact; the retired number is never reused. A restore of an earlier
+// version keeps the ref by the same rule (refAfterRetype): it is the
+// artifact's, not the version's, and only a restore that brings back a type
+// with another prefix draws a new one.
 //
 // This is unrelated to CreateArtifactRequest.Ref, the proposal-mode
 // temporary token (issue #235) that only names a not-yet-created artifact
@@ -75,6 +78,21 @@ func RefPrefix(artifactType string) string {
 		return strings.ToUpper(c)
 	}
 	return "ART"
+}
+
+// refAfterRetype is the ref an artifact carries into a new version that moves
+// it from type from to type to: its own, unless the type changes to one whose
+// prefix its ref does not carry, when it is "" so the repository mints one
+// from the new prefix's counter. A ref an import kept under a prefix of its
+// own stays as long as the type does.
+func refAfterRetype(ref, from, to string) string {
+	if from == to {
+		return ref
+	}
+	if prefix, _, ok := ParseRef(ref); ok && prefix != RefPrefix(to) {
+		return ""
+	}
+	return ref
 }
 
 // ParseRef splits a stable ref of the form PREFIX-NUM. ok is false for

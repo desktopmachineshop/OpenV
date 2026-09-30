@@ -81,7 +81,11 @@ Per-artifact activity feed: `artifact_id`, `message`, `is_auto_entry`
 
 ### baselines
 Implemented (not "future"): `project_id`, `name`, full project `snapshot`
-JSONB, `created_by`.
+JSONB, `created_by`. The snapshot is the JSON export (artifacts, links,
+attachment metadata but no files, the product profile) with the attribute
+definitions in effect when it was captured (`attribute_definitions`,
+absent from a baseline captured before they were kept). A delete is the
+project owner's and publishes `baseline.deleted`.
 
 ### templates
 Project templates: `template_key` (unique; built-ins), `name`, `snapshot`
@@ -322,11 +326,12 @@ may have agent-recorded results (`internal/domain/vv`). Evidence files
 attach via `attachments.test_result_id`.
 
 ### work_items / work_item_activity
-Kanban cards: `project_id`, `title`, `description`, `board_column`,
-`sort_order`, `assignee_type` (`user` | `agent`) + `assignee_id`,
-`agent_run_id` (moving a card into an agent column enqueues a run),
-`artifact_ids` JSONB, `due_date`. Activity is the card's feed (`kind`,
-`actor`, `content`, `payload`).
+Kanban cards: `project_id`, `title`, `description`, `board_column`
+(`backlog` | `todo` | `in-progress` | `review` | `done`, listed in that
+order), `sort_order`, `assignee_type` (`user` | `agent` | `team`, a
+crew) + `assignee_id`, `agent_run_id` (moving a card into an agent
+column enqueues a run), `artifact_ids` JSONB, `due_date`. Activity is the
+card's feed (`kind`, `actor`, `content`, `payload`).
 
 ### interviews / interview_invites / interview_sessions / interview_messages
 Stakeholder elicitation: an interview (`project_id`, optional

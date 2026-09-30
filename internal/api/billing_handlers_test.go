@@ -431,6 +431,39 @@ func TestRefreshBindsThroughTheSessionAndRefusesAnotherWorkspaces(t *testing.T) 
 	}
 }
 
+// A checkout the provider does not know, which it answers 404 for, is its
+// answer, not an outage: the return page's bind answers 404 "checkout not
+// found" with no Retry-After and changes nothing (#379's bug 19, OpenV
+// REQ-172), where it answered 503 billing_upstream. A completed checkout
+// whose subscription the provider does not know is still the provider
+// failing the bind: 503, as before.
+func TestRefreshFromACheckoutTheProviderDoesNotKnowAnswers404(t *testing.T) {
+	h, svc, provider := purchaseHandler(t, orgs.TypeCompany)
+	admin := &users.User{ID: "admin"}
+	provider.sessions["cs_lost"] = &billing.CheckoutSession{ID: "cs_lost", ClientReferenceID: "org-1", SubscriptionID: "sub_lost"}
+
+	w := httptest.NewRecorder()
+	h.RefreshOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_unknown"}`, admin))
+	if w.Code != http.StatusNotFound || w.Body.String() != "{\"error\":\"checkout not found\"}\n" {
+		t.Fatalf("a checkout the provider does not know: %d %q, want 404 checkout not found", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Retry-After"); got != "" {
+		t.Errorf("Retry-After = %q on a checkout that is not there: retrying cannot find it", got)
+	}
+	if svc.billing != (orgs.Billing{}) {
+		t.Fatalf("a refused bind changed the workspace: %+v", svc.billing)
+	}
+
+	w = httptest.NewRecorder()
+	h.RefreshOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_lost"}`, admin))
+	var body errorBody
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if w.Code != http.StatusServiceUnavailable || body.Code != ErrCodeBillingUpstream || w.Header().Get("Retry-After") != "30" {
+		t.Fatalf("a subscription the provider does not know: %d %q (Retry-After %q), want 503 billing_upstream",
+			w.Code, body.Code, w.Header().Get("Retry-After"))
+	}
+}
+
 // The load-bearing property of seat sync: a membership change commits and
 // answers before the provider is asked anything, and a provider that is
 // down changes nothing about the answer. The push happens on the queue's

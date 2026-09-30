@@ -29,7 +29,8 @@ const (
 	// deliberately absent from that response, so the code is how the client
 	// tells this refusal from an unusable link.
 	ErrCodeInvitationEmailMismatch = "invitation_email_mismatch"
-	// The three ways a password change refuses (REQ-99).
+	// The three ways a password change refuses (REQ-99). weak_password also
+	// answers a registration's and a reset's password under the minimum.
 	ErrCodeWeakPassword      = "weak_password"
 	ErrCodePasswordIncorrect = "password_incorrect"
 	// ErrCodeLimitReached marks a refusal caused by a workspace limit rather

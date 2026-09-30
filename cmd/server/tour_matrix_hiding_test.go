@@ -52,7 +52,6 @@ var tourHidingExempt = map[string]string{
 	"GET /api/v1/public/share/{token}":             "a share link opens for whoever holds it",
 	"GET /api/v1/public/share/{token}/page":        "a share link opens for whoever holds it",
 	"GET /api/v1/public/share/{token}/preview.png": "a share link opens for whoever holds it",
-	"GET /api/v1/users/{id}/avatar":                "any signed-in account reads any account's picture, #379's decision 14 to come",
 }
 
 // tourMatrixCells reads the named sections of an S5e matrix golden: each

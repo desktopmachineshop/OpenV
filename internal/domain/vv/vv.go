@@ -91,6 +91,14 @@ var (
 	ErrInvalidStatus     = errors.New("invalid status value")
 	ErrInvalidTransition = errors.New("invalid run status transition")
 	ErrNotTestCase       = errors.New("artifact is not a test case")
+	// ErrRunClosed refuses a result for a completed or aborted run: closing
+	// a run is what makes its results a record (REQ-13).
+	ErrRunClosed = errors.New("only in-progress runs accept new results")
+	// ErrRunHasResults refuses to delete a run that holds results: they are
+	// the record REQ-13 keeps, so such a run is closed, not deleted. The
+	// store says which: complete or abort a run in progress, or that a
+	// closed one is already so.
+	ErrRunHasResults = errors.New("a test run that holds results is kept")
 )
 
 // TestRun represents a verification test execution campaign.
@@ -148,12 +156,24 @@ type Repository interface {
 	UpdateRun(run *TestRun) error
 	FindRunByID(id string) (*TestRun, error)
 	ListRunsByProject(projectID string) ([]*TestRun, error)
+	// DeleteRun removes a run that holds no result; ErrRunHasResults when
+	// it holds any, ErrRunNotFound when there is no such run.
 	DeleteRun(id string) error
-	UpsertResult(r *TestResult) error
-	// FindResultByCase returns the run's existing result for a test case, or
-	// (nil, nil) when it has none.
+	// AddResult stores a new result, never overwriting one: a result
+	// recorded again for a case the run already has one for is added beside
+	// it and becomes the case's current result, and the citations of the
+	// result it supersedes move to it. It refuses a run that is not in
+	// progress with ErrRunClosed, checked under a lock on the run so that a
+	// concurrent close cannot let a result in after it.
+	AddResult(r *TestResult) error
+	// FindResultByCase returns the run's current (latest) result for a test
+	// case, or (nil, nil) when it has none.
 	FindResultByCase(runID, testCaseID string) (*TestResult, error)
+	// ListResultsByRun returns the run's current result per test case.
 	ListResultsByRun(runID string) ([]*TestResult, error)
+	// ListResultHistoryByRun returns every result recorded in the run,
+	// superseded ones included, newest first.
+	ListResultHistoryByRun(runID string) ([]*TestResult, error)
 	LatestResultPerCase(projectID string) (map[string]*TestResult, error)
 }
 
@@ -163,12 +183,19 @@ type Service interface {
 	GetRun(id string) (*TestRun, error)
 	ListRuns(projectID string) ([]*TestRun, error)
 	UpdateRunStatus(id, status string) (*TestRun, error)
+	// DeleteRun deletes a run that holds no result, and refuses one that
+	// holds any with ErrRunHasResults.
 	DeleteRun(id string) error
-	// UpsertResult records a result. agentRunID is the executing agent run
-	// ("" when a person records it); agent-recorded results are refused for
-	// test cases flagged manual or physical.
+	// UpsertResult records a result, adding it beside any earlier one for
+	// the same case (which it supersedes). agentRunID is the executing agent
+	// run ("" when a person records it); agent-recorded results are refused
+	// for test cases flagged manual or physical.
 	UpsertResult(runID string, req UpsertResultRequest, executedBy *string, actor, agentRunID string) (*TestResult, error)
+	// ListResults returns the run's current result per test case.
 	ListResults(runID string) ([]*TestResult, error)
+	// ListResultHistory returns every result recorded in the run, newest
+	// first.
+	ListResultHistory(runID string) ([]*TestResult, error)
 	LatestResults(projectID string) (map[string]*TestResult, error)
 	// AgentExecutableCases returns the project's test cases an agent may
 	// execute, plus those skipped because they need a human or a rig.
@@ -260,14 +287,19 @@ func (s *DefaultService) UpdateRunStatus(id, status string) (*TestRun, error) {
 	return run, nil
 }
 
-// DeleteRun removes a test run and its results.
+// DeleteRun removes a test run that holds no result. A run that holds
+// results is refused with ErrRunHasResults: they are the record of what was
+// verified, so such a run is closed (completed or aborted), never deleted.
 func (s *DefaultService) DeleteRun(id string) error {
 	return s.repo.DeleteRun(id)
 }
 
-// UpsertResult records or updates a test result within a run. The test case
-// artifact must exist and be of type "test-case"; its current version is
-// captured on the result. actor is the event actor ("" for system).
+// UpsertResult records a test result within an in-progress run. A result
+// for a case the run already has one for is added beside it rather than
+// written over it, and is the case's current result from then on (REQ-13).
+// The test case artifact must exist in the run's project and be of type
+// "test-case"; its current version is captured on the result. actor is the
+// event actor ("" for system).
 func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, executedBy *string, actor, agentRunID string) (*TestResult, error) {
 	switch req.Status {
 	case ResultPass, ResultFail, ResultBlocked, ResultNotRun:
@@ -279,10 +311,20 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 	if err != nil {
 		return nil, err
 	}
+	if run.Status != RunStatusInProgress {
+		return nil, fmt.Errorf("this test run is %s; %w", run.Status, ErrRunClosed)
+	}
 
 	testCase, err := s.artifactService.GetArtifact(req.TestCaseID)
 	if err != nil {
 		return nil, err
+	}
+	// A run verifies its own project's test cases. Another project's is
+	// answered as one that does not exist, before its type is looked at,
+	// so the answer tells nothing about an artifact outside the run's
+	// project, whether or not the caller can reach it.
+	if testCase.ProjectID != run.ProjectID {
+		return nil, artifacts.ErrNotFound
 	}
 	if testCase.Type != "test-case" {
 		return nil, ErrNotTestCase
@@ -293,11 +335,12 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 		return nil, fmt.Errorf("%w (%s: %s)", ErrNotAgentExecutable, testCase.Title, ExecutionMethod(testCase.Attributes))
 	}
 
-	// An omitted evidence field means "leave it alone"; only an explicit
-	// empty list clears it. The run grid sends status and notes and nothing
-	// else on every edit, so writing []string{} here for a nil field silently
-	// discarded whatever evidence had been attached — the commonest edit in
-	// the product destroyed the rarest thing in it.
+	// An omitted evidence field means "leave it alone": the new result
+	// carries the current one's; only an explicit empty list clears it. The
+	// run grid sends status and notes and nothing else on every edit, so
+	// writing []string{} here for a nil field silently discarded whatever
+	// evidence had been attached — the commonest edit in the product
+	// destroyed the rarest thing in it.
 	evidence := req.Evidence
 	if evidence == nil {
 		evidence = []string{}
@@ -325,7 +368,7 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 		result.ExecutedByAgentRunID = &id
 	}
 
-	if err := s.repo.UpsertResult(result); err != nil {
+	if err := s.repo.AddResult(result); err != nil {
 		return nil, err
 	}
 
@@ -351,9 +394,15 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 	return result, nil
 }
 
-// ListResults retrieves all results recorded in a run.
+// ListResults retrieves the current result per test case in a run.
 func (s *DefaultService) ListResults(runID string) ([]*TestResult, error) {
 	return s.repo.ListResultsByRun(runID)
+}
+
+// ListResultHistory retrieves every result recorded in a run, the ones later
+// results superseded included, newest first.
+func (s *DefaultService) ListResultHistory(runID string) ([]*TestResult, error) {
+	return s.repo.ListResultHistoryByRun(runID)
 }
 
 // LatestResults returns the latest executed result per test case across the

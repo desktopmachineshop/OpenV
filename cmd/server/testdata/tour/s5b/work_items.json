@@ -21,7 +21,7 @@
     "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
     "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from",
     "2026-01-15T09:30:00+01:00 kept as it is: a due date the tour sends with an offset, which the create echoes as sent",
-    "2026-01-15T09:30:00Z kept as it is: that due date read back: due_date is a TIMESTAMP without a time zone, so the offset was dropped and the wall clock sent comes back with Z",
+    "2026-01-15T08:30:00Z kept as it is: that due date read back: the instant sent, in UTC (a TIMESTAMPTZ since migration 0050; a TIMESTAMP dropped the offset and the wall clock sent came back with Z)",
     "2026-02-01T00:00:00Z kept as it is: a due date the tour sends in UTC"
   ],
   "env": [
@@ -555,7 +555,7 @@
     },
     {
       "n": 14,
-      "title": "create in review with an assignee_type the board does not know: accepted, nothing checks it",
+      "title": "create in review with an assignee_type the board does not know: 400, which names the three it takes",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/work-items",
       "request": {
@@ -566,46 +566,28 @@
         ],
         "body": "{\"title\":\"Check the wording\",\"column\":\"review\",\"assignee_type\":\"robot\"}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "notes": [
+        "the service checks the type after the title and the column"
+      ],
+      "status": 400,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 63,
       "kind": "json",
       "body": [
-        "{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"robot\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"}"
+        "{\"error\":\"invalid assignee_type: must be user, agent or team\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<w_review>",
-        "project_id": "<p>",
-        "title": "Check the wording",
-        "description": "",
-        "column": "review",
-        "sort_order": 0,
-        "assignee_type": "robot",
-        "artifact_ids": [],
-        "created_by": "<owner>",
-        "created_at": "<time@step 14>",
-        "updated_at": "<time@step 14>"
+        "error": "invalid assignee_type: must be user, agent or team"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.created",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<w_review>",
-          "payload": {
-            "column": "string \"review\"",
-            "title": "string \"Check the wording\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 15,
-      "title": "create in in-progress, assigned to a team id no team has: accepted, with an assigned activity",
+      "title": "create in in-progress, assigned to a team id no crew has: 404 team not found, as the crew routes answer it",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/work-items",
       "request": {
@@ -616,47 +598,28 @@
         ],
         "body": "{\"title\":\"Write the timing script\",\"column\":\"in-progress\",\"assignee_type\":\"team\",\"assignee_id\":\"<phantom>\"}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "notes": [
+        "\"team\" is a crew's wire name; the crew is looked up after the source note, and one the caller may not know of answers the same, while one of another workspace that the caller may know of answers 400 team belongs to a different workspace"
+      ],
+      "status": 404,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 27,
       "kind": "json",
       "body": [
-        "{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<phantom>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"}"
+        "{\"error\":\"team not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<w_progress>",
-        "project_id": "<p>",
-        "title": "Write the timing script",
-        "description": "",
-        "column": "in-progress",
-        "sort_order": 0,
-        "assignee_type": "team",
-        "assignee_id": "<phantom>",
-        "artifact_ids": [],
-        "created_by": "<owner>",
-        "created_at": "<time@step 15>",
-        "updated_at": "<time@step 15>"
+        "error": "team not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.created",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<w_progress>",
-          "payload": {
-            "column": "string \"in-progress\"",
-            "title": "string \"Write the timing script\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 16,
-      "title": "P's work items: by column name (backlog, done, in-progress, review, todo), then sort_order, then created_at; compressed, and then sent with no Content-Type (Q1)",
+      "title": "P's work items: in the order the board flows in (backlog, todo, in-progress, review, done), then sort_order, then created_at; compressed, and then sent with no Content-Type (Q1)",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/work-items",
       "request": {
@@ -664,7 +627,7 @@
         "path": "/api/v1/projects/<p>/work-items"
       },
       "notes": [
-        "board_column ASC is a text order, so the columns come alphabetically, not in the board's order; these five names sort alike in C and en_US collations"
+        "the items in review and in-progress were created as setup, since the two creates above are refused"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -673,7 +636,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<phantom>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"robot\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T09:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}]"
+        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<crew>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -704,46 +667,6 @@
           "updated_at": "<time@step 11>"
         },
         {
-          "id": "<w_done>",
-          "project_id": "<p>",
-          "title": "Close the old ticket",
-          "description": "",
-          "column": "done",
-          "sort_order": 0,
-          "assignee_type": "user",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 13>",
-          "updated_at": "<time@step 13>"
-        },
-        {
-          "id": "<w_progress>",
-          "project_id": "<p>",
-          "title": "Write the timing script",
-          "description": "",
-          "column": "in-progress",
-          "sort_order": 0,
-          "assignee_type": "team",
-          "assignee_id": "<phantom>",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 15>",
-          "updated_at": "<time@step 15>"
-        },
-        {
-          "id": "<w_review>",
-          "project_id": "<p>",
-          "title": "Check the wording",
-          "description": "",
-          "column": "review",
-          "sort_order": 0,
-          "assignee_type": "robot",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 14>",
-          "updated_at": "<time@step 14>"
-        },
-        {
           "id": "<w_note>",
           "project_id": "<p>",
           "title": "Load test the answer",
@@ -755,11 +678,51 @@
           "artifact_ids": [
             "<r1>"
           ],
-          "due_date": "2026-01-15T09:30:00Z",
+          "due_date": "2026-01-15T08:30:00Z",
           "source_chatter_id": "<note_p>",
           "created_by": "<owner>",
           "created_at": "<time@step 12>",
           "updated_at": "<time@step 12>"
+        },
+        {
+          "id": "<w_progress>",
+          "project_id": "<p>",
+          "title": "Write the timing script",
+          "description": "",
+          "column": "in-progress",
+          "sort_order": 0,
+          "assignee_type": "team",
+          "assignee_id": "<crew>",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 16>",
+          "updated_at": "<time@before step 16>"
+        },
+        {
+          "id": "<w_review>",
+          "project_id": "<p>",
+          "title": "Check the wording",
+          "description": "",
+          "column": "review",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 16>",
+          "updated_at": "<time@before step 16>"
+        },
+        {
+          "id": "<w_done>",
+          "project_id": "<p>",
+          "title": "Close the old ticket",
+          "description": "",
+          "column": "done",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@step 13>",
+          "updated_at": "<time@step 13>"
         }
       ],
       "gzip": {
@@ -784,7 +747,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<phantom>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"robot\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T09:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}]"
+        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<crew>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -815,46 +778,6 @@
           "updated_at": "<time@step 11>"
         },
         {
-          "id": "<w_done>",
-          "project_id": "<p>",
-          "title": "Close the old ticket",
-          "description": "",
-          "column": "done",
-          "sort_order": 0,
-          "assignee_type": "user",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 13>",
-          "updated_at": "<time@step 13>"
-        },
-        {
-          "id": "<w_progress>",
-          "project_id": "<p>",
-          "title": "Write the timing script",
-          "description": "",
-          "column": "in-progress",
-          "sort_order": 0,
-          "assignee_type": "team",
-          "assignee_id": "<phantom>",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 15>",
-          "updated_at": "<time@step 15>"
-        },
-        {
-          "id": "<w_review>",
-          "project_id": "<p>",
-          "title": "Check the wording",
-          "description": "",
-          "column": "review",
-          "sort_order": 0,
-          "assignee_type": "robot",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 14>",
-          "updated_at": "<time@step 14>"
-        },
-        {
           "id": "<w_note>",
           "project_id": "<p>",
           "title": "Load test the answer",
@@ -866,11 +789,51 @@
           "artifact_ids": [
             "<r1>"
           ],
-          "due_date": "2026-01-15T09:30:00Z",
+          "due_date": "2026-01-15T08:30:00Z",
           "source_chatter_id": "<note_p>",
           "created_by": "<owner>",
           "created_at": "<time@step 12>",
           "updated_at": "<time@step 12>"
+        },
+        {
+          "id": "<w_progress>",
+          "project_id": "<p>",
+          "title": "Write the timing script",
+          "description": "",
+          "column": "in-progress",
+          "sort_order": 0,
+          "assignee_type": "team",
+          "assignee_id": "<crew>",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 16>",
+          "updated_at": "<time@before step 16>"
+        },
+        {
+          "id": "<w_review>",
+          "project_id": "<p>",
+          "title": "Check the wording",
+          "description": "",
+          "column": "review",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 16>",
+          "updated_at": "<time@before step 16>"
+        },
+        {
+          "id": "<w_done>",
+          "project_id": "<p>",
+          "title": "Close the old ticket",
+          "description": "",
+          "column": "done",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@step 13>",
+          "updated_at": "<time@step 13>"
         }
       ],
       "gzip": {
@@ -905,13 +868,16 @@
     },
     {
       "n": 19,
-      "title": "read the item raised from the note: {activity, item}, keys sorted; the assigned activity; the due date read back as the wall clock sent, with Z",
+      "title": "read the item raised from the note: {activity, item}, keys sorted; the assigned activity; the due date read back as the instant sent, in UTC",
       "actor": "owner",
       "route": "GET /api/v1/work-items/{id}",
       "request": {
         "method": "GET",
         "path": "/api/v1/work-items/<w_note>"
       },
+      "notes": [
+        "fixed under R7 (#379 bug 4): the TIMESTAMP column kept the wall clock sent and dropped its offset, so the instant moved by the offset"
+      ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
@@ -919,7 +885,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<w_note>\",\"kind\":\"assigned\",\"actor\":\"user:<owner>\",\"content\":\"assigned to user:<owner>\",\"payload\":{\"assignee_id\":\"<owner>\",\"assignee_type\":\"user\"},\"created_at\":\"<time@step 12>\"}],\"item\":{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T09:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}}"
+        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<w_note>\",\"kind\":\"assigned\",\"actor\":\"user:<owner>\",\"content\":\"assigned to user:<owner>\",\"payload\":{\"assignee_id\":\"<owner>\",\"assignee_type\":\"user\"},\"created_at\":\"<time@step 12>\"}],\"item\":{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -949,7 +915,7 @@
           "artifact_ids": [
             "<r1>"
           ],
-          "due_date": "2026-01-15T09:30:00Z",
+          "due_date": "2026-01-15T08:30:00Z",
           "source_chatter_id": "<note_p>",
           "created_by": "<owner>",
           "created_at": "<time@step 12>",
@@ -1011,7 +977,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<w_note>\",\"kind\":\"assigned\",\"actor\":\"user:<owner>\",\"content\":\"assigned to user:<owner>\",\"payload\":{\"assignee_id\":\"<owner>\",\"assignee_type\":\"user\"},\"created_at\":\"<time@step 12>\"}],\"item\":{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T09:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}}"
+        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<w_note>\",\"kind\":\"assigned\",\"actor\":\"user:<owner>\",\"content\":\"assigned to user:<owner>\",\"payload\":{\"assignee_id\":\"<owner>\",\"assignee_type\":\"user\"},\"created_at\":\"<time@step 12>\"}],\"item\":{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1041,7 +1007,7 @@
           "artifact_ids": [
             "<r1>"
           ],
-          "due_date": "2026-01-15T09:30:00Z",
+          "due_date": "2026-01-15T08:30:00Z",
           "source_chatter_id": "<note_p>",
           "created_by": "<owner>",
           "created_at": "<time@step 12>",
@@ -2702,7 +2668,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<w_worker>\",\"project_id\":\"<p>\",\"title\":\"Triage the nightly failures\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_at\":\"<time@step 46>\",\"updated_at\":\"<time@step 46>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer at 2 s\",\"description\":\"Handed to the viewer.\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<viewer>\",\"artifact_ids\":[],\"due_date\":\"2026-02-01T00:00:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 38>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<phantom>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"},{\"id\":\"<w_claimed>\",\"project_id\":\"<p>\",\"title\":\"Implement the timeout\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 47>\",\"updated_at\":\"<time@before step 47>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"robot\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"review\",\"sort_order\":5,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 37>\"},{\"id\":\"<w_barrier>\",\"project_id\":\"<p>\",\"title\":\"Barrier item\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 53>\",\"updated_at\":\"<time@before step 53>\"},{\"id\":\"<w_agent>\",\"project_id\":\"<p>\",\"title\":\"Add the retry\",\"description\":\"Retry once after a timeout.\",\"column\":\"todo\",\"sort_order\":2,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[\"<r1>\"],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<w_direct>\",\"project_id\":\"<p>\",\"title\":\"Tune the pool\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":4,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"updated_at\":\"<time@step 52>\"}]"
+        "[{\"id\":\"<w_worker>\",\"project_id\":\"<p>\",\"title\":\"Triage the nightly failures\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_at\":\"<time@step 46>\",\"updated_at\":\"<time@step 46>\"},{\"id\":\"<w_barrier>\",\"project_id\":\"<p>\",\"title\":\"Barrier item\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 53>\",\"updated_at\":\"<time@before step 53>\"},{\"id\":\"<w_agent>\",\"project_id\":\"<p>\",\"title\":\"Add the retry\",\"description\":\"Retry once after a timeout.\",\"column\":\"todo\",\"sort_order\":2,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[\"<r1>\"],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<w_direct>\",\"project_id\":\"<p>\",\"title\":\"Tune the pool\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":4,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<crew>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_claimed>\",\"project_id\":\"<p>\",\"title\":\"Implement the timeout\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 47>\",\"updated_at\":\"<time@before step 47>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"review\",\"sort_order\":5,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 37>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer at 2 s\",\"description\":\"Handed to the viewer.\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<viewer>\",\"artifact_ids\":[],\"due_date\":\"2026-02-01T00:00:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 38>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2717,89 +2683,6 @@
           "artifact_ids": [],
           "created_at": "<time@step 46>",
           "updated_at": "<time@step 46>"
-        },
-        {
-          "id": "<w_note>",
-          "project_id": "<p>",
-          "title": "Load test the answer at 2 s",
-          "description": "Handed to the viewer.",
-          "column": "done",
-          "sort_order": 0,
-          "assignee_type": "user",
-          "assignee_id": "<viewer>",
-          "artifact_ids": [],
-          "due_date": "2026-02-01T00:00:00Z",
-          "source_chatter_id": "<note_p>",
-          "created_by": "<owner>",
-          "created_at": "<time@step 12>",
-          "updated_at": "<time@step 38>"
-        },
-        {
-          "id": "<w_done>",
-          "project_id": "<p>",
-          "title": "Close the old ticket",
-          "description": "",
-          "column": "done",
-          "sort_order": 0,
-          "assignee_type": "user",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 13>",
-          "updated_at": "<time@step 13>"
-        },
-        {
-          "id": "<w_progress>",
-          "project_id": "<p>",
-          "title": "Write the timing script",
-          "description": "",
-          "column": "in-progress",
-          "sort_order": 0,
-          "assignee_type": "team",
-          "assignee_id": "<phantom>",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 15>",
-          "updated_at": "<time@step 15>"
-        },
-        {
-          "id": "<w_claimed>",
-          "project_id": "<p>",
-          "title": "Implement the timeout",
-          "description": "",
-          "column": "in-progress",
-          "sort_order": 0,
-          "assignee_type": "agent",
-          "assignee_id": "<developer>",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@before step 47>",
-          "updated_at": "<time@before step 47>"
-        },
-        {
-          "id": "<w_review>",
-          "project_id": "<p>",
-          "title": "Check the wording",
-          "description": "",
-          "column": "review",
-          "sort_order": 0,
-          "assignee_type": "robot",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 14>",
-          "updated_at": "<time@step 14>"
-        },
-        {
-          "id": "<w_second>",
-          "project_id": "<p>",
-          "title": "Review the margins",
-          "description": "Second in the backlog.",
-          "column": "review",
-          "sort_order": 5,
-          "assignee_type": "user",
-          "artifact_ids": [],
-          "created_by": "<owner>",
-          "created_at": "<time@step 11>",
-          "updated_at": "<time@step 37>"
         },
         {
           "id": "<w_barrier>",
@@ -2844,6 +2727,89 @@
           "created_by": "<owner>",
           "created_at": "<time@step 50>",
           "updated_at": "<time@step 52>"
+        },
+        {
+          "id": "<w_progress>",
+          "project_id": "<p>",
+          "title": "Write the timing script",
+          "description": "",
+          "column": "in-progress",
+          "sort_order": 0,
+          "assignee_type": "team",
+          "assignee_id": "<crew>",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 16>",
+          "updated_at": "<time@before step 16>"
+        },
+        {
+          "id": "<w_claimed>",
+          "project_id": "<p>",
+          "title": "Implement the timeout",
+          "description": "",
+          "column": "in-progress",
+          "sort_order": 0,
+          "assignee_type": "agent",
+          "assignee_id": "<developer>",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 47>",
+          "updated_at": "<time@before step 47>"
+        },
+        {
+          "id": "<w_review>",
+          "project_id": "<p>",
+          "title": "Check the wording",
+          "description": "",
+          "column": "review",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@before step 16>",
+          "updated_at": "<time@before step 16>"
+        },
+        {
+          "id": "<w_second>",
+          "project_id": "<p>",
+          "title": "Review the margins",
+          "description": "Second in the backlog.",
+          "column": "review",
+          "sort_order": 5,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@step 11>",
+          "updated_at": "<time@step 37>"
+        },
+        {
+          "id": "<w_note>",
+          "project_id": "<p>",
+          "title": "Load test the answer at 2 s",
+          "description": "Handed to the viewer.",
+          "column": "done",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "assignee_id": "<viewer>",
+          "artifact_ids": [],
+          "due_date": "2026-02-01T00:00:00Z",
+          "source_chatter_id": "<note_p>",
+          "created_by": "<owner>",
+          "created_at": "<time@step 12>",
+          "updated_at": "<time@step 38>"
+        },
+        {
+          "id": "<w_done>",
+          "project_id": "<p>",
+          "title": "Close the old ticket",
+          "description": "",
+          "column": "done",
+          "sort_order": 0,
+          "assignee_type": "user",
+          "artifact_ids": [],
+          "created_by": "<owner>",
+          "created_at": "<time@step 13>",
+          "updated_at": "<time@step 13>"
         }
       ],
       "gzip": {

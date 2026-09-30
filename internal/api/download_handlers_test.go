@@ -80,11 +80,22 @@ func TestCsvParamIgnoresBlanks(t *testing.T) {
 
 // The content switches: a template is a starting point, explicit parameters
 // win over it, and the fields parameter has three shapes.
+//
+// REQ-6: the PDF and the Word document include V&V status unless the query
+// turns it off; it was off unless the query turned it on.
 func TestSelectionFromQueryContentDefaults(t *testing.T) {
 	got := selectionFromQuery(queryRequest(t, ""))
 	c := got.Content
-	if !c.Traceability || !c.Figures || !c.TOC || !c.AllFields || c.TestResults || c.VVStatus || c.Template != "" {
-		t.Errorf("default content = %+v, want the specification defaults", c)
+	if !c.Traceability || !c.Figures || !c.TOC || !c.AllFields || c.TestResults || !c.VVStatus || c.Template != "" {
+		t.Errorf("default content = %+v, want the specification defaults, V&V status on", c)
+	}
+	for _, off := range []string{"vv=0", "vv=false"} {
+		if got := selectionFromQuery(queryRequest(t, off)); got.Content.VVStatus {
+			t.Errorf("%s: V&V status is on, want it off", off)
+		}
+	}
+	if got := selectionFromQuery(queryRequest(t, "template=test-planning")); got.Content.VVStatus {
+		t.Error("the test-planning preset turns V&V status on; it keeps it off")
 	}
 }
 

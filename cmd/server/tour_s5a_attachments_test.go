@@ -22,10 +22,12 @@ import (
 // version), a second version, a rename, a restore, the other formats the
 // catalogue accepts (PDF, SVG, STEP) and how each is served, the lists and
 // the figure notes, an outsider's and an anonymous request, an id no figure
-// has on every route, an artifact restore that redraws the artifact's ref
-// under a figure that keeps the old one, and the deletes. An outsider, an
-// ordinary account in a workspace of its own, is registered for the
-// access steps. No step publishes an event.
+// has on every route, an artifact restore that keeps the artifact's ref, so
+// the next figure is numbered under it, and the deletes. Each figure upload,
+// new file and rename takes the artifact to a new version (the upload since
+// the fix under R7, REQ-4). An outsider, an ordinary account in a workspace
+// of its own, is registered for the access steps. No step publishes an event
+// but the artifact restore's artifact.restored.
 //
 // Every figure is deleted at the end, so the only file left under
 // UPLOADS_DIR is the superseded second version, which a delete leaves on
@@ -109,7 +111,8 @@ func attachmentsTour(tr *tour) {
 	tr.step("upload fig.png to REQ-1: figure REQ-1-FIG-1", o, "POST /api/v1/attachments/upload",
 		attachmentsForm(attachmentsFields(tr, "{{req}}"), "fig.png", "image/png", tourPNG),
 		note("the file is stored as UPLOADS_DIR/<random uuid>_<uploaded name> (I16); the figure is served as "+
-			"<figure ref><extension>")).
+			"<figure ref><extension>; the artifact takes a new version, through an update that changes nothing it "+
+			"says (fixed under R7, REQ-4: an upload left the artifact's version as it was)")).
 		capture("fig", "/id")
 	tr.step("its metadata", o, "GET /api/v1/attachments/{id}", at("id", "{{fig}}"))
 	lastModified := tr.step("download it: served inline, with the raster image policy", o,
@@ -158,9 +161,9 @@ func attachmentsTour(tr *tour) {
 		jsonBody(`{"title":"  Wiring diagram  "}`), note("the title is trimmed"))
 	tr.step("rename it to the title it has: a no-op", o, "PUT /api/v1/attachments/{id}", at("id", "{{fig}}"),
 		jsonBody(`{"title":"Wiring diagram"}`), note("no new version, no note, and no artifact version"))
-	tr.step("REQ-1 after a new figure version and a rename: version 3", o, "GET /api/v1/artifacts/{id}",
-		at("id", "{{req}}"), note("an upload of a new figure does not version the artifact; see the artifact "+
-			"restore below, which answers version 4 after four more uploads"))
+	tr.step("REQ-1 after an upload, a new figure version and a rename: version 4", o, "GET /api/v1/artifacts/{id}",
+		at("id", "{{req}}"), note("each takes the artifact to a new version; see the artifact restore below, "+
+			"which answers version 9 after four more uploads"))
 	// The versions are listed again after the restore, not here: three
 	// versions come to about 1,300 bytes, which a longer temporary directory
 	// on another machine would take over the compressor's 1,400-byte floor.
@@ -179,7 +182,7 @@ func attachmentsTour(tr *tour) {
 	tr.step("its metadata after the restore", o, "GET /api/v1/attachments/{id}", at("id", "{{fig}}"))
 	tr.step("the versions after the restore", o, "GET /api/v1/attachments/{id}/versions", at("id", "{{fig}}"))
 	tr.step("download it: version 1's bytes again", o, "GET /api/v1/attachments/{id}/download", at("id", "{{fig}}"))
-	tr.step("REQ-1 after the restore: still version 3", o, "GET /api/v1/artifacts/{id}", at("id", "{{req}}"))
+	tr.step("REQ-1 after the restore: still version 4", o, "GET /api/v1/artifacts/{id}", at("id", "{{req}}"))
 
 	// The other formats (REQ-137): on the nightly channel every workspace may
 	// attach them; each is served as a download under a policy that permits
@@ -244,15 +247,15 @@ func attachmentsTour(tr *tour) {
 	tr.step("the figures of a project that does not exist", o, "GET /api/v1/projects/{projectID}/attachments",
 		at("projectID", "{{phantom}}"))
 
-	// An artifact restore draws the artifact a new ref; its figures keep the
-	// old one, and the next figure is numbered on from the artifact's counter
-	// under the new ref.
-	tr.step("restore REQ-1 to its version 1: the restore draws it a new ref, REQ-3", o,
+	// An artifact restore keeps the artifact's ref (fixed under R7, REQ-4: it
+	// drew a new one, and the next figure was numbered under that), so its
+	// figures and the next one are all numbered under REQ-1.
+	tr.step("restore REQ-1 to its version 1: it keeps its ref, REQ-1", o,
 		"POST /api/v1/artifacts/{id}/restore", at("id", "{{req}}"), jsonBody(`{"version":1}`),
 		note("the artifacts area pins this route; it is here for what it does to the figures' refs"))
 	tr.step("figure 1 after the artifact's restore: still REQ-1-FIG-1", o, "GET /api/v1/attachments/{id}",
 		at("id", "{{fig}}"))
-	tr.step("a figure uploaded after the restore: REQ-3-FIG-6", o, "POST /api/v1/attachments/upload",
+	tr.step("a figure uploaded after the restore: REQ-1-FIG-6", o, "POST /api/v1/attachments/upload",
 		attachmentsForm(attachmentsFields(tr, "{{req}}"), "after.png", "image/png", tourPNG)).
 		capture("after", "/id")
 
