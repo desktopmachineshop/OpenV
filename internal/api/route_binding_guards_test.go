@@ -56,6 +56,10 @@ type guardHelper struct {
 //   - crew-visible: the caller may know of the crew: a member, a worker key
 //     or a run of its workspace (a run only in a pinned crew's project), or
 //     a caller who reaches its pinned project; else the crew's not-found.
+//   - user-visible: the caller may know of the account the request names:
+//     the account itself, a platform admin, or a member of a live workspace
+//     the account is a member of; else the not-found of what the request
+//     names there (I3), and 401 with no session.
 //   - no-proposal-run: the request is not a proposal-mode agent run's, else
 //     403 (a route that sets a run going).
 //   - unscoped-launch: a launch with no project: org:member for a signed-in
@@ -89,6 +93,7 @@ var guardHelpers = map[string]guardHelper{
 	"requireProjectVisible":           {kind: "project-visible"},
 	"requireOrgVisible":               {kind: "org-visible"},
 	"requireTeamVisible":              {kind: "crew-visible"},
+	"requireUserVisible":              {kind: "user-visible"},
 	"requireNoProposalRunLaunch":      {kind: "no-proposal-run"},
 	"requireUnscopedLaunch":           {kind: "unscoped-launch"},
 	"requireProjectCreate":            {kind: "project-create"},

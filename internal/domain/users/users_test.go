@@ -475,6 +475,24 @@ func TestWeakPasswordMessageNamesTheMinimum(t *testing.T) {
 	}
 }
 
+// Sign-in refuses a password under the minimum as it refuses any wrong one,
+// ErrInvalidCredentials whether or not the account exists: registration's
+// refusal names the minimum (and, since #379's bug 20, answers
+// weak_password), but sign-in's must not tell which accounts exist (OpenV
+// REQ-18).
+func TestSignInRefusesAShortPasswordAsAnyWrongOne(t *testing.T) {
+	svc := NewDefaultService(newMemRepo())
+	if _, err := svc.Register("owner@example.com", "long enough", "Owner"); err != nil {
+		t.Fatal(err)
+	}
+	short := strings.Repeat("a", MinPasswordLength-1)
+	for _, email := range []string{"owner@example.com", "nobody@example.com"} {
+		if _, _, err := svc.Login(email, short); err != ErrInvalidCredentials {
+			t.Errorf("sign-in as %s with %d characters: %v, want ErrInvalidCredentials", email, len(short), err)
+		}
+	}
+}
+
 // SetAdmin (REQ-155): grants and revokes standing, never leaves the
 // deployment without a platform admin, and names an unknown account.
 func TestSetAdmin(t *testing.T) {

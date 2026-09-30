@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -131,6 +132,23 @@ func (f *fakeOrgService) SetReleaseChannel(id, channel string) (*orgs.Org, error
 
 func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
 	return f.roles[orgID][userID], nil
+}
+
+// ListForUser lists the workspaces roles makes the account a member of, by
+// id.
+func (f *fakeOrgService) ListForUser(userID string) ([]*orgs.Org, error) {
+	var ids []string
+	for orgID, byUser := range f.roles {
+		if byUser[userID] != "" {
+			ids = append(ids, orgID)
+		}
+	}
+	sort.Strings(ids)
+	list := make([]*orgs.Org, 0, len(ids))
+	for _, id := range ids {
+		list = append(list, &orgs.Org{ID: id, Role: f.roles[id][userID]})
+	}
+	return list, nil
 }
 
 // Get answers the handlers that read a workspace's effective limits (e.g.

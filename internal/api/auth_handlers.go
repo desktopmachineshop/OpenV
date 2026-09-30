@@ -257,6 +257,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.userService.Register(req.Email, req.Password, req.Name)
 	if err != nil {
+		// A password under the minimum carries the code a password change
+		// and a reset give it (#379's bug 20, OpenV REQ-18); sign-in's
+		// refusal stays the one generic answer.
+		if errors.Is(err, users.ErrWeakPassword) {
+			writeJSONErrorCode(w, http.StatusBadRequest, err.Error(), ErrCodeWeakPassword)
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}

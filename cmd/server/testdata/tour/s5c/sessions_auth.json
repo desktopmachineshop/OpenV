@@ -471,14 +471,15 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 74,
       "kind": "json",
       "body": [
-        "{\"error\":\"password must be at least 8 characters\"}"
+        "{\"error\":\"password must be at least 8 characters\",\"code\":\"weak_password\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "password must be at least 8 characters"
+        "error": "password must be at least 8 characters",
+        "code": "weak_password"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

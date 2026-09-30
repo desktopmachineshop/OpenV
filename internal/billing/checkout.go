@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -168,11 +169,12 @@ func pickCurrency(amounts map[string]int64) string {
 // BindCheckoutSession attaches a just-completed checkout to its workspace
 // and applies the subscription, so the return page shows the entitlement
 // before it renders. Nothing in the browser is trusted: the session is read
-// from the provider and must name this workspace. A session that is not
-// complete yet leaves the workspace as it is. A second live subscription
-// arriving for a workspace that already holds one — two admins checking out
-// at once — loses: it is cancelled at once and reported, so an operator can
-// refund it.
+// from the provider and must name this workspace; one the provider does not
+// have is ErrCheckoutNotFound, since the provider answered. A session that
+// is not complete yet leaves the workspace as it is. A second live
+// subscription arriving for a workspace that already holds one — two admins
+// checking out at once — loses: it is cancelled at once and reported, so an
+// operator can refund it.
 func (s *Service) BindCheckoutSession(ctx context.Context, orgID, sessionID string) (*orgs.Org, error) {
 	org, err := s.orgs.Get(orgID)
 	if err != nil {
@@ -182,6 +184,9 @@ func (s *Service) BindCheckoutSession(ctx context.Context, orgID, sessionID stri
 		return org, ErrNotConfigured
 	}
 	sess, err := s.provider.GetCheckoutSession(ctx, sessionID)
+	if errors.Is(err, ErrNotFound) {
+		return org, ErrCheckoutNotFound
+	}
 	if err != nil {
 		return org, err
 	}
