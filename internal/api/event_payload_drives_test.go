@@ -127,10 +127,12 @@ func payloadDrives() []payloadDrive {
 			`{"project_id":"proj-1","type":"requirement","title":"New requirement"}`),
 		httpDrive("PUT /api/v1/artifacts/{id}", "/api/v1/artifacts/art-req", `{"title":"Renamed"}`),
 		httpDrive("PUT /api/v1/artifacts/{id}/status", "/api/v1/artifacts/art-req/status", `{"status":"in_review"}`),
+		httpDrive("POST /api/v1/artifacts/{id}/restore", "/api/v1/artifacts/art-req/restore", `{"version":1}`),
 		httpDrive("DELETE /api/v1/artifacts/{id}", "/api/v1/artifacts/art-gone", ""),
 		httpDrive("POST /api/v1/links", "/api/v1/links", `{"from_id":"art-tc","to_id":"art-req","type":"verifies"}`),
 		httpDrive("DELETE /api/v1/links/{id}", "/api/v1/links/link-1", ""),
 		httpDrive("POST /api/v1/projects/{id}/baselines", "/api/v1/projects/proj-1/baselines", `{"name":"Release 1"}`),
+		httpDrive("DELETE /api/v1/baselines/{id}", "/api/v1/baselines/bl-old", ""),
 		httpDrive("POST /api/v1/chatter", "/api/v1/chatter", `{"artifact_id":"art-req","message":"Looks good @sam"}`),
 		httpDrive("POST /api/v1/projects/{id}/review-round", "/api/v1/projects/proj-1/review-round", `{"types":["requirement"]}`),
 		// A guided commit publishes each approval it made.
@@ -306,6 +308,19 @@ func (f *payloadArtifacts) ChangeStatus(id, status string) (*artifacts.Artifact,
 	return &changed, nil
 }
 
+// RestoreArtifactVersion answers the requirement at its next version, with
+// the restored version's title.
+func (f *payloadArtifacts) RestoreArtifactVersion(id string, version int) (*artifacts.Artifact, error) {
+	a, err := f.GetArtifact(id)
+	if err != nil {
+		return nil, err
+	}
+	restored := *a
+	restored.Title = "Requirement, as first written"
+	restored.Version++
+	return &restored, nil
+}
+
 func (f *payloadArtifacts) StartProjectReview(projectID string, req artifacts.ReviewRoundRequest) (*artifacts.ReviewRoundResult, error) {
 	moved := *f.byID["art-req"]
 	moved.Status = artifacts.StatusInReview
@@ -337,6 +352,16 @@ type payloadBaselines struct{ baselines.Service }
 func (f *payloadBaselines) CreateBaseline(projectID, name string, snapshot []byte, createdBy *string) (*baselines.Baseline, error) {
 	return &baselines.Baseline{ID: "bl-1", ProjectID: projectID, Name: name}, nil
 }
+
+// GetBaseline answers bl-old, the baseline the delete drive removes.
+func (f *payloadBaselines) GetBaseline(id string) (*baselines.Baseline, error) {
+	if id != "bl-old" {
+		return nil, baselines.ErrNotFound
+	}
+	return &baselines.Baseline{ID: id, ProjectID: payloadProject, Name: "Release 0"}, nil
+}
+
+func (f *payloadBaselines) DeleteBaseline(id string) error { return nil }
 
 type payloadMembers struct{ members.Service }
 

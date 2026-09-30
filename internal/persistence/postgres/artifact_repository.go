@@ -345,11 +345,12 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 	defer tx.Rollback()
 
 	// The ref normally rides along unchanged from the loaded current version
-	// — a ref is stable across an artifact's history. The one exception is a
-	// type change that no longer matches the old ref's prefix: DefaultService
-	// .UpdateArtifact clears Ref in that case, and ensureRef mints a fresh one
-	// from the new type's counter here, exactly as Save does for a brand-new
-	// artifact.
+	// — a ref is stable across an artifact's history, a restored version's
+	// included. The one exception is a type change that no longer matches the
+	// old ref's prefix: DefaultService.UpdateArtifact and
+	// RestoreArtifactVersion clear Ref in that case, and ensureRef mints a
+	// fresh one from the new type's counter here, exactly as Save does for a
+	// brand-new artifact.
 	if err := ensureRef(ctx, tx, artifact); err != nil {
 		return err
 	}
@@ -509,7 +510,10 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 	return hits, rows.Err()
 }
 
-// FindVersionsByID retrieves all versions of an artifact (including historical ones)
+// FindVersionsByID retrieves all versions of an artifact (including
+// historical ones, and a deleted artifact's, whose rows the soft delete
+// closes and keeps). An id Postgres refuses as a uuid has none, as one no
+// row has (ids.go).
 func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact, error) {
 	query := `
 		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
@@ -522,6 +526,9 @@ func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact,
 	defer cancel()
 
 	rows, err := r.db.QueryContext(ctx, query, id)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

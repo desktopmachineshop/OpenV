@@ -30,6 +30,12 @@ artifact.deleted              (org)              org-1                    DELETE
 artifact.deleted              (org)              org-1                    proposal applier DeleteArtifact
 artifact.deleted              artifact_type      string                   proposal applier DeleteArtifact
 artifact.deleted              title              string                   proposal applier DeleteArtifact
+artifact.restored             (actor)            user:u-admin             POST /api/v1/artifacts/{id}/restore
+artifact.restored             (org)              org-1                    POST /api/v1/artifacts/{id}/restore
+artifact.restored             artifact_type      string                   POST /api/v1/artifacts/{id}/restore
+artifact.restored             restored_version   int                      POST /api/v1/artifacts/{id}/restore
+artifact.restored             title              string                   POST /api/v1/artifacts/{id}/restore
+artifact.restored             version            int                      POST /api/v1/artifacts/{id}/restore
 artifact.status_changed       (actor)            user:u-admin             POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       (actor)            user:u-admin             POST /api/v1/projects/{id}/review-round
 artifact.status_changed       (actor)            user:u-admin             PUT /api/v1/artifacts/{id}/status
@@ -66,6 +72,9 @@ artifact.updated              version            int                      propos
 baseline.captured             (actor)            user:u-admin             POST /api/v1/projects/{id}/baselines
 baseline.captured             (org)              org-1                    POST /api/v1/projects/{id}/baselines
 baseline.captured             name               string                   POST /api/v1/projects/{id}/baselines
+baseline.deleted              (actor)            user:u-admin             DELETE /api/v1/baselines/{id}
+baseline.deleted              (org)              org-1                    DELETE /api/v1/baselines/{id}
+baseline.deleted              name               string                   DELETE /api/v1/baselines/{id}
 chatter.created               (actor)            system                   POST /api/v1/public/interviews/{token}/finish
 chatter.created               (actor)            user:u-admin             POST /api/v1/chatter
 chatter.created               (org)              org-1                    POST /api/v1/chatter

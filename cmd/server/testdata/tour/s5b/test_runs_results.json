@@ -226,7 +226,7 @@
     },
     {
       "n": 6,
-      "title": "create a run whose baseline_id is not a UUID: the driver's text (Q19)",
+      "title": "create a run whose baseline_id is not a UUID: 404, as a baseline no row has",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/test-runs",
       "request": {
@@ -237,25 +237,28 @@
         ],
         "body": "{\"name\":\"Bad baseline\",\"baseline_id\":\"not-a-uuid\"}"
       },
-      "status": 400,
+      "notes": [
+        "fixed under R7 (#379's decision on REQ-6): it answered 400 with the driver's text (Q19)"
+      ],
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 67,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"pq: invalid input syntax for type uuid: \\\"not-a-uuid\\\"\"}"
+        "{\"error\":\"baseline not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "pq: invalid input syntax for type uuid: \"not-a-uuid\""
+        "error": "baseline not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 7,
-      "title": "create a run whose baseline_id no baseline has: accepted, test_runs.baseline_id has no foreign key",
+      "title": "create a run whose baseline_id no baseline has: 404 baseline not found",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/test-runs",
       "request": {
@@ -266,27 +269,21 @@
         ],
         "body": "{\"name\":\"Phantom baseline\",\"baseline_id\":\"<phantom>\"}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "notes": [
+        "fixed under R7 (#379's decision on REQ-6): it was accepted, since test_runs.baseline_id has no foreign key and nothing looked the baseline up"
+      ],
+      "status": 404,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"in-progress\",\"started_at\":\"<time@step 7>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}"
+        "{\"error\":\"baseline not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<run_phantom_baseline>",
-        "project_id": "<p>",
-        "name": "Phantom baseline",
-        "description": "",
-        "baseline_id": "<phantom>",
-        "status": "in-progress",
-        "started_at": "<time@step 7>",
-        "created_by": "<owner>",
-        "created_at": "<time@step 7>",
-        "updated_at": "<time@step 7>"
+        "error": "baseline not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -483,7 +480,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"in-progress\",\"started_at\":\"<time@step 8>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"in-progress\",\"started_at\":\"<time@step 7>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
+        "[{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"in-progress\",\"started_at\":\"<time@step 8>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"in-progress\",\"started_at\":\"<time@before step 8>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@before step 8>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -499,16 +496,16 @@
           "updated_at": "<time@step 8>"
         },
         {
-          "id": "<run_phantom_baseline>",
+          "id": "<run_baselined>",
           "project_id": "<p>",
-          "name": "Phantom baseline",
+          "name": "Baselined run",
           "description": "",
-          "baseline_id": "<phantom>",
+          "baseline_id": "<bp>",
           "status": "in-progress",
-          "started_at": "<time@step 7>",
+          "started_at": "<time@before step 8>",
           "created_by": "<owner>",
-          "created_at": "<time@step 7>",
-          "updated_at": "<time@step 7>"
+          "created_at": "<time@before step 8>",
+          "updated_at": "<time@before step 8>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
@@ -1974,12 +1971,12 @@
     },
     {
       "n": 52,
-      "title": "abort the run with the phantom baseline",
+      "title": "abort the run on P's baseline",
       "actor": "owner",
       "route": "PUT /api/v1/test-runs/{id}",
       "request": {
         "method": "PUT",
-        "path": "/api/v1/test-runs/<run_phantom_baseline>",
+        "path": "/api/v1/test-runs/<run_baselined>",
         "headers": [
           "Content-Type: application/json"
         ],
@@ -1992,20 +1989,20 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"aborted\",\"started_at\":\"<time@step 7>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 52>\"}"
+        "{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"aborted\",\"started_at\":\"<time@before step 8>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<run_phantom_baseline>",
+        "id": "<run_baselined>",
         "project_id": "<p>",
-        "name": "Phantom baseline",
+        "name": "Baselined run",
         "description": "",
-        "baseline_id": "<phantom>",
+        "baseline_id": "<bp>",
         "status": "aborted",
-        "started_at": "<time@step 7>",
+        "started_at": "<time@before step 8>",
         "completed_at": "<time@step 52>",
         "created_by": "<owner>",
-        "created_at": "<time@step 7>",
+        "created_at": "<time@before step 8>",
         "updated_at": "<time@step 52>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -2098,7 +2095,7 @@
       "route": "POST /api/v1/test-runs/{id}/results",
       "request": {
         "method": "POST",
-        "path": "/api/v1/test-runs/<run_phantom_baseline>/results",
+        "path": "/api/v1/test-runs/<run_baselined>/results",
         "headers": [
           "Content-Type: application/json"
         ],
@@ -2111,12 +2108,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_aborted>\",\"run_id\":\"<run_phantom_baseline>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"\",\"evidence\":[],\"executed_at\":\"<time@step 55>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 55>\",\"updated_at\":\"<time@step 55>\"}"
+        "{\"id\":\"<res_aborted>\",\"run_id\":\"<run_baselined>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"\",\"evidence\":[],\"executed_at\":\"<time@step 55>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 55>\",\"updated_at\":\"<time@step 55>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<res_aborted>",
-        "run_id": "<run_phantom_baseline>",
+        "run_id": "<run_baselined>",
         "test_case_id": "<tc_auto>",
         "test_case_version": 2,
         "status": "fail",
@@ -2135,7 +2132,7 @@
           "project": "<p>",
           "entity": "<res_aborted>",
           "payload": {
-            "run_id": "string \"<run_phantom_baseline>\"",
+            "run_id": "string \"<run_baselined>\"",
             "status": "string \"fail\"",
             "test_case_id": "string \"<tc_auto>\""
           }
@@ -2158,7 +2155,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"completed\",\"started_at\":\"<time@step 8>\",\"completed_at\":\"<time@step 50>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 50>\"},{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"aborted\",\"started_at\":\"<time@step 7>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 52>\"}]"
+        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"completed\",\"started_at\":\"<time@step 8>\",\"completed_at\":\"<time@step 50>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 50>\"},{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"aborted\",\"started_at\":\"<time@before step 8>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@step 52>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2186,16 +2183,16 @@
           "updated_at": "<time@step 50>"
         },
         {
-          "id": "<run_phantom_baseline>",
+          "id": "<run_baselined>",
           "project_id": "<p>",
-          "name": "Phantom baseline",
+          "name": "Baselined run",
           "description": "",
-          "baseline_id": "<phantom>",
+          "baseline_id": "<bp>",
           "status": "aborted",
-          "started_at": "<time@step 7>",
+          "started_at": "<time@before step 8>",
           "completed_at": "<time@step 52>",
           "created_by": "<owner>",
-          "created_at": "<time@step 7>",
+          "created_at": "<time@before step 8>",
           "updated_at": "<time@step 52>"
         }
       ],
@@ -2313,7 +2310,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"aborted\",\"started_at\":\"<time@step 7>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 52>\"}]"
+        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"aborted\",\"started_at\":\"<time@before step 8>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@step 52>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2329,16 +2326,16 @@
           "updated_at": "<time@step 33>"
         },
         {
-          "id": "<run_phantom_baseline>",
+          "id": "<run_baselined>",
           "project_id": "<p>",
-          "name": "Phantom baseline",
+          "name": "Baselined run",
           "description": "",
-          "baseline_id": "<phantom>",
+          "baseline_id": "<bp>",
           "status": "aborted",
-          "started_at": "<time@step 7>",
+          "started_at": "<time@before step 8>",
           "completed_at": "<time@step 52>",
           "created_by": "<owner>",
-          "created_at": "<time@step 7>",
+          "created_at": "<time@before step 8>",
           "updated_at": "<time@step 52>"
         }
       ],
@@ -2446,6 +2443,38 @@
           }
         }
       ]
+    },
+    {
+      "n": 64,
+      "title": "create a run in P on Q's baseline: 404, as a baseline no row has",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/test-runs",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/test-runs",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"name\":\"Borrowed baseline\",\"baseline_id\":\"<bq>\"}"
+      },
+      "notes": [
+        "fixed under R7 (#379's decision on REQ-6): it was accepted, the run naming a baseline of another project"
+      ],
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 31,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"baseline not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "baseline not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
     }
   ],
   "uploads": [],

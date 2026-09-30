@@ -13,6 +13,9 @@ import (
 // Error definitions
 var (
 	ErrNotFound = errors.New("artifact not found")
+	// ErrVersionNotFound is a restore naming a version the artifact never
+	// had; handlers answer it 404, as a version's links do.
+	ErrVersionNotFound = errors.New("artifact version not found")
 )
 
 // Artifact represents a single requirement, test case, hazard, or other typed item
@@ -253,7 +256,13 @@ type Service interface {
 	// owner "" means any owner; otherwise only artifacts whose "owner"
 	// attribute equals it (REQ-147).
 	ListArtifactsPage(projectID string, artifactType string, owner string, limit, offset int) ([]*Artifact, int, error)
+	// GetArtifactVersions returns every version of an artifact, newest
+	// first, a deleted artifact's among them (its rows stay, closed by
+	// valid_to): none for an id no artifact has had.
 	GetArtifactVersions(id string) ([]*Artifact, error)
+	// RestoreArtifactVersion writes an earlier version's content as a new
+	// version, keeping the artifact's ref; ErrVersionNotFound for a version
+	// the artifact never had.
 	RestoreArtifactVersion(id string, version int) (*Artifact, error)
 	// SearchArtifacts finds current artifacts whose title or body contains
 	// query (case-insensitive) within the given projects, title matches first.
@@ -561,7 +570,8 @@ func (s *DefaultService) GetArtifactVersions(id string) ([]*Artifact, error) {
 	return s.repo.FindVersionsByID(id)
 }
 
-// RestoreArtifactVersion restores a previous version of an artifact
+// RestoreArtifactVersion restores a previous version of an artifact as a new
+// version: ErrVersionNotFound when the artifact never had that version.
 func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifact, error) {
 	versions, err := s.repo.FindVersionsByID(id)
 	if err != nil {
@@ -578,7 +588,7 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 	}
 
 	if versionToRestore == nil {
-		return nil, ErrNotFound
+		return nil, ErrVersionNotFound
 	}
 
 	// Get current artifact to preserve some fields
@@ -595,12 +605,16 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 		restoredStatus = StatusDraft
 	}
 
-	// Create a new version based on the old version
+	// Create a new version based on the old version. The ref is the
+	// artifact's, not the restored version's, and stays as it is (REQ-4),
+	// unless the restore changes the type to one with another prefix: then
+	// it is minted again, as a retype edit's is (ref.go).
 	restored := &Artifact{
 		ID:         current.ID,
 		ProjectID:  current.ProjectID,
 		ParentID:   versionToRestore.ParentID,
 		Type:       versionToRestore.Type,
+		Ref:        refAfterRetype(current.Ref, current.Type, versionToRestore.Type),
 		Title:      versionToRestore.Title,
 		Body:       versionToRestore.Body,
 		SortOrder:  current.SortOrder, // Keep current sort order

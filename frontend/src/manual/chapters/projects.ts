@@ -83,7 +83,7 @@ a two-step wizard.
 
 | Format | What it is |
 | --- | --- |
-| PDF specification | The document as a reader sees it: sections, artifacts, figures, traceability |
+| PDF specification | The document as a reader sees it: sections, artifacts, figures, traceability and each requirement's V&V status |
 | Word document | The same specification as a .docx, for editing or review outside OpenV |
 | JSON data | The complete project, and the only format an OpenV import reads back |
 | CSV table | One row per artifact for a spreadsheet; links fold into a single column |

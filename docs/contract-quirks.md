@@ -205,11 +205,14 @@ the Phase 3 consolidations that give quirks their names.
   `internal/domain/links/validation.go:61` and
   `frontend/src/config/linkTypeRules.ts:52`; the event-type filters in
   `frontend/src/views/ActivityLog.tsx:9` and
-  `frontend/src/views/AutomationsPage.tsx:15` are subsets of the 24 types in
-  `internal/domain/events/events.go`.
+  `frontend/src/views/AutomationsPage.tsx:15` are subsets of the 26 types in
+  `internal/domain/events/events.go` (24 until the R7 bug-fix pull request
+  for #379's decisions on REQ-4 and REQ-5 added `artifact.restored` and
+  `baseline.deleted`, which the activity log's filter offers and the
+  automations page does not).
 - **Pinned by, named as:** S13's allowed differences *(planned)*;
   `LINK_RULE_UI_OVERRIDES` (X4) *(planned)*. Pain point fe-requirements-4.
-- **Pinned today:** S6 pins the 24 event type strings
+- **Pinned today:** S6 pins the 26 event type strings
   (`internal/domain/events/event_types_test.go`), not the TS subsets.
 
 ## Q7. Bell deep links differ from email and push links
@@ -575,12 +578,14 @@ the Phase 3 consolidations that give quirks their names.
   `encoding/xml`'s text for a truncated ReqIF import (step 46 of
   `cmd/server/testdata/tour/s5a/exports_imports.json`). The S5b tour pins
   the driver's text passed through as a 400,
-  `pq: invalid input syntax for type uuid: "not-a-uuid"`, for a run's
-  `baseline_id`, a work item's `assignee_id`, an interview's
-  `guided_session_id` and a guided draft's `parent_id` (step 6 of
-  `test_runs_results.json`, step 5 of `work_items.json`, step 8 of
+  `pq: invalid input syntax for type uuid: "not-a-uuid"`, for a work
+  item's `assignee_id`, an interview's `guided_session_id` and a guided
+  draft's `parent_id` (step 5 of `work_items.json`, step 8 of
   `interviews.json` and step 29 of `guided_sessions.json`, under
-  `cmd/server/testdata/tour/s5b/`), and any lookup error mapped to 404: a
+  `cmd/server/testdata/tour/s5b/`; a run's `baseline_id`, step 6 of
+  `test_runs_results.json`, passed the driver's text through too until the
+  fix for #379's decision on REQ-6, and now answers as a baseline no row
+  has, `baseline not found`), and any lookup error mapped to 404: a
   quality report's malformed `baseline_id`, a lint of a malformed artifact
   id and a malformed run's citations (steps 17 and 27 of
   `quality_profile_parties.json`, step 68 of `evidence.json`). The S5c tour

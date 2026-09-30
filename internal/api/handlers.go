@@ -1012,22 +1012,44 @@ func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GetArtifactVersions retrieves all versions of an artifact
+// GetArtifactVersions retrieves all versions of an artifact. The guard asks
+// the project of the versions themselves, not of the current row, so a
+// deleted artifact's history stays readable to its project's viewers
+// (REQ-4); an id no version has answers as the guard answers any artifact
+// no row has.
 func (h *Handler) GetArtifactVersions(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(id), members.RoleViewer) {
-		return
-	}
-
-	versions, err := h.artifactService.GetArtifactVersions(id)
-	if err != nil {
-		respondInternal(w, r, "failed to load artifact versions", err)
+	versions, projectID, ok := h.artifactHistory(w, r, id, true)
+	if !ok || !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(versions)
+}
+
+// artifactHistory answers the project a read of an artifact is guarded by
+// and, when the read is of its history, the versions it loaded: a history
+// read asks the project of the versions, "" when there are none (an
+// artifact never changes project, so any version says), so a deleted
+// artifact's history reads as the artifact did (REQ-4); any other read, the
+// current artifact's. It writes the 500 of a failed load itself.
+func (h *Handler) artifactHistory(w http.ResponseWriter, r *http.Request, id string, history bool) ([]*artifacts.Artifact, string, bool) {
+	if !history {
+		return nil, h.projectIDForArtifact(id), true
+	}
+	versions, err := h.artifactService.GetArtifactVersions(id)
+	if err != nil {
+		respondInternal(w, r, "failed to load artifact versions", err)
+		return nil, "", false
+	}
+	for _, v := range versions {
+		if v != nil {
+			return versions, v.ProjectID, true
+		}
+	}
+	return versions, "", true
 }
 
 // RestoreArtifactVersion restores a previous version of an artifact
@@ -1056,7 +1078,14 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 
 	artifact, err := h.artifactService.RestoreArtifactVersion(id, req.Version)
 	if err != nil {
-		respondInternal(w, r, "failed to restore artifact version", err)
+		switch {
+		case errors.Is(err, artifacts.ErrVersionNotFound):
+			respondError(w, r, http.StatusNotFound, err.Error(), err)
+		case errors.Is(err, artifacts.ErrNotFound):
+			respondError(w, r, http.StatusNotFound, "artifact not found", err)
+		default:
+			respondInternal(w, r, "failed to restore artifact version", err)
+		}
 		return
 	}
 
@@ -1068,6 +1097,15 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		// Log but don't fail the request
 		slog.Warn("api: failed to create chatter entry for restore", "artifact_id", id, "error", err)
 	}
+
+	// A restore is an edit the event stream records like any other (REQ-4):
+	// the version it wrote and the one whose content it brought back.
+	h.publish(r, events.ArtifactRestored, artifact.ProjectID, artifact.ID, map[string]interface{}{
+		"artifact_type":    artifact.Type,
+		"title":            artifact.Title,
+		"version":          artifact.Version,
+		"restored_version": restoredFromVersion,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(artifact)
@@ -1212,12 +1250,14 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 // GetArtifactVersionLinks retrieves links for a specific artifact version
 func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	versionStr := r.URL.Query().Get("version")
 
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(id), members.RoleViewer) {
+	// A version's links are the artifact's history, which a deleted artifact
+	// keeps (REQ-4); the live links are the current artifact's.
+	versions, projectID, ok := h.artifactHistory(w, r, id, versionStr != "")
+	if !ok || !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-
-	versionStr := r.URL.Query().Get("version")
 
 	// If no version specified, return current links from link table
 	if versionStr == "" {
@@ -1261,13 +1301,6 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 	version := 0
 	if _, err := fmt.Sscanf(versionStr, "%d", &version); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid version parameter")
-		return
-	}
-
-	// Get the artifact version from database
-	versions, err := h.artifactService.GetArtifactVersions(id)
-	if err != nil {
-		respondInternal(w, r, "failed to load artifact versions", err)
 		return
 	}
 
@@ -2267,7 +2300,9 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 		name = fmt.Sprintf("Baseline %s", time.Now().Format("2006-01-02 15:04"))
 	}
 
-	data, _, err := h.exportService.ExportProject(projectID, exports.FormatJSON)
+	// The snapshot is the JSON export with the project's attribute
+	// definitions beside it (REQ-5): attachment metadata, not their files.
+	data, err := h.exportService.Snapshot(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to export project", err)
 		return
@@ -2328,7 +2363,8 @@ func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 	w.Write(baseline.Snapshot)
 }
 
-// DeleteBaseline deletes a baseline by ID.
+// DeleteBaseline deletes a baseline by ID: the project's owner alone, and the
+// delete is published as baseline.deleted.
 func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 	baselineID := mux.Vars(r)["id"]
 
@@ -2345,6 +2381,12 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to delete baseline", err)
 		return
 	}
+
+	// A baseline is a project's record; its deletion is recorded in turn
+	// (REQ-5), under the name it had, since nothing else keeps it.
+	h.publish(r, events.BaselineDeleted, baseline.ProjectID, baseline.ID, map[string]interface{}{
+		"name": baseline.Name,
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -2442,6 +2484,9 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A new figure is an edit of its artifact, as its new file is (REQ-4).
+	h.versionArtifactForFigure(artifactID, attachment.ID, "upload")
+
 	if attachment.FigureRef != "" {
 		h.logFigureNote(r, artifactID, fmt.Sprintf("Figure %s added (version 1) — %s.",
 			attachment.FigureRef, attachment.Name()))
@@ -2468,6 +2513,19 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(attachment)
+}
+
+// versionArtifactForFigure takes the artifact carrying a figure to a new
+// version after the figure changed: added, given a new file or renamed.
+// Nothing the artifact SAYS changed, so this goes through an attribute-free
+// update: it does not demote an approved artifact or mark its links suspect.
+// A failure is logged rather than failing the figure change that succeeded;
+// change names it in the log ("upload", "change", "rename").
+func (h *Handler) versionArtifactForFigure(artifactID, attachmentID, change string) {
+	if _, err := h.artifactService.UpdateArtifact(artifactID, artifacts.UpdateArtifactRequest{}); err != nil {
+		slog.Warn("api: failed to version artifact after a figure "+change,
+			"artifact_id", artifactID, "attachment_id", attachmentID, "error", err)
+	}
 }
 
 // logFigureNote records a figure event in the artifact's notes. The feed is
@@ -2576,13 +2634,8 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	}
 
 	// The artifact carries the figure, so a new figure version is a new
-	// artifact version. Nothing the artifact SAYS changed, so this goes
-	// through an attribute-free update: it does not demote an approved
-	// artifact or mark its links suspect.
-	if _, err := h.artifactService.UpdateArtifact(existing.ArtifactID, artifacts.UpdateArtifactRequest{}); err != nil {
-		slog.Warn("api: failed to version artifact after a figure change",
-			"artifact_id", existing.ArtifactID, "attachment_id", id, "error", err)
-	}
+	// artifact version.
+	h.versionArtifactForFigure(existing.ArtifactID, id, "change")
 
 	label := existing.FigureRef
 	if label == "" {
@@ -2656,10 +2709,7 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.artifactService.UpdateArtifact(existing.ArtifactID, artifacts.UpdateArtifactRequest{}); err != nil {
-		slog.Warn("api: failed to version artifact after a figure rename",
-			"artifact_id", existing.ArtifactID, "attachment_id", id, "error", err)
-	}
+	h.versionArtifactForFigure(existing.ArtifactID, id, "rename")
 
 	label := existing.FigureRef
 	if label == "" {

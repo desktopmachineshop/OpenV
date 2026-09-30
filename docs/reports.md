@@ -63,30 +63,49 @@ The wizard's Content step, for the PDF and Word formats:
 | Table of contents | `toc=0\|1` | on |
 | Traceability rows under each artifact | `traceability=0\|1` | on |
 | Figures embedded with captions | `figures=0\|1` | on |
-| V&V status: rollup per requirement, coverage summary and gaps, with the flow-down from child projects (REQ-146) | `vv=0\|1` | off |
+| V&V status: rollup per requirement, coverage summary and gaps, with the flow-down from child projects (REQ-146) | `vv=0\|1` | on (REQ-6) |
 | Test results: latest result per test case, test-run appendix | `results=0\|1` | off |
 | Fields (attributes) shown per artifact | `fields=all\|none\|key,key` | all |
 
 A template sets the types and the switches; any parameter given explicitly
-wins over it, and the wizard sends the switches it shows so the cover
+wins over it, and the wizard sends every switch it shows, and its field
+choice, beside the template, a switch that matches the defaults too, since
+the server starts a named preset from the preset's content: the cover
 records the starting point while the document does what the reader chose.
 `GET /projects/{id}/download/options` lists the presets, the fields the
 project holds (standard keys first, custom definitions and discovered keys
 after, each with a count) and the defaults, so the wizard offers only what
-exists.
+exists. A baseline that kept the attribute definitions in effect when it
+was captured (REQ-5) names a defined field as its definition did, in its
+options and in its documents, and lists the defined fields before the
+discovered ones; the live project's documents load no definitions, so
+they, and a baseline captured before baselines kept them, word each key
+themselves (`asil` reads *Asil*). A definition no artifact carries is not
+a field.
 
 The presets:
 
 | Key | Keeps | Carries |
 |---|---|---|
-| `standard` — Specification | every type | all fields, traceability, figures, contents |
+| `standard` — Specification | every type | all fields, traceability, figures, contents, V&V rollup per requirement, coverage summary, gaps |
 | `requirements-review` | user needs, requirements | priority, status, verification method; traceability; figures |
 | `test-planning` | requirements, test cases | priority, status, verification and execution method; traceability; no figures |
 | `vv` — Verification & Validation | needs, requirements, test cases, hazards | all fields, traceability, V&V rollup per requirement, latest results, coverage summary, gaps, test-run appendix |
 
 Test evidence is live state rather than part of a baseline's snapshot: a
 baseline document with results shows the results as they stand at export
-time, and says so on its cover date.
+time, and says so on its cover date. The legacy `GET /projects/{id}/report`
+reads no evidence at all, so it renders the Specification without the V&V
+status the download carries by default rather than report every tested
+requirement as never run.
+
+The ReqIF download types an attribute with a list of values as an
+enumeration of that list, by the attribute definitions the ReqIF export
+takes (REQ-6), so the two files match; a baseline's is typed by the
+definitions it kept, and one captured before baselines kept them writes
+such attributes as text. As in the export, a value that is not in its
+attribute's list, such as one left behind when the list was edited, is
+left out of the file.
 
 ## Layout rules
 

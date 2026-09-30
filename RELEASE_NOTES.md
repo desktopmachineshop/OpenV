@@ -549,6 +549,91 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Giving a project role to an account that does not exist now answers `404`
   *user not found*, where it failed with a server error.
 
+- **Restoring an earlier version of an artifact keeps its reference, and the
+  activity log records it.** Restoring a version from an artifact's History
+  gave the artifact a new reference, so REQ-3 might become REQ-9 and every
+  citation of REQ-3, in documents, notes and other artifacts, stopped
+  pointing at it; figures added afterwards were numbered under the new
+  reference. A restore now keeps the artifact's reference, as every other
+  edit does. Only a restore that brings back a different type of artifact,
+  such as a heading over what is now a requirement, takes a new reference
+  of the matching kind, as changing the type does. Each restore now also
+  appears in the project's activity log as *artifact.restored*, with the
+  version it brought back, and the log's filter offers it. An artifact a
+  restore already renumbered keeps the reference it has now.
+
+- **Restoring a version an artifact never had says so.** Through the API,
+  restoring an artifact to a version it never had failed with a server
+  error (`500`). It now answers `404` *artifact version not found*, and
+  nothing is written.
+
+- **A deleted artifact's history can still be read.** Through the API, the
+  version history of a deleted artifact answered `404` even to the
+  project's members, although OpenV keeps every version. Anyone who can
+  view the project can now read a deleted artifact's versions, and the
+  links of any one of them. Someone with no access to the project still
+  gets `404`, as for an artifact that does not exist.
+
+- **Adding a figure to an artifact creates a new version of it.** Uploading
+  a new file for a figure, or renaming one, already took the artifact to a
+  new version, but adding a figure did not, so the History did not show
+  when a drawing first appeared. Adding a figure now creates a version too.
+  As with the other figure changes, that version does not send an approved
+  artifact back to draft or mark its links suspect.
+
+- **Deleting a baseline is recorded in the activity log.** A project owner
+  could delete a baseline and nothing recorded that it had existed. The
+  deletion now appears in the project's activity log as
+  *baseline.deleted*, with the baseline's name and who deleted it, and the
+  log's filter offers it. Deleting a baseline is still for the project's
+  owners alone.
+
+- **A baseline keeps the project's attribute definitions.** A baseline kept
+  a project's artifacts, links and the details of its attachments, but not
+  the custom attributes defined for it, so what a baseline's values meant
+  could change after it was taken. A new baseline also keeps the attribute
+  definitions in effect when it is captured, the workspace's and the
+  project's, and its ReqIF download types list attributes by them. Its
+  PDF and Word downloads, and the fields the download wizard offers for
+  it, name each custom attribute as it was defined then, where the live
+  project's downloads name it after its key. Attachment files are still
+  not copied into a baseline, and each attachment's name, type and size
+  are still kept. Baselines captured before this release are unchanged and
+  read as before.
+
+- **PDF and Word downloads include V&V status unless you turn it off.** A
+  downloaded specification carried each requirement's verification status,
+  the coverage summary and the gaps only when *V&V status* was ticked or
+  the Verification & Validation template chosen. Every PDF and Word
+  download, and the Specification template, now carries them by default;
+  untick *V&V status* under *Document* in the download wizard to leave them
+  out. The Requirements review and Test planning templates still leave
+  them out, and test results are still included only when chosen. A box
+  you tick or untick after choosing a template now always reaches the
+  document: before, one ticked to match what a download has without a
+  template, such as *Figures* on the Test planning template or every
+  field on Requirements review, was lost, and the document followed the
+  template instead.
+
+- **A ReqIF download types list attributes as the ReqIF export does.** A
+  project downloaded as ReqIF wrote an attribute with a fixed list of
+  values, such as a *risk* of low or high, as free text, while the ReqIF
+  export wrote it as a list of values, so DOORS, Polarion and an OpenV
+  import saw two different documents. The download now writes it as the
+  export does, from the same attribute definitions, and the two files
+  match. As in the export, a value that is not in its attribute's list,
+  such as one left behind when the list was edited, is left out of the
+  file. A download of a baseline uses the definitions the baseline kept;
+  one captured before this release still writes such attributes as text.
+
+- **A test run can only name a baseline of its own project.** Through the
+  API, creating a test run with a `baseline_id` no baseline has, or one of
+  another project, stored that reference anyway, and an id that is not a
+  UUID failed with a database error (`400`). Each now answers `404`
+  *baseline not found*, as every other request that names a baseline
+  does, and no run is created. A run on one of the project's own
+  baselines, or on none, is created as before.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

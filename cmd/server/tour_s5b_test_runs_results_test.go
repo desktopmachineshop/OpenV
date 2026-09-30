@@ -24,7 +24,8 @@ import (
 // project E nothing. A viewer of P and an outsider, both registered here,
 // show the role gates, and an editor of P from a workspace of its own shows
 // whose agent a launch uses. The area walks a run's life: created (with the
-// refusals of its body, its guard and its baseline_id), read and listed;
+// refusals of its body, its guard and its baseline_id, and a run on P's
+// baseline as setup), read and listed;
 // results recorded, re-recorded (the upsert keeps the row's id and
 // created_at, and an omitted evidence list keeps the stored one), refused
 // and listed; a run and a result recorded through a workspace runner key,
@@ -34,8 +35,9 @@ import (
 // and results recorded with the claimed run's token, which is refused a
 // case flagged manual and a run of another project; the run completed and
 // aborted, the refused transitions, a result still accepted by a completed
-// run; the deletes; and, last, the editor's launch on a run of its own, with
-// P's workspace's V&V engineer. Every answer of these handlers but a refusal is a
+// run; the deletes; the editor's launch on a run of its own, with P's
+// workspace's V&V engineer; and, last, a run on Q's baseline, refused.
+// Every answer of these handlers but a refusal is a
 // bare encode with no Content-Type (Q1): sniffed as text/plain, and sent
 // with none once compressed, which a long description and long notes make
 // the lists show; the refusals go through writeJSONError (application/json).
@@ -127,11 +129,18 @@ func testRunsResultsTour(tr *tour) {
 	tr.step("create a run in a project that does not exist", o, "POST /api/v1/projects/{id}/test-runs",
 		at("id", "{{phantom}}"), jsonBody(`{"name":"Nowhere"}`),
 		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
-	tr.step("create a run whose baseline_id is not a UUID: the driver's text (Q19)", o,
-		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"), jsonBody(`{"name":"Bad baseline","baseline_id":"not-a-uuid"}`))
-	tr.step("create a run whose baseline_id no baseline has: accepted, test_runs.baseline_id has no foreign key", o,
+	tr.step("create a run whose baseline_id is not a UUID: 404, as a baseline no row has", o,
+		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"), jsonBody(`{"name":"Bad baseline","baseline_id":"not-a-uuid"}`),
+		note("fixed under R7 (#379's decision on REQ-6): it answered 400 with the driver's text (Q19)"))
+	tr.step("create a run whose baseline_id no baseline has: 404 baseline not found", o,
 		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"),
-		jsonBody(`{"name":"Phantom baseline","baseline_id":"{{phantom}}"}`)).capture("run_phantom_baseline", "/id")
+		jsonBody(`{"name":"Phantom baseline","baseline_id":"{{phantom}}"}`),
+		note("fixed under R7 (#379's decision on REQ-6): it was accepted, since test_runs.baseline_id has no "+
+			"foreign key and nothing looked the baseline up"))
+	tr.setup("P's baseline", o, "POST /api/v1/projects/{id}/baselines", at("id", "{{p}}"),
+		jsonBody(`{"name":"Tour runs baseline"}`), expect(201)).capture("bp", "/id")
+	tr.setup("a run on P's baseline, aborted later", o, "POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"),
+		jsonBody(`{"name":"Baselined run","baseline_id":"{{bp}}"}`), expect(201)).capture("run_baselined", "/id")
 	tr.step("create run R1: a name and description that JSON escapes; started_at, created_at and updated_at are one time", o,
 		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"),
 		jsonBody(`{"name":"Tour run <1> & \"one\"","description":"The first run: <b>all</b> cases"}`)).capture("r1", "/id")
@@ -262,15 +271,15 @@ func testRunsResultsTour(tr *tour) {
 		jsonBody(`{"status":"completed"}`))
 	tr.step("complete R1 again: not a transition", o, "PUT /api/v1/test-runs/{id}", at("id", "{{r1}}"),
 		jsonBody(`{"status":"completed"}`))
-	tr.step("abort the run with the phantom baseline", o, "PUT /api/v1/test-runs/{id}",
-		at("id", "{{run_phantom_baseline}}"), jsonBody(`{"status":"aborted"}`))
+	tr.step("abort the run on P's baseline", o, "PUT /api/v1/test-runs/{id}",
+		at("id", "{{run_baselined}}"), jsonBody(`{"status":"aborted"}`))
 	tr.step("launch an agent on the completed R1", o, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"),
 		jsonBody(`{"agent_slug":"vv-engineer"}`))
 	tr.step("record the physical case in the completed R1: accepted, nothing checks the run's status", o,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
 		jsonBody(`{"test_case_id":"{{tc_rig}}","status":"blocked","notes":"Rig booked"}`)).capture("res_rig", "/id")
 	tr.step("record a result in the aborted run: accepted too", o, "POST /api/v1/test-runs/{id}/results",
-		at("id", "{{run_phantom_baseline}}"), jsonBody(`{"test_case_id":"{{tc_auto}}","status":"fail"}`)).
+		at("id", "{{run_baselined}}"), jsonBody(`{"test_case_id":"{{tc_auto}}","status":"fail"}`)).
 		capture("res_aborted", "/id")
 	tr.step("P's runs: completed, aborted and the runner's", o, "GET /api/v1/projects/{id}/test-runs", at("id", "{{p}}"))
 
@@ -297,4 +306,13 @@ func testRunsResultsTour(tr *tour) {
 	tr.step("an editor of P from another workspace launches the V&V engineer on R3: P's workspace's agent, and "+
 		"the run queued in P's workspace", editor, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r3}}"),
 		jsonBody(`{"agent_slug":"vv-engineer"}`))
+
+	// A run's baseline is one of its own project's (#379's decision on REQ-6).
+	tr.setup("Q's baseline", o, "POST /api/v1/projects/{id}/baselines", at("id", "{{q}}"),
+		jsonBody(`{"name":"Tour other runs baseline"}`), expect(201)).capture("bq", "/id")
+	tr.step("create a run in P on Q's baseline: 404, as a baseline no row has", o,
+		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"),
+		jsonBody(`{"name":"Borrowed baseline","baseline_id":"{{bq}}"}`),
+		note("fixed under R7 (#379's decision on REQ-6): it was accepted, the run naming a baseline of "+
+			"another project"))
 }
