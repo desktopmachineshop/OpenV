@@ -14,7 +14,8 @@ import (
 type evidenceFakeRepo struct {
 	Repository
 	run     *TestRun
-	stored  map[string]*TestResult // keyed by run+case, as the real unique index is
+	stored  map[string]*TestResult // the current result, keyed by run+case
+	added   []*TestResult          // every result added, in order
 	lookups int
 }
 
@@ -25,15 +26,12 @@ func (f *evidenceFakeRepo) FindResultByCase(runID, testCaseID string) (*TestResu
 	return f.stored[runID+"|"+testCaseID], nil
 }
 
-func (f *evidenceFakeRepo) UpsertResult(r *TestResult) error {
-	key := r.RunID + "|" + r.TestCaseID
-	// The real table conflicts on (run_id, test_case_id) and keeps the
-	// original id, so the fake does too.
-	if existing, ok := f.stored[key]; ok {
-		r.ID = existing.ID
-	}
+func (f *evidenceFakeRepo) AddResult(r *TestResult) error {
+	// The real table keeps every result and answers the newest as the
+	// case's current one, so the fake does too.
 	copied := *r
-	f.stored[key] = &copied
+	f.stored[r.RunID+"|"+r.TestCaseID] = &copied
+	f.added = append(f.added, &copied)
 	return nil
 }
 
@@ -55,11 +53,11 @@ func (f *evidenceFakeChatter) CreateEntry(*chatter.ChatterEntry) error { return 
 func newEvidenceService(t *testing.T) (*DefaultService, *evidenceFakeRepo) {
 	t.Helper()
 	repo := &evidenceFakeRepo{
-		run:    &TestRun{ID: "run-1", ProjectID: "p-1", Name: "Noise campaign"},
+		run:    &TestRun{ID: "run-1", ProjectID: "p-1", Name: "Noise campaign", Status: RunStatusInProgress},
 		stored: map[string]*TestResult{},
 	}
 	art := &evidenceFakeArtifacts{artifact: &artifacts.Artifact{
-		ID: "tc-1", Type: "test-case", Title: "Idle noise", Version: 3,
+		ID: "tc-1", ProjectID: "p-1", Type: "test-case", Title: "Idle noise", Version: 3,
 	}}
 	return NewDefaultService(repo, art, &evidenceFakeChatter{}, nil), repo
 }

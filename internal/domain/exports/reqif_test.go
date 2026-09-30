@@ -295,3 +295,34 @@ func TestExportReqIFThroughService(t *testing.T) {
 		t.Errorf("SPEC-OBJECT count = %d, want 3", got)
 	}
 }
+
+// A ReqIF file types an attribute with a list of values as an enumeration of
+// that list, so a value outside it, such as one left behind when the list was
+// edited after it was set, is left out of the file. The live ReqIF download
+// shares this with the export since it takes the same definitions (REQ-6),
+// and docs/api-spec.md and docs/reports.md say so. With no definitions, as in
+// a baseline captured before baselines kept them, the value is written as
+// text.
+func TestAReqIFFileLeavesOutAValueOutsideItsAttributesList(t *testing.T) {
+	data := reqifFixture()
+	data.Artifacts[0].Attributes["priority"] = "critical"
+	typed, err := buildReqIF(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(typed), "critical") {
+		t.Error("a value outside the definition's list reached the typed ReqIF")
+	}
+	if !strings.Contains(string(typed), "<DATATYPE-DEFINITION-ENUMERATION") {
+		t.Error("priority is not typed as an enumeration")
+	}
+
+	data.AttributeDefs = nil
+	untyped, err := buildReqIF(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(untyped), "critical") {
+		t.Error("with no definitions, the value should be written as text")
+	}
+}

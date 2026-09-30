@@ -22,7 +22,7 @@ import (
 // and their guard; the default agent slug finds the workspace's seeded
 // requirements-interviewer, an unknown one leaves the interview with no
 // agent), a persona set and cleared, listed; invites created (one expired,
-// one to expire, whose TIMESTAMP column drops the offset it was sent with),
+// one to expire, sent with an offset, read back as that instant in UTC),
 // listed without their token hash, revoked (idempotently); an interview
 // closed twice, and refused a new invite. Then the project-wide session list
 // and its limit parser (Q8), over 21 sessions of a survey interview. Then
@@ -152,8 +152,8 @@ func interviewsTour(tr *tour) {
 	tr.remember("unknown.token", strings.Repeat("0123456789abcdef", 4))
 	tr.keep("2020-01-01T00:00:00Z", "an invite's expiry the tour sends, in the past")
 	tr.keep("2099-01-01T00:00:00+01:00", "an invite's expiry the tour sends, to come, with an offset")
-	tr.keep("2099-01-01T00:00:00Z", "that expiry read back: expires_at is a TIMESTAMP column, which keeps the wall "+
-		"clock and drops the offset")
+	tr.keep("2098-12-31T23:00:00Z", "that expiry read back: the instant sent, in UTC (a TIMESTAMPTZ since "+
+		"migration 0050; a TIMESTAMP kept the wall clock and dropped the offset)")
 	tr.headerPattern("Retry-After", `^(179|180)$`, "<retry-after 180 s>", "Retry-After on the sixth quick "+
 		"message to one invite: ceil(180 s less the seconds since the first of the six), so 180 while they take "+
 		"under a second and 179 under two (they take some 30 ms)")
@@ -240,8 +240,10 @@ func interviewsTour(tr *tour) {
 	tr.step("revoke it", o, "POST /api/v1/interview-invites/{id}/revoke", at("id", "{{inv_revoked}}"))
 	tr.step("revoke it again: the same answer", o, "POST /api/v1/interview-invites/{id}/revoke",
 		at("id", "{{inv_revoked}}"))
-	tr.step("I1's invites, newest first: no token, the 2099 expiry read back without its offset, one revoked", o,
-		"GET /api/v1/interviews/{id}/invites", at("id", "{{i1}}"))
+	tr.step("I1's invites, newest first: no token, the 2099 expiry read back as the instant sent, in UTC, one revoked", o,
+		"GET /api/v1/interviews/{id}/invites", at("id", "{{i1}}"),
+		note("fixed under R7 (#379 bug 4): the TIMESTAMP column kept the wall clock sent and dropped its offset, "+
+			"so the instant moved by the offset"))
 	tr.step("the viewer lists I1's invites", viewer, "GET /api/v1/interviews/{id}/invites", at("id", "{{i1}}"))
 
 	// Closing: an interview with an invite, closed twice; a closed interview

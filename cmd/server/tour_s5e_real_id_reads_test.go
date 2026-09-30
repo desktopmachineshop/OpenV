@@ -61,7 +61,9 @@ import (
 //     which are looked up in the workspace the caller acts in; and the
 //     decode's 400 on the writes that decode first (PUT /artifacts/{id},
 //     /links/{id}, the status and the restore), as for a phantom; only a
-//     public link's token and an account's picture open for it;
+//     public link's token opens for it, and the owner's picture, which W's
+//     members and the platform admin read, answers it the 404 of an account
+//     with no picture (fixed under R7, #379's decision 14);
 //   - the worker key: every read of P and its children, as a workspace-wide
 //     editor (REQ-42), and, as the editor is, 403 "you do not have access to
 //     this project" on P's owner routes (its share links, and in "body {" its
@@ -112,13 +114,6 @@ import (
 //     creates none either, 403 "runner keys cannot create projects" on the
 //     three (a key has no person to own what it would make), and 401 on the
 //     workspace's.
-//
-// Pinned as they behave (plan R7), for release-noted bug-fix pull requests
-// that regenerate the golden, with the golden's rows:
-//   - GET /users/{id}/avatar serves an account's picture to any signed-in
-//     account, the outsider included, which shares no workspace with it
-//     (GetUserAvatar, avatar_handlers.go: by its comment, "any signed-in
-//     member"; S5c pinned it too).
 func TestTourS5eRealIdReads(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5e",

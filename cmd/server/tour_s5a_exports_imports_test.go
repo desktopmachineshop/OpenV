@@ -17,7 +17,11 @@ import "testing"
 // defines an enum attribute (risk: low|high) for requirements. Project P
 // has one heading, the only parent, over a user need, a requirement and a
 // test case, beside a root design item: artifact lists order by parent_id
-// first, a random UUID, so a project the golden lists has one parent. The
+// first, a random UUID, so a project the golden lists has one parent. Both
+// ReqIF paths, the export and the download, type risk as an enumeration by
+// the definitions in effect, and the baseline keeps them in its snapshot
+// (fixed under R7, REQ-6 and REQ-5: the download typed risk as a string, and
+// a snapshot kept no definitions). The
 // requirement carries a multi-line body, priority, owner and risk, and a
 // PNG figure; the links are derives-from, verifies and satisfies, and a
 // requirement of a second project refines P's, so P's export names it
@@ -107,8 +111,8 @@ func exportsImportsTour(tr *tour) {
 				"lists order by created_at alone")}, opts...)...)
 	}
 
-	// The workspace's enum attribute: the ReqIF export types it as an
-	// enumeration; the ReqIF download does not load definitions (I15).
+	// The workspace's enum attribute: the ReqIF export and the ReqIF download
+	// type it as an enumeration (I15).
 	tr.setup("an org-wide enum attribute for requirements", o, "POST /api/v1/attribute-definitions",
 		jsonBody(`{"org_id":"{{owner.workspace}}","key":"risk","label":"Risk","data_type":"enum",`+
 			`"enum_values":["low","high"],"applies_to_type":"requirement"}`))
@@ -170,7 +174,7 @@ func exportsImportsTour(tr *tour) {
 	reqif := tr.step("export P as ReqIF: the export loads attribute definitions, so risk is an enumeration", o,
 		"GET /api/v1/projects/{id}/export", at("id", "{{p}}"), query("format=reqif"),
 		note("risk is a DATATYPE-DEFINITION-ENUMERATION and, on the requirement type, an "+
-			"ATTRIBUTE-DEFINITION-ENUMERATION: 8 lines name ENUMERATION here, none in the ReqIF download below (I15)"))
+			"ATTRIBUTE-DEFINITION-ENUMERATION: 8 lines name ENUMERATION here, as in the ReqIF download below (I15)"))
 	tr.step("export with a format in capitals: the format is case-sensitive", o, "GET /api/v1/projects/{id}/export",
 		at("id", "{{p}}"), query("format=JSON"))
 	tr.step("export as PDF, which only the download and the report render", o, "GET /api/v1/projects/{id}/export",
@@ -181,7 +185,8 @@ func exportsImportsTour(tr *tour) {
 
 	// The download options.
 	tr.step("P's download options: sections, types, figures, fields, owners, templates and defaults", o,
-		"GET /api/v1/projects/{id}/download/options", at("id", "{{p}}"))
+		"GET /api/v1/projects/{id}/download/options", at("id", "{{p}}"),
+		note("the defaults and the Specification preset carry V&V status (fixed under R7, REQ-6: off)"))
 	tr.step("the options of P's baseline", o, "GET /api/v1/projects/{id}/download/options", at("id", "{{p}}"),
 		query("baseline_id={{baseline}}"))
 	tr.step("the options of a baseline that does not exist", o, "GET /api/v1/projects/{id}/download/options",
@@ -190,8 +195,10 @@ func exportsImportsTour(tr *tour) {
 	// The downloads: live, from the baseline, narrowed, bundled.
 	live := tr.step("download P as JSON: the export's document, through the selection", o,
 		"GET /api/v1/projects/{id}/download/json", at("id", "{{p}}"))
-	tr.step("download P's baseline as JSON: before the refines link", o, "GET /api/v1/projects/{id}/download/json",
-		at("id", "{{p}}"), query("baseline_id={{baseline}}"))
+	tr.step("download P's baseline as JSON: before the refines link, with the definitions it kept", o,
+		"GET /api/v1/projects/{id}/download/json", at("id", "{{p}}"), query("baseline_id={{baseline}}"),
+		note("a baseline's snapshot keeps the attribute definitions in effect when it was captured, which the live "+
+			"JSON leaves out (fixed under R7, REQ-5: a snapshot kept none)"))
 	tr.step("download from a baseline that does not exist: 404", o, "GET /api/v1/projects/{id}/download/json",
 		at("id", "{{p}}"), query("baseline_id={{phantom}}"),
 		note("as the report route answers the same baseline (the next step); fixed under R7, the download mapped "+
@@ -214,10 +221,11 @@ func exportsImportsTour(tr *tour) {
 		query("template=bogus&fields=none&traceability=0&figures=0&toc=0&results=1&vv=1"))
 	tr.step("download P's baseline as Excel: the cover names the baseline", o,
 		"GET /api/v1/projects/{id}/download/excel", at("id", "{{p}}"), query("baseline_id={{baseline}}"))
-	tr.step("download P as ReqIF: no attribute definitions, so risk is a string (I15)", o,
+	tr.step("download P as ReqIF: typed by the definitions as the export is, so risk is an enumeration (I15)", o,
 		"GET /api/v1/projects/{id}/download/reqif", at("id", "{{p}}"),
-		note("a download loads the project through the JSON export, which carries no attribute definitions, so risk "+
-			"is a discovered ATTRIBUTE-DEFINITION-STRING like owner and priority"))
+		note("the download takes the definitions in effect from the function the export takes them from (fixed "+
+			"under R7, REQ-6: it loaded none, so risk was a discovered ATTRIBUTE-DEFINITION-STRING like owner and "+
+			"priority)"))
 	tr.step("download P as JSON with its figures: a zip of the document and the figure", o,
 		"GET /api/v1/projects/{id}/download/json", at("id", "{{p}}"), query("attachments=figures"))
 	tr.step("download with a category P does not hold: no archive", o, "GET /api/v1/projects/{id}/download/csv",

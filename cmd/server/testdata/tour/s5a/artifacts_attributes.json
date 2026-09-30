@@ -9653,7 +9653,7 @@
         "path": "/api/v1/artifacts/<phantom>/versions"
       },
       "notes": [
-        "the guard looks the project up through the artifact and finds none"
+        "the guard looks the project up through the artifact's versions and finds none"
       ],
       "status": 404,
       "content_type": "application/json",
@@ -9701,7 +9701,7 @@
     },
     {
       "n": 46,
-      "title": "restore a version the artifact never had",
+      "title": "restore a version the artifact never had: not found",
       "actor": "owner",
       "route": "POST /api/v1/artifacts/{id}/restore",
       "request": {
@@ -9712,18 +9712,21 @@
         ],
         "body": "{\"version\":99}"
       },
-      "status": 500,
+      "notes": [
+        "404 artifact version not found, as a version's links answer it (fixed under R7, REQ-4: it answered 500)"
+      ],
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 47,
+      "content_length": 39,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to restore artifact version\"}"
+        "{\"error\":\"artifact version not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to restore artifact version"
+        "error": "artifact version not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -9762,7 +9765,7 @@
     },
     {
       "n": 48,
-      "title": "restore version 1: version 5, a new ref, and no event",
+      "title": "restore version 1: version 5, the ref kept, and artifact.restored",
       "actor": "owner",
       "route": "POST /api/v1/artifacts/{id}/restore",
       "request": {
@@ -9774,7 +9777,7 @@
         "body": "{\"version\":1}"
       },
       "notes": [
-        "the restored version is built without the current ref, so the repository mints the next one; the handler publishes no event"
+        "the restored version carries the artifact's ref, REQ-1, and the handler publishes artifact.restored with the version written and the one brought back (fixed under R7, REQ-4: the repository minted the next ref, and no event was published)"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -9783,7 +9786,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 48>\",\"valid_to\":null,\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 48>\"}"
+        "{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 48>\",\"valid_to\":null,\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 48>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -9791,7 +9794,7 @@
         "project_id": "<project>",
         "parent_id": "<heading>",
         "type": "requirement",
-        "ref": "REQ-4",
+        "ref": "REQ-1",
         "title": "Answer in time",
         "body": "The system shall answer within 2 s.",
         "sort_order": 4,
@@ -9808,7 +9811,20 @@
         "updated_at": "<time@step 48>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "artifact.restored",
+          "actor": "user:<owner>",
+          "project": "<project>",
+          "entity": "<requirement>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "restored_version": "number 1",
+            "title": "string \"Answer in time\"",
+            "version": "number 5"
+          }
+        }
+      ]
     },
     {
       "n": 49,
@@ -9894,7 +9910,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 48>\",\"valid_to\":null,\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 48>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in good time\",\"body\":\"The system shall answer within 1 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 40>\",\"valid_to\":\"<time@step 48>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 40>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in good time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 39>\",\"valid_to\":\"<time@step 40>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in good time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 38>\",\"valid_to\":\"<time@step 39>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 38>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 14>\",\"valid_to\":\"<time@step 38>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"}]"
+        "[{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 48>\",\"valid_to\":null,\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 48>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in good time\",\"body\":\"The system shall answer within 1 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 40>\",\"valid_to\":\"<time@step 48>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 40>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in good time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 39>\",\"valid_to\":\"<time@step 40>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in good time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 38>\",\"valid_to\":\"<time@step 39>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 38>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 14>\",\"valid_to\":\"<time@step 38>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -9903,7 +9919,7 @@
           "project_id": "<project>",
           "parent_id": "<heading>",
           "type": "requirement",
-          "ref": "REQ-4",
+          "ref": "REQ-1",
           "title": "Answer in time",
           "body": "The system shall answer within 2 s.",
           "sort_order": 4,
@@ -10086,26 +10102,47 @@
     },
     {
       "n": 54,
-      "title": "the deleted persona's versions",
+      "title": "the deleted persona's versions: its history stays readable",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/versions",
       "request": {
         "method": "GET",
         "path": "/api/v1/artifacts/<persona>/versions"
       },
-      "status": 404,
+      "notes": [
+        "the guard asks the project of the versions, which the delete closes and keeps (fixed under R7, REQ-4: it looked the project up through the current row, and answered 404)"
+      ],
+      "status": 200,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 30,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"error\":\"project not found\"}"
+        "[{\"id\":\"<persona>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"persona\",\"ref\":\"PER-1\",\"title\":\"Operator\",\"body\":\"Runs the machine.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 12>\",\"valid_to\":\"<time@step 52>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"}]"
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "project not found"
-      },
+      "parsed": [
+        {
+          "id": "<persona>",
+          "project_id": "<project>",
+          "parent_id": "<heading>",
+          "type": "persona",
+          "ref": "PER-1",
+          "title": "Operator",
+          "body": "Runs the machine.",
+          "sort_order": 2,
+          "status": "draft",
+          "attributes": {
+            "status": "draft"
+          },
+          "version": 1,
+          "valid_from": "<time@step 12>",
+          "valid_to": "<time@step 52>",
+          "created_at": "<time@step 12>",
+          "updated_at": "<time@step 12>"
+        }
+      ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
@@ -10152,7 +10189,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<heading>\",\"project_id\":\"<project>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the tour covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 10>\",\"valid_to\":null,\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<subheading>\",\"project_id\":\"<project>\",\"type\":\"heading\",\"ref\":\"HDG-2\",\"title\":\"Details\",\"body\":\"\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 42>\",\"valid_to\":null,\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<description>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"description\",\"ref\":\"DSC-1\",\"title\":\"Context\",\"body\":\"Where the \\u003csystem\\u003e runs \\u0026 why.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 11>\",\"valid_to\":null,\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<need>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Quick answers\",\"body\":\"The operator needs answers fast.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 13>\",\"valid_to\":null,\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 48>\",\"valid_to\":null,\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 48>\"},{\"id\":\"<design>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"Cache the answers.\",\"sort_order\":5,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 15>\",\"valid_to\":null,\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"},{\"id\":\"<test_case>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":6,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<hazard>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"hazard\",\"ref\":\"HAZ-1\",\"title\":\"Stale answer\",\"body\":\"A cached answer is out of date.\",\"sort_order\":7,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":1,\"valid_from\":\"<time@step 17>\",\"valid_to\":null,\"created_at\":\"<time@step 17>\",\"updated_at\":\"<time@step 17>\"},{\"id\":\"<other>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"hazard\",\"ref\":\"HAZ-2\",\"title\":\"Loose note\",\"body\":\"Anything else.\",\"sort_order\":40,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 41>\",\"valid_to\":null,\"created_at\":\"<time@step 18>\",\"updated_at\":\"<time@step 41>\"},{\"id\":\"<copy>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Copied rule\",\"body\":\"The system shall be copied.\",\"sort_order\":42,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 20>\",\"valid_to\":null,\"created_at\":\"<time@step 20>\",\"updated_at\":\"<time@step 20>\"},{\"id\":\"<orphan>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Orphan copy\",\"body\":\"No source: the artifact it names does not exist, so the copy gets no note.\",\"sort_order\":43,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 22>\",\"valid_to\":null,\"created_at\":\"<time@step 22>\",\"updated_at\":\"<time@step 22>\"}]"
+        "[{\"id\":\"<heading>\",\"project_id\":\"<project>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the tour covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 10>\",\"valid_to\":null,\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<subheading>\",\"project_id\":\"<project>\",\"type\":\"heading\",\"ref\":\"HDG-2\",\"title\":\"Details\",\"body\":\"\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 42>\",\"valid_to\":null,\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<description>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"description\",\"ref\":\"DSC-1\",\"title\":\"Context\",\"body\":\"Where the \\u003csystem\\u003e runs \\u0026 why.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 11>\",\"valid_to\":null,\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<need>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Quick answers\",\"body\":\"The operator needs answers fast.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 13>\",\"valid_to\":null,\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"},{\"id\":\"<requirement>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 48>\",\"valid_to\":null,\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 48>\"},{\"id\":\"<design>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"Cache the answers.\",\"sort_order\":5,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 15>\",\"valid_to\":null,\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"},{\"id\":\"<test_case>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":6,\"status\":\"draft\",\"attributes\":{\"owner\":\"alice\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<hazard>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"hazard\",\"ref\":\"HAZ-1\",\"title\":\"Stale answer\",\"body\":\"A cached answer is out of date.\",\"sort_order\":7,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":1,\"valid_from\":\"<time@step 17>\",\"valid_to\":null,\"created_at\":\"<time@step 17>\",\"updated_at\":\"<time@step 17>\"},{\"id\":\"<other>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"hazard\",\"ref\":\"HAZ-2\",\"title\":\"Loose note\",\"body\":\"Anything else.\",\"sort_order\":40,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 41>\",\"valid_to\":null,\"created_at\":\"<time@step 18>\",\"updated_at\":\"<time@step 41>\"},{\"id\":\"<copy>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Copied rule\",\"body\":\"The system shall be copied.\",\"sort_order\":42,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 20>\",\"valid_to\":null,\"created_at\":\"<time@step 20>\",\"updated_at\":\"<time@step 20>\"},{\"id\":\"<orphan>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Orphan copy\",\"body\":\"No source: the artifact it names does not exist, so the copy gets no note.\",\"sort_order\":43,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 22>\",\"valid_to\":null,\"created_at\":\"<time@step 22>\",\"updated_at\":\"<time@step 22>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -10235,7 +10272,7 @@
           "project_id": "<project>",
           "parent_id": "<heading>",
           "type": "requirement",
-          "ref": "REQ-4",
+          "ref": "REQ-1",
           "title": "Answer in time",
           "body": "The system shall answer within 2 s.",
           "sort_order": 4,
@@ -11228,7 +11265,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<unchecked>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-5\",\"title\":\"Unchecked rule\",\"body\":\"\",\"sort_order\":44,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 82>\",\"valid_to\":null,\"created_at\":\"<time@step 82>\",\"updated_at\":\"<time@step 82>\"}"
+        "{\"id\":\"<unchecked>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"Unchecked rule\",\"body\":\"\",\"sort_order\":44,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 82>\",\"valid_to\":null,\"created_at\":\"<time@step 82>\",\"updated_at\":\"<time@step 82>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -11236,7 +11273,7 @@
         "project_id": "<project>",
         "parent_id": "<heading>",
         "type": "requirement",
-        "ref": "REQ-5",
+        "ref": "REQ-4",
         "title": "Unchecked rule",
         "body": "",
         "sort_order": 44,
@@ -11342,7 +11379,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<risky>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-6\",\"title\":\"Risky rule\",\"body\":\"\",\"sort_order\":45,\"status\":\"draft\",\"attributes\":{\"risk\":\"high\",\"status\":\"draft\",\"verifier\":\"QA\"},\"version\":1,\"valid_from\":\"<time@step 85>\",\"valid_to\":null,\"created_at\":\"<time@step 85>\",\"updated_at\":\"<time@step 85>\"}"
+        "{\"id\":\"<risky>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-5\",\"title\":\"Risky rule\",\"body\":\"\",\"sort_order\":45,\"status\":\"draft\",\"attributes\":{\"risk\":\"high\",\"status\":\"draft\",\"verifier\":\"QA\"},\"version\":1,\"valid_from\":\"<time@step 85>\",\"valid_to\":null,\"created_at\":\"<time@step 85>\",\"updated_at\":\"<time@step 85>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -11350,7 +11387,7 @@
         "project_id": "<project>",
         "parent_id": "<heading>",
         "type": "requirement",
-        "ref": "REQ-6",
+        "ref": "REQ-5",
         "title": "Risky rule",
         "body": "",
         "sort_order": 45,
@@ -11429,7 +11466,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<risky>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-6\",\"title\":\"Risky rule\",\"body\":\"\",\"sort_order\":45,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\",\"verifier\":\"QA\"},\"version\":2,\"valid_from\":\"<time@step 87>\",\"valid_to\":null,\"created_at\":\"<time@step 85>\",\"updated_at\":\"<time@step 87>\"}"
+        "{\"id\":\"<risky>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-5\",\"title\":\"Risky rule\",\"body\":\"\",\"sort_order\":45,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\",\"verifier\":\"QA\"},\"version\":2,\"valid_from\":\"<time@step 87>\",\"valid_to\":null,\"created_at\":\"<time@step 85>\",\"updated_at\":\"<time@step 87>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -11437,7 +11474,7 @@
         "project_id": "<project>",
         "parent_id": "<heading>",
         "type": "requirement",
-        "ref": "REQ-6",
+        "ref": "REQ-5",
         "title": "Risky rule",
         "body": "",
         "sort_order": 45,
@@ -11646,7 +11683,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<medium_rule>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-7\",\"title\":\"Medium rule\",\"body\":\"\",\"sort_order\":46,\"status\":\"draft\",\"attributes\":{\"risk\":\"medium\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 93>\",\"valid_to\":null,\"created_at\":\"<time@step 93>\",\"updated_at\":\"<time@step 93>\"}"
+        "{\"id\":\"<medium_rule>\",\"project_id\":\"<project>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-6\",\"title\":\"Medium rule\",\"body\":\"\",\"sort_order\":46,\"status\":\"draft\",\"attributes\":{\"risk\":\"medium\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 93>\",\"valid_to\":null,\"created_at\":\"<time@step 93>\",\"updated_at\":\"<time@step 93>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -11654,7 +11691,7 @@
         "project_id": "<project>",
         "parent_id": "<heading>",
         "type": "requirement",
-        "ref": "REQ-7",
+        "ref": "REQ-6",
         "title": "Medium rule",
         "body": "",
         "sort_order": 46,
@@ -12648,14 +12685,14 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<team_req>\",\"project_id\":\"<team_project>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Team rule\",\"body\":\"\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 120>\",\"valid_to\":null,\"created_at\":\"<time@before step 98>\",\"updated_at\":\"<time@step 120>\"}"
+        "{\"id\":\"<team_req>\",\"project_id\":\"<team_project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Team rule\",\"body\":\"\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 120>\",\"valid_to\":null,\"created_at\":\"<time@before step 98>\",\"updated_at\":\"<time@step 120>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<team_req>",
         "project_id": "<team_project>",
         "type": "requirement",
-        "ref": "REQ-3",
+        "ref": "REQ-1",
         "title": "Team rule",
         "body": "",
         "sort_order": 1,
@@ -12670,7 +12707,20 @@
         "updated_at": "<time@step 120>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "artifact.restored",
+          "actor": "user:<editor>",
+          "project": "<team_project>",
+          "entity": "<team_req>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "restored_version": "number 1",
+            "title": "string \"Team rule\"",
+            "version": "number 3"
+          }
+        }
+      ]
     },
     {
       "n": 121,
@@ -12698,6 +12748,53 @@
           "payload": {}
         }
       ]
+    },
+    {
+      "n": 122,
+      "title": "the viewer reads the versions of the requirement the editor deleted",
+      "actor": "viewer",
+      "acting_in": "<team>",
+      "route": "GET /api/v1/artifacts/{id}/versions",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<team_dated>/versions"
+      },
+      "notes": [
+        "a deleted artifact's history reads as the artifact did, to its project's viewers (REQ-4)"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<team_dated>\",\"project_id\":\"<team_project>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Dated rule\",\"body\":\"\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"due\":\"2026-01-31\",\"status\":\"draft\",\"verifier\":true},\"version\":1,\"valid_from\":\"<time@step 110>\",\"valid_to\":\"<time@step 121>\",\"created_at\":\"<time@step 110>\",\"updated_at\":\"<time@step 110>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<team_dated>",
+          "project_id": "<team_project>",
+          "type": "requirement",
+          "ref": "REQ-2",
+          "title": "Dated rule",
+          "body": "",
+          "sort_order": 2,
+          "status": "draft",
+          "attributes": {
+            "due": "2026-01-31",
+            "status": "draft",
+            "verifier": true
+          },
+          "version": 1,
+          "valid_from": "<time@step 110>",
+          "valid_to": "<time@step 121>",
+          "created_at": "<time@step 110>",
+          "updated_at": "<time@step 110>"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
     }
   ],
   "uploads": [],

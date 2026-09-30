@@ -118,6 +118,7 @@ func scanWorkItem(scan func(dest ...interface{}) error) (*workitems.WorkItem, er
 	if err != nil {
 		return nil, err
 	}
+	item.DueDate = inUTC(item.DueDate)
 
 	item.ArtifactIDs = []string{}
 	if len(artifactIDsJSON) > 0 {

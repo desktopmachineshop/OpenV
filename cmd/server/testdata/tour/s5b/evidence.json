@@ -23,7 +23,7 @@
     "d6cc5883258ae538e692334624867d32efea2a5ab01b55f5ef4ce395e140c188 kept as it is: the SHA-256 of the 60-byte CSV the area uploads, in the file JSON and X-Evidence-SHA256",
     "b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc kept as it is: the SHA-256 of the 2,000-byte log the area uploads, in the file JSON and X-Evidence-SHA256",
     "2026-09-12T10:00:00+02:00 kept as it is: a captured_at the tour sends with an offset, which the create echoes as sent",
-    "2026-09-12T10:00:00Z kept as it is: that captured_at as read back: the column is TIMESTAMP (no zone), which keeps the wall time and drops the offset",
+    "2026-09-12T08:00:00Z kept as it is: that captured_at as read back: the instant sent, in UTC (a TIMESTAMPTZ since migration 0050; a TIMESTAMP kept the wall time and dropped the offset)",
     "2026-09-01T08:30:00Z kept as it is: a captured_at the tour sends in UTC, echoed and read back alike"
   ],
   "env": [
@@ -412,7 +412,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"ref\":\"EVD-2\",\"title\":\"Visual inspection\",\"summary\":\"No file: the account is the evidence.\",\"captured_by\":\"\",\"conditions\":{},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\",\"file_count\":0,\"total_size\":0},{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0}]"
+        "[{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"ref\":\"EVD-2\",\"title\":\"Visual inspection\",\"summary\":\"No file: the account is the evidence.\",\"captured_by\":\"\",\"conditions\":{},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\",\"file_count\":0,\"total_size\":0},{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -436,7 +436,7 @@
           "ref": "EVD-1",
           "title": "Noise sweep, run 3",
           "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-          "captured_at": "2026-09-12T10:00:00Z",
+          "captured_at": "2026-09-12T08:00:00Z",
           "captured_by": "Lab B",
           "conditions": {
             "ambient_c": 21.5,
@@ -459,13 +459,16 @@
     },
     {
       "n": 12,
-      "title": "read B1: captured_at as the column holds it, the wall time with no offset",
+      "title": "read B1: captured_at the instant sent, in UTC",
       "actor": "owner",
       "route": "GET /api/v1/evidence-bundles/{id}",
       "request": {
         "method": "GET",
         "path": "/api/v1/evidence-bundles/<b1>"
       },
+      "notes": [
+        "fixed under R7 (#379 bug 4): the TIMESTAMP column kept the wall time sent and dropped its offset, so the instant moved by the offset"
+      ],
       "status": 200,
       "content_type": "application/json",
       "headers": [],
@@ -473,7 +476,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0}"
+        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -482,7 +485,7 @@
         "ref": "EVD-1",
         "title": "Noise sweep, run 3",
         "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-        "captured_at": "2026-09-12T10:00:00Z",
+        "captured_at": "2026-09-12T08:00:00Z",
         "captured_by": "Lab B",
         "conditions": {
           "ambient_c": 21.5,
@@ -518,7 +521,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0}"
+        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -527,7 +530,7 @@
         "ref": "EVD-1",
         "title": "Noise sweep, run 3",
         "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-        "captured_at": "2026-09-12T10:00:00Z",
+        "captured_at": "2026-09-12T08:00:00Z",
         "captured_by": "Lab B",
         "conditions": {
           "ambient_c": 21.5,
@@ -845,7 +848,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0},{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"ref\":\"EVD-2\",\"title\":\"Visual inspection\",\"summary\":\"Looked at the solder joints.\",\"captured_at\":\"2026-09-01T08:30:00Z\",\"captured_by\":\"QA\",\"conditions\":{\"lamp\":\"ring light\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 23>\",\"file_count\":0,\"total_size\":0}]"
+        "[{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":0,\"total_size\":0},{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"ref\":\"EVD-2\",\"title\":\"Visual inspection\",\"summary\":\"Looked at the solder joints.\",\"captured_at\":\"2026-09-01T08:30:00Z\",\"captured_by\":\"QA\",\"conditions\":{\"lamp\":\"ring light\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 23>\",\"file_count\":0,\"total_size\":0}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -855,7 +858,7 @@
           "ref": "EVD-1",
           "title": "Noise sweep, run 3",
           "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-          "captured_at": "2026-09-12T10:00:00Z",
+          "captured_at": "2026-09-12T08:00:00Z",
           "captured_by": "Lab B",
           "conditions": {
             "ambient_c": 21.5,
@@ -1284,7 +1287,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"files\":[{\"id\":\"<csv>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep \\\"run 3\\\".csv\",\"mime_type\":\"text/csv\",\"file_size\":60,\"sha256\":\"d6cc5883258ae538e692334624867d32efea2a5ab01b55f5ef4ce395e140c188\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 31>\"},{\"id\":\"<log>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep-log.txt\",\"mime_type\":\"text/plain\",\"file_size\":2000,\"sha256\":\"b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 32>\"}],\"file_count\":2,\"total_size\":2060}"
+        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"files\":[{\"id\":\"<csv>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep \\\"run 3\\\".csv\",\"mime_type\":\"text/csv\",\"file_size\":60,\"sha256\":\"d6cc5883258ae538e692334624867d32efea2a5ab01b55f5ef4ce395e140c188\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 31>\"},{\"id\":\"<log>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep-log.txt\",\"mime_type\":\"text/plain\",\"file_size\":2000,\"sha256\":\"b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 32>\"}],\"file_count\":2,\"total_size\":2060}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1293,7 +1296,7 @@
         "ref": "EVD-1",
         "title": "Noise sweep, run 3",
         "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-        "captured_at": "2026-09-12T10:00:00Z",
+        "captured_at": "2026-09-12T08:00:00Z",
         "captured_by": "Lab B",
         "conditions": {
           "ambient_c": 21.5,
@@ -1351,7 +1354,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"ref\":\"EVD-2\",\"title\":\"Visual inspection\",\"summary\":\"\",\"captured_by\":\"\",\"conditions\":{},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 25>\",\"file_count\":1,\"total_size\":60},{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":2,\"total_size\":2060}]"
+        "[{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"ref\":\"EVD-2\",\"title\":\"Visual inspection\",\"summary\":\"\",\"captured_by\":\"\",\"conditions\":{},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 25>\",\"file_count\":1,\"total_size\":60},{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"file_count\":2,\"total_size\":2060}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1375,7 +1378,7 @@
           "ref": "EVD-1",
           "title": "Noise sweep, run 3",
           "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-          "captured_at": "2026-09-12T10:00:00Z",
+          "captured_at": "2026-09-12T08:00:00Z",
           "captured_by": "Lab B",
           "conditions": {
             "ambient_c": 21.5,
@@ -2587,7 +2590,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"files\":[{\"id\":\"<csv>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep \\\"run 3\\\".csv\",\"mime_type\":\"text/csv\",\"file_size\":60,\"sha256\":\"d6cc5883258ae538e692334624867d32efea2a5ab01b55f5ef4ce395e140c188\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 31>\"},{\"id\":\"<log>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep-log.txt\",\"mime_type\":\"text/plain\",\"file_size\":2000,\"sha256\":\"b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 32>\"}],\"citations\":[{\"id\":\"<cite1>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res1>\",\"note\":\"The quiet rows.\",\"created_at\":\"<time@step 57>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r1>\",\"run_name\":\"Rig campaign\"},{\"id\":\"<cite3>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res3>\",\"note\":\"Same capture, repeat run\",\"created_at\":\"<time@step 69>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r2>\",\"run_name\":\"Rig campaign, repeat\"}],\"file_count\":2,\"total_size\":2060}"
+        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"files\":[{\"id\":\"<csv>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep \\\"run 3\\\".csv\",\"mime_type\":\"text/csv\",\"file_size\":60,\"sha256\":\"d6cc5883258ae538e692334624867d32efea2a5ab01b55f5ef4ce395e140c188\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 31>\"},{\"id\":\"<log>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep-log.txt\",\"mime_type\":\"text/plain\",\"file_size\":2000,\"sha256\":\"b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 32>\"}],\"citations\":[{\"id\":\"<cite1>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res1>\",\"note\":\"The quiet rows.\",\"created_at\":\"<time@step 57>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r1>\",\"run_name\":\"Rig campaign\"},{\"id\":\"<cite3>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res3>\",\"note\":\"Same capture, repeat run\",\"created_at\":\"<time@step 69>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r2>\",\"run_name\":\"Rig campaign, repeat\"}],\"file_count\":2,\"total_size\":2060}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2596,7 +2599,7 @@
         "ref": "EVD-1",
         "title": "Noise sweep, run 3",
         "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-        "captured_at": "2026-09-12T10:00:00Z",
+        "captured_at": "2026-09-12T08:00:00Z",
         "captured_by": "Lab B",
         "conditions": {
           "ambient_c": 21.5,
@@ -3001,13 +3004,16 @@
     },
     {
       "n": 85,
-      "title": "read B1 once R1 is deleted: res1's citation went with its result, res3's stays",
+      "title": "read B1 once R1's delete is refused: res1's citation stays with its result, and res3's",
       "actor": "owner",
       "route": "GET /api/v1/evidence-bundles/{id}",
       "request": {
         "method": "GET",
         "path": "/api/v1/evidence-bundles/<b1>"
       },
+      "notes": [
+        "fixed under R7 (OpenV REQ-13): R1 was deleted, and res1 and its citation with it"
+      ],
       "status": 200,
       "content_type": "application/json",
       "headers": [],
@@ -3015,7 +3021,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T10:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"files\":[{\"id\":\"<log>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep-log.txt\",\"mime_type\":\"text/plain\",\"file_size\":2000,\"sha256\":\"b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 32>\"}],\"citations\":[{\"id\":\"<cite3>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res3>\",\"note\":\"Same capture, repeat run\",\"created_at\":\"<time@step 69>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r2>\",\"run_name\":\"Rig campaign, repeat\"}],\"file_count\":1,\"total_size\":2000}"
+        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"ref\":\"EVD-1\",\"title\":\"Noise sweep, run 3\",\"summary\":\"Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.\",\"captured_at\":\"2026-09-12T08:00:00Z\",\"captured_by\":\"Lab B\",\"conditions\":{\"ambient_c\":21.5,\"calibrated\":true,\"channels\":[1,2],\"counter\":12345678901234567000,\"rig\":\"Bench 4\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\",\"files\":[{\"id\":\"<log>\",\"bundle_id\":\"<b1>\",\"filename\":\"sweep-log.txt\",\"mime_type\":\"text/plain\",\"file_size\":2000,\"sha256\":\"b147424efab46231f4f90c2b3d6b7b53bf67b90877642a50aaa1876010e1ecbc\",\"uploaded_by\":\"<owner>\",\"created_at\":\"<time@step 32>\"}],\"citations\":[{\"id\":\"<cite1>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res1>\",\"note\":\"The quiet rows.\",\"created_at\":\"<time@step 57>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r1>\",\"run_name\":\"Rig campaign\"},{\"id\":\"<cite3>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res3>\",\"note\":\"Same capture, repeat run\",\"created_at\":\"<time@step 69>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r2>\",\"run_name\":\"Rig campaign, repeat\"}],\"file_count\":1,\"total_size\":2000}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3024,7 +3030,7 @@
         "ref": "EVD-1",
         "title": "Noise sweep, run 3",
         "summary": "Swept the input from quiet to loud on bench 4 in three passes, logging the level and the noise at each step; the quiet rows back TC1.",
-        "captured_at": "2026-09-12T10:00:00Z",
+        "captured_at": "2026-09-12T08:00:00Z",
         "captured_by": "Lab B",
         "conditions": {
           "ambient_c": 21.5,
@@ -3053,6 +3059,20 @@
         ],
         "citations": [
           {
+            "id": "<cite1>",
+            "bundle_id": "<b1>",
+            "test_result_id": "<res1>",
+            "note": "The quiet rows.",
+            "created_at": "<time@step 57>",
+            "bundle_ref": "EVD-1",
+            "bundle_title": "Noise sweep, run 3",
+            "test_case_id": "<tc1>",
+            "test_case_title": "Measure the noise floor",
+            "test_case_ref": "TC-1",
+            "run_id": "<r1>",
+            "run_name": "Rig campaign"
+          },
+          {
             "id": "<cite3>",
             "bundle_id": "<b1>",
             "test_result_id": "<res3>",
@@ -3078,26 +3098,39 @@
     },
     {
       "n": 86,
-      "title": "res1's citations once R1 is deleted: the result is gone",
+      "title": "res1's citations once R1's delete is refused: still there",
       "actor": "owner",
       "route": "GET /api/v1/test-results/{id}/citations",
       "request": {
         "method": "GET",
         "path": "/api/v1/test-results/<res1>/citations"
       },
-      "status": 404,
+      "status": 200,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 34,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"error\":\"test result not found\"}"
+        "[{\"id\":\"<cite1>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res1>\",\"note\":\"The quiet rows.\",\"created_at\":\"<time@step 57>\",\"bundle_ref\":\"EVD-1\",\"bundle_title\":\"Noise sweep, run 3\",\"test_case_id\":\"<tc1>\",\"test_case_title\":\"Measure the noise floor\",\"test_case_ref\":\"TC-1\",\"run_id\":\"<r1>\",\"run_name\":\"Rig campaign\"}]"
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "test result not found"
-      },
+      "parsed": [
+        {
+          "id": "<cite1>",
+          "bundle_id": "<b1>",
+          "test_result_id": "<res1>",
+          "note": "The quiet rows.",
+          "created_at": "<time@step 57>",
+          "bundle_ref": "EVD-1",
+          "bundle_title": "Noise sweep, run 3",
+          "test_case_id": "<tc1>",
+          "test_case_title": "Measure the noise floor",
+          "test_case_ref": "TC-1",
+          "run_id": "<r1>",
+          "run_name": "Rig campaign"
+        }
+      ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {

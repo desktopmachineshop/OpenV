@@ -81,7 +81,11 @@ Per-artifact activity feed: `artifact_id`, `message`, `is_auto_entry`
 
 ### baselines
 Implemented (not "future"): `project_id`, `name`, full project `snapshot`
-JSONB, `created_by`.
+JSONB, `created_by`. The snapshot is the JSON export (artifacts, links,
+attachment metadata but no files, the product profile) with the attribute
+definitions in effect when it was captured (`attribute_definitions`,
+absent from a baseline captured before they were kept). A delete is the
+project owner's and publishes `baseline.deleted`.
 
 ### templates
 Project templates: `template_key` (unique; built-ins), `name`, `snapshot`

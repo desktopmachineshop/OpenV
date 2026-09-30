@@ -503,7 +503,7 @@
         }
       },
       "notes": [
-        "the file is stored as UPLOADS_DIR/<random uuid>_<uploaded name> (I16); the figure is served as <figure ref><extension>"
+        "the file is stored as UPLOADS_DIR/<random uuid>_<uploaded name> (I16); the figure is served as <figure ref><extension>; the artifact takes a new version, through an update that changes nothing it says (fixed under R7, REQ-4: an upload left the artifact's version as it was)"
       ],
       "status": 201,
       "content_type": "application/json",
@@ -1260,7 +1260,7 @@
     },
     {
       "n": 32,
-      "title": "REQ-1 after a new figure version and a rename: version 3",
+      "title": "REQ-1 after an upload, a new figure version and a rename: version 4",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}",
       "request": {
@@ -1268,7 +1268,7 @@
         "path": "/api/v1/artifacts/<req>"
       },
       "notes": [
-        "an upload of a new figure does not version the artifact; see the artifact restore below, which answers version 4 after four more uploads"
+        "each takes the artifact to a new version; see the artifact restore below, which answers version 9 after four more uploads"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -1277,7 +1277,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
+        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1292,7 +1292,7 @@
         "attributes": {
           "status": "draft"
         },
-        "version": 3,
+        "version": 4,
         "valid_from": "<time@step 30>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
@@ -1570,7 +1570,7 @@
     },
     {
       "n": 40,
-      "title": "REQ-1 after the restore: still version 3",
+      "title": "REQ-1 after the restore: still version 4",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}",
       "request": {
@@ -1584,7 +1584,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
+        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1599,7 +1599,7 @@
         "attributes": {
           "status": "draft"
         },
-        "version": 3,
+        "version": 4,
         "valid_from": "<time@step 30>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
@@ -2697,7 +2697,7 @@
     },
     {
       "n": 66,
-      "title": "restore REQ-1 to its version 1: the restore draws it a new ref, REQ-3",
+      "title": "restore REQ-1 to its version 1: it keeps its ref, REQ-1",
       "actor": "owner",
       "route": "POST /api/v1/artifacts/{id}/restore",
       "request": {
@@ -2718,14 +2718,14 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 66>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 66>\"}"
+        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":9,\"valid_from\":\"<time@step 66>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 66>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<req>",
         "project_id": "<project>",
         "type": "requirement",
-        "ref": "REQ-3",
+        "ref": "REQ-1",
         "title": "Show the wiring",
         "body": "The system shall show its wiring diagram.",
         "sort_order": 1,
@@ -2733,14 +2733,27 @@
         "attributes": {
           "status": "draft"
         },
-        "version": 4,
+        "version": 9,
         "valid_from": "<time@step 66>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
         "updated_at": "<time@step 66>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "artifact.restored",
+          "actor": "user:<owner>",
+          "project": "<project>",
+          "entity": "<req>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "restored_version": "number 1",
+            "title": "string \"Show the wiring\"",
+            "version": "number 9"
+          }
+        }
+      ]
     },
     {
       "n": 67,
@@ -2780,7 +2793,7 @@
     },
     {
       "n": 68,
-      "title": "a figure uploaded after the restore: REQ-3-FIG-6",
+      "title": "a figure uploaded after the restore: REQ-1-FIG-6",
       "actor": "owner",
       "route": "POST /api/v1/attachments/upload",
       "request": {
@@ -2815,19 +2828,19 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<after>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-3-FIG-6.png\",\"original_filename\":\"after.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:19>_after.png\",\"file_size\":75,\"figure_ref\":\"REQ-3-FIG-6\",\"figure_num\":6,\"version\":1,\"created_at\":\"<time@step 68>\",\"kind\":\"image\"}"
+        "{\"id\":\"<after>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-6.png\",\"original_filename\":\"after.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:19>_after.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-6\",\"figure_num\":6,\"version\":1,\"created_at\":\"<time@step 68>\",\"kind\":\"image\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<after>",
         "artifact_id": "<req>",
-        "filename": "REQ-3-FIG-6.png",
+        "filename": "REQ-1-FIG-6.png",
         "original_filename": "after.png",
         "title": "",
         "mime_type": "image/png",
         "file_path": "<tmp>/uploads/<uuid:19>_after.png",
         "file_size": 75,
-        "figure_ref": "REQ-3-FIG-6",
+        "figure_ref": "REQ-1-FIG-6",
         "figure_num": 6,
         "version": 1,
         "created_at": "<time@step 68>",

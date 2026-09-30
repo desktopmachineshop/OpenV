@@ -11,6 +11,17 @@ http://localhost:8080/api/v1
 All requests and responses use `application/json` unless noted (attachment
 upload/download, connector bundle download, SSE streams).
 
+## Times
+
+Times are RFC 3339. A time sent with an offset as an evidence bundle's
+`captured_at`, a work item's `due_date` or an interview invite's
+`expires_at` is stored as the instant it names and read back in UTC:
+`2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`, though the
+create's own answer echoes it as sent. A workspace invitation's
+`expires_at`, which the server sets, is stored the same way. A share link's
+`expires_at` still keeps the wall clock sent and drops its offset, so send
+it in UTC.
+
 ## Authentication
 
 Every request is authenticated by the middleware in
@@ -183,20 +194,27 @@ Enforced per-handler via `internal/api/authz.go`:
   `persona artifact not found`), and a people-team granted a project and
   a work item's crew assignee the `404` `team not found`, while one the
   caller does reach in another workspace or project is refused as such
-  (`400`; a crew assignee `team belongs to a different workspace`). An
-  artifact's update and restore, which look the artifact up before their
-  guard, answer an artifact the caller cannot reach, as one no row has,
-  `404` `artifact not found`, and a crew's launch, and a work item
-  assigned to a crew, answer a caller who may not know of the crew (*Crew
-  writes*) `404` `team not found`. A worker key or run token, which
+  (`400`; a crew assignee `team belongs to a different workspace`). A
+  result's `test_case_id` outside its run's project answers `404`
+  `artifact not found`, as one no row has, whether or not the caller
+  reaches it, and before its type is read: a run verifies its own
+  project's test cases. An artifact's update and restore, which look the
+  artifact up before their guard, answer an artifact the caller cannot
+  reach, as one no row has, `404` `artifact not found`, and a crew's
+  launch, and a work item assigned to a crew, answer a caller who may not
+  know of the crew (*Crew writes*) `404` `team not found`. A worker key or
+  run token, which
   has no session, gets the workspace guard's `401`, but one of another
   workspace, at a route that looks its resource up first (a people-team, a
   workspace-wide attribute definition), gets that resource's not-found; and
   a run token polling a run outside its project (`GET
   /agent-runs/delegate/{id}`) gets `404` `agent run not found`. A caller who
   reaches the project or workspace but lacks the role a route needs gets
-  `403`. A public link's token and an account's picture are not hidden (the
-  picture: #379's decision 14, to come).
+  `403`. An account's uploaded picture is read only by the account itself,
+  a member of a workspace it is a member of and a platform admin; anyone
+  else gets `404` `user has no uploaded picture`, as for an account with no
+  picture or none at all (#379's decision 14). A public link's token is not
+  hidden: whoever holds the link opens it.
 - **Malformed ids**: an id that is not a UUID, in a path, a query or a body
   field that names something to look up, answers exactly as a well-formed id
   no row has: the same `404`, an empty list, or nothing changed; never a
@@ -205,9 +223,9 @@ Enforced per-handler via `internal/api/authz.go`:
   the guard or the id sits in the query or the body, an id no row has
   answers `404` too: an artifact's update and restore and a result's
   `test_case_id` `artifact not found`, a download's or its options'
-  `baseline_id` `baseline not found`, and a work item's crew assignee
-  (`assignee_type` `team`) `team not found`. A body field stored as a
-  reference without a lookup (a test run's `baseline_id`, a work item's
+  `baseline_id` and a test run's `baseline_id` `baseline not found`, and a
+  work item's crew assignee (`assignee_type` `team`) `team not found`. A
+  body field stored as a reference without a lookup (a work item's
   person's or agent's `assignee_id`, a launch's `work_item_id`...) still
   passes the database's refusal through as a `400` (quirk Q19), and `POST
   /projects/{id}/draft-test-cases` refuses a `requirement_ids` entry that
@@ -236,7 +254,7 @@ their own project, workers pass within their org, a workspace key up to
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address) | open |
+| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address). `400 weak_password` for a password under 8 characters, as a password change and a reset answer it; an invalid or already registered address is a `400` with no code. Sign-in's refusal stays one generic `401` whatever the password, so it never tells which accounts exist | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
@@ -248,7 +266,7 @@ their own project, workers pass within their org, a workspace key up to
 | PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
 | POST | `/api/v1/me/avatar` | Upload the account's profile picture: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes are the declared type (an image of another type is `400`), at most 2 MiB (`413` beyond). Replaces any previous picture; returns the user with `has_avatar:true` and an `avatar_url` on the API (`/api/v1/users/{id}/avatar?v=<upload time>`, relative to the API origin) that from then on outranks the identity provider's picture at sign-in | user |
 | DELETE | `/api/v1/me/avatar` | Remove the uploaded picture; returns the user with `has_avatar:false` and an empty `avatar_url` (an identity provider's picture returns at the next sign-in) | user |
-| GET | `/api/v1/users/{id}/avatar` | An account's uploaded picture (served as its stored type, `Content-Disposition: inline`, cached a day — the URL changes on every upload); `404` when none is uploaded | user |
+| GET | `/api/v1/users/{id}/avatar` | An account's uploaded picture (served as its stored type, `Content-Disposition: inline`, cached a day — the URL changes on every upload), to the account itself, a member of a workspace it is a member of, and a platform admin; `404` when none is uploaded, and the same `404` to anyone else, so the answer does not say whether the account exists or has a picture | user |
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
@@ -341,13 +359,13 @@ their own project, workers pass within their org, a workspace key up to
 | PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
 | POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token and a runner key are refused (`403`). Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
-| GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
-| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults | viewer |
+| GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`), the specification with the default content but without V&V status: the route reads no test evidence, so the status the download carries by default would be wrong here. The download routes are the supported path | viewer |
+| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults. The fields are the attribute keys the artifacts carry: a baseline that kept the attribute definitions (REQ-5) labels a defined key as its definition did and lists the defined keys before the discovered ones, while the live project and an older baseline word each key themselves; a definition no artifact carries is not a field | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
-| POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline | editor |
+| POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline (see below for what the snapshot holds); publishes `baseline.captured` `{name}` | editor |
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
-| DELETE | `/api/v1/baselines/{id}` | Delete baseline | owner |
+| DELETE | `/api/v1/baselines/{id}` | Delete baseline; publishes `baseline.deleted` `{name}`, the name it had, so the activity log records it (REQ-5). `403` for an editor or viewer, `404` `baseline not found` for one no row has | owner |
 | GET | `/api/v1/projects/{id}/share-links` | The project's share links (`docs/sharing.md`), tokens never included | owner |
 | POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `400` for another role; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
@@ -365,7 +383,17 @@ rather than removing the baseline, because a project's history must outlive
 the people in it.
 
 `GET /api/v1/baselines/{id}` returns the snapshot itself — a whole project
-export, which is close to a megabyte of JSON for a real project. It is served
+export, which is close to a megabyte of JSON for a real project. The snapshot
+is the JSON export (artifacts, links, the attachments' metadata, the product
+profile, linked artifacts) with `attribute_definitions` beside it: the
+workspace's and the project's definitions in effect when it was captured
+(REQ-5), which the live JSON export leaves out. Attachment **files** stay out
+of it; each attachment's record is kept — its name, type, size, figure
+reference and the artifact it belongs to. A snapshot captured before
+baselines kept definitions has no `attribute_definitions` and reads as it
+always did: its ReqIF download types no attribute as an enumeration. The
+open-source showcase publishes a baseline's snapshot without its
+definitions, as a live public link carries none. It is served
 gzipped to any client that offers it (see `docs/operations.md`), but a client
 should still show progress while it loads rather than rendering an empty
 project.
@@ -399,8 +427,11 @@ project.
   values so hard line breaks survive the round trip.
 - **Downloads** (`internal/domain/downloads`, `docs/reports.md`): every
   `/download/{format}` reads the same query. `baseline_id` picks a snapshot
-  (`404` `baseline not found` for one no row has or of another project, as
-  the report answers it);
+  (`404` `baseline not found` for one no row has, a malformed id or another
+  project's, as every route that takes a baseline answers it: the options,
+  the report, the V&V reads and report, the quality report, the impact
+  read, the AI map, a baseline's read, diff and delete, and the diff's
+  `against`; `/export` takes none);
   `sections`, `types`, `owners` (a comma-separated list of owner names: only
   the artifacts whose `owner` attribute is one of them, plus the headings,
   so one party's share of a project can be handed over on its own — REQ-148),
@@ -409,7 +440,15 @@ project.
   `requirements-review`, `test-planning`, `vv`), `toc`, `traceability`,
   `figures`, `vv`, `results` (`0|1`) and `fields` (`all`, `none`, or a
   comma-separated list of attribute keys); an explicit parameter wins over
-  the template. Any attachment category turns the response into a zip
+  the template. Each requirement's V&V status is in a document by default
+  (REQ-6; `vv=0` leaves it out); the test results are not (`results=1`).
+  The ReqIF download types an enum attribute as an enumeration by the
+  attribute definitions in effect, from the same function the ReqIF export
+  takes them from, so the two documents type alike; a baseline's is typed by
+  the definitions it kept. As in the export, a value that is not in its
+  enum attribute's list, such as one left behind when the list was edited,
+  is left out of the file. A baseline's PDF and Word documents name its
+  fields as its options do. Any attachment category turns the response into a zip
   holding the document and the files. The cover states whether the
   document is a named baseline (with its id and capture time) or the live
   project at the export time, and shows the workspace logo when one is set.
@@ -443,16 +482,16 @@ Every artifact carries two identifiers, and they answer different questions:
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
 | PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version); `404` `artifact not found` for an artifact no row has or the caller cannot reach | editor |
 | DELETE | `/api/v1/artifacts/{id}` | Soft-delete (history retained) | editor |
-| GET | `/api/v1/artifacts/{id}/versions` | Version history | viewer |
-| POST | `/api/v1/artifacts/{id}/restore` | Restore an older version; `404` `artifact not found` as for an update | editor |
-| GET | `/api/v1/artifacts/{id}/links` | Links per artifact version | viewer |
+| GET | `/api/v1/artifacts/{id}/versions` | Version history, newest first. A deleted artifact's stays readable: the guard asks the project of its versions, so the project's viewers read it after the delete (REQ-4); an id no version has, or one in a project the caller cannot reach, answers `404` `project not found` | viewer |
+| POST | `/api/v1/artifacts/{id}/restore` | Restore an older version `{version}` as a new one. The artifact keeps its ref, as every version does (a restore that brings back a type with another prefix draws a new one, as a retype does), and the restore publishes `artifact.restored` `{artifact_type, title, version, restored_version}`. `404` `artifact version not found` for a version the artifact never had; `404` `artifact not found` as for an update | editor |
+| GET | `/api/v1/artifacts/{id}/links` | Links per artifact version: `?version=N` reads that version's links, a deleted artifact's among them, as its versions are read; without it, the live links | viewer |
 | POST | `/api/v1/links` | Create traceability link. A link may cross projects: the caller needs editor rights on both ends' projects, except for `refines` (the flow-down link, `docs/flow-down.md`), which needs editor rights on the source's project and viewer rights on the target's | editor |
 | GET | `/api/v1/links` | List links (`?project_id=`): every link that touches the project, from either end, so a flow-down link written from a child project is seen by the parent too | viewer |
 | GET | `/api/v1/links/{id}` | Get link | viewer |
 | PUT | `/api/v1/links/{id}` | Update link | editor |
 | PUT | `/api/v1/links/{id}/confirm` | Clear the suspect flag: an editor vouches that the trace still holds after an artifact at one end changed. Idempotent — confirming a link that is not suspect changes nothing. Refused `403` for a proposal-mode agent run rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag exists to trigger | editor |
 | DELETE | `/api/v1/links/{id}` | Delete link | editor |
-| POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result | editor |
+| POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result. A figure takes its artifact to a new version, as a new figure version and a rename do (see Figures) | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata (`title` is the name a member gave the figure, empty when none; readers fall back to `original_filename`) | viewer |
 | PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157) | editor |
 | GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
@@ -515,6 +554,10 @@ under `documents`, `models` or `data` rather than `figures`.
   needs a file of its own.
 - An artifact with no stable reference yields no figure reference rather than a
   bare `FIG-1` that would collide once the artifact got one.
+
+Adding a figure is an edit of the artifact that carries it: the upload takes
+the artifact to a new version (REQ-4), through the same attribute-free update
+as below, and writes the figure's note to its feed.
 
 Uploading a **new version** keeps the figure's reference and supersedes its
 file, and may change its format — a sketch replaced by the real drawing — so
@@ -773,14 +816,14 @@ hidden entry is out of every list and cannot be voted for either.
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/profile` | Product profile (vision, users, constraints) | viewer |
 | PUT | `/api/v1/projects/{id}/profile` | Update product profile | editor |
-| POST | `/api/v1/projects/{id}/test-runs` | Create test run | editor |
+| POST | `/api/v1/projects/{id}/test-runs` | Create test run. A `baseline_id` names one of the project's baselines: one no row has, a malformed id or another project's answers `404` `baseline not found`, after the project guard and the body's decode, and no run is created | editor |
 | GET | `/api/v1/projects/{id}/test-runs` | List test runs | viewer |
 | GET | `/api/v1/test-runs/{id}` | Test run details | viewer |
 | PUT | `/api/v1/test-runs/{id}` | Update test run | editor |
-| DELETE | `/api/v1/test-runs/{id}` | Delete test run | editor |
-| POST | `/api/v1/test-runs/{id}/results` | Record/overwrite a test result; `404` `artifact not found` for a `test_case_id` no artifact has | editor |
+| DELETE | `/api/v1/test-runs/{id}` | Delete a test run that holds no result. `409` for one that holds results, which are kept (REQ-13): `a test run that holds results is kept: complete or abort it instead of deleting it` for a run in progress, and `a test run that holds results is kept: this one is already completed` (or `aborted`) for a closed one | editor |
+| POST | `/api/v1/test-runs/{id}/results` | Record a test result `{test_case_id, status, notes?, evidence?}`. Recording a case again adds a result with an id of its own rather than overwriting the earlier one, which stays in the run's history; the one recorded last is the case's current result wherever a result is read, its times always after those of the result it supersedes, an omitted `evidence` carries the current one's, and the current one's evidence citations move to it (REQ-13, REQ-121). `404` `artifact not found` for a `test_case_id` no artifact of the run's project has; `409` `this test run is completed; only in-progress runs accept new results` (or `aborted`) for a closed run | editor |
 | POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run | editor |
-| GET | `/api/v1/test-runs/{id}/results` | List results | viewer |
+| GET | `/api/v1/test-runs/{id}/results` | The run's current result per test case, the latest recorded first; `?history=true` lists every result recorded in the run, those later results superseded included, newest first | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
@@ -891,6 +934,9 @@ seats, period end, cancel-at-period-end, grandfathered, synced-at). Provider
 object ids never reach a client. A refresh reads from the provider and can
 grant nothing it does not hold; a provider failure is `503` with
 `code: "billing_upstream"` and `Retry-After`, the workspace left as it was.
+A `session_id` the provider does not know is its answer, not a failure:
+`404` *checkout not found*, with no `Retry-After`, the workspace left as it
+was.
 The limits response likewise carries `entitled_plan`, `plan_status` and
 `grandfathered`, so a member can see there is a payment problem without
 seeing anything about money. Each flag (`hosted_automation`, `teams`,

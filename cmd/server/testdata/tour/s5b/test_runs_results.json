@@ -226,7 +226,7 @@
     },
     {
       "n": 6,
-      "title": "create a run whose baseline_id is not a UUID: the driver's text (Q19)",
+      "title": "create a run whose baseline_id is not a UUID: 404, as a baseline no row has",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/test-runs",
       "request": {
@@ -237,25 +237,28 @@
         ],
         "body": "{\"name\":\"Bad baseline\",\"baseline_id\":\"not-a-uuid\"}"
       },
-      "status": 400,
+      "notes": [
+        "fixed under R7 (#379's decision on REQ-6): it answered 400 with the driver's text (Q19)"
+      ],
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 67,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"pq: invalid input syntax for type uuid: \\\"not-a-uuid\\\"\"}"
+        "{\"error\":\"baseline not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "pq: invalid input syntax for type uuid: \"not-a-uuid\""
+        "error": "baseline not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 7,
-      "title": "create a run whose baseline_id no baseline has: accepted, test_runs.baseline_id has no foreign key",
+      "title": "create a run whose baseline_id no baseline has: 404 baseline not found",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/test-runs",
       "request": {
@@ -266,27 +269,21 @@
         ],
         "body": "{\"name\":\"Phantom baseline\",\"baseline_id\":\"<phantom>\"}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "notes": [
+        "fixed under R7 (#379's decision on REQ-6): it was accepted, since test_runs.baseline_id has no foreign key and nothing looked the baseline up"
+      ],
+      "status": 404,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"in-progress\",\"started_at\":\"<time@step 7>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}"
+        "{\"error\":\"baseline not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<run_phantom_baseline>",
-        "project_id": "<p>",
-        "name": "Phantom baseline",
-        "description": "",
-        "baseline_id": "<phantom>",
-        "status": "in-progress",
-        "started_at": "<time@step 7>",
-        "created_by": "<owner>",
-        "created_at": "<time@step 7>",
-        "updated_at": "<time@step 7>"
+        "error": "baseline not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -483,7 +480,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"in-progress\",\"started_at\":\"<time@step 8>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"in-progress\",\"started_at\":\"<time@step 7>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
+        "[{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"in-progress\",\"started_at\":\"<time@step 8>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"in-progress\",\"started_at\":\"<time@before step 8>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@before step 8>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -499,16 +496,16 @@
           "updated_at": "<time@step 8>"
         },
         {
-          "id": "<run_phantom_baseline>",
+          "id": "<run_baselined>",
           "project_id": "<p>",
-          "name": "Phantom baseline",
+          "name": "Baselined run",
           "description": "",
-          "baseline_id": "<phantom>",
+          "baseline_id": "<bp>",
           "status": "in-progress",
-          "started_at": "<time@step 7>",
+          "started_at": "<time@before step 8>",
           "created_by": "<owner>",
-          "created_at": "<time@step 7>",
-          "updated_at": "<time@step 7>"
+          "created_at": "<time@before step 8>",
+          "updated_at": "<time@before step 8>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
@@ -845,7 +842,7 @@
     },
     {
       "n": 25,
-      "title": "re-record the automated case with no evidence field: the row's id and created_at stay, the evidence too",
+      "title": "re-record the automated case with no evidence field: a result of its own beside the first, which carries the current one's evidence",
       "actor": "owner",
       "route": "POST /api/v1/test-runs/{id}/results",
       "request": {
@@ -856,6 +853,9 @@
         ],
         "body": "{\"test_case_id\":\"<tc_auto>\",\"status\":\"blocked\",\"notes\":\"Rig offline\"}"
       },
+      "notes": [
+        "fixed under R7 (OpenV REQ-13): the upsert wrote over the first result, keeping its id and created_at"
+      ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
@@ -863,11 +863,11 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"blocked\",\"notes\":\"Rig offline\",\"evidence\":[\"figure-1\"],\"executed_at\":\"<time@step 25>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 25>\"}"
+        "{\"id\":\"<res_auto_blocked>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"blocked\",\"notes\":\"Rig offline\",\"evidence\":[\"figure-1\"],\"executed_at\":\"<time@step 25>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<res_auto>",
+        "id": "<res_auto_blocked>",
         "run_id": "<r1>",
         "test_case_id": "<tc_auto>",
         "test_case_version": 2,
@@ -878,7 +878,7 @@
         ],
         "executed_at": "<time@step 25>",
         "executed_by": "<owner>",
-        "created_at": "<time@step 23>",
+        "created_at": "<time@step 25>",
         "updated_at": "<time@step 25>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -887,7 +887,7 @@
           "type": "testrun.recorded",
           "actor": "user:<owner>",
           "project": "<p>",
-          "entity": "<res_auto>",
+          "entity": "<res_auto_blocked>",
           "payload": {
             "run_id": "string \"<r1>\"",
             "status": "string \"blocked\"",
@@ -916,11 +916,11 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 26>\"}"
+        "{\"id\":\"<res_auto_pass>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 26>\",\"updated_at\":\"<time@step 26>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<res_auto>",
+        "id": "<res_auto_pass>",
         "run_id": "<r1>",
         "test_case_id": "<tc_auto>",
         "test_case_version": 2,
@@ -929,7 +929,7 @@
         "evidence": [],
         "executed_at": "<time@step 26>",
         "executed_by": "<owner>",
-        "created_at": "<time@step 23>",
+        "created_at": "<time@step 26>",
         "updated_at": "<time@step 26>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -938,7 +938,7 @@
           "type": "testrun.recorded",
           "actor": "user:<owner>",
           "project": "<p>",
-          "entity": "<res_auto>",
+          "entity": "<res_auto_pass>",
           "payload": {
             "run_id": "string \"<r1>\"",
             "status": "string \"pass\"",
@@ -949,7 +949,7 @@
     },
     {
       "n": 27,
-      "title": "record Q's test case in a run of P: accepted, nothing ties the case to the run's project",
+      "title": "record Q's test case in a run of P: 404, as a test case no artifact has",
       "actor": "owner",
       "route": "POST /api/v1/test-runs/{id}/results",
       "request": {
@@ -961,45 +961,23 @@
         "body": "{\"test_case_id\":\"<tc_q>\",\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. <end> & done\"}"
       },
       "notes": [
-        "its notes make every list of R1's results long enough to be compressed"
+        "fixed under R7 (#379 bug 5): it was accepted, since nothing tied the case to the run's project; a test case outside it is answered as one no row has, before its type is read"
       ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 404,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_q>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_q>\",\"test_case_version\":1,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@step 27>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 27>\",\"updated_at\":\"<time@step 27>\"}"
+        "{\"error\":\"artifact not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<res_q>",
-        "run_id": "<r1>",
-        "test_case_id": "<tc_q>",
-        "test_case_version": 1,
-        "status": "not-run",
-        "notes": "The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \u003cend\u003e \u0026 done",
-        "evidence": [],
-        "executed_at": "<time@step 27>",
-        "executed_by": "<owner>",
-        "created_at": "<time@step 27>",
-        "updated_at": "<time@step 27>"
+        "error": "artifact not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "testrun.recorded",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<res_q>",
-          "payload": {
-            "run_id": "string \"<r1>\"",
-            "status": "string \"not-run\"",
-            "test_case_id": "string \"<tc_q>\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 28,
@@ -1017,25 +995,25 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<res_q>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_q>\",\"test_case_version\":1,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@step 27>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 27>\",\"updated_at\":\"<time@step 27>\"},{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 26>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
+        "[{\"id\":\"<res_rig>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_rig>\",\"test_case_version\":2,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@before step 28>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@before step 28>\",\"updated_at\":\"<time@before step 28>\"},{\"id\":\"<res_auto_pass>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 26>\",\"updated_at\":\"<time@step 26>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<res_q>",
+          "id": "<res_rig>",
           "run_id": "<r1>",
-          "test_case_id": "<tc_q>",
-          "test_case_version": 1,
+          "test_case_id": "<tc_rig>",
+          "test_case_version": 2,
           "status": "not-run",
           "notes": "The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \u003cend\u003e \u0026 done",
           "evidence": [],
-          "executed_at": "<time@step 27>",
+          "executed_at": "<time@before step 28>",
           "executed_by": "<owner>",
-          "created_at": "<time@step 27>",
-          "updated_at": "<time@step 27>"
+          "created_at": "<time@before step 28>",
+          "updated_at": "<time@before step 28>"
         },
         {
-          "id": "<res_auto>",
+          "id": "<res_auto_pass>",
           "run_id": "<r1>",
           "test_case_id": "<tc_auto>",
           "test_case_version": 2,
@@ -1044,7 +1022,7 @@
           "evidence": [],
           "executed_at": "<time@step 26>",
           "executed_by": "<owner>",
-          "created_at": "<time@step 23>",
+          "created_at": "<time@step 26>",
           "updated_at": "<time@step 26>"
         },
         {
@@ -1083,25 +1061,25 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<res_q>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_q>\",\"test_case_version\":1,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@step 27>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 27>\",\"updated_at\":\"<time@step 27>\"},{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 26>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
+        "[{\"id\":\"<res_rig>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_rig>\",\"test_case_version\":2,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@before step 28>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@before step 28>\",\"updated_at\":\"<time@before step 28>\"},{\"id\":\"<res_auto_pass>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 26>\",\"updated_at\":\"<time@step 26>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<res_q>",
+          "id": "<res_rig>",
           "run_id": "<r1>",
-          "test_case_id": "<tc_q>",
-          "test_case_version": 1,
+          "test_case_id": "<tc_rig>",
+          "test_case_version": 2,
           "status": "not-run",
           "notes": "The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \u003cend\u003e \u0026 done",
           "evidence": [],
-          "executed_at": "<time@step 27>",
+          "executed_at": "<time@before step 28>",
           "executed_by": "<owner>",
-          "created_at": "<time@step 27>",
-          "updated_at": "<time@step 27>"
+          "created_at": "<time@before step 28>",
+          "updated_at": "<time@before step 28>"
         },
         {
-          "id": "<res_auto>",
+          "id": "<res_auto_pass>",
           "run_id": "<r1>",
           "test_case_id": "<tc_auto>",
           "test_case_version": 2,
@@ -1110,7 +1088,7 @@
           "evidence": [],
           "executed_at": "<time@step 26>",
           "executed_by": "<owner>",
-          "created_at": "<time@step 23>",
+          "created_at": "<time@step 26>",
           "updated_at": "<time@step 26>"
         },
         {
@@ -1634,11 +1612,11 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Ran the timing script: 1.0 s\",\"evidence\":[],\"executed_at\":\"<time@step 42>\",\"executed_by_agent_run_id\":\"<agent_run>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 42>\"}"
+        "{\"id\":\"<res_agent>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Ran the timing script: 1.0 s\",\"evidence\":[],\"executed_at\":\"<time@step 42>\",\"executed_by_agent_run_id\":\"<agent_run>\",\"created_at\":\"<time@step 42>\",\"updated_at\":\"<time@step 42>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<res_auto>",
+        "id": "<res_agent>",
         "run_id": "<r1>",
         "test_case_id": "<tc_auto>",
         "test_case_version": 2,
@@ -1647,7 +1625,7 @@
         "evidence": [],
         "executed_at": "<time@step 42>",
         "executed_by_agent_run_id": "<agent_run>",
-        "created_at": "<time@step 23>",
+        "created_at": "<time@step 42>",
         "updated_at": "<time@step 42>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -1656,7 +1634,7 @@
           "type": "testrun.recorded",
           "actor": "agent:<agent_run>",
           "project": "<p>",
-          "entity": "<res_auto>",
+          "entity": "<res_agent>",
           "payload": {
             "run_id": "string \"<r1>\"",
             "status": "string \"pass\"",
@@ -1739,12 +1717,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Ran the timing script: 1.0 s\",\"evidence\":[],\"executed_at\":\"<time@step 42>\",\"executed_by_agent_run_id\":\"<agent_run>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<res_q>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_q>\",\"test_case_version\":1,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@step 27>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 27>\",\"updated_at\":\"<time@step 27>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
+        "[{\"id\":\"<res_agent>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Ran the timing script: 1.0 s\",\"evidence\":[],\"executed_at\":\"<time@step 42>\",\"executed_by_agent_run_id\":\"<agent_run>\",\"created_at\":\"<time@step 42>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<res_rig>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_rig>\",\"test_case_version\":2,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@before step 28>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@before step 28>\",\"updated_at\":\"<time@before step 28>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<res_auto>",
+          "id": "<res_agent>",
           "run_id": "<r1>",
           "test_case_id": "<tc_auto>",
           "test_case_version": 2,
@@ -1753,21 +1731,21 @@
           "evidence": [],
           "executed_at": "<time@step 42>",
           "executed_by_agent_run_id": "<agent_run>",
-          "created_at": "<time@step 23>",
+          "created_at": "<time@step 42>",
           "updated_at": "<time@step 42>"
         },
         {
-          "id": "<res_q>",
+          "id": "<res_rig>",
           "run_id": "<r1>",
-          "test_case_id": "<tc_q>",
-          "test_case_version": 1,
+          "test_case_id": "<tc_rig>",
+          "test_case_version": 2,
           "status": "not-run",
           "notes": "The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \u003cend\u003e \u0026 done",
           "evidence": [],
-          "executed_at": "<time@step 27>",
+          "executed_at": "<time@before step 28>",
           "executed_by": "<owner>",
-          "created_at": "<time@step 27>",
-          "updated_at": "<time@step 27>"
+          "created_at": "<time@before step 28>",
+          "updated_at": "<time@before step 28>"
         },
         {
           "id": "<res_manual>",
@@ -1974,12 +1952,12 @@
     },
     {
       "n": 52,
-      "title": "abort the run with the phantom baseline",
+      "title": "abort the run on P's baseline",
       "actor": "owner",
       "route": "PUT /api/v1/test-runs/{id}",
       "request": {
         "method": "PUT",
-        "path": "/api/v1/test-runs/<run_phantom_baseline>",
+        "path": "/api/v1/test-runs/<run_baselined>",
         "headers": [
           "Content-Type: application/json"
         ],
@@ -1992,20 +1970,20 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"aborted\",\"started_at\":\"<time@step 7>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 52>\"}"
+        "{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"aborted\",\"started_at\":\"<time@before step 8>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<run_phantom_baseline>",
+        "id": "<run_baselined>",
         "project_id": "<p>",
-        "name": "Phantom baseline",
+        "name": "Baselined run",
         "description": "",
-        "baseline_id": "<phantom>",
+        "baseline_id": "<bp>",
         "status": "aborted",
-        "started_at": "<time@step 7>",
+        "started_at": "<time@before step 8>",
         "completed_at": "<time@step 52>",
         "created_by": "<owner>",
-        "created_at": "<time@step 7>",
+        "created_at": "<time@before step 8>",
         "updated_at": "<time@step 52>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -2042,7 +2020,7 @@
     },
     {
       "n": 54,
-      "title": "record the physical case in the completed R1: accepted, nothing checks the run's status",
+      "title": "record the physical case in the completed R1: 409, a closed run takes no result",
       "actor": "owner",
       "route": "POST /api/v1/test-runs/{id}/results",
       "request": {
@@ -2053,94 +2031,53 @@
         ],
         "body": "{\"test_case_id\":\"<tc_rig>\",\"status\":\"blocked\",\"notes\":\"Rig booked\"}"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "notes": [
+        "fixed under R7 (#379 bug 5): it was accepted, since nothing checked the run's status"
+      ],
+      "status": 409,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 81,
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_rig>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_rig>\",\"test_case_version\":2,\"status\":\"blocked\",\"notes\":\"Rig booked\",\"evidence\":[],\"executed_at\":\"<time@step 54>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 54>\",\"updated_at\":\"<time@step 54>\"}"
+        "{\"error\":\"this test run is completed; only in-progress runs accept new results\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<res_rig>",
-        "run_id": "<r1>",
-        "test_case_id": "<tc_rig>",
-        "test_case_version": 2,
-        "status": "blocked",
-        "notes": "Rig booked",
-        "evidence": [],
-        "executed_at": "<time@step 54>",
-        "executed_by": "<owner>",
-        "created_at": "<time@step 54>",
-        "updated_at": "<time@step 54>"
+        "error": "this test run is completed; only in-progress runs accept new results"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "testrun.recorded",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<res_rig>",
-          "payload": {
-            "run_id": "string \"<r1>\"",
-            "status": "string \"blocked\"",
-            "test_case_id": "string \"<tc_rig>\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 55,
-      "title": "record a result in the aborted run: accepted too",
+      "title": "record a result in the aborted run: 409 too",
       "actor": "owner",
       "route": "POST /api/v1/test-runs/{id}/results",
       "request": {
         "method": "POST",
-        "path": "/api/v1/test-runs/<run_phantom_baseline>/results",
+        "path": "/api/v1/test-runs/<run_baselined>/results",
         "headers": [
           "Content-Type: application/json"
         ],
         "body": "{\"test_case_id\":\"<tc_auto>\",\"status\":\"fail\"}"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 409,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 79,
       "kind": "json",
       "body": [
-        "{\"id\":\"<res_aborted>\",\"run_id\":\"<run_phantom_baseline>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"\",\"evidence\":[],\"executed_at\":\"<time@step 55>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 55>\",\"updated_at\":\"<time@step 55>\"}"
+        "{\"error\":\"this test run is aborted; only in-progress runs accept new results\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<res_aborted>",
-        "run_id": "<run_phantom_baseline>",
-        "test_case_id": "<tc_auto>",
-        "test_case_version": 2,
-        "status": "fail",
-        "notes": "",
-        "evidence": [],
-        "executed_at": "<time@step 55>",
-        "executed_by": "<owner>",
-        "created_at": "<time@step 55>",
-        "updated_at": "<time@step 55>"
+        "error": "this test run is aborted; only in-progress runs accept new results"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "testrun.recorded",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<res_aborted>",
-          "payload": {
-            "run_id": "string \"<run_phantom_baseline>\"",
-            "status": "string \"fail\"",
-            "test_case_id": "string \"<tc_auto>\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 56,
@@ -2158,7 +2095,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"completed\",\"started_at\":\"<time@step 8>\",\"completed_at\":\"<time@step 50>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 50>\"},{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"aborted\",\"started_at\":\"<time@step 7>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 52>\"}]"
+        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"completed\",\"started_at\":\"<time@step 8>\",\"completed_at\":\"<time@step 50>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 50>\"},{\"id\":\"<run_baselined>\",\"project_id\":\"<p>\",\"name\":\"Baselined run\",\"description\":\"\",\"baseline_id\":\"<bp>\",\"status\":\"aborted\",\"started_at\":\"<time@before step 8>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"updated_at\":\"<time@step 52>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2186,16 +2123,16 @@
           "updated_at": "<time@step 50>"
         },
         {
-          "id": "<run_phantom_baseline>",
+          "id": "<run_baselined>",
           "project_id": "<p>",
-          "name": "Phantom baseline",
+          "name": "Baselined run",
           "description": "",
-          "baseline_id": "<phantom>",
+          "baseline_id": "<bp>",
           "status": "aborted",
-          "started_at": "<time@step 7>",
+          "started_at": "<time@before step 8>",
           "completed_at": "<time@step 52>",
           "created_by": "<owner>",
-          "created_at": "<time@step 7>",
+          "created_at": "<time@before step 8>",
           "updated_at": "<time@step 52>"
         }
       ],
@@ -2232,12 +2169,40 @@
     },
     {
       "n": 58,
-      "title": "delete R1",
+      "title": "delete R1, which holds results: 409, a run with results is closed, not deleted",
       "actor": "owner",
       "route": "DELETE /api/v1/test-runs/{id}",
       "request": {
         "method": "DELETE",
         "path": "/api/v1/test-runs/<r1>"
+      },
+      "notes": [
+        "fixed under R7 (OpenV REQ-13): the run was deleted, and its results with it"
+      ],
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 81,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a test run that holds results is kept: this one is already completed\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a test run that holds results is kept: this one is already completed"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 59,
+      "title": "delete the aborted run, which holds no result: deleted",
+      "actor": "owner",
+      "route": "DELETE /api/v1/test-runs/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/test-runs/<run_baselined>"
       },
       "status": 204,
       "content_type": null,
@@ -2249,57 +2214,74 @@
       "events": []
     },
     {
-      "n": 59,
-      "title": "delete R1 again",
-      "actor": "owner",
-      "route": "DELETE /api/v1/test-runs/{id}",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/v1/test-runs/<r1>"
-      },
-      "status": 404,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 31,
-      "kind": "json",
-      "body": [
-        "{\"error\":\"test run not found\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "error": "test run not found"
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
       "n": 60,
-      "title": "R1's results once it is gone",
+      "title": "R1's results once its delete is refused: kept",
       "actor": "owner",
       "route": "GET /api/v1/test-runs/{id}/results",
       "request": {
         "method": "GET",
         "path": "/api/v1/test-runs/<r1>/results"
       },
-      "status": 404,
-      "content_type": "application/json",
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 31,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"error\":\"test run not found\"}"
+        "[{\"id\":\"<res_agent>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Ran the timing script: 1.0 s\",\"evidence\":[],\"executed_at\":\"<time@step 42>\",\"executed_by_agent_run_id\":\"<agent_run>\",\"created_at\":\"<time@step 42>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<res_rig>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_rig>\",\"test_case_version\":2,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@before step 28>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@before step 28>\",\"updated_at\":\"<time@before step 28>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "test run not found"
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "parsed": [
+        {
+          "id": "<res_agent>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_auto>",
+          "test_case_version": 2,
+          "status": "pass",
+          "notes": "Ran the timing script: 1.0 s",
+          "evidence": [],
+          "executed_at": "<time@step 42>",
+          "executed_by_agent_run_id": "<agent_run>",
+          "created_at": "<time@step 42>",
+          "updated_at": "<time@step 42>"
+        },
+        {
+          "id": "<res_rig>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_rig>",
+          "test_case_version": 2,
+          "status": "not-run",
+          "notes": "The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \u003cend\u003e \u0026 done",
+          "evidence": [],
+          "executed_at": "<time@before step 28>",
+          "executed_by": "<owner>",
+          "created_at": "<time@before step 28>",
+          "updated_at": "<time@before step 28>"
+        },
+        {
+          "id": "<res_manual>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_manual>",
+          "test_case_version": 2,
+          "status": "fail",
+          "notes": "Wording unclear",
+          "evidence": [],
+          "executed_at": "<time@step 24>",
+          "executed_by": "<owner>",
+          "created_at": "<time@step 24>",
+          "updated_at": "<time@step 24>"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 61,
-      "title": "P's runs after the delete",
+      "title": "P's runs after the deletes: R1 kept, the aborted run gone",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/test-runs",
       "request": {
@@ -2313,7 +2295,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<run_phantom_baseline>\",\"project_id\":\"<p>\",\"name\":\"Phantom baseline\",\"description\":\"\",\"baseline_id\":\"<phantom>\",\"status\":\"aborted\",\"started_at\":\"<time@step 7>\",\"completed_at\":\"<time@step 52>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 52>\"}]"
+        "[{\"id\":\"<r_worker>\",\"project_id\":\"<p>\",\"name\":\"Runner run\",\"description\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"status\":\"completed\",\"started_at\":\"<time@step 31>\",\"completed_at\":\"<time@step 33>\",\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 33>\"},{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"name\":\"Tour run \\u003c1\\u003e \\u0026 \\\"one\\\"\",\"description\":\"The first run: \\u003cb\\u003eall\\u003c/b\\u003e cases\",\"status\":\"completed\",\"started_at\":\"<time@step 8>\",\"completed_at\":\"<time@step 50>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 50>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2329,17 +2311,16 @@
           "updated_at": "<time@step 33>"
         },
         {
-          "id": "<run_phantom_baseline>",
+          "id": "<r1>",
           "project_id": "<p>",
-          "name": "Phantom baseline",
-          "description": "",
-          "baseline_id": "<phantom>",
-          "status": "aborted",
-          "started_at": "<time@step 7>",
-          "completed_at": "<time@step 52>",
+          "name": "Tour run \u003c1\u003e \u0026 \"one\"",
+          "description": "The first run: \u003cb\u003eall\u003c/b\u003e cases",
+          "status": "completed",
+          "started_at": "<time@step 8>",
+          "completed_at": "<time@step 50>",
           "created_by": "<owner>",
-          "created_at": "<time@step 7>",
-          "updated_at": "<time@step 52>"
+          "created_at": "<time@step 8>",
+          "updated_at": "<time@step 50>"
         }
       ],
       "gzip": {
@@ -2446,6 +2427,148 @@
           }
         }
       ]
+    },
+    {
+      "n": 64,
+      "title": "R1's history: every result recorded, the superseded ones included, the latest recorded first",
+      "actor": "owner",
+      "route": "GET /api/v1/test-runs/{id}/results",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/test-runs/<r1>/results",
+        "query": "history=true"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<res_agent>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Ran the timing script: 1.0 s\",\"evidence\":[],\"executed_at\":\"<time@step 42>\",\"executed_by_agent_run_id\":\"<agent_run>\",\"created_at\":\"<time@step 42>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<res_rig>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_rig>\",\"test_case_version\":2,\"status\":\"not-run\",\"notes\":\"The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \\u003cend\\u003e \\u0026 done\",\"evidence\":[],\"executed_at\":\"<time@before step 28>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@before step 28>\",\"updated_at\":\"<time@before step 28>\"},{\"id\":\"<res_auto_pass>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.1 s\",\"evidence\":[],\"executed_at\":\"<time@step 26>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 26>\",\"updated_at\":\"<time@step 26>\"},{\"id\":\"<res_auto_blocked>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"blocked\",\"notes\":\"Rig offline\",\"evidence\":[\"figure-1\"],\"executed_at\":\"<time@step 25>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<res_manual>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_manual>\",\"test_case_version\":2,\"status\":\"fail\",\"notes\":\"Wording unclear\",\"evidence\":[],\"executed_at\":\"<time@step 24>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"},{\"id\":\"<res_auto>\",\"run_id\":\"<r1>\",\"test_case_id\":\"<tc_auto>\",\"test_case_version\":2,\"status\":\"pass\",\"notes\":\"Answered in 1.2 s \\u003cp95\\u003e\",\"evidence\":[\"figure-1\"],\"executed_at\":\"<time@step 23>\",\"executed_by\":\"<owner>\",\"created_at\":\"<time@step 23>\",\"updated_at\":\"<time@step 23>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<res_agent>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_auto>",
+          "test_case_version": 2,
+          "status": "pass",
+          "notes": "Ran the timing script: 1.0 s",
+          "evidence": [],
+          "executed_at": "<time@step 42>",
+          "executed_by_agent_run_id": "<agent_run>",
+          "created_at": "<time@step 42>",
+          "updated_at": "<time@step 42>"
+        },
+        {
+          "id": "<res_rig>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_rig>",
+          "test_case_version": 2,
+          "status": "not-run",
+          "notes": "The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. The tour needs this answer long enough to be compressed. \u003cend\u003e \u0026 done",
+          "evidence": [],
+          "executed_at": "<time@before step 28>",
+          "executed_by": "<owner>",
+          "created_at": "<time@before step 28>",
+          "updated_at": "<time@before step 28>"
+        },
+        {
+          "id": "<res_auto_pass>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_auto>",
+          "test_case_version": 2,
+          "status": "pass",
+          "notes": "Answered in 1.1 s",
+          "evidence": [],
+          "executed_at": "<time@step 26>",
+          "executed_by": "<owner>",
+          "created_at": "<time@step 26>",
+          "updated_at": "<time@step 26>"
+        },
+        {
+          "id": "<res_auto_blocked>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_auto>",
+          "test_case_version": 2,
+          "status": "blocked",
+          "notes": "Rig offline",
+          "evidence": [
+            "figure-1"
+          ],
+          "executed_at": "<time@step 25>",
+          "executed_by": "<owner>",
+          "created_at": "<time@step 25>",
+          "updated_at": "<time@step 25>"
+        },
+        {
+          "id": "<res_manual>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_manual>",
+          "test_case_version": 2,
+          "status": "fail",
+          "notes": "Wording unclear",
+          "evidence": [],
+          "executed_at": "<time@step 24>",
+          "executed_by": "<owner>",
+          "created_at": "<time@step 24>",
+          "updated_at": "<time@step 24>"
+        },
+        {
+          "id": "<res_auto>",
+          "run_id": "<r1>",
+          "test_case_id": "<tc_auto>",
+          "test_case_version": 2,
+          "status": "pass",
+          "notes": "Answered in 1.2 s \u003cp95\u003e",
+          "evidence": [
+            "figure-1"
+          ],
+          "executed_at": "<time@step 23>",
+          "executed_by": "<owner>",
+          "created_at": "<time@step 23>",
+          "updated_at": "<time@step 23>"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 65,
+      "title": "create a run in P on Q's baseline: 404, as a baseline no row has",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/test-runs",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/test-runs",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"name\":\"Borrowed baseline\",\"baseline_id\":\"<bq>\"}"
+      },
+      "notes": [
+        "fixed under R7 (#379's decision on REQ-6): it was accepted, the run naming a baseline of another project"
+      ],
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 31,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"baseline not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "baseline not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
     }
   ],
   "uploads": [],

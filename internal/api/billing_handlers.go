@@ -36,11 +36,14 @@ func (h *Handler) registerBillingRoutes(router *mux.Router) {
 
 // writeBillingError answers a purchase-path refusal with the status and code
 // a client branches on. Anything unrecognised is the provider not answering:
-// 503 with Retry-After, the workspace left as it was.
+// 503 with Retry-After, the workspace left as it was. A checkout the
+// provider does not have is its answer, not its silence: 404 (#379's bug 19).
 func (h *Handler) writeBillingError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, orgs.ErrNotFound):
 		writeJSONError(w, http.StatusNotFound, "workspace not found")
+	case errors.Is(err, billing.ErrCheckoutNotFound):
+		writeJSONError(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, billing.ErrNotConfigured):
 		writeJSONErrorCode(w, http.StatusNotFound, err.Error(), ErrCodeBillingUnavailable)
 	case errors.Is(err, billing.ErrUnknownPlan), errors.Is(err, billing.ErrUnknownCurrency),

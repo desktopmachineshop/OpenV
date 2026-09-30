@@ -49,6 +49,7 @@ var (
 	ErrPersonalWorkspace = errors.New("a personal workspace is one person; Business is for a shared workspace")
 	ErrNoCustomer        = errors.New("this workspace has no billing customer yet")
 	ErrSessionMismatch   = errors.New("that checkout belongs to another workspace")
+	ErrCheckoutNotFound  = errors.New("checkout not found")
 )
 
 // Metadata keys written on provider objects. openv_org_id names the

@@ -244,6 +244,15 @@ func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// A run's baseline is one of its project's, answered as every route
+	// answers a baseline that does not exist (REQ-6): an id no baseline has,
+	// a malformed one and another project's are 404, and nothing is stored.
+	if req.BaselineID != nil {
+		if _, err := h.baselineService.GetProjectBaseline(projectID, *req.BaselineID); err != nil {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
+	}
 	req.ProjectID = projectID
 	run, err := h.vvService.CreateRun(req, CurrentUserID(r))
 	if err != nil {
@@ -324,7 +333,16 @@ func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.vvService.DeleteRun(id); err != nil {
-		respondInternal(w, r, "failed to delete test run", err)
+		switch {
+		case errors.Is(err, vv.ErrRunHasResults):
+			// Its results are the record REQ-13 keeps: the run is closed,
+			// not deleted.
+			writeJSONError(w, http.StatusConflict, err.Error())
+		case errors.Is(err, vv.ErrRunNotFound):
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to delete test run", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -362,9 +380,12 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusForbidden, err.Error())
 		case errors.Is(err, vv.ErrInvalidStatus), errors.Is(err, vv.ErrNotTestCase):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, vv.ErrRunClosed):
+			writeJSONError(w, http.StatusConflict, err.Error())
 		case errors.Is(err, vv.ErrRunNotFound), errors.Is(err, artifacts.ErrNotFound):
 			// The run exists (checked above); ErrNotFound here means the
-			// referenced test case id does not resolve to an artifact.
+			// referenced test case id does not resolve to an artifact of the
+			// run's project (another project's is answered as none).
 			writeJSONError(w, http.StatusNotFound, err.Error())
 		default:
 			respondInternal(w, r, "failed to record test result", err)
@@ -384,7 +405,13 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
-	results, err := h.vvService.ListResults(runID)
+	// The current result per test case; ?history=true lists every result
+	// recorded, the superseded ones included (REQ-13).
+	list := h.vvService.ListResults
+	if r.URL.Query().Get("history") == "true" {
+		list = h.vvService.ListResultHistory
+	}
+	results, err := list(runID)
 	if err != nil {
 		respondInternal(w, r, "failed to list test results", err)
 		return
@@ -839,41 +866,6 @@ func (h *Handler) noteBelongsToProject(chatterID, projectID string) bool {
 		return false
 	}
 	return h.projectIDForArtifact(entry.ArtifactID) == projectID
-}
-
-// assigneeCrewChecked answers a work item's crew assignee (assignee_type
-// "team", a crew's wire name) as the crew routes answer a crew no row has,
-// 404 `team not found`, when no crew has the id or the caller may not know
-// of it (I3), and refuses one the caller may know of in another workspace
-// than the item's project 400, as a people-team's grant does. Any other
-// assignee passes. Returns false when it has answered.
-func (h *Handler) assigneeCrewChecked(w http.ResponseWriter, r *http.Request, projectID, assigneeType string, assigneeID *string) bool {
-	if assigneeType != workitems.AssigneeTeam || assigneeID == nil {
-		return true
-	}
-	absent := missing("team not found")
-	if h.teamService == nil {
-		absent.write(w)
-		return false
-	}
-	graph, err := h.teamService.GetTeam(*assigneeID)
-	if err != nil {
-		respondError(w, r, http.StatusNotFound, "team not found", err)
-		return false
-	}
-	if !h.requireTeamVisible(w, r, graph.Team, absent) {
-		return false
-	}
-	project, err := h.projectService.GetProject(projectID)
-	if err != nil || project == nil {
-		respondError(w, r, http.StatusNotFound, "project not found", err)
-		return false
-	}
-	if graph.Team.OrgID != project.OrgID {
-		writeJSONError(w, http.StatusBadRequest, "team belongs to a different workspace")
-		return false
-	}
-	return true
 }
 
 func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {

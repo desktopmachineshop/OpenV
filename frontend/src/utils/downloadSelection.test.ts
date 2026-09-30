@@ -86,7 +86,7 @@ describe('selectAll', () => {
       figures: true,
       toc: true,
       testResults: false,
-      vvStatus: false,
+      vvStatus: true,
     });
     expect(got.allFields).toBe(true);
     expect(got.fields).toEqual([]);
@@ -107,7 +107,7 @@ describe('selectAll', () => {
       includeHeadings: true,
       attachments: [],
       template: '',
-      content: { traceability: true, figures: true, toc: true, testResults: false, vvStatus: false },
+      content: { traceability: true, figures: true, toc: true, testResults: false, vvStatus: true },
       allFields: true,
       fields: [],
     });
@@ -224,32 +224,81 @@ describe('downloadQuery', () => {
 
   it('names the preset but sends its switches as themselves', () => {
     const query = downloadQuery(toWire(selectAll(withTemplates), withTemplates));
-    // The standard preset is the server's own default, so nothing but its
-    // name travels.
-    expect(query).toBe('template=standard');
+    // The server starts from a named preset's own content, not from its
+    // defaults, so every switch travels beside the name.
+    expect(query).toBe('template=standard&traceability=1&figures=1&toc=1&results=0&vv=1&fields=all');
   });
 
   it('spells out the V&V preset as what it switches on', () => {
     const wire = toWire(applyTemplate(selectAll(withTemplates), vv, withTemplates), withTemplates);
     const params = new URLSearchParams(downloadQuery(wire));
     expect(params.get('template')).toBe('vv');
-    expect(params.get('vv')).toBe('1');
     expect(params.get('results')).toBe('1');
     expect(params.get('figures')).toBe('0');
-    // Still the default, so not worth a parameter.
-    expect(params.has('traceability')).toBe(false);
-    expect(params.has('toc')).toBe(false);
+    expect(params.get('vv')).toBe('1');
+    expect(params.get('traceability')).toBe('1');
+    expect(params.get('toc')).toBe('1');
     expect(params.get('fields')).toBe('priority,verification_status');
   });
 
+  // The server builds a named preset from the preset's content, so a box
+  // ticked or unticked after choosing one must travel even where it matches
+  // what the server does with no preset (REQ-6: V&V status).
+  it('sends V&V status ticked on a preset that leaves it out', () => {
+    const review: DownloadTemplate = {
+      key: 'requirements-review',
+      name: 'Requirements review',
+      description: 'Needs and requirements for a review board.',
+      types: ['requirement'],
+      content: {
+        template: 'requirements-review',
+        traceability: true,
+        figures: true,
+        toc: true,
+        all_fields: false,
+        fields: ['priority', 'status'],
+        test_results: false,
+        vv_status: false,
+      },
+    };
+    const presets: DownloadOptions = { ...withTemplates, templates: [standard, review, vv] };
+    const picked = applyTemplate(selectAll(presets), review, presets);
+    expect(picked.content.vvStatus).toBe(false);
+    const ticked: FormSelection = {
+      ...picked,
+      content: { ...picked.content, vvStatus: true },
+      allFields: true,
+      fields: presets.fields!.map((f) => f.key),
+    };
+    const params = new URLSearchParams(downloadQuery(toWire(ticked, presets)));
+    expect(params.get('template')).toBe('requirements-review');
+    expect(params.get('vv')).toBe('1');
+    // Every field ticked by hand is sent as every field, not left to the
+    // preset's three.
+    expect(params.get('fields')).toBe('all');
+  });
+
+  it('sends V&V status unticked on the V&V preset', () => {
+    const picked = applyTemplate(selectAll(withTemplates), vv, withTemplates);
+    const unticked: FormSelection = { ...picked, content: { ...picked.content, vvStatus: false } };
+    const params = new URLSearchParams(downloadQuery(toWire(unticked, withTemplates)));
+    expect(params.get('template')).toBe('vv');
+    expect(params.get('vv')).toBe('0');
+  });
+
   it('sends the switches a reader turned off', () => {
+    // No preset, so the server starts from its defaults and only what
+    // leaves them travels.
     const selection: FormSelection = {
-      ...selectAll(withTemplates),
+      ...selectAll(options),
       content: { traceability: false, figures: true, toc: false, testResults: false, vvStatus: false },
     };
-    const params = new URLSearchParams(downloadQuery(toWire(selection, withTemplates)));
+    const params = new URLSearchParams(downloadQuery(toWire(selection, options)));
+    expect(params.has('template')).toBe(false);
     expect(params.get('traceability')).toBe('0');
     expect(params.get('toc')).toBe('0');
+    // V&V status is on unless it is turned off, so an unticked box travels.
+    expect(params.get('vv')).toBe('0');
     expect(params.has('figures')).toBe(false);
   });
 
@@ -335,7 +384,7 @@ describe('describeSelection', () => {
       withTemplates
     );
     expect(got).toBe(
-      'Verification & Validation: the whole project, with V&V status and test results, without figures, 2 of 4 fields'
+      'Verification & Validation: the whole project, with test results, without figures, 2 of 4 fields'
     );
   });
 
@@ -350,7 +399,7 @@ describe('describeSelection', () => {
       },
       withTemplates
     );
-    expect(got).toBe('The whole project, without traceability, no fields');
+    expect(got).toBe('The whole project, without traceability or V&V status, no fields');
   });
 });
 

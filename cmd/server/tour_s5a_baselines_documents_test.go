@@ -28,7 +28,8 @@ import (
 // added, one modified, one removed, a link added and one removed), so B1
 // against live is not empty; the editor, a project editor from outside the
 // workspace, captures B3, and B3 against B1 reads the same changes the other
-// way round. Delete is owner-only. An empty project E pins the baseline
+// way round. Delete is owner-only, and published as baseline.deleted (fixed
+// under R7, REQ-5: it published nothing). An empty project E pins the baseline
 // list's null (Q14) and the empty export's nulls, and gives a baseline of
 // another project, which the scoped lookups (diff, ai-map, report) refuse as
 // not found.
@@ -37,10 +38,12 @@ import (
 // refusals); the legacy /report as PDF (live and from B1) and as DOCX, with
 // the format trimmed and lower-cased, and its refusals; it sets no workspace
 // source, so its covers lack the workspace name and the DOCX creator is
-// "OpenV". Then /download/pdf and /download/docx with the selection query:
-// the four templates, toc=0, figures=0, results=1, vv=1, fields, a baseline,
-// and attachments=figures, which answers a zip of the document and the
-// figure. A PDF or DOCX is pinned by its structure and text
+// "OpenV", and it carries no V&V status, since it reads no test evidence.
+// Then /download/pdf and /download/docx with the selection query: the
+// default content, which carries each requirement's V&V status (fixed under
+// R7, REQ-6: a document carried it only when asked), the four templates,
+// toc=0, figures=0, results=1, vv=1, fields, a baseline, and
+// attachments=figures, which answers a zip of the document and the figure. A PDF or DOCX is pinned by its structure and text
 // (tour_bodies_test.go), since its bytes carry the render time, font subsets
 // and Go's map order; the Markdown renderer drops a body's inline "<fast>",
 // pinned as it is.
@@ -244,10 +247,12 @@ func baselinesDocumentsReports(tr *tour) {
 // selection query and name the workspace on the cover.
 func baselinesDocumentsDownloads(tr *tour) {
 	owner := tr.owner
-	tr.step("download the PDF with no selection: the default content, the workspace on the cover", owner,
-		"GET /api/v1/projects/{id}/download/pdf", at("id", "{{p}}"))
-	tr.step("download the Word file with no selection", owner, "GET /api/v1/projects/{id}/download/docx",
-		at("id", "{{p}}"))
+	tr.step("download the PDF with no selection: the default content, V&V status included, the workspace on the cover",
+		owner, "GET /api/v1/projects/{id}/download/pdf", at("id", "{{p}}"),
+		note("the default content carries each requirement's V&V status, the coverage summary and the gaps "+
+			"(fixed under R7, REQ-6: only vv=1 or the vv template turned it on)"))
+	tr.step("download the Word file with no selection: V&V status included", owner,
+		"GET /api/v1/projects/{id}/download/docx", at("id", "{{p}}"))
 	tr.step("download the PDF with the requirements-review template", owner, "GET /api/v1/projects/{id}/download/pdf",
 		at("id", "{{p}}"), query("template=requirements-review"))
 	tr.step("download the PDF with the test-planning template", owner, "GET /api/v1/projects/{id}/download/pdf",
@@ -275,8 +280,8 @@ func baselinesDocumentsDelete(tr *tour, editor *tourActor) {
 	owner := tr.owner
 	tr.step("the editor deletes B2: owner only", editor, "DELETE /api/v1/baselines/{id}", at("id", "{{b2}}"),
 		note("an editor may capture a baseline (B3) but deleting one takes the project's owner"))
-	tr.step("the owner deletes B2", owner, "DELETE /api/v1/baselines/{id}", at("id", "{{b2}}"),
-		note("no event is published"))
+	tr.step("the owner deletes B2: baseline.deleted", owner, "DELETE /api/v1/baselines/{id}", at("id", "{{b2}}"),
+		note("the delete is published under the name B2 had (fixed under R7, REQ-5: no event was published)"))
 	tr.step("delete B2 again", owner, "DELETE /api/v1/baselines/{id}", at("id", "{{b2}}"),
 		note("the baseline is looked up before the guard, so an id no baseline has answers 404, not 403"))
 	tr.step("read the deleted B2", owner, "GET /api/v1/baselines/{id}", at("id", "{{b2}}"))

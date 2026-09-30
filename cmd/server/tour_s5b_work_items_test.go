@@ -134,8 +134,8 @@ func workItemsTour(tr *tour) {
 	o := tr.owner
 	viewer, outsider := workItemsSeed(tr)
 	tr.keep("2026-01-15T09:30:00+01:00", "a due date the tour sends with an offset, which the create echoes as sent")
-	tr.keep("2026-01-15T09:30:00Z", "that due date read back: due_date is a TIMESTAMP without a time zone, so the "+
-		"offset was dropped and the wall clock sent comes back with Z")
+	tr.keep("2026-01-15T08:30:00Z", "that due date read back: the instant sent, in UTC (a TIMESTAMPTZ since "+
+		"migration 0050; a TIMESTAMP dropped the offset and the wall clock sent came back with Z)")
 	tr.keep("2026-02-01T00:00:00Z", "a due date the tour sends in UTC")
 
 	// Creating, in the handler's order: the guard, the decode, the source
@@ -203,7 +203,9 @@ func workItemsTour(tr *tour) {
 
 	// Reading one item: the lookup, then the guard.
 	tr.step("read the item raised from the note: {activity, item}, keys sorted; the assigned activity; the due "+
-		"date read back as the wall clock sent, with Z", o, "GET /api/v1/work-items/{id}", at("id", "{{w_note}}"))
+		"date read back as the instant sent, in UTC", o, "GET /api/v1/work-items/{id}", at("id", "{{w_note}}"),
+		note("fixed under R7 (#379 bug 4): the TIMESTAMP column kept the wall clock sent and dropped its offset, "+
+			"so the instant moved by the offset"))
 	tr.step("read an item with no activity: activity null", o, "GET /api/v1/work-items/{id}", at("id", "{{w_first}}"))
 	tr.step("the viewer reads an item", viewer, "GET /api/v1/work-items/{id}", at("id", "{{w_note}}"))
 	tr.step("the outsider reads an item: the item found, then the guard", outsider, "GET /api/v1/work-items/{id}",

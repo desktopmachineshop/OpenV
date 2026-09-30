@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -340,6 +341,11 @@ func TestOpenSourceListingTakesBaselinedProjectsOfOpenSourceWorkspaces(t *testin
 	reviewed.LinkedArtifacts = []*exports.LinkedArtifact{{
 		ID: "x1", ProjectID: "q1", ProjectName: "ACME Motor Program", Ref: "REQ-7", Type: "requirement", Title: "Torque from vendor X", Status: "draft",
 	}}
+	// A baseline keeps the attribute definitions in effect (REQ-5), the
+	// workspace's among them, which the showcase does not publish.
+	workspace := "o1"
+	reviewed.AttributeDefs = []*attributes.Definition{{ID: "d1", OrgID: &workspace, Key: "supplier_margin",
+		Label: "Supplier margin", DataType: attributes.DataTypeText}}
 	review, _ := json.Marshal(reviewed)
 	now := time.Now()
 	h.baselineService = baselines.NewService(&shareBaselineRepo{rows: []*baselines.Baseline{
@@ -355,7 +361,7 @@ func TestOpenSourceListingTakesBaselinedProjectsOfOpenSourceWorkspaces(t *testin
 	// the other workspace's project and requirement.
 	published := func(what, body string) {
 		t.Helper()
-		for _, private := range []string{"Renamed", "roadmap", "ACME", "vendor X"} {
+		for _, private := range []string{"Renamed", "roadmap", "ACME", "vendor X", "supplier_margin", "attribute_definitions"} {
 			if strings.Contains(body, private) {
 				t.Errorf("%s publishes %q: %s", what, private, body)
 			}
