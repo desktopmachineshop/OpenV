@@ -369,11 +369,17 @@ the Phase 3 consolidations that give quirks their names.
 
 - **Where:** `FRONTEND_URL`, then `PUBLIC_URL`, then
   `http://localhost:3000` for email links and the handler
-  (`cmd/server/main.go:539`, `:825`); `FRONTEND_URL`, then
+  (`cmd/server/main.go:538`, `:824`); `FRONTEND_URL`, then
   `http://localhost:3000` for the Google and OIDC sign-in configurations
-  (`:739`, `:761`). The report service reads `UPLOADS_DIR` with
-  `os.Getenv` (`internal/domain/reports/report.go:733`), not the server's
-  `./uploads` default (`cmd/server/main.go:139`).
+  (`:738`, `:760`). The report service reads `UPLOADS_DIR` with
+  `os.Getenv` (`internal/domain/reports/report.go:735`), not the server's
+  `./uploads` default (`cmd/server/main.go:141`). Both reads trim the
+  value, as every setting but a credential has been read since the R7 fix
+  of #379's question 15 (`internal/envparse`), so spaces round it do not
+  send the two to different directories; the quirk is the missing default,
+  not the spaces. The lines are as that fix left them, each one or two from
+  `863b470`'s (`main.go:539`, `:825`, `:739`, `:761` and `:139`, and
+  `report.go:733`).
 - **Pinned by, named as:** the S5c tour for the two chains; S8's env
   inventory for both reads of each variable; X10 keeps distinct fields
   *(planned)*. Pain point boot-3.

@@ -1,7 +1,11 @@
 package api
 
 import (
+	"bytes"
+	"log"
+	"log/slog"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -252,5 +256,120 @@ func TestClientIPTrustFromEnv(t *testing.T) {
 	r.Header.Set("CF-Connecting-IP", "198.51.100.42")
 	if got := clientIP(r); got != "198.51.100.42" {
 		t.Fatalf("clientIP ignored %s: %q, want 198.51.100.42", envClientIPHeader, got)
+	}
+}
+
+// A rate limit's settings follow internal/envparse's rule (#379, question
+// 15): a refill of Inf used to parse as +Inf, which refilled every bucket at
+// once and switched the limit off, and a burst with spaces round it was
+// ignored. Now Inf keeps the default refill, so the limit still throttles,
+// and the burst is trimmed.
+func TestRateLimiterFromEnvKeepsThrottlingOnAnInfiniteRefill(t *testing.T) {
+	const burstVar, refillVar = "OPENV_TEST_ONLY_BURST", "OPENV_TEST_ONLY_REFILL_PER_HOUR"
+	for _, refill := range []string{"Inf", "+Inf", "Infinity", "NaN", "0", "-1"} {
+		t.Setenv(burstVar, " 2 ")
+		t.Setenv(refillVar, refill)
+		clock := newFakeClock()
+		l := withClock(newRateLimiterFromEnv(burstVar, refillVar, 5, 20), clock)
+		if l.burst != 2 || l.refillPerHour != 20 {
+			t.Errorf("burst %q, refill %q: burst %v, refill %v; want 2 and the default 20", " 2 ", refill, l.burst, l.refillPerHour)
+		}
+		l.allow("k")
+		l.allow("k")
+		clock.advance(time.Second)
+		if ok, _ := l.allow("k"); ok {
+			t.Errorf("refill %q: a third request a second after a burst of 2 was allowed, so the limit is off", refill)
+		}
+	}
+	// A finite rate in any float form still counts.
+	t.Setenv(refillVar, "1e3")
+	if l := newRateLimiterFromEnv(burstVar, refillVar, 5, 20); l.refillPerHour != 1000 {
+		t.Errorf("refill 1e3 = %v, want 1000", l.refillPerHour)
+	}
+}
+
+// OPENV_TRUST_PROXY is a boolean like every other (#379, question 15): true
+// in any case declares the one trusted hop that 1 does, where only the exact
+// text 1 used to, and a malformed value, or a hop count that is not a whole
+// number above 0, declares nothing.
+func TestClientIPTrustProxyIsABoolean(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "192.0.2.7:5511"
+	r.Header.Set("X-Forwarded-For", "203.0.113.9")
+	for value, want := range map[string]string{
+		"true": "203.0.113.9", "TRUE": "203.0.113.9", " 1 ": "203.0.113.9",
+		"false": "192.0.2.7", "0": "192.0.2.7", "yes": "192.0.2.7", "": "192.0.2.7",
+	} {
+		t.Setenv(envTrustProxy, value)
+		if got := clientIP(r); got != want {
+			t.Errorf("clientIP with %s=%q = %q, want %q", envTrustProxy, value, got, want)
+		}
+	}
+	t.Setenv(envTrustProxy, "")
+	for _, hops := range []string{"0", "-1", "two", "1.5"} {
+		t.Setenv(envTrustedHops, hops)
+		if got := clientIP(r); got != "192.0.2.7" {
+			t.Errorf("clientIP with %s=%q = %q, want the peer 192.0.2.7", envTrustedHops, hops, got)
+		}
+	}
+}
+
+// A setting a request reads on every call is read once by NewHandler too, so
+// a malformed one is named in the boot log, as #379's question 15 decided,
+// rather than first when a request reads it: only sign-in, registration,
+// SSO, password reset, invitations and interviews read the proxy trust, so a
+// mistyped hop count, which leaves every client behind the proxy on the
+// proxy's own rate-limit bucket, could go unreported for as long as nobody
+// signed in. The requests that read it again add no second warning.
+func TestNewHandlerNamesAMalformedPerRequestSettingAtBoot(t *testing.T) {
+	// Values no other test sets: internal/envparse warns once per variable
+	// and value for the life of the process.
+	const tag = " (TestNewHandlerNamesAMalformedPerRequestSettingAtBoot)"
+	malformed := map[string]string{
+		envTrustedHops:   "two" + tag,
+		envTrustProxy:    "yes" + tag,
+		envMaxUploadMB:   "25 MB" + tag,
+		envMaxEvidenceMB: "-1" + tag,
+	}
+	for name, value := range malformed {
+		t.Setenv(name, value)
+	}
+	// slog.SetDefault also points the log package at the new handler, and
+	// setting the old one back does not undo that, so both are restored.
+	var logged bytes.Buffer
+	prev, prevOut, prevFlags := slog.Default(), log.Writer(), log.Flags()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
+	t.Cleanup(func() {
+		slog.SetDefault(prev)
+		log.SetOutput(prevOut)
+		log.SetFlags(prevFlags)
+	})
+
+	NewHandler(HandlerDeps{})
+	atBoot := logged.String()
+	for name := range malformed {
+		if n := strings.Count(atBoot, "var="+name+" "); n != 1 {
+			t.Errorf("NewHandler named %s %d times, want once; log:\n%s", name, n, atBoot)
+		}
+	}
+	if strings.Contains(atBoot, tag) {
+		t.Errorf("a warning printed a value:\n%s", atBoot)
+	}
+
+	// The per-request reads still happen per request, and stay quiet.
+	r := httptest.NewRequest("POST", "/api/v1/auth/login", nil)
+	r.RemoteAddr = "192.0.2.7:5511"
+	r.Header.Set("X-Forwarded-For", "203.0.113.9")
+	if got := clientIP(r); got != "192.0.2.7" {
+		t.Errorf("clientIP = %q, want the peer 192.0.2.7: a malformed trust declares no proxy", got)
+	}
+	if _, ok := envUploadMB(); ok {
+		t.Errorf("envUploadMB took a malformed %s", envMaxUploadMB)
+	}
+	if got := maxEvidenceBytes(); got != defaultMaxEvidenceMB*bytesPerMB {
+		t.Errorf("maxEvidenceBytes = %d, want the default %d", got, defaultMaxEvidenceMB*bytesPerMB)
+	}
+	if later := strings.TrimPrefix(logged.String(), atBoot); strings.Contains(later, "malformed setting") {
+		t.Errorf("a request's read warned again:\n%s", later)
 	}
 }

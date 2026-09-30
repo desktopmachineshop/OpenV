@@ -15,11 +15,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // Intervals a price may recur on.
@@ -242,7 +244,8 @@ func MapStatus(providerStatus string) string {
 
 // Config is the environment's billing configuration.
 type Config struct {
-	// SecretKey is the provider's secret API key; empty means billing off.
+	// SecretKey is the provider's secret API key, exactly as set; empty, or
+	// only spaces, means billing off.
 	SecretKey string
 	// APIVersion pins the provider API version on every request; empty
 	// leaves the account's own pinned version in charge.
@@ -263,16 +266,24 @@ type Config struct {
 	MaxSeats int
 }
 
-// Enabled reports whether a provider is configured.
-func (c Config) Enabled() bool { return c.SecretKey != "" }
+// Enabled reports whether a provider is configured. A key of only spaces is
+// none, as it always was: used exactly as set, it could never sign in, and
+// it must not switch billing on and start calling the provider.
+func (c Config) Enabled() bool { return strings.TrimSpace(c.SecretKey) != "" }
 
 // ConfigFromEnv reads the billing configuration. A malformed price map is an
 // error the caller should treat as fatal, like OPENV_LIMITS: a typo that
 // silently sold nothing would look exactly like a price that does not work.
-// The secret key's absence is not an error — it is the off switch.
+// So is a malformed count, where every other setting falls back to its
+// default: each is a whole number (internal/envparse.WholeNumber, so 30d,
+// 7x and 1e3 are refused rather than read as 30, 7 and 1), above 0 but for
+// the trial's days, which may be 0. The secret key's absence is not an
+// error — it is the off switch. The key is a credential, used exactly as set
+// (#379, question 24), with one warning naming STRIPE_SECRET_KEY when spaces
+// or a line break sit around it.
 func ConfigFromEnv(getenv func(string) string) (Config, error) {
 	cfg := Config{
-		SecretKey:         strings.TrimSpace(getenv("STRIPE_SECRET_KEY")),
+		SecretKey:         envparse.Secret("STRIPE_SECRET_KEY", getenv("STRIPE_SECRET_KEY")),
 		APIVersion:        strings.TrimSpace(getenv("OPENV_STRIPE_API_VERSION")),
 		ReconcileInterval: 5 * time.Minute,
 		ReturnURL:         strings.TrimRight(strings.TrimSpace(getenv("OPENV_BILLING_RETURN_URL")), "/"),
@@ -281,15 +292,15 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		MaxSeats:          DefaultMaxSeats,
 	}
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_MAX_SEATS")); raw != "" {
-		var n int
-		if _, err := fmt.Sscanf(raw, "%d", &n); err != nil || n < 1 {
+		n, ok := envparse.WholeNumber(raw)
+		if !ok || n < 1 {
 			return cfg, fmt.Errorf("OPENV_BILLING_MAX_SEATS must be a whole number of seats, got %q", raw)
 		}
 		cfg.MaxSeats = n
 	}
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_TRIAL_DAYS")); raw != "" {
-		var days int
-		if _, err := fmt.Sscanf(raw, "%d", &days); err != nil || days < 0 {
+		days, ok := envparse.WholeNumber(raw)
+		if !ok || days < 0 {
 			return cfg, fmt.Errorf("OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got %q", raw)
 		}
 		cfg.TrialDays = days
@@ -300,8 +311,8 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 	}
 	cfg.Registry = reg
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_RECONCILE_MINUTES")); raw != "" {
-		var minutes int
-		if _, err := fmt.Sscanf(raw, "%d", &minutes); err != nil || minutes < 1 {
+		minutes, ok := envparse.WholeNumber(raw)
+		if !ok || minutes < 1 {
 			return cfg, fmt.Errorf("OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got %q", raw)
 		}
 		cfg.ReconcileInterval = time.Duration(minutes) * time.Minute
@@ -339,7 +350,7 @@ func ParseRegistry(raw string) (*Registry, error) {
 	}
 	var entries []PriceEntry
 	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
-		return nil, fmt.Errorf("not a JSON array of {price, plan, interval}: %w", err)
+		return nil, fmt.Errorf("not a JSON array of {price, plan, interval}: %s", priceMapShapeError(err))
 	}
 	seenPlan := map[string]bool{}
 	for i, e := range entries {
@@ -372,6 +383,30 @@ func ParseRegistry(raw string) (*Registry, error) {
 		return r.entries[i].Interval < r.entries[j].Interval
 	})
 	return r, nil
+}
+
+// priceMapShapeError says what in the price map has the wrong shape, in the
+// map's own terms: the decoder's type errors name Go types
+// ([]billing.PriceEntry), which an operator never wrote. A syntax error is
+// the decoder's own words, which name only the JSON.
+func priceMapShapeError(err error) string {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
+		return err.Error()
+	}
+	kind := map[string]string{
+		"bool": "true or false", "number": "a number", "string": "a string", "array": "an array", "object": "an object",
+	}[typeErr.Value]
+	if kind == "" {
+		kind = "a JSON " + typeErr.Value
+	}
+	switch {
+	case typeErr.Field != "":
+		return fmt.Sprintf("an entry's %s is %s, not a string", typeErr.Field, kind)
+	case typeErr.Type != nil && typeErr.Type.Kind() == reflect.Struct:
+		return fmt.Sprintf("an entry is %s, not an object", kind)
+	}
+	return fmt.Sprintf("the value is %s, not an array", kind)
 }
 
 // Lookup finds the plan and interval a price sells.

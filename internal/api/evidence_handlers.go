@@ -21,6 +21,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // Evidence bundles: the files and written accounts behind a physical or manual
@@ -81,14 +82,10 @@ const (
 	defaultMaxEvidenceMB = 200
 )
 
+// maxEvidenceBytes is the cap: OPENV_MAX_EVIDENCE_MB, a whole number above
+// 0, or the default (internal/envparse).
 func maxEvidenceBytes() int64 {
-	mb := int64(defaultMaxEvidenceMB)
-	if v := os.Getenv(envMaxEvidenceMB); v != "" {
-		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
-			mb = n
-		}
-	}
-	return mb * 1024 * 1024
+	return int64(envparse.Count(envMaxEvidenceMB, os.Getenv(envMaxEvidenceMB), defaultMaxEvidenceMB)) * 1024 * 1024
 }
 
 // evidenceStorageLimitBytes is the workspace's total evidence allowance, from

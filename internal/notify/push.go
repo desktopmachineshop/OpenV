@@ -87,9 +87,11 @@ type VAPIDConfig struct {
 	Subject string
 }
 
-// Enabled reports whether the deployment can send web push at all.
+// Enabled reports whether the deployment can send web push at all. The
+// private key is used exactly as set, but one of only spaces is none, as it
+// always was.
 func (c VAPIDConfig) Enabled() bool {
-	return c.PublicKey != "" && c.PrivateKey != "" && validVAPIDSubject(c.Subject)
+	return c.PublicKey != "" && strings.TrimSpace(c.PrivateKey) != "" && validVAPIDSubject(c.Subject)
 }
 
 func validVAPIDSubject(s string) bool {
@@ -99,19 +101,21 @@ func validVAPIDSubject(s string) bool {
 // VAPIDFromEnv reads the VAPID configuration. Every variable unset is the
 // default and leaves push off; a half-configured or malformed set logs why
 // and also leaves it off, so a typo never silently degrades to "no pushes
-// and no explanation".
+// and no explanation". The private key is a credential, read exactly as set
+// (#379, question 24); one of only spaces counts as missing.
 func VAPIDFromEnv() VAPIDConfig {
 	c := VAPIDConfig{
 		PublicKey:  strings.TrimSpace(os.Getenv(envVAPIDPublicKey)),
-		PrivateKey: strings.TrimSpace(os.Getenv(envVAPIDPrivateKey)),
+		PrivateKey: envSecret(envVAPIDPrivateKey),
 		Subject:    strings.TrimSpace(os.Getenv(envVAPIDSubject)),
 	}
+	havePrivate := strings.TrimSpace(c.PrivateKey) != ""
 	switch {
-	case c.PublicKey == "" && c.PrivateKey == "" && c.Subject == "":
+	case c.PublicKey == "" && !havePrivate && c.Subject == "":
 		slog.Info("push: " + envVAPIDPublicKey + " unset; web push disabled (in-app + SSE delivery unaffected)")
-	case c.PublicKey == "" || c.PrivateKey == "":
+	case c.PublicKey == "" || !havePrivate:
 		slog.Warn("push: VAPID key pair incomplete; web push disabled",
-			"have_public", c.PublicKey != "", "have_private", c.PrivateKey != "")
+			"have_public", c.PublicKey != "", "have_private", havePrivate)
 	case !validVAPIDSubject(c.Subject):
 		slog.Warn("push: " + envVAPIDSubject + " must be a mailto: or https: URI; web push disabled")
 	default:

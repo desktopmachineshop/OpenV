@@ -2,6 +2,7 @@
   "about": "Shrink-only ceilings and allowlists for internal/archtest; see README.md there. Regenerate with UPDATE_RATCHETS=1 go test ./internal/archtest, which only lowers or removes entries.",
   "import_edges": {
     "cmd/agentd": [
+      "internal/envparse",
       "internal/runner"
     ],
     "cmd/openv-mcp": [
@@ -51,6 +52,7 @@
       "internal/domain/vv",
       "internal/domain/workerkeys",
       "internal/domain/workitems",
+      "internal/envparse",
       "internal/events",
       "internal/hosting",
       "internal/metrics",
@@ -104,6 +106,7 @@
       "internal/domain/vv",
       "internal/domain/workerkeys",
       "internal/domain/workitems",
+      "internal/envparse",
       "internal/hosting",
       "internal/notify",
       "internal/scheduler",
@@ -117,7 +120,8 @@
       "internal/scheduler"
     ],
     "internal/billing": [
-      "internal/domain/orgs"
+      "internal/domain/orgs",
+      "internal/envparse"
     ],
     "internal/billing/stripe": [
       "internal/billing"
@@ -212,7 +216,8 @@
       "internal/domain/events"
     ],
     "internal/hosting": [
-      "internal/domain/orgs"
+      "internal/domain/orgs",
+      "internal/envparse"
     ],
     "internal/mcp": [
       "internal/domain/artifacts"
@@ -229,7 +234,8 @@
       "internal/domain/orgs",
       "internal/domain/pushsubs",
       "internal/domain/release",
-      "internal/domain/users"
+      "internal/domain/users",
+      "internal/envparse"
     ],
     "internal/orchestration": [
       "internal/domain/agentruns",
@@ -321,7 +327,7 @@
     "internal/domain/links"
   ],
   "file_lines": {
-    "cmd/server/main.go": 1081,
+    "cmd/server/main.go": 1073,
     "internal/api/agent_handlers.go": 2414,
     "internal/api/handlers.go": 3519,
     "internal/api/org_handlers.go": 1552,
@@ -336,7 +342,7 @@
     "internal/persistence/postgres/migrations.go": 1950
   },
   "func_lines": {
-    "cmd/server:main": 938,
+    "cmd/server:main": 935,
     "internal/api:Handler.CreateLink": 115,
     "internal/api:Handler.OIDCCallback": 115,
     "internal/api:Handler.UpdateArtifact": 168,
@@ -387,12 +393,12 @@
   },
   "env_reads": {
     "internal/api": 10,
-    "internal/domain/embeddings": 3,
+    "internal/domain/embeddings": 2,
     "internal/domain/reports": 1,
     "internal/domain/users": 1,
-    "internal/hosting": 4,
+    "internal/hosting": 2,
     "internal/mcp": 1,
-    "internal/notify": 10,
+    "internal/notify": 8,
     "internal/runner": 10
   }
 }

@@ -487,7 +487,7 @@ range over a package-level table of string constants that nothing but range
 statements uses (the Gemini auth probe's). The read column is `os.Getenv`,
 `os.LookupEnv` or `<package>:<getter>(<param>)`, followed by the comparison
 when the value is only compared with a string constant
-(`os.Getenv =="true"`); the default is the argument that pairs with the
+(`os.Getenv !=""`); the default is the argument that pairs with the
 name, the i-th name parameter with the i-th other parameter, printed when it
 is a constant. The rate-limit variables and their defaults are included.
 Where each read sits (file and line, function, the binaries that link it) is

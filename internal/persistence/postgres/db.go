@@ -8,7 +8,7 @@ import (
 
 // Connect establishes a PostgreSQL connection
 func Connect(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", dsn)
+	db, err := openDB(dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func Connect(dsn string) (*sql.DB, error) {
 
 	err = db.Ping()
 	if err != nil {
-		return nil, err
+		return nil, connectError(dsn, err)
 	}
 
 	return db, nil

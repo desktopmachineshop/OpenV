@@ -48,8 +48,8 @@ const (
 const envParseHeader = `# What each env read returns (refactor plan S8, invariant I13), for X10a to
 # rerun against internal/config: one section per read column of
 # env_vars.txt, [<read>], or [<read> <NAME>] per variable where the getter's
-# parse depends on the variable; [=="true"], [=="1"] and [!=""] are the
-# comparisons a read column ends with. Each row is <input><TAB><result>: the
+# parse depends on the variable; a comparison a read column ends with, such
+# as [!=""], has a section of its own. Each row is <input><TAB><result>: the
 # input is unset or a Go-quoted raw value, and every section tries the same
 # inputs first; the result is Go-quoted text, a number, a duration, true or
 # false, a JSON list, error: <message>, or default where the getter returned

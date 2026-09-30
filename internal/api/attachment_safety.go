@@ -12,6 +12,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // Attachment uploads are the one place a member hands the API a file that
@@ -53,18 +54,12 @@ const (
 	bytesPerMB         = int64(1024 * 1024)
 )
 
-// envUploadMB reads the operator's override, and whether it was set to
-// something usable.
+// envUploadMB reads the operator's override, a whole number above 0, and
+// whether it was set to something usable; a malformed one warns once
+// (internal/envparse) and leaves the workspace's limit in charge.
 func envUploadMB() (int64, bool) {
-	v := os.Getenv(envMaxUploadMB)
-	if v == "" {
-		return 0, false
-	}
-	n, err := strconv.ParseInt(v, 10, 64)
-	if err != nil || n <= 0 {
-		return 0, false
-	}
-	return n, true
+	n := envparse.Count(envMaxUploadMB, os.Getenv(envMaxUploadMB), 0)
+	return int64(n), n > 0
 }
 
 // uploadLimitBytes is the biggest single figure this workspace may upload.

@@ -730,7 +730,9 @@ func resolveAttachmentPath(original string) (string, bool) {
 		if abs, err := filepath.Abs(original); err == nil {
 			paths = append(paths, abs)
 		}
-		if uploadsDir := os.Getenv("UPLOADS_DIR"); uploadsDir != "" {
+		// Trimmed, as the server reads it (internal/envparse), so both
+		// find the same directory.
+		if uploadsDir := strings.TrimSpace(os.Getenv("UPLOADS_DIR")); uploadsDir != "" {
 			paths = append(paths, filepath.Join(uploadsDir, original))
 			paths = append(paths, filepath.Join(uploadsDir, filepath.Base(original)))
 		}
