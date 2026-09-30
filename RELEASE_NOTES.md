@@ -395,6 +395,46 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   to raise in `OPENV_LIMITS`, as a refusal at one of those limits already
   did. Hosted workspaces are pointed to the Billing tab as before.
 
+- **An agent whose changes need review can no longer start other runs.**
+  With its run's credentials, an agent in proposal mode could launch another
+  agent, a crew, or an agent on a test run through the API, send the V&V
+  Assistant a message, or set up an interview with any agent as its
+  interviewer, invite a participant and answer as one, and so start work
+  whose changes could land with no one reviewing them. Each is now refused
+  (`403`), as *Draft test cases* already was, and so are retrying a run and
+  running an automation now. An agent that writes directly can still launch
+  runs, and a run it launches now shows under it in the run tree of its
+  run's details, where it had stood alone with no record of what started it;
+  the tree shows only the runs you could open yourself. Like a run a crew
+  agent delegates, such a run is followed in that tree rather than on a card
+  of its own on the board, and it is not retried automatically if it fails.
+
+- **Every way of creating a project counts toward the workspace's project
+  limit and respects a read-only workspace.** Creating a project from a
+  template or by importing one did not count toward the most projects the
+  workspace's plan allows (on a self-hosted deployment, `OPENV_LIMITS`), so
+  either could take a workspace past its limit and make it read-only; and
+  on a workspace already read-only because it is over its plan, a new
+  project and one from a template were still created. Each now counts: at
+  the limit it is refused with the limit and how to raise it, and on a
+  read-only workspace a new project and one from a template are refused like
+  any other change. Importing stays available on a read-only workspace
+  while the workspace is under its project limit. Launching an agent with no
+  project through the API now also needs you to be a member of the agent's
+  workspace, and is refused while that workspace is read-only.
+
+- **A runner key can no longer create projects.** Through the API, a
+  workspace runner key, or a member's own runner key, could create a
+  project that no one owned, and creating one from a template or by import
+  with it answered as if nobody had signed in. Each is now refused (`403`,
+  *runner keys cannot create projects*). Any member of a workspace still
+  creates projects there and becomes their owner.
+
+- **An agent listing projects sees only its own.** Through the API, an
+  agent's run credentials listed every project of its workspace, including
+  projects the agent cannot open. The list now holds only the project the
+  run works in, and is empty for a run that has none.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features
