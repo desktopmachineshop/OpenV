@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -30,6 +31,33 @@ type GuidedNudgeLauncher interface {
 	LaunchGuidedNudge(sessionID string, nudge guided.PendingNudge, launchedBy *string) error
 }
 
+// ProjectReach reports whether a person may be handed a card on a project's
+// board, and if not, which rule refused them (Reach): an admin of the
+// project's workspace, or a member of it with a role in the project,
+// directly or through a people team, is allowed. That is stricter than what
+// a person's own session opens, the safer choice for a card made on their
+// behalf: a platform admin who is neither, or someone who has left the
+// workspace but keeps a role in the project, is refused too. With an error
+// it answers a refusal, never ReachAllowed. main.go wires it from the
+// project, org and member services (handoffReach).
+type ProjectReach func(projectID, userID string) (Reach, error)
+
+// Reach is what a ProjectReach found of a person and a project: allowed, or
+// the rule that refused them, which the hand-off's refusal names.
+type Reach string
+
+const (
+	// ReachAllowed: an admin of the project's workspace, or a member of it
+	// with a role in the project.
+	ReachAllowed Reach = "allowed"
+	// ReachNotInWorkspace: not a member of the project's workspace, such as
+	// someone who has left it, whatever role in the project they kept.
+	ReachNotInWorkspace Reach = "not_in_workspace"
+	// ReachNoRole: a member of the project's workspace, not its admin, with
+	// no role in the project.
+	ReachNoRole Reach = "no_role"
+)
+
 // partialBroadcastInterval is the floor between two assistant_partial events
 // for one run. The worker already batches at 750ms, but a retry, a second
 // worker, or a future faster pump must not turn a reply into an SSE flood.
@@ -47,6 +75,9 @@ type Hooks struct {
 	projectService   projects.Service
 	broadcaster      SessionBroadcaster
 	nudgeLauncher    GuidedNudgeLauncher
+	// reach decides who may be handed a card (handOffToHuman); nil refuses
+	// every hand-off to a person.
+	reach ProjectReach
 
 	// Last assistant_partial broadcast per run, for the rate limit. Entries
 	// are dropped when the run reaches a terminal state.
@@ -54,8 +85,9 @@ type Hooks struct {
 	lastPartial map[string]time.Time
 }
 
-// NewHooks creates the orchestration hooks.
-func NewHooks(runService agentruns.Service, teamService teams.Service, workItemService workitems.Service, interviewService interviews.Service, guidedService guided.Service, projectService projects.Service, broadcaster SessionBroadcaster) *Hooks {
+// NewHooks creates the orchestration hooks. reach decides who a crew's
+// hand-off card may go to.
+func NewHooks(runService agentruns.Service, teamService teams.Service, workItemService workitems.Service, interviewService interviews.Service, guidedService guided.Service, projectService projects.Service, broadcaster SessionBroadcaster, reach ProjectReach) *Hooks {
 	return &Hooks{
 		runService:       runService,
 		teamService:      teamService,
@@ -64,6 +96,7 @@ func NewHooks(runService agentruns.Service, teamService teams.Service, workItemS
 		guidedService:    guidedService,
 		projectService:   projectService,
 		broadcaster:      broadcaster,
+		reach:            reach,
 		lastPartial:      map[string]time.Time{},
 	}
 }
@@ -242,6 +275,11 @@ func (h *Hooks) enqueueSuccessors(run *agentruns.Run) {
 	if run.TeamNodeID == nil || run.TeamID == nil {
 		return
 	}
+	// The agent successors the workspace's budget refused, recorded together
+	// once every edge was tried: an event and a note on the run, each naming
+	// them and the budget (OpenV REQ-76).
+	var skipped []agentruns.Successor
+	var refusal error
 	for _, edgeType := range []string{teams.EdgeHandsOff, teams.EdgeReviews} {
 		edges, err := h.teamService.SuccessorEdges(*run.TeamNodeID, edgeType)
 		if err != nil {
@@ -249,16 +287,27 @@ func (h *Hooks) enqueueSuccessors(run *agentruns.Run) {
 			continue
 		}
 		for _, edge := range edges {
-			h.launchSuccessor(run, edge, edgeType)
+			if target, err := h.launchSuccessor(run, edge, edgeType); errors.Is(err, agentruns.ErrBudgetExceeded) {
+				skipped = append(skipped, agentruns.Successor{NodeID: target.ID, Label: target.Label})
+				refusal = err
+			}
+		}
+	}
+	if len(skipped) > 0 {
+		if err := h.runService.SuccessorsSkipped(run, skipped, refusal); err != nil {
+			slog.Error("orchestration: failed to record the successors the budget refused", "run_id", run.ID, "error", err)
 		}
 	}
 }
 
-func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType string) {
+// launchSuccessor starts what an edge leads to: an agent's run, or a card
+// for a person. It returns the node the edge leads to, nil when the crew or
+// the node is gone, and for an agent the launch's error.
+func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType string) (*teams.Node, error) {
 	graph, err := h.teamService.GetTeam(edge.TeamID)
 	if err != nil {
 		slog.Error("orchestration: team lookup failed", "team_id", edge.TeamID, "error", err)
-		return
+		return nil, nil
 	}
 	var target *teams.Node
 	for _, node := range graph.Nodes {
@@ -268,13 +317,13 @@ func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType s
 		}
 	}
 	if target == nil {
-		return
+		return nil, nil
 	}
 
 	// Human targets never get an agent run; they get a kanban card instead.
 	if target.IsHuman() {
 		h.handOffToHuman(run, graph, edge, edgeType, target)
-		return
+		return target, nil
 	}
 
 	output := agentruns.TruncateAnswer(run.FinalText)
@@ -306,10 +355,14 @@ func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType s
 	if err != nil {
 		slog.Error("orchestration: failed to launch successor for run", "edge_type", edgeType, "run_id", run.ID, "error", err)
 	}
+	return target, err
 }
 
 // handOffToHuman turns a hands-off-to/reviews edge into a human node into a
-// kanban card assigned to that person in the run's project.
+// kanban card assigned to that person in the run's project, if the person
+// may be handed one there (ProjectReach). Anyone else is refused: the reason
+// is kept on the run and on its card, no card is made, and no access is
+// granted (OpenV REQ-23, REQ-81).
 func (h *Hooks) handOffToHuman(run *agentruns.Run, graph *teams.TeamGraph, edge *teams.Edge, edgeType string, target *teams.Node) {
 	if run.ProjectID == nil {
 		slog.Warn("orchestration: run hands off to human node but has no project; skipping work item", "run_id", run.ID, "team_node_id", target.ID)
@@ -317,6 +370,10 @@ func (h *Hooks) handOffToHuman(run *agentruns.Run, graph *teams.TeamGraph, edge 
 	}
 	if target.UserID == nil {
 		slog.Warn("orchestration: human node has no user; skipping work item", "team_node_id", target.ID, "run_id", run.ID)
+		return
+	}
+	if reason := h.handOffRefusal(*run.ProjectID, *target.UserID, target.Label); reason != "" {
+		h.refuseHandOff(run, edgeType, target, reason)
 		return
 	}
 
@@ -354,6 +411,56 @@ func (h *Hooks) handOffToHuman(run *agentruns.Run, graph *teams.TeamGraph, edge 
 		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFinished,
 			"Handed off to "+target.Label, actor,
 			map[string]interface{}{"run_id": run.ID, "work_item_id": item.ID, "edge_type": edgeType})
+	}
+}
+
+// handOffRefusal is why a hand-off card may not go to a person in a project,
+// or "" when it may: they can open the project (ProjectReach). The reason
+// names the rule that refused, with the remedy that would let them in: a
+// role in the project for a member with none, and the workspace itself for
+// someone who has left it, whom no role in the project lets in. An access
+// that cannot be checked, or an answer this does not know, refuses too.
+func (h *Hooks) handOffRefusal(projectID, userID, label string) string {
+	if h.reach == nil {
+		return label + "'s access to this project could not be checked."
+	}
+	reach, err := h.reach(projectID, userID)
+	if err != nil {
+		slog.Error("orchestration: could not check a hand-off target's project access", "project_id", projectID, "user_id", userID, "error", err)
+		return label + "'s access to this project could not be checked."
+	}
+	switch reach {
+	case ReachAllowed:
+		return ""
+	case ReachNoRole:
+		return label + " has no role in this project and could not open the card. Give them a role in the project to hand work to them."
+	case ReachNotInWorkspace:
+		return label + " is no longer a member of this workspace and could not open the card. Add them back to the workspace, with a role in the project, to hand work to them."
+	}
+	slog.Error("orchestration: a hand-off target's project access has an unknown answer", "project_id", projectID, "user_id", userID, "reach", string(reach))
+	return label + "'s access to this project could not be checked."
+}
+
+// refuseHandOff keeps a refused hand-off's reason on the run, as a note at
+// the end of its log, and on the run's card, where a hand-off made is
+// recorded.
+func (h *Hooks) refuseHandOff(run *agentruns.Run, edgeType string, target *teams.Node, reason string) {
+	what := "Hand-off"
+	if edgeType == teams.EdgeReviews {
+		what = "Review request"
+	}
+	message := what + " to " + target.Label + " refused: " + reason
+	slog.Warn("orchestration: hand-off to a person refused", "run_id", run.ID, "team_node_id", target.ID, "reason", reason)
+	if err := h.runService.NoteRun(run.ID, agentruns.NoteHandOffRefused, message, map[string]interface{}{
+		"team_node_id": target.ID,
+		"user_id":      *target.UserID,
+		"edge_type":    edgeType,
+	}); err != nil {
+		slog.Error("orchestration: failed to note a refused hand-off on the run", "run_id", run.ID, "error", err)
+	}
+	if run.WorkItemID != nil {
+		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFailed, message, "agent:"+run.ID,
+			map[string]interface{}{"run_id": run.ID, "team_node_id": target.ID, "edge_type": edgeType})
 	}
 }
 

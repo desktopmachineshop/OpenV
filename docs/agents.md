@@ -911,8 +911,15 @@ org-chart graph: a lead agent can delegate work to member agents, and
 orchestration hooks route follow-up runs along the graph's edges
 (`delegates-to`, `hands-off-to`, `reviews`). Crews can also contain **human
 members** — hand-offs to a human create a card on the project board instead
-of launching a run. Use crews when a task naturally splits (e.g. one agent
-drafts requirements, another reviews for testability).
+of launching a run. The card goes only to an admin of the project's
+workspace, or a member of the workspace with a role in the project; someone
+who has left the workspace is refused even if they kept a role in the
+project. A hand-off to anyone else is refused, with the reason noted at the
+end of the run's log and on its card, and grants no access. When the
+workspace's budget refuses the agent successors of a finished run, none is
+launched; the run publishes `agentrun.successors_skipped` and keeps a note
+naming them and the budget. Use crews when a task naturally splits (e.g. one
+agent drafts requirements, another reviews for testability).
 
 The canonical API is `/api/v1/crews` (with `/crew-nodes`, `/crew-edges`); the
 old `/api/v1/teams` (and `/team-nodes`, `/team-edges`) paths remain as

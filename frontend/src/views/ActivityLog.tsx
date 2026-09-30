@@ -22,6 +22,7 @@ const EVENT_TYPES = [
   'workitem.moved',
   'workitem.updated',
   'agentrun.finished',
+  'agentrun.successors_skipped',
 ];
 
 // Cursor pagination: each page asks for PAGE_SIZE events older than the

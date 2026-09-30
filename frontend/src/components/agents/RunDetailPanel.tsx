@@ -14,6 +14,13 @@ const RETRYABLE_STATUSES = ['failed', 'timed_out', 'cancelled'];
 const MAX_SSE_RECONNECT_ATTEMPTS = 3;
 const SSE_RECONNECT_BASE_DELAY_MS = 1000;
 
+// A finished crew run's log can still grow: the server appends its notes (a
+// hand-off refused, successors the budget did not launch) just after the
+// terminal status, on the stream this panel closes at that status. So a
+// terminal status catches the log up at once, and once more this long after,
+// for a note the server was still writing.
+const FINISHED_LOG_SETTLE_MS = 2000;
+
 // Human-readable label + color for a run's structured failure class (issue
 // #184). Retryable classes (provider_unavailable, timeout, worker_error) read
 // amber; terminal-by-design ones (auth, agent_error, workspace) read red.
@@ -135,6 +142,19 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
           {p.text || p.error || p.message || JSON.stringify(p)}
         </div>
       );
+    case 'marker':
+      // A notice about the run rather than its agent's output: the worker's
+      // own (events it dropped) or a note the server keeps on a finished
+      // crew run (a hand-off refused, successors the budget did not launch).
+      // Its message says it in words.
+      return (
+        <div
+          key={`${entry.seq}-${idx}`}
+          style={{ fontSize: 12.5, color: 'var(--warning-text)', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+        >
+          {typeof p.message === 'string' && p.message ? p.message : JSON.stringify(p)}
+        </div>
+      );
     default:
       return (
         <div
@@ -212,6 +232,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
 
     let es: EventSource | null = null;
     let pollTimer: number | null = null;
+    let settleTimer: number | null = null;
     let closed = false;
 
     const appendLogs = (entries: RunLogEntry[]) => {
@@ -224,6 +245,13 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
         lastSeqRef.current = next[next.length - 1]?.seq || lastSeqRef.current;
         return next;
       });
+    };
+
+    const catchUp = () => {
+      agentRunsAPI
+        .logs(runId, lastSeqRef.current)
+        .then((res) => appendLogs(res.data || []))
+        .catch(() => undefined);
     };
 
     const startPolling = () => {
@@ -296,8 +324,16 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
           statusRef.current = status;
           if (TERMINAL_STATUSES.includes(status)) {
             es?.close();
-            // Refresh once for final text / tokens.
+            // Refresh once for final text / tokens, and catch the log up for
+            // the server's notes (FINISHED_LOG_SETTLE_MS).
             loadRun();
+            catchUp();
+            if (settleTimer === null) {
+              settleTimer = window.setTimeout(() => {
+                settleTimer = null;
+                if (!closed) catchUp();
+              }, FINISHED_LOG_SETTLE_MS);
+            }
           }
         });
         es.onerror = () => {
@@ -308,10 +344,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             const delay = SSE_RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempts;
             reconnectAttempts += 1;
             // Catch up on anything missed while disconnected, then retry SSE.
-            agentRunsAPI
-              .logs(runId, lastSeqRef.current)
-              .then((res) => appendLogs(res.data || []))
-              .catch(() => undefined);
+            catchUp();
             reconnectTimer = window.setTimeout(connectStream, delay);
           } else {
             // Reconnect budget exhausted — settle on polling.
@@ -329,6 +362,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
       closed = true;
       es?.close();
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      if (settleTimer !== null) window.clearTimeout(settleTimer);
       if (pollTimer !== null) window.clearInterval(pollTimer);
     };
   }, [runId, loadRun]);

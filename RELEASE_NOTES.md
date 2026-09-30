@@ -737,6 +737,38 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   both. A citation of an artifact it is not linked to is still flagged in
   both.
 
+- **A run whose approved changes could not be applied is marked an agent
+  error.** When you approved an agent's proposed changes and one of them
+  could not be applied, the run was marked failed with no failure class, so
+  the Runs page and the run's panel showed no *agent error* beside it, and
+  an API client read no `error_class`. Such a run now fails as an
+  `agent_error`, as other failures of the agent's own work do, and is not
+  retried automatically, since the same changes would fail the same way.
+  You can still retry it yourself.
+
+- **A crew no longer hands work to someone who cannot open the project.**
+  When a crew run finished and its crew handed work to a person, or asked a
+  person for a review, the card it put on the project's board was assigned
+  to that person even when they had no role in the project, so they could
+  not open the work they were given. Such a hand-off is now refused: no
+  card is made, nobody is given access, and the run's log and its card on
+  the board say who the hand-off was for and why it was refused. Give the
+  person a role in the project, or make them an admin of the workspace, to
+  hand work to them. Someone who has left the workspace is refused even if
+  they kept a role in the project, and the reason says they are no longer a
+  member of the workspace: add them back to it, with a role in the
+  project, to hand work to them. Hand-offs to members of the workspace who
+  can open the project, and to agents, work as before.
+
+- **A crew run stopped by the budget now says which agents it did not
+  start.** Where a workspace's monthly AI budget is enforced, a crew run
+  that finished after the budget was reached launched none of the agents
+  it hands work to or is reviewed by, and only the server's own log said
+  so. The run's log now ends with a note naming those agents and the
+  budget that stopped them, and the project's *Activity* page records an
+  `agentrun.successors_skipped` event with the same, which API clients can
+  follow. Hand-offs to people still go ahead, since they start no run.
+
 - **Revoking a server's own runner key on the Runners tab now stops it.**
   On a deployment you run yourself, the runner key the server is given in
   `WORKER_API_KEY` is listed on the workspace's *Runners* tab as

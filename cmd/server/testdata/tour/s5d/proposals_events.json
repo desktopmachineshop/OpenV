@@ -1556,7 +1556,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 33>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"\",\"error\":\"one or more approved proposals failed to apply\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 33>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"\",\"error\":\"one or more approved proposals failed to apply\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1574,6 +1574,7 @@
         "finished_at": "<time@step 35>",
         "final_text": "",
         "error": "one or more approved proposals failed to apply",
+        "error_class": "agent_error",
         "attempt_count": 1,
         "max_attempts": 3,
         "tokens_in": 0,
