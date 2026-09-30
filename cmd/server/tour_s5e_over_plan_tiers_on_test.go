@@ -118,6 +118,8 @@ func overPlanTiersOnTour(tr *tour) {
 	// id; the claimed run's agent's slug, which the pattern leaves alone, is
 	// not checked.
 	tr.slugPattern()
+	// The V&V report's filename carries the day it was rendered, as in S5b.
+	tr.pattern(`vv-report-.*-(\d{8})\.pdf`, "<yyyymmdd>", "the day the V&V report was rendered, in its filename")
 	x := overPlanTiersOnSetup(tr)
 	x.overSeats()
 	x.refusals()

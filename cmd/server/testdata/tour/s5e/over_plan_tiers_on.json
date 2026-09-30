@@ -21,6 +21,7 @@
     "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
     "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from",
     "<id8>: a workspace slug ends in the first 8 hex digits of its id (orgs.makeSlug), which the id's own token does not cover (the area's own pattern \"slug\":\"[a-z0-9-]*-([0-9a-f]{8})\")",
+    "<yyyymmdd>: the day the V&V report was rendered, in its filename (the area's own pattern vv-report-.*-(\\d{8})\\.pdf)",
     "GET /api/v1/projects/{id}/export writes whole seconds (the JSON export's times): its times without a fraction are <time>",
     "GET /api/v1/projects/{id}/download/csv writes whole seconds (the CSV's created and updated columns): its times without a fraction are <time>",
     "GET /api/v1/projects/{id}/download/excel writes whole seconds (the workbook's created and updated cells): its times without a fraction are <time>",
@@ -4888,7 +4889,7 @@
       "status": 200,
       "content_type": "application/pdf",
       "headers": [
-        "Content-Disposition: attachment; filename=vv-report-Tour_Over_P-20260929.pdf"
+        "Content-Disposition: attachment; filename=vv-report-Tour_Over_P-<yyyymmdd>.pdf"
       ],
       "security_headers": "standard",
       "content_length": "<varies>",
