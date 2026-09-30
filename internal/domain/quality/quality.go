@@ -493,19 +493,50 @@ func LintProject(export *exports.ProjectExport, rs RuleSet) *Report {
 }
 
 // LinkedRefsByArtifact maps each artifact id to the set of refs it is linked
-// to, in either direction and uppercased.
+// to, in either direction and uppercased: LinkedRefs over the export's links,
+// naming each end from the export's own artifacts or, for an end in another
+// project, from its linked_artifacts.
 //
-// Exported because the single-artifact endpoint needs the same rule applied
-// the same way: a citation judged untraceable in the project report and fine
-// on the artifact's own page would be worse than no rule at all.
+// The single-artifact endpoint applies LinkedRefs to the links it reads, so
+// both judge a citation the same way: a citation judged untraceable in the
+// project report and fine on the artifact's own page would be worse than no
+// rule at all.
 func LinkedRefsByArtifact(export *exports.ProjectExport) map[string]map[string]bool {
-	refByID := make(map[string]string, len(export.Artifacts))
+	refByID := make(map[string]string, len(export.Artifacts)+len(export.LinkedArtifacts))
 	for _, a := range export.Artifacts {
-		if a != nil && a.Ref != "" {
-			refByID[a.ID] = strings.ToUpper(a.Ref)
+		if a != nil {
+			refByID[a.ID] = a.Ref
 		}
 	}
-	out := make(map[string]map[string]bool, len(export.Artifacts))
+	for _, l := range export.LinkedArtifacts {
+		if l != nil {
+			refByID[l.ID] = l.Ref
+		}
+	}
+	ends := make([]LinkEnds, 0, len(export.Links))
+	for _, l := range export.Links {
+		if l != nil {
+			ends = append(ends, LinkEnds{FromID: l.FromID, ToID: l.ToID})
+		}
+	}
+	return LinkedRefs(ends, func(id string) string { return refByID[id] })
+}
+
+// LinkEnds is a traceability link as the linter's rule reads it: its two
+// ends.
+type LinkEnds struct {
+	FromID, ToID string
+}
+
+// LinkedRefs maps each artifact id to the set of refs it is linked to, in
+// either direction and uppercased, whatever project the other end is in.
+// refOf names an end's ref; an end it names "" (no ref, or one that cannot
+// be read) is left out, and the other links still judge correctly.
+//
+// It is the one rule both the project report and one artifact's lint judge
+// a citation by (OpenV REQ-164): only how each names a link's ends differs.
+func LinkedRefs(links []LinkEnds, refOf func(id string) string) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
 	add := func(id, ref string) {
 		if id == "" || ref == "" {
 			return
@@ -513,14 +544,11 @@ func LinkedRefsByArtifact(export *exports.ProjectExport) map[string]map[string]b
 		if out[id] == nil {
 			out[id] = map[string]bool{}
 		}
-		out[id][ref] = true
+		out[id][strings.ToUpper(ref)] = true
 	}
-	for _, l := range export.Links {
-		if l == nil {
-			continue
-		}
-		add(l.FromID, refByID[l.ToID])
-		add(l.ToID, refByID[l.FromID])
+	for _, l := range links {
+		add(l.FromID, refOf(l.ToID))
+		add(l.ToID, refOf(l.FromID))
 	}
 	return out
 }

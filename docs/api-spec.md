@@ -180,13 +180,15 @@ Enforced per-handler via `internal/api/authz.go`:
   link's endpoint, a crew's pin, a flow-down parent and an interview's
   persona the `400` of one no row has (`source artifact not found`, `target
   artifact not found`, `project not found`, `parent project not found`,
-  `persona artifact not found`), and a people-team granted a project the
-  `404` `team not found`, while one the caller does reach in another
-  workspace or project is refused as such (`400`). An artifact's update
-  and restore, which look the artifact up before their guard, answer an
-  artifact the caller cannot reach, as one no row has, `404` `artifact not
-  found`, and a crew's launch answers a caller who may not know of the crew
-  (*Crew writes*) `404` `team not found`. A worker key or run token, which
+  `persona artifact not found`), and a people-team granted a project and
+  a work item's crew assignee the `404` `team not found`, while one the
+  caller does reach in another workspace or project is refused as such
+  (`400`; a crew assignee `team belongs to a different workspace`). An
+  artifact's update and restore, which look the artifact up before their
+  guard, answer an artifact the caller cannot reach, as one no row has,
+  `404` `artifact not found`, and a crew's launch, and a work item
+  assigned to a crew, answer a caller who may not know of the crew (*Crew
+  writes*) `404` `team not found`. A worker key or run token, which
   has no session, gets the workspace guard's `401`, but one of another
   workspace, at a route that looks its resource up first (a people-team, a
   workspace-wide attribute definition), gets that resource's not-found; and
@@ -203,10 +205,11 @@ Enforced per-handler via `internal/api/authz.go`:
   the guard or the id sits in the query or the body, an id no row has
   answers `404` too: an artifact's update and restore and a result's
   `test_case_id` `artifact not found`, a download's or its options'
-  `baseline_id` `baseline not found`. A body field stored as a reference
-  without a lookup (a test run's `baseline_id`, a work item's
-  `assignee_id`, a launch's `work_item_id`...) still passes the database's
-  refusal through as a `400` (quirk Q19), and `POST
+  `baseline_id` `baseline not found`, and a work item's crew assignee
+  (`assignee_type` `team`) `team not found`. A body field stored as a
+  reference without a lookup (a test run's `baseline_id`, a work item's
+  person's or agent's `assignee_id`, a launch's `work_item_id`...) still
+  passes the database's refusal through as a `400` (quirk Q19), and `POST
   /projects/{id}/draft-test-cases` refuses a `requirement_ids` entry that
   is not a UUID with its own `400` `requirement_ids must be valid artifact
   ids`, where a well-formed id no artifact has is launched with the rest,
@@ -1013,7 +1016,7 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/projects/{id}/quality` | Lint every requirement/user need (`?baseline_id=` lints a snapshot) | viewer |
+| GET | `/api/v1/projects/{id}/quality` | Lint every requirement/user need (`?baseline_id=` lints a snapshot). A citation is judged by the rule `/artifacts/{id}/quality` applies (REQ-164): one of any artifact the requirement is linked to, in either direction and in whichever project, counts as linked; the report names another project's artifact from the export's `linked_artifacts` | viewer |
 | GET | `/api/v1/artifacts/{id}/quality` | Lint one artifact (400 for a type the linter does not judge) | viewer |
 | GET | `/api/v1/projects/{id}/quality-rules` | Resolved rules + both levels' overrides + the editor catalog | viewer |
 | PUT | `/api/v1/projects/{id}/quality-rules` | Set or clear the project's override | editor |
@@ -1022,10 +1025,10 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/work-items` | Create card. `source_chatter_id` raises it from a note (that note must be in the same project, else 400) | editor |
-| GET | `/api/v1/projects/{id}/work-items` | List board | viewer |
+| POST | `/api/v1/projects/{id}/work-items` | Create card. `source_chatter_id` raises it from a note (that note must be in the same project, else 400). `assignee_type` is `user` (the default), `agent` or `team` (a crew), else 400 `invalid assignee_type: must be user, agent or team`; a crew's `assignee_id` must name a crew the caller may know of (*Crew writes*), else 404 `team not found`, and one of the project's workspace, else 400 `team belongs to a different workspace` | editor |
+| GET | `/api/v1/projects/{id}/work-items` | List board: the columns in the order the board flows in (`backlog`, `todo`, `in-progress`, `review`, `done`), then `sort_order`, then `created_at` | viewer |
 | GET | `/api/v1/work-items/{id}` | Card + activity | viewer |
-| PUT | `/api/v1/work-items/{id}` | Edit card | editor |
+| PUT | `/api/v1/work-items/{id}` | Edit card. `assignee_type` and a crew's `assignee_id` are checked as on create; an omitted `assignee_type` keeps the card's, and the `assignee_id` sent is checked against it. An update replaces `assignee_id` (omitted, it clears it), and one that re-sends the card's own assignee, the same type and id, is not checked again | editor |
 | DELETE | `/api/v1/work-items/{id}` | Delete card | editor |
 | POST | `/api/v1/work-items/{id}/move` | Move card (agent columns can enqueue runs) | editor |
 | POST | `/api/v1/work-items/{id}/comments` | Comment on card | viewer |

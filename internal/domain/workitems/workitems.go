@@ -3,6 +3,7 @@ package workitems
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,6 +20,10 @@ const (
 	ColumnReview     = "review"
 	ColumnDone       = "done"
 )
+
+// Columns are the board columns in the order the board flows in, left to
+// right, which is the order a project's work items are listed in.
+var Columns = []string{ColumnBacklog, ColumnTodo, ColumnInProgress, ColumnReview, ColumnDone}
 
 // Assignee types.
 const (
@@ -39,8 +44,9 @@ const (
 
 // Error definitions
 var (
-	ErrNotFound      = errors.New("work item not found")
-	ErrInvalidColumn = errors.New("invalid board column")
+	ErrNotFound            = errors.New("work item not found")
+	ErrInvalidColumn       = errors.New("invalid board column")
+	ErrInvalidAssigneeType = errors.New("invalid assignee_type: must be user, agent or team")
 )
 
 // WorkItem is a kanban card on the project board. The board column is stored
@@ -110,8 +116,14 @@ type MoveRequest struct {
 
 // ValidColumn reports whether the value is a known board column.
 func ValidColumn(column string) bool {
-	switch column {
-	case ColumnBacklog, ColumnTodo, ColumnInProgress, ColumnReview, ColumnDone:
+	return slices.Contains(Columns, column)
+}
+
+// ValidAssigneeType reports whether the value is a known assignee type: a
+// person, an agent or a crew ("team" is a crew's wire name).
+func ValidAssigneeType(assigneeType string) bool {
+	switch assigneeType {
+	case AssigneeUser, AssigneeAgent, AssigneeTeam:
 		return true
 	}
 	return false
@@ -177,6 +189,9 @@ func (s *DefaultService) Create(req CreateWorkItemRequest, createdBy *string, ac
 	assigneeType := req.AssigneeType
 	if assigneeType == "" {
 		assigneeType = AssigneeUser
+	}
+	if !ValidAssigneeType(assigneeType) {
+		return nil, ErrInvalidAssigneeType
 	}
 
 	artifactIDs := req.ArtifactIDs
@@ -267,6 +282,9 @@ func (s *DefaultService) Update(id string, req UpdateWorkItemRequest, actor stri
 
 	if strings.TrimSpace(req.Title) == "" {
 		return nil, errors.New("title is required")
+	}
+	if req.AssigneeType != "" && !ValidAssigneeType(req.AssigneeType) {
+		return nil, ErrInvalidAssigneeType
 	}
 
 	item.Title = req.Title

@@ -549,6 +549,38 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Giving a project role to an account that does not exist now answers `404`
   *user not found*, where it failed with a server error.
 
+- **A card on the board is assigned only to a person, an agent or an
+  existing crew, and the board's cards list in the order its columns
+  flow.** Through the API, creating or editing a work item with an
+  `assignee_type` other than `user`, `agent` or `team` saved it as sent,
+  and assigning a card to a crew (`assignee_type` `team`) that does not
+  exist saved that too, so the card named an assignee nobody could find.
+  The first now answers `400` *invalid assignee_type: must be user, agent
+  or team*, the second `404` *team not found*, and neither saves anything.
+  A crew you may not see is refused as one that does not exist, and one
+  you can see in another workspace than the card's project answers `400`
+  *team belongs to a different workspace*. An edit that sends no
+  `assignee_type` keeps the card's, and the assignee it sends is checked
+  against that; an edit that sends the card's own assignee back unchanged
+  is not checked again, so it saves as before. A person's or an agent's id
+  is not looked up. Cards already assigned so are left as they are. The
+  list of a project's cards, which agents read through the
+  `list_work_items` tool, gave the columns in alphabetical order, with Done
+  before In Progress and To Do; it now gives them as the board shows them,
+  Backlog, To Do, In Progress, Review and Done, each column's cards in
+  their order on the board. The board itself looks as it did.
+
+- **The quality report accepts a citation of a linked artifact in another
+  project.** A requirement that cites an artifact of another project it is
+  linked to, such as the requirement it refines, was flagged in the
+  project's quality report as citing something it has no traceability link
+  to, and its score in the requirements list was lowered for it, while the
+  requirement's own quality check found nothing wrong. The report now
+  judges every citation as that check does, so a citation of any artifact
+  the requirement is linked to, in whichever project, counts as linked in
+  both. A citation of an artifact it is not linked to is still flagged in
+  both.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

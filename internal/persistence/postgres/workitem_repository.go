@@ -149,16 +149,18 @@ func (r *WorkItemRepository) FindByID(id string) (*workitems.WorkItem, error) {
 	return item, nil
 }
 
-// ListByProject retrieves all work items for a project ordered by board position
+// ListByProject retrieves all work items for a project ordered by board
+// position: the columns in the order the board flows in (workitems.Columns),
+// then sort_order, then created_at.
 func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkItem, error) {
 	query := `
 		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
 		FROM work_items
 		WHERE project_id = $1
-		ORDER BY board_column ASC, sort_order ASC, created_at ASC
+		ORDER BY array_position($2::text[], board_column::text) ASC, sort_order ASC, created_at ASC
 	`
 
-	rows, err := r.db.Query(query, projectID)
+	rows, err := r.db.Query(query, projectID, pq.Array(workitems.Columns))
 	if err != nil {
 		return nil, err
 	}

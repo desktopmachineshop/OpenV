@@ -755,9 +755,11 @@ func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
 }
 
 // linkedRefsFor collects the refs an artifact is linked to, in either
-// direction. ok is false when the links could not be read, which the linter
-// treats as "not checked" rather than "nothing is linked" — the difference
-// decides whether every citation in the artifact is flagged as untraceable.
+// direction, by the rule the project report applies (quality.LinkedRefs),
+// reading each link's other end. ok is false when the links could not be
+// read, which the linter treats as "not checked" rather than "nothing is
+// linked" — the difference decides whether every citation in the artifact
+// is flagged as untraceable.
 func (h *Handler) linkedRefsFor(artifactID string) (map[string]bool, bool) {
 	if h.linkService == nil || h.artifactService == nil {
 		return nil, false
@@ -770,25 +772,22 @@ func (h *Handler) linkedRefsFor(artifactID string) (map[string]bool, bool) {
 	if err != nil {
 		return nil, false
 	}
-	refs := map[string]bool{}
+	var ends []quality.LinkEnds
 	for _, l := range append(outgoing, incoming...) {
-		if l == nil {
-			continue
-		}
-		other := l.ToID
-		if other == artifactID {
-			other = l.FromID
-		}
-		if other == "" || other == artifactID {
-			continue
-		}
-		// A counterpart that cannot be read leaves its ref out rather than
-		// failing the lint: the other links still judge correctly.
-		if a, err := h.artifactService.GetArtifact(other); err == nil && a != nil && a.Ref != "" {
-			refs[strings.ToUpper(a.Ref)] = true
+		if l != nil {
+			ends = append(ends, quality.LinkEnds{FromID: l.FromID, ToID: l.ToID})
 		}
 	}
-	return refs, true
+	return quality.LinkedRefs(ends, func(id string) string {
+		// A counterpart that cannot be read names no ref.
+		if id == artifactID {
+			return ""
+		}
+		if a, err := h.artifactService.GetArtifact(id); err == nil && a != nil {
+			return a.Ref
+		}
+		return ""
+	})[artifactID], true
 }
 
 // --- Work items ---
@@ -816,6 +815,9 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if !h.assigneeCrewChecked(w, r, projectID, req.AssigneeType, req.AssigneeID) {
+		return
+	}
 	item, err := h.workItemService.Create(req, CurrentUserID(r), Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -837,6 +839,41 @@ func (h *Handler) noteBelongsToProject(chatterID, projectID string) bool {
 		return false
 	}
 	return h.projectIDForArtifact(entry.ArtifactID) == projectID
+}
+
+// assigneeCrewChecked answers a work item's crew assignee (assignee_type
+// "team", a crew's wire name) as the crew routes answer a crew no row has,
+// 404 `team not found`, when no crew has the id or the caller may not know
+// of it (I3), and refuses one the caller may know of in another workspace
+// than the item's project 400, as a people-team's grant does. Any other
+// assignee passes. Returns false when it has answered.
+func (h *Handler) assigneeCrewChecked(w http.ResponseWriter, r *http.Request, projectID, assigneeType string, assigneeID *string) bool {
+	if assigneeType != workitems.AssigneeTeam || assigneeID == nil {
+		return true
+	}
+	absent := missing("team not found")
+	if h.teamService == nil {
+		absent.write(w)
+		return false
+	}
+	graph, err := h.teamService.GetTeam(*assigneeID)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "team not found", err)
+		return false
+	}
+	if !h.requireTeamVisible(w, r, graph.Team, absent) {
+		return false
+	}
+	project, err := h.projectService.GetProject(projectID)
+	if err != nil || project == nil {
+		respondError(w, r, http.StatusNotFound, "project not found", err)
+		return false
+	}
+	if graph.Team.OrgID != project.OrgID {
+		writeJSONError(w, http.StatusBadRequest, "team belongs to a different workspace")
+		return false
+	}
+	return true
 }
 
 func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {
@@ -880,6 +917,17 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 	var req workitems.UpdateWorkItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// An update that sends no assignee_type keeps the item's. One that
+	// re-sends the item's own assignee stores nothing new, so it is not
+	// checked again: an editor who may not know of the crew keeps it.
+	assigneeType := req.AssigneeType
+	if assigneeType == "" {
+		assigneeType = item.AssigneeType
+	}
+	unchanged := assigneeType == item.AssigneeType && req.AssigneeID != nil && item.AssigneeID != nil && *req.AssigneeID == *item.AssigneeID
+	if !unchanged && !h.assigneeCrewChecked(w, r, item.ProjectID, assigneeType, req.AssigneeID) {
 		return
 	}
 	updated, err := h.workItemService.Update(id, req, Actor(r))
