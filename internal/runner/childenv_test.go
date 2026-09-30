@@ -11,13 +11,45 @@ import (
 	"testing"
 )
 
-// TestChildEnvDropsRunnerCredentials pins what a provider CLI inherits: the
-// runner's environment and the entries layered on top, but neither of the
-// runner's own OpenV keys, whatever their case.
-func TestChildEnvDropsRunnerCredentials(t *testing.T) {
-	t.Setenv("WORKER_API_KEY", "wk-example")
-	t.Setenv("RUNNER_POOL_KEY", "pk-example")
+// credentialValues are the OpenV credentials a runner's host may hold, each
+// with a value of its own, so that a child's output shows which one it saw;
+// they are listed here rather than read from runnerCredentials, so that one
+// dropped from that list shows as a child that sees it.
+var credentialValues = map[string]string{
+	"WORKER_API_KEY":  "wk-example",
+	"RUNNER_POOL_KEY": "pk-example",
+	"OPENV_API_TOKEN": "api-token-example",
+	"OPENV_EMAIL":     "agent-owner@example.com",
+	"OPENV_PASSWORD":  "password-example",
+}
+
+// setRunnerCredentials sets every credential of credentialValues in the
+// test's environment, and a setting a child should see.
+func setRunnerCredentials(t *testing.T) {
+	t.Helper()
+	for name, value := range credentialValues {
+		t.Setenv(name, value)
+	}
 	t.Setenv("OPENV_CHILD_ENV_SETTING", "kept")
+}
+
+// seesACredential reports the first credential value in a child's output.
+func seesACredential(out string) string {
+	for name, value := range credentialValues {
+		if strings.Contains(out, value) {
+			return name + "=" + value
+		}
+	}
+	return ""
+}
+
+// TestChildEnvDropsRunnerCredentials pins what a provider CLI inherits: the
+// runner's environment and the entries layered on top, but none of the
+// OpenV credentials the runner's host may hold, whatever their case: the
+// runner's own keys since #414, and a workspace runner key and an account's
+// email and password since issue #379's question 17.
+func TestChildEnvDropsRunnerCredentials(t *testing.T) {
+	setRunnerCredentials(t)
 	env := childEnv("OPENV_RUN_TOKEN=run-token", "TERM=xterm-256color")
 
 	has := map[string]bool{}
@@ -36,13 +68,27 @@ func TestChildEnvDropsRunnerCredentials(t *testing.T) {
 		t.Errorf("childEnv's extra entries are not last, in order: %q", got)
 	}
 
+	for _, kv := range env {
+		if seen := seesACredential(kv); seen != "" {
+			t.Errorf("childEnv passes on %s", seen)
+		}
+	}
 	for kv, want := range map[string]bool{
-		"WORKER_API_KEY=x":    true,
-		"worker_api_key=x":    true,
-		"RUNNER_POOL_KEY=":    true,
-		"WORKER_API_KEYS=x":   false,
-		"MY_WORKER_API_KEY=x": false,
-		"RUNNER_POOL=x":       false,
+		"WORKER_API_KEY=x":             true,
+		"worker_api_key=x":             true,
+		"RUNNER_POOL_KEY=":             true,
+		"OPENV_API_TOKEN=x":            true,
+		"openv_api_token=x":            true,
+		"OPENV_EMAIL=a@example.com":    true,
+		"OPENV_PASSWORD=x":             true,
+		"Openv_Password=":              true,
+		"WORKER_API_KEYS=x":            false,
+		"MY_WORKER_API_KEY=x":          false,
+		"RUNNER_POOL=x":                false,
+		"OPENV_RUN_TOKEN=x":            false,
+		"OPENV_API_URL=x":              false,
+		"OPENV_EMAIL_VERIFICATION=off": false,
+		"OPENV_API_TOKENS=x":           false,
 	} {
 		if got := isRunnerCredential(kv); got != want {
 			t.Errorf("isRunnerCredential(%q) = %v, want %v", kv, got, want)
@@ -72,9 +118,7 @@ func (c *lineCollector) Result(exitCode int, stderrTail string) (Result, error) 
 // TestStartProcHidesRunnerCredentials runs a real child through startProc,
 // the path every agent run takes, and checks the environment it sees.
 func TestStartProcHidesRunnerCredentials(t *testing.T) {
-	t.Setenv("WORKER_API_KEY", "wk-example")
-	t.Setenv("RUNNER_POOL_KEY", "pk-example")
-	t.Setenv("OPENV_CHILD_ENV_SETTING", "kept")
+	setRunnerCredentials(t)
 	c := &lineCollector{}
 	h, err := startProc(context.Background(), procConfig{
 		Command:    os.Args[0],
@@ -98,7 +142,7 @@ func TestStartProcHidesRunnerCredentials(t *testing.T) {
 		}
 	}
 	for _, line := range c.lines {
-		if isRunnerCredential(line) || strings.Contains(line, "wk-example") || strings.Contains(line, "pk-example") {
+		if isRunnerCredential(line) || seesACredential(line) != "" {
 			t.Errorf("the child sees a runner credential: %s", line)
 		}
 	}
@@ -120,8 +164,7 @@ func TestChildEnvHelperProcess(t *testing.T) {
 // TestRunVersionHidesRunnerCredentials checks the provider version probe's
 // environment the same way.
 func TestRunVersionHidesRunnerCredentials(t *testing.T) {
-	t.Setenv("WORKER_API_KEY", "wk-example")
-	t.Setenv("RUNNER_POOL_KEY", "pk-example")
+	setRunnerCredentials(t)
 	t.Setenv("OPENV_CHILD_ENV_HELPER", "1")
 	out, err := runVersion(context.Background(), os.Args[0], "-test.run=^TestChildEnvHelperProcess$")
 	if err != nil {
@@ -130,14 +173,14 @@ func TestRunVersionHidesRunnerCredentials(t *testing.T) {
 	if !strings.Contains(out, "OPENV_CHILD_ENV_HELPER=1") {
 		t.Fatalf("the probe printed no environment: %q", out)
 	}
-	if strings.Contains(out, "wk-example") || strings.Contains(out, "pk-example") {
-		t.Errorf("the version probe sees a runner credential: %q", out)
+	if seen := seesACredential(out); seen != "" {
+		t.Errorf("the version probe sees a runner credential, %s", seen)
 	}
 }
 
 // TestRunGitHidesRunnerCredentials runs a git shell alias, which runs with
 // git's environment as a hook the agent wrote into its workspace would, and
-// checks neither key reaches it.
+// checks no credential reaches it.
 func TestRunGitHidesRunnerCredentials(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("the alias runs env through a POSIX shell")
@@ -145,9 +188,7 @@ func TestRunGitHidesRunnerCredentials(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	t.Setenv("WORKER_API_KEY", "wk-example")
-	t.Setenv("RUNNER_POOL_KEY", "pk-example")
-	t.Setenv("OPENV_CHILD_ENV_SETTING", "kept")
+	setRunnerCredentials(t)
 	dir := t.TempDir()
 	out, err := runGit(dir, "-c", "alias.showenv=!env", "showenv")
 	if err != nil {
@@ -159,7 +200,7 @@ func TestRunGitHidesRunnerCredentials(t *testing.T) {
 	if !strings.Contains(out, "PWD="+dir+"\n") && !strings.HasSuffix(out, "PWD="+dir) {
 		t.Errorf("git does not see PWD=%s, which os/exec gave it when it inherited the environment: %q", dir, out)
 	}
-	if strings.Contains(out, "wk-example") || strings.Contains(out, "pk-example") {
-		t.Errorf("git sees a runner credential: %q", out)
+	if seen := seesACredential(out); seen != "" {
+		t.Errorf("git sees a runner credential, %s", seen)
 	}
 }

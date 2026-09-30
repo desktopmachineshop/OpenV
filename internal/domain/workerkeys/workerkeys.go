@@ -2,6 +2,7 @@ package workerkeys
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -11,6 +12,11 @@ import (
 )
 
 var ErrNotFound = errors.New("worker key not found")
+
+// ErrRevoked is a presented token, or a bootstrap plaintext, whose key was
+// revoked. A revoked key stays revoked: nothing resolves it again, and the
+// boot does not register its value anew.
+var ErrRevoked = errors.New("worker key revoked")
 
 // Key is an org-scoped credential for a host worker (agentd).
 // UserID nil = a workspace runner key; set = a member's personal runner key
@@ -75,14 +81,18 @@ type Service interface {
 	// PersonalKey returns the user's personal key in the org (nil if none).
 	PersonalKey(orgID, userID string) (*Key, error)
 	Revoke(orgID, keyID string) error
-	// Resolve maps a presented token to its identity (zero value when
-	// invalid/revoked).
+	// Resolve maps a presented token to its identity: the zero value and
+	// no error when no key has it, ErrRevoked when its key was revoked, so
+	// that a caller with a fallback for an unknown token (the server's own
+	// WORKER_API_KEY) can tell a revoked one from it.
 	Resolve(token string) (Resolved, error)
 	// HasOnlinePersonalRunner reports whether the user's personal runner
 	// has polled recently.
 	HasOnlinePersonalRunner(orgID, userID string, since time.Time) (bool, error)
 	// EnsureBootstrapKey upserts a workspace key with a known plaintext
-	// (keeps the WORKER_API_KEY env workflow working).
+	// (keeps the WORKER_API_KEY env workflow working). A plaintext whose key
+	// was revoked is not registered again: it answers ErrRevoked, and the
+	// key stays revoked until the plaintext changes.
 	EnsureBootstrapKey(orgID, plaintext, name string) error
 
 	// MintSessionKey creates a personal key bound to a transient runner
@@ -269,8 +279,11 @@ func (s *DefaultService) Resolve(token string) (Resolved, error) {
 	if err != nil {
 		return Resolved{}, err
 	}
-	if key == nil || key.Revoked {
+	if key == nil {
 		return Resolved{}, nil
+	}
+	if key.Revoked {
+		return Resolved{}, ErrRevoked
 	}
 	_ = s.repo.Touch(key.ID, time.Now())
 	resolved := Resolved{OrgID: key.OrgID, KeyID: key.ID}
@@ -288,12 +301,18 @@ func (s *DefaultService) HasOnlinePersonalRunner(orgID, userID string, since tim
 	return s.repo.HasOnlinePersonalKey(orgID, userID, since)
 }
 
-// EnsureBootstrapKey upserts the env-configured key for an org.
+// EnsureBootstrapKey upserts the env-configured key for an org. A key row
+// that already holds the plaintext is left as it is, a revoked one too: an
+// operator who revoked the server's own key on the Runners tab keeps it
+// revoked across restarts, and a new value is what registers a new key.
 func (s *DefaultService) EnsureBootstrapKey(orgID, plaintext, name string) error {
 	hash := users.HashToken(plaintext)
 	existing, err := s.repo.FindByHash(hash)
 	if err != nil {
 		return err
+	}
+	if existing != nil && existing.Revoked {
+		return fmt.Errorf("%w: it stays revoked, and a new value registers a new key", ErrRevoked)
 	}
 	if existing != nil {
 		return nil

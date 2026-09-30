@@ -49,6 +49,7 @@ type AuthMiddleware struct {
 	workerService workerkeys.Service
 	// legacyWorkerKey keeps a WORKER_API_KEY-only deployment working until
 	// the boot process registers it as an org key (resolved by hash first).
+	// Once a key row holds it, the row decides: revoked, it is refused.
 	legacyWorkerKey string
 	legacyOrgID     func() string
 	// poolKey authenticates transient runner pool nodes (RUNNER_POOL_KEY).
@@ -114,7 +115,8 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 		if strings.HasPrefix(authz, "Bearer ") {
 			token := strings.TrimPrefix(authz, "Bearer ")
 
-			if resolved, err := m.workerService.Resolve(token); err == nil && resolved.OrgID != "" {
+			resolved, resolveErr := m.workerService.Resolve(token)
+			if resolveErr == nil && resolved.OrgID != "" {
 				ctx := context.WithValue(r.Context(), ctxWorkerOrg, resolved.OrgID)
 				if resolved.UserID != "" {
 					ctx = context.WithValue(ctx, ctxWorkerUser, resolved.UserID)
@@ -126,8 +128,14 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
-			// Legacy env key: resolve to the bootstrap org.
-			if m.legacyWorkerKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(m.legacyWorkerKey)) == 1 {
+			// Legacy env key: resolve to the bootstrap org, but only while no
+			// key row holds it. The boot registers it as the env-bootstrap
+			// key once a personal workspace exists, and that row, revoked on
+			// the Runners tab, is refused like any revoked key while the
+			// environment still holds its value (issue #379's question 16);
+			// a lookup that failed lets it through no more than a revoked
+			// row would.
+			if resolveErr == nil && m.legacyWorkerKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(m.legacyWorkerKey)) == 1 {
 				if orgID := m.legacyOrgID(); orgID != "" {
 					ctx := context.WithValue(r.Context(), ctxWorkerOrg, orgID)
 					annotateRequestLog(ctx, orgID, "", "worker")

@@ -53,7 +53,9 @@ import (
 // bring it back under the plan. Then the transient runners, member side: the
 // member's lease before the pool has a node (none, then 503 with the same
 // payload), and once a pool node has registered (setup, as the pool): a lease
-// of the single plan's length, the lease read back, extended, listed for the
+// of the single plan's length (201), the lease read back, asked for again
+// (200 and the same lease, since the fix of #379's question 20), extended,
+// listed for the
 // workspace's admin and refused to a member, ended, then extending and
 // ending with none; the pool key and an outsider on the member routes; and a
 // lease on the business plan, four hours long. Last, a workspace over its
@@ -251,7 +253,7 @@ func tiersSecureRunnerSessionsTour(tr *tour) {
 	read, extend, end := "GET /api/v1/orgs/{id}/runner-session", "POST /api/v1/orgs/{id}/runner-session/extend",
 		"DELETE /api/v1/orgs/{id}/runner-session"
 	tiersSecureRunnerSessionsLease(tr, tr.step("m1's cloud runner: the lease", m1, read, inW))
-	tiersSecureRunnerSessionsLease(tr, tr.step("m1 leases again: the lease it holds, no second node", m1, session, inW))
+	tiersSecureRunnerSessionsLease(tr, tr.step("m1 leases again: 200 and the lease it holds, no second node", m1, session, inW))
 	tiersSecureRunnerSessionsLease(tr, tr.step("m1 extends it", m1, extend, inW))
 	tr.step("the workspace's runner pool, for W's admin: the pool's counts and W's leases", o,
 		"GET /api/v1/orgs/{id}/runner-pool", inW)
