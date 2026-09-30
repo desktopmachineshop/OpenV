@@ -220,6 +220,13 @@ GUARD_CODE = [
     ("S12b", ["frontend/src/**/cssOrder.test.ts", "frontend/scripts/bundle-check.mjs"]),
     ("S13", []),  # slot: the Go vocabulary writer and the vitest parity test
     ("S14a", ["internal/tools/declhash/**", "frontend/scripts/tsdeclhash.mjs", "frontend/scripts/tsmovecheck.mjs"]),
+    # S14d's migration generator, its tests and their fixture and goldens.
+    # M10 is what it writes; the S3 freeze and the generator's own self-check
+    # (every lifted body its literal token for token, comments included,
+    # everything else byte for byte) are M10's proof, so a refactor pull
+    # request changes the generator only in a class C or T commit, never in
+    # the commits it proves. M10's declmove spec is not under it.
+    ("S14d", ["internal/tools/liftmigrations/**"]),
     ("S14b", [".github/workflows/refactor-guard.yml", "scripts/refactor/refactor_guard.py",
               "scripts/refactor/refactor_guard_test.py"]),
 ]

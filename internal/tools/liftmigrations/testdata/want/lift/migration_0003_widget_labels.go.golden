@@ -1,0 +1,11 @@
+package store
+
+import "database/sql"
+
+// 0003: existing rows read '' (SQL's empty string), which gofmt would
+// turn into a typographic quote in a doc comment.
+
+func m0003WidgetLabels(tx *sql.Tx) error {
+	_, err := tx.Exec(`ALTER TABLE widgets ADD COLUMN label TEXT NOT NULL DEFAULT ''`)
+	return err
+}

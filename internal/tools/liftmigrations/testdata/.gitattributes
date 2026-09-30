@@ -1,0 +1,4 @@
+# Byte-compared goldens of liftmigrations' tests (refactor plan S14d), and
+# the fixture they are generated from: a checkout with CRLF line endings
+# would fail every comparison, so they stay LF on every platform.
+* text eol=lf
