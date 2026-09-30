@@ -102,8 +102,8 @@ CHARACTERIZATION_TRAILER = "Refactor-Characterization"
 # (1) The golden list (§6.4 S14b): (owning step, what it pins, patterns).
 # One entry may hold several patterns. `**` spans directories, `*` does not.
 # An entry for a step not yet merged is the pattern the plan names; it
-# matches nothing until that step lands its goldens. S17 and X4a/X5 each add
-# one entry in a class T commit.
+# matches nothing until that step lands its goldens. X4a/X5 add one entry
+# in a class T commit (S17, which would have added another, is dropped).
 GOLDEN_LIST = [
     ("I1, pre-S2", "HTTP route set", ["internal/api/testdata/routes.txt"]),
     ("S2", "route binding in registration order", ["internal/api/testdata/route_handlers.txt"]),

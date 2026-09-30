@@ -101,7 +101,7 @@ POST /api/v1/orgs/{id}/logo: 200, 400, 403, 404, 413; workspaces_logo
 POST /api/v1/orgs/{id}/members: 201, 202, 400, 403, 404, 409, 429; invitations_closed, mail_password_admin, members_teams, self_hosted_cross_site_sso, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/my-runner-key: 201, 404; runner_keys_connector
 POST /api/v1/orgs/{id}/restore: 200, 400, 403, 404; workspaces_logo
-POST /api/v1/orgs/{id}/runner-session: 201, 400, 403, 503; runner_keys_connector, tiers_secure_runner_sessions
+POST /api/v1/orgs/{id}/runner-session: 200, 201, 400, 403, 503; runner_keys_connector, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/runner-session/extend: 200, 400, 404; runner_keys_connector, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/teams: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/worker-keys: 201, 400, 403; runner_keys_connector

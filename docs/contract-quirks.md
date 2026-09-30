@@ -208,14 +208,15 @@ the Phase 3 consolidations that give quirks their names.
   `internal/domain/links/validation.go:61` and
   `frontend/src/config/linkTypeRules.ts:52`; the event-type filters in
   `frontend/src/views/ActivityLog.tsx:9` and
-  `frontend/src/views/AutomationsPage.tsx:15` are subsets of the 26 types in
+  `frontend/src/views/AutomationsPage.tsx:15` are subsets of the 27 types in
   `internal/domain/events/events.go` (24 until the R7 bug-fix pull request
   for #379's decisions on REQ-4 and REQ-5 added `artifact.restored` and
-  `baseline.deleted`, which the activity log's filter offers and the
-  automations page does not).
+  `baseline.deleted`, and the one for its decision on REQ-76 added
+  `agentrun.successors_skipped`, which the activity log's filter offers and
+  the automations page does not).
 - **Pinned by, named as:** S13's allowed differences *(planned)*;
   `LINK_RULE_UI_OVERRIDES` (X4) *(planned)*. Pain point fe-requirements-4.
-- **Pinned today:** S6 pins the 26 event type strings
+- **Pinned today:** S6 pins the 27 event type strings
   (`internal/domain/events/event_types_test.go`), not the TS subsets.
 
 ## Q7. Bell deep links differ from email and push links
@@ -300,18 +301,22 @@ the Phase 3 consolidations that give quirks their names.
   `cmd/server/testdata/tour/s5d/orchestration_budget.json`). Beyond this
   entry's six, a retry answers 500 `failed to retry run`
   (`RetryAgentRun`, `internal/api/agent_handlers.go:625`; step 49), and a
-  crew run that finishes over budget launches none of its agent successors,
-  the refusal only logged, while its hand-off to a person is still made
-  (steps 50 and 51). With the budget cleared the launch, run-now, the crew
-  launch and the retry pass (steps 52–55), so each refusal was the
-  guard's.
+  crew run that finishes over budget launches none of its agent successors
+  (steps 50 and 51), while its hand-off to a person, who views the project,
+  is still made (step 50). Where the refusal was only logged, the run now
+  publishes `agentrun.successors_skipped`, naming the skipped successors
+  and the budget, and keeps a note on the run saying the same, at the end
+  of its log (step 50's events, and step 56; fixed under R7 by its own
+  release-noted bug-fix pull request, OpenV REQ-76). With the budget
+  cleared the launch, run-now, the crew launch and the retry pass (steps
+  52–55), so each refusal was the guard's.
 
 ## Q10. `RunFinished` is published twice, or never
 
 - **Where:** a proposal-mode run publishes `RunFinished` when it finishes
-  into `awaiting_approval` (`internal/domain/agentruns/agentruns.go:953`)
+  into `awaiting_approval` (`internal/domain/agentruns/agentruns.go:968`)
   and again when its proposals are resolved (`FinalizeIfResolved`,
-  `:1178`); a cancel of a queued run (`RequestCancel`, `:1069-1080`)
+  `:1193`); a cancel of a queued run (`RequestCancel`, `:1084-1095`)
   notifies the status change but never publishes it.
 - **Pinned by, named as:** S5d events.
 - **Pinned today:** the S5d tour records each step's events. A
@@ -657,7 +662,7 @@ the Phase 3 consolidations that give quirks their names.
 ## Q21. Four SSE reconnect policies
 
 - **Where:** the four `EventSource` sites:
-  `frontend/src/components/agents/RunDetailPanel.tsx:259` (backoff with
+  `frontend/src/components/agents/RunDetailPanel.tsx:287` (backoff with
   `after_seq`), `frontend/src/components/wizard/GuidedChatPanel.tsx:380` and
   `frontend/src/views/InterviewChat.tsx:51` (a capped exponent forever; the
   public interview without credentials), and

@@ -26,8 +26,7 @@ func scanShareLink(row interface{ Scan(...interface{}) error }) (*sharelinks.Lin
 		l.CreatedBy = &createdBy
 	}
 	if expires.Valid {
-		t := expires.Time
-		l.ExpiresAt = &t
+		l.ExpiresAt = inUTC(&expires.Time) // a TIMESTAMPTZ since migration 0051
 	}
 	if revoked.Valid {
 		t := revoked.Time

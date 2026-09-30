@@ -104,7 +104,7 @@ func (h *Handler) CreateShareLink(w http.ResponseWriter, r *http.Request) {
 	}
 	link, token, err := h.shareLinkService.Create(projectID, req.Role, req.Label, CurrentUserID(r), req.ExpiresAt)
 	if err != nil {
-		if errors.Is(err, sharelinks.ErrInvalidRole) {
+		if errors.Is(err, sharelinks.ErrInvalidRole) || errors.Is(err, sharelinks.ErrInvalidExpiry) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return
 		}

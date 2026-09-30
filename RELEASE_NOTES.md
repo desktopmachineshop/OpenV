@@ -19,6 +19,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Project settings → Repositories, and a run taken by a workspace runner
   clones the repository, as before.
 
+- **The manual says what an agent can read on the machine it runs on.** An
+  agent runs as the same user of the machine as the runner that runs it,
+  so it can read whatever that user can: on your own machine, your files
+  and the Agent Connector's key file, and on Windows and macOS the runner's
+  environment, which holds its key. The *Runs & runners* page of the
+  manual, and the runner setup guide, now say so, and recommend a cloud
+  runner or the hosted runner, which run on Linux with nothing of yours on
+  them, or a separate user on your machine, for agents you do not fully
+  trust.
+
+- **The web app's connection library carries today's security fixes.** The
+  app now uses axios 1.20.0. Security advisories published on 30 September
+  2026 cover every earlier 1.x version: requests that could be redirected or
+  altered by polluted objects, and inputs that could stall the app. Nothing
+  you do in the app changes.
+
 ### Bug fixes
 
 - **A runner no longer prints its keys in its help or on a flag error.**
@@ -60,8 +76,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   *Create key* on the workspace's *Runners* tab, move the runner to the new
   key, then *Revoke* the old one. If you run your own OpenV, also set a new
   `RUNNER_POOL_KEY` on the server and its pool nodes, and a new
-  `WORKER_API_KEY` on the server if a runner used the server's own key,
-  since revoking that one on the *Runners* tab does not stop it.
+  `WORKER_API_KEY` on the server if a runner used the server's own key.
 
 - **Committing a guided definition approves its drafts.** The wizard's last
   step said every draft was now live, but the personas, needs, requirements,
@@ -727,6 +742,106 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   the requirement is linked to, in whichever project, counts as linked in
   both. A citation of an artifact it is not linked to is still flagged in
   both.
+
+- **A run whose approved changes could not be applied is marked an agent
+  error.** When you approved an agent's proposed changes and one of them
+  could not be applied, the run was marked failed with no failure class, so
+  the Runs page and the run's panel showed no *agent error* beside it, and
+  an API client read no `error_class`. Such a run now fails as an
+  `agent_error`, as other failures of the agent's own work do, and is not
+  retried automatically, since the same changes would fail the same way.
+  You can still retry it yourself.
+
+- **A crew no longer hands work to someone who cannot open the project.**
+  When a crew run finished and its crew handed work to a person, or asked a
+  person for a review, the card it put on the project's board was assigned
+  to that person even when they had no role in the project, so they could
+  not open the work they were given. Such a hand-off is now refused: no
+  card is made, nobody is given access, and the run's log and its card on
+  the board say who the hand-off was for and why it was refused. Give the
+  person a role in the project, or make them an admin of the workspace, to
+  hand work to them. Someone who has left the workspace is refused even if
+  they kept a role in the project, and the reason says they are no longer a
+  member of the workspace: add them back to it, with a role in the
+  project, to hand work to them. Hand-offs to members of the workspace who
+  can open the project, and to agents, work as before.
+
+- **A crew run stopped by the budget now says which agents it did not
+  start.** Where a workspace's monthly AI budget is enforced, a crew run
+  that finished after the budget was reached launched none of the agents
+  it hands work to or is reviewed by, and only the server's own log said
+  so. The run's log now ends with a note naming those agents and the
+  budget that stopped them, and the project's *Activity* page records an
+  `agentrun.successors_skipped` event with the same, which API clients can
+  follow. Hand-offs to people still go ahead, since they start no run.
+
+- **Revoking a server's own runner key on the Runners tab now stops it.**
+  On a deployment you run yourself, the runner key the server is given in
+  `WORKER_API_KEY` is listed on the workspace's *Runners* tab as
+  *env-bootstrap*. Revoking it there changed nothing: the server went on
+  accepting the same key from its own settings. It is now refused like any
+  revoked key, even while the server still has that value, and a restart
+  with the same value keeps it revoked, adds no key, and logs a warning
+  saying so. To use the server's own key again, set a new `WORKER_API_KEY`
+  and restart the server, which registers the new value as a new key.
+
+- **A runner keeps more OpenV credentials from the agents it runs.** A
+  runner already kept its own worker and pool keys from every program it
+  starts for a run. It now also keeps `OPENV_API_TOKEN`, `OPENV_EMAIL` and
+  `OPENV_PASSWORD` from them, which a machine that also runs the OpenV
+  tools or scripts may have set, so an agent's CLI, the commands and git
+  hooks it runs, and its MCP servers no longer see a runner key or an
+  account's password that way. Agents still reach OpenV with their run's
+  own token, and every other setting, a provider's API key included,
+  reaches them as before.
+
+- **Runner keys stay off the command line.** The setup command shown when
+  you create a runner key, and the runner setup guide, passed the key to
+  `agentd` as `--worker-key`, where `ps` shows it to every user of the
+  machine. Both now set the key in the runner's environment as
+  `WORKER_API_KEY`, and the guide starts a pool node with
+  `RUNNER_POOL_KEY` there too. `agentd` still accepts `--worker-key` and
+  `--pool-key`, so existing scripts keep working, but it now logs a warning
+  when either is given, naming the flag and the variable to use instead,
+  never the key. If a runner was started with its key on the command line
+  of a machine other people use, replace the key: *Rotate* a personal
+  runner key under *My personal runner* in your settings, or create a new
+  workspace key on the *Runners* tab, move the runner to it and revoke the
+  old one.
+
+- **Asking again for a cloud runner you hold answers 200.** Through the
+  API, `POST /api/v1/orgs/{id}/runner-session` returned the cloud runner
+  you already hold with `201 Created`, as if it had leased you another. It
+  now returns that same lease with `200`, and answers `201` only when it
+  leases you a new runner. The body is the same either way, and the app
+  works as before.
+
+- **A workspace a platform admin moves onto Business or Enterprise keeps the
+  nightly channel.** Moving a workspace from Single User, Business Lite,
+  Self-hosted or Open source onto Business or Enterprise from the platform
+  admin page, or with `PUT /api/v1/orgs/{id}/plan`, put it on the stable
+  channel before any stable release had turned on for it, so every newer
+  feature its members were using disappeared at once. It now stays on
+  nightly, as a workspace that moves onto Business by checkout already does,
+  and its admins can choose stable in workspace settings whenever they want
+  to. A workspace whose admins had already chosen a channel keeps their
+  choice, and a move between Business and Enterprise changes nothing.
+  Workspaces moved before this release stay on the channel they are on: an
+  admin can choose nightly in workspace settings.
+
+- **A share link closes at the moment its expiry names.** A share link
+  created through the API with an expiry carrying a time zone offset, such
+  as `2026-10-01T12:00:00+02:00`, was stored without its offset, so it
+  closed at 12:00 UTC: a link given a `+02:00` expiry stayed open to anyone
+  holding it for two hours after it should have closed, and one given a
+  `-05:00` expiry closed five hours early. Links now close at the moment
+  sent, and the list of a project's links shows each expiry in UTC,
+  `2026-10-01T10:00:00Z` for that example; an expiry that falls outside
+  the years 1 to 9999 in UTC is refused. The app already sends a link's
+  expiry in UTC, so links made in Project settings close when they did;
+  links already created close when they did before this release, so
+  revoke and re-create any link an API client gave an expiry with a
+  positive offset if it should close sooner.
 
 - **Settings are read one way, and a mistyped one is named in the log.** A
   self-hosted server or runner treated the same slip differently from one

@@ -1,6 +1,7 @@
 package sharelinks
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -87,6 +88,50 @@ func TestCreateRejectsOtherRoles(t *testing.T) {
 		if _, _, err := svc.Create("p1", role, "", nil, nil); !errors.Is(err, ErrInvalidRole) {
 			t.Errorf("role %q: err = %v, want ErrInvalidRole", role, err)
 		}
+	}
+}
+
+// An expiry is read back in UTC (migration 0051), and Go writes no JSON
+// time outside years 0 to 9999, so an expiry that is valid as sent but
+// falls outside years 1 to 9999 in UTC is refused before anything is
+// stored: stored, it would leave the project's list of links unanswerable
+// for good, since a link is revoked, never deleted.
+func TestCreateRefusesAnExpiryOutsideYears1To9999InUTC(t *testing.T) {
+	for _, c := range []struct {
+		sent string
+		ok   bool
+	}{
+		{"9999-12-31T23:00:00-05:00", false}, // 10000-01-01T04:00:00Z
+		{"0000-01-01T00:30:00+01:00", false}, // -0001-12-31T23:30:00Z
+		{"0001-01-01T00:30:00+01:00", false}, // 0000-12-31T23:30:00Z
+		{"9999-12-31T23:00:00+05:00", true},  // 9999-12-31T18:00:00Z
+		{"0001-01-01T00:30:00-01:00", true},  // 0001-01-01T01:30:00Z
+		{"2026-10-01T12:00:00+02:00", true},
+	} {
+		var expiry time.Time // decoded as the handler decodes it
+		if err := json.Unmarshal([]byte(`"`+c.sent+`"`), &expiry); err != nil {
+			t.Fatalf("%s: %v", c.sent, err)
+		}
+		repo := newMemRepo()
+		link, token, err := NewService(repo).Create("p1", RolePublic, "", nil, &expiry)
+		if !c.ok {
+			if !errors.Is(err, ErrInvalidExpiry) || link != nil || token != "" || len(repo.links) != 0 {
+				t.Errorf("%s: Create = %+v, %q, %v with %d links stored; want ErrInvalidExpiry and nothing stored",
+					c.sent, link, token, err, len(repo.links))
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s: %v", c.sent, err)
+			continue
+		}
+		// The list answers the expiry in UTC, as the repository reads it.
+		if _, err := json.Marshal(link.ExpiresAt.UTC()); err != nil {
+			t.Errorf("%s: an accepted expiry cannot be listed: %v", c.sent, err)
+		}
+	}
+	if _, _, err := NewService(newMemRepo()).Create("p1", RolePublic, "", nil, nil); err != nil {
+		t.Errorf("no expiry: %v", err)
 	}
 }
 

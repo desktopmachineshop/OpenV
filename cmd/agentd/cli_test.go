@@ -64,12 +64,19 @@ func TestCLI(t *testing.T) {
 		// and TestCLIPrintsNoKey holds that it prints no key.
 		{name: "worker_key_line_break", env: []string{"WORKER_API_KEY=wk-example\n"}, setup: blockWorkspaces},
 		{name: "pool_key_leading_space", env: []string{"RUNNER_POOL_KEY= pk-example"}, setup: blockWorkspaces},
+		// A key given on the command line still works, and agentd warns that
+		// ps shows it there, naming the variable to use instead and never
+		// the key (issue #379's question 18); an empty one, above, puts no
+		// key there and draws no warning.
+		{name: "worker_key_flag", args: []string{"-worker-key=wk-example"}, setup: blockWorkspaces},
+		{name: "pool_key_flag", args: []string{"-pool-key=pk-example"}, setup: blockWorkspaces},
 	})
 }
 
 // TestCLIPrintsNoKey reads every agentd snapshot and fails when a key value
-// a scenario sets appears anywhere but on its own env line, so regenerating
-// the goldens cannot quietly accept a key printed again.
+// a scenario sets appears anywhere but where the scenario gives it, its env
+// lines and its command line, so regenerating the goldens cannot quietly
+// accept a key printed again.
 func TestCLIPrintsNoKey(t *testing.T) {
 	goldens, err := filepath.Glob(filepath.Join("testdata", "cli", "*.txt"))
 	if err != nil || len(goldens) == 0 {
@@ -81,7 +88,7 @@ func TestCLIPrintsNoKey(t *testing.T) {
 			t.Fatal(err)
 		}
 		for i, line := range strings.Split(string(src), "\n") {
-			if strings.HasPrefix(line, "env ") {
+			if strings.HasPrefix(line, "env ") || strings.HasPrefix(line, "$ "+cliName) {
 				continue
 			}
 			for _, key := range []string{"wk-example", "pk-example"} {

@@ -128,8 +128,12 @@ A link that opens a project without a membership (0039, REQ-149,
 SHA-256 of the token, which is shown once at creation and never stored),
 `role` (`public` — the live project read only, no account — or `reviewer`
 — sign in and become a reviewer), `label`, `created_by`, `created_at`,
-`expires_at`, `revoked_at`. Revoking sets `revoked_at` once; an expired or
-revoked link resolves to the same 404 as an unknown token.
+`expires_at` (`TIMESTAMPTZ` since 0051: the instant a client sends, offset
+and all, read back in UTC, truncated to the microsecond; one outside
+years 1 to 9999 in UTC after that is refused, since the list could not
+answer it), `revoked_at`. Revoking sets
+`revoked_at` once; an expired or revoked link resolves to the same 404 as
+an unknown token.
 
 ### release_announcements
 `version` (primary key, the release named by the top section of
@@ -170,7 +174,11 @@ Release channel (REQ-136, migration 0035): `release_channel` (TEXT, `''`
 by default) is the channel a company workspace's admin chose; empty means
 the plan's default (`orgs.ChannelForPlan`: `business`, `team` and
 `enterprise` run `stable`, everything else `nightly`). Personal-tier plans
-ignore the column and report `release_channel_locked`. Migration 0036
+ignore the column and report `release_channel_locked`. A plan move from a
+plan that always runs nightly onto one that chooses, by the billing sync or
+a platform admin's `PUT /api/v1/orgs/{id}/plan`, writes `nightly` into an
+empty `release_channel` in the same `UPDATE` (`orgs.ChannelOverrideAfterMove`),
+so the workspace stays on nightly. Migration 0036
 adds `stable_release` (the stable release turned on for the workspace,
 `''` until the first one does), `upgrade_day` (1-28, 0 = at the cut),
 `upgrade_hour` and `upgrade_timezone` (REQ-137, REQ-138), and
@@ -211,7 +219,8 @@ Org-scoped runner credentials: `org_id`, `name`, `key_hash` (unique),
 `user_id` (NULL = shared workspace key; set = a member's **personal runner
 key**, one active per member), `revoked`, `last_used_at`. The legacy
 `WORKER_API_KEY` env value is registered as a workspace key for the
-bootstrap org at startup.
+bootstrap org at startup (`env-bootstrap`). A revoked row stays revoked:
+startup does not register the same value again, and the API refuses it.
 
 ### connector_pairings
 One-time Agent Connector pairing codes: `org_id`, `user_id`, `code_hash`

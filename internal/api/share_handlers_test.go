@@ -497,3 +497,72 @@ func TestReviewerRoleOnTheLadder(t *testing.T) {
 		}
 	}
 }
+
+// shareLinkRepoFake keeps links in memory and reads each expiry back in
+// UTC, as the Postgres ShareLinkRepository does since migration 0051.
+type shareLinkRepoFake struct {
+	sharelinks.Repository
+	links []*sharelinks.Link
+}
+
+func (f *shareLinkRepoFake) Create(link *sharelinks.Link, _ string) error {
+	cp := *link
+	f.links = append(f.links, &cp)
+	return nil
+}
+
+func (f *shareLinkRepoFake) ListByProject(projectID string) ([]*sharelinks.Link, error) {
+	var out []*sharelinks.Link
+	for _, l := range f.links {
+		if l.ProjectID == projectID {
+			cp := *l
+			if cp.ExpiresAt != nil {
+				utc := cp.ExpiresAt.UTC()
+				cp.ExpiresAt = &utc
+			}
+			out = append(out, &cp)
+		}
+	}
+	return out, nil
+}
+
+// A share link's expiry is listed in UTC, and Go writes no JSON time after
+// year 9999, so an expiry that is valid as sent but falls in year 10000 in
+// UTC is refused with 400. Minted, it left the owner's list answering 200
+// with an empty body for good (a link is revoked, never deleted), and the
+// Access tab showed none of the project's links.
+func TestCreateShareLinkRefusesAnExpiryItCouldNotList(t *testing.T) {
+	repo := &shareLinkRepoFake{}
+	h, member := shareHandler(t)
+	h.shareLinkService = sharelinks.NewService(repo)
+	h.orgService = nil // no feature gate or plan limit to pass
+	member.roles = map[string]map[string]string{"p1": {"u1": members.RoleOwner}}
+	call := func(method, body string, handle http.HandlerFunc) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(method, "/api/v1/projects/p1/share-links", strings.NewReader(body))
+		r = withUser(mux.SetURLVars(r, map[string]string{"id": "p1"}), "u1")
+		w := httptest.NewRecorder()
+		handle(w, r)
+		return w
+	}
+
+	w := call(http.MethodPost, `{"role":"public","expires_at":"9999-12-31T23:00:00-05:00"}`, h.CreateShareLink)
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), sharelinks.ErrInvalidExpiry.Error()) {
+		t.Errorf("an expiry in year 10000 in UTC: status = %d: %s; want 400 naming the years", w.Code, w.Body.String())
+	}
+	w = call(http.MethodPost, `{"role":"public","expires_at":"9999-12-31T23:00:00+05:00"}`, h.CreateShareLink)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("an expiry in year 9999 in UTC: status = %d: %s", w.Code, w.Body.String())
+	}
+
+	w = call(http.MethodGet, "", h.ListShareLinks)
+	var listed []struct {
+		ExpiresAt *time.Time `json:"expires_at"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &listed); w.Code != http.StatusOK || err != nil {
+		t.Fatalf("the owner's list: status = %d, body %q: %v", w.Code, w.Body.String(), err)
+	}
+	if len(listed) != 1 || listed[0].ExpiresAt == nil ||
+		!listed[0].ExpiresAt.Equal(time.Date(9999, 12, 31, 18, 0, 0, 0, time.UTC)) {
+		t.Errorf("the owner's list = %s; want the one link, expiring 9999-12-31T18:00:00Z", w.Body.String())
+	}
+}

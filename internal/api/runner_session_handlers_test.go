@@ -29,14 +29,17 @@ type fakeRunnerSessions struct {
 	// startedWith is the lease length the handler asked for.
 	minutesUsed int
 	startedWith int
+	// held marks session as the lease the member already holds, which
+	// Start returns rather than creating one.
+	held bool
 }
 
-func (f *fakeRunnerSessions) Start(orgID, userID string, sessionMinutes, idleMinutes int) (*runnersessions.Session, error) {
+func (f *fakeRunnerSessions) Start(orgID, userID string, sessionMinutes, idleMinutes int) (*runnersessions.Session, bool, error) {
 	f.startedWith = sessionMinutes
 	if f.startErr != nil {
-		return nil, f.startErr
+		return nil, false, f.startErr
 	}
-	return f.session, nil
+	return f.session, !f.held, nil
 }
 
 func (f *fakeRunnerSessions) Get(orgID, userID string) (*runnersessions.Session, error) {
@@ -89,6 +92,39 @@ func TestStartRunnerSessionWithEmptyPool(t *testing.T) {
 	load, ok := body["pool_load"].(map[string]interface{})
 	if !ok || load["status"] != runnersessions.LoadRed {
 		t.Errorf("payload did not report the pool load band: %s", w.Body.String())
+	}
+}
+
+// A new lease answers 201; asking again while the member holds one returns
+// that lease with 200 and the same payload, since nothing was created
+// (issue #379's question 20; OpenV REQ-57). Sent through the router
+// RegisterRoutes builds.
+func TestARepeatedLeaseRequestAnswers200(t *testing.T) {
+	lease := &runnersessions.Session{ID: "s1", OrgID: "org-1", UserID: "user-1", Status: runnersessions.StatusActive}
+	svc := &fakeRunnerSessions{session: lease}
+	router := mux.NewRouter()
+	NewHandler(HandlerDeps{RunnerSessionService: svc, OrgService: memberOrgService()}).RegisterRoutes(router)
+	send := func() *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodPost, "/api/v1/orgs/org-1/runner-session", nil)
+		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "user-1"})
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r.WithContext(context.WithValue(ctx, ctxActiveOrg, "org-1")))
+		return w
+	}
+
+	w := send()
+	if w.Code != http.StatusCreated {
+		t.Fatalf("a new lease: %d %s, want 201", w.Code, w.Body.String())
+	}
+	created := w.Body.String()
+
+	svc.held = true
+	w = send()
+	if w.Code != http.StatusOK {
+		t.Errorf("the lease the member holds: %d, want 200", w.Code)
+	}
+	if w.Body.String() != created {
+		t.Errorf("the lease the member holds answers %s, the new one %s; want the same payload", w.Body.String(), created)
 	}
 }
 

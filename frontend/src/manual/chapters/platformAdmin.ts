@@ -34,7 +34,10 @@ single sign-on have no password, so they have no button.
 The *Workspaces* table lists every workspace on the deployment with its
 type, plan, member count and creation date. Change a plan from the
 selector: a plan decides the workspace's limits and its default release
-channel.
+channel. A workspace you move from Single User, Business Lite, Self-hosted
+or Open source onto Business or Enterprise stays on the nightly channel,
+as it would after a checkout, so none of the features its members use
+switch off; its admins can choose stable in its settings.
 
 The **Open source** plan is how an open-source project is hosted free:
 choose it and every project in that workspace is published, as of its

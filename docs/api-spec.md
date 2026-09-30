@@ -14,13 +14,12 @@ upload/download, connector bundle download, SSE streams).
 ## Times
 
 Times are RFC 3339. A time sent with an offset as an evidence bundle's
-`captured_at`, a work item's `due_date` or an interview invite's
-`expires_at` is stored as the instant it names and read back in UTC:
-`2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`, though the
-create's own answer echoes it as sent. A workspace invitation's
-`expires_at`, which the server sets, is stored the same way. A share link's
-`expires_at` still keeps the wall clock sent and drops its offset, so send
-it in UTC.
+`captured_at`, a work item's `due_date`, an interview invite's `expires_at`
+or a share link's `expires_at` is stored as the instant it names and read
+back in UTC: `2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`,
+though the create's own answer echoes it as sent, and a share link closes
+at that instant. A workspace invitation's `expires_at`, which the server
+sets, is stored the same way.
 
 ## Authentication
 
@@ -137,10 +136,16 @@ key like any other runner.
 
 A raw `WORKER_API_KEY` in the API server environment keeps old deployments
 working: at startup it is registered as a workspace key for the bootstrap
-org, and the middleware also accepts the raw env value directly (resolving it
-to the bootstrap org). The value is used exactly as set, like every
-credential the server reads: spaces or a line break around it are not
-trimmed, and the server names such a key in its boot log, never printing it.
+org, named `env-bootstrap`, once a personal workspace exists to hold it, and
+until then the middleware accepts the raw env value directly (resolving it
+to the bootstrap org). Once a key row holds the value, the row decides:
+revoked on the Runners tab (`DELETE /orgs/{id}/worker-keys/{keyId}`), the
+value answers `401` `invalid token`, as any revoked key does, even while the
+environment still holds it. A restart with the same value leaves the key
+revoked, registers nothing and logs a warning; only a new value registers a
+new key. The value is used exactly as set, like every credential the server
+reads: spaces or a line break around it are not trimmed, and the server
+names such a key in its boot log, never printing it.
 
 ## Authorization model
 
@@ -291,7 +296,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
 | PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). Every part is checked before any is written, so a request refused for one part changes nothing. The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
 | GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards), `default-workspace` (choosing the workspace a sign-in lands in), `figure-titles` (renaming a figure). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
-| PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace, and `409` with `code: "already_subscribed"` for a granted plan (`enterprise`, `open_source`) while the workspace holds a live subscription, which is cancelled first (REQ-168). The channel override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
+| PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace, and `409` with `code: "already_subscribed"` for a granted plan (`enterprise`, `open_source`) while the workspace holds a live subscription, which is cancelled first (REQ-168). A move from a plan that always runs nightly (`single`, `business_lite`, `self_host`, `open_source`, legacy `free`) onto one whose admins choose the channel (`business`, `enterprise`, legacy `team`) writes `nightly` as the channel override where none is set, as a checkout does, so the workspace keeps the features it uses (`release_channel: "nightly"`, unlocked); otherwise the override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
 | PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly; `404` `workspace not found` for an account with no membership of the workspace, as for one no row has, and `403` for a platform admin outside it, whom the guard lets by, since the preview is kept on the membership | org member |
 | DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period; returns the workspace as restored. `403` for a member who is not its admin, `404` `workspace not found` for an account that is no member, as for a workspace no row has | org admin (of the deleted org) |
@@ -338,7 +343,7 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
 | GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and a `pool_load` band — `green` / `amber` / `red` / `unavailable`, never a count) | org member |
-| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner (409-free: an existing lease is returned; 503 when the pool is full) | org member |
+| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner: `201` with a new lease; the lease the caller already holds is returned with `200` and the same payload, rather than a second node or a `409`; `503` when the pool is full | org member |
 | POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
 | DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |
 | GET | `/api/v1/orgs/{id}/runner-pool` | Pool occupancy and the workspace's live leases | org admin |
@@ -369,7 +374,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
 | DELETE | `/api/v1/baselines/{id}` | Delete baseline; publishes `baseline.deleted` `{name}`, the name it had, so the activity log records it (REQ-5). `403` for an editor or viewer, `404` `baseline not found` for one no row has | owner |
 | GET | `/api/v1/projects/{id}/share-links` | The project's share links (`docs/sharing.md`), tokens never included | owner |
-| POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `400` for another role; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
+| POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `expires_at` is the instant the link closes, whatever offset it is sent with (see Times); the list answers it in UTC. `400` for another role, and for an `expires_at` that falls outside years 1 to 9999 in UTC, such as `9999-12-31T23:00:00-05:00` (`expires_at must fall between years 1 and 9999 in UTC`), which the list could not answer. It is truncated to the microsecond, as stored, before that check, so a link closes no later than sent; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template | editor |
@@ -1190,7 +1195,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree, less each run below the root the caller could not open by itself and the runs below it | launcher / viewer |
-| GET | `/api/v1/agent-runs/{id}/logs` | Run log entries | launcher / viewer |
+| GET | `/api/v1/agent-runs/{id}/logs` | Run log entries: the worker's, then any note the server keeps on the finished run (`kind` `marker`, below) | launcher / viewer |
 | POST | `/api/v1/agent-runs/{id}/logs` | Worker appends log entries (returns cancel flag) | worker |
 | GET | `/api/v1/agent-runs/{id}/stream` | SSE live log stream | launcher / viewer |
 
@@ -1207,6 +1212,41 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
 | POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. `204` also when nothing was released | worker |
+
+A run that finishes with proposals pending review waits in
+`awaiting_approval` until its last proposal is reviewed, then succeeds, or
+fails when an approved proposal could not be applied: its `error` is then
+`one or more approved proposals failed to apply` and its `error_class`
+`agent_error`, which is never retried automatically; a member may still
+retry it (REQ-79, REQ-84).
+
+When a crew run succeeds (for one awaiting approval, once it is finalised),
+each `hands-off-to` and `reviews` edge of its crew node starts what it leads
+to: an agent's run, or, for a person, a card on the run's project board
+assigned to them. That card goes only to an admin of the project's
+workspace, or a member of it with a role in the project, directly or
+through a people team. That is stricter than what the person's own session
+opens: a platform admin who is neither, and someone who has left the
+workspace but kept a role in the project, are refused too. Anyone refused
+is granted nothing: no card is made, and the run keeps a note saying why,
+which its card's activity repeats (`run-failed`) (REQ-23, REQ-81). The
+reason names the rule that refused: a member of the workspace with no role
+in the project "has no role in this project", to be given one, and anyone
+outside the workspace, such as a former member who kept a role in the
+project, "is no longer a member of this workspace", to be added back to it
+with a role in the project; a check that fails says the person's access
+"could not be checked".
+When the workspace's budget refuses the agent successors
+(`OPENV_BUDGET_ENFORCE`), none is launched: the run publishes
+`agentrun.successors_skipped`, with `agent_id`, `team_id`, `successors` (the
+skipped nodes' labels), `team_node_ids` and `reason` (the budget refusal,
+which names the budget and the month's spend), and keeps a note saying the
+same (REQ-76); a person's hand-off, which starts no run, is still made. A
+note is an entry the server appends at the end of the finished run's log,
+`kind` `marker`, whose payload carries `marker` (`handoff_refused` or
+`successors_skipped`), `message`, the sentence the run panel shows, and the
+detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
+`successors`, `team_node_ids` and `reason` for skipped successors.
 
 ### Crews (agent org charts) — canonical
 

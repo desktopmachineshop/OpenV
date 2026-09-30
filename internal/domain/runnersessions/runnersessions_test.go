@@ -225,7 +225,7 @@ func TestStartLeasesNodeAndHandsKeyOverOnce(t *testing.T) {
 	svc, _, minter := newService()
 	node := idleNode(t, svc, "node-a")
 
-	session, err := svc.Start("org", "user", 60, 15)
+	session, _, err := svc.Start("org", "user", 60, 15)
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -266,16 +266,19 @@ func TestStartIsIdempotentPerMember(t *testing.T) {
 	idleNode(t, svc, "node-a")
 	idleNode(t, svc, "node-b")
 
-	first, err := svc.Start("org", "user", 60, 15)
-	if err != nil {
-		t.Fatalf("Start: %v", err)
+	first, created, err := svc.Start("org", "user", 60, 15)
+	if err != nil || !created {
+		t.Fatalf("Start: created %v, %v; want a new lease", created, err)
 	}
-	second, err := svc.Start("org", "user", 60, 15)
+	second, created, err := svc.Start("org", "user", 60, 15)
 	if err != nil {
 		t.Fatalf("second Start: %v", err)
 	}
 	if second.ID != first.ID {
 		t.Errorf("second Start leased a new node (%s vs %s)", second.ID, first.ID)
+	}
+	if created {
+		t.Error("second Start reports a new lease; it returned the one the member holds")
 	}
 	counts, _ := svc.Counts(DefaultPool)
 	if counts.Idle != 1 {
@@ -289,10 +292,10 @@ func TestStartWithNoFreeNodes(t *testing.T) {
 	svc, _, _ := newService()
 	idleNode(t, svc, "node-a")
 
-	if _, err := svc.Start("org", "user-1", 60, 15); err != nil {
+	if _, _, err := svc.Start("org", "user-1", 60, 15); err != nil {
 		t.Fatalf("first Start: %v", err)
 	}
-	if _, err := svc.Start("org", "user-2", 60, 15); !errors.Is(err, ErrNoNodes) {
+	if _, _, err := svc.Start("org", "user-2", 60, 15); !errors.Is(err, ErrNoNodes) {
 		t.Fatalf("second Start error = %v, want ErrNoNodes", err)
 	}
 }
@@ -302,7 +305,7 @@ func TestStartWithNoFreeNodes(t *testing.T) {
 func TestEndRevokesCredentialAndDrainsNode(t *testing.T) {
 	svc, repo, minter := newService()
 	node := idleNode(t, svc, "node-a")
-	session, _ := svc.Start("org", "user", 60, 15)
+	session, _, _ := svc.Start("org", "user", 60, 15)
 
 	ended, err := svc.End(session.ID, EndReasonUser)
 	if err != nil {
@@ -340,14 +343,14 @@ func TestEndRevokesCredentialAndDrainsNode(t *testing.T) {
 func TestReleaseNodeIgnoresStaleSession(t *testing.T) {
 	svc, repo, _ := newService()
 	node := idleNode(t, svc, "node-a")
-	first, _ := svc.Start("org", "user-1", 60, 15)
+	first, _, _ := svc.Start("org", "user-1", 60, 15)
 	if _, err := svc.End(first.ID, EndReasonUser); err != nil {
 		t.Fatalf("End: %v", err)
 	}
 	if err := svc.ReleaseNode(node.ID, first.ID); err != nil {
 		t.Fatalf("ReleaseNode: %v", err)
 	}
-	second, err := svc.Start("org", "user-2", 60, 15)
+	second, _, err := svc.Start("org", "user-2", 60, 15)
 	if err != nil {
 		t.Fatalf("second Start: %v", err)
 	}
@@ -372,8 +375,8 @@ func TestSweepEndsExpiredAndIdleLeases(t *testing.T) {
 	idleNode(t, svc, "node-a")
 	idleNode(t, svc, "node-b")
 
-	expired, _ := svc.Start("org", "user-1", 60, 15)
-	idle, _ := svc.Start("org", "user-2", 60, 15)
+	expired, _, _ := svc.Start("org", "user-1", 60, 15)
+	idle, _, _ := svc.Start("org", "user-2", 60, 15)
 
 	// Make one lease's hard expiry pass, and let the other go quiet.
 	now := time.Now()
@@ -412,7 +415,7 @@ func TestSweepEndsExpiredAndIdleLeases(t *testing.T) {
 func TestTouchDefersIdleTimeout(t *testing.T) {
 	svc, repo, _ := newService()
 	idleNode(t, svc, "node-a")
-	session, _ := svc.Start("org", "user", 60, 15)
+	session, _, _ := svc.Start("org", "user", 60, 15)
 	repo.sessions[session.ID].Status = StatusActive
 	repo.sessions[session.ID].LastActivityAt = time.Now().Add(-16 * time.Minute)
 
@@ -433,7 +436,7 @@ func TestTouchDefersIdleTimeout(t *testing.T) {
 func TestSweepEndsLeasesOnLostNodes(t *testing.T) {
 	svc, repo, minter := newService()
 	node := idleNode(t, svc, "node-a")
-	session, _ := svc.Start("org", "user", 60, 15)
+	session, _, _ := svc.Start("org", "user", 60, 15)
 	repo.sessions[session.ID].Status = StatusActive
 	repo.nodes[node.ID].LastSeenAt = time.Now().Add(-2 * NodeOfflineAfter)
 
@@ -453,7 +456,7 @@ func TestSweepEndsLeasesOnLostNodes(t *testing.T) {
 func TestSweepEndsLeasesStuckStarting(t *testing.T) {
 	svc, repo, _ := newService()
 	idleNode(t, svc, "node-a")
-	session, _ := svc.Start("org", "user", 60, 15)
+	session, _, _ := svc.Start("org", "user", 60, 15)
 	repo.sessions[session.ID].StartedAt = time.Now().Add(-2 * StartTimeout)
 
 	ended, err := svc.Sweep(time.Now())
@@ -470,7 +473,7 @@ func TestSweepEndsLeasesStuckStarting(t *testing.T) {
 func TestExtendIsCappedFromStart(t *testing.T) {
 	svc, repo, _ := newService()
 	idleNode(t, svc, "node-a")
-	session, _ := svc.Start("org", "user", 60, 15)
+	session, _, _ := svc.Start("org", "user", 60, 15)
 	repo.sessions[session.ID].StartedAt = time.Now().Add(-(MaxSessionMinutes - 10) * time.Minute)
 
 	extended, err := svc.Extend(session.ID, 60)

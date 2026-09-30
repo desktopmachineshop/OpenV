@@ -155,13 +155,14 @@ func (f *fakeRunRepo) CountApplyFailedProposals(string) (int, error) {
 // FinalizeApproval mirrors the SQL: it transitions the STORED run only while
 // it is still awaiting_approval, so a concurrent resolver can never
 // double-finalize; reports whether it was applied.
-func (f *fakeRunRepo) FinalizeApproval(runID, status, errMsg string, at time.Time) (bool, error) {
+func (f *fakeRunRepo) FinalizeApproval(runID, status, errMsg, errorClass string, at time.Time) (bool, error) {
 	r, ok := f.runs[runID]
 	if !ok || r.Status != StatusAwaitingApproval {
 		return false, nil
 	}
 	r.Status = status
 	r.Error = errMsg
+	r.ErrorClass = errorClass
 	r.FinishedAt = &at
 	r.RunTokenHash = ""
 	return true, nil
@@ -1007,10 +1008,15 @@ func TestFinalizeIfResolvedFailsWhenApplyFailed(t *testing.T) {
 	if run.Error != "one or more approved proposals failed to apply" {
 		t.Errorf("returned error = %q, want the apply failure explained", run.Error)
 	}
-	// The stored run reads back as the returned one: the error is stored with
-	// the status, not only broadcast.
-	if stored := repo.runs["r1"]; stored.Status != StatusFailed || stored.Error != run.Error {
-		t.Errorf("stored run = %s %q, want failed with %q", stored.Status, stored.Error, run.Error)
+	// An apply failure is the agent's: class agent_error, which is not
+	// retried (OpenV REQ-84).
+	if run.ErrorClass != ErrorClassAgentError || IsRetryableClass(run.ErrorClass) {
+		t.Errorf("returned error class = %q, want agent_error, not retryable", run.ErrorClass)
+	}
+	// The stored run reads back as the returned one: the error and its class
+	// are stored with the status, not only broadcast.
+	if stored := repo.runs["r1"]; stored.Status != StatusFailed || stored.Error != run.Error || stored.ErrorClass != ErrorClassAgentError {
+		t.Errorf("stored run = %s %q class %q, want failed with %q, class agent_error", stored.Status, stored.Error, stored.ErrorClass, run.Error)
 	}
 	finished := bus.finished()
 	if len(finished) != 1 || finished[0].Payload["status"] != StatusFailed {

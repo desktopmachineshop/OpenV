@@ -89,7 +89,7 @@ its own credential and never rotates the member's connector key.
 #### The pool
 
 Transient runners come from a **pool of always-on `agentd` processes** started
-with the deployment's `RUNNER_POOL_KEY` (`agentd --pool-key …`). A pool node
+with the deployment's `RUNNER_POOL_KEY` in their environment. A pool node
 belongs to nobody: it registers, heartbeats, and waits. When a member leases
 one, the API hands that node a session credential on its next heartbeat; when
 the lease ends, the node wipes and reports itself free.
@@ -182,6 +182,32 @@ only the sign-in URL and the one-time code.
 
 A subscription is never shared between members, proxied, or executed by the API
 server itself in any tier.
+
+### What an agent can read on its runner
+
+An agent runs as the runner's operating-system user. Its CLI, and every
+command, git hook and MCP server it starts, can read whatever that user can
+read: the user's files, among them a personal runner's connector key file
+(`OpenV/connector.json` in the user's configuration directory,
+`%APPDATA%\OpenV\connector.json` on Windows), and, on Windows and macOS, the
+runner's own environment, which holds the runner's key.
+
+The runner keeps what it can from its agents. No process it starts gets
+`WORKER_API_KEY`, `RUNNER_POOL_KEY`, `OPENV_API_TOKEN`, `OPENV_EMAIL` or
+`OPENV_PASSWORD` from its environment; an agent reaches OpenV with its run's
+own token, `OPENV_RUN_TOKEN`, and every other variable, a provider's API key
+included, reaches it as before. On Linux `agentd` also marks itself not
+dumpable, so a program running as its user reads neither its environment
+(`/proc/<pid>/environ`) nor its memory. Windows and macOS offer no
+equivalent, and no runner can keep an agent from its own user's files.
+
+So for agents you do not trust (one that reads content nobody in the
+workspace wrote, say; see [Untrusted content never
+auto-approves](#untrusted-content-never-auto-approves)), use a Linux runner
+with nothing else of yours on it: a transient runner from the pool or the
+hosted runner, both Linux containers, or `agentd` started as a separate
+operating-system user that holds no other key, repository or sign-in you
+would not hand the agent.
 
 ## Prerequisites
 
@@ -328,13 +354,19 @@ repository URL instead.
 Every runner authenticates to the API with an org-scoped worker key.
 
 - **Personal runner:** mint your key in workspace settings (one active
-  personal key per member; minting a new one rotates the old). Pass it to
-  `agentd` via `--worker-key` or the `WORKER_API_KEY` env.
+  personal key per member; minting a new one rotates the old). Give it to
+  `agentd` in its environment as `WORKER_API_KEY`, not on its command line
+  (see *Build and run a personal runner manually* below).
 - **Workspace keys:** admins can mint shared workspace keys under Settings →
   Worker Keys for self-managed always-on workers.
 - **Hosted runner:** the server mints the key automatically at provision time.
 - Legacy fallback: a `WORKER_API_KEY` set in the API server environment is
-  registered as a workspace key for the bootstrap org at startup.
+  registered at startup as the bootstrap org's workspace key `env-bootstrap`,
+  once a personal workspace exists to hold it (until then the server takes
+  the raw value as that org's key). Revoking `env-bootstrap` on the Runners
+  tab stops it, even while the environment still holds the value: a restart
+  with the same value keeps it revoked and logs a warning, and only a new
+  value registers a new key.
 
 ## The Agent Connector (recommended personal-runner setup)
 
@@ -379,14 +411,22 @@ above).
 ## Build and run a personal runner manually
 
 ```bash
-# Windows host (cross-compiles via Docker into bin/)
+# Windows host (cross-compiles via Docker into bin/), in a Command Prompt
+# (in PowerShell: $env:WORKER_API_KEY = "<your-personal-key>")
 make worker
-bin\agentd.exe --api http://localhost:8080 --worker-key <your-personal-key>
+set WORKER_API_KEY=<your-personal-key>
+bin\agentd.exe --api http://localhost:8080
 
 # Linux/macOS host
 make worker-unix
-./bin/agentd --api http://localhost:8080 --worker-key <your-personal-key>
+read -rs WORKER_API_KEY   # paste the key: not echoed, not in the shell's history
+export WORKER_API_KEY
+./bin/agentd --api http://localhost:8080
 ```
+
+The key goes in `agentd`'s environment, not on its command line: `ps` shows a
+process's arguments to every user of the machine, so `agentd` logs a warning
+when `--worker-key` or `--pool-key` is given, though both still work.
 
 `agentd` polls for queued runs, launches the configured provider CLI with
 `openv-mcp` wired in, streams progress back, and reports completion. Stale runs
@@ -405,7 +445,7 @@ Transient runners are off until a deployment configures a pool. Two things:
    `openv-worker` image (`make worker-image`), started in pool mode:
 
    ```bash
-   agentd --api https://<api-host> --pool-key <RUNNER_POOL_KEY>
+   RUNNER_POOL_KEY=<same-key> agentd --api https://<api-host>
    ```
 
    With compose, that is a scaled service — `make runner-pool-up POOL=3`, or:
@@ -871,8 +911,15 @@ org-chart graph: a lead agent can delegate work to member agents, and
 orchestration hooks route follow-up runs along the graph's edges
 (`delegates-to`, `hands-off-to`, `reviews`). Crews can also contain **human
 members** — hand-offs to a human create a card on the project board instead
-of launching a run. Use crews when a task naturally splits (e.g. one agent
-drafts requirements, another reviews for testability).
+of launching a run. The card goes only to an admin of the project's
+workspace, or a member of the workspace with a role in the project; someone
+who has left the workspace is refused even if they kept a role in the
+project. A hand-off to anyone else is refused, with the reason noted at the
+end of the run's log and on its card, and grants no access. When the
+workspace's budget refuses the agent successors of a finished run, none is
+launched; the run publishes `agentrun.successors_skipped` and keeps a note
+naming them and the budget. Use crews when a task naturally splits (e.g. one
+agent drafts requirements, another reviews for testability).
 
 The canonical API is `/api/v1/crews` (with `/crew-nodes`, `/crew-edges`); the
 old `/api/v1/teams` (and `/team-nodes`, `/team-edges`) paths remain as

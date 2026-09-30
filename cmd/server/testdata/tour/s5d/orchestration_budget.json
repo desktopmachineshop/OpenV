@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5d/orchestration_budget.json",
   "test": "TestTourS5dOrchestrationBudget",
-  "about": "Crew orchestration and the workspace budget: delegation and the parent's poll (with I2's delegate/{id} overlap), hand-offs to agents and to a person when a crew run finishes, the run tree, the guided copilot's and the interviewer's replies over the worker wire, and Q9's refusals of every launch path once the workspace is over its monthly budget.",
+  "about": "Crew orchestration and the workspace budget: delegation and the parent's poll (with I2's delegate/{id} overlap), hand-offs to agents and to a person when a crew run finishes, refused to a person who cannot open the project, the run tree, the guided copilot's and the interviewer's replies over the worker wire, and Q9's refusals of every launch path once the workspace is over its monthly budget, with the skipped successors of a crew run recorded.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5dOrchestrationBudget$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -48,7 +48,7 @@
       "email": "tour-member@example.com",
       "account_name": "Tour Member",
       "workspace": "<member.workspace>",
-      "about": "m, a plain member of W with no role in P: the human node of crew C, to whom its Lead hands off, and a refusal of the run tree"
+      "about": "m, a plain member of W with no role in P until the owner makes m a viewer of it before the over-budget finish: the human node of crew C, to whom its Lead's hand-off is refused, and then made, and a refusal of the run tree"
     },
     {
       "name": "box",
@@ -942,7 +942,7 @@
     },
     {
       "n": 24,
-      "title": "the box key finishes lead: Checker's and Critic's runs and m's card are launched inside the request",
+      "title": "the box key finishes lead: Checker's and Critic's runs are launched inside the request, and the hand-off to m, who has no role in P, is refused",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
       "request": {
@@ -954,7 +954,7 @@
         "body": "{\"status\":\"succeeded\",\"final_text\":\"Plan: add the two tests, then ship.\"}"
       },
       "notes": [
-        "hands-off-to edges first, then reviews, each in the order the edges were made; each successor inherits lead's card and moves it back to To Do as itself; m's card is created as agent:<lead>"
+        "hands-off-to edges first, then reviews, each in the order the edges were made; each successor inherits lead's card and moves it back to To Do as itself; m could not open a card in P, so none is made"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -1020,16 +1020,6 @@
           }
         },
         {
-          "type": "workitem.created",
-          "actor": "agent:<lead>",
-          "project": "<p>",
-          "entity": "<handoff>",
-          "payload": {
-            "column": "string \"todo\"",
-            "title": "string \"Handoff from Lead\""
-          }
-        },
-        {
           "type": "workitem.moved",
           "actor": "agent:<critic>",
           "project": "<p>",
@@ -1055,16 +1045,16 @@
     },
     {
       "n": 25,
-      "title": "m's card: assigned to m, the run's answer and (from agent run <lead>) (REQ-23)",
+      "title": "lead's log: the refused hand-off, noted at its end, since m has no role in P (REQ-23)",
       "actor": "owner",
       "acting_in": "<w>",
-      "route": "GET /api/v1/work-items/{id}",
+      "route": "GET /api/v1/agent-runs/{id}/logs",
       "request": {
         "method": "GET",
-        "path": "/api/v1/work-items/<handoff>"
+        "path": "/api/v1/agent-runs/<lead>/logs"
       },
       "notes": [
-        "an S5b route, read to show the hand-off"
+        "the tour sent no log for lead, so the note is its first entry"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -1073,49 +1063,35 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<handoff>\",\"kind\":\"assigned\",\"actor\":\"agent:<lead>\",\"content\":\"assigned to user:<member>\",\"payload\":{\"assignee_id\":\"<member>\",\"assignee_type\":\"user\"},\"created_at\":\"<time@step 24>\"}],\"item\":{\"id\":\"<handoff>\",\"project_id\":\"<p>\",\"title\":\"Handoff from Lead\",\"description\":\"Plan: add the two tests, then ship.\\n\\n(from agent run <lead>)\",\"column\":\"todo\",\"sort_order\":1,\"assignee_type\":\"user\",\"assignee_id\":\"<member>\",\"artifact_ids\":[],\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}}"
+        "[{\"run_id\":\"<lead>\",\"seq\":1,\"kind\":\"marker\",\"payload\":{\"edge_type\":\"hands-off-to\",\"marker\":\"handoff_refused\",\"message\":\"Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.\",\"team_node_id\":\"<node.m>\",\"user_id\":\"<member>\"},\"created_at\":\"<time@step 24>\"}]"
       ],
       "trailing_newline": true,
-      "parsed": {
-        "activity": [
-          {
-            "id": "<uuid:1>",
-            "work_item_id": "<handoff>",
-            "kind": "assigned",
-            "actor": "agent:<lead>",
-            "content": "assigned to user:<member>",
-            "payload": {
-              "assignee_id": "<member>",
-              "assignee_type": "user"
-            },
-            "created_at": "<time@step 24>"
-          }
-        ],
-        "item": {
-          "id": "<handoff>",
-          "project_id": "<p>",
-          "title": "Handoff from Lead",
-          "description": "Plan: add the two tests, then ship.\n\n(from agent run <lead>)",
-          "column": "todo",
-          "sort_order": 1,
-          "assignee_type": "user",
-          "assignee_id": "<member>",
-          "artifact_ids": [],
-          "created_at": "<time@step 24>",
-          "updated_at": "<time@step 24>"
+      "parsed": [
+        {
+          "run_id": "<lead>",
+          "seq": 1,
+          "kind": "marker",
+          "payload": {
+            "edge_type": "hands-off-to",
+            "marker": "handoff_refused",
+            "message": "Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.",
+            "team_node_id": "<node.m>",
+            "user_id": "<member>"
+          },
+          "created_at": "<time@step 24>"
         }
-      },
+      ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
       "n": 26,
-      "title": "m, the card's assignee, reads it: P's guard, since m has no role in P",
+      "title": "m reads lead's card: P's guard, since m has no role in P and the refused hand-off granted none",
       "actor": "member",
       "acting_in": "<w>",
       "route": "GET /api/v1/work-items/{id}",
       "request": {
         "method": "GET",
-        "path": "/api/v1/work-items/<handoff>"
+        "path": "/api/v1/work-items/<lead.card>"
       },
       "status": 404,
       "content_type": "application/json",
@@ -1134,7 +1110,7 @@
     },
     {
       "n": 27,
-      "title": "lead's card: its activity ends with the hand-off to Member M",
+      "title": "lead's card: its activity records the refused hand-off to Member M",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/work-items/{id}",
@@ -1152,13 +1128,13 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"activity\":[{\"id\":\"<uuid:2>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"assigned\",\"actor\":\"agent:<lead>\",\"content\":\"assigned to agent:<agent.lead>\",\"payload\":{\"assignee_id\":\"<agent.lead>\",\"assignee_type\":\"agent\"},\"created_at\":\"<time@before step 1>\"},{\"id\":\"<uuid:3>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<lead>\",\"content\":\"Run queued\",\"payload\":{\"run_id\":\"<lead>\"},\"created_at\":\"<time@before step 1>\"},{\"id\":\"<uuid:4>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@step 1>\"},{\"id\":\"<uuid:5>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@before step 2>\"},{\"id\":\"<uuid:6>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<lead>\",\"content\":\"Run started\",\"payload\":{\"run_id\":\"<lead>\"},\"created_at\":\"<time@before step 2>\"},{\"id\":\"<uuid:7>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 10>\"},{\"id\":\"<uuid:8>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@step 21>\"},{\"id\":\"<uuid:9>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@before step 22>\"},{\"id\":\"<uuid:10>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<child>\",\"content\":\"Run started\",\"payload\":{\"run_id\":\"<child>\"},\"created_at\":\"<time@before step 22>\"},{\"id\":\"<uuid:11>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to done\",\"payload\":{\"column\":\"done\",\"sort_order\":0},\"created_at\":\"<time@step 22>\"},{\"id\":\"<uuid:12>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<child>\",\"content\":\"P lacks two tests.\",\"payload\":{\"run_id\":\"<child>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 22>\"},{\"id\":\"<uuid:13>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to done\",\"payload\":{\"column\":\"done\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:14>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<lead>\",\"content\":\"Plan: add the two tests, then ship.\",\"payload\":{\"run_id\":\"<lead>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:15>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<checker>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:16>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<lead>\",\"content\":\"Handed off to Member M\",\"payload\":{\"edge_type\":\"hands-off-to\",\"run_id\":\"<lead>\",\"work_item_id\":\"<handoff>\"},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:17>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<critic>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"}],\"item\":{\"id\":\"<lead.card>\",\"project_id\":\"<p>\",\"title\":\"Agent run: Tour Lead\",\"description\":\"Plan the release of P.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<agent.lead>\",\"artifact_ids\":[],\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}}"
+        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"assigned\",\"actor\":\"agent:<lead>\",\"content\":\"assigned to agent:<agent.lead>\",\"payload\":{\"assignee_id\":\"<agent.lead>\",\"assignee_type\":\"agent\"},\"created_at\":\"<time@before step 1>\"},{\"id\":\"<uuid:2>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<lead>\",\"content\":\"Run queued\",\"payload\":{\"run_id\":\"<lead>\"},\"created_at\":\"<time@before step 1>\"},{\"id\":\"<uuid:3>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@step 1>\"},{\"id\":\"<uuid:4>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@before step 2>\"},{\"id\":\"<uuid:5>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<lead>\",\"content\":\"Run started\",\"payload\":{\"run_id\":\"<lead>\"},\"created_at\":\"<time@before step 2>\"},{\"id\":\"<uuid:6>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 10>\"},{\"id\":\"<uuid:7>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@step 21>\"},{\"id\":\"<uuid:8>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@before step 22>\"},{\"id\":\"<uuid:9>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<child>\",\"content\":\"Run started\",\"payload\":{\"run_id\":\"<child>\"},\"created_at\":\"<time@before step 22>\"},{\"id\":\"<uuid:10>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to done\",\"payload\":{\"column\":\"done\",\"sort_order\":0},\"created_at\":\"<time@step 22>\"},{\"id\":\"<uuid:11>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<child>\",\"content\":\"P lacks two tests.\",\"payload\":{\"run_id\":\"<child>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 22>\"},{\"id\":\"<uuid:12>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to done\",\"payload\":{\"column\":\"done\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:13>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<lead>\",\"content\":\"Plan: add the two tests, then ship.\",\"payload\":{\"run_id\":\"<lead>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:14>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<checker>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:15>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-failed\",\"actor\":\"agent:<lead>\",\"content\":\"Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.\",\"payload\":{\"edge_type\":\"hands-off-to\",\"run_id\":\"<lead>\",\"team_node_id\":\"<node.m>\"},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:16>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<critic>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"}],\"item\":{\"id\":\"<lead.card>\",\"project_id\":\"<p>\",\"title\":\"Agent run: Tour Lead\",\"description\":\"Plan the release of P.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<agent.lead>\",\"artifact_ids\":[],\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
         "activity": [
           {
-            "id": "<uuid:2>",
+            "id": "<uuid:1>",
             "work_item_id": "<lead.card>",
             "kind": "assigned",
             "actor": "agent:<lead>",
@@ -1170,7 +1146,7 @@
             "created_at": "<time@before step 1>"
           },
           {
-            "id": "<uuid:3>",
+            "id": "<uuid:2>",
             "work_item_id": "<lead.card>",
             "kind": "run-started",
             "actor": "agent:<lead>",
@@ -1181,7 +1157,7 @@
             "created_at": "<time@before step 1>"
           },
           {
-            "id": "<uuid:4>",
+            "id": "<uuid:3>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<lead>",
@@ -1193,7 +1169,7 @@
             "created_at": "<time@step 1>"
           },
           {
-            "id": "<uuid:5>",
+            "id": "<uuid:4>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<lead>",
@@ -1205,7 +1181,7 @@
             "created_at": "<time@before step 2>"
           },
           {
-            "id": "<uuid:6>",
+            "id": "<uuid:5>",
             "work_item_id": "<lead.card>",
             "kind": "run-started",
             "actor": "agent:<lead>",
@@ -1216,7 +1192,7 @@
             "created_at": "<time@before step 2>"
           },
           {
-            "id": "<uuid:7>",
+            "id": "<uuid:6>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<child>",
@@ -1228,7 +1204,7 @@
             "created_at": "<time@step 10>"
           },
           {
-            "id": "<uuid:8>",
+            "id": "<uuid:7>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<child>",
@@ -1240,7 +1216,7 @@
             "created_at": "<time@step 21>"
           },
           {
-            "id": "<uuid:9>",
+            "id": "<uuid:8>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<child>",
@@ -1252,7 +1228,7 @@
             "created_at": "<time@before step 22>"
           },
           {
-            "id": "<uuid:10>",
+            "id": "<uuid:9>",
             "work_item_id": "<lead.card>",
             "kind": "run-started",
             "actor": "agent:<child>",
@@ -1263,7 +1239,7 @@
             "created_at": "<time@before step 22>"
           },
           {
-            "id": "<uuid:11>",
+            "id": "<uuid:10>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<child>",
@@ -1275,7 +1251,7 @@
             "created_at": "<time@step 22>"
           },
           {
-            "id": "<uuid:12>",
+            "id": "<uuid:11>",
             "work_item_id": "<lead.card>",
             "kind": "run-finished",
             "actor": "agent:<child>",
@@ -1287,7 +1263,7 @@
             "created_at": "<time@step 22>"
           },
           {
-            "id": "<uuid:13>",
+            "id": "<uuid:12>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<lead>",
@@ -1299,7 +1275,7 @@
             "created_at": "<time@step 24>"
           },
           {
-            "id": "<uuid:14>",
+            "id": "<uuid:13>",
             "work_item_id": "<lead.card>",
             "kind": "run-finished",
             "actor": "agent:<lead>",
@@ -1311,7 +1287,7 @@
             "created_at": "<time@step 24>"
           },
           {
-            "id": "<uuid:15>",
+            "id": "<uuid:14>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<checker>",
@@ -1323,20 +1299,20 @@
             "created_at": "<time@step 24>"
           },
           {
-            "id": "<uuid:16>",
+            "id": "<uuid:15>",
             "work_item_id": "<lead.card>",
-            "kind": "run-finished",
+            "kind": "run-failed",
             "actor": "agent:<lead>",
-            "content": "Handed off to Member M",
+            "content": "Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.",
             "payload": {
               "edge_type": "hands-off-to",
               "run_id": "<lead>",
-              "work_item_id": "<handoff>"
+              "team_node_id": "<node.m>"
             },
             "created_at": "<time@step 24>"
           },
           {
-            "id": "<uuid:17>",
+            "id": "<uuid:16>",
             "work_item_id": "<lead.card>",
             "kind": "moved",
             "actor": "agent:<critic>",
@@ -1836,12 +1812,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:18>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 35>\"}]"
+        "[{\"id\":\"<uuid:17>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 35>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:18>",
+          "id": "<uuid:17>",
           "session_id": "<s>",
           "role": "assistant",
           "content": "Who operates the mill?",
@@ -1935,26 +1911,26 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:18>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 35>\"},{\"id\":\"<uuid:19>\",\"session_id\":\"<s>\",\"role\":\"user\",\"content\":\"A machinist.\",\"created_at\":\"<time@before step 37>\"},{\"id\":\"<uuid:20>\",\"session_id\":\"<s>\",\"role\":\"system\",\"content\":\"The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.\",\"created_at\":\"<time@step 37>\"}]"
+        "[{\"id\":\"<uuid:17>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 35>\"},{\"id\":\"<uuid:18>\",\"session_id\":\"<s>\",\"role\":\"user\",\"content\":\"A machinist.\",\"created_at\":\"<time@before step 37>\"},{\"id\":\"<uuid:19>\",\"session_id\":\"<s>\",\"role\":\"system\",\"content\":\"The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.\",\"created_at\":\"<time@step 37>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:18>",
+          "id": "<uuid:17>",
           "session_id": "<s>",
           "role": "assistant",
           "content": "Who operates the mill?",
           "created_at": "<time@step 35>"
         },
         {
-          "id": "<uuid:19>",
+          "id": "<uuid:18>",
           "session_id": "<s>",
           "role": "user",
           "content": "A machinist.",
           "created_at": "<time@before step 37>"
         },
         {
-          "id": "<uuid:20>",
+          "id": "<uuid:19>",
           "session_id": "<s>",
           "role": "system",
           "content": "The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.",
@@ -1981,7 +1957,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<spent>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:21>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Estimate P's cost.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 2>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<spent>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:20>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Estimate P's cost.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 2>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1990,7 +1966,7 @@
           "org_id": "<w>",
           "agent_id": "<agent.worker>",
           "project_id": "<p>",
-          "work_item_id": "<uuid:21>",
+          "work_item_id": "<uuid:20>",
           "status": "queued",
           "cancel_requested": false,
           "priority": 0,
@@ -2176,19 +2152,19 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:22>\",\"session_id\":\"<is>\",\"role\":\"participant\",\"content\":\"I run the mill at night.\",\"created_at\":\"<time@before step 40>\"},{\"id\":\"<uuid:23>\",\"session_id\":\"<is>\",\"role\":\"assistant\",\"content\":\"What do you check before a night run?\",\"created_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<uuid:21>\",\"session_id\":\"<is>\",\"role\":\"participant\",\"content\":\"I run the mill at night.\",\"created_at\":\"<time@before step 40>\"},{\"id\":\"<uuid:22>\",\"session_id\":\"<is>\",\"role\":\"assistant\",\"content\":\"What do you check before a night run?\",\"created_at\":\"<time@step 41>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:22>",
+          "id": "<uuid:21>",
           "session_id": "<is>",
           "role": "participant",
           "content": "I run the mill at night.",
           "created_at": "<time@before step 40>"
         },
         {
-          "id": "<uuid:23>",
+          "id": "<uuid:22>",
           "session_id": "<is>",
           "role": "assistant",
           "content": "What do you check before a night run?",
@@ -2406,7 +2382,7 @@
     },
     {
       "n": 50,
-      "title": "the box key finishes lead2 over budget: 200, no agent successor is launched (the refusal is only logged), but m still gets a card",
+      "title": "the box key finishes lead2 over budget: 200, no agent successor is launched, an event names them and the budget (REQ-76), and m, now a viewer of P, still gets a card",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
       "request": {
@@ -2417,6 +2393,9 @@
         ],
         "body": "{\"status\":\"succeeded\",\"final_text\":\"Plan: ship as is.\"}"
       },
+      "notes": [
+        "the owner made m a viewer of P just before (setup: POST /api/v1/projects/{id}/members)"
+      ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
@@ -2476,6 +2455,19 @@
           "payload": {
             "column": "string \"todo\"",
             "title": "string \"Handoff from Lead\""
+          }
+        },
+        {
+          "type": "agentrun.successors_skipped",
+          "actor": "agent:<lead2>",
+          "project": "<p>",
+          "entity": "<lead2>",
+          "payload": {
+            "agent_id": "string \"<agent.lead>\"",
+            "reason": "string \"this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised\"",
+            "successors": "array[string] [\"Checker\",\"Critic\"]",
+            "team_id": "string \"<c>\"",
+            "team_node_ids": "array[string] [\"<node.checker>\",\"<node.critic>\"]"
           }
         },
         {
@@ -2782,6 +2774,52 @@
           }
         }
       ]
+    },
+    {
+      "n": 56,
+      "title": "lead2's log: the note that Checker and Critic were not launched, and why (REQ-76)",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/agent-runs/{id}/logs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/agent-runs/<lead2>/logs"
+      },
+      "notes": [
+        "the tour sent no log for lead2, so the note is its only entry"
+      ],
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"run_id\":\"<lead2>\",\"seq\":1,\"kind\":\"marker\",\"payload\":{\"marker\":\"successors_skipped\",\"message\":\"Checker and Critic were not launched: this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised\",\"reason\":\"this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised\",\"successors\":[\"Checker\",\"Critic\"],\"team_node_ids\":[\"<node.checker>\",\"<node.critic>\"]},\"created_at\":\"<time@step 50>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "run_id": "<lead2>",
+          "seq": 1,
+          "kind": "marker",
+          "payload": {
+            "marker": "successors_skipped",
+            "message": "Checker and Critic were not launched: this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised",
+            "reason": "this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised",
+            "successors": [
+              "Checker",
+              "Critic"
+            ],
+            "team_node_ids": [
+              "<node.checker>",
+              "<node.critic>"
+            ]
+          },
+          "created_at": "<time@step 50>"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
     }
   ],
   "uploads": [],

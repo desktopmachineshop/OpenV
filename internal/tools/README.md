@@ -75,7 +75,7 @@ go run ./internal/tools/movecheck -flatten <func> [-recv a] [-base <ref>] <pkg d
 
 Prints the declaration-to-file map (`key -> file.go`), or with `-base` only
 what changed file (`key: old.go -> new.go`): the map a move PR's
-description carries (§6.5) and a hot-file window announces (§6.9).
+description carries (§6.5) and a hot-file move's heads-up posts (§6.9).
 `-flatten main` prints `main()` with every `a.<stage>()` call inlined from
 the `wire_*.go` stage methods, and fails if a stage has a value receiver or
 contains `defer`, `recover` or a return before its last statement; with

@@ -116,11 +116,16 @@ func (r *OrgRepository) SetReleaseChannel(orgID, channel string) error {
 	return err
 }
 
-// SetPlan writes only plan (REQ-154).
+// SetPlan writes plan (REQ-154), and the channel override keepNightlySQL writes.
 func (r *OrgRepository) SetPlan(orgID, plan string) error {
-	_, err := r.db.Exec(`UPDATE organizations SET plan = $2, updated_at = NOW() WHERE id = $1`, orgID, plan)
+	_, err := r.db.Exec(`UPDATE organizations SET plan = $2, `+fmt.Sprintf(keepNightlySQL, "$2", "$3")+`, updated_at = NOW() WHERE id = $1`, orgID, plan, pq.Array(orgs.ChoosablePlans))
 	return err
 }
+
+// keepNightlySQL is orgs.ChannelOverrideAfterMove as the SET of an UPDATE, whose expressions see the row's OLD plan,
+// formatted with the parameters of the new plan (cast to the plan column's type, as SetPlan also assigns it and
+// Postgres deduces one type per parameter) and of orgs.ChoosablePlans. Every plan move writes it.
+const keepNightlySQL = `release_channel = CASE WHEN COALESCE(release_channel, '') = '' AND NOT (plan = ANY(%[2]s)) AND %[1]s::varchar = ANY(%[2]s) THEN 'nightly' ELSE release_channel END`
 
 // SetStableRelease writes only stable_release.
 func (r *OrgRepository) SetStableRelease(orgID, version string) error {
@@ -287,12 +292,9 @@ func (r *OrgRepository) SetBillingCustomer(orgID, customerRef, currency string) 
 //     grant wins over a subscription. Every other column still follows the
 //     snapshot, so the tab can say what the provider believes.
 //   - A workspace moving from a nightly-only plan onto a channel-choosing
-//     one with no channel override gets 'nightly' written as its override.
-//     Without it the plan flip would put the new subscriber on the stable
-//     channel with no stable release turned on, which closes every gated
-//     feature at once — including the Billing tab they just used. The
-//     SET expressions see the row's OLD values, which is what makes the
-//     comparison between the old plan and the new one possible here.
+//     one with no override gets 'nightly' written (keepNightlySQL, as by
+//     SetPlan), or the flip would put a new subscriber on the stable channel
+//     with no stable release, closing every gated feature, the Billing tab too.
 func (r *OrgRepository) ApplyBillingState(orgID string, st orgs.BillingState) (bool, error) {
 	var periodEnd interface{}
 	if st.PeriodEnd != nil {
@@ -301,9 +303,7 @@ func (r *OrgRepository) ApplyBillingState(orgID string, st orgs.BillingState) (b
 	res, err := r.db.Exec(`
 		UPDATE organizations SET
 			plan = CASE WHEN plan = ANY($11) THEN plan ELSE $2 END,
-			release_channel = CASE
-				WHEN COALESCE(release_channel, '') = '' AND NOT (plan = ANY($12)) AND $2 = ANY($12) THEN 'nightly'
-				ELSE release_channel END,
+			`+fmt.Sprintf(keepNightlySQL, "$2", "$12")+`,
 			plan_status = $3,
 			plan_interval = $4,
 			plan_seats = $5,

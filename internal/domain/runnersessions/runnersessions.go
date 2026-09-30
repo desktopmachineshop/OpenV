@@ -290,8 +290,9 @@ type Service interface {
 	ReleaseNode(nodeID, sessionID string) error
 
 	// Start leases a node for the member. An existing live session is
-	// returned as-is rather than leasing a second node.
-	Start(orgID, userID string, sessionMinutes, idleMinutes int) (*Session, error)
+	// returned as-is rather than leasing a second node; created says which
+	// it was.
+	Start(orgID, userID string, sessionMinutes, idleMinutes int) (session *Session, created bool, err error)
 	// Get returns the member's live session, or nil.
 	Get(orgID, userID string) (*Session, error)
 	// Extend pushes the hard expiry out by minutes from now and clears the
@@ -456,9 +457,9 @@ func (s *DefaultService) ReleaseNode(nodeID, sessionID string) error {
 }
 
 // Start leases a pool node for the member.
-func (s *DefaultService) Start(orgID, userID string, sessionMinutes, idleMinutes int) (*Session, error) {
+func (s *DefaultService) Start(orgID, userID string, sessionMinutes, idleMinutes int) (*Session, bool, error) {
 	if orgID == "" || userID == "" {
-		return nil, errors.New("workspace and user are required")
+		return nil, false, errors.New("workspace and user are required")
 	}
 	if sessionMinutes <= 0 {
 		sessionMinutes = DefaultSessionMinutes
@@ -472,9 +473,9 @@ func (s *DefaultService) Start(orgID, userID string, sessionMinutes, idleMinutes
 
 	// One live lease per member: a second click returns the first session.
 	if existing, err := s.repo.FindLiveSessionForUser(orgID, userID); err != nil {
-		return nil, err
+		return nil, false, err
 	} else if existing != nil {
-		return existing, nil
+		return existing, false, nil
 	}
 
 	now := time.Now()
@@ -491,10 +492,10 @@ func (s *DefaultService) Start(orgID, userID string, sessionMinutes, idleMinutes
 
 	node, err := s.repo.LeaseIdleNode(DefaultPool, session.ID, now.Add(-NodeOfflineAfter))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if node == nil {
-		return nil, ErrNoNodes
+		return nil, false, ErrNoNodes
 	}
 	session.NodeID = node.ID
 	session.NodeName = node.Name
@@ -502,17 +503,17 @@ func (s *DefaultService) Start(orgID, userID string, sessionMinutes, idleMinutes
 	keyID, plaintext, err := s.minter.MintSessionKey(orgID, userID, session.ID, "cloud runner")
 	if err != nil {
 		_ = s.repo.SetNodeStatus(node.ID, NodeIdle, nil)
-		return nil, err
+		return nil, false, err
 	}
 	session.WorkerKeyID = &keyID
 
 	if err := s.repo.SaveSession(session); err != nil {
 		_ = s.minter.RevokeSessionKey(orgID, keyID)
 		_ = s.repo.SetNodeStatus(node.ID, NodeIdle, nil)
-		return nil, err
+		return nil, false, err
 	}
 	s.pending[session.ID] = plaintext
-	return session, nil
+	return session, true, nil
 }
 
 // Get returns the member's live session, or nil.

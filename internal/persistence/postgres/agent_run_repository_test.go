@@ -263,6 +263,49 @@ func TestAppendLogsAndListLogs(t *testing.T) {
 	}
 }
 
+// TestAppendNoteNumbersAfterTheLastEntry: a note the server keeps on a run
+// is written at the end of its log, numbered after the worker's last entry
+// (or 1 on an empty log), reads back with the log, and is refused for a run
+// no row has.
+func TestAppendNoteNumbersAfterTheLastEntry(t *testing.T) {
+	f := newClaimFixture(t)
+	id := f.queueRun(t, runSpec{})
+	empty := f.queueRun(t, runSpec{})
+	if err := f.repo.AppendLogs(id, []agentruns.LogEntry{
+		{Seq: 1, Kind: "text", Payload: map[string]interface{}{"text": "hello"}},
+		{Seq: 7, Kind: "text", Payload: map[string]interface{}{"text": "bye"}},
+	}); err != nil {
+		t.Fatalf("AppendLogs: %v", err)
+	}
+
+	note, err := f.repo.AppendNote(id, agentruns.LogEntry{Kind: agentruns.LogMarker,
+		Payload: map[string]interface{}{"marker": "handoff_refused", "message": "refused"}})
+	if err != nil {
+		t.Fatalf("AppendNote: %v", err)
+	}
+	if note.Seq != 8 || note.RunID != id || note.CreatedAt.IsZero() {
+		t.Errorf("note = %+v, want seq 8 of run %s with a time", note, id)
+	}
+	second, err := f.repo.AppendNote(id, agentruns.LogEntry{Kind: agentruns.LogMarker, Payload: map[string]interface{}{"marker": "x"}})
+	if err != nil || second.Seq != 9 {
+		t.Errorf("second note = %+v, %v, want seq 9", second, err)
+	}
+	logs, err := f.repo.ListLogs(id, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 2 || logs[0].Seq != 8 || logs[0].Kind != agentruns.LogMarker || logs[0].Payload["message"] != "refused" {
+		t.Errorf("log after 7 = %+v, want the two notes, the first saying refused", logs)
+	}
+
+	if first, err := f.repo.AppendNote(empty, agentruns.LogEntry{Kind: agentruns.LogMarker, Payload: map[string]interface{}{}}); err != nil || first.Seq != 1 {
+		t.Errorf("a note on an empty log = %+v, %v, want seq 1", first, err)
+	}
+	if _, err := f.repo.AppendNote(uuid.New().String(), agentruns.LogEntry{Kind: agentruns.LogMarker}); err != agentruns.ErrNotFound {
+		t.Errorf("a note on a run no row has = %v, want ErrNotFound", err)
+	}
+}
+
 func TestUpdateTokenHashRotation(t *testing.T) {
 	f := newClaimFixture(t)
 	id := f.queueRun(t, runSpec{})
@@ -540,7 +583,8 @@ func TestUpdateTerminalTakesOnlyAHeldRun(t *testing.T) {
 // TestFinalizeIfResolvedStoresTheApplyFailure runs the run service over the
 // repository: a run awaiting approval whose approved proposal failed to
 // apply is finalised failed with the reason stored, so that the run read back
-// says why, as the status it broadcast did.
+// says why, as the status it broadcast did, and with the error class
+// agent_error, which is not retried (OpenV REQ-84).
 func TestFinalizeIfResolvedStoresTheApplyFailure(t *testing.T) {
 	f := newClaimFixture(t)
 	failed := f.queueRun(t, runSpec{})
@@ -568,13 +612,16 @@ func TestFinalizeIfResolvedStoresTheApplyFailure(t *testing.T) {
 	if stored.Status != agentruns.StatusFailed || stored.Error != reason || stored.FinishedAt == nil {
 		t.Errorf("stored run = %s %q finished %v, want failed with %q", stored.Status, stored.Error, stored.FinishedAt, reason)
 	}
+	if stored.ErrorClass != agentruns.ErrorClassAgentError || agentruns.IsRetryableClass(stored.ErrorClass) {
+		t.Errorf("stored error class = %q, want agent_error, which is not retried", stored.ErrorClass)
+	}
 
-	// A run whose proposals all landed succeeds with no error.
+	// A run whose proposals all landed succeeds with no error and no class.
 	if _, err := svc.FinalizeIfResolved(clean); err != nil {
 		t.Fatalf("FinalizeIfResolved(clean): %v", err)
 	}
-	if stored := f.mustFind(t, clean); stored.Status != agentruns.StatusSucceeded || stored.Error != "" {
-		t.Errorf("stored clean run = %s %q, want succeeded with no error", stored.Status, stored.Error)
+	if stored := f.mustFind(t, clean); stored.Status != agentruns.StatusSucceeded || stored.Error != "" || stored.ErrorClass != "" {
+		t.Errorf("stored clean run = %s %q class %q, want succeeded with no error and no class", stored.Status, stored.Error, stored.ErrorClass)
 	}
 }
 
