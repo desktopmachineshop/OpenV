@@ -2050,7 +2050,7 @@
     },
     {
       "n": 28,
-      "title": "C's report: its citation of P's REQ-4 is flagged unlinked, though C refines it",
+      "title": "C's report: its citation of P's REQ-4 counts as linked, since C refines it, as the lint below judges it",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/quality",
       "request": {
@@ -2058,16 +2058,16 @@
         "path": "/api/v1/projects/<c>/quality"
       },
       "notes": [
-        "C's export lists the refines link, but REQ-4 is not among C's artifacts, so the report cannot name the link's other end"
+        "REQ-4 is not among C's artifacts: the report names the link's other end from the export's linked_artifacts"
       ],
       "status": 200,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 706,
+      "content_length": 490,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<c>\",\"entries\":[{\"artifact_id\":\"<c_req>\",\"title\":\"Archive\",\"type\":\"requirement\",\"score\":85,\"band\":\"good\",\"findings\":[{\"rule\":\"unlinked-citation\",\"severity\":\"error\",\"message\":\"cites REQ-4 with no traceability link to it — link the two artifacts, or the citation is a claim the matrix cannot see\",\"start\":44,\"end\":50,\"match\":\"#REQ-4\"}]}],\"summary\":{\"fair\":0,\"good\":1,\"poor\":0},\"rule_set\":{\"convention\":\"shall\",\"severities\":{\"long-sentence\":\"warning\",\"not-testable\":\"warning\",\"off-convention\":\"info\",\"passive-voice\":\"warning\",\"placeholder\":\"error\",\"unlinked-citation\":\"error\",\"vague-quantifier\":\"warning\",\"weak-word\":\"warning\"}}}"
+        "{\"project_id\":\"<c>\",\"entries\":[{\"artifact_id\":\"<c_req>\",\"title\":\"Archive\",\"type\":\"requirement\",\"score\":100,\"band\":\"good\",\"findings\":[]}],\"summary\":{\"fair\":0,\"good\":1,\"poor\":0},\"rule_set\":{\"convention\":\"shall\",\"severities\":{\"long-sentence\":\"warning\",\"not-testable\":\"warning\",\"off-convention\":\"info\",\"passive-voice\":\"warning\",\"placeholder\":\"error\",\"unlinked-citation\":\"error\",\"vague-quantifier\":\"warning\",\"weak-word\":\"warning\"}}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2077,18 +2077,9 @@
             "artifact_id": "<c_req>",
             "title": "Archive",
             "type": "requirement",
-            "score": 85,
+            "score": 100,
             "band": "good",
-            "findings": [
-              {
-                "rule": "unlinked-citation",
-                "severity": "error",
-                "message": "cites REQ-4 with no traceability link to it — link the two artifacts, or the citation is a claim the matrix cannot see",
-                "start": 44,
-                "end": 50,
-                "match": "#REQ-4"
-              }
-            ]
+            "findings": []
           }
         ],
         "summary": {

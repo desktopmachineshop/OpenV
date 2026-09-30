@@ -24,9 +24,8 @@ import (
 // linted. A viewer of P, who is no member of the workspace, and an
 // outsider show the role gates. Project E and its baseline EB give another
 // project's baseline; project C, in the owner's personal workspace, holds a
-// requirement that cites a requirement of P and refines it, for the one
-// place the project report and the artifact endpoint judge a citation
-// differently.
+// requirement that cites a requirement of P and refines it, which the
+// project report and the artifact endpoint judge by the same rule.
 //
 // The area walks P's product profile first, since the first read of a
 // project's profile creates it (a write on a read, which every export-based
@@ -214,13 +213,13 @@ func qualityProfilePartiesLint(tr *tour, a qualityProfilePartiesActors) {
 	tr.step("lint by an id that is not a UUID: any lookup error is not found", o, "GET /api/v1/artifacts/{id}/quality",
 		at("id", "not-a-uuid"))
 
-	// The report builds a project's linked refs from its own export's
-	// artifacts only, so a link to another project's artifact names no ref
-	// there; the artifact endpoint reads each link's other end.
-	tr.step("C's report: its citation of P's REQ-4 is flagged unlinked, though C refines it", o,
+	// The report names a link's other end in another project from its
+	// export's linked_artifacts; the artifact endpoint reads each link's
+	// other end. Both then judge a citation by one rule (OpenV REQ-164).
+	tr.step("C's report: its citation of P's REQ-4 counts as linked, since C refines it, as the lint below judges it", o,
 		"GET /api/v1/projects/{id}/quality", at("id", "{{c}}"), actingIn("{{owner.workspace}}"),
-		note("C's export lists the refines link, but REQ-4 is not among C's artifacts, so the report cannot name "+
-			"the link's other end"))
+		note("REQ-4 is not among C's artifacts: the report names the link's other end from the export's "+
+			"linked_artifacts"))
 	tr.step("the same requirement linted alone: nothing flagged, the link's other end is read", o,
 		"GET /api/v1/artifacts/{id}/quality", at("id", "{{c_req}}"), actingIn("{{owner.workspace}}"))
 }

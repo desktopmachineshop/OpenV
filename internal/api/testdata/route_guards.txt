@@ -273,7 +273,7 @@ POST /api/v1/projects/{id}/repo-connections: project:owner
 POST /api/v1/projects/{id}/review-round: project:editor
 POST /api/v1/projects/{id}/share-links: project:owner
 POST /api/v1/projects/{id}/test-runs: project:editor
-POST /api/v1/projects/{id}/work-items: project:editor
+POST /api/v1/projects/{id}/work-items: project:editor, crew-visible
 POST /api/v1/proposals/bulk: session, project:editor, project-visible
 POST /api/v1/proposals/{id}/approve: project:editor
 POST /api/v1/proposals/{id}/reject: project:editor
@@ -344,4 +344,4 @@ PUT /api/v1/team-edges/{id}: session, scoped-write
 PUT /api/v1/team-nodes/{id}: session, scoped-write
 PUT /api/v1/teams/{id}: session, scoped-write
 PUT /api/v1/test-runs/{id}: project:editor
-PUT /api/v1/work-items/{id}: project:editor
+PUT /api/v1/work-items/{id}: project:editor, crew-visible

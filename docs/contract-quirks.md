@@ -582,8 +582,11 @@ the Phase 3 consolidations that give quirks their names.
   `cmd/server/testdata/tour/s5a/exports_imports.json`). The S5b tour pins
   the driver's text passed through as a 400,
   `pq: invalid input syntax for type uuid: "not-a-uuid"`, for a work
-  item's `assignee_id`, an interview's `guided_session_id` and a guided
-  draft's `parent_id` (step 5 of `work_items.json`, step 8 of
+  item's `assignee_id` (a person's or an agent's: a crew's has been looked
+  up since the release-noted bug-fix pull request for #379's REQ-23
+  decision, and one no crew has answers `404` `team not found`, step 15),
+  an interview's `guided_session_id` and a guided draft's `parent_id`
+  (step 5 of `work_items.json`, step 8 of
   `interviews.json` and step 29 of `guided_sessions.json`, under
   `cmd/server/testdata/tour/s5b/`; a run's `baseline_id`, step 6 of
   `test_runs_results.json`, passed the driver's text through too until the

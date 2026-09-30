@@ -35,13 +35,13 @@ import (
 
 // unreachableFixture is project P (proj-1) of workspace W (org-1), with an
 // artifact, a run and a proposal in it, and W's people-team team-1, its
-// workspace-wide attribute definition def-1 and an unscoped run, which
-// "stranger" cannot reach: it belongs to workspace org-own only, as editor
-// of its project proj-own, where it has an interview, and as the admin of
-// org-own, whose workspace-wide crew crew-own it may copy. Org-own also has
-// a run in proj-own, run-own, and one in its project proj-sib, run-sib. The
-// projects are the real service's over a map, so an update checks a parent
-// as it does against the database.
+// workspace-wide crew crew-1, attribute definition def-1 and an unscoped
+// run, which "stranger" cannot reach: it belongs to workspace org-own only,
+// as editor of its project proj-own, where it has an interview, and as the
+// admin of org-own, whose workspace-wide crew crew-own it may copy. Org-own
+// also has a run in proj-own, run-own, and one in its project proj-sib,
+// run-sib. The projects are the real service's over a map, so an update
+// checks a parent as it does against the database.
 func unreachableFixture() *Handler {
 	own, ownRun, sib := "proj-1", "proj-own", "proj-sib"
 	w, ownOrg := "org-1", "org-own"
@@ -54,6 +54,7 @@ func unreachableFixture() *Handler {
 		OrgTeamService: mapOrgTeams{byID: map[string]*orgs.OrgTeam{"team-1": {ID: "team-1", OrgID: "org-1"}}},
 		TeamService: &fakeCrewGraphs{graphs: map[string]*teams.TeamGraph{
 			"crew-own": {Team: &teams.Team{ID: "crew-own", OrgID: ownOrg, Name: "Own"}},
+			"crew-1":   {Team: &teams.Team{ID: "crew-1", OrgID: w, Name: "W's"}},
 		}},
 		InterviewService: &oneInterview{interview: &interviews.Interview{ID: "iv-own", ProjectID: "proj-own"}},
 		AttributeService: &fakeAttributeService{byID: map[string]*attributes.Definition{
@@ -225,6 +226,8 @@ func TestAResourceTheCallerCannotReachAnswersAsOneNoRowHas(t *testing.T) {
 			http.MethodPut, "proj-own", `{"parent_project_id":"ID"}`), http.StatusBadRequest, "parent project not found"},
 		{"a people-team granted a project", "team-1", on(func(h *Handler) http.HandlerFunc { return h.GrantProjectTeamAccess },
 			http.MethodPut, "proj-own", `{"org_team_id":"ID","role":"viewer"}`), http.StatusNotFound, "team not found"},
+		{"a work item's crew assignee", "crew-1", on(func(h *Handler) http.HandlerFunc { return h.CreateWorkItem },
+			http.MethodPost, "proj-own", `{"title":"T","assignee_type":"team","assignee_id":"ID"}`), http.StatusNotFound, "team not found"},
 		{"a new interview's persona", "art-1", on(func(h *Handler) http.HandlerFunc { return h.CreateInterview },
 			http.MethodPost, "proj-own", `{"name":"I","persona_artifact_id":"ID"}`), http.StatusBadRequest, "persona artifact not found"},
 		{"an interview's persona", "art-1", on(func(h *Handler) http.HandlerFunc { return h.SetInterviewPersona },
@@ -333,8 +336,8 @@ func TestAnotherWorkspacesKeyOrRunAnswersAsForAnIDNoRowHas(t *testing.T) {
 }
 
 // What the body names in a project or workspace the caller does reach is
-// refused for what it is: a parent, a people-team or a persona of another
-// workspace or project.
+// refused for what it is: a parent, a people-team, a work item's crew
+// assignee or a persona of another workspace or project.
 func TestWhatTheCallerReachesElsewhereIsRefusedAsSuch(t *testing.T) {
 	h := unreachableFixture()
 	h.orgService.(*roleAnyOrgs).roles["org-1"]["stranger"] = orgs.RoleMember
@@ -351,6 +354,8 @@ func TestWhatTheCallerReachesElsewhereIsRefusedAsSuch(t *testing.T) {
 			`400 {"error":"a parent project must be in the same workspace"}`},
 		{"a people-team", h.GrantProjectTeamAccess, http.MethodPut, "proj-own", `{"org_team_id":"team-1","role":"viewer"}`,
 			`400 {"error":"team belongs to a different workspace"}`},
+		{"a work item's crew assignee", h.CreateWorkItem, http.MethodPost, "proj-own",
+			`{"title":"T","assignee_type":"team","assignee_id":"crew-1"}`, `400 {"error":"team belongs to a different workspace"}`},
 		{"a persona", h.CreateInterview, http.MethodPost, "proj-own", `{"name":"I","persona_artifact_id":"art-1"}`,
 			`400 {"error":"persona artifact belongs to a different project"}`},
 	} {

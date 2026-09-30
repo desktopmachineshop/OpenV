@@ -23,12 +23,12 @@ import (
 // with no access to P, is refused a read and a comment, the comment with a
 // malformed body, which the guard refuses before the decode reads it. The area
 // walks an item's life: created (the refusals of its body, its title, its
-// column, its assignee_id and its source note; the defaults a title alone
-// gets; an item raised from a note, with an assignee, artifacts and a due
-// date), listed in the board's order, read with its activity, replaced by an
-// update (what an omitted field clears and what it keeps), moved,
-// commented on and deleted. A workspace runner key and an agent run's token
-// write too, and show their actors.
+// column, its assignee_id, its assignee_type, its crew and its source note;
+// the defaults a title alone gets; an item raised from a note, with an
+// assignee, artifacts and a due date), listed in the order the board flows
+// in, read with its activity, replaced by an update (what an omitted field
+// clears and what it keeps), moved, commented on and deleted. A workspace
+// runner key and an agent run's token write too, and show their actors.
 //
 // The board drives agents: a person's move of an item assigned to an agent
 // into todo makes the orchestration hooks (a bus subscriber) launch a run
@@ -67,9 +67,9 @@ func TestTourS5bWorkItems(t *testing.T) {
 	})
 }
 
-// workItemsSeed creates the projects, the notes, the viewer and the
-// outsider the area reads (setup; the artifacts and chatter areas pin those
-// routes), and looks up the seeded developer agent.
+// workItemsSeed creates the projects, the notes, a crew pinned to P, the
+// viewer and the outsider the area reads (setup; the artifacts, chatter and
+// crews areas pin those routes), and looks up the seeded developer agent.
 func workItemsSeed(tr *tour) (viewer, outsider *tourActor) {
 	o := tr.owner
 	tr.setup("project P", o, "POST /api/v1/projects", jsonBody(`{"name":"Tour board"}`)).capture("p", "/id")
@@ -84,6 +84,8 @@ func workItemsSeed(tr *tour) (viewer, outsider *tourActor) {
 		`"title":"Log each answer","body":"The system shall log each answer."}`)).capture("rq", "/id")
 	tr.setup("a note on Q's requirement", o, "POST /api/v1/chatter",
 		jsonBody(`{"artifact_id":"{{rq}}","message":"A note of the other board."}`)).capture("note_q", "/id")
+	tr.setup("a crew pinned to P, for an item assigned to a crew", o, "POST /api/v1/crews",
+		jsonBody(`{"name":"Tour board crew","project_id":"{{p}}"}`), expect(http.StatusCreated)).capture("crew", "/id")
 	viewer = tr.register("viewer", "Tour Viewer", "a viewer of P, from a workspace of its own: may read and "+
 		"comment, not write")
 	tr.setup("the viewer joins P as a viewer", o, "POST /api/v1/projects/{id}/members", at("id", "{{p}}"),
@@ -176,16 +178,25 @@ func workItemsTour(tr *tour) {
 	tr.step("create in done with an empty source_chatter_id, which counts as none", o,
 		"POST /api/v1/projects/{id}/work-items", at("id", "{{p}}"),
 		jsonBody(`{"title":"Close the old ticket","column":"done","source_chatter_id":""}`)).capture("w_done", "/id")
-	tr.step("create in review with an assignee_type the board does not know: accepted, nothing checks it", o,
+	tr.step("create in review with an assignee_type the board does not know: 400, which names the three it takes", o,
 		"POST /api/v1/projects/{id}/work-items", at("id", "{{p}}"),
-		jsonBody(`{"title":"Check the wording","column":"review","assignee_type":"robot"}`)).capture("w_review", "/id")
-	tr.step("create in in-progress, assigned to a team id no team has: accepted, with an assigned activity", o,
-		"POST /api/v1/projects/{id}/work-items", at("id", "{{p}}"), jsonBody(`{"title":"Write the timing script",`+
-			`"column":"in-progress","assignee_type":"team","assignee_id":"{{phantom}}"}`)).capture("w_progress", "/id")
-	tr.step("P's work items: by column name (backlog, done, in-progress, review, todo), then sort_order, then "+
-		"created_at; compressed, and then sent with no Content-Type (Q1)", o, "GET /api/v1/projects/{id}/work-items",
-		at("id", "{{p}}"), note("board_column ASC is a text order, so the columns come alphabetically, not in the "+
-			"board's order; these five names sort alike in C and en_US collations"))
+		jsonBody(`{"title":"Check the wording","column":"review","assignee_type":"robot"}`),
+		note("the service checks the type after the title and the column"))
+	tr.step("create in in-progress, assigned to a team id no crew has: 404 team not found, as the crew routes "+
+		"answer it", o, "POST /api/v1/projects/{id}/work-items", at("id", "{{p}}"),
+		jsonBody(`{"title":"Write the timing script","column":"in-progress","assignee_type":"team",`+
+			`"assignee_id":"{{phantom}}"}`), note("\"team\" is a crew's wire name; the crew is looked up after the "+
+			"source note, and one the caller may not know of answers the same, while one of another workspace that "+
+			"the caller may know of answers 400 team belongs to a different workspace"))
+	tr.setup("an item in review, with no assignee", o, "POST /api/v1/projects/{id}/work-items", at("id", "{{p}}"),
+		jsonBody(`{"title":"Check the wording","column":"review"}`)).capture("w_review", "/id")
+	tr.setup("an item in in-progress, assigned to P's crew", o, "POST /api/v1/projects/{id}/work-items",
+		at("id", "{{p}}"), jsonBody(`{"title":"Write the timing script","column":"in-progress",`+
+			`"assignee_type":"team","assignee_id":"{{crew}}"}`)).capture("w_progress", "/id")
+	tr.step("P's work items: in the order the board flows in (backlog, todo, in-progress, review, done), then "+
+		"sort_order, then created_at; compressed, and then sent with no Content-Type (Q1)", o,
+		"GET /api/v1/projects/{id}/work-items", at("id", "{{p}}"),
+		note("the items in review and in-progress were created as setup, since the two creates above are refused"))
 	tr.step("the viewer lists P's work items", viewer, "GET /api/v1/projects/{id}/work-items", at("id", "{{p}}"))
 	tr.step("list the work items of a project that does not exist", o, "GET /api/v1/projects/{id}/work-items",
 		at("id", "{{phantom}}"))
