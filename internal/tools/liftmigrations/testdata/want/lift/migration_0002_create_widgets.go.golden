@@ -1,0 +1,25 @@
+package store
+
+import (
+	"database/sql"
+	"fmt"
+	str "strings"
+)
+
+// 0002: a body that uses fmt, an aliased import and a helper, with a
+// multi-line raw string indented deeper than the code and a comment
+// inside.
+//
+// The comment has two paragraphs.
+func m0002CreateWidgets(tx *sql.Tx) error {
+	// The table.
+	if _, err := tx.Exec(`
+			CREATE TABLE widgets (
+				id INT PRIMARY KEY
+			)
+		`); err != nil {
+		return fmt.Errorf("widgets: %w", err)
+	}
+	_, err := tx.Exec(str.TrimSpace(widgetSQL(2))) // a trailing comment
+	return err
+}

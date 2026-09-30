@@ -1,0 +1,8 @@
+0001 baseline: RunDB initSchema (schema.go:6), left as it is
+0002 create_widgets: migrations.go:35 -> migration_0002_create_widgets.go m0002CreateWidgets
+0003 widget_labels: migrations.go:49 -> migration_0003_widget_labels.go m0003WidgetLabels
+0004 no_comment: migrations.go:53 -> migration_0004_no_comment.go m0004NoComment
+0006 already_named: Run m0006AlreadyNamed (migration_0006_already_named.go:6), left as it is
+0007 same_name: migrations.go:61 -> migration_0007_same_name.go m0007SameName
+0008 same_name: migrations.go:65 -> migration_0008_same_name.go m0008SameName
+liftmigrations: lifted 5 migrations into files of their own; migrations.go is 74 lines
