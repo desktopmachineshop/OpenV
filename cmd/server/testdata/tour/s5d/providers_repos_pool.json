@@ -80,6 +80,14 @@
       "about": "the member's run's token"
     },
     {
+      "name": "prun",
+      "about": "the token of a run in P that no one launched, claimed by the member's runner key, since the member views P"
+    },
+    {
+      "name": "brun",
+      "about": "the token of a run in P that no one launched, claimed by the box key"
+    },
+    {
       "name": "anonymous",
       "about": "no session cookie"
     }
@@ -4596,6 +4604,79 @@
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
+    },
+    {
+      "n": 128,
+      "title": "the run's token reads P's connections, as the runner reads a claimed run's: the local path of the member, whose runner key claimed the run",
+      "actor": "prun",
+      "route": "GET /api/v1/projects/{id}/repo-connections",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/repo-connections"
+      },
+      "notes": [
+        "P's owner connected the repository again, the member set its path, the box key launched the run in P and the member's runner key claimed it, all just before (setup)"
+      ],
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@before step 128>\",\"updated_at\":\"<time@before step 128>\",\"my_local_path\":\"/home/member/src/tour\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<repo3>",
+          "project_id": "<p>",
+          "name": "Tour repo",
+          "remote_url": "https://git.example.com/tour.git",
+          "default_branch": "main",
+          "credential_strategy": "host",
+          "created_at": "<time@before step 128>",
+          "updated_at": "<time@before step 128>",
+          "my_local_path": "/home/member/src/tour"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 129,
+      "title": "the token of a run the box key claimed reads P's connections: no member's machine, so no path",
+      "actor": "brun",
+      "route": "GET /api/v1/projects/{id}/repo-connections",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/repo-connections"
+      },
+      "notes": [
+        "the box key launched and claimed the run just before (setup)"
+      ],
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@before step 128>\",\"updated_at\":\"<time@before step 128>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<repo3>",
+          "project_id": "<p>",
+          "name": "Tour repo",
+          "remote_url": "https://git.example.com/tour.git",
+          "default_branch": "main",
+          "credential_strategy": "host",
+          "created_at": "<time@before step 128>",
+          "updated_at": "<time@before step 128>"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
     }
   ],
   "uploads": [],

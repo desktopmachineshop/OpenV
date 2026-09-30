@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -258,9 +259,11 @@ func TestAStalePinDoesNotHandACrewAway(t *testing.T) {
 // that launch used to be taken, and a run of another project launching a
 // crew pinned elsewhere, which used to hear the pinned project's 404.
 func TestACrewLaunchAnswersWhoMayNotKnowOfItAsForACrewNoRowHas(t *testing.T) {
+	// Each run is a direct-mode agent's, which requireNoProposalRunLaunch
+	// lets launch, so that the crew's own checks answer.
 	asRun := func(projectID, crewID, body string) *http.Request {
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/crews/"+crewID+"/runs", strings.NewReader(body))
-		run := &agentruns.Run{ID: "run-in-" + projectID, OrgID: "org-w", ProjectID: &projectID}
+		run := &agentruns.Run{ID: "run-in-" + projectID, OrgID: "org-w", AgentID: "agent-direct", ProjectID: &projectID}
 		return mux.SetURLVars(r.WithContext(context.WithValue(r.Context(), ctxRun, run)), map[string]string{"id": crewID})
 	}
 	for _, tc := range []struct {
@@ -281,6 +284,8 @@ func TestACrewLaunchAnswersWhoMayNotKnowOfItAsForACrewNoRowHas(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			h, _, _ := crewPinFixture()
 			h.memberService.(*fakeMemberService).roles["proj-p"]["outsider"] = members.RoleEditor
+			h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
+				"agent-direct": {ID: "agent-direct", OrgID: "org-w", WriteMode: agents.WriteModeDirect}}}
 			w := httptest.NewRecorder()
 			h.LaunchTeamRun(w, tc.req)
 			got := strconv.Itoa(w.Code)

@@ -206,6 +206,16 @@ GUARD_CODE = [
             "frontend/src/views/InterviewChat.stream.test.tsx"]),
     ("S7", ["internal/mcp/golden_test.go", "internal/mcp/tools_golden_test.go", "internal/mcp/jsonrpc_golden_test.go",
             "internal/runner/wire_golden_test.go", "internal/runner/wire_cases_test.go"]),
+    # S8's inventory and its fixture are internal/archtest/env_*_test.go,
+    # under S1's row. Outside it, by file name: each command's CLI snapshot
+    # (its scenarios and the harness every command carries a copy of), and
+    # each getter package's parse-table writer beside its copy of the shared
+    # helpers. The patterns name no package, so a command or a package that
+    # gains a getter (TestEnvInventory then asks for its TestEnvParse) is
+    # covered with no edit here.
+    ("S8", ["cmd/*/cli_test.go", "cmd/*/cli_harness_test.go",
+            "cmd/*/env_parse_test.go", "cmd/*/env_parse_helpers_test.go",
+            "internal/**/env_parse_test.go", "internal/**/env_parse_helpers_test.go"]),
     ("S12", ["frontend/src/arch/**", "frontend/eslint.config.js"]),
     ("S12b", ["frontend/src/**/cssOrder.test.ts", "frontend/scripts/bundle-check.mjs"]),
     ("S13", []),  # slot: the Go vocabulary writer and the vitest parity test

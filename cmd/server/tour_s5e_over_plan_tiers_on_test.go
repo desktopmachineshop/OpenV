@@ -11,8 +11,8 @@ import (
 
 // TestTourS5eOverPlanTiersOn is part (3) of S5e, the over-plan pass, under
 // the S4b tiers_on profile (refactor plan §6.4 S5e; invariant I3's plan
-// read-only gate inside requireProjectRole and requireOrgRole; quirk Q13;
-// OpenV REQ-143, REQ-18, REQ-113 and REQ-176). Its golden is
+// read-only gate inside requireProjectRole and requireOrgRole; OpenV
+// REQ-143, REQ-18, REQ-113, REQ-176 and REQ-177). Its golden is
 // testdata/tour/s5e/over_plan_tiers_on.json; the self-hosted profile's pass
 // is TestTourS5eOverPlanSelfHosted, and parts (1) and (2), the phantom and
 // real-id matrices, are areas of their own.
@@ -21,10 +21,10 @@ import (
 // that passes a project or workspace guard is then refused 403
 // plan_read_only, with the limits it is past (over) and the remedy, until it
 // is brought back under the plan (limits.go, requireWritable). Reads and
-// export never are, and nine writes are exempt (alwaysWritable, the routes
-// internal/api/testdata/route_handlers.txt marks). The area pins that by
-// behavior, on one workspace W, which the owner administers and where m1 is
-// a member and P's editor:
+// export never are, and sixteen writes are exempt (alwaysWritable, the
+// routes internal/api/testdata/route_handlers.txt marks). The area pins that
+// by behavior, on one workspace W, which the owner administers and where m1
+// is a member and P's editor:
 //
 //   - W's limits on the single plan (two seats, both taken), then, once W
 //     holds four seats (m2 added and an address invited while the platform
@@ -33,37 +33,58 @@ import (
 //   - one refused write or more per guard kind that carries the gate:
 //     project:editor (the owner's rename of P; an artifact created by m1, by
 //     W's worker key and by a run's token), project:owner, project:viewer,
-//     project:reviewer, org:admin, org:member, runner-sessions, scoped-write
-//     and run:editor, each 403 plan_read_only; and before them P's viewer's
-//     rename, refused by its role first (the guard decides access, then the
-//     gate: I3's order);
+//     project:reviewer, org:admin, org:member and scoped-write, each 403
+//     plan_read_only; and before them P's viewer's rename, refused by its
+//     role first (the guard decides access, then the gate: I3's order). The
+//     runner-sessions and run:editor refusals the pass sent, the end of a
+//     lease and a cancel, are always writable now. The gated writes left to
+//     those kinds, a lease's start and extension and a retry by anyone but
+//     the run's launcher, are refused by internal/api's
+//     plan_read_only_exemptions_test.go, while S2 pins that their routes
+//     carry no [alwaysWritable] mark (route_handlers.txt) and ask a guard
+//     that carries the gate (route_guards.txt). None of the refusals here is
+//     a DELETE any more, every DELETE the pass refused being one of the
+//     routes #379 exempted: that the gate refuses a DELETE as it does a POST
+//     or a PUT, on the workspace's guard and on a project's, is pinned by
+//     the same unit test (TestAReadOnlyWorkspaceStillRevokesAccess), not by
+//     this area;
+//   - beside the refusals of their guard kinds, the seven writes that issue
+//     #379's questions 6 to 8 made always writable: the revocations of P's
+//     public share link, of W's spare worker key k2 and of m1's own runner
+//     key; m1's activation of W, its stable preview (400, since the single
+//     plan always runs nightly) and the end of its cloud runner lease (400,
+//     since the tour's deployment runs no transient runners), each the
+//     handler's own answer, as on a writable workspace; and run2's cancel by
+//     P's editor m1, then by the owner, who launched it;
+//   - the project creates and a launch with no project, which ask the gate
+//     (requireProjectCreate, requireUnscopedLaunch) and are refused;
 //   - the writes that pass a read-only workspace because nothing on their
-//     path asks the gate: the launcher's own cancel (requireRunAccess passes
-//     a launcher before the project ladder), marking notifications read (a
-//     session route), POST /projects and a project from a template (no
-//     guard), a launch with no project (no guard), and the worker wire (a
-//     claim and a log push);
+//     path asks the gate: marking notifications read (a session route), and
+//     the worker wire (a claim of the run m1 launched before W went
+//     read-only, and a log push);
 //   - the hosted runner's claim, refused by the single plan's
 //     hosted_automation flag (the refusal the S5d note left to S5e) and
 //     taken on Business Lite, where the flag is on (REQ-176), which leaves W
 //     read-only, since Business Lite has two seats too;
 //   - REQ-113: the export and every document download of P, on the
 //     read-only workspace;
-//   - the nine always-writable routes, each answering as on a writable
+//   - the other nine always-writable routes, each answering as on a writable
 //     workspace: the JSON and ReqIF imports of those exports, the four billing
 //     writes (404 billing_unavailable: billingAdmin and RefreshOrgBilling ask
 //     requireOrgRole, with its gate, before billingAvailable, so a dropped
 //     exemption would answer 403 plan_read_only instead), a project's delete,
 //     an invitation's revocation and a member's removal, which bring W back
 //     under the plan, and last the workspace's delete;
-//   - Q13, only POST /api/v1/projects enforces the project maximum: at the
-//     tier's 200, a new project is refused limit_reached, while a project
-//     from a template and an import pass and push W over, read-only, which
-//     POST /projects still answers with limit_reached, since it has no gate.
+//   - the project maximum: at the tier's 200, a new project, a project from a
+//     template and an import are each refused limit_reached (quirk Q13, that
+//     only POST /projects counted, is fixed); once the platform admin has had
+//     W on business for a 201st project and moved it back to single, W is
+//     read-only over max_projects, and a new project is refused by the gate,
+//     plan_read_only, before the count.
 //
-// ImportProject calls no guard that asks the gate, so its alwaysWritable
-// changes nothing today: the step pins that the import passes, which is what
-// the exemption promises, not the wrapper itself.
+// ImportProject asks the gate (requireProjectCreate), so its alwaysWritable
+// is what lets the imports through on the read-only workspace: dropping it
+// turns their 201 into 403 plan_read_only.
 //
 // Not reachable here: the grandfather step, which runs at boot over the
 // workspaces created before OPENV_BILLING_GRANDFATHER_BEFORE, and a tour
@@ -73,23 +94,31 @@ import (
 // shared-workspace ceiling, the 300 hosted minutes, the teams and budget
 // flags).
 //
-// Pinned as they behave (plan R7), and listed for the maintainer: the member
-// and admin writes that only concern the caller's own session, key or lease,
-// or that revoke access, are refused on a read-only workspace like any other
-// write (activating W, the stable preview, revoking one's own runner key or
-// W's worker key, ending a runner lease, revoking a public share link); and
-// the writes that pass because their route asks no gate (a launch with no
-// project, the launcher's own cancel, POST /projects and a template's
-// project), though ReadOnlyRemedy says every write is refused.
+// Pinned as they behave (plan R7), and listed for the maintainer: a run's
+// retry by its launcher, whom requireRunAccess lets by ahead of either
+// ladder and so of the gate (no step sends it; internal/api's
+// TestAReadOnlyWorkspaceStillCancelsARun pins its 201), though
+// ReadOnlyRemedy says every write is refused. Fixed under R7 by the bug-fix
+// pull request that answered #379's questions 6 to 8: three revocations (a
+// worker key, one's own runner key, a share link), three writes that touch
+// only the caller's own session or lease (activating W, the stable preview,
+// ending a runner lease) and a run's cancel, by whoever may cancel it, are
+// always writable, where they were refused plan_read_only like any other
+// write, but for the launcher's cancel, which asked no gate (steps 9, 14,
+// 17, 18, 19, 22, 25 and 26).
 func TestTourS5eOverPlanTiersOn(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5e",
 		key:   "over_plan_tiers_on",
 		about: "The over-plan pass under the tiers: a workspace over its single plan's seats is read-only (403 " +
-			"plan_read_only) for a write of every guard kind that carries the gate, passes the writes that ask no " +
-			"gate, the export and every document download (REQ-113) and the nine always-writable routes; the hosted " +
-			"claim's plan flag, refused on single and taken on Business Lite (REQ-176); and Q13 at the tier's 200 " +
-			"projects. The grandfather step runs at boot over workspaces created before the grandfather date, which " +
+			"plan_read_only) for a write of each project role's guard, the workspace admin's and member's and a " +
+			"scoped write's, and for the project creates and a launch with no project (the gated writes left to " +
+			"runner sessions and a run's editor, and a DELETE, are refused by internal/api's " +
+			"plan_read_only_exemptions_test.go instead), passes the writes that ask no " +
+			"gate, the export and every document download (REQ-113) and the sixteen always-writable routes; the hosted " +
+			"claim's plan flag, refused on single and taken on Business Lite (REQ-176); and every project create " +
+			"refused at the tier's 200 projects. The grandfather step runs at boot over workspaces created before the " +
+			"grandfather date, which " +
 			"a tour on an empty database never has: internal/persistence/postgres's " +
 			"TestGrandfatherBeforeKeepsTheAlphaTerms covers it.",
 		run:      overPlanTiersOnTour,
@@ -115,6 +144,8 @@ func overPlanTiersOnTour(tr *tour) {
 	// id; the claimed run's agent's slug, which the pattern leaves alone, is
 	// not checked.
 	tr.slugPattern()
+	// The V&V report's filename carries the day it was rendered, as in S5b.
+	tr.pattern(`vv-report-.*-(\d{8})\.pdf`, "<yyyymmdd>", "the day the V&V report was rendered, in its filename")
 	x := overPlanTiersOnSetup(tr)
 	x.overSeats()
 	x.refusals()
@@ -166,6 +197,8 @@ func overPlanTiersOnSetup(tr *tour) *overPlanTiersOn {
 		jsonBody(`{"name":"Tour repo","remote_url":"https://git.example.com/tour.git"}`)).capture("rc", "/id")
 	tr.setup("the agent tour-over", o, "POST /api/v1/agents", jsonBody(overPlanAgent())).capture("agent", "/id")
 	x.k = tr.workerKey("k", "{{w}}", "W's workspace worker key (a workspace runner)")
+	tr.workerKey("k2", "{{w}}", "W's spare workspace worker key, never sent: the owner revokes it on the read-only "+
+		"workspace, where revoking k would cut the worker wire's steps off")
 	tr.runnerKey("rk", x.m1, "{{w}}", "m1's personal runner key in W, which the area never sends, so that m1's "+
 		"runner is never online and m1's launch is not reserved for it")
 	tr.setup("the templates", o, "GET /api/v1/templates").
@@ -174,6 +207,7 @@ func overPlanTiersOnSetup(tr *tour) *overPlanTiersOn {
 	x.run1 = tr.takeRun(x.k, "tour-over", "run1", "the token of a direct-mode run of tour-over in P, launched by "+
 		"the owner and claimed by W's worker key: what an agent's tools send")
 	tr.queueRun("run2", o, "tour-over", `{"project_id":"{{p}}","prompt":"Summarise P again."}`)
+	tr.queueRun("run3", x.m1, "tour-over", `{"prompt":"Summarise W."}`)
 	return x
 }
 
@@ -197,11 +231,15 @@ func (x *overPlanTiersOn) overSeats() {
 			"platform admin moved W back to single (setups)"))
 }
 
-// refusals sends a write of each guard kind that asks the gate.
+// refusals sends a write of each guard kind that asks the gate. Beside
+// them, in the order the area has always sent them, go the writes of the
+// same guard kinds that #379's questions 6 to 8 made always writable, each
+// answering as on a writable workspace.
 func (x *overPlanTiersOn) refusals() {
 	tr, o, m1 := x.tr, x.o, x.m1
 	inW := at("id", "{{w}}")
 	const gate = "403 plan_read_only: "
+	const exempt = "always writable, beside the gate's refusals: "
 
 	// project:editor (and the order of guard and gate).
 	tr.step("P's viewer m2 renames P: its role refuses it first (the guard decides access, then the gate)", x.m2,
@@ -218,7 +256,7 @@ func (x *overPlanTiersOn) refusals() {
 	// project:owner, project:viewer, project:reviewer.
 	tr.step(gate+"project:owner, mint a share link to P", o, "POST /api/v1/projects/{id}/share-links",
 		at("id", "{{p}}"), jsonBody(`{"role":"public","label":"Tour Over second link"}`))
-	tr.step(gate+"project:owner, revoke P's public share link", o, "DELETE /api/v1/share-links/{id}",
+	tr.step(exempt+"project:owner, revoke P's public share link", o, "DELETE /api/v1/share-links/{id}",
 		at("id", "{{sl}}"))
 	tr.step(gate+"project:viewer, m1 comments on P's card", m1, "POST /api/v1/work-items/{id}/comments",
 		at("id", "{{card}}"), jsonBody(`{"body":"Still on it."}`))
@@ -229,53 +267,56 @@ func (x *overPlanTiersOn) refusals() {
 
 	// org:admin.
 	tr.step(gate+"org:admin, rename W", o, "PUT /api/v1/orgs/{id}", inW, jsonBody(`{"name":"Tour Over Plan renamed"}`))
-	tr.step(gate+"org:admin, revoke W's worker key", o, "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
-		at("id", "{{w}}", "keyId", "{{k.key}}"))
+	tr.step(exempt+"org:admin, revoke W's spare worker key k2", o, "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
+		at("id", "{{w}}", "keyId", "{{k2.key}}"))
 	tr.step(gate+"org:admin, sync W's agent files", o, "POST /api/v1/agents/sync")
 	tr.step(gate+"org:admin, import a workspace-wide crew (no project_id: the workspace admin's guard, before the "+
 		"body is read)", o, "POST /api/v1/crews/import", jsonBody(`{"name":"Tour Over crew"}`))
 
 	// org:member, as m1.
-	tr.step(gate+"org:member, m1 makes W its session's active workspace", m1, "POST /api/v1/orgs/{id}/activate", inW)
-	tr.step(gate+"org:member, m1 revokes its own runner key", m1, "DELETE /api/v1/orgs/{id}/my-runner-key", inW)
-	tr.step(gate+"org:member, m1 turns the stable preview on for itself", m1, "PUT /api/v1/orgs/{id}/members/me/preview",
-		inW, jsonBody(`{"enabled":true}`))
+	tr.step(exempt+"org:member, m1 makes W its session's active workspace", m1, "POST /api/v1/orgs/{id}/activate", inW)
+	tr.step(exempt+"org:member, m1 revokes its own runner key", m1, "DELETE /api/v1/orgs/{id}/my-runner-key", inW)
+	tr.step(exempt+"org:member, m1 turns the stable preview on for itself: the single plan always runs nightly", m1,
+		"PUT /api/v1/orgs/{id}/members/me/preview", inW, jsonBody(`{"enabled":true}`))
 	tr.step(gate+"org:member, m1 publishes a shared product (W is its active workspace)", m1,
 		"POST /api/v1/shared-products", jsonBody(sharedProductsJSON("tour", "Tour Over Product", "d", "v", "p", "t")))
 	tr.step(gate+"org:member, m1 asks for a connector pairing code", m1, "POST /api/v1/orgs/{id}/connector-pairing", inW)
 
 	// runner-sessions, scoped-write, run:editor.
-	tr.step(gate+"runner-sessions, m1 ends its cloud runner lease (it holds none: the gate answers first)", m1,
+	tr.step(exempt+"runner-sessions, m1 ends its cloud runner lease: this deployment runs no transient runners", m1,
 		"DELETE /api/v1/orgs/{id}/runner-session", inW)
 	tr.step(gate+"scoped-write, a workspace-wide attribute definition", o, "POST /api/v1/attribute-definitions",
 		jsonBody(`{"org_id":"{{w}}","key":"risk","label":"Risk","data_type":"text"}`))
 	tr.step(gate+"scoped-write, an automation pinned to P", o, "POST /api/v1/automations",
 		jsonBody(`{"name":"Tour Over watch","kind":"manual","agent_id":"{{agent}}","project_id":"{{p}}"}`))
-	tr.step(gate+"run:editor, m1 cancels run2, which the owner launched in P (the project's ladder)", m1,
+	tr.step(exempt+"run:editor, m1 cancels run2, which the owner launched in P (the project's ladder)", m1,
 		"POST /api/v1/agent-runs/{id}/cancel", at("id", "{{run2}}"))
 }
 
 // passes sends the writes a read-only workspace still takes, since nothing
-// on their path asks the gate.
+// on their path asks the gate, after run2's cancel by its launcher, always
+// writable too, and in their midst the three that took it before they asked
+// the gate too: two project creates and a launch with no project.
 func (x *overPlanTiersOn) passes() {
 	tr, o := x.tr, x.o
-	tr.step("the owner cancels run2, which it launched: requireRunAccess passes a launcher before the project's "+
-		"ladder, so no gate", o, "POST /api/v1/agent-runs/{id}/cancel", at("id", "{{run2}}"))
+	tr.step("always writable: the owner cancels run2, which it launched and m1 has cancelled: the run as it is", o,
+		"POST /api/v1/agent-runs/{id}/cancel", at("id", "{{run2}}"))
 	tr.step("mark every notification read: a session route, no workspace, no gate", o,
 		"POST /api/v1/notifications/read-all",
 		elide("/updated", "<count>", 1, 3, "the notifier writes the joins' notifications after the setups "+
 			"answered, so how many it has written by now is not the server's to fix"),
 		elide("/unread_count", "<count>", 1, 3, "the same"))
-	tr.step("create a project in W: POST /projects asks no gate, only the project count", o, "POST /api/v1/projects",
-		jsonBody(`{"name":"Tour Over new while read-only"}`)).capture("while_read_only", "/id")
-	tr.step("a project from the default template: no guard, no gate, no count", o,
+	tr.step("403 plan_read_only: project-create, a project in W (the gate before the count)", o,
+		"POST /api/v1/projects", jsonBody(`{"name":"Tour Over new while read-only"}`))
+	tr.step("403 plan_read_only: project-create, a project from the default template", o,
 		"POST /api/v1/templates/{id}/projects", at("id", "{{template}}"),
-		jsonBody(`{"name":"Tour Over from the template"}`)).capture("from_template", "/id")
-	tr.step("m1 launches tour-over with no project: no guard, so no gate", x.m1, "POST /api/v1/agents/{slug}/runs",
-		at("slug", "tour-over"), jsonBody(`{"prompt":"Summarise W."}`)).capture("run3", "/id")
+		jsonBody(`{"name":"Tour Over from the template"}`))
+	tr.step("403 plan_read_only: unscoped-launch, m1 launches tour-over with no project", x.m1,
+		"POST /api/v1/agents/{slug}/runs", at("slug", "tour-over"), jsonBody(`{"prompt":"Summarise W."}`))
 	tr.step("W's worker key claims, not hosted: the worker wire asks no gate, and takes m1's run, the one queued",
 		x.k, "POST /api/v1/agent-runs/claim", claimBody("tour-over", tourDefaultProvider),
-		note("run2 was cancelled and run1 is claimed, so run3 is the one queued run")).
+		note("m1 launched run3 with no project while W was writable (setup); run2 was cancelled and run1 is "+
+			"claimed, so run3 is the one queued run")).
 		claimed("run3").runToken("run3", "the token W's worker key's claim of run3 handed out; never sent")
 	tr.step("W's worker key pushes run1's log: the worker wire again", x.k, "POST /api/v1/agent-runs/{id}/logs",
 		at("id", "{{run1}}"), jsonBody(`{"entries":[{"seq":1,"kind":"text","payload":{"text":"Reading P."}}],`+
@@ -355,7 +396,9 @@ func (x *overPlanTiersOn) exports(reads []struct{ route, query, whole string }) 
 	x.export, x.reqif = overPlanReads(x.tr, reads)
 }
 
-// alwaysWritable walks the nine exempt routes on the read-only workspace.
+// alwaysWritable walks, on the read-only workspace, the nine routes that
+// were exempt before #379's questions 6 to 8; refusals and passes send the
+// seven those made exempt.
 func (x *overPlanTiersOn) alwaysWritable() {
 	tr, o := x.tr, x.o
 	inW := at("id", "{{w}}")
@@ -419,7 +462,8 @@ func overPlanFill(tr *tour, want int) {
 	}
 }
 
-// projectCap is Q13 at the tier's 200 projects.
+// projectCap is the project maximum at the tier's 200 projects, which every
+// project create counts toward, and a workspace over it.
 func (x *overPlanTiersOn) projectCap() {
 	tr, o := x.tr, x.o
 	inW := at("id", "{{w}}")
@@ -427,15 +471,23 @@ func (x *overPlanTiersOn) projectCap() {
 	overPlanFill(tr, 200)
 	tr.step("W's limits: 200 projects of 200, writable", o, limits, inW,
 		note("the owner created projects up to the single plan's 200 just before (setups, Tour fill NNN)"))
-	tr.step("Q13: a new project past the 200 is refused limit_reached, the remedy the Billing tab", o,
+	tr.step("a new project past the 200 is refused limit_reached, the remedy the Billing tab", o,
 		"POST /api/v1/projects", jsonBody(`{"name":"Tour Over one too many"}`))
-	tr.step("Q13: a project from the default template is not counted: 201, the 201st", o,
+	tr.step("a project from the default template counts too: refused limit_reached", o,
 		"POST /api/v1/templates/{id}/projects", at("id", "{{template}}"), jsonBody(`{"name":"Tour Over past the cap"}`))
-	tr.step("Q13: an import is not counted either: 201, the 202nd", o, "POST /api/v1/projects/import",
+	tr.step("an import counts too: refused limit_reached", o, "POST /api/v1/projects/import",
 		answerOf(x.export, "application/json"))
-	tr.step("W's limits: 202 projects of 200, read-only, over max_projects", o, limits, inW)
+	tr.setup("the platform admin moves W to business", x.admin, "PUT /api/v1/orgs/{id}/plan", inW,
+		jsonBody(`{"plan":"business"}`))
+	tr.setup("the 201st project, on business", o, "POST /api/v1/projects", jsonBody(`{"name":"Tour Over past the cap"}`),
+		expect(http.StatusCreated))
+	tr.setup("the platform admin moves W back to single", x.admin, "PUT /api/v1/orgs/{id}/plan", inW,
+		jsonBody(`{"plan":"single"}`))
+	tr.step("W's limits: 201 projects of 200, read-only, over max_projects", o, limits, inW,
+		note("on business the owner created a 201st project; then the platform admin moved W back to single "+
+			"(setups)"))
 	tr.step("rename P: 403 plan_read_only, naming Projects", o, "PUT /api/v1/projects/{id}", at("id", "{{p}}"),
 		jsonBody(`{"name":"Tour Over P renamed"}`))
-	tr.step("Q13: a new project is still refused limit_reached, the count's refusal: POST /projects has no gate", o,
+	tr.step("a new project on the read-only workspace: 403 plan_read_only, the gate before the count", o,
 		"POST /api/v1/projects", jsonBody(`{"name":"Tour Over one too many"}`))
 }

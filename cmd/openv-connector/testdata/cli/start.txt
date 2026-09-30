@@ -1,0 +1,20 @@
+# The command line of openv-connector (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/openv-connector/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/openv-connector -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ openv-connector openv-connector://start
+exit 1
+--- stdout
+
+  OpenV Agent Connector
+  ---------------------
+
+  ERROR: this connector isn't paired yet.
+  Open OpenV → Workspace settings → Runners → "Open Agent Connector" and use the pairing link there.
+
+  Press Enter to close this window...
+\ no newline at end
+--- stderr

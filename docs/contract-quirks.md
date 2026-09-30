@@ -363,8 +363,9 @@ the Phase 3 consolidations that give quirks their names.
   (`:739`, `:761`). The report service reads `UPLOADS_DIR` with
   `os.Getenv` (`internal/domain/reports/report.go:733`), not the server's
   `./uploads` default (`cmd/server/main.go:139`).
-- **Pinned by, named as:** the S5c tour for the two chains; X10 keeps
-  distinct fields *(planned)*. Pain point boot-3.
+- **Pinned by, named as:** the S5c tour for the two chains; S8's env
+  inventory for both reads of each variable; X10 keeps distinct fields
+  *(planned)*. Pain point boot-3.
 - **Pinned today:** S1's env-read ratchet counts the direct read in
   `internal/domain/reports`. The S5c tour boots a server with `PUBLIC_URL`
   set and `FRONTEND_URL` unset, and pins each site: an invitation's link
@@ -373,29 +374,45 @@ the Phase 3 consolidations that give quirks their names.
   `redirect_uri` is on it too, while an OIDC sign-in and a Google sign-in
   land on `http://localhost:3000` (the second) (steps 4, 44, 42, 31 and 43
   of `cmd/server/testdata/tour/s5c/self_hosted_cross_site_sso.json`). The raw
-  `UPLOADS_DIR` read is not pinned by a response.
+  `UPLOADS_DIR` read is not pinned by a response, but
+  `internal/archtest/testdata/env_vars.txt` (S8) lists it beside the
+  server's `envOr` with `"./uploads"`, and `FRONTEND_URL` and `PUBLIC_URL`
+  each with their constant and their computed fallback; S8's `per-request`
+  exemption keeps the report's read where it is.
 
-## Q13. Only `POST /api/v1/projects` enforces the project maximum
+## Q13. Only `POST /api/v1/projects` enforces the project maximum (resolved)
 
-- **Where:** `checkProjectCount` (`internal/api/limits.go:326`) has one
-  caller, `CreateProject` (`internal/api/handlers.go:1618`); the other
-  project-creation paths do not count.
+- **Resolved:** fixed under R7 by its own release-noted bug-fix pull
+  request (#379's question 8; OpenV REQ-176 and REQ-177), so it is no
+  longer a quirk to preserve. Every project create, `POST /api/v1/projects`,
+  `POST /api/v1/templates/{id}/projects` and `POST /api/v1/projects/import`,
+  now asks `requireProjectCreate` (`internal/api/authz.go`), which takes the
+  plan read-only gate (`requireWritable` on the caller's active workspace,
+  which the import route's `alwaysWritable` passes, as REQ-177 keeps import
+  open on a read-only workspace) and `checkProjectCount` before anything is
+  created.
+- **Where it was:** `checkProjectCount` (`internal/api/limits.go`) had one
+  caller, `CreateProject` (`internal/api/handlers.go`); the template and
+  import routes counted nothing, and none of the three asked the gate.
 - **Pinned by, named as:** S5e's over-plan pass under the S4 tiers-on
-  profile, and under the self-hosted profile with `OPENV_LIMITS`. Pain
-  point api-requirements-v1.
-- **Pinned today:** the S5e tour. At the single plan's 200 projects,
-  `POST /api/v1/projects` is refused 403 `limit_reached` with the Billing
-  tab's remedy, while a project from a template and an import answer 201
-  and take the workspace to 202 of 200, read-only and over `max_projects`,
-  where a project's rename is refused `plan_read_only` and
-  `POST /api/v1/projects` still answers `limit_reached`, the count's
-  refusal, since the route asks no plan gate (steps 60–66 of
-  `cmd/server/testdata/tour/s5e/over_plan_tiers_on.json`). A workspace
-  read-only for its seats, under the project maximum, takes a new project
-  and a template's project with 201 (steps 28 and 29). On a self-hosted
-  deployment at `OPENV_LIMITS`'s seven projects the same holds, the
-  `limit_reached` remedy naming `OPENV_LIMITS` (steps 4–7, 12 and 13 of
-  `over_plan_self_hosted.json`).
+  profile, and under the self-hosted profile with `OPENV_LIMITS`, pin the
+  fix. Pain point api-requirements-v1.
+- **Pinned today:** at the single plan's 200 projects, a new project, a
+  template's project and an import are each refused 403 `limit_reached`
+  with the Billing tab's remedy; once W is over `max_projects`, read-only, a
+  new project is refused by the gate, 403 `plan_read_only`, before the count
+  (steps 60–66 of `cmd/server/testdata/tour/s5e/over_plan_tiers_on.json`).
+  A workspace read-only for its seats refuses a new project and a template's
+  project 403 `plan_read_only` (steps 28 and 29) and still takes the
+  imports, which are always writable (steps 48 and 49). On a self-hosted
+  deployment at `OPENV_LIMITS`'s seven projects the three creates are
+  refused `limit_reached` with the `OPENV_LIMITS` remedy, and once two
+  projects past the seven are written as setup a new project and a
+  template's project are refused `plan_read_only` and the imports, past the
+  gate, `limit_reached` (steps 4–7, 12, 13, 18 and 19 of
+  `over_plan_self_hosted.json`). `internal/api`'s
+  `TestEveryProjectCreateTakesTheGateAndTheCount` covers each route at the
+  maximum, over it, and on a workspace over its seats.
 
 ## Q14. Some list endpoints encode `null` for an empty list
 
@@ -445,14 +462,14 @@ the Phase 3 consolidations that give quirks their names.
   42, 43, 73 and 74 of `cmd/server/testdata/tour/s5d/agents_automations.json`,
   steps 11 and 116 of `crews_teams.json`, steps 23 and 29 of
   `proposals_events.json`, steps 90 and 96 of `worker_wire.json`, steps 68,
-  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log and
-  the events before a cursor no event has (step 53 of `worker_wire.json`,
-  step 61 of `proposals_events.json`). The S5e matrix counts each list its
+  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log, the
+  events before a cursor no event has, and the project list of a personal
+  runner key whose member has a role in no project (steps 53 and 104 of
+  `worker_wire.json`, step 61 of `proposals_events.json`). The S5e matrix counts each list its
   real-id reads answer, per identity (`[n]` or `null`): a workspace's teams,
   a project's repository connections and team grants and a project's
-  proposals answer `null` to every column that reads them, the platform
-  admin's read of a project's runs `null` where its members read two, and,
-  with no query, a plain member's runs, none of which it launched, and the
+  proposals answer `null` to every column that reads them, and, with no
+  query, a plain member's runs, none of which it launched, and the
   automations of a workspace with none (the sections "real ids, GET", "real
   ids in the query, GET" and "real ids, lists with no query" of
   `cmd/server/testdata/tour/s5e/real_id_reads.json`).

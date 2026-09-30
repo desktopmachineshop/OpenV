@@ -9,7 +9,59 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Runners open a run's repositories with the run's own access.** A runner
+  now looks up the repositories of the project an agent works in with the
+  access OpenV gives that run, not with the runner's own key, which reads
+  only the projects its owner can open. Your personal runner keeps working
+  from your own copy of each repository, the local path you set under
+  Project settings → Repositories, and a run taken by a workspace runner
+  clones the repository, as before.
+
 ### Bug fixes
+
+- **A runner no longer prints its keys in its help or on a flag error.**
+  `agentd` showed the worker key and the runner pool key, from
+  `WORKER_API_KEY` and `RUNNER_POOL_KEY`, as the defaults of `--worker-key`
+  and `--pool-key`. It printed them in `agentd -h`, and in the usage it
+  prints on any flag error, such as a mistyped flag, so both keys could
+  land in a container log or in help output someone shared. The runner now
+  names those variables and never prints their values, and `--pool` and
+  `--node-name` no longer show two defaults when `RUNNER_POOL` or
+  `RUNNER_NODE_NAME` is set. A runner still reads all four from the
+  environment when the flag is not given. If a runner's help or flag-error
+  output may have reached anyone, or a log others can read, replace the
+  keys it showed. *Rotate* a personal runner key under *My personal runner*
+  in your settings, which stops the old key at once. For a workspace key,
+  use *Create key* on the workspace's *Runners* tab, move the runner to the
+  new key, then *Revoke* the old one, which keeps working until you do. If
+  you run your own OpenV, also set a new `RUNNER_POOL_KEY` on the server and
+  its pool nodes, and a new `WORKER_API_KEY` on the server if the runner
+  used the deployment's own key, then restart them.
+
+- **A runner no longer hands its own keys to the agents it runs.** Every
+  program a runner started for a run (the agent's CLI, its sign-in and
+  version checks, and git in the run's workspace) inherited
+  `WORKER_API_KEY` and `RUNNER_POOL_KEY` from the runner, and on Linux any
+  of them could also read both from the runner process itself. So an agent,
+  or a command or git hook it ran, could read the key its runner signs in
+  with, and on a pool node the deployment's shared pool key, whichever
+  member's run it was. The runner now keeps both keys from everything it
+  starts, and on Linux, hosted runners and the runner image included, it
+  stops programs running as its own user from reading its environment or
+  memory. On Windows and macOS a program running as the same user can still
+  read a runner's environment through the operating system, so run agents
+  you do not trust on Linux or as another user. Agents still reach OpenV
+  with their run's own token, and every other setting, a provider's API key
+  included, reaches them as before. If agents you do not fully trust have
+  run on a runner, replace the key it used. *Rotate* a personal runner key
+  under *My personal runner* in your settings. For a workspace key, use
+  *Create key* on the workspace's *Runners* tab, move the runner to the new
+  key, then *Revoke* the old one. If you run your own OpenV, also set a new
+  `RUNNER_POOL_KEY` on the server and its pool nodes, and a new
+  `WORKER_API_KEY` on the server if a runner used the server's own key,
+  since revoking that one on the *Runners* tab does not stop it.
 
 - **Committing a guided definition approves its drafts.** The wizard's last
   step said every draft was now live, but the personas, needs, requirements,
@@ -352,6 +404,89 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   The refusal now speaks of the deployment's limits and names the setting
   to raise in `OPENV_LIMITS`, as a refusal at one of those limits already
   did. Hosted workspaces are pointed to the Billing tab as before.
+
+- **An agent whose changes need review can no longer start other runs.**
+  With its run's credentials, an agent in proposal mode could launch another
+  agent, a crew, or an agent on a test run through the API, send the V&V
+  Assistant a message, or set up an interview with any agent as its
+  interviewer, invite a participant and answer as one, and so start work
+  whose changes could land with no one reviewing them. Each is now refused
+  (`403`), as *Draft test cases* already was, and so are retrying a run and
+  running an automation now. An agent that writes directly can still launch
+  runs, and a run it launches now shows under it in the run tree of its
+  run's details, where it had stood alone with no record of what started it;
+  the tree shows only the runs you could open yourself. Like a run a crew
+  agent delegates, such a run is followed in that tree rather than on a card
+  of its own on the board, and it is not retried automatically if it fails.
+
+- **Every way of creating a project counts toward the workspace's project
+  limit and respects a read-only workspace.** Creating a project from a
+  template or by importing one did not count toward the most projects the
+  workspace's plan allows (on a self-hosted deployment, `OPENV_LIMITS`), so
+  either could take a workspace past its limit and make it read-only; and
+  on a workspace already read-only because it is over its plan, a new
+  project and one from a template were still created. Each now counts: at
+  the limit it is refused with the limit and how to raise it, and on a
+  read-only workspace a new project and one from a template are refused like
+  any other change. Importing stays available on a read-only workspace
+  while the workspace is under its project limit. Launching an agent with no
+  project through the API now also needs you to be a member of the agent's
+  workspace, and is refused while that workspace is read-only.
+
+- **A runner key can no longer create projects.** Through the API, a
+  workspace runner key, or a member's own runner key, could create a
+  project that no one owned, and creating one from a template or by import
+  with it answered as if nobody had signed in. Each is now refused (`403`,
+  *runner keys cannot create projects*). Any member of a workspace still
+  creates projects there and becomes their owner.
+
+- **An agent listing projects sees only its own.** Through the API, an
+  agent's run credentials listed every project of its workspace, including
+  projects the agent cannot open. The list now holds only the project the
+  run works in, and is empty for a run that has none.
+
+- **A personal runner key reads only the projects its owner can open.** A
+  member's personal runner key could read every project of its workspace
+  through the API, and list them all, even projects that member could not
+  open in the app. It now reads and lists only the projects its owner can
+  open, as a workspace admin or with a role in the project, and anything
+  else is refused as it is for the member. Workspace runner keys are
+  unchanged.
+
+- **A personal runner takes only the work its owner could see.** A member's
+  personal runner picked up automation and board runs from every project of
+  the workspace, so its agent worked in projects that member cannot open. It
+  now takes such a run only in a project its owner has a role in, or, for a
+  workspace admin, anywhere in the workspace. A run that belongs to no
+  project, which only a workspace's admins can open, is left to an admin's
+  runner or to the workspace's shared runners. Runs you launch still go to
+  your own runner, and workspace and hosted runners take any run as before.
+
+- **Runner keys and share links can be revoked in a read-only workspace.**
+  In a workspace that holds more than its plan allows, and so is read-only,
+  revoking a workspace runner key, your own personal runner key or a
+  project's share link was refused like any change to the workspace
+  (`403 plan_read_only` for an API client), so the key or link went on
+  working until the workspace was back under its plan. Revoking them is now
+  always allowed there, as removing someone from the workspace or revoking
+  a workspace invitation already was.
+
+- **You can switch to a read-only workspace, set your own stable-release
+  preview and end your cloud runner there.** In a workspace that holds more
+  than its plan allows, turning the next stable release's preview on or off
+  for yourself and ending your leased cloud runner were refused, although
+  neither changes the workspace, and so was making it your session's active
+  workspace (`POST /api/v1/orgs/{id}/activate`, which the app sends when you
+  switch to it). These three now work there as in any other workspace;
+  starting or extending a cloud runner lease, like changes to the
+  workspace's own content, stays refused until it is back under its plan.
+
+- **A run can be cancelled in a read-only workspace.** In a workspace that
+  holds more than its plan allows, a project's editor could not cancel a
+  run someone else had launched in the project, nor a workspace admin a
+  run launched outside any project: the cancel was refused as a change to
+  the workspace, although the person who launched the run could cancel it.
+  Everyone who may cancel a run can now cancel it there.
 
 - **Something you cannot reach answers exactly as something that does not
   exist.** Through the API, a project, a workspace, or anything in them

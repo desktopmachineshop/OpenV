@@ -43,7 +43,8 @@ GET /api/v1/guided-sessions/{id}/messages: 200; orchestration_budget
 GET /api/v1/interview-sessions/{id}/transcript: 200; orchestration_budget
 GET /api/v1/orgs/{id}/runner-session: 200; providers_repos_pool
 GET /api/v1/orgs/{id}/worker-keys: 200; worker_wire
-GET /api/v1/projects/{id}/repo-connections: 200, 404; providers_repos_pool
+GET /api/v1/projects: 200; worker_wire
+GET /api/v1/projects/{id}/repo-connections: 200, 404; providers_repos_pool, worker_wire
 GET /api/v1/proposals: 200, 400, 401, 404; proposals_events
 GET /api/v1/provider-logins/{id}: 200, 404; providers_repos_pool
 GET /api/v1/provider-logins/{id}/full: 200, 403, 404; providers_repos_pool
@@ -109,4 +110,4 @@ PUT /api/v1/team-edges/{id}: 200, 404; crews_teams
 PUT /api/v1/team-nodes/{id}: 200, 404; crews_teams
 PUT /api/v1/teams/{id}: 200; crews_teams
 
-s5d: 97 of 341 routes reached (28.4%), 95 with a 2xx or 3xx answer (27.9%)
+s5d: 98 of 341 routes reached (28.7%), 96 with a 2xx or 3xx answer (28.2%)

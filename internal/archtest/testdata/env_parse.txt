@@ -1,0 +1,700 @@
+# What each env read returns (refactor plan S8, invariant I13), for X10a to
+# rerun against internal/config: one section per read column of
+# env_vars.txt, [<read>], or [<read> <NAME>] per variable where the getter's
+# parse depends on the variable; [=="true"], [=="1"] and [!=""] are the
+# comparisons a read column ends with. Each row is <input><TAB><result>: the
+# input is unset or a Go-quoted raw value, and every section tries the same
+# inputs first; the result is Go-quoted text, a number, a duration, true or
+# false, a JSON list, error: <message>, or default where the getter returned
+# the fallback the test passed it, so that X10a substitutes each variable's
+# own default. Each package's TestEnvParse (<package>/env_parse_test.go)
+# writes its <package>: sections by calling its real helpers, and
+# TestEnvInventory the rest; regenerate them all with
+#   UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/api ./internal/billing ./internal/domain/users ./internal/hosting ./internal/notify
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+
+[!=""]
+unset	false
+""	false
+"   "	true
+"TRUE"	true
+"true"	true
+"1"	true
+"0"	true
+"-5"	true
+"7"	true
+" 7 "	true
+"+7"	true
+"7x"	true
+"1e3"	true
+"2.5"	true
+"Inf"	true
+"NaN"	true
+"2h"	true
+" 2h "	true
+"-1h"	true
+"800h"	true
+"30d"	true
+"a, ,b"	true
+","	true
+
+[=="1"]
+unset	false
+""	false
+"   "	false
+"TRUE"	false
+"true"	false
+"1"	true
+"0"	false
+"-5"	false
+"7"	false
+" 7 "	false
+"+7"	false
+"7x"	false
+"1e3"	false
+"2.5"	false
+"Inf"	false
+"NaN"	false
+"2h"	false
+" 2h "	false
+"-1h"	false
+"800h"	false
+"30d"	false
+"a, ,b"	false
+","	false
+
+[=="true"]
+unset	false
+""	false
+"   "	false
+"TRUE"	false
+"true"	true
+"1"	false
+"0"	false
+"-5"	false
+"7"	false
+" 7 "	false
+"+7"	false
+"7x"	false
+"1e3"	false
+"2.5"	false
+"Inf"	false
+"NaN"	false
+"2h"	false
+" 2h "	false
+"-1h"	false
+"800h"	false
+"30d"	false
+"a, ,b"	false
+","	false
+
+[cmd/agentd:envDurationOr(key)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	default
+"0"	0s
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	2h0m0s
+" 2h "	default
+"-1h"	-1h0m0s
+"800h"	800h0m0s
+"30d"	default
+"a, ,b"	default
+","	default
+
+[cmd/agentd:envIntOr(key)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	1
+"0"	0
+"-5"	-5
+"7"	7
+" 7 "	default
+"+7"	7
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+
+[cmd/agentd:envOr(key)]
+unset	default
+""	default
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[cmd/openv-mcp:resolveToken(env) OPENV_API_TOKEN]
+unset	""
+""	""
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[cmd/openv-mcp:resolveToken(env) OPENV_RUN_TOKEN]
+unset	default
+""	default
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[cmd/server:envInt(key)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	1
+"0"	default
+"-5"	default
+"7"	7
+" 7 "	default
+"+7"	7
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+
+[cmd/server:envOr(key)]
+unset	default
+""	default
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/api:newRateLimiterFromEnv(burstVar)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	1
+"0"	default
+"-5"	default
+"7"	7
+" 7 "	default
+"+7"	7
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+
+[internal/api:newRateLimiterFromEnv(refillVar)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	1
+"0"	default
+"-5"	default
+"7"	7
+" 7 "	default
+"+7"	7
+"7x"	default
+"1e3"	1000
+"2.5"	2.5
+"Inf"	+Inf
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_BILLING_MAX_SEATS]
+unset	default
+""	default
+"   "	default
+"TRUE"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "TRUE"
+"true"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "true"
+"1"	1
+"0"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "0"
+"-5"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "-5"
+"7"	7
+" 7 "	7
+"+7"	7
+"7x"	7
+"1e3"	1
+"2.5"	2
+"Inf"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "Inf"
+"NaN"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "NaN"
+"2h"	2
+" 2h "	2
+"-1h"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "-1h"
+"800h"	800
+"30d"	30
+"a, ,b"	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got "a, ,b"
+","	error: OPENV_BILLING_MAX_SEATS must be a whole number of seats, got ","
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_BILLING_PORTAL_CONFIG]
+unset	default
+""	default
+"   "	default
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	"7"
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	"2h"
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_BILLING_RECONCILE_MINUTES]
+unset	default
+""	default
+"   "	default
+"TRUE"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "TRUE"
+"true"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "true"
+"1"	1m0s
+"0"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "0"
+"-5"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "-5"
+"7"	7m0s
+" 7 "	7m0s
+"+7"	7m0s
+"7x"	7m0s
+"1e3"	1m0s
+"2.5"	2m0s
+"Inf"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "Inf"
+"NaN"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "NaN"
+"2h"	2m0s
+" 2h "	2m0s
+"-1h"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "-1h"
+"800h"	13h20m0s
+"30d"	30m0s
+"a, ,b"	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got "a, ,b"
+","	error: OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got ","
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_BILLING_RETURN_URL]
+unset	default
+""	default
+"   "	default
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	"7"
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	"2h"
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+" https://app.example.test/billing// "	"https://app.example.test/billing"
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_BILLING_TRIAL_DAYS]
+unset	default
+""	default
+"   "	default
+"TRUE"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "TRUE"
+"true"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "true"
+"1"	1
+"0"	0
+"-5"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "-5"
+"7"	7
+" 7 "	7
+"+7"	7
+"7x"	7
+"1e3"	1
+"2.5"	2
+"Inf"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "Inf"
+"NaN"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "NaN"
+"2h"	2
+" 2h "	2
+"-1h"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "-1h"
+"800h"	800
+"30d"	30
+"a, ,b"	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got "a, ,b"
+","	error: OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got ","
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_STRIPE_API_VERSION]
+unset	default
+""	default
+"   "	default
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	"7"
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	"2h"
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/billing:ConfigFromEnv(getenv) OPENV_STRIPE_PRICES]
+unset	default
+""	default
+"   "	default
+"TRUE"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'T' looking for beginning of value
+"true"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal bool into Go value of type []billing.PriceEntry
+"1"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+"0"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+"-5"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+"7"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+" 7 "	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+"+7"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character '+' looking for beginning of value
+"7x"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'x' after top-level value
+"1e3"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+"2.5"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: json: cannot unmarshal number into Go value of type []billing.PriceEntry
+"Inf"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'I' looking for beginning of value
+"NaN"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'N' looking for beginning of value
+"2h"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'h' after top-level value
+" 2h "	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'h' after top-level value
+"-1h"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'h' after top-level value
+"800h"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'h' after top-level value
+"30d"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'd' after top-level value
+"a, ,b"	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character 'a' looking for beginning of value
+","	error: OPENV_STRIPE_PRICES: not a JSON array of {price, plan, interval}: invalid character ',' looking for beginning of value
+" [{\"price\":\"price_b_m\",\"plan\":\"business\",\"interval\":\"month\"},{\"price\":\"price_bl_y\",\"plan\":\" business_lite \",\"interval\":\"year\"}] "	[{"price":"price_b_m","plan":"business","interval":"month"},{"price":"price_bl_y","plan":"business_lite","interval":"year"}]
+"[{\"price\":\"price_e\",\"plan\":\"enterprise\",\"interval\":\"month\"}]"	error: OPENV_STRIPE_PRICES: entry 0 sells plan "enterprise"; only business_lite and business are for sale
+"[]"	default
+
+[internal/billing:ConfigFromEnv(getenv) STRIPE_SECRET_KEY]
+unset	default
+""	default
+"   "	default
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	"7"
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	"2h"
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/domain/users:envDuration(name) OPENV_SESSION_IDLE]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	default
+"0"	default
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	2h0m0s
+" 2h "	2h0m0s
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+"719h"	default
+"167h59m"	167h59m0s
+
+[internal/domain/users:envDuration(name) OPENV_SESSION_MAX_AGE]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	default
+"0"	default
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	2h0m0s
+" 2h "	2h0m0s
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+"719h"	719h0m0s
+"167h59m"	167h59m0s
+
+[internal/hosting:envOr(key)]
+unset	default
+""	default
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/notify:envDefault(key)]
+unset	default
+""	default
+"   "	default
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	"7"
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	"2h"
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/notify:typeListFromEnv(key)]
+unset	default
+""	default
+"   "	default
+"TRUE"	["TRUE"]
+"true"	["true"]
+"1"	["1"]
+"0"	["0"]
+"-5"	["-5"]
+"7"	["7"]
+" 7 "	["7"]
+"+7"	["+7"]
+"7x"	["7x"]
+"1e3"	["1e3"]
+"2.5"	["2.5"]
+"Inf"	["Inf"]
+"NaN"	["NaN"]
+"2h"	["2h"]
+" 2h "	["2h"]
+"-1h"	["-1h"]
+"800h"	["800h"]
+"30d"	["30d"]
+"a, ,b"	["a","b"]
+","	default
+" a , b "	["a","b"]
+"b,a,a"	["b","a","a"]
+"A"	["A"]
+
+[os.Getenv]
+unset	""
+""	""
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[os.LookupEnv]
+unset	unset
+""	""
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","

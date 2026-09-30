@@ -111,7 +111,7 @@
       "section \"real ids, body {\": writes to real ids whose handlers decode before they write, with Content-Type: application/json and the one-byte body { (it decodes into nothing, so each column shows which of guard, lookup and decode refuses it first, and nothing is written); a second path id is the viewer's (<viewer>)",
       "section \"real ids, lists with no query\": the list reads that take no query, in routes.txt's order, then GET /api/v1/search ?q=R1 with no project; an answer that is a JSON array or null is counted, and the workspaces' at /orgs and search's at /hits; before it the owner made, as setup, project Q in W (<q>), which only the owner belongs to, and a requirement titled R1 of Q (<q.r1>)",
       "section \"real ids, well-formed creates\": the four creates that take no path id or a template's, with a well-formed body (the row shows it), after the sections that write nothing, since each writes: a project, a project from the seeded template (<template>), an import and a workspace, in the workspace each column acts in",
-      "section \"a proposal-mode run's token\", last: the run column is sent by <review.run.token>, the token of <review.run>, a run of the proposal-mode agent tour-matrix-review in P, launched by the owner, claimed by W's worker key and started, as setup after the creates, with a workspace-wide crew whose entry node is tour-matrix (<launch.crew>); the draft of test cases and the test run's agent run carry the body { (the row shows no body), the launches and creates a well-formed body (the row shows it)",
+      "section \"a proposal-mode run's token\", last: the run column is sent by <review.run.token>, the token of <review.run>, a run of the proposal-mode agent tour-matrix-review in P, launched by the owner, claimed by W's worker key and started, as setup after the creates, with a workspace-wide crew whose entry node is tour-matrix (<launch.crew>); the draft of test cases, the test run's agent run, the assistant's chat message, kickoff and nudge (on <guided>), an interview in P and an invite to <interview> carry the body {, the retry (of <run>) and run-now (of <automation>) no body (either row shows none), the launches and creates a well-formed body (the row shows it)",
       "after each section, the events of each workspace a signed-in column acts in are read and listed with the section (W, <outsider.workspace>, <admin.workspace>); in the first four sections none of them may publish any, or the area fails"
     ],
     "cells": [
@@ -306,7 +306,7 @@
           "GET /api/v1/crews | 401: authentication required | 200 text[2] | 200 text[2] | 200 text[2] | 200 text[1] | 401: authentication required | 401: authentication required | 200 text[1]",
           "GET /api/v1/events | 401: authentication required | 200 text[12] | 200 text[12] | 200 text[15] | 200 text[0] | 401: authentication required | 401: authentication required | 200 text[0]",
           "GET /api/v1/orgs | 401: authentication required | 200 text /orgs[2] | 200 text /orgs[2] | 200 text /orgs[2] | 200 text /orgs[1] | 401: authentication required | 401: authentication required | 200 text /orgs[1]",
-          "GET /api/v1/projects | 401: authentication required | 200 json[1] | 200 json[1] | 200 json[2] | 200 json[0] | 200 json[2] | 200 json[2] | 200 json[0]",
+          "GET /api/v1/projects | 401: authentication required | 200 json[1] | 200 json[1] | 200 json[2] | 200 json[0] | 200 json[2] | 200 json[1] | 200 json[0]",
           "GET /api/v1/teams | 401: authentication required | 200 text[2] | 200 text[2] | 200 text[2] | 200 text[1] | 401: authentication required | 401: authentication required | 200 text[1]",
           "GET /api/v1/users | 401: authentication required | 200 text[3] | 200 text[3] | 200 text[3] | 200 text[1] | 401: authentication required | 401: authentication required | 200 text[1]",
           "GET /api/v1/search ?q=R1 | 401: authentication required | 200 json /hits[1] | 200 json /hits[1] | 200 json /hits[2] | 200 json /hits[0] | 401: authentication required | 401: authentication required | 200 json /hits[0]"
@@ -316,22 +316,29 @@
         "name": "real ids, well-formed creates",
         "about": "The creates that take no project or workspace id in their path, with a well-formed body: each column creates in the workspace it acts in.",
         "rows": [
-          "POST /api/v1/projects {\"name\":\"Tour Matrix create\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 201 json | 403: agent runs cannot create projects | 201 json",
-          "POST /api/v1/templates/{id}/projects {\"name\":\"Tour Matrix from the template\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 401: authentication required | 403: agent runs cannot create projects | 201 json",
-          "POST /api/v1/projects/import {\"project_name\":\"Tour Matrix import\",\"artifacts\":[{\"id\":\"r\",\"type\":\"requirement\",\"title\":\"Imported\",\"body\":\"The system shall import.\"}]} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 401: authentication required | 403: agent runs cannot create projects | 201 json",
+          "POST /api/v1/projects {\"name\":\"Tour Matrix create\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 403: runner keys cannot create projects | 403: agent runs cannot create projects | 201 json",
+          "POST /api/v1/templates/{id}/projects {\"name\":\"Tour Matrix from the template\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 403: runner keys cannot create projects | 403: agent runs cannot create projects | 201 json",
+          "POST /api/v1/projects/import {\"project_name\":\"Tour Matrix import\",\"artifacts\":[{\"id\":\"r\",\"type\":\"requirement\",\"title\":\"Imported\",\"body\":\"The system shall import.\"}]} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 403: runner keys cannot create projects | 403: agent runs cannot create projects | 201 json",
           "POST /api/v1/orgs {\"name\":\"Tour Matrix create\"} | 401: authentication required | 201 text | 201 text | 201 text | 201 text | 401: authentication required | 401: authentication required | 201 text"
         ]
       },
       {
         "name": "a proposal-mode run's token",
-        "about": "The writes that set work going or create a project, with the token of a running proposal-mode run in P in the run column: the draft of test cases, which refuses it, then launches in P, which a direct-mode run may send, and creates, which refuse every run's token.",
+        "about": "The writes that set work going or create a project, with the token of a running proposal-mode run in P in the run column: the draft of test cases and every other route that sets a run going or arms one (an interview and its invite), which refuse it, and creates, which refuse every run's token and runner key.",
         "rows": [
           "POST /api/v1/projects/{id}/draft-test-cases | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: project not found | 400: invalid request body | 403: proposal-mode agent runs cannot draft test cases | 400: invalid request body",
-          "POST /api/v1/agents/{slug}/runs {\"project_id\":\"<p>\",\"prompt\":\"Summarise P again.\"} | 401: authentication required | 403: you do not have access to this project | 201 text | 201 text | 404: agent not found | 201 text | 201 text | 404: agent not found",
-          "POST /api/v1/crews/{id}/runs {\"project_id\":\"<p>\",\"prompt\":\"Summarise P as a crew.\"} | 401: authentication required | 403: you do not have access to this project | 201 text | 201 text | 404: team not found | 201 text | 201 text | 201 text",
-          "POST /api/v1/test-runs/{id}/agent-run | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: test run not found | 400: invalid request body | 400: invalid request body | 400: invalid request body",
-          "POST /api/v1/projects {\"name\":\"Tour Matrix create in review\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 201 json | 403: agent runs cannot create projects | 201 json",
-          "POST /api/v1/templates/{id}/projects {\"name\":\"Tour Matrix from the template in review\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 401: authentication required | 403: agent runs cannot create projects | 201 json"
+          "POST /api/v1/agents/{slug}/runs {\"project_id\":\"<p>\",\"prompt\":\"Summarise P again.\"} | 401: authentication required | 403: you do not have access to this project | 201 text | 201 text | 404: agent not found | 201 text | 403: proposal-mode agent runs cannot launch agent runs | 404: agent not found",
+          "POST /api/v1/crews/{id}/runs {\"project_id\":\"<p>\",\"prompt\":\"Summarise P as a crew.\"} | 401: authentication required | 403: you do not have access to this project | 201 text | 201 text | 404: team not found | 201 text | 403: proposal-mode agent runs cannot launch agent runs | 201 text",
+          "POST /api/v1/test-runs/{id}/agent-run | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: test run not found | 400: invalid request body | 403: proposal-mode agent runs cannot launch agent runs | 400: invalid request body",
+          "POST /api/v1/agent-runs/{id}/retry | 401: authentication required | 403: you do not have access to this project | 409: run is not retryable: run is running (only failed, cancelled, or timed_out runs can be retried) | 409: run is not retryable: run is running (only failed, cancelled, or timed_out runs can be retried) | 404: agent run not found | 401: authentication required | 403: proposal-mode agent runs cannot launch agent runs | 409: run is not retryable: run is running (only failed, cancelled, or timed_out runs can be retried)",
+          "POST /api/v1/automations/{id}/run-now | 401: authentication required | 403: you do not have access to this project | 201 text | 201 text | 404: automation not found | 401: authentication required | 403: proposal-mode agent runs cannot launch agent runs | 201 text",
+          "POST /api/v1/guided-sessions/{id}/messages | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: guided session not found | 400: invalid request body | 403: proposal-mode agent runs cannot launch agent runs | 400: invalid request body",
+          "POST /api/v1/guided-sessions/{id}/chat/kickoff | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: guided session not found | 400: invalid request body | 403: proposal-mode agent runs cannot launch agent runs | 400: invalid request body",
+          "POST /api/v1/guided-sessions/{id}/chat/nudge | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: guided session not found | 400: invalid request body | 403: proposal-mode agent runs cannot launch agent runs | 400: invalid request body",
+          "POST /api/v1/projects/{id}/interviews | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: project not found | 400: invalid request body | 403: proposal-mode agent runs cannot launch agent runs | 400: invalid request body",
+          "POST /api/v1/interviews/{id}/invites | 401: authentication required | 403: you do not have access to this project | 400: invalid request body | 400: invalid request body | 404: interview not found | 400: invalid request body | 403: proposal-mode agent runs cannot launch agent runs | 400: invalid request body",
+          "POST /api/v1/projects {\"name\":\"Tour Matrix create in review\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 403: runner keys cannot create projects | 403: agent runs cannot create projects | 201 json",
+          "POST /api/v1/templates/{id}/projects {\"name\":\"Tour Matrix from the template in review\"} | 401: authentication required | 201 json | 201 json | 201 json | 201 json | 403: runner keys cannot create projects | 403: agent runs cannot create projects | 201 json"
         ],
         "events": [
           "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:1>\",\"project\":\"<p>\",\"entity\":\"<uuid:2>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}",
@@ -342,15 +349,16 @@
           "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:11>\",\"project\":\"<p>\",\"entity\":\"<uuid:12>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}",
           "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:13>\",\"project\":\"<p>\",\"entity\":\"<uuid:14>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}",
           "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:15>\",\"project\":\"<p>\",\"entity\":\"<uuid:16>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}",
-          "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:17>\",\"project\":\"<p>\",\"entity\":\"<uuid:18>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}"
+          "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:17>\",\"project\":\"<p>\",\"entity\":\"<uuid:18>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}",
+          "<w>: {\"type\":\"workitem.created\",\"actor\":\"agent:<uuid:19>\",\"project\":\"<p>\",\"entity\":\"<uuid:20>\",\"payload\":{\"column\":\"string \\\"todo\\\"\",\"title\":\"string \\\"Agent run: Tour Matrix\\\"\"}}"
         ]
       }
     ]
   },
   "uploads": [
-    "<uuid:19>_fig.png (75 bytes)",
+    "<uuid:21>_fig.png (75 bytes)",
     "avatars/<owner>.png (75 bytes)",
-    "evidence-<uuid:20> (24 bytes)",
+    "evidence-<uuid:22> (24 bytes)",
     "org-logos/<w>.png (75 bytes)"
   ],
   "outbound_requests": [

@@ -2,17 +2,17 @@
   "method": "Client.ListRepoConnections",
   "cases": [
     {
-      "name": "a project's connections, with the caller's checkout path",
+      "name": "a claimed run's project's connections, read with the run's token, with its claimant's checkout path",
       "calls": [
         {
-          "call": "ListRepoConnections(\"<project-id>\")",
+          "call": "ListRepoConnections(\"<project-id>\", \"<run-token>\")",
           "http": [
             {
               "request": {
                 "method": "GET",
                 "path": "/api/v1/projects/<project-id>/repo-connections",
                 "route": "GET /api/v1/projects/{id}/repo-connections",
-                "authorization": "Bearer <worker-key>",
+                "authorization": "Bearer <run-token>",
                 "content_type": "",
                 "body": ""
               },
@@ -43,14 +43,14 @@
       "name": "null decodes to no connections and no error",
       "calls": [
         {
-          "call": "ListRepoConnections(\"<project-id>\")",
+          "call": "ListRepoConnections(\"<project-id>\", \"<run-token>\")",
           "http": [
             {
               "request": {
                 "method": "GET",
                 "path": "/api/v1/projects/<project-id>/repo-connections",
                 "route": "GET /api/v1/projects/{id}/repo-connections",
-                "authorization": "Bearer <worker-key>",
+                "authorization": "Bearer <run-token>",
                 "content_type": "",
                 "body": ""
               },
@@ -69,14 +69,14 @@
       "name": "a server error is returned at once, not retried",
       "calls": [
         {
-          "call": "ListRepoConnections(\"<project-id>\")",
+          "call": "ListRepoConnections(\"<project-id>\", \"<run-token>\")",
           "http": [
             {
               "request": {
                 "method": "GET",
                 "path": "/api/v1/projects/<project-id>/repo-connections",
                 "route": "GET /api/v1/projects/{id}/repo-connections",
-                "authorization": "Bearer <worker-key>",
+                "authorization": "Bearer <run-token>",
                 "content_type": "",
                 "body": ""
               },

@@ -29,7 +29,7 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}", h.alwaysWritable(h.DeleteOrg)).Methods("DELETE")
 	router.HandleFunc("/api/v1/orgs/{id}/plan", h.SetOrgPlan).Methods("PUT")
 	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/activate", h.ActivateOrg).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/activate", h.alwaysWritable(h.ActivateOrg)).Methods("POST")
 
 	// Workspace logo: any member may fetch it (it is shown in the app and on
 	// download cover pages); admins upload and remove it.
@@ -52,12 +52,12 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 
 	router.HandleFunc("/api/v1/orgs/{id}/worker-keys", h.ListWorkerKeys).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/worker-keys", h.CreateWorkerKey).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/worker-keys/{keyId}", h.RevokeWorkerKey).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/worker-keys/{keyId}", h.alwaysWritable(h.RevokeWorkerKey)).Methods("DELETE")
 
 	// Personal runner keys: every member manages their own.
 	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.GetMyRunnerKey).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.CreateMyRunnerKey).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.RevokeMyRunnerKey).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.alwaysWritable(h.RevokeMyRunnerKey)).Methods("DELETE")
 
 	// Requirement quality house style: readable by any member, set by admins,
 	// inherited by every project in the workspace.

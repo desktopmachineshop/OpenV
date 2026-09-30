@@ -480,8 +480,10 @@ Every API request authenticates as one of four principals; only `/health`,
   grant (`org_teams` via `project_team_access`).
 - Agent runs count as editor within their own project, except that they never
   approve or reject a proposal, and create no project; workers pass for any
-  project in their org, a workspace key as an editor, a personal key above a
-  viewer's read only where its holder would.
+  project in their org, a workspace key as an editor, a personal key only
+  where its holder would, reads included. A personal runner claims its
+  holder's runs and the ownerless ones its holder could see, and reads a
+  claimed run's repository connections with the run's token.
 
 ### Transport & hardening
 - **CORS** is restricted to the configured frontend origin (`CORS_ORIGIN`),

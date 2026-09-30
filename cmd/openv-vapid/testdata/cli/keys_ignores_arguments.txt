@@ -1,0 +1,14 @@
+# The command line of openv-vapid (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/openv-vapid/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/openv-vapid -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ openv-vapid -h --x
+exit 0
+--- stdout
+OPENV_VAPID_PUBLIC_KEY=<base64url: the 65-byte uncompressed P-256 public key of the private key below>
+OPENV_VAPID_PRIVATE_KEY=<base64url: a 32-byte P-256 private key>
+OPENV_VAPID_SUBJECT=mailto:admin@example.com
+--- stderr

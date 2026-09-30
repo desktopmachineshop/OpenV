@@ -222,12 +222,12 @@ class DataTest(unittest.TestCase):
         # renaming a golden or its directory cannot drop it from the list
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
-        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S12, S12b, S16"}
+        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 15)
+        self.assertEqual(len(entries), 17)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
@@ -236,7 +236,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S12", "S14a", "S14b"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -289,6 +289,46 @@ class DataTest(unittest.TestCase):
                 self.assertEqual(areas, want, "each area golden needs its area file, and each area file its golden")
                 for a in areas:
                     self.assertEqual(rg.guard_code_step(a), "S5a-S5e", a)
+
+    def test_merged_s8_writers_are_guarded(self):
+        # S8's writers outside internal/archtest are guard code of its row by
+        # file name, wherever they sit under cmd/ and internal/: each
+        # command's CLI snapshot and the harness beside it, and each getter
+        # package's parse-table writer and its copy of the shared helpers.
+        # A command or getter package that gains one is covered with no edit
+        # here, so nothing counts them; instead the four commands of I14 keep
+        # their snapshot by path, every writer keeps its helpers beside it,
+        # and each pattern of the row still matches a file.
+        files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
+                               check=True).stdout.split("\n")
+        names = ("cli_test.go", "cli_harness_test.go", "env_parse_test.go", "env_parse_helpers_test.go")
+        writers = [f for f in files if os.path.basename(f) in names and f.startswith(("cmd/", "internal/"))]
+        for f in writers:
+            with self.subTest(path=f):
+                self.assertEqual(rg.guard_code_step(f), "S8")
+        for command in ("agentd", "openv-connector", "openv-mcp", "openv-vapid"):
+            for name in ("cli_test.go", "cli_harness_test.go"):
+                self.assertIn(f"cmd/{command}/{name}", writers)
+        parse = {os.path.dirname(f) for f in writers if os.path.basename(f) == "env_parse_test.go"}
+        helpers = {os.path.dirname(f) for f in writers if os.path.basename(f) == "env_parse_helpers_test.go"}
+        self.assertTrue(parse)
+        self.assertEqual(parse, helpers)
+        row = dict(rg.GUARD_CODE)["S8"]
+        for p in row:
+            with self.subTest(pattern=p):
+                self.assertTrue(any(rg.matches(f, [p]) for f in files), f"{p} matches no tracked file")
+
+    def test_s8_row_covers_a_new_getter_package(self):
+        # A feature pull request that adds a getter in a package with none
+        # adds its parse writer there, and a command its CLI snapshot: both
+        # are S8 guard code with no edit to the row.
+        for path in ("internal/newpkg/env_parse_test.go", "internal/domain/newpkg/env_parse_helpers_test.go",
+                     "cmd/newcmd/cli_test.go", "cmd/newcmd/env_parse_test.go"):
+            with self.subTest(path=path):
+                self.assertEqual(rg.guard_code_step(path), "S8")
+        for path in ("cmd/newcmd/sub/cli_test.go", "frontend/env_parse_test.go", "internal/archtest/env_parse_test.go"):
+            with self.subTest(path=path):
+                self.assertNotEqual(rg.guard_code_step(path), "S8")
 
     def test_classification(self):
         self.assertEqual(rg.guard_code_step("internal/archtest/graph_test.go"), "S1")

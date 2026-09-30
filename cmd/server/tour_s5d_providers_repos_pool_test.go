@@ -76,12 +76,21 @@ import (
 //     release naming another lease (a no-op), the release, and the
 //     refusals (a phantom node, 404 as its beat answers, not registered;
 //     a phantom node's beat, 404; ids that are not UUIDs; bodies; a key, a
-//     user).
+//     user);
+//   - last, the read the runner makes of a claimed run's repository
+//     connections, with the run's own token since R7's fix (OpenV REQ-16 and
+//     REQ-42; the maintainer's answer to #379's first S5d question): the token
+//     of a run in P that the member's runner key claimed reads P's
+//     connections with the member's local path, and the token of one the box
+//     key claimed with none (a connection and the member's path made again
+//     as setup, the runs launched by the box key, so no one's, and claimed as
+//     setup).
 //
 // Every 2xx JSON answer here is a bare encode (text/plain by sniffing, Q1);
 // errors are application/json. No step of the area publishes an event: the
-// run the lease's key claims has no project, so no card moves. The golden's
-// empty outbound_requests pins that no route here makes a provider call.
+// run the lease's key claims has no project, so no card moves, and the last
+// section's runs in P are launched and claimed as setup. The golden's empty
+// outbound_requests pins that no route here makes a provider call.
 //
 // Nondeterminism: a provider default's id is minted afresh on each read, so
 // the plain answer's and the gzip variant's differ: it is elided (its
@@ -150,6 +159,7 @@ func providersReposPoolTour(tr *tour) {
 	providersReposPoolLogins(tr, o, m, m2, box, runner, pool)
 	providersReposPoolRepos(tr, o, m, m2, box, runner)
 	providersReposPoolNodes(tr, o, m, box, pool)
+	providersReposPoolRunReads(tr, o, m, box, runner)
 }
 
 // providersReposPoolSettings walks the provider settings and the worker's
@@ -415,6 +425,34 @@ func providersReposPoolRepos(tr *tour, o, m, m2, box, runner *tourActor) {
 	tr.step("remove it again: 404", o, remove, repo("repo1"))
 	tr.step("the owner removes the second: 204", o, remove, repo("repo2"))
 	tr.step("P's connections: none again, null (Q14)", o, list, inP)
+}
+
+// providersReposPoolRunReads walks the runner's read of a claimed run's
+// repository connections, made with the run's own token (fixed under R7): a
+// member's personal key reads only the projects its member can, so the
+// runner no longer reads them with its key. The token reads its own
+// project's connections with the local path of the member whose personal
+// runner key claimed the run, since that is the machine the run is on, and
+// none for a run a workspace key holds.
+func providersReposPoolRunReads(tr *tour, o, m, box, runner *tourActor) {
+	const list = "GET /api/v1/projects/{id}/repo-connections"
+	inP := at("id", "{{p}}")
+	tr.setup("P's owner connects a repository again", o, "POST /api/v1/projects/{id}/repo-connections", inP,
+		jsonBody(`{"name":"Tour repo","remote_url":"https://git.example.com/tour.git"}`), expect(201)).
+		capture("repo3", "/id")
+	tr.setup("the member sets its local path to it", m, "PUT /api/v1/repo-connections/{id}/my-path",
+		at("id", "{{repo3}}"), jsonBody(`{"local_path":"/home/member/src/tour"}`))
+	tr.queueRun("prun", box, "tour-pool", `{"project_id":"{{p}}","prompt":"Tidy P."}`)
+	prun := tr.takeRun(runner, "tour-runner", "prun", "the token of a run in P that no one launched, claimed by "+
+		"the member's runner key, since the member views P")
+	tr.step("the run's token reads P's connections, as the runner reads a claimed run's: the local path of the "+
+		"member, whose runner key claimed the run", prun, list, inP, note("P's owner connected the repository again, "+
+		"the member set its path, the box key launched the run in P and the member's runner key claimed it, all "+
+		"just before (setup)"))
+	tr.queueRun("brun", box, "tour-pool", `{"project_id":"{{p}}","prompt":"Tidy P again."}`)
+	brun := tr.takeRun(box, "tour-box", "brun", "the token of a run in P that no one launched, claimed by the box key")
+	tr.step("the token of a run the box key claimed reads P's connections: no member's machine, so no path", brun,
+		list, inP, note("the box key launched and claimed the run just before (setup)"))
 }
 
 // providersReposPoolNodes walks the runner pool's node routes, with the

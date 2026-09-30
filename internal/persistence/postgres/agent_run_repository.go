@@ -23,11 +23,11 @@ func NewAgentRunRepository(db *sql.DB) *AgentRunRepository {
 const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id, r.guided_session_id, r.retried_from_run_id,
 	r.status, r.cancel_requested, r.priority, r.prompt, r.run_token_hash, r.worker_id, r.heartbeat_at, r.started_at, r.finished_at, r.exit_code,
 	r.final_text, r.partial_text, r.error, r.error_class, r.attempt_count, r.max_attempts, r.next_attempt_at, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, r.preferred_user_id, r.hosted_after,
-	r.agent_content_hash, r.agent_model, r.agent_effort, a.name, a.provider`
+	r.agent_content_hash, r.agent_model, r.agent_effort, r.claimed_by, a.name, a.provider`
 
 func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error) {
 	r := new(agentruns.Run)
-	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, retriedFromRunID, launchedBy, preferredUserID sql.NullString
+	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, retriedFromRunID, launchedBy, preferredUserID, claimedBy sql.NullString
 	var heartbeatAt, startedAt, finishedAt, hostedAfter, nextAttemptAt sql.NullTime
 	var exitCode sql.NullInt64
 	var costUSD sql.NullFloat64
@@ -36,7 +36,7 @@ func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error
 	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID, &guidedSessionID, &retriedFromRunID,
 		&r.Status, &r.CancelRequested, &r.Priority, &r.Prompt, &r.RunTokenHash, &r.WorkerID, &heartbeatAt, &startedAt, &finishedAt, &exitCode,
 		&r.FinalText, &r.PartialText, &r.Error, &r.ErrorClass, &r.AttemptCount, &r.MaxAttempts, &nextAttemptAt, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &preferredUserID, &hostedAfter,
-		&r.AgentContentHash, &r.AgentModel, &r.AgentEffort, &r.AgentName, &r.AgentProvider)
+		&r.AgentContentHash, &r.AgentModel, &r.AgentEffort, &claimedBy, &r.AgentName, &r.AgentProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +68,7 @@ func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error
 	r.RetriedFromRunID = setStr(retriedFromRunID)
 	r.LaunchedBy = setStr(launchedBy)
 	r.PreferredUserID = setStr(preferredUserID)
+	r.ClaimedBy = setStr(claimedBy)
 	r.HostedAfter = setTime(hostedAfter)
 	r.NextAttemptAt = setTime(nextAttemptAt)
 	r.HeartbeatAt = setTime(heartbeatAt)
@@ -202,13 +203,19 @@ func collectRuns(rows *sql.Rows) ([]*agentruns.Run, error) {
 }
 
 // Claim atomically claims the best queued run in the worker's org.
-// Personal runners (workerUserID != "") claim only runs launched by their
-// user; workspace/hosted runners skip runs still reserved for a personal
-// runner (until hosted_after) and, when excludeRepoAccess is set, runs
-// whose agent needs repo access.
+// Personal runners (workerUserID != "") claim runs launched by their user,
+// and ownerless ones only where their user could see them: a workspace
+// admin sees every run of the workspace, anyone else one in a project they
+// hold a role in (directly or through a people team), and a run with no
+// project only its launcher and the workspace's admins. Workspace/hosted
+// runners skip runs still reserved for a personal runner (until
+// hosted_after) and, when excludeRepoAccess is set, runs whose agent needs
+// repo access. The claim records the personal runner's user as claimed_by
+// (NULL for a workspace key), whose local paths the run's token reads.
 func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*agentruns.Run, error) {
 	row := rep.db.QueryRow(`
-		UPDATE agent_runs SET status = 'claimed', worker_id = $1, heartbeat_at = NOW()
+		UPDATE agent_runs SET status = 'claimed', worker_id = $1, heartbeat_at = NOW(),
+			claimed_by = NULLIF($5, '')::uuid
 		WHERE id = (
 			SELECT r.id FROM agent_runs r
 			JOIN agents a ON a.id = r.agent_id
@@ -220,11 +227,21 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 			  -- next_attempt_at elapses (NULL for runs with no backoff).
 			  AND (r.next_attempt_at IS NULL OR r.next_attempt_at <= NOW())
 			  AND (
-			    -- Personal runners take their owner's runs plus ownerless
-			    -- (system-launched) ones, so board/automation work load-shares
-			    -- across every live runner. Runs another member launched stay
+			    -- Personal runners take their owner's runs plus the ownerless
+			    -- (system-launched) ones their owner could see, so board and
+			    -- automation work load-shares across the live runners of the
+			    -- people who can see it. Runs another member launched stay
 			    -- reserved for that member's runner or the workspace pool.
-			    ($5 <> '' AND (r.launched_by = $5::uuid OR r.launched_by IS NULL))
+			    ($5 <> '' AND (r.launched_by = $5::uuid OR (r.launched_by IS NULL AND (
+			      EXISTS (SELECT 1 FROM org_members om JOIN organizations o ON o.id = om.org_id
+			              WHERE om.org_id = r.org_id AND om.user_id = $5::uuid AND om.role = 'admin'
+			                AND o.deleted_at IS NULL)
+			      OR EXISTS (SELECT 1 FROM project_members pm
+			                 WHERE pm.project_id = r.project_id AND pm.user_id = $5::uuid)
+			      OR EXISTS (SELECT 1 FROM project_team_access pta
+			                 JOIN org_team_members otm ON otm.org_team_id = pta.org_team_id
+			                 WHERE pta.project_id = r.project_id AND otm.user_id = $5::uuid)
+			    ))))
 			    OR
 			    ($5 = '' AND (r.preferred_user_id IS NULL OR r.hosted_after <= NOW()))
 			  )
@@ -256,9 +273,11 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 // write, and a queued run must not show text as if it were being typed. The
 // run token is revoked with it: the departing worker, and the agent it
 // started, no longer act for the run, and the next claim issues a new token.
+// claimed_by is cleared too: no runner holds the run until the next claim
+// names its own.
 func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL, partial_text = '', run_token_hash = ''
+		UPDATE agent_runs SET status = 'queued', worker_id = '', claimed_by = NULL, heartbeat_at = NULL, started_at = NULL, partial_text = '', run_token_hash = ''
 		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
 	`, runID, workerID)
 	if err != nil {

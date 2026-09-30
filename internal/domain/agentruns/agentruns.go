@@ -195,7 +195,14 @@ type Run struct {
 	// until HostedAfter, when workspace/hosted runners may claim it.
 	PreferredUserID *string    `json:"preferred_user_id,omitempty"`
 	HostedAfter     *time.Time `json:"hosted_after,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
+	// ClaimedBy is the member whose personal runner key claimed the run: set
+	// by the claim, cleared when a release returns the run to the queue, and
+	// kept once the run ends. Nil for a run a workspace key claimed and for
+	// one no runner has claimed since it was queued. The run's token reads
+	// its project's repository connections with that member's local paths,
+	// as the runner on that member's machine needs. Server-side only.
+	ClaimedBy *string   `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
 
 	// Reproducibility snapshot (issue #216): the agent identity this run was
 	// launched with, captured once at Launch and never retro-filled. Because
@@ -362,9 +369,13 @@ type Repository interface {
 	// in the worker's org whose agent's provider is in providers.
 	// minPriority > 0 restricts the claim to priority >= minPriority
 	// (dedicated child slots). workerUserID != "" restricts the claim to
-	// runs launched by that user (personal runners); "" claims workspace
-	// work: runs whose personal reservation is absent or expired.
-	// excludeRepoAccess skips runs whose agent needs repo access.
+	// runs launched by that user and the ownerless runs that user could see
+	// (personal runners, which never take a run their user could not): a
+	// workspace admin sees them all, anyone else those in a project they
+	// hold a role in, and a run with no project is a workspace admin's
+	// alone. "" claims workspace work: runs whose personal reservation is
+	// absent or expired. excludeRepoAccess skips runs whose agent needs
+	// repo access. The claimed run records workerUserID as ClaimedBy.
 	Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*Run, error)
 	// ReleaseClaim conditionally returns a claimed run to the queue, but only
 	// while it is still claimed by workerID (claim handshake failed), and

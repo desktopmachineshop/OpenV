@@ -603,15 +603,36 @@ func TestRequireProjectRole(t *testing.T) {
 			wantPass: true,
 		},
 		{
-			name:     "roleless member's personal key fails editor",
+			// A project its holder has no role in answers the key as one
+			// no row has (I3), as it answers the holder's session.
+			name:     "roleless member's personal key fails editor with 404",
 			request:  reqWithPersonalKey(orgID, "org-member"),
 			minRole:  members.RoleEditor,
 			wantPass: false,
-			wantCode: http.StatusForbidden,
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
 		},
 		{
-			name:     "roleless member's personal key still reads as a viewer",
+			// A personal key reads only where its holder's own session
+			// would: a member with no role in the project is refused a
+			// viewer's read as their session is, as for a project no row
+			// has (I3).
+			name:     "roleless member's personal key is refused a viewer's read with 404",
 			request:  reqWithPersonalKey(orgID, "org-member"),
+			minRole:  members.RoleViewer,
+			wantPass: false,
+			wantCode: http.StatusNotFound,
+			wantErr:  "project not found",
+		},
+		{
+			name:     "viewer's personal key reads as a viewer",
+			request:  reqWithPersonalKey(orgID, "team-viewer"),
+			minRole:  members.RoleViewer,
+			wantPass: true,
+		},
+		{
+			name:     "org admin's personal key reads a project it has no role in",
+			request:  reqWithPersonalKey(orgID, "org-admin"),
 			minRole:  members.RoleViewer,
 			wantPass: true,
 		},
@@ -699,15 +720,20 @@ func workerRunReq(body, orgID, userID, runID string) *http.Request {
 
 // TestWorkerRunLifecycleScoping locks in that a worker key can only drive the
 // start/logs/finish lifecycle of runs in its own org (foreign and unknown run
-// IDs are indistinguishable 404s), and that a personal runner key cannot
-// touch runs launched by another member.
+// IDs are indistinguishable 404s), and that a personal runner key touches
+// only the runs it could claim: its member's own, and the ownerless runs its
+// member could see (a run in a project they hold a role in, and, for a
+// workspace admin, any run of the workspace, one with no project included).
+// Every other run answers the same 404 (OpenV REQ-27, REQ-16).
 func TestWorkerRunLifecycleScoping(t *testing.T) {
 	launcher := "user-1"
+	project := "proj-1"
 	newRuns := func() map[string]*agentruns.Run {
 		return map[string]*agentruns.Run{
-			"run-own":     {ID: "run-own", OrgID: "org-1", Status: agentruns.StatusClaimed, LaunchedBy: &launcher},
-			"run-foreign": {ID: "run-foreign", OrgID: "org-2", Status: agentruns.StatusClaimed},
-			"run-unowned": {ID: "run-unowned", OrgID: "org-1", Status: agentruns.StatusClaimed},
+			"run-own":       {ID: "run-own", OrgID: "org-1", Status: agentruns.StatusClaimed, LaunchedBy: &launcher},
+			"run-foreign":   {ID: "run-foreign", OrgID: "org-2", Status: agentruns.StatusClaimed},
+			"run-unowned":   {ID: "run-unowned", OrgID: "org-1", Status: agentruns.StatusClaimed},
+			"run-unowned-p": {ID: "run-unowned-p", OrgID: "org-1", Status: agentruns.StatusClaimed, ProjectID: &project},
 		}
 	}
 
@@ -734,14 +760,26 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 		{"unknown run gets 404", "run-missing", "org-1", "", http.StatusNotFound},
 		{"personal key on another member's run gets 404", "run-own", "org-1", "user-2", http.StatusNotFound},
 		{"personal key on own run passes", "run-own", "org-1", "user-1", 0},
-		{"personal key on ownerless run passes", "run-unowned", "org-1", "user-2", 0},
+		{"personal key on an ownerless run in a project its holder views passes", "run-unowned-p", "org-1", "user-2", 0},
+		{"personal key on an ownerless run in a project its holder has no role in gets 404", "run-unowned-p", "org-1",
+			"user-3", http.StatusNotFound},
+		{"personal key on an ownerless run with no project gets 404", "run-unowned", "org-1", "user-2",
+			http.StatusNotFound},
+		{"workspace admin's personal key on an ownerless run with no project passes", "run-unowned", "org-1",
+			"user-admin", 0},
+		{"workspace key on an ownerless run with no project passes", "run-unowned", "org-1", "", 0},
 	}
 
 	for _, ep := range endpoints {
 		for _, tc := range cases {
 			t.Run(ep.name+"/"+tc.name, func(t *testing.T) {
 				runSvc := &fakeRunService{byID: newRuns()}
-				h := &Handler{runService: runSvc}
+				h := &Handler{runService: runSvc,
+					orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {
+						"user-1": orgs.RoleMember, "user-2": orgs.RoleMember, "user-3": orgs.RoleMember,
+						"user-admin": orgs.RoleAdmin}}},
+					memberService: &fakeMemberService{roles: map[string]map[string]string{
+						project: {"user-2": members.RoleViewer}}}}
 				w := httptest.NewRecorder()
 				ep.call(h, w, workerRunReq(ep.body, tc.workerOrg, tc.workerUser, tc.runID))
 				if tc.wantCode == 0 {

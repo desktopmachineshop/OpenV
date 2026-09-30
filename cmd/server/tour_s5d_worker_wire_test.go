@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 )
 
@@ -23,7 +24,7 @@ import (
 //     Content-Type, when nothing is queued, and while a run is queued but the
 //     claim names another provider, none, or a priority floor above it, or
 //     comes from the member's personal key, which takes only its member's runs
-//     and those no one launched (it claims run_b below, which a key launched);
+//     and those no one launched that its member could see (the last section);
 //   - launch: an agent W does not have (before the body is decoded), a body
 //     that does not decode, no prompt (after the project's guard), the member
 //     in P, a key of another workspace (the agent is looked up in the key's
@@ -68,7 +69,12 @@ import (
 //     foreign key; the board's move of that card only logs);
 //   - launches by a worker key and by a run's token (201 with no launched_by:
 //     the handler has no user check, and the project guard lets a worker of
-//     the project's workspace and a run scoped to the project through);
+//     the project's workspace and a run scoped to the project through, a
+//     launch with no project the workspace's plan gate alone), the key's run
+//     with no project claimed by the box key (since R7's fix a personal key
+//     no longer takes it: only W's admins see such a run); the run's launch
+//     records the launching run as its parent (parent_run_id), as a
+//     delegation does;
 //   - the auto-retry of a retryable failure (worker_error): attempt 2 queued
 //     behind a 30 s backoff that the claim honours (204), a manual retry
 //     claimable at once, and a failure of class agent_error, which is not
@@ -88,8 +94,17 @@ import (
 //     workspace admin for an unscoped run), a key's 401, the id "claim" (GET
 //     matches {id}), the member's own runs and null when none match (Q14), the
 //     filters, an agent_id that is not a UUID (null, as for an agent no row
-//     has),
-//     and every run of W, newest first, compressed with no Content-Type (Q1).
+//     has), and every run of W, newest first, compressed with no
+//     Content-Type (Q1);
+//   - last, a personal key never takes, nor reads, what its member could not
+//     see (fixed under R7, OpenV REQ-16 and REQ-42; the maintainer's answer to
+//     #379's first S5d question): the member's runner key is refused a run no
+//     one launched in P, where the member has no role, and P's repository
+//     connections with the member's own 404, as for a project no row has
+//     (I3), and lists no project; once the owner makes the member a viewer of
+//     P (setup), the key claims that run and lists P; a run no one launched
+//     with no project, which only W's admins may see, it is refused, and the
+//     owner's personal key, as W's admin, claims it.
 //
 // Every 2xx JSON answer of the wire is a bare encode (text/plain by sniffing,
 // Q1); errors are application/json; the stream is text/event-stream with
@@ -216,8 +231,8 @@ func workerWireTour(tr *tour) {
 	tr.step("a claim naming no provider: 204, an empty list matches none", box, claim, claimBody("tour-box"))
 	tr.step("a claim for priority 10 and up: 204, a manual launch is priority 0", box, claim,
 		claimAbove("tour-box", 10, tourDefaultProvider))
-	tr.step("the member's runner key claims: 204, a personal key takes only its member's runs and ownerless ones",
-		runner, claim, as("tour-runner"))
+	tr.step("the member's runner key claims: 204, a personal key takes only its member's runs and ownerless ones "+
+		"its member could see", runner, claim, as("tour-runner"))
 
 	// (c) The claim (I12).
 	claimed := tr.step("the box key claims run1: the agent, how it authenticates, the run and a run token, keys "+
@@ -325,13 +340,13 @@ func workerWireTour(tr *tour) {
 	// Launches by a key and by a run's token: the handler has no user check.
 	tr.step("the box key launches with no project: 201, in the key's workspace, with no launched_by", box, launch,
 		agent, jsonBody(`{"prompt":"Tidy W."}`)).capture("run_b", "/id")
-	runB := tr.takeRun(runner, "tour-runner", "run_b", "run_b's token, a run with no project that the member's "+
-		"runner key claimed, since no one launched it")
+	runB := tr.takeRun(box, "tour-box", "run_b", "run_b's token, a run with no project that W's box key claimed; "+
+		"the member's runner key does not take it, since only W's admins see a run with no project that no one launched")
 	tr.step("the member reads run_b, unscoped and not its own: the workspace admin guard", m, get, run("run_b"))
 	tr.step("run_b's token launches in P: 404, the run is not scoped to P", runB, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Help."}`))
-	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by", runB, launch,
-		agent, jsonBody(`{"prompt":"Help with W."}`)).capture("run_t", "/id")
+	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by and run_b as "+
+		"its parent", runB, launch, agent, jsonBody(`{"prompt":"Help with W."}`)).capture("run_t", "/id")
 	tr.setup("cancel run_t, so that no later claim takes it", o, cancel, run("run_t"))
 
 	// (k) The auto-retry and its backoff.
@@ -415,4 +430,28 @@ func workerWireTour(tr *tour) {
 	tr.step("tour-repo's runs", o, list, query("agent_id={{repo.agent}}"))
 	tr.step("agent_id x: none, as for an agent no row has", o, list, query("agent_id=x"))
 	tr.step("every run of W, as its admin: newest first, compressed and then sent with no Content-Type (Q1)", o, list)
+
+	// (q) A personal key never takes, nor reads, what its member could not
+	// see (fixed under R7).
+	tr.queueRun("run_o", box, "tour-worker", `{"project_id":"{{p}}","prompt":"Summarise P for whoever can."}`)
+	tr.step("the member's runner key claims: 204, run_o, which no one launched, is in P, where the member has no role",
+		runner, claim, as("tour-runner"), note("the box key launched run_o in P just before (setup), so no one launched "+
+			"it; a personal key takes such a run only where its member could see it"))
+	tr.step("the member's runner key reads P's repository connections: P's guard, the 404 the member's own session "+
+		"gets", runner, "GET /api/v1/projects/{id}/repo-connections", at("id", "{{p}}"))
+	tr.step("the member's runner key lists W's projects: none, the member has a role in neither P nor K", runner,
+		"GET /api/v1/projects")
+	tr.setup("the owner makes the member a viewer of P", o, "POST /api/v1/projects/{id}/members", at("id", "{{p}}"),
+		jsonBody(`{"email":"tour-member@example.com","role":"viewer"}`), expect(http.StatusCreated))
+	tr.step("the member's runner key claims run_o, now that the member views P", runner, claim, as("tour-runner"),
+		note("the owner made the member a viewer of P just before (setup: POST /api/v1/projects/{id}/members)")).
+		claimed("run_o")
+	tr.step("the member's runner key lists W's projects: P, which the member views", runner, "GET /api/v1/projects")
+	tr.queueRun("run_n", box, "tour-worker", `{"prompt":"Tidy W for whoever can."}`)
+	tr.step("the member's runner key claims: 204, run_n, which no one launched, has no project, so only W's admins "+
+		"see it", runner, claim, as("tour-runner"), note("the box key launched run_n with no project just before "+
+		"(setup)"))
+	own := tr.runnerKey("own", o, "{{w}}", "the owner's personal runner key in W, as W's admin (worker id tour-own)")
+	tr.step("the owner's runner key claims run_n: W's admin sees every run of W", own, claim, as("tour-own")).
+		claimed("run_n")
 }

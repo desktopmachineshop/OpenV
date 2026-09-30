@@ -41,8 +41,10 @@ import (
 //   - "a proposal-mode run's token": last, the writes a run could set work
 //     going with, with the token of a running proposal-mode run in P
 //     (realIdReadsReviewRunLaunches) standing in the run column: the draft of
-//     test cases, which refuses it, launches of an agent and of a crew in P, a
-//     test run's agent run, a project and a project from the template.
+//     test cases, launches of an agent and of a crew in P, a test run's agent
+//     run, a retry, an automation's run-now, the assistant's chat message,
+//     kickoff and nudge, an interview in P and an invite to <interview>, which
+//     arm the interviewer's runs, a project and a project from the template.
 //
 // After each of the first four sections, W, the outsider's and the admin's
 // workspaces must have published nothing (readSectionEvents fails the area
@@ -85,43 +87,34 @@ import (
 //     (/events and /agent-runs of P) holds P's rows, filtered by P's
 //     workspace rather than the one the admin acts in (fixed under R7);
 //   - the lists with no query: P's viewer and editor list P alone, the owner
-//     (W's admin) P and Q, and the worker key and the run token both, having
-//     no user to filter by; the plain members read P's events alone (12) and
-//     none of the runs, which they did not launch, where the owner reads W's
-//     15 events and 2 runs; search finds R1 in P for them, in P and Q for the
-//     owner, nothing for the outsider and the admin in their own workspaces;
-//     automations, crews, agents and members are the workspace's, whoever
-//     reads them;
+//     (W's admin) P and Q, the worker key both, having no user to filter by,
+//     and the run token P alone, the one project it acts in; the plain
+//     members read P's events alone (12) and none of the runs, which they did
+//     not launch, where the owner reads W's 15 events and 2 runs; search
+//     finds R1 in P for them, in P and Q for the owner, nothing for the
+//     outsider and the admin in their own workspaces; automations, crews,
+//     agents and members are the workspace's, whoever reads them;
 //   - the proposal-mode run: refused the draft of test cases ("proposal-mode
 //     agent runs cannot draft test cases"), where a direct run reaches the
-//     decode; the test run's agent run passes its guard to the decode (400);
-//     a project and the templated project are refused it as a direct run's
-//     token is;
+//     decode, and every other route that sets a run going ("proposal-mode
+//     agent runs cannot launch agent runs", before any lookup: REQ-21,
+//     REQ-75), the retry and run-now among them, which answer a direct run's
+//     token the 401 of a request with no person, and an interview and its
+//     invite, which arm the interviewer's runs, where a direct run reaches
+//     the decode; a project and the templated project are refused it as a
+//     direct run's token is;
 //   - the creates: every signed-in column creates a project, a project from
 //     the seeded template, an import and a workspace (201; the workspace's
 //     answer has no Content-Type, Q1), in the workspace it acts in; the run
 //     token creates none, 403 "agent runs cannot create projects" on the
 //     three project creates (a run acts only inside its own project, REQ-42)
-//     and 401 on the workspace's, which takes a session.
+//     and 401 on the workspace's, which takes a session; W's worker key
+//     creates none either, 403 "runner keys cannot create projects" on the
+//     three (a key has no person to own what it would make), and 401 on the
+//     workspace's.
 //
 // Pinned as they behave (plan R7), for release-noted bug-fix pull requests
 // that regenerate the golden, with the golden's rows:
-//   - POST /projects checks nothing but an active workspace and a run's token:
-//     W's worker key creates a project in W (201), with no owner, since only a
-//     user is made the creator-owner (CreateProject, handlers.go);
-//   - a proposal-mode run's token launches runs in its own project: a
-//     direct-mode agent's (POST /agents/{slug}/runs, 201) and a crew's whose
-//     entry is one (POST /crews/{id}/runs, 201), each with a card on P's board
-//     and no launcher, and it passes the guard of a test run's agent run to its
-//     decode (400): LaunchAgentRun, LaunchTeamRun and LaunchTestRunAgent ask
-//     requireProjectRole's editor alone, which a run passes in its own project,
-//     and not proposalRunID, as DraftTestCases does, so a review-gated agent
-//     sets going a run whose writes land with no person reviewing them (REQ-21,
-//     REQ-75);
-//   - GET /projects lists every project of W to the run token, Q included,
-//     whose own routes answer the run as for a project no row has: ListProjects
-//     filters by the user, and a run has none (a run acts in its own project
-//     only, authz.go);
 //   - GET /users/{id}/avatar serves an account's picture to any signed-in
 //     account, the outsider included, which shares no workspace with it
 //     (GetUserAvatar, avatar_handlers.go: by its comment, "any signed-in
@@ -180,8 +173,10 @@ var realIdReadsSends = []string{
 	"section \"a proposal-mode run's token\", last: the run column is sent by <review.run.token>, the token of " +
 		"<review.run>, a run of the proposal-mode agent tour-matrix-review in P, launched by the owner, claimed by " +
 		"W's worker key and started, as setup after the creates, with a workspace-wide crew whose entry node is " +
-		"tour-matrix (<launch.crew>); the draft of test cases and the test run's agent run carry the body { (the " +
-		"row shows no body), the launches and creates a well-formed body (the row shows it)",
+		"tour-matrix (<launch.crew>); the draft of test cases, the test run's agent run, the assistant's chat " +
+		"message, kickoff and nudge (on <guided>), an interview in P and an invite to <interview> carry the body {, " +
+		"the retry (of <run>) and run-now (of <automation>) no body (either row shows none), the launches and " +
+		"creates a well-formed body (the row shows it)",
 	"after each section, the events of each workspace a signed-in column acts in are read and listed with the " +
 		"section (W, <outsider.workspace>, <admin.workspace>); in the first four sections none of them may publish " +
 		"any, or the area fails",
@@ -317,12 +312,18 @@ func realIdReadsReviewAgent() string {
 // proposal-mode agent in P and a crew whose entry node is tour-matrix, then
 // sends, with that run's token in the run column (rowAs), the writes a run
 // could set work going with: the draft of test cases (which refuses a
-// proposal-mode run, the contrast), a launch of tour-matrix in P, a launch
-// of the crew in P, a test run's agent run, a project and a project from the
-// seeded template. The draft and the test run's agent run carry the body {,
-// since each checks its guard before it decodes; the others a well-formed
+// proposal-mode run in words of its own), a launch of tour-matrix in P, a
+// launch of the crew in P, a test run's agent run, a retry of <run> (running,
+// so 409 to a column that passes its guard), the run-now of <automation>, the
+// assistant's chat message, kickoff and nudge on <guided>, an interview in P
+// and an invite to <interview> (which arm the interviewer's runs, one for each
+// message the invite's participant posts), a project and a project from the
+// seeded template. The draft, the test run's agent run, the assistant's three,
+// the interview and the invite carry the body {, since each checks its guard
+// before it decodes; the retry and run-now no body; the others a well-formed
 // body, since each decodes first for the columns it lets through (the creates
-// refuse a run's token before). Last, since the launches and creates write.
+// refuse a run's token and a runner key before). Last, since the launches and
+// creates write.
 func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 	tr.t.Helper()
 	o := tr.owner
@@ -343,8 +344,9 @@ func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 	m.leaveOutSetups()
 
 	m.section("a proposal-mode run's token", "The writes that set work going or create a project, with the token "+
-		"of a running proposal-mode run in P in the run column: the draft of test cases, which refuses it, then "+
-		"launches in P, which a direct-mode run may send, and creates, which refuse every run's token.")
+		"of a running proposal-mode run in P in the run column: the draft of test cases and every other route that "+
+		"sets a run going or arms one (an interview and its invite), which refuse it, and creates, which refuse "+
+		"every run's token and runner key.")
 	stand := map[string]*tourActor{c.run.name: review}
 	m.rowAs("POST /api/v1/projects/{id}/draft-test-cases", stand, at("id", "{{p}}"), truncatedBody())
 	m.rowAs("POST /api/v1/agents/{slug}/runs", stand, at("slug", "tour-matrix"),
@@ -352,6 +354,14 @@ func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 	m.rowAs("POST /api/v1/crews/{id}/runs", stand, at("id", "{{launch.crew}}"),
 		jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P as a crew."}`))
 	m.rowAs("POST /api/v1/test-runs/{id}/agent-run", stand, at("id", "{{test.run}}"), truncatedBody())
+	m.rowAs("POST /api/v1/agent-runs/{id}/retry", stand, at("id", "{{run}}"))
+	m.rowAs("POST /api/v1/automations/{id}/run-now", stand, at("id", "{{automation}}"))
+	for _, route := range []string{"POST /api/v1/guided-sessions/{id}/messages",
+		"POST /api/v1/guided-sessions/{id}/chat/kickoff", "POST /api/v1/guided-sessions/{id}/chat/nudge"} {
+		m.rowAs(route, stand, at("id", "{{guided}}"), truncatedBody())
+	}
+	m.rowAs("POST /api/v1/projects/{id}/interviews", stand, at("id", "{{p}}"), truncatedBody())
+	m.rowAs("POST /api/v1/interviews/{id}/invites", stand, at("id", "{{interview}}"), truncatedBody())
 	m.rowAs("POST /api/v1/projects", stand, jsonBody(`{"name":"Tour Matrix create in review"}`))
 	m.rowAs("POST /api/v1/templates/{id}/projects", stand, at("id", "{{template}}"),
 		jsonBody(`{"name":"Tour Matrix from the template in review"}`))
