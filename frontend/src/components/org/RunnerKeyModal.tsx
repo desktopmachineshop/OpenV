@@ -24,7 +24,9 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
     }
   };
 
-  const setupSnippet = `bin\\agentd.exe --api http://localhost:8080 --worker-key ${plaintext}`;
+  // The key goes in agentd's environment, never on its command line, where
+  // ps shows it to every user of the machine (agentd warns when it is there).
+  const setupSnippet = `set WORKER_API_KEY=${plaintext}\nbin\\agentd.exe --api http://localhost:8080`;
 
   return (
     <div
@@ -99,7 +101,9 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
         </pre>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
           Replace http://localhost:8080 with the address of the OpenV server the runner should
-          connect to.
+          connect to. The key goes in the runner&apos;s environment as WORKER_API_KEY, not on its
+          command line, where every user of the machine can see it. In PowerShell, set it with
+          $env:WORKER_API_KEY; on Linux or macOS, export WORKER_API_KEY and run ./bin/agentd.
         </div>
         <div style={{ textAlign: 'right' }}>
           <button className="button-secondary button" style={{ width: 'auto' }} onClick={onClose}>

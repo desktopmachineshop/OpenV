@@ -19,6 +19,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Project settings → Repositories, and a run taken by a workspace runner
   clones the repository, as before.
 
+- **The manual says what an agent can read on the machine it runs on.** An
+  agent runs as the same user of the machine as the runner that runs it,
+  so it can read whatever that user can: on your own machine, your files
+  and the Agent Connector's key file, and on Windows and macOS the runner's
+  environment, which holds its key. The *Runs & runners* page of the
+  manual, and the runner setup guide, now say so, and recommend a cloud
+  runner or the hosted runner, which run on Linux with nothing of yours on
+  them, or a separate user on your machine, for agents you do not fully
+  trust.
+
 - **The web app's connection library carries today's security fixes.** The
   app now uses axios 1.20.0. Security advisories published on 30 September
   2026 cover every earlier 1.x version: requests that could be redirected or
@@ -66,8 +76,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   *Create key* on the workspace's *Runners* tab, move the runner to the new
   key, then *Revoke* the old one. If you run your own OpenV, also set a new
   `RUNNER_POOL_KEY` on the server and its pool nodes, and a new
-  `WORKER_API_KEY` on the server if a runner used the server's own key,
-  since revoking that one on the *Runners* tab does not stop it.
+  `WORKER_API_KEY` on the server if a runner used the server's own key.
 
 - **Committing a guided definition approves its drafts.** The wizard's last
   step said every draft was now live, but the personas, needs, requirements,
@@ -765,6 +774,47 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   budget that stopped them, and the project's *Activity* page records an
   `agentrun.successors_skipped` event with the same, which API clients can
   follow. Hand-offs to people still go ahead, since they start no run.
+
+- **Revoking a server's own runner key on the Runners tab now stops it.**
+  On a deployment you run yourself, the runner key the server is given in
+  `WORKER_API_KEY` is listed on the workspace's *Runners* tab as
+  *env-bootstrap*. Revoking it there changed nothing: the server went on
+  accepting the same key from its own settings. It is now refused like any
+  revoked key, even while the server still has that value, and a restart
+  with the same value keeps it revoked, adds no key, and logs a warning
+  saying so. To use the server's own key again, set a new `WORKER_API_KEY`
+  and restart the server, which registers the new value as a new key.
+
+- **A runner keeps more OpenV credentials from the agents it runs.** A
+  runner already kept its own worker and pool keys from every program it
+  starts for a run. It now also keeps `OPENV_API_TOKEN`, `OPENV_EMAIL` and
+  `OPENV_PASSWORD` from them, which a machine that also runs the OpenV
+  tools or scripts may have set, so an agent's CLI, the commands and git
+  hooks it runs, and its MCP servers no longer see a runner key or an
+  account's password that way. Agents still reach OpenV with their run's
+  own token, and every other setting, a provider's API key included,
+  reaches them as before.
+
+- **Runner keys stay off the command line.** The setup command shown when
+  you create a runner key, and the runner setup guide, passed the key to
+  `agentd` as `--worker-key`, where `ps` shows it to every user of the
+  machine. Both now set the key in the runner's environment as
+  `WORKER_API_KEY`, and the guide starts a pool node with
+  `RUNNER_POOL_KEY` there too. `agentd` still accepts `--worker-key` and
+  `--pool-key`, so existing scripts keep working, but it now logs a warning
+  when either is given, naming the flag and the variable to use instead,
+  never the key. If a runner was started with its key on the command line
+  of a machine other people use, replace the key: *Rotate* a personal
+  runner key under *My personal runner* in your settings, or create a new
+  workspace key on the *Runners* tab, move the runner to it and revoke the
+  old one.
+
+- **Asking again for a cloud runner you hold answers 200.** Through the
+  API, `POST /api/v1/orgs/{id}/runner-session` returned the cloud runner
+  you already hold with `201 Created`, as if it had leased you another. It
+  now returns that same lease with `200`, and answers `201` only when it
+  leases you a new runner. The body is the same either way, and the app
+  works as before.
 
 ## 0.15.0 — 2026-09-22
 

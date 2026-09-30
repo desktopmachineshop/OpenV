@@ -197,8 +197,10 @@ func (h *Handler) GetRunnerSession(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(h.runnerSessionPayload(session))
 }
 
-// StartRunnerSession leases a pool node to the member. Clicking twice returns
-// the lease they already hold rather than taking a second node.
+// StartRunnerSession leases a pool node to the member, 201. Clicking twice
+// returns the lease they already hold rather than taking a second node, 200
+// with the same payload, since nothing was created (issue #379's question
+// 20).
 func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) || !h.requireRunnerSessions(w) {
@@ -213,7 +215,7 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 		h.writeLimitError(w, err)
 		return
 	}
-	session, err := h.runnerSessionService.Start(orgID, user.ID, sessionMinutes, idleMinutes)
+	session, created, err := h.runnerSessionService.Start(orgID, user.ID, sessionMinutes, idleMinutes)
 	if err != nil {
 		if errors.Is(err, runnersessions.ErrNoNodes) {
 			// Not an error the member did anything wrong: every runner in
@@ -226,7 +228,9 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.minutesAlerts.Check(orgID)
-	w.WriteHeader(http.StatusCreated)
+	if created {
+		w.WriteHeader(http.StatusCreated)
+	}
 	json.NewEncoder(w).Encode(h.runnerSessionPayload(session))
 }
 
