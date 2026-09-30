@@ -1,0 +1,32 @@
+{
+  "description": "splittools's test spec over testdata/fixture: two constructors in one file with a header, one file per constructor after that, docs, and a constructor without one.",
+  "package": "fixture",
+  "headers": {
+    "tools_first.go": "// The first tools of the fixture's table."
+  },
+  "constructors": [
+    {
+      "func": "firstTools",
+      "file": "tools_first.go",
+      "doc": "// firstTools returns alpha and beta.",
+      "tools": ["alpha", "beta"]
+    },
+    {
+      "func": "middleTools",
+      "file": "tools_first.go",
+      "tools": ["gamma"]
+    },
+    {
+      "func": "deltaTools",
+      "file": "tools_delta.go",
+      "doc": "// deltaTools returns delta, whose local sort is not package sort.",
+      "tools": ["delta"]
+    },
+    {
+      "func": "lastTools",
+      "file": "tools_last.go",
+      "doc": "// lastTools returns the rest,\n// in the table's order.",
+      "tools": ["epsilon"]
+    }
+  ]
+}
