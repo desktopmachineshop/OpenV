@@ -25,17 +25,19 @@ import (
 // show the role gates, and an editor of P from a workspace of its own shows
 // whose agent a launch uses. The area walks a run's life: created (with the
 // refusals of its body, its guard and its baseline_id), read and listed;
-// results recorded, re-recorded (the upsert keeps the row's id and
-// created_at, and an omitted evidence list keeps the stored one), refused
-// and listed; a run and a result recorded through a workspace runner key,
+// results recorded, re-recorded (a re-record adds a result of its own, the
+// case's current one from then on, and an omitted evidence list carries the
+// current one's), refused (another project's test case among them) and
+// listed; a run and a result recorded through a workspace runner key,
 // the path the MCP tools take; an agent run launched on the run (the
 // launch's refusals, and its answer: the queued run with its prompt, and
 // the manual and physical cases it skips), claimed by that key as setup,
 // and results recorded with the claimed run's token, which is refused a
 // case flagged manual and a run of another project; the run completed and
-// aborted, the refused transitions, a result still accepted by a completed
-// run; the deletes; and, last, the editor's launch on a run of its own, with
-// P's workspace's V&V engineer. Every answer of these handlers but a refusal is a
+// aborted, the refused transitions, a result refused by the completed and the
+// aborted run; the deletes (a run that holds results kept, an empty one
+// deleted); the editor's launch on a run of its own, with P's workspace's
+// V&V engineer; and, last, R1's history. Every answer of these handlers but a refusal is a
 // bare encode with no Content-Type (Q1): sniffed as text/plain, and sent
 // with none once compressed, which a long description and long notes make
 // the lists show; the refusals go through writeJSONError (application/json).
@@ -169,15 +171,22 @@ func testRunsResultsTour(tr *tour) {
 		note("evidence ids are stored as sent; nothing checks them")).capture("res_auto", "/id")
 	tr.step("record a fail for the manual case", o, "POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
 		jsonBody(`{"test_case_id":"{{tc_manual}}","status":"fail","notes":"Wording unclear"}`)).capture("res_manual", "/id")
-	tr.step("re-record the automated case with no evidence field: the row's id and created_at stay, the evidence too", o,
-		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
-		jsonBody(`{"test_case_id":"{{tc_auto}}","status":"blocked","notes":"Rig offline"}`))
+	tr.step("re-record the automated case with no evidence field: a result of its own beside the first, which "+
+		"carries the current one's evidence", o, "POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
+		jsonBody(`{"test_case_id":"{{tc_auto}}","status":"blocked","notes":"Rig offline"}`),
+		note("fixed under R7 (OpenV REQ-13): the upsert wrote over the first result, keeping its id and "+
+			"created_at")).capture("res_auto_blocked", "/id")
 	tr.step("re-record it with an empty evidence list, which clears it", o, "POST /api/v1/test-runs/{id}/results",
-		at("id", "{{r1}}"), jsonBody(`{"test_case_id":"{{tc_auto}}","status":"pass","notes":"Answered in 1.1 s","evidence":[]}`))
-	tr.step("record Q's test case in a run of P: accepted, nothing ties the case to the run's project", o,
+		at("id", "{{r1}}"), jsonBody(`{"test_case_id":"{{tc_auto}}","status":"pass","notes":"Answered in 1.1 s","evidence":[]}`)).
+		capture("res_auto_pass", "/id")
+	tr.step("record Q's test case in a run of P: 404, as a test case no artifact has", o,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
 		jsonBody(`{"test_case_id":"{{tc_q}}","status":"not-run","notes":"`+long+`"}`),
-		note("its notes make every list of R1's results long enough to be compressed")).capture("res_q", "/id")
+		note("fixed under R7 (#379 bug 5): it was accepted, since nothing tied the case to the run's project; a "+
+			"test case outside it is answered as one no row has, before its type is read"))
+	tr.setup("the rig case's result, whose long notes make every list of R1's results long enough to be compressed", o,
+		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
+		jsonBody(`{"test_case_id":"{{tc_rig}}","status":"not-run","notes":"`+long+`"}`)).capture("res_rig", "/id")
 	tr.step("R1's results, the latest recorded first: compressed, and then sent with no Content-Type (Q1)", o,
 		"GET /api/v1/test-runs/{id}/results", at("id", "{{r1}}"))
 	tr.step("the viewer reads R1's results", viewer, "GET /api/v1/test-runs/{id}/results", at("id", "{{r1}}"))
@@ -241,7 +250,8 @@ func testRunsResultsTour(tr *tour) {
 		capture("r_q", "/id")
 	tr.step("the agent records a pass for the automated case: executed_by_agent_run_id", agent,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
-		jsonBody(`{"test_case_id":"{{tc_auto}}","status":"pass","notes":"Ran the timing script: 1.0 s"}`))
+		jsonBody(`{"test_case_id":"{{tc_auto}}","status":"pass","notes":"Ran the timing script: 1.0 s"}`)).
+		capture("res_agent", "/id")
 	tr.step("the agent records the manual case: refused, a person must verify it", agent,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
 		jsonBody(`{"test_case_id":"{{tc_manual}}","status":"pass"}`))
@@ -266,20 +276,25 @@ func testRunsResultsTour(tr *tour) {
 		at("id", "{{run_phantom_baseline}}"), jsonBody(`{"status":"aborted"}`))
 	tr.step("launch an agent on the completed R1", o, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"),
 		jsonBody(`{"agent_slug":"vv-engineer"}`))
-	tr.step("record the physical case in the completed R1: accepted, nothing checks the run's status", o,
+	tr.step("record the physical case in the completed R1: 409, a closed run takes no result", o,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
-		jsonBody(`{"test_case_id":"{{tc_rig}}","status":"blocked","notes":"Rig booked"}`)).capture("res_rig", "/id")
-	tr.step("record a result in the aborted run: accepted too", o, "POST /api/v1/test-runs/{id}/results",
-		at("id", "{{run_phantom_baseline}}"), jsonBody(`{"test_case_id":"{{tc_auto}}","status":"fail"}`)).
-		capture("res_aborted", "/id")
+		jsonBody(`{"test_case_id":"{{tc_rig}}","status":"blocked","notes":"Rig booked"}`),
+		note("fixed under R7 (#379 bug 5): it was accepted, since nothing checked the run's status"))
+	tr.step("record a result in the aborted run: 409 too", o, "POST /api/v1/test-runs/{id}/results",
+		at("id", "{{run_phantom_baseline}}"), jsonBody(`{"test_case_id":"{{tc_auto}}","status":"fail"}`))
 	tr.step("P's runs: completed, aborted and the runner's", o, "GET /api/v1/projects/{id}/test-runs", at("id", "{{p}}"))
 
-	// Deletes: the results go with the run.
+	// Deletes: a run that holds results is kept, its results with it, and
+	// one that holds none is deleted.
 	tr.step("the viewer deletes R1", viewer, "DELETE /api/v1/test-runs/{id}", at("id", "{{r1}}"))
-	tr.step("delete R1", o, "DELETE /api/v1/test-runs/{id}", at("id", "{{r1}}"))
-	tr.step("delete R1 again", o, "DELETE /api/v1/test-runs/{id}", at("id", "{{r1}}"))
-	tr.step("R1's results once it is gone", o, "GET /api/v1/test-runs/{id}/results", at("id", "{{r1}}"))
-	tr.step("P's runs after the delete", o, "GET /api/v1/projects/{id}/test-runs", at("id", "{{p}}"))
+	tr.step("delete R1, which holds results: 409, a run with results is closed, not deleted", o,
+		"DELETE /api/v1/test-runs/{id}", at("id", "{{r1}}"),
+		note("fixed under R7 (OpenV REQ-13): the run was deleted, and its results with it"))
+	tr.step("delete the aborted run, which holds no result: deleted", o, "DELETE /api/v1/test-runs/{id}",
+		at("id", "{{run_phantom_baseline}}"))
+	tr.step("R1's results once its delete is refused: kept", o, "GET /api/v1/test-runs/{id}/results", at("id", "{{r1}}"))
+	tr.step("P's runs after the deletes: R1 kept, the aborted run gone", o, "GET /api/v1/projects/{id}/test-runs",
+		at("id", "{{p}}"))
 
 	// Accounts from other workspaces: the outsider is refused a run's
 	// results once the run is found; an editor of P, whose own workspace is
@@ -297,4 +312,9 @@ func testRunsResultsTour(tr *tour) {
 	tr.step("an editor of P from another workspace launches the V&V engineer on R3: P's workspace's agent, and "+
 		"the run queued in P's workspace", editor, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r3}}"),
 		jsonBody(`{"agent_slug":"vv-engineer"}`))
+
+	// A run's history: every result recorded in it, the ones later results
+	// superseded included (OpenV REQ-13).
+	tr.step("R1's history: every result recorded, the superseded ones included, the latest recorded first", o,
+		"GET /api/v1/test-runs/{id}/results", at("id", "{{r1}}"), query("history=true"))
 }

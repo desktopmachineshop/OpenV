@@ -92,7 +92,10 @@ the Phase 3 consolidations that give quirks their names.
   answers an artifact no row has, a malformed id among them,
   `artifacts.ErrNotFound`, so the `errors.Is(err, artifacts.ErrNotFound)`
   branches of `ChangeArtifactStatus` (a delete landing mid-request) and of
-  `RecordTestResult` (a `test_case_id` no artifact has) answer 404, and
+  `UpsertTestResult` (a `test_case_id` no artifact has, and, since the
+  release-noted bug-fix pull request for #379's bug 5, one of another
+  project than the run's, which `vv.UpsertResult` answers as one no row
+  has, before its type is read) answer 404, and
   `PUT /api/v1/artifacts/{id}` and `POST /api/v1/artifacts/{id}/restore`,
   which load the artifact before their guard, answer it 404 `artifact not
   found` and guard with that answer (`requireProjectRoleFor`), so a real

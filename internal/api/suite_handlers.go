@@ -324,7 +324,16 @@ func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.vvService.DeleteRun(id); err != nil {
-		respondInternal(w, r, "failed to delete test run", err)
+		switch {
+		case errors.Is(err, vv.ErrRunHasResults):
+			// Its results are the record REQ-13 keeps: the run is closed,
+			// not deleted.
+			writeJSONError(w, http.StatusConflict, err.Error())
+		case errors.Is(err, vv.ErrRunNotFound):
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to delete test run", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -362,9 +371,12 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusForbidden, err.Error())
 		case errors.Is(err, vv.ErrInvalidStatus), errors.Is(err, vv.ErrNotTestCase):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, vv.ErrRunClosed):
+			writeJSONError(w, http.StatusConflict, err.Error())
 		case errors.Is(err, vv.ErrRunNotFound), errors.Is(err, artifacts.ErrNotFound):
 			// The run exists (checked above); ErrNotFound here means the
-			// referenced test case id does not resolve to an artifact.
+			// referenced test case id does not resolve to an artifact of the
+			// run's project (another project's is answered as none).
 			writeJSONError(w, http.StatusNotFound, err.Error())
 		default:
 			respondInternal(w, r, "failed to record test result", err)
@@ -384,7 +396,13 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
-	results, err := h.vvService.ListResults(runID)
+	// The current result per test case; ?history=true lists every result
+	// recorded, the superseded ones included (REQ-13).
+	list := h.vvService.ListResults
+	if r.URL.Query().Get("history") == "true" {
+		list = h.vvService.ListResultHistory
+	}
+	results, err := list(runID)
 	if err != nil {
 		respondInternal(w, r, "failed to list test results", err)
 		return
