@@ -14,13 +14,12 @@ upload/download, connector bundle download, SSE streams).
 ## Times
 
 Times are RFC 3339. A time sent with an offset as an evidence bundle's
-`captured_at`, a work item's `due_date` or an interview invite's
-`expires_at` is stored as the instant it names and read back in UTC:
-`2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`, though the
-create's own answer echoes it as sent. A workspace invitation's
-`expires_at`, which the server sets, is stored the same way. A share link's
-`expires_at` still keeps the wall clock sent and drops its offset, so send
-it in UTC.
+`captured_at`, a work item's `due_date`, an interview invite's `expires_at`
+or a share link's `expires_at` is stored as the instant it names and read
+back in UTC: `2026-01-15T09:30:00+01:00` reads back `2026-01-15T08:30:00Z`,
+though the create's own answer echoes it as sent, and a share link closes
+at that instant. A workspace invitation's `expires_at`, which the server
+sets, is stored the same way.
 
 ## Authentication
 
@@ -289,7 +288,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
 | PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). Every part is checked before any is written, so a request refused for one part changes nothing. The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
 | GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards), `default-workspace` (choosing the workspace a sign-in lands in), `figure-titles` (renaming a figure). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
-| PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace, and `409` with `code: "already_subscribed"` for a granted plan (`enterprise`, `open_source`) while the workspace holds a live subscription, which is cancelled first (REQ-168). The channel override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
+| PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace, and `409` with `code: "already_subscribed"` for a granted plan (`enterprise`, `open_source`) while the workspace holds a live subscription, which is cancelled first (REQ-168). A move from a plan that always runs nightly (`single`, `business_lite`, `self_host`, `open_source`, legacy `free`) onto one whose admins choose the channel (`business`, `enterprise`, legacy `team`) writes `nightly` as the channel override where none is set, as a checkout does, so the workspace keeps the features it uses (`release_channel: "nightly"`, unlocked); otherwise the override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
 | PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly; `404` `workspace not found` for an account with no membership of the workspace, as for one no row has, and `403` for a platform admin outside it, whom the guard lets by, since the preview is kept on the membership | org member |
 | DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period; returns the workspace as restored. `403` for a member who is not its admin, `404` `workspace not found` for an account that is no member, as for a workspace no row has | org admin (of the deleted org) |
@@ -367,7 +366,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
 | DELETE | `/api/v1/baselines/{id}` | Delete baseline; publishes `baseline.deleted` `{name}`, the name it had, so the activity log records it (REQ-5). `403` for an editor or viewer, `404` `baseline not found` for one no row has | owner |
 | GET | `/api/v1/projects/{id}/share-links` | The project's share links (`docs/sharing.md`), tokens never included | owner |
-| POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `400` for another role; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
+| POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `expires_at` is the instant the link closes, whatever offset it is sent with (see Times); the list answers it in UTC. `400` for another role, and for an `expires_at` that falls outside years 1 to 9999 in UTC, such as `9999-12-31T23:00:00-05:00` (`expires_at must fall between years 1 and 9999 in UTC`), which the list could not answer. It is truncated to the microsecond, as stored, before that check, so a link closes no later than sent; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template | editor |

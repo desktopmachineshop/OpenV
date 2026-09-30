@@ -21,7 +21,7 @@
     "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
     "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from",
     "2099-01-02T03:04:05+02:00 kept as it is: a reviewer link's expiry as the tour sends it, with an offset",
-    "2099-01-02T03:04:05Z kept as it is: the same expiry read back: the TIMESTAMP column drops the offset and keeps the wall time",
+    "2099-01-02T01:04:05Z kept as it is: the same expiry read back: the same instant, in UTC",
     "2001-02-03T04:05:06Z kept as it is: the expiry of a link minted already expired",
     "5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed kept as it is: a well-formed share token that no link has"
   ],
@@ -227,7 +227,7 @@
         "body": "{\"role\":\"reviewer\",\"expires_at\":\"2099-01-02T03:04:05+02:00\"}"
       },
       "notes": [
-        "the answer echoes the expiry as sent, offset and all; the list below reads the stored wall time back as UTC"
+        "the answer echoes the expiry as sent, offset and all; the list below reads the same instant back in UTC"
       ],
       "status": 201,
       "content_type": "application/json",
@@ -309,7 +309,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<expired_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Expired\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"expires_at\":\"2001-02-03T04:05:06Z\"},{\"id\":\"<reviewer_link>\",\"project_id\":\"<shared_project>\",\"role\":\"reviewer\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"expires_at\":\"2099-01-02T03:04:05Z\"},{\"id\":\"<public_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Customer \\u003ccopy\\u003e \\u0026 co\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 5>\"}]"
+        "[{\"id\":\"<expired_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Expired\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"expires_at\":\"2001-02-03T04:05:06Z\"},{\"id\":\"<reviewer_link>\",\"project_id\":\"<shared_project>\",\"role\":\"reviewer\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"expires_at\":\"2099-01-02T01:04:05Z\"},{\"id\":\"<public_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Customer \\u003ccopy\\u003e \\u0026 co\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 5>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -329,7 +329,7 @@
           "label": "",
           "created_by": "<owner>",
           "created_at": "<time@step 6>",
-          "expires_at": "2099-01-02T03:04:05Z"
+          "expires_at": "2099-01-02T01:04:05Z"
         },
         {
           "id": "<public_link>",
@@ -1452,7 +1452,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<expired_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Expired\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"expires_at\":\"2001-02-03T04:05:06Z\"},{\"id\":\"<reviewer_link>\",\"project_id\":\"<shared_project>\",\"role\":\"reviewer\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"expires_at\":\"2099-01-02T03:04:05Z\",\"revoked_at\":\"<time@step 40>\"},{\"id\":\"<public_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Customer \\u003ccopy\\u003e \\u0026 co\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 5>\",\"revoked_at\":\"<time@step 38>\"}]"
+        "[{\"id\":\"<expired_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Expired\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"expires_at\":\"2001-02-03T04:05:06Z\"},{\"id\":\"<reviewer_link>\",\"project_id\":\"<shared_project>\",\"role\":\"reviewer\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"expires_at\":\"2099-01-02T01:04:05Z\",\"revoked_at\":\"<time@step 40>\"},{\"id\":\"<public_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Customer \\u003ccopy\\u003e \\u0026 co\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 5>\",\"revoked_at\":\"<time@step 38>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1472,7 +1472,7 @@
           "label": "",
           "created_by": "<owner>",
           "created_at": "<time@step 6>",
-          "expires_at": "2099-01-02T03:04:05Z",
+          "expires_at": "2099-01-02T01:04:05Z",
           "revoked_at": "<time@step 40>"
         },
         {
@@ -2164,7 +2164,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<fresh_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Fresh\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 46>\"},{\"id\":\"<expired_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Expired\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"expires_at\":\"2001-02-03T04:05:06Z\"},{\"id\":\"<reviewer_link>\",\"project_id\":\"<shared_project>\",\"role\":\"reviewer\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"expires_at\":\"2099-01-02T03:04:05Z\",\"revoked_at\":\"<time@step 40>\"},{\"id\":\"<public_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Customer \\u003ccopy\\u003e \\u0026 co\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 5>\",\"revoked_at\":\"<time@step 38>\"}]"
+        "[{\"id\":\"<fresh_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Fresh\",\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 46>\"},{\"id\":\"<expired_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Expired\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 7>\",\"expires_at\":\"2001-02-03T04:05:06Z\"},{\"id\":\"<reviewer_link>\",\"project_id\":\"<shared_project>\",\"role\":\"reviewer\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"expires_at\":\"2099-01-02T01:04:05Z\",\"revoked_at\":\"<time@step 40>\"},{\"id\":\"<public_link>\",\"project_id\":\"<shared_project>\",\"role\":\"public\",\"label\":\"Customer \\u003ccopy\\u003e \\u0026 co\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 5>\",\"revoked_at\":\"<time@step 38>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2192,7 +2192,7 @@
           "label": "",
           "created_by": "<owner>",
           "created_at": "<time@step 6>",
-          "expires_at": "2099-01-02T03:04:05Z",
+          "expires_at": "2099-01-02T01:04:05Z",
           "revoked_at": "<time@step 40>"
         },
         {

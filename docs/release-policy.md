@@ -35,7 +35,12 @@ same day. No channel or upgrade window holds them back.
 - **Channel.** Business and Enterprise admins choose nightly or stable in
   workspace settings. Personal and Lite are on nightly and cannot change it:
   that is the trade for the lower tier, newest features first and the risk
-  of a nightly with them.
+  of a nightly with them. A workspace that moves from a plan that always
+  runs nightly onto Business or Enterprise, by a checkout or by a platform
+  admin's plan change, stays on nightly: the move records nightly as its
+  admins' choice when they have made none, so no feature it uses switches
+  off before a stable release has turned on for it. Its admins choose
+  stable from then on when they want it.
 - **Upgrade window.** The day of the month and hour, in the workspace's
   time zone, at which each stable release turns on, up to 14 days after it
   is designated; admins are notified at the designation and 24 hours

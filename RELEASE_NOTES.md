@@ -728,6 +728,33 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   both. A citation of an artifact it is not linked to is still flagged in
   both.
 
+- **A workspace a platform admin moves onto Business or Enterprise keeps the
+  nightly channel.** Moving a workspace from Single User, Business Lite,
+  Self-hosted or Open source onto Business or Enterprise from the platform
+  admin page, or with `PUT /api/v1/orgs/{id}/plan`, put it on the stable
+  channel before any stable release had turned on for it, so every newer
+  feature its members were using disappeared at once. It now stays on
+  nightly, as a workspace that moves onto Business by checkout already does,
+  and its admins can choose stable in workspace settings whenever they want
+  to. A workspace whose admins had already chosen a channel keeps their
+  choice, and a move between Business and Enterprise changes nothing.
+  Workspaces moved before this release stay on the channel they are on: an
+  admin can choose nightly in workspace settings.
+
+- **A share link closes at the moment its expiry names.** A share link
+  created through the API with an expiry carrying a time zone offset, such
+  as `2026-10-01T12:00:00+02:00`, was stored without its offset, so it
+  closed at 12:00 UTC: a link given a `+02:00` expiry stayed open to anyone
+  holding it for two hours after it should have closed, and one given a
+  `-05:00` expiry closed five hours early. Links now close at the moment
+  sent, and the list of a project's links shows each expiry in UTC,
+  `2026-10-01T10:00:00Z` for that example; an expiry that falls outside
+  the years 1 to 9999 in UTC is refused. The app already sends a link's
+  expiry in UTC, so links made in Project settings close when they did;
+  links already created close when they did before this release, so
+  revoke and re-create any link an API client gave an expiry with a
+  positive offset if it should close sooner.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

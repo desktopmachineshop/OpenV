@@ -1570,7 +1570,7 @@
         "body": "{\"plan\":\"business\"}"
       },
       "notes": [
-        "the channel resolves to stable, business's default, with no stable release turned on, so every gate is off until one is (the billing path writes a nightly override instead; the all-off map below is a pattern that a gate on would fail)"
+        "a move from a nightly-only plan onto a channel-choosing one keeps nightly, as the billing path does: a nightly override is written where W has none, so the features it uses stay on"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -1579,7 +1579,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1596,7 +1596,7 @@
         "created_at": "<time@step 1>",
         "updated_at": "<time@step 32>",
         "has_logo": false,
-        "release_channel": "stable",
+        "release_channel": "nightly",
         "release_channel_locked": false,
         "stable_release": "",
         "upgrade_day": 0,
@@ -1725,7 +1725,7 @@
     },
     {
       "n": 37,
-      "title": "W on business, read back: stable, and the channel no longer locked",
+      "title": "W on business, read back: nightly, and the channel no longer locked",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}",
@@ -1740,7 +1740,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1757,7 +1757,7 @@
         "created_at": "<time@step 1>",
         "updated_at": "<time@step 32>",
         "has_logo": false,
-        "release_channel": "stable",
+        "release_channel": "nightly",
         "release_channel_locked": false,
         "stable_release": "",
         "upgrade_day": 0,

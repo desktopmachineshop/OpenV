@@ -25,10 +25,12 @@ optional expiry. The link is
 `${FRONTEND_URL}/share/<token>`. The token is 32 random bytes, shown once
 in the answer that minted it and stored as a SHA-256 hash; the list of
 links never carries tokens again. Revoking a link closes it at once for
-everyone holding it; an expired link closes itself. Every unusable link,
-whatever the reason, answers the same 404, and the public lookups are
-throttled per address like invitation previews, so a guessed token learns
-nothing.
+everyone holding it; an expired link closes itself, at the instant its
+expiry names, whatever time zone offset an API client sent it with (the
+app sends the end of the chosen day in the browser's zone, as UTC). Every
+unusable link, whatever the reason, answers the same 404, and the public
+lookups are throttled per address like invitation previews, so a guessed
+token learns nothing.
 
 A **public link** opens `SharedProjectView`: the live project as a
 read-only export, rendered without a session. The API path

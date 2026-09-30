@@ -48,6 +48,23 @@ func ChannelChoosable(plan string) bool {
 	}
 }
 
+// ChannelOverrideAfterMove is the channel override a workspace holds once
+// its plan moves from one plan to another: the one it holds, unless it holds
+// none and the move takes it from a plan that always runs nightly onto one
+// whose admins choose, when it is nightly. Without that the new plan's
+// default would put the workspace on the stable channel with no stable
+// release turned on, and every gated feature it was using would close at
+// once. Every plan move takes this rule, a checkout's and the billing sync's
+// (Repository.ApplyBillingState) as a platform admin's (SetPlan); the
+// store applies it in the UPDATE that writes the plan, which sees the row's
+// old plan, and the service to the workspace it answers.
+func ChannelOverrideAfterMove(from, to, override string) string {
+	if override == "" && !ChannelChoosable(from) && ChannelChoosable(to) {
+		return ChannelNightly
+	}
+	return override
+}
+
 // ErrInvalidWindow is answered for an upgrade window outside day 1-28,
 // hour 0-23, or with a time zone the platform does not know.
 var ErrInvalidWindow = errors.New("upgrade window must be a day of the month from 1 to 28, an hour from 0 to 23, and a known time zone")

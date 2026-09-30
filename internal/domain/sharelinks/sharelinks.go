@@ -34,6 +34,13 @@ var (
 	ErrInvalidRole  = errors.New("a share link is public or reviewer")
 	ErrInvalidToken = errors.New("share link not found")
 	ErrNotFound     = errors.New("share link not found")
+	// ErrInvalidExpiry refuses an expiry outside years 1 to 9999 in UTC.
+	// The expiry is stored as an instant and read back in UTC (migration
+	// 0051), and Go writes no JSON time after year 9999 or before year 0,
+	// so one sent as 9999-12-31T23:00:00-05:00, year 10000 in UTC, would
+	// leave the project's list of links unanswerable for good: a link is
+	// revoked, never deleted. Year 0, PostgreSQL's 1 BC, goes with them.
+	ErrInvalidExpiry = errors.New("expires_at must fall between years 1 and 9999 in UTC")
 )
 
 // Link is one share link. The token itself is never stored.
@@ -94,10 +101,30 @@ func NewService(repo Repository) *DefaultService {
 // ValidRole reports whether role names a link kind.
 func ValidRole(role string) bool { return role == RolePublic || role == RoleReviewer }
 
+// validExpiry reports whether an expiry, if any, falls in years 1 to 9999
+// in UTC, the years it can be read back and listed in (ErrInvalidExpiry).
+func validExpiry(expiresAt *time.Time) bool {
+	if expiresAt == nil {
+		return true
+	}
+	y := expiresAt.UTC().Year()
+	return y >= 1 && y <= 9999
+}
+
 // Create implements Service.
 func (s *DefaultService) Create(projectID, role, label string, createdBy *string, expiresAt *time.Time) (*Link, string, error) {
 	if !ValidRole(role) {
 		return nil, "", ErrInvalidRole
+	}
+	// The expiry is stored to the microsecond, so it is checked as it will
+	// be stored: a finer one that Postgres would round into year 10000
+	// could not be listed. Truncating closes the link no later than sent.
+	if expiresAt != nil {
+		e := expiresAt.Truncate(time.Microsecond)
+		expiresAt = &e
+	}
+	if !validExpiry(expiresAt) {
+		return nil, "", ErrInvalidExpiry
 	}
 	token, err := users.NewToken()
 	if err != nil {
