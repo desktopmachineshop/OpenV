@@ -495,6 +495,42 @@ func (rep *AgentRunRepository) ListLogs(runID string, afterSeq int) ([]agentruns
 	return result, rows.Err()
 }
 
+// AppendNote writes one entry at the end of a run's log, numbered after the
+// last entry there, and returns it as stored: a note the server keeps on a
+// run (agentruns.NoteRun), where AppendLogs stores what a worker numbered
+// itself. The run's row is locked for the write, so two notes on one run
+// never take the same number.
+func (rep *AgentRunRepository) AppendNote(runID string, e agentruns.LogEntry) (agentruns.LogEntry, error) {
+	payload, err := json.Marshal(e.Payload)
+	if err != nil {
+		return e, err
+	}
+	if e.CreatedAt.IsZero() {
+		e.CreatedAt = time.Now()
+	}
+	tx, err := rep.db.Begin()
+	if err != nil {
+		return e, err
+	}
+	defer tx.Rollback()
+	var locked string
+	if err := tx.QueryRow(`SELECT id FROM agent_runs WHERE id = $1::uuid FOR UPDATE`, runID).Scan(&locked); err != nil {
+		if err == sql.ErrNoRows {
+			return e, agentruns.ErrNotFound
+		}
+		return e, err
+	}
+	if err := tx.QueryRow(`
+		INSERT INTO agent_run_logs (run_id, seq, kind, payload, created_at)
+		SELECT $1::uuid, COALESCE(MAX(seq), 0) + 1, $2, $3, $4 FROM agent_run_logs WHERE run_id = $1::uuid
+		RETURNING seq
+	`, runID, e.Kind, payload, e.CreatedAt).Scan(&e.Seq); err != nil {
+		return e, err
+	}
+	e.RunID = runID
+	return e, tx.Commit()
+}
+
 // CountRunsSince counts an automation's runs created after since.
 func (rep *AgentRunRepository) CountRunsSince(automationID string, since time.Time) (int, error) {
 	var count int
@@ -618,15 +654,15 @@ func (rep *AgentRunRepository) CountApplyFailedProposals(runID string) (int, err
 }
 
 // FinalizeApproval transitions an awaiting_approval run to a terminal status
-// once its proposals are resolved, storing errMsg as its error and revoking
-// its run token. The write is conditional on the run still being
-// awaiting_approval so a concurrent resolver can never double-finalize;
-// reports whether it was applied.
-func (rep *AgentRunRepository) FinalizeApproval(runID, status, errMsg string, at time.Time) (bool, error) {
+// once its proposals are resolved, storing errMsg and errorClass as its error
+// and error class and revoking its run token. The write is conditional on the
+// run still being awaiting_approval so a concurrent resolver can never
+// double-finalize; reports whether it was applied.
+func (rep *AgentRunRepository) FinalizeApproval(runID, status, errMsg, errorClass string, at time.Time) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = $2, error = $3, finished_at = $4, run_token_hash = ''
+		UPDATE agent_runs SET status = $2, error = $3, error_class = $4, finished_at = $5, run_token_hash = ''
 		WHERE id = $1 AND status = 'awaiting_approval'
-	`, runID, status, errMsg, at)
+	`, runID, status, errMsg, errorClass, at)
 	if err != nil {
 		return false, err
 	}

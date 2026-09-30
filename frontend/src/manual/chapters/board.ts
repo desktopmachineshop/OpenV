@@ -53,8 +53,8 @@ unassigned cards behave like a normal kanban; only agent/crew cards with live
 runs are locked.
 
 Work items can also be **created by crews**: when a crew edge hands work off
-to (or requests review from) a *person*, a board card assigned to that person
-appears automatically — see *Crews*.
+to (or requests review from) a *person* who can open the project, a board card
+assigned to that person appears automatically — see *Crews*.
 
 ## To-dos: the same work, by person
 
