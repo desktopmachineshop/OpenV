@@ -28,8 +28,14 @@ func TestEvidenceUploadCapIsSeparateFromTheFigureCap(t *testing.T) {
 	if got, want := maxEvidenceBytes(), int64(512*1024*1024); got != want {
 		t.Fatalf("OPENV_MAX_EVIDENCE_MB=512 gave %d, want %d", got, want)
 	}
+	// The value is trimmed, like every setting (#379, question 15): spaces
+	// round it used to make it nonsense, so the default applied.
+	t.Setenv(envMaxEvidenceMB, " 512 ")
+	if got, want := maxEvidenceBytes(), int64(512*1024*1024); got != want {
+		t.Fatalf("OPENV_MAX_EVIDENCE_MB=\" 512 \" gave %d, want %d", got, want)
+	}
 	// Nonsense falls back to the default rather than to "unlimited".
-	for _, bad := range []string{"0", "-4", "lots"} {
+	for _, bad := range []string{"0", "-4", "lots", "512MB"} {
 		t.Setenv(envMaxEvidenceMB, bad)
 		if got := maxEvidenceBytes(); got != defaultMaxEvidenceMB*1024*1024 {
 			t.Errorf("OPENV_MAX_EVIDENCE_MB=%q gave %d, want the default", bad, got)

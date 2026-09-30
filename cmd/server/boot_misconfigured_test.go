@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -27,7 +28,9 @@ import (
 //     schema_migrations ledger that runs from version 1 without a gap (the
 //     count is not recorded, so a new migration changes no golden here);
 //     for a boot whose DATABASE_URL names no server, that it had none;
-//   - what the server sent through the recording proxy (nothing).
+//   - what the server sent through the recording proxy (nothing);
+//   - for a boot pointed at a stand-in database, whether the password it
+//     received was DB_PASSWORD exactly as set.
 //
 // One boot per fatal check, and one more per condition a check must not
 // grow: OPENV_LIMITS twice, on a fresh database and with a DATABASE_URL no
@@ -36,7 +39,16 @@ import (
 // first boot alone cannot tell); the grandfather date; the billing
 // configuration three times, with billing on, with no STRIPE_SECRET_KEY
 // (billing off) and on a self-hosted deployment (billing kept off), each
-// refusing a price map that does not parse; and CORS_ORIGIN. The boot that
+// refusing a price map that does not parse, and once more refusing a trial
+// with a unit after its number, which billing's counts, unlike every other
+// setting, refuse rather than fall back from (#379, question 15);
+// CORS_ORIGIN; and the database credentials, which are used exactly as set
+// (#379, question 24): a DATABASE_URL with a line break after it, which does
+// not parse; one with a space in front of it, as Railway's has no query,
+// which lib/pq would read as key=value settings and whose parse error would
+// quote the whole URL; and a DB_PASSWORD with a line break, which a stand-in
+// database receives line break and all and refuses, each named once in the
+// log, where neither the URL nor the password may appear. The boot that
 // must still come up despite a malformed value, self-hosted with a
 // malformed grandfather date, is a profile of TestBootProfiles,
 // self_hosted_bad_grandfather.
@@ -75,11 +87,16 @@ const misconfiguredGoldenHeader = `# The server binary (go build -cover ./cmd/se
 `
 
 // misconfiguredBoot is one boot that must refuse to start: the variables it
-// sets on top of the harness's, and what is wrong with them.
+// sets on top of the harness's, and what is wrong with them. With standIn,
+// DB_HOST and DB_PORT point at a stand-in database (boot_standin_db_test.go),
+// which must receive exactly DB_PASSWORD as env sets it. secret, when set,
+// must appear on no line of the boot's log or stdout.
 type misconfiguredBoot struct {
-	name  string
-	about string
-	env   map[string]string
+	name    string
+	about   string
+	env     map[string]string
+	standIn bool
+	secret  string
 }
 
 // unreachableDatabase is a DATABASE_URL no server answers at (nothing
@@ -91,6 +108,12 @@ const unreachableDatabase = "postgres://openv@127.0.0.1:1/unreachable?sslmode=di
 // badPriceMap is OPENV_STRIPE_PRICES in a shape an operator might guess,
 // which is not the JSON array the variable holds.
 const badPriceMap = "business_lite:month=price_boot_harness"
+
+// bootDatabasePassword is the password the database-credential boots set:
+// in a DATABASE_URL no server answers at, with a line break after it or a
+// space in front of it, and as DB_PASSWORD for the stand-in database, with
+// a line break after it.
+const bootDatabasePassword = "boot-harness-db-password"
 
 var misconfiguredBoots = []misconfiguredBoot{
 	{name: "fatal_limits", about: "OPENV_LIMITS written as key=value, not as a JSON object",
@@ -105,8 +128,19 @@ var misconfiguredBoots = []misconfiguredBoot{
 		env: map[string]string{"OPENV_STRIPE_PRICES": badPriceMap}},
 	{name: "fatal_billing_self_hosted", about: "the same billing configuration on a self-hosted deployment",
 		env: map[string]string{"OPENV_SELF_HOSTED": "true", "STRIPE_SECRET_KEY": testStripeKey, "OPENV_STRIPE_PRICES": badPriceMap}},
+	{name: "fatal_billing_trial_days", about: "OPENV_BILLING_TRIAL_DAYS with a unit after the number, with no STRIPE_SECRET_KEY (billing off)",
+		env: map[string]string{"OPENV_BILLING_TRIAL_DAYS": "30d"}},
 	{name: "fatal_cors", about: "CORS_ORIGIN the wildcard *",
 		env: map[string]string{"CORS_ORIGIN": "*"}},
+	{name: "fatal_database_url_line_break", about: "a DATABASE_URL with a password and a line break after it, used exactly as set, which does not parse",
+		env:    map[string]string{"DATABASE_URL": "postgres://openv:" + bootDatabasePassword + "@127.0.0.1:1/unreachable?sslmode=disable\n"},
+		secret: bootDatabasePassword},
+	{name: "fatal_database_url_leading_space", about: "a DATABASE_URL with a password and a space in front of it, used exactly as set, which lib/pq would read as key=value settings, refused before anything is dialled",
+		env:    map[string]string{"DATABASE_URL": " postgres://openv:" + bootDatabasePassword + "@127.0.0.1:1/unreachable"},
+		secret: bootDatabasePassword},
+	{name: "fatal_db_password_line_break", about: "no DATABASE_URL, and a DB_PASSWORD with a line break after it, which the stand-in database receives exactly as set and refuses",
+		env:     map[string]string{"DATABASE_URL": "", "DB_PASSWORD": bootDatabasePassword + "\n"},
+		standIn: true, secret: bootDatabasePassword},
 }
 
 // misconfiguredExitWithin bounds a refused boot: the migrations and the
@@ -118,7 +152,14 @@ const misconfiguredExitWithin = 60 * time.Second
 func runMisconfiguredBoot(t *testing.T, bin string, b misconfiguredBoot) []byte {
 	proxy := startRecordingProxy(t)
 	db := freshDatabase(t)
-	s, err := startServer(t, bin, db, proxy.env(b.env))
+	env, shown := b.env, b.env
+	var standIn *standInDatabase
+	if b.standIn {
+		standIn = startStandInDatabase(t)
+		env, shown = withEnv(b.env, standIn.env()), withEnv(b.env, map[string]string{
+			"DB_HOST": "127.0.0.1", "DB_PORT": standInDatabasePortPlaceholder})
+	}
+	s, err := startServer(t, bin, db, proxy.env(env))
 	if err == nil {
 		t.Fatalf("the server came up and answered /health; with %v it must refuse to start. "+
 			"UPDATE_GOLDEN=1 does not change this: if main() no longer refuses it on purpose, that changes "+
@@ -142,10 +183,19 @@ func runMisconfiguredBoot(t *testing.T, bin string, b misconfiguredBoot) []byte 
 			boot = append(boot, l.text)
 		}
 	}
+	if b.secret != "" {
+		for _, out := range []string{string(s.stderr.Bytes()), string(s.stdout.Bytes())} {
+			for _, l := range strings.Split(out, "\n") {
+				if strings.Contains(l, b.secret) {
+					t.Errorf("the boot printed a credential it was given: %s", l)
+				}
+			}
+		}
+	}
 
 	var w goldenWriter
 	w.WriteString(misconfiguredGoldenHeader)
-	w.profileHead("misconfigured boot", b.name, b.about, b.env, true)
+	w.profileHead("misconfigured boot", b.name, b.about, shown, true)
 	w.section("boot log, in order (lines logged from boot goroutines left out)", boot)
 	w.section("stdout", stdoutLines(s))
 	w.section("exit", []string{
@@ -154,7 +204,34 @@ func runMisconfiguredBoot(t *testing.T, bin string, b misconfiguredBoot) []byte 
 	})
 	w.section("the boot's database after the exit", []string{"migrations ran before the exit: " + ran.text})
 	w.section("outbound requests (the recording proxy, after exit)", proxy.summary())
+	if standIn != nil {
+		w.section("the stand-in database (after exit)", []string{standInSummary(t, standIn, b.env["DB_PASSWORD"])})
+	}
 	return []byte(w.String())
+}
+
+// withEnv is env with more set over it, in a new map.
+func withEnv(env, more map[string]string) map[string]string {
+	out := map[string]string{}
+	for k, v := range env {
+		out[k] = v
+	}
+	for k, v := range more {
+		out[k] = v
+	}
+	return out
+}
+
+// standInSummary says what the stand-in database received: one password,
+// DB_PASSWORD exactly as the boot set it, or the test fails.
+func standInSummary(t *testing.T, standIn *standInDatabase, want string) string {
+	t.Helper()
+	got := standIn.received()
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("the stand-in database received the passwords %q; want one, DB_PASSWORD exactly as set, %q", got, want)
+		return fmt.Sprintf("received %d passwords, not DB_PASSWORD exactly as set", len(got))
+	}
+	return "received one password, DB_PASSWORD exactly as set, line break and all, and refused it"
 }
 
 // migrationState is what a refused boot left in its database.
@@ -170,6 +247,9 @@ type migrationState struct {
 // database, so there is nothing of its to read.
 func migrationsRan(t *testing.T, db testDatabase, b misconfiguredBoot) migrationState {
 	t.Helper()
+	if b.standIn {
+		return migrationState{text: "no (the server was pointed at a stand-in database: DB_HOST and DB_PORT above)"}
+	}
 	if _, own := b.env["DATABASE_URL"]; own {
 		return migrationState{text: "no (the server was given no reachable database: DATABASE_URL above)"}
 	}

@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,13 +13,14 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
+
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
+// envOr reads a text setting, trimmed, falling back when that leaves nothing
+// (internal/envparse's rule, as the server's own settings).
 func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
+	return envparse.Text(os.Getenv(key), fallback)
 }
 
 // dockerProvisioner implements Provisioner against the local docker daemon
@@ -49,7 +49,7 @@ func newDockerProvisioner() (*dockerProvisioner, error) {
 	return &dockerProvisioner{
 		cli:     cli,
 		image:   envOr("RUNNER_IMAGE", "openv-worker:latest"),
-		network: os.Getenv("RUNNER_NETWORK"),
+		network: envOr("RUNNER_NETWORK", ""),
 		apiURL:  envOr("RUNNER_API_URL", "http://api:8080"),
 	}, nil
 }
@@ -73,23 +73,17 @@ func (p *dockerProvisioner) Enabled() bool { return true }
 const defaultPidsLimit int64 = 1024
 
 // PidsLimit is the per-container process cap, overridable with
-// HOSTED_RUNNER_PIDS_LIMIT. A value of 0 or less means "no cap" (docker's own
-// convention) for an operator who has to lift it; anything unparseable falls
-// back to the default rather than to unlimited.
+// HOSTED_RUNNER_PIDS_LIMIT, a whole number. A value of 0 or less means "no
+// cap" (docker's own convention) for an operator who has to lift it, the one
+// count whose zero keeps a meaning of its own; anything else malformed falls
+// back to the default rather than to unlimited, and warns once
+// (internal/envparse).
 func PidsLimit() int64 {
-	raw := os.Getenv("HOSTED_RUNNER_PIDS_LIMIT")
-	if raw == "" {
-		return defaultPidsLimit
-	}
-	n, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
-	if err != nil {
-		log.Printf("hosting: HOSTED_RUNNER_PIDS_LIMIT=%q is not a number; using %d", raw, defaultPidsLimit)
-		return defaultPidsLimit
-	}
+	n := envparse.Number("HOSTED_RUNNER_PIDS_LIMIT", os.Getenv("HOSTED_RUNNER_PIDS_LIMIT"), int(defaultPidsLimit))
 	if n <= 0 {
 		return 0
 	}
-	return n
+	return int64(n)
 }
 
 // hostConfigFor builds the runner container's HostConfig: the org's data

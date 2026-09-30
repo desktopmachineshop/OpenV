@@ -14,9 +14,12 @@ const cliName = "agentd"
 // I14): its twelve flags with their help and defaults, and the defaults the
 // environment gives them (not WORKER_API_KEY, RUNNER_POOL_KEY, RUNNER_POOL
 // or RUNNER_NODE_NAME, which agentd reads after parsing, so its usage text
-// prints no key), flag errors, and the refusal without a worker key, which
-// comes before any network call. Nothing here reaches the network: -h and a
-// flag error stop in flag.Parse.
+// prints no key), trimmed, with the default and one warning naming the
+// variable for a value that breaks internal/envparse's rule, flag errors,
+// the refusal without a worker key, which comes before any network call,
+// and a key with spaces or a line break around it, used exactly as set and
+// named once, never printed (#379, question 24). Nothing here reaches the network: -h and a flag error stop in
+// flag.Parse.
 func TestCLI(t *testing.T) {
 	runCLI(t, []cliScenario{
 		{name: "help", args: []string{"-h"}},
@@ -35,6 +38,14 @@ func TestCLI(t *testing.T) {
 			"OPENV_HOSTED=TRUE",
 		}},
 		{name: "hosted_true", args: []string{"-h"}, env: []string{"OPENV_HOSTED=true"}},
+		// A value that breaks the rule keeps the flag's own default and
+		// warns once, naming the variable and not the value.
+		{name: "malformed_env", args: []string{"-h"}, env: []string{
+			"AGENT_CONCURRENCY=-5",
+			"AGENT_CHILD_CONCURRENCY=2x",
+			"AGENT_WORKSPACE_RETENTION=-1h",
+			"OPENV_HOSTED=yes",
+		}},
 		// Every flag error prints the same usage text as -h.
 		{name: "bad_flag_value_env_keys", args: []string{"-concurrency=x"}, env: []string{
 			"WORKER_API_KEY=wk-example",
@@ -48,6 +59,11 @@ func TestCLI(t *testing.T) {
 		{name: "worker_key_flag_empty", args: []string{"-worker-key="}, env: []string{"WORKER_API_KEY=wk-example"}},
 		{name: "pool_key_from_env", env: []string{"RUNNER_POOL_KEY=pk-example"}, setup: blockWorkspaces},
 		{name: "pool_key_flag_empty", args: []string{"-pool-key="}, env: []string{"RUNNER_POOL_KEY=pk-example"}},
+		// A key with a line break after it, or a space in front, is a
+		// credential used exactly as set: one warning names its variable,
+		// and TestCLIPrintsNoKey holds that it prints no key.
+		{name: "worker_key_line_break", env: []string{"WORKER_API_KEY=wk-example\n"}, setup: blockWorkspaces},
+		{name: "pool_key_leading_space", env: []string{"RUNNER_POOL_KEY= pk-example"}, setup: blockWorkspaces},
 		// A key given on the command line still works, and agentd warns that
 		// ps shows it there, naming the variable to use instead and never
 		// the key (issue #379's question 18); an empty one, above, puts no

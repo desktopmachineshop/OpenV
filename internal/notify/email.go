@@ -57,8 +57,8 @@ func MailerFromEnv() *SMTPMailer {
 	m := &SMTPMailer{
 		host: host,
 		port: envDefault("OPENV_SMTP_PORT", "587"),
-		user: os.Getenv("OPENV_SMTP_USER"),
-		pass: os.Getenv("OPENV_SMTP_PASSWORD"),
+		user: envSecret("OPENV_SMTP_USER"),
+		pass: envSecret("OPENV_SMTP_PASSWORD"),
 		from: strings.TrimSpace(os.Getenv("OPENV_SMTP_FROM")),
 	}
 	if m.from == "" {
@@ -67,7 +67,7 @@ func MailerFromEnv() *SMTPMailer {
 	if host == "" {
 		slog.Info("email: OPENV_SMTP_HOST unset; email notifications disabled (in-app + SSE delivery unaffected)")
 	} else {
-		slog.Info("email: SMTP delivery enabled", "host", host, "port", m.port, "from", m.from)
+		slog.Info("email: SMTP delivery enabled", "host", host, "port", m.port, "from", fromForLog(m.from, m.user))
 	}
 	return m
 }

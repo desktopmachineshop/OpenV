@@ -375,6 +375,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		h.billing.SetSeatCounter(h.countOrgSeats)
 		h.billing.DefaultReturnURL(h.frontendURL)
 	}
+	readRequestSettingsAtBoot()
 	return h
 }
 

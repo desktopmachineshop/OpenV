@@ -843,6 +843,49 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   revoke and re-create any link an API client gave an expiry with a
   positive offset if it should close sooner.
 
+- **Settings are read one way, and a mistyped one is named in the log.** A
+  self-hosted server or runner treated the same slip differently from one
+  setting to the next: spaces round a value, as in `AGENT_CONCURRENCY=" 3"`,
+  made it count as nonsense; `SECURE_COOKIES=TRUE` counted as off, since
+  only a lower-case `true` was on; a runner took `0` or a negative number
+  for its concurrency, and `-1h` for how long it keeps finished workspaces;
+  and a rate limit, such as sign-in's, given a refill of `Inf` stopped
+  throttling altogether. The API and the runner now ignore spaces round a
+  setting's value, read a count as a whole number above 0, a duration as
+  positive and a rate as a positive, finite number, and take `true` or
+  `false` in any case, or `1` or `0`, for an on/off setting. A value that
+  breaks this keeps the setting's default, and the log says so once, as the
+  server or runner starts, naming the variable but never its value.
+  `HOSTED_RUNNER_PIDS_LIMIT=0`, or a negative number, still means no cap on
+  a hosted runner's processes. Credentials are the exception to the spaces:
+  a key, token, password or private key, such as `WORKER_API_KEY`,
+  `RUNNER_POOL_KEY`, `DATABASE_URL`, `DB_PASSWORD` or `STRIPE_SECRET_KEY`,
+  is used exactly as set, and one with spaces or a line break around it is
+  named in the log once, as the server or runner starts, and never printed.
+  A `DATABASE_URL` that does not parse, or that has spaces or a line break
+  in front of it, no longer puts the whole URL, password included, in the
+  log: the server stops, before it dials anything, with a message saying
+  what is wrong. Billing still refuses to start on a malformed setting,
+  and now also when anything follows the number, so
+  `OPENV_BILLING_TRIAL_DAYS=30d`, which gave a 30-day trial by luck, stops
+  the server with a message that it must be a whole number of days; a
+  malformed `OPENV_STRIPE_PRICES` is now explained in its own terms rather
+  than by an internal type name. If you run your own OpenV, check your
+  settings before you upgrade: `SECURE_COOKIES=TRUE`,
+  `OPENV_TRUST_PROXY=true` and `OPENV_RUN_AUTO_RETRY=0` now take effect, so
+  set `OPENV_TRUST_PROXY` only when a proxy sits in front of the API; a
+  billing count such as `30d` keeps the server from starting until it is
+  written as a number; a runner's `AGENT_CHILD_CONCURRENCY=0`, or a
+  negative number, which reserved no extra slots for child and interview
+  runs, now keeps the default of 2, so pass `-child-concurrency=0` to
+  reserve none; and `STRIPE_SECRET_KEY`, `OPENV_EMBEDDING_API_KEY`,
+  `OPENV_VAPID_PRIVATE_KEY` and `DB_PASSWORD` no longer lose the spaces or
+  line break around them, and `DB_PASSWORD` keeps the spaces, quotes and
+  backslashes in it that used to cut it short or change it, so remove
+  whatever the log names, or billing, embeddings, web push or the database
+  will refuse the credential; a Stripe, embeddings or VAPID key that is only
+  spaces still leaves its feature off.
+
 - **A test run whose baseline was deleted says so.** A test run can be
   pinned to a baseline, and a project owner can still delete that baseline
   later. The run keeps the baseline as part of its record, but the runs

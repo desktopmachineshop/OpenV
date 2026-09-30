@@ -32,9 +32,9 @@ open (no credentials): `/health`, `/metrics` (carries its own optional
 
 `POST /api/v1/auth/register` or `POST /api/v1/auth/login` sets the
 `openv_session` cookie (HttpOnly, SameSite=Lax; `Secure` when
-`SECURE_COOKIES=true`). The first user ever registered becomes the platform
-admin. Optional **Google OIDC** sign-in is enabled by setting
-`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI:
+`SECURE_COOKIES` is `true`, in any case, or `1`). The first user ever
+registered becomes the platform admin. Optional **Google OIDC** sign-in is
+enabled by setting `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (redirect URI:
 `${PUBLIC_URL}/api/v1/auth/google/callback`); `GET /api/v1/auth/config` tells
 the login page whether the button should appear.
 
@@ -143,7 +143,9 @@ revoked on the Runners tab (`DELETE /orgs/{id}/worker-keys/{keyId}`), the
 value answers `401` `invalid token`, as any revoked key does, even while the
 environment still holds it. A restart with the same value leaves the key
 revoked, registers nothing and logs a warning; only a new value registers a
-new key.
+new key. The value is used exactly as set, like every credential the server
+reads: spaces or a line break around it are not trimmed, and the server
+names such a key in its boot log, never printing it.
 
 ## Authorization model
 
@@ -1352,6 +1354,16 @@ unchanged invitation within the hour of its link being **delivered** does not
 mail anything at all (see the endpoint), so an impatient admin costs the
 invitee nothing; an invitation whose send failed is re-sent instead, since
 nothing reached the invitee to be spared.
+
+Each bucket's `…_BURST` is a whole number above 0 and its
+`…_REFILL_PER_HOUR` a positive, finite number (`2.5` and `1e3` included),
+spaces round either ignored. Any other value keeps that bucket's default,
+and the server logs one warning at boot naming the variable: `Inf`, which
+used to refill a bucket at once and so switched its throttling off, now
+keeps the default refill. The client address a bucket keys on follows
+`OPENV_TRUSTED_PROXY_HOPS`, a whole number above 0, or the one hop
+`OPENV_TRUST_PROXY` declares when it is `true` in any case or `1` (see
+[operations.md](operations.md)).
 
 While a server requires email verification (`email_verification_required` in
 `GET /auth/config`), a session whose account has `email_verified: false` is

@@ -105,6 +105,12 @@ func TestUploadLimitFollowsTheWorkspacePlan(t *testing.T) {
 	if got, want := h.uploadLimitBytes(""), int64(defaultMaxUploadMB)*bytesPerMB; got != want {
 		t.Fatalf("a bad override gave %d, want %d", got, want)
 	}
+	// The override is trimmed, like every setting (#379, question 15):
+	// spaces round it used to make it nonsense, so the plan's cap applied.
+	t.Setenv(envMaxUploadMB, " 7 ")
+	if got, want := h.uploadLimitBytes(""), int64(7)*bytesPerMB; got != want {
+		t.Fatalf("OPENV_MAX_UPLOAD_MB=\" 7 \" gave %d, want %d", got, want)
+	}
 }
 
 // Every plan must allow a real CAD file, which is what the 25 MB this shipped

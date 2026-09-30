@@ -83,6 +83,59 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
 
+#### How a setting is read
+
+The API and the runner (`agentd`) read every setting by one rule
+(`internal/envparse`). Spaces round a value are ignored, and a value that is
+only spaces counts as unset. A count, such as a burst, a size in MB or
+`AGENT_CONCURRENCY`, is a whole number above 0; a duration, such as
+`AGENT_WORKSPACE_RETENTION`, is a positive Go duration (`90m`, `24h`); a
+rate, a `…_REFILL_PER_HOUR`, is a positive, finite number; and an on/off
+setting, such as `SECURE_COOKIES`, `OPENV_SELF_HOSTED` or `OPENV_HOSTED`, is
+`true` or `false` in any case, or `1` or `0`. A value that breaks the rule
+keeps the setting's default, and the log says so once, as the API or the
+runner starts, naming the variable but not the value. That holds too for a
+setting read again later: the proxy trust and the upload and evidence caps,
+which a request reads each time it needs them, are also read once at
+start-up, and so, with hosted runners on, is `HOSTED_RUNNER_PIDS_LIMIT`, read
+again for each runner the API provisions. `AGENT_CHILD_CONCURRENCY`, the
+extra slots a runner keeps for child and interview runs, is a count like the
+rest, so `0` or a negative number, which used to reserve none, now keeps the
+default of 2; pass `-child-concurrency=0` to reserve none. Three kinds of
+setting keep rules of their own: a billing count (`OPENV_BILLING_MAX_SEATS`,
+`OPENV_BILLING_RECONCILE_MINUTES`, or `OPENV_BILLING_TRIAL_DAYS`, which may
+be `0`) that is not a whole number above 0 stops the server from starting,
+so `30d` is refused rather than read as 30; `HOSTED_RUNNER_PIDS_LIMIT` reads
+`0`, or a negative number, as no cap (below); and a credential is used
+exactly as set, never trimmed, since a key cut short of its spaces is
+another key.
+
+The credentials are `WORKER_API_KEY` and `RUNNER_POOL_KEY`, on the API and
+the runner alike, `DATABASE_URL`, `DB_PASSWORD`, `OPENV_METRICS_TOKEN`,
+`GOOGLE_CLIENT_SECRET`, `OPENV_OIDC_CLIENT_SECRET`, `OPENV_SMTP_USER`,
+`OPENV_SMTP_PASSWORD`, `STRIPE_SECRET_KEY`, `OPENV_EMBEDDING_API_KEY` and
+`OPENV_VAPID_PRIVATE_KEY`. One with spaces or a line break around it, as a
+secret pasted from a file often has, is named once in the log as the API or
+the runner starts (`a credential setting has spaces or a line break around
+it; it is used exactly as set`), never printed; remove them, or whatever the
+credential signs in to refuses it. `DB_PASSWORD` reaches the database
+exactly as set, spaces, quotes and backslashes in it included. A
+`DATABASE_URL` that does not parse, a line break after it among the reasons,
+stops the server with a message that leaves out the URL and its password;
+so does a URL that does not start with `postgres://` or `postgresql://`
+exactly, such as one with spaces, a line break or a byte-order mark in
+front of it, which the database driver would read as `key=value` settings,
+refused before anything is dialled. With `OPENV_SMTP_FROM` unset, mail goes
+out from `OPENV_SMTP_USER`, and the log shows `from=OPENV_SMTP_USER` in
+place of the user. A
+`STRIPE_SECRET_KEY`, `OPENV_EMBEDDING_API_KEY` or `OPENV_VAPID_PRIVATE_KEY`
+of only spaces still leaves billing, embeddings or web push off, so a
+placeholder never starts calling a provider. `DB_USER`, a role name rather
+than a secret, is trimmed like any other setting. The provider keys a runner
+hands its CLIs (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`,
+`GOOGLE_API_KEY`) are passed on exactly as set; the runner only checks that
+one is there and signs in with none itself, so its log names none of them.
+
 Optional — email notifications (issue #187). Strictly opt-in: with
 `OPENV_SMTP_HOST` unset the mailer is a no-op and only in-app + live (SSE)
 notifications are delivered, so dev and existing deployments are unaffected.
@@ -433,7 +486,7 @@ Notes:
   - `OPENV_TRUSTED_PROXY_HOPS=<n>` — the number of proxies that append to
     `X-Forwarded-For`. The client is read that many hops **from the right**;
     entries a client prepended stay on the left and are ignored. The legacy
-    `OPENV_TRUST_PROXY=1` is the same as one hop.
+    `OPENV_TRUST_PROXY=1` (or `true`, in any case) is the same as one hop.
 
   Leave all three unset when clients reach the API directly: the headers are
   client-supplied, and trusting them would let anyone dodge per-IP limits — or
@@ -664,9 +717,11 @@ a place where something will eventually go wrong:
 | `Binds` | the org's data volume only | Never the docker socket. |
 | `ReadonlyRootfs` | **not set** | The vendor CLIs in the runner image write outside `/data` (npm and CLI caches, git temporaries), so a read-only root filesystem breaks runs today. Getting there means a tmpfs for each of those paths. |
 
-`HOSTED_RUNNER_PIDS_LIMIT` on the API service overrides the cap; `0` means no
-cap (docker's own convention), and an unparseable value falls back to the
-default of 1024 rather than to unlimited. Raise it if runs in a workspace start
+`HOSTED_RUNNER_PIDS_LIMIT` on the API service overrides the cap; `0`, or a
+negative number, means no cap (docker's own convention), and a value that is
+not a whole number falls back to the default of 1024 rather than to
+unlimited, with one warning in the log, as the API starts, naming the
+variable. Raise it if runs in a workspace start
 failing to spawn — the symptom is a `fork`/`EAGAIN` failure deep inside a
 vendor CLI, not a message about the limit.
 

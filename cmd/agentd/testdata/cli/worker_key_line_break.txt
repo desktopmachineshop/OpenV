@@ -1,0 +1,14 @@
+# The command line of agentd (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/agentd/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/agentd -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ agentd
+env WORKER_API_KEY="wk-example\n"
+exit 1
+--- stdout
+--- stderr
+WARN a credential setting has spaces or a line break around it; it is used exactly as set var=WORKER_API_KEY
+create workspace dir: mkdir $HOME/.openv: not a directory
