@@ -19,6 +19,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Project settings → Repositories, and a run taken by a workspace runner
   clones the repository, as before.
 
+- **The web app's connection library carries today's security fixes.** The
+  app now uses axios 1.20.0. Security advisories published on 30 September
+  2026 cover every earlier 1.x version: requests that could be redirected or
+  altered by polluted objects, and inputs that could stall the app. Nothing
+  you do in the app changes.
+
 ### Bug fixes
 
 - **A runner no longer prints its keys in its help or on a flag error.**
