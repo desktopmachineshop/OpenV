@@ -7,7 +7,6 @@ package hosting
 import (
 	"errors"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -72,7 +71,7 @@ type Provisioner interface {
 // disables the feature; an unreachable docker daemon auto-disables it (logged
 // once at startup).
 func NewProvisioner() Provisioner {
-	if strings.EqualFold(os.Getenv("HOSTED_RUNNERS"), "off") {
+	if strings.EqualFold(envOr("HOSTED_RUNNERS", ""), "off") {
 		log.Print("Hosted runners disabled (HOSTED_RUNNERS=off)")
 		return disabledProvisioner{}
 	}
@@ -82,6 +81,10 @@ func NewProvisioner() Provisioner {
 		return disabledProvisioner{}
 	}
 	log.Printf("Hosted runners enabled (image %s)", p.image)
+	// Provision reads the process cap for each runner; reading it here too
+	// names a malformed HOSTED_RUNNER_PIDS_LIMIT in the boot log (#379,
+	// question 15) rather than at the first provision.
+	PidsLimit()
 	return p
 }
 

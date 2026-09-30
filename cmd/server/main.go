@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -60,6 +59,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
+	"github.com/openv/requirements-platform/internal/envparse"
 	eventbus "github.com/openv/requirements-platform/internal/events"
 	"github.com/openv/requirements-platform/internal/hosting"
 	"github.com/openv/requirements-platform/internal/metrics"
@@ -70,22 +70,24 @@ import (
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
+// The server's settings follow internal/envparse's one rule: a value is
+// trimmed, and a malformed count or boolean reads as its fallback with one
+// warning naming the variable; a credential is exact (envSecret, at the end).
+
+// envOr reads a text setting, trimmed, falling back when that leaves
+// nothing.
 func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
+	return envparse.Text(os.Getenv(key), fallback)
 }
 
-// envInt reads a positive integer setting, falling back on anything unset,
-// unparseable, or non-positive.
+// envInt reads a count, a whole number above 0.
 func envInt(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-	}
-	return fallback
+	return envparse.Count(key, os.Getenv(key), fallback)
+}
+
+// envBool reads a boolean: true or false in any case, or 1 or 0.
+func envBool(key string, fallback bool) bool {
+	return envparse.Bool(key, os.Getenv(key), fallback)
 }
 
 // initLogging installs the process-wide slog default: a text handler on
@@ -125,14 +127,14 @@ func main() {
 
 	// Database connection: Railway-style DATABASE_URL or individual vars.
 	var dsn string
-	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+	if databaseURL := envSecret("DATABASE_URL", ""); databaseURL != "" {
 		slog.Info("using DATABASE_URL (Railway.app mode)")
 		dsn = databaseURL
 	} else {
 		slog.Info("using individual environment variables (local development mode)")
-		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dsn = postgres.ConnString(
 			envOr("DB_HOST", "localhost"), envOr("DB_PORT", "5432"), envOr("DB_USER", "postgres"),
-			envOr("DB_PASSWORD", "postgres"), envOr("DB_NAME", "openv"))
+			envSecret("DB_PASSWORD", "postgres"), envOr("DB_NAME", "openv"))
 	}
 
 	port := envOr("PORT", "8080")
@@ -141,7 +143,7 @@ func main() {
 	agentsDir := envOr("AGENTS_DIR", dataDir+"/agents")
 	// WORKER_API_KEY is a legacy single-key fallback; workers should use
 	// org-scoped keys minted in workspace settings.
-	workerKey := os.Getenv("WORKER_API_KEY")
+	workerKey := envSecret("WORKER_API_KEY", "")
 
 	// Workspace limits. A deployment somebody runs themselves owns its own
 	// hardware, so it sets its own ceilings: OPENV_SELF_HOSTED picks the plan
@@ -149,7 +151,7 @@ func main() {
 	// telling a self-hoster to upgrade a plan they do not have would send
 	// them nowhere. OPENV_LIMITS then retunes any individual limit across the
 	// whole deployment without touching the database.
-	selfHosted := os.Getenv("OPENV_SELF_HOSTED") == "true"
+	selfHosted := envBool("OPENV_SELF_HOSTED", false)
 	orgs.SetSelfHosted(selfHosted)
 	defaultPlan := envOr("OPENV_PLAN_DEFAULT", "")
 	if defaultPlan == "" {
@@ -163,7 +165,7 @@ func main() {
 	// silently did nothing would be indistinguishable from a limit that does
 	// not work, and the operator would discover it when somebody was wrongly
 	// refused.
-	deploymentLimits, err := orgs.ParseLimits(os.Getenv("OPENV_LIMITS"))
+	deploymentLimits, err := orgs.ParseLimits(envOr("OPENV_LIMITS", ""))
 	if err != nil {
 		fatal("OPENV_LIMITS is not usable", err)
 	}
@@ -248,7 +250,7 @@ func main() {
 	// admin reindex endpoint backfills a project on demand. The store no-ops
 	// gracefully on a database where the vector extension was unavailable at
 	// migration time (see migration 0016).
-	embeddingProvider := embeddings.ProviderFromEnv()
+	embeddingProvider := embeddings.ProviderFromEnv(envSecret("OPENV_EMBEDDING_API_KEY", ""))
 	embeddingStore := postgres.NewEmbeddingRepository(db)
 	embeddingService := embeddings.NewService(embeddingProvider, embeddingStore, artifactService)
 	artifactService.SetEmbeddingIndexer(embeddingService)
@@ -305,7 +307,7 @@ func main() {
 	// the shared credential its pool nodes present — because without a pool
 	// there is nothing to lease. Everything else about the feature is on by
 	// default for the workspaces on that deployment.
-	runnerPoolKey := os.Getenv("RUNNER_POOL_KEY")
+	runnerPoolKey := envSecret("RUNNER_POOL_KEY", "")
 	var runnerSessionService runnersessions.Service
 	if runnerPoolKey != "" {
 		runnerSessionService = runnersessions.NewDefaultService(runnerSessionRepo, workerKeyService)
@@ -469,11 +471,8 @@ func main() {
 	// attempt with backoff while attempts remain. OPENV_RUN_MAX_ATTEMPTS caps
 	// the chain (default 3); OPENV_RUN_AUTO_RETRY=false (or a cap of 1) opts
 	// out and the failure simply stands.
-	maxAttempts := agentruns.DefaultMaxAttempts
-	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv("OPENV_RUN_MAX_ATTEMPTS"))); err == nil && v > 0 {
-		maxAttempts = v
-	}
-	autoRetry := !strings.EqualFold(strings.TrimSpace(os.Getenv("OPENV_RUN_AUTO_RETRY")), "false")
+	maxAttempts := envInt("OPENV_RUN_MAX_ATTEMPTS", agentruns.DefaultMaxAttempts)
+	autoRetry := envBool("OPENV_RUN_AUTO_RETRY", true)
 	runService.SetRetryPolicy(maxAttempts, autoRetry)
 	automationService := automations.NewDefaultService(automationRepo)
 	repoConnService := repoconns.NewDefaultService(repoConnRepo)
@@ -618,7 +617,7 @@ func main() {
 	// deployment can be matched to a revision (REQ-141). Railway injects
 	// RAILWAY_GIT_COMMIT_SHA; OPENV_BUILD_SHA overrides it for platforms that
 	// do not, and both being unset simply leaves the commit out of /health.
-	buildSHA := envOr("OPENV_BUILD_SHA", os.Getenv("RAILWAY_GIT_COMMIT_SHA"))
+	buildSHA := envOr("OPENV_BUILD_SHA", envOr("RAILWAY_GIT_COMMIT_SHA", ""))
 	releaseService, err := release.NewService(openv.ReleaseNotesMarkdown)
 	if err != nil {
 		slog.Error("release notes failed to parse; serving no release", "error", err)
@@ -653,7 +652,7 @@ func main() {
 	// OPENV_BUDGET_ENFORCE=true, new launches are refused once a workspace has
 	// hit 100% of its monthly budget. Fails open on lookup errors so a budget
 	// hiccup never blocks work.
-	if os.Getenv("OPENV_BUDGET_ENFORCE") == "true" {
+	if envBool("OPENV_BUDGET_ENFORCE", false) {
 		runService.SetBudgetGuard(func(orgID string) (bool, string) {
 			org, err := orgService.Get(orgID)
 			if err != nil || org == nil || org.MonthlyBudgetUSD == nil || *org.MonthlyBudgetUSD <= 0 {
@@ -730,11 +729,11 @@ func main() {
 
 	// Google OAuth (optional).
 	var googleOAuth *api.GoogleOAuthConfig
-	if clientID := os.Getenv("GOOGLE_CLIENT_ID"); clientID != "" {
+	if clientID := envOr("GOOGLE_CLIENT_ID", ""); clientID != "" {
 		publicURL := envOr("PUBLIC_URL", "http://localhost:"+port)
 		googleOAuth = &api.GoogleOAuthConfig{
 			ClientID:     clientID,
-			ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+			ClientSecret: envSecret("GOOGLE_CLIENT_SECRET", ""),
 			RedirectURL:  publicURL + "/api/v1/auth/google/callback",
 			FrontendURL:  envOr("FRONTEND_URL", "http://localhost:3000"),
 		}
@@ -744,7 +743,7 @@ func main() {
 	// deployment; strictly opt-in — with OPENV_OIDC_ISSUER unset the endpoints
 	// report "not configured" and the default deployment is unaffected.
 	var oidcConfig *api.OIDCConfig
-	if issuer := os.Getenv("OPENV_OIDC_ISSUER"); issuer != "" {
+	if issuer := envOr("OPENV_OIDC_ISSUER", ""); issuer != "" {
 		publicURL := envOr("PUBLIC_URL", "http://localhost:"+port)
 		redirectURL := envOr("OPENV_OIDC_REDIRECT_URL", publicURL+"/api/v1/auth/oidc/callback")
 		var scopes []string
@@ -753,8 +752,8 @@ func main() {
 		}
 		oidcConfig = &api.OIDCConfig{
 			Issuer:       issuer,
-			ClientID:     os.Getenv("OPENV_OIDC_CLIENT_ID"),
-			ClientSecret: os.Getenv("OPENV_OIDC_CLIENT_SECRET"),
+			ClientID:     envOr("OPENV_OIDC_CLIENT_ID", ""),
+			ClientSecret: envSecret("OPENV_OIDC_CLIENT_SECRET", ""),
 			RedirectURL:  redirectURL,
 			Scopes:       scopes,
 			ProviderName: envOr("OPENV_OIDC_NAME", "SSO"),
@@ -848,8 +847,8 @@ func main() {
 		SSEHub:            sseHub,
 		GoogleOAuth:       googleOAuth,
 		OIDC:              oidcConfig,
-		SecureCookies:     os.Getenv("SECURE_COOKIES") == "true",
-		CrossSiteCookies:  os.Getenv("CROSS_SITE_COOKIES") == "true",
+		SecureCookies:     envBool("SECURE_COOKIES", false),
+		CrossSiteCookies:  envBool("CROSS_SITE_COOKIES", false),
 		PublicAPIURL:      envOr("PUBLIC_URL", "http://localhost:"+port),
 		ConnectorDistDir:  envOr("CONNECTOR_DIST_DIR", "./dist"),
 		Mailer:            emailMailer,
@@ -880,7 +879,7 @@ func main() {
 	// internal network in production); set OPENV_METRICS_TOKEN to require an
 	// "Authorization: Bearer <token>" header. Registered as an open path in the
 	// auth middleware so scraping is never blocked by session auth.
-	router.Handle("/metrics", metricsCollector.Handler(os.Getenv("OPENV_METRICS_TOKEN"))).Methods("GET")
+	router.Handle("/metrics", metricsCollector.Handler(envSecret("OPENV_METRICS_TOKEN", ""))).Methods("GET")
 
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
 	authMiddleware.SetPoolKey(runnerPoolKey)
@@ -914,7 +913,7 @@ func main() {
 	// headers on every response, including CORS preflights and rejections.
 	// HSTS follows SECURE_COOKIES, the deployment's declaration that it is
 	// only reached over TLS.
-	secureDeployment := os.Getenv("SECURE_COOKIES") == "true" || os.Getenv("CROSS_SITE_COOKIES") == "true"
+	secureDeployment := envBool("SECURE_COOKIES", false) || envBool("CROSS_SITE_COOKIES", false)
 	rootHandler := api.SecurityHeadersMiddleware(secureDeployment)(
 		api.BodyLimitMiddleware(maxRequestBodyBytes())(corsHandler),
 	)
@@ -973,11 +972,17 @@ func main() {
 // OPENV_MAX_BODY_MB overrides the 32 MB default; attachment uploads carry a
 // tighter cap of their own (OPENV_MAX_UPLOAD_MB).
 func maxRequestBodyBytes() int64 {
-	mb := int64(32)
-	if v := os.Getenv("OPENV_MAX_BODY_MB"); v != "" {
-		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
-			mb = n
-		}
+	return int64(envInt("OPENV_MAX_BODY_MB", 32)) * 1024 * 1024
+}
+
+// envSecret reads a credential exactly as set (#379, question 24): never
+// trimmed, since a key, token, password or private key cut short of its
+// spaces is another one, with one warning naming the variable, never the
+// value, when spaces or a line break sit around it. Only an unset or empty
+// variable falls back.
+func envSecret(key, fallback string) string {
+	if v := envparse.Secret(key, os.Getenv(key)); v != "" {
+		return v
 	}
-	return mb * 1024 * 1024
+	return fallback
 }

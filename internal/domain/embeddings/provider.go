@@ -24,22 +24,28 @@ type HTTPProvider struct {
 	http    *http.Client
 }
 
-// ProviderFromEnv builds an HTTPProvider from the OPENV_EMBEDDING_*
-// environment. With OPENV_EMBEDDING_API_KEY unset the provider is DISABLED
-// (Enabled()==false) and every Embed is a no-op error-free skip — the intended
-// default for dev and any deployment that has not opted into embeddings, so
-// semantic-search infra costs a default install nothing. This mirrors
-// notify.MailerFromEnv.
+// ProviderFromEnv builds an HTTPProvider from apiKey, the value of
+// OPENV_EMBEDDING_API_KEY, and the rest of the OPENV_EMBEDDING_*
+// environment. With no API key the
+// provider is DISABLED (Enabled()==false) and every Embed is a no-op
+// error-free skip — the intended default for dev and any deployment that has
+// not opted into embeddings, so semantic-search infra costs a default install
+// nothing. This mirrors notify.MailerFromEnv.
+//
+// The key is a credential, which cmd/server reads exactly as set, naming it
+// in the log when spaces or a line break sit around it (#379, question 24;
+// internal/envparse, which K7 keeps this domain package from importing). A
+// key that is only spaces is none, as it always was: it must not switch
+// embeddings on and send artifact text to the provider.
 //
 // Recognized variables:
 //
-//	OPENV_EMBEDDING_API_KEY   API key (empty => embeddings disabled)
+//	OPENV_EMBEDDING_API_KEY   API key (read by the caller; blank => embeddings disabled)
 //	OPENV_EMBEDDING_BASE_URL  API base URL (default https://api.openai.com/v1)
 //	OPENV_EMBEDDING_MODEL     model id (default text-embedding-3-small)
 //	OPENV_EMBEDDING_PROVIDER  informational label only (e.g. "openai");
 //	                          the wire protocol is always OpenAI-compatible
-func ProviderFromEnv() *HTTPProvider {
-	apiKey := strings.TrimSpace(os.Getenv("OPENV_EMBEDDING_API_KEY"))
+func ProviderFromEnv(apiKey string) *HTTPProvider {
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENV_EMBEDDING_BASE_URL")), "/")
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
@@ -54,7 +60,7 @@ func ProviderFromEnv() *HTTPProvider {
 		model:   model,
 		http:    &http.Client{Timeout: 30 * time.Second},
 	}
-	if apiKey == "" {
+	if !p.Enabled() {
 		slog.Info("embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)")
 	} else {
 		slog.Info("embeddings: provider enabled", "base_url", baseURL, "model", model)
@@ -62,8 +68,9 @@ func ProviderFromEnv() *HTTPProvider {
 	return p
 }
 
-// Enabled reports whether an API key is configured.
-func (p *HTTPProvider) Enabled() bool { return p != nil && p.apiKey != "" }
+// Enabled reports whether an API key is configured: one with more than
+// spaces in it, which Embed sends exactly as set.
+func (p *HTTPProvider) Enabled() bool { return p != nil && strings.TrimSpace(p.apiKey) != "" }
 
 // Model returns the configured embedding model id.
 func (p *HTTPProvider) Model() string {

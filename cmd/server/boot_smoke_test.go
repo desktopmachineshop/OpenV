@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 )
 
 // TestBootSmoke boots the real server once per profile, probes it from
@@ -508,7 +509,14 @@ func (w *goldenWriter) profileHead(kind, name, about string, env map[string]stri
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		fmt.Fprintf(w, "%s=%s\n", k, shown[k])
+		v := shown[k]
+		// A value with spaces at an end, or with a control character such as
+		// a line break, is shown Go-quoted, so that it stays on its line and
+		// its ends can be seen.
+		if strings.TrimSpace(v) != v || strings.ContainsFunc(v, unicode.IsControl) {
+			v = strconv.Quote(v)
+		}
+		fmt.Fprintf(w, "%s=%s\n", k, v)
 	}
 }
 
@@ -686,11 +694,12 @@ func (r *probeRun) waitForAccessLog(key string) {
 	}
 }
 
-// bodyCap is the JSON body cap the profile runs with.
+// bodyCap is the JSON body cap the profile runs with: OPENV_MAX_BODY_MB
+// read by internal/envparse's rule, a whole number above 0 once trimmed.
 func (r *probeRun) bodyCap() int64 {
 	mb := int64(defaultBodyCapMB)
 	if v, ok := r.p.env["OPENV_MAX_BODY_MB"]; ok {
-		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
+		if n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil && n > 0 {
 			mb = n
 		}
 	}

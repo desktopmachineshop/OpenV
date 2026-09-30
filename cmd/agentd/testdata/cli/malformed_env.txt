@@ -6,29 +6,26 @@
 # $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
 # directory and $TMP the working directory.
 $ agentd -h
-env OPENV_API_URL="https://api.example.test"
-env WORKER_API_KEY="wk-example"
-env AGENT_CONCURRENCY=" 3"
-env AGENT_CHILD_CONCURRENCY="0"
-env AGENT_WORKSPACE_RETENTION="90m"
-env RUNNER_POOL_KEY="pk-example"
-env RUNNER_POOL="gpu"
-env RUNNER_NODE_NAME="node-a"
-env RUNNER_SESSION_ROOT="/srv/openv/sessions"
-env OPENV_HOSTED="TRUE"
+env AGENT_CONCURRENCY="-5"
+env AGENT_CHILD_CONCURRENCY="2x"
+env AGENT_WORKSPACE_RETENTION="-1h"
+env OPENV_HOSTED="yes"
 exit 0
 --- stdout
 --- stderr
+WARN ignoring a malformed setting; its default applies var=AGENT_CONCURRENCY want="a whole number above 0"
 WARN ignoring a malformed setting; its default applies var=AGENT_CHILD_CONCURRENCY want="a whole number above 0"
+WARN ignoring a malformed setting; its default applies var=OPENV_HOSTED want="true or false (any case), or 1 or 0"
+WARN ignoring a malformed setting; its default applies var=AGENT_WORKSPACE_RETENTION want="a positive duration, such as 90m or 24h"
 Usage of agentd:
   -api string
-    	OpenV API base URL (default "https://api.example.test")
+    	OpenV API base URL (default "http://localhost:8080")
   -child-concurrency int
     	extra slots reserved for child/interview runs (default 2)
   -concurrency int
-    	concurrent normal runs (default 3)
+    	concurrent normal runs (default 1)
   -hosted
-    	token-mode hosted runner: no CLI sign-in, no repo-access runs (default true)
+    	token-mode hosted runner: no CLI sign-in, no repo-access runs
   -mcp-binary string
     	path to the openv-mcp binary (default "$BINDIR/openv-mcp")
   -node-name string
@@ -38,10 +35,10 @@ Usage of agentd:
   -pool-key string
     	transient runner pool key: run as a pre-warmed pool node instead of a fixed runner (read from RUNNER_POOL_KEY when not given)
   -session-root string
-    	parent directory for per-lease HOME directories (pool mode) (default "/srv/openv/sessions")
+    	parent directory for per-lease HOME directories (pool mode)
   -worker-key string
     	worker API key (required; read from WORKER_API_KEY when not given)
   -workspace-retention duration
-    	how long finished run workspaces are kept before cleanup (default 1h30m0s)
+    	how long finished run workspaces are kept before cleanup (default 24h0m0s)
   -workspaces string
     	base directory for run workspaces (default "$HOME/.openv/workspaces")

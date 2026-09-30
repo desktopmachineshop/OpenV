@@ -47,8 +47,11 @@ import (
 // combine settings: billing configured on a self-hosted deployment, which
 // keeps it off and says so, and the boot the plan says must still come up, a
 // self-hosted deployment with a malformed grandfather date, which it reads
-// only when not self-hosted. boot_misconfigured_test.go holds the boots that
-// must not come up.
+// only when not self-hosted; and one of malformed settings, those the server
+// reads at boot and those a request reads, which it must still come up with,
+// each at its default and named once in the boot log (internal/envparse;
+// #379, question 15), SECURE_COOKIES among them although main reads it twice.
+// boot_misconfigured_test.go holds the boots that must not come up.
 func TestBootProfiles(t *testing.T) {
 	if os.Getenv(testDatabaseURLEnv) == "" {
 		t.Skipf("%s not set; skipping the boot harness (it needs a Postgres server)", testDatabaseURLEnv)
@@ -146,7 +149,31 @@ var s4bProfiles = s4b([]bootProfile{
 		env: billingOn(map[string]string{"OPENV_SELF_HOSTED": "true"})},
 	{name: "self_hosted_bad_grandfather", about: "a malformed grandfather date on a self-hosted deployment, which does not read it",
 		env: map[string]string{"OPENV_SELF_HOSTED": "true", "OPENV_BILLING_GRANDFATHER_BEFORE": badGrandfather}},
+	{name: "malformed_settings", about: "settings that break the rule, each kept at its default with one warning",
+		env: malformedSettings},
 })
+
+// malformedSettings break internal/envparse's rule, one of each kind the
+// server reads at boot: a boolean (SECURE_COOKIES, read twice, and
+// OPENV_BUDGET_ENFORCE), a count (OPENV_SHARED_PRODUCT_DAILY_LIMIT, the body
+// cap, a run's attempts, 0 among them) and a rate (a refill of Inf, which
+// used to switch sign-in throttling off); and the settings a request reads,
+// the proxy trust (its hop count and its boolean) and the upload and
+// evidence caps, which NewHandler reads once as well, so that the boot log
+// names them, not the first request to read one (the register probe, for
+// the proxy trust).
+var malformedSettings = map[string]string{
+	"SECURE_COOKIES":                   "yes",
+	"OPENV_BUDGET_ENFORCE":             "on",
+	"OPENV_SHARED_PRODUCT_DAILY_LIMIT": "20 a day",
+	"OPENV_MAX_BODY_MB":                "32MB",
+	"OPENV_RUN_MAX_ATTEMPTS":           "0",
+	"OPENV_AUTH_IP_REFILL_PER_HOUR":    "Inf",
+	"OPENV_TRUSTED_PROXY_HOPS":         "two",
+	"OPENV_TRUST_PROXY":                "on",
+	"OPENV_MAX_UPLOAD_MB":              "25 MB",
+	"OPENV_MAX_EVIDENCE_MB":            "-1",
+}
 
 // s4b gives each profile the recording proxy and S4b's probes.
 func s4b(profiles []bootProfile) []bootProfile {

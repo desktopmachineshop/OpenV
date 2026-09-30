@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // Rate limiting for the public (token-only) interview endpoints. Every
@@ -192,20 +194,12 @@ func newRateLimiter(burst int, refillPerHour float64) *rateLimiter {
 }
 
 // newRateLimiterFromEnv builds a limiter from a pair of environment
-// variables, falling back to the given defaults when unset or invalid.
+// variables, a burst (a count) and a refill per hour (a rate), each falling
+// back to its default when unset or malformed (internal/envparse's rule): a
+// refill of Inf would switch the limiter off, so it is malformed too.
 func newRateLimiterFromEnv(burstVar, refillVar string, defBurst int, defRefill float64) *rateLimiter {
-	burst := defBurst
-	if v := os.Getenv(burstVar); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			burst = n
-		}
-	}
-	refill := defRefill
-	if v := os.Getenv(refillVar); v != "" {
-		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
-			refill = f
-		}
-	}
+	burst := envparse.Count(burstVar, os.Getenv(burstVar), defBurst)
+	refill := envparse.Rate(refillVar, os.Getenv(refillVar), defRefill)
 	return newRateLimiter(burst, refill)
 }
 
@@ -326,16 +320,18 @@ func (l *rateLimiter) maybeCleanupLocked(now time.Time) {
 //
 //	OPENV_TRUSTED_PROXY_HOPS  number of trusted proxies in front of the app.
 //	                          The client is the X-Forwarded-For entry this many
-//	                          hops from the right; 0 or unset trusts no header
-//	                          and keys on the TCP peer address.
+//	                          hops from the right; unset, or anything but a
+//	                          whole number above 0 (which warns once), trusts
+//	                          no header and keys on the TCP peer address.
 //	OPENV_CLIENT_IP_HEADER    a single header the OUTERMOST trusted proxy sets
 //	                          to the real client and that a client cannot forge
 //	                          THROUGH it — Cloudflare's CF-Connecting-IP, Akamai's
 //	                          True-Client-IP. When set it wins, which is the
 //	                          robust choice behind a CDN that rewrites it on
 //	                          every request regardless of chain depth.
-//	OPENV_TRUST_PROXY=1       legacy alias for one trusted hop; still honored,
-//	                          now counting from the right like the rest, so a
+//	OPENV_TRUST_PROXY=1       legacy alias for one trusted hop, a boolean (1,
+//	                          or true in any case); still honored, now
+//	                          counting from the right like the rest, so a
 //	                          single trusted proxy keeps working and extra
 //	                          client-supplied entries no longer shift the key.
 const (
@@ -350,16 +346,31 @@ type proxyTrust struct {
 	clientHeader string // a proxy-set header naming the real client, if any
 }
 
-// proxyTrustFromEnv reads the trust declaration. An explicit hop count wins;
-// the legacy OPENV_TRUST_PROXY=1 is honored as a single hop.
+// proxyTrustFromEnv reads the trust declaration. An explicit hop count (a
+// whole number above 0) wins; the legacy OPENV_TRUST_PROXY, a boolean, is
+// honored as a single hop. A malformed value of either declares nothing and
+// warns once (internal/envparse).
 func proxyTrustFromEnv() proxyTrust {
 	t := proxyTrust{clientHeader: strings.TrimSpace(os.Getenv(envClientIPHeader))}
-	if n, err := strconv.Atoi(strings.TrimSpace(os.Getenv(envTrustedHops))); err == nil && n > 0 {
+	if n := envparse.Count(envTrustedHops, os.Getenv(envTrustedHops), 0); n > 0 {
 		t.hops = n
-	} else if os.Getenv(envTrustProxy) == "1" {
+	} else if envparse.Bool(envTrustProxy, os.Getenv(envTrustProxy), false) {
 		t.hops = 1
 	}
 	return t
+}
+
+// readRequestSettingsAtBoot reads, once, the settings a request reads on
+// every call: the proxy trust and the upload and evidence caps. A malformed
+// one is then named in the boot log (#379, question 15) rather than by the
+// first request to read it, which for the proxy trust, read only by
+// sign-in, registration and the like, can come long after boot. The values
+// are dropped: each request still reads its own, and internal/envparse
+// warns once per variable and value, so those reads stay quiet.
+func readRequestSettingsAtBoot() {
+	_ = proxyTrustFromEnv()
+	_, _ = envUploadMB()
+	_ = maxEvidenceBytes()
 }
 
 // clientIP extracts the requesting client's IP under the deployment's declared

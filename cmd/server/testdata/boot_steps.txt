@@ -82,7 +82,6 @@ func main()
     call os.Exit
   call (*internal/domain/agents.FileService).SyncAllFromDisk
   call (*internal/domain/agentruns.DefaultService).SetRoutingPolicy
-  call strconv.Atoi
   call (*internal/domain/agentruns.DefaultService).SetRetryPolicy
   call (*internal/domain/teams.DefaultService).SetMemberValidator
   call (*internal/domain/proposals.DefaultService).OnResolved
@@ -143,6 +142,7 @@ func main()
     if
       call (*internal/billing.Service).SetSeatCounter
       call (*internal/billing.Service).DefaultReturnURL
+    call conversion to int64
   call (*internal/domain/proposals.DefaultService).SetAppliers
   call (*internal/orchestration.Hooks).SetGuidedNudgeLauncher
   call (*github.com/gorilla/mux.Router).Use

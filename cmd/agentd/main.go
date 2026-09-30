@@ -12,30 +12,41 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/openv/requirements-platform/internal/envparse"
 	"github.com/openv/requirements-platform/internal/runner"
 )
 
+// agentd's settings follow internal/envparse's one rule, as the server's
+// do: a value is trimmed, and a malformed count, duration or boolean reads
+// as its fallback, the flag's default, with one warning naming the variable.
+// Its keys are credentials, read exactly as set (envSecret).
+
 func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
+	return envparse.Text(os.Getenv(key), fallback)
 }
 
+// envIntOr reads a count, a whole number above 0.
 func envIntOr(key string, fallback int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
-	}
-	return fallback
+	return envparse.Count(key, os.Getenv(key), fallback)
 }
 
+// envDurationOr reads a positive duration.
 func envDurationOr(key string, fallback time.Duration) time.Duration {
-	if v := os.Getenv(key); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
+	return envparse.Duration(key, os.Getenv(key), fallback)
+}
+
+// envBool reads a boolean: true or false in any case, or 1 or 0.
+func envBool(key string, fallback bool) bool {
+	return envparse.Bool(key, os.Getenv(key), fallback)
+}
+
+// envSecret reads a credential exactly as set (#379, question 24): never
+// trimmed, with one warning naming the variable, never the value, when
+// spaces or a line break sit around it. Only an unset or empty variable
+// falls back.
+func envSecret(key, fallback string) string {
+	if v := envparse.Secret(key, os.Getenv(key)); v != "" {
+		return v
 	}
 	return fallback
 }
@@ -101,7 +112,7 @@ func main() {
 	childConcurrency := flag.Int("child-concurrency", envIntOr("AGENT_CHILD_CONCURRENCY", 2), "extra slots reserved for child/interview runs")
 	workspaces := flag.String("workspaces", defaultWorkspaces(), "base directory for run workspaces")
 	mcpBinary := flag.String("mcp-binary", defaultMCPBinary(), "path to the openv-mcp binary")
-	hosted := flag.Bool("hosted", envOr("OPENV_HOSTED", "") == "true", "token-mode hosted runner: no CLI sign-in, no repo-access runs")
+	hosted := flag.Bool("hosted", envBool("OPENV_HOSTED", false), "token-mode hosted runner: no CLI sign-in, no repo-access runs")
 	workspaceRetention := flag.Duration("workspace-retention", envDurationOr("AGENT_WORKSPACE_RETENTION", 24*time.Hour), "how long finished run workspaces are kept before cleanup")
 	poolKey := flag.String("pool-key", "", "transient runner pool key: run as a pre-warmed pool node instead of a fixed runner (read from RUNNER_POOL_KEY when not given)")
 	pool := flag.String("pool", "", "pool this node belongs to (read from RUNNER_POOL when not given; \"default\" when neither sets it)")
@@ -117,10 +128,10 @@ func main() {
 	given := map[string]bool{}
 	flag.Visit(func(f *flag.Flag) { given[f.Name] = true })
 	if !given["worker-key"] {
-		*workerKey = os.Getenv("WORKER_API_KEY")
+		*workerKey = envSecret("WORKER_API_KEY", "")
 	}
 	if !given["pool-key"] {
-		*poolKey = os.Getenv("RUNNER_POOL_KEY")
+		*poolKey = envSecret("RUNNER_POOL_KEY", "")
 	}
 	if !given["pool"] {
 		*pool = envOr("RUNNER_POOL", "")
