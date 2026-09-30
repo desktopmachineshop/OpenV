@@ -1978,7 +1978,7 @@
     },
     {
       "n": 39,
-      "title": "m1 leases again: the lease it holds, no second node",
+      "title": "m1 leases again: 200 and the lease it holds, no second node",
       "actor": "m1",
       "acting_in": "<w>",
       "route": "POST /api/v1/orgs/{id}/runner-session",
@@ -1989,7 +1989,7 @@
       "notes": [
         "the lease runs 60 minutes (expires_at less last_activity_at), and the runner goes at deadline, 15 minutes after last_activity_at (the idle window, the earlier of the two), which seconds_remaining counts down to"
       ],
-      "status": 201,
+      "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",

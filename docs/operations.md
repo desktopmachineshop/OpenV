@@ -58,6 +58,9 @@ CORS_ORIGIN=https://openv.example.com
 # Shared key agent workers use to authenticate with the API (replaces the
 # dev default "dev-worker-key"). Generate a long random string, e.g.:
 #   openssl rand -hex 32
+# The API registers it as the key "env-bootstrap" on the Runners tab of the
+# first account's personal workspace; revoking it there stops it, across
+# restarts, until you set a new value here.
 WORKER_API_KEY=generate-a-long-random-string
 ```
 

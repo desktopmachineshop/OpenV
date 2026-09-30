@@ -468,7 +468,9 @@ Every API request authenticates as one of four principals; only `/health`,
   present the deployment's `RUNNER_POOL_KEY` instead, which carries no
   workspace identity at all and reaches only the pool endpoints. The
   legacy `WORKER_API_KEY` env value is registered as the bootstrap org's
-  workspace key at startup and still accepted directly.
+  workspace key `env-bootstrap` at startup, and accepted directly only while
+  no key row holds it: revoked, that row refuses the value, however long the
+  environment keeps it, and a restart does not restore it.
 
 ### Authorization (`authz.go`)
 - **Platform admin** (`users.is_admin`, the first user) passes every check,

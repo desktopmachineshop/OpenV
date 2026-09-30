@@ -137,8 +137,14 @@ key like any other runner.
 
 A raw `WORKER_API_KEY` in the API server environment keeps old deployments
 working: at startup it is registered as a workspace key for the bootstrap
-org, and the middleware also accepts the raw env value directly (resolving it
-to the bootstrap org).
+org, named `env-bootstrap`, once a personal workspace exists to hold it, and
+until then the middleware accepts the raw env value directly (resolving it
+to the bootstrap org). Once a key row holds the value, the row decides:
+revoked on the Runners tab (`DELETE /orgs/{id}/worker-keys/{keyId}`), the
+value answers `401` `invalid token`, as any revoked key does, even while the
+environment still holds it. A restart with the same value leaves the key
+revoked, registers nothing and logs a warning; only a new value registers a
+new key.
 
 ## Authorization model
 
@@ -336,7 +342,7 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
 | GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and a `pool_load` band — `green` / `amber` / `red` / `unavailable`, never a count) | org member |
-| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner (409-free: an existing lease is returned; 503 when the pool is full) | org member |
+| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner: `201` with a new lease; the lease the caller already holds is returned with `200` and the same payload, rather than a second node or a `409`; `503` when the pool is full | org member |
 | POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
 | DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |
 | GET | `/api/v1/orgs/{id}/runner-pool` | Pool occupancy and the workspace's live leases | org admin |

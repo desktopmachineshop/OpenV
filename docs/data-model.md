@@ -211,7 +211,8 @@ Org-scoped runner credentials: `org_id`, `name`, `key_hash` (unique),
 `user_id` (NULL = shared workspace key; set = a member's **personal runner
 key**, one active per member), `revoked`, `last_used_at`. The legacy
 `WORKER_API_KEY` env value is registered as a workspace key for the
-bootstrap org at startup.
+bootstrap org at startup (`env-bootstrap`). A revoked row stays revoked:
+startup does not register the same value again, and the API refuses it.
 
 ### connector_pairings
 One-time Agent Connector pairing codes: `org_id`, `user_id`, `code_hash`
