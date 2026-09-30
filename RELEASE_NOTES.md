@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.15.1 — 2026-09-30
+
 ### Maintenance updates
 
 - **Runners open a run's repositories with the run's own access.** A runner
