@@ -188,10 +188,10 @@ The job judges a pull request with the **base's** copy of
 own copy), so a pull request's edits to the lists and rules take effect only
 once it merges: a pull request that drops a guard-code or protected-path
 entry is still judged by that entry. A step that needs a new exception, such
-as P5's import edges or S12b's class T rule for TypeScript the build erases,
-lands it in an earlier pull request. `X2B_CALL_SHAPE_CHANGES` is the one
-list the job reads from the pull request, since X2b fills it in its own.
-`make check` does the same with the merge base's copy.
+as S12b's class T rule for TypeScript the build erases, lands it in an
+earlier pull request. `X2B_CALL_SHAPE_CHANGES` is the one list the job reads
+from the pull request, since X2b fills it in its own. `make check` does the
+same with the merge base's copy.
 
 ### Goldens are regenerated only for a behavior change
 
