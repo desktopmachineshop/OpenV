@@ -151,7 +151,7 @@ type Repository interface {
 	// SetReleaseChannel writes only release_channel ("" returns the
 	// workspace to its plan's default).
 	SetReleaseChannel(id, channel string) error
-	// SetPlan writes only plan.
+	// SetPlan writes plan, and the override ChannelOverrideAfterMove calls for.
 	SetPlan(id, plan string) error
 	// SetStableRelease writes only stable_release: the stable release now
 	// turned on for the workspace.
@@ -262,8 +262,8 @@ type Service interface {
 	// SetPlan moves a workspace to another plan (REQ-154): a platform
 	// operator's act, since a plan decides limits, the release channel's
 	// default and, for the open-source plan, what is public. ErrInvalidPlan
-	// for a name PlanDefaults does not know. The channel override is kept;
-	// the resolved channel follows the new plan where the override is empty.
+	// for a name PlanDefaults does not know. The channel override follows
+	// ChannelOverrideAfterMove, so a move off a nightly-only plan keeps nightly.
 	// ErrBillingActive for a granted plan while a subscription is live.
 	SetPlan(id, plan string) (*Org, error)
 	// SetUpgradeWindow records when stable releases turn on for a company
@@ -484,7 +484,7 @@ func (s *DefaultService) SetPlan(id, plan string) (*Org, error) {
 	if err := s.repo.SetPlan(id, plan); err != nil {
 		return nil, err
 	}
-	org.BilledPlan = plan
+	org.ReleaseChannelOverride, org.BilledPlan = ChannelOverrideAfterMove(org.BilledPlan, plan, org.ReleaseChannelOverride), plan
 	org.UpdatedAt = time.Now()
 	org.ResolveReleaseChannel()
 	return org, nil

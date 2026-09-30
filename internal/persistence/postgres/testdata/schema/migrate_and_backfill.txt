@@ -695,7 +695,7 @@ table project_share_links rows 0
   column label text NOT NULL DEFAULT ''::text
   column created_by uuid
   column created_at timestamp without time zone NOT NULL DEFAULT now()
-  column expires_at timestamp without time zone
+  column expires_at timestamp with time zone
   column revoked_at timestamp without time zone
   constraint project_share_links_pkey PRIMARY KEY (id)
   constraint project_share_links_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -834,7 +834,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 50
+table schema_migrations rows 51
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1069,3 +1069,4 @@ ledger 0047 organizations_minutes_alert
 ledger 0048 agent_runs_claimed_by
 ledger 0049 test_results_history
 ledger 0050 timestamptz_client_times
+ledger 0051 timestamptz_share_link_expiry

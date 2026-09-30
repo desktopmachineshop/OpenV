@@ -1042,7 +1042,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Renamed\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 19>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Renamed\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 19>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1059,7 +1059,7 @@
         "created_at": "<time@step 6>",
         "updated_at": "<time@step 19>",
         "has_logo": false,
-        "release_channel": "stable",
+        "release_channel": "nightly",
         "release_channel_locked": false,
         "stable_release": "",
         "upgrade_day": 0,

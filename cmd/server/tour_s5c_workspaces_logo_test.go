@@ -34,8 +34,10 @@ import (
 // stable-release preview the single plan refuses; the limits under the
 // alpha terms, for a shared and a personal workspace; the plan a platform
 // admin sets (business), each refusal of it, and what business changes:
-// the stable channel, the channel and upgrade window its admin may now
-// choose, and the preview a member turns on for itself alone, which a
+// the nightly channel the move keeps, the channel (stable, chosen) and
+// upgrade window its admin may now choose, the stable channel's gates with
+// no stable release turned on, all off, and the preview a member turns on
+// for itself alone, which a
 // platform admin that is no member is refused; the logo in every raster
 // format, each replacing the last and its file, each refusal (an image of a
 // type other than the one declared among them), removal, and the uploads
@@ -54,11 +56,12 @@ import (
 // administers W; member is a plain member of W, for the admin-only refusals;
 // outsider belongs to no workspace but its own, for the non-member refusals.
 //
-// Pinned as it is, a bug whose fix is a release-noted bug-fix pull request
-// of its own that regenerates this golden (R7): the platform admin's move to
-// business puts the workspace on the stable channel with no stable release,
-// so every gate is off (the channel and the empty stable release show it,
-// and the all-off map is a pattern that a gate on would fail).
+// Fixed under R7 by a release-noted bug-fix pull request of its own, which
+// regenerated this golden: the platform admin's move to business put the
+// workspace on the stable channel with no stable release, so every gate
+// was off; the move now keeps nightly, as a checkout does (#379 question
+// 19, REQ-154), and the admin's own choice of stable after it is what
+// shuts the gates.
 //
 // Nondeterminism: ids, sessions and minted times (the generic tokens); a
 // slug's last 8 hex digits (the area's pattern); the feature map, which
@@ -244,9 +247,8 @@ func workspacesLogoTour(tr *tour) {
 	// The plan, which only a platform admin sets (REQ-154).
 	tr.step("the platform admin moves W to business: the workspace, with an explicit Content-Type", admin,
 		"PUT /api/v1/orgs/{id}/plan", at("id", w), jsonBody(`{"plan":"business"}`),
-		note("the channel resolves to stable, business's default, with no stable release turned on, so every "+
-			"gate is off until one is (the billing path writes a nightly override instead; the all-off map below is "+
-			"a pattern that a gate on would fail)"))
+		note("a move from a nightly-only plan onto a channel-choosing one keeps nightly, as the billing path does: "+
+			"a nightly override is written where W has none, so the features it uses stay on"))
 	tr.step("a plan that does not exist: the six plans listed", admin, "PUT /api/v1/orgs/{id}/plan", at("id", w),
 		jsonBody(`{"plan":"gold"}`))
 	tr.step("a workspace that does not exist", admin, "PUT /api/v1/orgs/{id}/plan", at("id", "{{phantom}}"),
@@ -254,7 +256,7 @@ func workspacesLogoTour(tr *tour) {
 	tr.step("a plan with a malformed body", admin, "PUT /api/v1/orgs/{id}/plan", at("id", w), jsonBody(`{`))
 	tr.step("the workspace's own admin sets its plan: platform admins only", o, "PUT /api/v1/orgs/{id}/plan", at("id", w),
 		jsonBody(`{"plan":"enterprise"}`))
-	tr.step("W on business, read back: stable, and the channel no longer locked", o, "GET /api/v1/orgs/{id}", at("id", w))
+	tr.step("W on business, read back: nightly, and the channel no longer locked", o, "GET /api/v1/orgs/{id}", at("id", w))
 	tr.step("W's limits on business, still under the alpha terms", o, "GET /api/v1/orgs/{id}/limits", at("id", w))
 
 	// What business lets its admin choose (REQ-136, REQ-138), and the

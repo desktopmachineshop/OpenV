@@ -196,6 +196,61 @@ func TestFirstMoveOntoAChoosingPlanPinsNightly(t *testing.T) {
 	}
 }
 
+// A platform admin's plan move takes the same rule as the billing path
+// (#379 question 19, REQ-154): onto a channel-choosing plan from a
+// nightly-only one, a workspace with no override gets nightly written, in
+// the UPDATE that moves it; it resolved to stable, with every gate shut.
+func TestSetPlanOntoAChoosingPlanPinsNightly(t *testing.T) {
+	f := newClaimFixture(t)
+	repo := NewOrgRepository(f.db)
+	channel := func(id string) (override, effective string) {
+		t.Helper()
+		o, err := repo.FindOrgByID(id)
+		if err != nil || o == nil {
+			t.Fatalf("read %s: %v", id, err)
+		}
+		return o.ReleaseChannelOverride, o.ReleaseChannel
+	}
+
+	// Single → Business with no override: nightly, as a checkout writes.
+	id := seedBillingOrg(t, f, orgs.PlanSingle)
+	if err := repo.SetPlan(id, orgs.PlanBusiness); err != nil {
+		t.Fatal(err)
+	}
+	if o, e := channel(id); o != orgs.ChannelNightly || e != orgs.ChannelNightly {
+		t.Fatalf("channel after the admin's move: override=%q effective=%q, want nightly", o, e)
+	}
+	// An admin's own choice of stable survives a later move between
+	// choosing plans.
+	if err := repo.SetReleaseChannel(id, orgs.ChannelStable); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SetPlan(id, orgs.PlanEnterprise); err != nil {
+		t.Fatal(err)
+	}
+	if o, _ := channel(id); o != orgs.ChannelStable {
+		t.Fatalf("a later move rewrote the admin's choice: %q", o)
+	}
+
+	// Single → Business Lite is nightly-only to nightly-only: no override.
+	lite := seedBillingOrg(t, f, orgs.PlanSingle)
+	if err := repo.SetPlan(lite, orgs.PlanBusinessLite); err != nil {
+		t.Fatal(err)
+	}
+	if o, _ := channel(lite); o != "" {
+		t.Fatalf("a nightly-only plan got an override: %q", o)
+	}
+	// Business → Enterprise moves between choosing plans: the stable
+	// default stays, as the workspace was already on it.
+	company := seedBillingOrg(t, f, orgs.PlanBusiness)
+	if err := repo.SetPlan(company, orgs.PlanEnterprise); err != nil {
+		t.Fatal(err)
+	}
+	if o, e := channel(company); o != "" || e != orgs.ChannelStable {
+		t.Fatalf("a move between choosing plans: override=%q effective=%q, want none and stable", o, e)
+	}
+}
+
 func TestUpdateOrgWritesOnlyTheName(t *testing.T) {
 	f := newClaimFixture(t)
 	repo := NewOrgRepository(f.db)

@@ -43,10 +43,11 @@ func TestTourS5aShareLinksPublic(t *testing.T) {
 
 // shareLinksPublicExpires is a reviewer link's expiry as the tour sends it,
 // with an offset; shareLinksPublicExpiresRead is what the database gives
-// back (a TIMESTAMP column drops the offset and keeps the wall time).
+// back: the same instant in UTC (a TIMESTAMPTZ since migration 0051; the
+// TIMESTAMP column before it dropped the offset and kept the wall time).
 const (
 	shareLinksPublicExpires     = "2099-01-02T03:04:05+02:00"
-	shareLinksPublicExpiresRead = "2099-01-02T03:04:05Z"
+	shareLinksPublicExpiresRead = "2099-01-02T01:04:05Z"
 	shareLinksPublicExpired     = "2001-02-03T04:05:06Z"
 )
 
@@ -58,7 +59,7 @@ func shareLinksPublicTour(tr *tour) {
 	reviewer := tr.register("reviewer", "Tour Reviewer",
 		"an ordinary account in a workspace of its own; takes up the reviewer link")
 	tr.keep(shareLinksPublicExpires, "a reviewer link's expiry as the tour sends it, with an offset")
-	tr.keep(shareLinksPublicExpiresRead, "the same expiry read back: the TIMESTAMP column drops the offset and keeps the wall time")
+	tr.keep(shareLinksPublicExpiresRead, "the same expiry read back: the same instant, in UTC")
 	tr.keep(shareLinksPublicExpired, "the expiry of a link minted already expired")
 	tr.keep(shareLinksPublicUnknown, "a well-formed share token that no link has")
 
@@ -109,7 +110,7 @@ func shareLinksPublicTour(tr *tour) {
 	review := tr.step("mint a reviewer link with an expiry that carries an offset", owner,
 		"POST /api/v1/projects/{id}/share-links", at("id", "{{shared_project}}"),
 		jsonBody(`{"role":"reviewer","expires_at":"`+shareLinksPublicExpires+`"}`),
-		note("the answer echoes the expiry as sent, offset and all; the list below reads the stored wall time back as UTC"))
+		note("the answer echoes the expiry as sent, offset and all; the list below reads the same instant back in UTC"))
 	shareLinksPublicMinted(review, "reviewer")
 	expired := tr.step("mint a public link that has already expired", owner, "POST /api/v1/projects/{id}/share-links",
 		at("id", "{{shared_project}}"), jsonBody(`{"role":"public","label":"Expired","expires_at":"`+shareLinksPublicExpired+`"}`),

@@ -44,8 +44,8 @@ import (
 // reached; the platform admin's plan change to business, where a team, the
 // usage rollup and a project's grant to the team pass, and back to single,
 // where the grant is refused again and what was granted stays readable (the
-// plan change's answer also moves W to the stable channel and back, pinned
-// as it is); and a workspace over
+// plan change's answer keeps W on nightly, as a checkout does, since the
+// R7 fix for #379's question 19 that regenerated it); and a workspace over
 // its plan (three members and an invitation on business, moved back to
 // single): read-only, its limits saying which limit it is past, a rename
 // refused with plan_read_only, and so is a runner lease, while revoking the
