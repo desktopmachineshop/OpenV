@@ -106,7 +106,27 @@ injected into the container only and never stored by the platform.
 
 Admins can also mint shared **worker keys** (Workspace settings → Runners) for
 self-managed always-on workers, e.g. a machine in your shop that serves the
-whole workspace.
+whole workspace. Give the key to the worker in its environment, as
+\`WORKER_API_KEY\`, not on its command line, where every user of the machine
+can see it.
+
+On a deployment you run yourself, the server's own key (\`WORKER_API_KEY\` in
+the server's settings) is listed there as **env-bootstrap** once the server
+has registered it. Revoking it stops it at once, even while the server still
+has that value, and it stays revoked across restarts until the operator sets
+a new one.
+
+### What an agent can read on its runner
+
+An agent runs as the same operating-system user as the runner it runs on, so
+it can read whatever that user can: on a personal runner that includes your
+files and the Agent Connector's key file, and on Windows and macOS the
+runner's own environment, where its key is. The runner never hands its keys
+to the programs it starts, and on Linux it also stops them reading its
+environment, but it cannot keep an agent from your user's own files. For
+agents you don't fully trust, use a **cloud runner** or the **hosted
+runner**, which run on Linux with nothing of yours on them, or run the worker
+as a separate user on your machine.
 
 ## How runs are routed
 

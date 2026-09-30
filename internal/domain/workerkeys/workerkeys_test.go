@@ -1,6 +1,7 @@
 package workerkeys
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -78,11 +79,56 @@ func TestResolveRejectsRevokedAndUnknown(t *testing.T) {
 	if err := s.Revoke("org-a", key.ID); err != nil {
 		t.Fatalf("Revoke failed: %v", err)
 	}
-	if resolved, _ := s.Resolve(plaintext); resolved.OrgID != "" {
-		t.Errorf("revoked key resolved to org %q, want none", resolved.OrgID)
+	if resolved, err := s.Resolve(plaintext); resolved.OrgID != "" || !errors.Is(err, ErrRevoked) {
+		t.Errorf("revoked key: Resolve = (%+v, %v), want no org and ErrRevoked", resolved, err)
 	}
-	if resolved, _ := s.Resolve("not-a-key"); resolved.OrgID != "" {
-		t.Errorf("unknown key resolved to org %q, want none", resolved.OrgID)
+	if resolved, err := s.Resolve("not-a-key"); resolved.OrgID != "" || err != nil {
+		t.Errorf("unknown key: Resolve = (%+v, %v), want no org and no error", resolved, err)
+	}
+}
+
+// The server's own WORKER_API_KEY, registered at boot as the env-bootstrap
+// key, stays revoked once revoked (issue #379's question 16): a boot with the
+// same value neither restores it nor mints a second row for it, and says so;
+// a new value registers a new key.
+func TestEnsureBootstrapKeyKeepsARevokedKeyRevoked(t *testing.T) {
+	repo := newFakeKeyRepo()
+	s := NewDefaultService(repo)
+	if err := s.EnsureBootstrapKey("org-a", "env-value", "env-bootstrap"); err != nil {
+		t.Fatalf("first registration: %v", err)
+	}
+	if err := s.EnsureBootstrapKey("org-a", "env-value", "env-bootstrap"); err != nil {
+		t.Fatalf("a second boot with the same value: %v, want the key left as it is", err)
+	}
+	keys, _ := s.List("org-a")
+	if len(keys) != 1 {
+		t.Fatalf("after two boots: %d keys, want 1", len(keys))
+	}
+	if err := s.Revoke("org-a", keys[0].ID); err != nil {
+		t.Fatal(err)
+	}
+
+	err := s.EnsureBootstrapKey("org-a", "env-value", "env-bootstrap")
+	if !errors.Is(err, ErrRevoked) {
+		t.Errorf("a boot with the revoked value: %v, want ErrRevoked", err)
+	}
+	keys, _ = s.List("org-a")
+	if len(keys) != 1 || !keys[0].Revoked {
+		t.Errorf("after a boot with the revoked value: %d keys, the first revoked %v; want the one, still revoked",
+			len(keys), len(keys) > 0 && keys[0].Revoked)
+	}
+	if _, err := s.Resolve("env-value"); !errors.Is(err, ErrRevoked) {
+		t.Errorf("the revoked value resolves with %v, want ErrRevoked", err)
+	}
+
+	if err := s.EnsureBootstrapKey("org-a", "new-env-value", "env-bootstrap"); err != nil {
+		t.Fatalf("a boot with a new value: %v", err)
+	}
+	if resolved, err := s.Resolve("new-env-value"); err != nil || resolved.OrgID != "org-a" {
+		t.Errorf("the new value: Resolve = (%+v, %v), want org-a", resolved, err)
+	}
+	if _, err := s.Resolve("env-value"); !errors.Is(err, ErrRevoked) {
+		t.Errorf("the old value after the new one: %v, want ErrRevoked still", err)
 	}
 }
 

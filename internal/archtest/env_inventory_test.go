@@ -87,7 +87,7 @@ var envExemptions = []envExemption{
 		reason: "read on every request (the client address, an upload or evidence size cap, a push endpoint, a report's attachment path), so a changed value applies without a restart"},
 	{id: "runner-child-environ", kind: "environ",
 		at:     []string{"internal/runner:childEnv"},
-		reason: "every process the runner starts (a provider CLI's run, sign-in or version probe, and git) inherits the runner's environment, less the runner's own WORKER_API_KEY and RUNNER_POOL_KEY, with a run's variables layered on top, which is how a provider CLI finds its own settings"},
+		reason: "every process the runner starts (a provider CLI's run, sign-in or version probe, and git) inherits the runner's environment, less the OpenV credentials its host may hold (the runner's own WORKER_API_KEY and RUNNER_POOL_KEY, and OPENV_API_TOKEN, OPENV_EMAIL and OPENV_PASSWORD), with a run's variables layered on top, which is how a provider CLI finds its own settings"},
 	{id: "runner-gemini-auth-probe", kind: "placement",
 		names: []string{"CLOUD_SHELL", "GEMINI_API_KEY", "GEMINI_CLI_USE_COMPUTE_ADC", "GOOGLE_API_KEY", "GOOGLE_GEMINI_BASE_URL",
 			"GOOGLE_GENAI_USE_GCA", "GOOGLE_GENAI_USE_VERTEXAI"},
