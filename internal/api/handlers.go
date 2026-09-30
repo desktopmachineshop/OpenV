@@ -1603,30 +1603,15 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 
 // CreateProject creates a new project
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	// A run acts only inside its own project (OpenV REQ-42): it creates none,
-	// as it could otherwise set up a project that no one owns and that no
-	// proposal review reaches.
-	if CurrentRun(r) != nil {
-		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
+	// A person, in the workspace it acts in, past its plan gate and project
+	// maximum (requireProjectCreate): a run or a runner key creates none.
+	orgID, ok := h.requireProjectCreate(w, r)
+	if !ok {
 		return
 	}
 	var req projects.CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	orgID := ActiveOrg(r)
-	if orgID == "" {
-		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
-		return
-	}
-
-	if err := h.checkProjectCount(orgID); err != nil {
-		if h.writeLimitError(w, err) {
-			return
-		}
-		respondInternal(w, r, "failed to check the project limit", err)
 		return
 	}
 
@@ -1667,8 +1652,10 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListProjects lists the projects visible to the caller within the active
-// workspace: all of the org's projects for platform admins and org admins,
-// membership-filtered otherwise.
+// workspace: all of the org's projects for platform admins, org admins and
+// workspace runner keys, membership-filtered otherwise (a personal runner key
+// by its holder's), and to an agent run's token its own project alone, the
+// one project it acts in (requireProjectRole).
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	// Scope to the active workspace in SQL, and fail closed: a caller whose
 	// active org could not be resolved (empty) sees no projects rather than
@@ -1687,16 +1674,33 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user := CurrentUser(r); user != nil && !user.IsAdmin && h.memberService != nil {
+	if run := CurrentRun(r); run != nil {
+		own := make([]*projects.Project, 0, 1)
+		for _, p := range projectList {
+			if run.ProjectID != nil && p.ID == *run.ProjectID {
+				own = append(own, p)
+			}
+		}
+		projectList = own
+	}
+
+	// A member sees the projects they have a role in, and so does their
+	// personal runner key, which is its holder acting (REQ-16); a platform
+	// admin's session and a workspace key (REQ-42) see them all.
+	person := WorkerUser(r)
+	if user := CurrentUser(r); user != nil && !user.IsAdmin {
+		person = user.ID
+	}
+	if person != "" && h.memberService != nil {
 		// Org admins of the active workspace see all of its projects.
 		isOrgAdmin := false
 		if h.orgService != nil {
-			if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
+			if role, err := h.orgService.RoleInOrg(activeOrg, person); err == nil && role == orgs.RoleAdmin {
 				isOrgAdmin = true
 			}
 		}
 		if !isOrgAdmin {
-			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+			ids, err := h.memberService.ProjectIDsForUser(person)
 			if err != nil {
 				respondInternal(w, r, "failed to list projects", err)
 				return
@@ -1867,19 +1871,11 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 
 // ImportProject imports project data from uploaded JSON file and creates a new project
 func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
-	// A run creates no project (CreateProject).
-	if CurrentRun(r) != nil {
-		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
-		return
-	}
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	orgID := ActiveOrg(r)
-	if orgID == "" {
-		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
+	// A project create like any other (requireProjectCreate): the import
+	// counts toward the project maximum, and its route's alwaysWritable
+	// passes the read-only gate (REQ-177).
+	orgID, ok := h.requireProjectCreate(w, r)
+	if !ok {
 		return
 	}
 
@@ -2117,19 +2113,9 @@ type createProjectFromTemplateRequest struct {
 func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Request) {
 	templateID := mux.Vars(r)["id"]
 
-	// A run creates no project (CreateProject).
-	if CurrentRun(r) != nil {
-		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
-		return
-	}
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	orgID := ActiveOrg(r)
-	if orgID == "" {
-		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
+	// A project create like any other (requireProjectCreate).
+	orgID, ok := h.requireProjectCreate(w, r)
+	if !ok {
 		return
 	}
 

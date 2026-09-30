@@ -22,8 +22,10 @@ After pairing, the "Open connector" button in OpenV (or double-clicking
 openv-connector.exe) starts your runner. Close the window to stop it.
 
 Your AI subscription sign-ins (claude / codex / gemini CLIs) stay on this
-machine — OpenV never sees them. The runner only picks up agent runs that
-you launched.
+machine — OpenV never sees them. The runner picks up the agent runs you
+launched, never a teammate's, and ownerless work (automations, board
+triggers) only where you could see it yourself: in a project you have a
+role in, or anywhere in the workspace if you are its admin.
 
 Files (after first run)
 -----------------------

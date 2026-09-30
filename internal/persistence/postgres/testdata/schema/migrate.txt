@@ -86,6 +86,7 @@ table agent_runs rows 0
   column agent_model character varying NOT NULL DEFAULT ''::character varying
   column agent_effort character varying NOT NULL DEFAULT ''::character varying
   column partial_text text NOT NULL DEFAULT ''::text
+  column claimed_by uuid
   constraint agent_runs_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
   constraint agent_runs_pkey PRIMARY KEY (id)
   index agent_runs_pkey CREATE UNIQUE INDEX agent_runs_pkey ON public.agent_runs USING btree (id)
@@ -833,7 +834,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 47
+table schema_migrations rows 48
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1065,3 +1066,4 @@ ledger 0044 attachment_version_restored_from
 ledger 0045 organizations_billing
 ledger 0046 users_billing_trial
 ledger 0047 organizations_minutes_alert
+ledger 0048 agent_runs_claimed_by

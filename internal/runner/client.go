@@ -56,6 +56,12 @@ type ClaimResponse struct {
 }
 
 func (c *Client) do(client *http.Client, method, path string, body interface{}) (*http.Response, error) {
+	return c.doAs(client, c.workerKey, method, path, body)
+}
+
+// doAs is do with another credential than the worker key: a claimed run's
+// token, for the reads that run acts in.
+func (c *Client) doAs(client *http.Client, credential, method, path string, body interface{}) (*http.Response, error) {
 	var reader io.Reader
 	if body != nil {
 		buf, err := json.Marshal(body)
@@ -68,7 +74,7 @@ func (c *Client) do(client *http.Client, method, path string, body interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.workerKey)
+	req.Header.Set("Authorization", "Bearer "+credential)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -302,9 +308,14 @@ func (c *Client) GetLoginFull(id string) (*providers.LoginRequest, error) {
 	return &login, nil
 }
 
-// ListRepoConnections returns a project's repo connections.
-func (c *Client) ListRepoConnections(projectID string) ([]*repoconns.RepoConnection, error) {
-	resp, err := c.do(c.http, "GET", "/api/v1/projects/"+projectID+"/repo-connections", nil)
+// ListRepoConnections returns the repo connections of a claimed run's
+// project, read with the run's own token rather than the worker key: the
+// token reads its own project's connections whoever's runner holds the run,
+// where a member's personal key reads only the projects its member can, and
+// the answer carries the local paths of the member whose personal runner
+// claimed the run.
+func (c *Client) ListRepoConnections(projectID, runToken string) ([]*repoconns.RepoConnection, error) {
+	resp, err := c.doAs(c.http, runToken, "GET", "/api/v1/projects/"+projectID+"/repo-connections", nil)
 	if err != nil {
 		return nil, err
 	}

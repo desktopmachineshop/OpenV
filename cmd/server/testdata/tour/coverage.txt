@@ -123,7 +123,7 @@ GET /api/v1/orgs/{id}/teams: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/usage: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/worker-keys: s5c, s5d, s5e; 2xx or 3xx in s5c, s5d, s5e
 GET /api/v1/orgs/{id}/worker-status: s5c, s5e; 2xx or 3xx in s5c, s5e
-GET /api/v1/projects: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d, s5e
 GET /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/ai-map: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/baselines: s5a, s5e; 2xx or 3xx in s5a, s5e
@@ -222,7 +222,7 @@ POST /api/v1/auth/verify-email: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/verify-email/change: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/verify-email/resend: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/automations: s5d, s5e; 2xx or 3xx in s5d
-POST /api/v1/automations/{id}/run-now: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/automations/{id}/run-now: s5d, s5e; 2xx or 3xx in s5d, s5e
 POST /api/v1/chatter: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/crews: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/crews/import: s5d, s5e; 2xx or 3xx in s5d

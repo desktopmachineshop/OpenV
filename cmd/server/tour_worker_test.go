@@ -82,8 +82,8 @@ func (tr *tour) workerKey(name, workspace, about string) *tourActor {
 // to (setup, as the member: POST /api/v1/orgs/{id}/my-runner-key), registers
 // its record id as name.key, and returns the key as a bearer actor, its
 // credential registered as name.token. A personal key claims only its
-// member's runs and ownerless ones, and marks the member's runner online for
-// 30 s after each use.
+// member's runs and the ownerless ones its member could see, and marks the
+// member's runner online for 30 s after each use.
 func (tr *tour) runnerKey(name string, member *tourActor, workspace, about string) *tourActor {
 	tr.t.Helper()
 	res := tr.setup("the runner key of "+member.name, member, "POST /api/v1/orgs/{id}/my-runner-key",

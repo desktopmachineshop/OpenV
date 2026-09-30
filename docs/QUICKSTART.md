@@ -86,9 +86,11 @@ Connector**:
 4. Sign your vendor CLIs in from **user settings → Agent sign-ins** (or run
    `claude login` etc. in a terminal yourself).
 
-Your personal runner only claims runs **you** launched, using your own CLI
-subscription on your own machine. See `docs/agents.md` for the manual
-`agentd` setup, workspace worker keys, and the always-on hosted runner tier.
+Your personal runner claims the runs **you** launched, never a teammate's,
+and ownerless work (automations, board triggers) only where you could see it
+yourself, using your own CLI subscription on your own machine. See
+`docs/agents.md` for the manual `agentd` setup, workspace worker keys, and the
+always-on hosted runner tier.
 
 ## Using the API directly
 

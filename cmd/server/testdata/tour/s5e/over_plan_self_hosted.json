@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5e/over_plan_self_hosted.json",
   "test": "TestTourS5eOverPlanSelfHosted",
-  "about": "The over-plan pass on a self-hosted deployment with OPENV_LIMITS={\"max_projects\":7}: seats unlimited and every flag on (the hosted claim passes), billing unavailable, Q13 at the deployment's seven projects with the OPENV_LIMITS remedy, the read-only workspace's refusals (their remedy OPENV_LIMITS too), export and import (REQ-113), and the always-writable routes.",
+  "about": "The over-plan pass on a self-hosted deployment with OPENV_LIMITS={\"max_projects\":7}: seats unlimited and every flag on (the hosted claim passes), billing unavailable, every project create refused at the deployment's seven projects with the OPENV_LIMITS remedy, the read-only workspace's refusals (their remedy OPENV_LIMITS too), export and import (REQ-113), and the always-writable routes.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5eOverPlanSelfHosted$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -294,7 +294,7 @@
     },
     {
       "n": 4,
-      "title": "Q13: an eighth project is refused limit_reached, the remedy OPENV_LIMITS",
+      "title": "an eighth project is refused limit_reached, the remedy OPENV_LIMITS",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/projects",
@@ -333,7 +333,7 @@
     },
     {
       "n": 5,
-      "title": "Q13: a project from the default template is not counted: 201, the eighth",
+      "title": "a project from the default template counts too: refused limit_reached",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/templates/{id}/projects",
@@ -345,32 +345,31 @@
         ],
         "body": "{\"name\":\"Tour Over past the cap\"}"
       },
-      "status": 201,
+      "status": 403,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 462,
       "kind": "json",
       "body": [
-        "{\"id\":\"<past1>\",\"org_id\":\"<w>\",\"name\":\"Tour Over past the cap\",\"description\":\"Starter structure with personas, user needs, derived requirements, and validating test cases.\",\"agent_auth\":\"user-account\",\"parent_project_id\":\"\",\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 5>\"}"
+        "{\"allowed\":7,\"code\":\"limit_reached\",\"error\":\"Projects: this workspace allows 7 and already has 7. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"label\":\"Projects\",\"limit\":\"max_projects\",\"remedy\":\"This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"used\":7}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<past1>",
-        "org_id": "<w>",
-        "name": "Tour Over past the cap",
-        "description": "Starter structure with personas, user needs, derived requirements, and validating test cases.",
-        "agent_auth": "user-account",
-        "parent_project_id": "",
-        "created_at": "<time@step 5>",
-        "updated_at": "<time@step 5>"
+        "allowed": 7,
+        "code": "limit_reached",
+        "error": "Projects: this workspace allows 7 and already has 7. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "label": "Projects",
+        "limit": "max_projects",
+        "remedy": "This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "used": 7
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 6,
-      "title": "Q13: an import is not counted either: 201, the ninth",
+      "title": "an import counts too: refused limit_reached",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/projects/import",
@@ -382,20 +381,24 @@
         ],
         "body": "{\"project_name\":\"Tour Over imported past the cap\"}"
       },
-      "status": 201,
+      "status": 403,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 115,
+      "content_length": 462,
       "kind": "json",
       "body": [
-        "{\"message\":\"Project imported successfully\",\"project_id\":\"<past2>\",\"status\":\"success\"}"
+        "{\"allowed\":7,\"code\":\"limit_reached\",\"error\":\"Projects: this workspace allows 7 and already has 7. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"label\":\"Projects\",\"limit\":\"max_projects\",\"remedy\":\"This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"used\":7}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "message": "Project imported successfully",
-        "project_id": "<past2>",
-        "status": "success"
+        "allowed": 7,
+        "code": "limit_reached",
+        "error": "Projects: this workspace allows 7 and already has 7. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "label": "Projects",
+        "limit": "max_projects",
+        "remedy": "This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "used": 7
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -410,6 +413,9 @@
         "method": "GET",
         "path": "/api/v1/orgs/<w>/limits"
       },
+      "notes": [
+        "<past1> and <past2>, two projects past the seven, were written to the database just before (no setup request): what a deployment holds whose operator lowered OPENV_LIMITS below a workspace's projects, since no route creates a project past the maximum"
+      ],
       "status": 200,
       "content_type": "application/json",
       "headers": [],
@@ -689,7 +695,7 @@
     },
     {
       "n": 12,
-      "title": "Q13: a new project on the read-only workspace: limit_reached, the count's refusal",
+      "title": "403 plan_read_only, its remedy OPENV_LIMITS: a new project, the gate before the count",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/projects",
@@ -705,27 +711,26 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 462,
+      "content_length": 930,
       "kind": "json",
       "body": [
-        "{\"allowed\":7,\"code\":\"limit_reached\",\"error\":\"Projects: this workspace allows 7 and already has 9. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"label\":\"Projects\",\"limit\":\"max_projects\",\"remedy\":\"This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"used\":9}"
+        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "allowed": 7,
-        "code": "limit_reached",
-        "error": "Projects: this workspace allows 7 and already has 9. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
-        "label": "Projects",
-        "limit": "max_projects",
-        "remedy": "This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
-        "used": 9
+        "code": "plan_read_only",
+        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
+        "over": [
+          "max_projects"
+        ],
+        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 13,
-      "title": "a project from the default template on the read-only workspace: 201, no guard, no gate, no count",
+      "title": "403 plan_read_only, its remedy OPENV_LIMITS: a project from the default template",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/templates/{id}/projects",
@@ -737,25 +742,23 @@
         ],
         "body": "{\"name\":\"Tour Over from the template\"}"
       },
-      "status": 201,
+      "status": 403,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 930,
       "kind": "json",
       "body": [
-        "{\"id\":\"<past3>\",\"org_id\":\"<w>\",\"name\":\"Tour Over from the template\",\"description\":\"Starter structure with personas, user needs, derived requirements, and validating test cases.\",\"agent_auth\":\"user-account\",\"parent_project_id\":\"\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}"
+        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<past3>",
-        "org_id": "<w>",
-        "name": "Tour Over from the template",
-        "description": "Starter structure with personas, user needs, derived requirements, and validating test cases.",
-        "agent_auth": "user-account",
-        "parent_project_id": "",
-        "created_at": "<time@step 13>",
-        "updated_at": "<time@step 13>"
+        "code": "plan_read_only",
+        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
+        "over": [
+          "max_projects"
+        ],
+        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1505,7 +1508,7 @@
     },
     {
       "n": 18,
-      "title": "always writable: import P's JSON export into W",
+      "title": "always writable, and counted: import P's JSON export into W, refused limit_reached",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/projects/import",
@@ -1517,27 +1520,31 @@
         ],
         "body": "(what step 14 answered, byte for byte)"
       },
-      "status": 201,
+      "status": 403,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 115,
+      "content_length": 462,
       "kind": "json",
       "body": [
-        "{\"message\":\"Project imported successfully\",\"project_id\":\"<past4>\",\"status\":\"success\"}"
+        "{\"allowed\":7,\"code\":\"limit_reached\",\"error\":\"Projects: this workspace allows 7 and already has 9. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"label\":\"Projects\",\"limit\":\"max_projects\",\"remedy\":\"This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"used\":9}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "message": "Project imported successfully",
-        "project_id": "<past4>",
-        "status": "success"
+        "allowed": 7,
+        "code": "limit_reached",
+        "error": "Projects: this workspace allows 7 and already has 9. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "label": "Projects",
+        "limit": "max_projects",
+        "remedy": "This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "used": 9
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 19,
-      "title": "always writable: import P's ReqIF export into W",
+      "title": "always writable, and counted: import P's ReqIF export into W, refused limit_reached",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/projects/import",
@@ -1550,20 +1557,24 @@
         ],
         "body": "(what step 15 answered, byte for byte)"
       },
-      "status": 201,
+      "status": 403,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 115,
+      "content_length": 462,
       "kind": "json",
       "body": [
-        "{\"message\":\"Project imported successfully\",\"project_id\":\"<past5>\",\"status\":\"success\"}"
+        "{\"allowed\":7,\"code\":\"limit_reached\",\"error\":\"Projects: this workspace allows 7 and already has 9. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"label\":\"Projects\",\"limit\":\"max_projects\",\"remedy\":\"This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.\",\"used\":9}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "message": "Project imported successfully",
-        "project_id": "<past5>",
-        "status": "success"
+        "allowed": 7,
+        "code": "limit_reached",
+        "error": "Projects: this workspace allows 7 and already has 9. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "label": "Projects",
+        "limit": "max_projects",
+        "remedy": "This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",
+        "used": 9
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1761,7 +1772,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"org_id\":\"<w>\",\"plan\":\"self_host\",\"entitled_plan\":\"self_host\",\"plan_status\":\"none\",\"grandfathered\":false,\"self_hosted\":true,\"limits\":[{\"key\":\"max_members\",\"label\":\"Workspace members\",\"description\":\"How many people can be in this workspace. Pending invitations count towards it.\",\"unit\":\"count\",\"limit\":0,\"unlimited\":true,\"used\":2,\"kind\":\"count\"},{\"key\":\"max_projects\",\"label\":\"Projects\",\"description\":\"How many projects this workspace can hold.\",\"unit\":\"count\",\"limit\":7,\"unlimited\":false,\"used\":12,\"kind\":\"count\"},{\"key\":\"max_shared_workspaces\",\"label\":\"Shared workspaces\",\"description\":\"How many shared workspaces you can create. Your personal workspace is never counted.\",\"unit\":\"count\",\"limit\":0,\"unlimited\":true,\"used\":1,\"kind\":\"count\"},{\"key\":\"evidence_storage_mb\",\"label\":\"Test evidence storage\",\"description\":\"Total size of the test evidence files this workspace has uploaded.\",\"unit\":\"mb\",\"limit\":0,\"unlimited\":true,\"used\":0,\"kind\":\"resource\"},{\"key\":\"max_upload_mb\",\"label\":\"Largest figure\",\"description\":\"The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model.\",\"unit\":\"mb\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"hosted_runner_minutes_month\",\"label\":\"Cloud runner minutes this month\",\"description\":\"How many minutes of leased cloud runner this workspace can use in a calendar month. Agents on your own machine through the Agent Connector are never counted.\",\"unit\":\"minutes\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_session_minutes\",\"label\":\"Cloud runner lease\",\"description\":\"How long a leased cloud runner lasts before it is reclaimed.\",\"unit\":\"minutes\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_session_idle_minutes\",\"label\":\"Cloud runner idle window\",\"description\":\"How long a leased cloud runner may sit unused before it is reclaimed.\",\"unit\":\"minutes\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_memory_mb\",\"label\":\"Hosted runner memory\",\"description\":\"Memory available to this workspace's always-on hosted runner.\",\"unit\":\"mb\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_cpus\",\"label\":\"Hosted runner CPUs\",\"description\":\"CPU available to this workspace's always-on hosted runner.\",\"unit\":\"cpus\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"hosted_automation\",\"label\":\"Always-on hosted agents\",\"description\":\"An always-on hosted runner on OpenV's hardware, so cron and event automations run while nobody is signed in. Agents on your own machine through the Agent Connector never depend on this.\",\"unit\":\"\",\"limit\":0,\"unlimited\":true,\"kind\":\"flag\",\"included\":true},{\"key\":\"teams\",\"label\":\"Teams and per-project access\",\"description\":\"People-teams and per-project access grants, so a company can decide who works on what.\",\"unit\":\"\",\"limit\":0,\"unlimited\":true,\"kind\":\"flag\",\"included\":true},{\"key\":\"workspace_budget\",\"label\":\"Workspace AI budget\",\"description\":\"A workspace-wide spend rollup and monthly budget. Your own runs and their cost are always yours to see.\",\"unit\":\"\",\"limit\":0,\"unlimited\":true,\"kind\":\"flag\",\"included\":true}],\"read_only\":true,\"over_plan\":[\"max_projects\"]}"
+        "{\"org_id\":\"<w>\",\"plan\":\"self_host\",\"entitled_plan\":\"self_host\",\"plan_status\":\"none\",\"grandfathered\":false,\"self_hosted\":true,\"limits\":[{\"key\":\"max_members\",\"label\":\"Workspace members\",\"description\":\"How many people can be in this workspace. Pending invitations count towards it.\",\"unit\":\"count\",\"limit\":0,\"unlimited\":true,\"used\":2,\"kind\":\"count\"},{\"key\":\"max_projects\",\"label\":\"Projects\",\"description\":\"How many projects this workspace can hold.\",\"unit\":\"count\",\"limit\":7,\"unlimited\":false,\"used\":9,\"kind\":\"count\"},{\"key\":\"max_shared_workspaces\",\"label\":\"Shared workspaces\",\"description\":\"How many shared workspaces you can create. Your personal workspace is never counted.\",\"unit\":\"count\",\"limit\":0,\"unlimited\":true,\"used\":1,\"kind\":\"count\"},{\"key\":\"evidence_storage_mb\",\"label\":\"Test evidence storage\",\"description\":\"Total size of the test evidence files this workspace has uploaded.\",\"unit\":\"mb\",\"limit\":0,\"unlimited\":true,\"used\":0,\"kind\":\"resource\"},{\"key\":\"max_upload_mb\",\"label\":\"Largest figure\",\"description\":\"The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model.\",\"unit\":\"mb\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"hosted_runner_minutes_month\",\"label\":\"Cloud runner minutes this month\",\"description\":\"How many minutes of leased cloud runner this workspace can use in a calendar month. Agents on your own machine through the Agent Connector are never counted.\",\"unit\":\"minutes\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_session_minutes\",\"label\":\"Cloud runner lease\",\"description\":\"How long a leased cloud runner lasts before it is reclaimed.\",\"unit\":\"minutes\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_session_idle_minutes\",\"label\":\"Cloud runner idle window\",\"description\":\"How long a leased cloud runner may sit unused before it is reclaimed.\",\"unit\":\"minutes\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_memory_mb\",\"label\":\"Hosted runner memory\",\"description\":\"Memory available to this workspace's always-on hosted runner.\",\"unit\":\"mb\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"runner_cpus\",\"label\":\"Hosted runner CPUs\",\"description\":\"CPU available to this workspace's always-on hosted runner.\",\"unit\":\"cpus\",\"limit\":0,\"unlimited\":true,\"kind\":\"resource\"},{\"key\":\"hosted_automation\",\"label\":\"Always-on hosted agents\",\"description\":\"An always-on hosted runner on OpenV's hardware, so cron and event automations run while nobody is signed in. Agents on your own machine through the Agent Connector never depend on this.\",\"unit\":\"\",\"limit\":0,\"unlimited\":true,\"kind\":\"flag\",\"included\":true},{\"key\":\"teams\",\"label\":\"Teams and per-project access\",\"description\":\"People-teams and per-project access grants, so a company can decide who works on what.\",\"unit\":\"\",\"limit\":0,\"unlimited\":true,\"kind\":\"flag\",\"included\":true},{\"key\":\"workspace_budget\",\"label\":\"Workspace AI budget\",\"description\":\"A workspace-wide spend rollup and monthly budget. Your own runs and their cost are always yours to see.\",\"unit\":\"\",\"limit\":0,\"unlimited\":true,\"kind\":\"flag\",\"included\":true}],\"read_only\":true,\"over_plan\":[\"max_projects\"]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1789,7 +1800,7 @@
             "unit": "count",
             "limit": 7,
             "unlimited": false,
-            "used": 12,
+            "used": 9,
             "kind": "count"
           },
           {
@@ -1910,7 +1921,7 @@
     },
     {
       "n": 27,
-      "title": "always writable: delete a project made past the seven, from 12 projects to 11",
+      "title": "always writable: delete a project past the seven, from 9 projects to 8",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/projects/{id}",
@@ -1929,7 +1940,7 @@
     },
     {
       "n": 28,
-      "title": "always writable: delete a project made past the seven, from 11 projects to 10",
+      "title": "always writable: delete a project past the seven, from 8 projects to 7",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/projects/{id}",
@@ -1948,63 +1959,6 @@
     },
     {
       "n": 29,
-      "title": "always writable: delete a project made past the seven, from 10 projects to 9",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "DELETE /api/v1/projects/{id}",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/v1/projects/<past3>"
-      },
-      "status": 204,
-      "content_type": null,
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": null,
-      "kind": "empty",
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
-      "n": 30,
-      "title": "always writable: delete a project made past the seven, from 9 projects to 8",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "DELETE /api/v1/projects/{id}",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/v1/projects/<past4>"
-      },
-      "status": 204,
-      "content_type": null,
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": null,
-      "kind": "empty",
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
-      "n": 31,
-      "title": "always writable: delete a project made past the seven, from 8 projects to 7",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "DELETE /api/v1/projects/{id}",
-      "request": {
-        "method": "DELETE",
-        "path": "/api/v1/projects/<past5>"
-      },
-      "status": 204,
-      "content_type": null,
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": null,
-      "kind": "empty",
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
-      "n": 32,
       "title": "W's limits: seven projects of seven, writable again",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2165,7 +2119,7 @@
       }
     },
     {
-      "n": 33,
+      "n": 30,
       "title": "delete W, from the owner's personal workspace",
       "actor": "owner",
       "route": "DELETE /api/v1/orgs/{id}",
@@ -2180,11 +2134,11 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"deleted_at\":\"<time@step 33>\",\"purge_after\":\"<time>\"}"
+        "{\"deleted_at\":\"<time@step 30>\",\"purge_after\":\"<time>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "deleted_at": "<time@step 33>",
+        "deleted_at": "<time@step 30>",
         "purge_after": "<time>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",

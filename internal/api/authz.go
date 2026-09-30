@@ -22,8 +22,8 @@ import (
 // effective role (direct grant or people-team grant, whichever is highest)
 // meets minRole; agent runs pass as editor-equivalent inside their own
 // project only; workers pass only for projects belonging to their own org, a
-// workspace key as an editor there and a member's personal runner key above a
-// viewer's read only where its holder would (personalKeyAccess).
+// workspace key as an editor there and a member's personal runner key, reads
+// included, only where its holder would (personalKeyAccess).
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
 	if !h.projectAccess(w, r, projectID, minRole) {
 		return false
@@ -113,11 +113,12 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 // workspace key (no holder) carries workspace-wide editor rights (OpenV
 // REQ-42): it passes up to an editor's guard and is refused an owner's with
 // the 403 a project editor gets. A member's personal runner key (a session
-// key among them) is its holder acting, so anything above a viewer's read
+// key among them) is its holder acting, so every guard, a viewer's read too,
 // needs what the holder's own session would: admin of the workspace, or an
-// effective project role that meets minRole (REQ-16, REQ-79). A viewer's read
-// still passes for any project of the workspace, since the runner reads a
-// claimed ownerless run's repository connections with the key.
+// effective project role that meets minRole (REQ-16, REQ-79), and a project
+// the holder has no role in answers the key the 403 it answers the holder.
+// The runner reads a claimed run's repository connections with the run's
+// token, not with the key, so it needs no read of its own there.
 func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgID, projectID, minRole string) bool {
 	holder := WorkerUser(r)
 	if holder == "" {
@@ -126,9 +127,6 @@ func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgI
 		}
 		writeJSONError(w, http.StatusForbidden, "you do not have access to this project")
 		return false
-	}
-	if members.RoleAtLeast(members.RoleViewer, minRole) {
-		return true
 	}
 	if h.orgService != nil {
 		if role, err := h.orgService.RoleInOrg(orgID, holder); err == nil && role == orgs.RoleAdmin {
@@ -145,6 +143,25 @@ func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgI
 		return false
 	}
 	return true
+}
+
+// holderSeesRun reports whether a personal runner key's holder could see an
+// ownerless run with their own session (requireRunAccess): a workspace admin
+// sees every run of the workspace, anyone else a run in a project they hold
+// a role in, and a run with no project is its workspace admins' alone. A
+// personal key never takes a run its holder could not see: the claim query
+// (AgentRunRepository.Claim) asks the same, and requireWorkerRun asks this.
+func (h *Handler) holderSeesRun(holder string, run *agentruns.Run) (bool, error) {
+	if h.orgService != nil {
+		if role, err := h.orgService.RoleInOrg(run.OrgID, holder); err == nil && role == orgs.RoleAdmin {
+			return true, nil
+		}
+	}
+	if run.ProjectID == nil || *run.ProjectID == "" {
+		return false, nil
+	}
+	role, err := h.memberService.EffectiveRole(*run.ProjectID, holder)
+	return role != "" && members.RoleAtLeast(role, members.RoleViewer), err
 }
 
 // requireOrgRole enforces workspace access: platform admins pass for a
@@ -239,6 +256,52 @@ func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *
 		return h.requireProjectRole(w, r, *run.ProjectID, minRole)
 	}
 	return h.requireOrgRole(w, r, run.OrgID, orgs.RoleAdmin)
+}
+
+// hasRunAccess reports whether the request would pass requireRunAccess.
+// Unlike the require* helpers it writes no response.
+func (h *Handler) hasRunAccess(r *http.Request, run *agentruns.Run, minRole string) bool {
+	return h.requireRunAccess(discardResponse{}, r, run, minRole)
+}
+
+// readableRunTree is the part of a run tree (root first, each run after its
+// parent) its reader may see: the root, whose access the caller passed, and
+// each run below it that the reader could open by itself (hasRunAccess,
+// as a viewer) under a parent kept too. A run launched by another run's
+// token (launchParent) can sit outside its parent's scope, as an unscoped
+// run a project's run launched does, which the workspace's admins alone may
+// read; pruning its subtree keeps its id out of its children's parent too.
+// The decision depends on a run's launcher, project and workspace alone, so
+// it is asked once for each.
+func (h *Handler) readableRunTree(r *http.Request, tree []*agentruns.Run) []*agentruns.Run {
+	if len(tree) == 0 {
+		return tree
+	}
+	kept := []*agentruns.Run{tree[0]}
+	shown := map[string]bool{tree[0].ID: true}
+	decided := map[[3]string]bool{}
+	for _, run := range tree[1:] {
+		if run.ParentRunID == nil || !shown[*run.ParentRunID] {
+			continue
+		}
+		key := [3]string{"", "", run.OrgID}
+		if run.LaunchedBy != nil {
+			key[0] = *run.LaunchedBy
+		}
+		if run.ProjectID != nil {
+			key[1] = *run.ProjectID
+		}
+		readable, known := decided[key]
+		if !known {
+			readable = h.hasRunAccess(r, run, members.RoleViewer)
+			decided[key] = readable
+		}
+		if readable {
+			kept = append(kept, run)
+			shown[run.ID] = true
+		}
+	}
+	return kept
 }
 
 // requireTeamWrite enforces crew mutations: project-pinned crews need project
@@ -345,6 +408,83 @@ func (h *Handler) proposalRunID(r *http.Request) (string, bool) {
 		return "", false
 	}
 	return run.ID, true
+}
+
+// requireNoProposalRunLaunch refuses a proposal-mode run every route that
+// sets a run going (a launch, a crew's, a test run's agent, a retry, an
+// automation's run-now, an assistant turn) or arms one (an interview, which
+// names the interviewer, and its invite, whose participant messages each
+// launch that interviewer's run): no proposal can carry a launch, so a
+// review-gated agent would otherwise start work whose writes land with no
+// person reviewing them (REQ-21, REQ-75). It asks first, before any
+// lookup, since the answer depends on the caller alone; a run whose agent
+// cannot be read is refused too, as maybePropose refuses its writes. The
+// draft of test cases refuses it in its own words (DraftTestCases).
+func (h *Handler) requireNoProposalRunLaunch(w http.ResponseWriter, r *http.Request) bool {
+	run := CurrentRun(r)
+	if run == nil {
+		return true
+	}
+	agent, err := h.agentService.Get(run.AgentID)
+	if err != nil || agent == nil {
+		respondInternal(w, r, "agent not found for run", err)
+		return false
+	}
+	if agent.WriteMode == agents.WriteModeProposal {
+		writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot launch agent runs")
+		return false
+	}
+	return true
+}
+
+// requireUnscopedLaunch guards a launch that names no project, which runs in
+// the workspace its agent was found in (orgID): a person must be a member
+// there (requireOrgRole, with its plan gate), while a worker key or a run
+// token, which the middleware already keeps to its own workspace, launches
+// there as before, past the same read-only gate (REQ-176).
+func (h *Handler) requireUnscopedLaunch(w http.ResponseWriter, r *http.Request, orgID string) bool {
+	if CurrentUser(r) != nil {
+		return h.requireOrgRole(w, r, orgID, orgs.RoleMember)
+	}
+	return h.requireWritable(w, r, orgID)
+}
+
+// requireProjectCreate decides every project create (POST /projects, a
+// template's project, an import) and returns the workspace it lands in, the
+// one the caller acts in. A person creates it and owns it: an agent run acts
+// only inside its own project (REQ-42), and a runner key, workspace or
+// personal, has no person to own what it would make, so both are refused
+// before the body is read. Then, before anything is created, the
+// workspace's read-only gate (which import's alwaysWritable passes, REQ-177)
+// and the project maximum (REQ-176).
+func (h *Handler) requireProjectCreate(w http.ResponseWriter, r *http.Request) (string, bool) {
+	if CurrentRun(r) != nil {
+		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
+		return "", false
+	}
+	if IsWorker(r) {
+		writeJSONError(w, http.StatusForbidden, "runner keys cannot create projects")
+		return "", false
+	}
+	if CurrentUser(r) == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return "", false
+	}
+	orgID := ActiveOrg(r)
+	if orgID == "" {
+		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
+		return "", false
+	}
+	if !h.requireWritable(w, r, orgID) {
+		return "", false
+	}
+	if err := h.checkProjectCount(orgID); err != nil {
+		if !h.writeLimitError(w, err) {
+			respondInternal(w, r, "failed to check the project limit", err)
+		}
+		return "", false
+	}
+	return orgID, true
 }
 
 // pendingArtifactRef returns the pending create_artifact proposal in runID that

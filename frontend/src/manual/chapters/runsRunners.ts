@@ -33,8 +33,9 @@ applied.
 ### Personal runner (your machine, your subscription)
 
 Runs on **your own computer**, signed into the vendor CLIs (Claude Code,
-Codex, Gemini) with **your own subscription**. It claims **only runs you
-launched** — never a teammate's.
+Codex, Gemini) with **your own subscription**. It claims **the runs you
+launched** — never a teammate's — and ownerless work only where you could
+see it yourself (see *How runs are routed* below).
 
 The easiest setup is the **Agent Connector**:
 
@@ -114,7 +115,12 @@ whole workspace.
   period (default 60 seconds). If it isn't claimed in time, hosted/workspace
   runners take over.
 - **Ownerless runs** (automations, board triggers, crew delegations) are
-  claimable by any live runner immediately, first come first served.
+  claimable immediately, first come first served, by every workspace or
+  hosted runner, and by the personal runner of every member who could see
+  the run: one with a role in its project, or a workspace admin. A personal
+  runner never takes a run its owner could not see, so an ownerless run with
+  no project, which only workspace admins can open, goes to an admin's
+  personal runner or to the workspace and hosted runners.
 - Runs another member launched are never routed to your personal runner.
 
 ## Signing the CLIs in

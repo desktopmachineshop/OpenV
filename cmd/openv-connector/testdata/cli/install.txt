@@ -1,0 +1,19 @@
+# The command line of openv-connector (refactor plan S8, invariant I14), written by
+# TestCLI in cmd/openv-connector/cli_test.go; regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/openv-connector -count=1 -run '^TestCLI$'
+# (only UPDATE_GOLDEN=1 regenerates; any other value compares).
+# One run with an empty environment but for the env lines below and fresh
+# $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
+# directory and $TMP the working directory.
+$ openv-connector install
+exit 1
+--- stdout
+
+  OpenV Agent Connector
+  ---------------------
+
+  ERROR: could not register the openv-connector:// protocol: automatic protocol registration is only supported on Windows; on this platform run the connector directly
+
+  Press Enter to close this window...
+\ no newline at end
+--- stderr

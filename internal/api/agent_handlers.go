@@ -309,8 +309,32 @@ func (h *Handler) SyncAgents(w http.ResponseWriter, r *http.Request) {
 
 // --- Runs ---
 
+// launchParent is the parent of a run a request launches: the agent run
+// whose token sent it, recorded as a delegation records its parent
+// (ParentRunID), so the launching run's tree shows the run it set going; nil
+// for a person or a runner key.
+func launchParent(r *http.Request) *string {
+	if run := CurrentRun(r); run != nil {
+		id := run.ID
+		return &id
+	}
+	return nil
+}
+
+// launchRun enqueues a run a request asked for, with its launchParent.
+func (h *Handler) launchRun(r *http.Request, launch agentruns.LaunchRequest) (*agentruns.Run, error) {
+	if launch.ParentRunID == nil {
+		launch.ParentRunID = launchParent(r)
+	}
+	run, _, err := h.runService.Launch(launch)
+	return run, err
+}
+
 // LaunchAgentRun starts a manual run for an agent (by slug).
 func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	agent, err := h.agentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
 	if err != nil || agent == nil {
 		writeJSONError(w, http.StatusNotFound, "agent not found")
@@ -325,7 +349,13 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.ProjectID != "" && !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
+	// A launch in a project takes its editor; one with none runs in the
+	// active workspace, where the agent was found (requireUnscopedLaunch).
+	if req.ProjectID != "" {
+		if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
+			return
+		}
+	} else if !h.requireUnscopedLaunch(w, r, ActiveOrg(r)) {
 		return
 	}
 	// The run belongs to the project's org when project-scoped, else to the
@@ -348,7 +378,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if req.WorkItemID != "" {
 		launch.WorkItemID = &req.WorkItemID
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, err := h.launchRun(r, launch)
 	if err != nil {
 		// Over-budget soft-block (enforcement on) is a distinct, expected
 		// refusal — surface it as 402 so the UI can message it clearly.
@@ -445,7 +475,7 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 		Prompt:     prompt,
 		LaunchedBy: CurrentUserID(r),
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, err := h.launchRun(r, launch)
 	if err != nil {
 		// Mirror LaunchAgentRun: an over-budget soft-block is a distinct 402.
 		if errors.Is(err, agentruns.ErrBudgetExceeded) {
@@ -525,7 +555,8 @@ func (h *Handler) GetAgentRunTree(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load run tree", err)
 		return
 	}
-	json.NewEncoder(w).Encode(tree)
+	// A child may sit outside the root's scope (readableRunTree).
+	json.NewEncoder(w).Encode(h.readableRunTree(r, tree))
 }
 
 func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
@@ -618,6 +649,9 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 // failed, cancelled, and timed_out runs are retryable — a status conflict
 // answers 409 with the sentinel text, like the worker lifecycle endpoints.
 func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	if !requireUser(w, r) {
 		return
 	}
@@ -671,7 +705,10 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Hosted runners never execute repo-access agents.
+	// Hosted runners never execute repo-access agents. A personal key takes
+	// its member's runs and only the ownerless ones its member could see
+	// (the claim query asks it, as holderSeesRun does), and the claim
+	// records the member, whose local paths the run's token reads.
 	run, err := h.runService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
 	if err != nil {
 		respondInternal(w, r, "failed to claim a run", err)
@@ -748,18 +785,28 @@ func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[st
 // requireWorkerRun resolves the {id} run for a worker lifecycle call and
 // verifies the worker credential may act on it: the run must belong to the
 // worker's org, and a personal runner key may only touch runs its user could
-// have claimed (their own or ownerless — mirrors Claim). Cross-org and
-// unknown run IDs both answer 404 so a foreign worker cannot probe whether a
-// run exists. Returns nil after writing the response when access is denied.
+// have claimed (their own, or an ownerless one its user could see — mirrors
+// Claim). Cross-org and unknown run IDs, and runs the key could not claim,
+// all answer 404 so a worker cannot probe whether a run exists. Returns nil
+// after writing the response when access is denied.
 func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
 	run, err := h.runService.Get(mux.Vars(r)["id"])
 	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
 		writeJSONError(w, http.StatusNotFound, "agent run not found")
 		return nil
 	}
-	if workerUser := WorkerUser(r); workerUser != "" && run.LaunchedBy != nil && *run.LaunchedBy != workerUser {
-		writeJSONError(w, http.StatusNotFound, "agent run not found")
-		return nil
+	if holder := WorkerUser(r); holder != "" {
+		sees := run.LaunchedBy != nil && *run.LaunchedBy == holder
+		if run.LaunchedBy == nil {
+			if sees, err = h.holderSeesRun(holder, run); err != nil {
+				respondInternal(w, r, "failed to resolve run access", err)
+				return nil
+			}
+		}
+		if !sees {
+			writeJSONError(w, http.StatusNotFound, "agent run not found")
+			return nil
+		}
 	}
 	return run
 }
@@ -1100,6 +1147,9 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 
 // RunAutomationNow launches an automation's run immediately.
 func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	if !requireUser(w, r) {
 		return
 	}
@@ -1123,7 +1173,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 		prompt = "Manual run of automation: " + automation.Name
 	}
 	automationID := automation.ID
-	run, _, err := h.runService.Launch(agentruns.LaunchRequest{
+	run, err := h.launchRun(r, agentruns.LaunchRequest{
 		OrgID:        automation.OrgID,
 		AgentID:      agentID,
 		ProjectID:    automation.ProjectID,
@@ -1353,9 +1403,16 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Personal runners get the claiming user's local paths: the checkout
-	// lives somewhere different on every member's machine.
-	if workerUser := WorkerUser(r); workerUser != "" {
-		list, err := h.repoConnService.ListByProjectForUser(projectID, workerUser)
+	// lives somewhere different on every member's machine. The runner reads
+	// a claimed run's connections with the run's token (the guard keeps it
+	// to the run's own project, read only), which carries the member whose
+	// personal runner key claimed it; a run a workspace key holds has none.
+	claimant := WorkerUser(r)
+	if run := CurrentRun(r); run != nil && run.ClaimedBy != nil {
+		claimant = *run.ClaimedBy
+	}
+	if claimant != "" {
+		list, err := h.repoConnService.ListByProjectForUser(projectID, claimant)
 		if err != nil {
 			respondInternal(w, r, "failed to list repo connections", err)
 			return
@@ -2188,6 +2245,9 @@ func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
 
 // LaunchTeamRun starts a run at the team's entry node.
 func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
@@ -2270,7 +2330,7 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	if req.ProjectID != "" {
 		launch.ProjectID = &req.ProjectID
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, err := h.launchRun(r, launch)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

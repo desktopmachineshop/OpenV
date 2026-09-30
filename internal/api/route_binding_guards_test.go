@@ -47,6 +47,14 @@ type guardHelper struct {
 //   - scoped-write: project:editor for a crew, automation or attribute
 //     definition pinned to a project, else org:admin (an attribute
 //     definition with neither scope is refused with 400).
+//   - no-proposal-run: the request is not a proposal-mode agent run's, else
+//     403 (a route that sets a run going).
+//   - unscoped-launch: a launch with no project: org:member for a signed-in
+//     person, else the plan read-only gate alone (a worker key or a run
+//     token).
+//   - project-create: a signed-in person, never an agent run or a runner key
+//     (403), else 401; then the plan read-only gate, which alwaysWritable
+//     routes skip, and the project maximum.
 //
 // Two notations join kinds: "a|b" is one guard whose role is chosen at run
 // time from constants the code assigns; "?" is a role argument the reader
@@ -67,6 +75,9 @@ var guardHelpers = map[string]guardHelper{
 	"requireTeamWrite":                {kind: "scoped-write"},
 	"requireAutomationWrite":          {kind: "scoped-write"},
 	"requireAttributeDefinitionWrite": {kind: "scoped-write"},
+	"requireNoProposalRunLaunch":      {kind: "no-proposal-run"},
+	"requireUnscopedLaunch":           {kind: "unscoped-launch"},
+	"requireProjectCreate":            {kind: "project-create"},
 }
 
 // roleConstants are the role constants a guard's role argument may name.

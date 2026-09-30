@@ -182,7 +182,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     tips: [
       'Runs stuck at queued mean no runner is online — pair the Agent Connector, or ask an admin to provision the hosted runner.',
       'Pending approvals at the top opens proposal review — approve or reject each proposed change before it is applied.',
-      'Your personal runner claims only runs you launched; ownerless runs (automations, board triggers) go to any live runner.',
+      'Your personal runner claims the runs you launched, never a teammate\'s. Ownerless runs (automations, board triggers) go to workspace and hosted runners, and to the personal runner of each member with a role in the run\'s project or of a workspace admin; one with no project goes only to an admin\'s runner or the shared runners.',
       'Click a run for its prompt, live log, results, and related runs such as crew delegations.',
       '"Reserved for launcher\'s runner" means a queued run is briefly waiting for that person\'s personal runner before others may claim it.',
     ],
