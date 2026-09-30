@@ -221,8 +221,8 @@ Enforced per-handler via `internal/api/authz.go`:
   the guard or the id sits in the query or the body, an id no row has
   answers `404` too: an artifact's update and restore and a result's
   `test_case_id` `artifact not found`, a download's or its options'
-  `baseline_id` `baseline not found`. A body field stored as a reference
-  without a lookup (a test run's `baseline_id`, a work item's
+  `baseline_id` and a test run's `baseline_id` `baseline not found`. A
+  body field stored as a reference without a lookup (a work item's
   `assignee_id`, a launch's `work_item_id`...) still passes the database's
   refusal through as a `400` (quirk Q19), and `POST
   /projects/{id}/draft-test-cases` refuses a `requirement_ids` entry that
@@ -356,13 +356,13 @@ their own project, workers pass within their org, a workspace key up to
 | PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
 | POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token and a runner key are refused (`403`). Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
-| GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
-| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults | viewer |
+| GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`), the specification with the default content but without V&V status: the route reads no test evidence, so the status the download carries by default would be wrong here. The download routes are the supported path | viewer |
+| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults. The fields are the attribute keys the artifacts carry: a baseline that kept the attribute definitions (REQ-5) labels a defined key as its definition did and lists the defined keys before the discovered ones, while the live project and an older baseline word each key themselves; a definition no artifact carries is not a field | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
-| POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline | editor |
+| POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline (see below for what the snapshot holds); publishes `baseline.captured` `{name}` | editor |
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
-| DELETE | `/api/v1/baselines/{id}` | Delete baseline | owner |
+| DELETE | `/api/v1/baselines/{id}` | Delete baseline; publishes `baseline.deleted` `{name}`, the name it had, so the activity log records it (REQ-5). `403` for an editor or viewer, `404` `baseline not found` for one no row has | owner |
 | GET | `/api/v1/projects/{id}/share-links` | The project's share links (`docs/sharing.md`), tokens never included | owner |
 | POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `400` for another role; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
@@ -380,7 +380,17 @@ rather than removing the baseline, because a project's history must outlive
 the people in it.
 
 `GET /api/v1/baselines/{id}` returns the snapshot itself — a whole project
-export, which is close to a megabyte of JSON for a real project. It is served
+export, which is close to a megabyte of JSON for a real project. The snapshot
+is the JSON export (artifacts, links, the attachments' metadata, the product
+profile, linked artifacts) with `attribute_definitions` beside it: the
+workspace's and the project's definitions in effect when it was captured
+(REQ-5), which the live JSON export leaves out. Attachment **files** stay out
+of it; each attachment's record is kept — its name, type, size, figure
+reference and the artifact it belongs to. A snapshot captured before
+baselines kept definitions has no `attribute_definitions` and reads as it
+always did: its ReqIF download types no attribute as an enumeration. The
+open-source showcase publishes a baseline's snapshot without its
+definitions, as a live public link carries none. It is served
 gzipped to any client that offers it (see `docs/operations.md`), but a client
 should still show progress while it loads rather than rendering an empty
 project.
@@ -414,8 +424,11 @@ project.
   values so hard line breaks survive the round trip.
 - **Downloads** (`internal/domain/downloads`, `docs/reports.md`): every
   `/download/{format}` reads the same query. `baseline_id` picks a snapshot
-  (`404` `baseline not found` for one no row has or of another project, as
-  the report answers it);
+  (`404` `baseline not found` for one no row has, a malformed id or another
+  project's, as every route that takes a baseline answers it: the options,
+  the report, the V&V reads and report, the quality report, the impact
+  read, the AI map, a baseline's read, diff and delete, and the diff's
+  `against`; `/export` takes none);
   `sections`, `types`, `owners` (a comma-separated list of owner names: only
   the artifacts whose `owner` attribute is one of them, plus the headings,
   so one party's share of a project can be handed over on its own — REQ-148),
@@ -424,7 +437,15 @@ project.
   `requirements-review`, `test-planning`, `vv`), `toc`, `traceability`,
   `figures`, `vv`, `results` (`0|1`) and `fields` (`all`, `none`, or a
   comma-separated list of attribute keys); an explicit parameter wins over
-  the template. Any attachment category turns the response into a zip
+  the template. Each requirement's V&V status is in a document by default
+  (REQ-6; `vv=0` leaves it out); the test results are not (`results=1`).
+  The ReqIF download types an enum attribute as an enumeration by the
+  attribute definitions in effect, from the same function the ReqIF export
+  takes them from, so the two documents type alike; a baseline's is typed by
+  the definitions it kept. As in the export, a value that is not in its
+  enum attribute's list, such as one left behind when the list was edited,
+  is left out of the file. A baseline's PDF and Word documents name its
+  fields as its options do. Any attachment category turns the response into a zip
   holding the document and the files. The cover states whether the
   document is a named baseline (with its id and capture time) or the live
   project at the export time, and shows the workspace logo when one is set.
@@ -458,16 +479,16 @@ Every artifact carries two identifiers, and they answer different questions:
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
 | PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version); `404` `artifact not found` for an artifact no row has or the caller cannot reach | editor |
 | DELETE | `/api/v1/artifacts/{id}` | Soft-delete (history retained) | editor |
-| GET | `/api/v1/artifacts/{id}/versions` | Version history | viewer |
-| POST | `/api/v1/artifacts/{id}/restore` | Restore an older version; `404` `artifact not found` as for an update | editor |
-| GET | `/api/v1/artifacts/{id}/links` | Links per artifact version | viewer |
+| GET | `/api/v1/artifacts/{id}/versions` | Version history, newest first. A deleted artifact's stays readable: the guard asks the project of its versions, so the project's viewers read it after the delete (REQ-4); an id no version has, or one in a project the caller cannot reach, answers `404` `project not found` | viewer |
+| POST | `/api/v1/artifacts/{id}/restore` | Restore an older version `{version}` as a new one. The artifact keeps its ref, as every version does (a restore that brings back a type with another prefix draws a new one, as a retype does), and the restore publishes `artifact.restored` `{artifact_type, title, version, restored_version}`. `404` `artifact version not found` for a version the artifact never had; `404` `artifact not found` as for an update | editor |
+| GET | `/api/v1/artifacts/{id}/links` | Links per artifact version: `?version=N` reads that version's links, a deleted artifact's among them, as its versions are read; without it, the live links | viewer |
 | POST | `/api/v1/links` | Create traceability link. A link may cross projects: the caller needs editor rights on both ends' projects, except for `refines` (the flow-down link, `docs/flow-down.md`), which needs editor rights on the source's project and viewer rights on the target's | editor |
 | GET | `/api/v1/links` | List links (`?project_id=`): every link that touches the project, from either end, so a flow-down link written from a child project is seen by the parent too | viewer |
 | GET | `/api/v1/links/{id}` | Get link | viewer |
 | PUT | `/api/v1/links/{id}` | Update link | editor |
 | PUT | `/api/v1/links/{id}/confirm` | Clear the suspect flag: an editor vouches that the trace still holds after an artifact at one end changed. Idempotent — confirming a link that is not suspect changes nothing. Refused `403` for a proposal-mode agent run rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag exists to trigger | editor |
 | DELETE | `/api/v1/links/{id}` | Delete link | editor |
-| POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result | editor |
+| POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result. A figure takes its artifact to a new version, as a new figure version and a rename do (see Figures) | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata (`title` is the name a member gave the figure, empty when none; readers fall back to `original_filename`) | viewer |
 | PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157) | editor |
 | GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
@@ -530,6 +551,10 @@ under `documents`, `models` or `data` rather than `figures`.
   needs a file of its own.
 - An artifact with no stable reference yields no figure reference rather than a
   bare `FIG-1` that would collide once the artifact got one.
+
+Adding a figure is an edit of the artifact that carries it: the upload takes
+the artifact to a new version (REQ-4), through the same attribute-free update
+as below, and writes the figure's note to its feed.
 
 Uploading a **new version** keeps the figure's reference and supersedes its
 file, and may change its format — a sketch replaced by the real drawing — so
@@ -788,7 +813,7 @@ hidden entry is out of every list and cannot be voted for either.
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/profile` | Product profile (vision, users, constraints) | viewer |
 | PUT | `/api/v1/projects/{id}/profile` | Update product profile | editor |
-| POST | `/api/v1/projects/{id}/test-runs` | Create test run | editor |
+| POST | `/api/v1/projects/{id}/test-runs` | Create test run. A `baseline_id` names one of the project's baselines: one no row has, a malformed id or another project's answers `404` `baseline not found`, after the project guard and the body's decode, and no run is created | editor |
 | GET | `/api/v1/projects/{id}/test-runs` | List test runs | viewer |
 | GET | `/api/v1/test-runs/{id}` | Test run details | viewer |
 | PUT | `/api/v1/test-runs/{id}` | Update test run | editor |

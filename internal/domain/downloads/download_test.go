@@ -10,6 +10,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 )
@@ -49,11 +50,23 @@ type recorder struct {
 	loaded       []string
 	renderedFrom *exports.ProjectExport
 	renderOpts   reports.RenderOptions
+	// definitionsFor lists the projects Definitions was asked for.
+	definitionsFor []string
 }
 
 type fakeExports struct {
 	exports.Service
 	rec *recorder
+}
+
+// riskDefinition is the one attribute definition the fake project has: an
+// enum, which ReqIF types as an enumeration.
+var riskDefinition = &attributes.Definition{Key: "risk", Label: "Risk", DataType: attributes.DataTypeEnum,
+	EnumValues: []string{"low", "high"}}
+
+func (f *fakeExports) Definitions(projectID string) []*attributes.Definition {
+	f.rec.definitionsFor = append(f.rec.definitionsFor, projectID)
+	return []*attributes.Definition{riskDefinition}
 }
 
 func (f *fakeExports) RenderExport(data *exports.ProjectExport, format exports.ExportFormat) ([]byte, string, error) {
@@ -191,6 +204,44 @@ func TestExcelCarriesTheBaselineName(t *testing.T) {
 	}
 	if rec.renderedFrom.BaselineName != "" {
 		t.Errorf("csv snapshot baseline name = %q, want it left alone", rec.renderedFrom.BaselineName)
+	}
+}
+
+// A ReqIF download of the live project is typed by the attribute
+// definitions in effect, from the function the ReqIF export takes them from,
+// so both ReqIF paths type an enum attribute as an enumeration (REQ-6); a
+// baseline's is typed by the definitions it kept, and the other formats
+// load none. The download loaded none, so its enum attributes were strings
+// where the export's were enumerations.
+func TestAReqIFDownloadIsTypedByTheExportsDefinitions(t *testing.T) {
+	s, rec := newService(t)
+	if _, err := s.Download(Request{ProjectID: "p1", Format: FormatReqIF}); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if strings.Join(rec.definitionsFor, ",") != "p1" {
+		t.Errorf("definitions asked for %v, want p1's once", rec.definitionsFor)
+	}
+	if defs := rec.renderedFrom.AttributeDefs; len(defs) != 1 || defs[0] != riskDefinition {
+		t.Errorf("the live ReqIF was rendered with definitions %v, want the project's", defs)
+	}
+
+	s, rec = newService(t)
+	if _, err := s.Download(Request{ProjectID: "p1", BaselineID: "b7", Format: FormatReqIF}); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if len(rec.definitionsFor) != 0 || rec.renderedFrom.AttributeDefs != nil {
+		t.Errorf("a baseline's ReqIF asked for %v and rendered with %v, want the definitions the baseline kept (none)",
+			rec.definitionsFor, rec.renderedFrom.AttributeDefs)
+	}
+
+	for _, format := range []Format{FormatJSON, FormatCSV, FormatExcel, FormatPDF, FormatDOCX} {
+		s, rec = newService(t)
+		if _, err := s.Download(Request{ProjectID: "p1", Format: format}); err != nil {
+			t.Fatalf("%s: %v", format, err)
+		}
+		if len(rec.definitionsFor) != 0 || rec.renderedFrom.AttributeDefs != nil {
+			t.Errorf("%s asked for definitions %v, want none", format, rec.definitionsFor)
+		}
 	}
 }
 

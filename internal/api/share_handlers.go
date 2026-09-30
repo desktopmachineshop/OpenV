@@ -522,7 +522,8 @@ func (h *Handler) ListOpenSourceProjects(w http.ResponseWriter, r *http.Request)
 // reason so a project id learns nothing about private projects. The view
 // names the project as the snapshot does, and leaves out the snapshot's
 // linked artifacts: those are other projects' refs and titles, possibly of
-// a private workspace, and not this project's to publish.
+// a private workspace, and not this project's to publish; and its attribute
+// definitions, which are the workspace's as well.
 func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*projects.Project, *orgs.Org, sharedProject) {
 	project, err := h.projectService.GetProject(mux.Vars(r)["id"])
 	if err != nil || project == nil || project.OrgID == "" || h.orgService == nil {
@@ -549,6 +550,10 @@ func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*pr
 	}{ID: id, Name: name, CreatedAt: at}
 	view.Counts = artifactCounts(snapshot)
 	snapshot.LinkedArtifacts = nil
+	// The attribute definitions a baseline keeps are the workspace's as well
+	// as the project's, with the workspace's id: not the project's to
+	// publish, and a live public link carries none either.
+	snapshot.AttributeDefs = nil
 	view.Snapshot = snapshot
 	return project, org, view
 }

@@ -164,10 +164,13 @@ opens the filter panel:
 
 Select an artifact to see its details; **Edit** opens the editor.
 
-- Every save creates a **new version** — the header shows "Version N".
+- Every save creates a **new version** — the header shows "Version N". Adding
+  a figure, uploading a new file for one or renaming one creates a version
+  too.
 - **History** (available once an artifact has more than one version) lets you
   preview any previous version and **restore** it. Restoring creates a new
-  version with the old content; nothing is lost.
+  version with the old content; nothing is lost, the artifact keeps its
+  reference, and the restore is recorded in the activity log.
 
 ## Review status
 
@@ -357,13 +360,16 @@ it takes the note's first line as the title and no due date.
 
 ## Baselines
 
-A **baseline** is an immutable snapshot of the whole project (artifacts +
-links) at a point in time. The top bar of the Requirements view controls them:
+A **baseline** is an immutable snapshot of the whole project at a point in
+time: its artifacts and links, the attribute definitions in effect, and each
+attachment's name, type and size (the files themselves are not copied). The
+top bar of the Requirements view controls them:
 
 - **Capture Baseline** — name and save a snapshot of the live project.
 - The **baseline dropdown** switches between "Live Project" and any baseline.
   Baseline views are **read-only** — you can browse but not edit.
-- 🗑 deletes the selected baseline (the live project can't be deleted here).
+- 🗑 deletes the selected baseline (project owners only; the live project
+  can't be deleted here). The deletion is recorded in the activity log.
 - **↓ Download** — opens the download wizard for the live project or the
   selected baseline: PDF, Word, JSON, CSV, Excel or ReqIF, narrowed to the sections,
   types and attachments you pick. See the Projects chapter.

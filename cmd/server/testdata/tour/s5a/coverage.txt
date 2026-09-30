@@ -64,7 +64,7 @@ GET /api/v1/public/share/{token}/preview.png: 200, 404, 429; share_links_public
 GET /api/v1/search: 200, 401; review_chatter_search
 GET /api/v1/templates: 200; projects_templates
 POST /api/v1/artifacts: 201, 400, 403, 404; artifacts_attributes, projects_templates
-POST /api/v1/artifacts/{id}/restore: 200, 400, 403, 404, 500; artifacts_attributes, attachments
+POST /api/v1/artifacts/{id}/restore: 200, 400, 403, 404; artifacts_attributes, attachments
 POST /api/v1/attachments/upload: 201, 400, 404; attachments
 POST /api/v1/attachments/{id}/versions: 201, 400, 404; attachments
 POST /api/v1/attachments/{id}/versions/{version}/restore: 201, 400, 404, 409; attachments

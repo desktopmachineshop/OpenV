@@ -443,6 +443,8 @@ export const ModuleView: React.FC = () => {
     });
   };
 
+  // Adding a figure takes the artifact to a new version server-side, as a new
+  // image and a rename do, so the artifact is reloaded too.
   const handleUploadAttachment = async (file: File) => {
     if (!selectedArtifactId) {
       setError('No artifact selected');
@@ -458,6 +460,7 @@ export const ModuleView: React.FC = () => {
       // resolves against, so a new figure has to reach it too.
       setProjectAttachments((prev) => [...prev, response.data]);
       setError('');
+      loadArtifacts();
     } catch (error: any) {
       console.error('Failed to attach the file:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');

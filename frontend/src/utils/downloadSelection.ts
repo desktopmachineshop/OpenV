@@ -132,14 +132,19 @@ export interface FormSelection {
   fields: string[];
 }
 
-/** What the server puts in a document when it is told nothing. */
+/**
+ * What the server puts in a document when it is told nothing: the
+ * specification with each requirement's V&V status (REQ-6). A switch is sent
+ * only where it leaves these, so they must be the server's own, or a switch
+ * turned off would never reach it.
+ */
 export const SERVER_CONTENT_DEFAULTS: DownloadContent = {
   traceability: true,
   figures: true,
   toc: true,
   all_fields: true,
   test_results: false,
-  vv_status: false,
+  vv_status: true,
 };
 
 /** The preset a wizard opens on, when the server offers presets at all. */
@@ -255,11 +260,16 @@ export const toWire = (
 /**
  * The query string for a download. Only the narrowing travels; the server's
  * defaults are the whole project with its headings, its traceability, figures
- * and contents, every field, no results, no V&V rollup and no files.
+ * and contents, every field, each requirement's V&V rollup, no results and no
+ * files.
  *
  * The template travels too, but only as a name for the cover: every switch it
  * implies is sent as itself, so what the reader saw ticked is what the server
- * builds even if the preset changes underneath them.
+ * builds even if the preset changes underneath them. The server builds a
+ * named preset from the preset's own content, not from its defaults, so with
+ * a template every switch and the field choice travel, a switch that matches
+ * the defaults too: V&V status ticked on the Requirements review preset,
+ * which leaves it out, would otherwise never reach it (REQ-6).
  */
 export const downloadQuery = (selection: DownloadSelection, baselineId?: string): string => {
   const defaults = SERVER_CONTENT_DEFAULTS;
@@ -271,9 +281,10 @@ export const downloadQuery = (selection: DownloadSelection, baselineId?: string)
   if (selection.attachments.length > 0) params.set('attachments', selection.attachments.join(','));
   if (baselineId && baselineId !== 'live') params.set('baseline_id', baselineId);
 
-  if (selection.template) params.set('template', selection.template);
+  const preset = Boolean(selection.template);
+  if (preset) params.set('template', selection.template);
   const flag = (name: string, value: boolean, fallback: boolean) => {
-    if (value !== fallback) params.set(name, value ? '1' : '0');
+    if (preset || value !== fallback) params.set(name, value ? '1' : '0');
   };
   flag('traceability', selection.traceability, defaults.traceability);
   flag('figures', selection.figures, defaults.figures);
@@ -282,6 +293,8 @@ export const downloadQuery = (selection: DownloadSelection, baselineId?: string)
   flag('vv', selection.vvStatus, defaults.vv_status);
   if (selection.fields) {
     params.set('fields', selection.fields.length === 0 ? 'none' : selection.fields.join(','));
+  } else if (preset) {
+    params.set('fields', 'all');
   }
   return params.toString();
 };

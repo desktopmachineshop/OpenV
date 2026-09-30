@@ -12,9 +12,10 @@ import (
 // formats (JSON, CSV, Excel, ReqIF) ignore it: they carry everything.
 //
 // Every switch defaults to the document a reader expects of a specification:
-// fields, traceability, figures and a table of contents on; test evidence
-// and V&V status off, because they describe verification rather than the
-// product, and a template turns them on for the reviews that need them.
+// fields, traceability, figures, a table of contents and each requirement's
+// V&V status on (REQ-6: the PDF and the Word document include V&V status);
+// the test results off, since they describe the test campaign rather than
+// the product, and a template turns them on for the reviews that need them.
 type Content struct {
 	// Template names the preset the reader started from ("", or a key from
 	// Templates()). It is recorded on the cover; the switches below are what
@@ -39,9 +40,9 @@ type Content struct {
 }
 
 // DefaultContent is the specification document: everything about the
-// product, nothing about its verification.
+// product, and where each requirement stands in its verification.
 func DefaultContent() Content {
-	return Content{Traceability: true, Figures: true, TOC: true, AllFields: true}
+	return Content{Traceability: true, Figures: true, TOC: true, AllFields: true, VVStatus: true}
 }
 
 // ShowsField reports whether an attribute key belongs in the document.
@@ -147,7 +148,7 @@ func Templates() []Template {
 		{
 			Key:         "standard",
 			Name:        "Specification",
-			Description: "The whole project as a specification: every artifact with its fields, figures and traceability.",
+			Description: "The whole project as a specification: every artifact with its fields, figures and traceability, and each requirement's V&V status.",
 			Content:     DefaultContent(),
 		},
 		{
@@ -206,7 +207,10 @@ type FieldOption struct {
 
 // Fields lists the attribute keys present in a snapshot: the standard keys
 // first in their fixed order, then attribute definitions in theirs, then any
-// other key found on an artifact, alphabetically.
+// other key found on an artifact, alphabetically. A definition names its key
+// and places it, but a key no artifact carries is not listed: a baseline
+// keeps every definition in effect (REQ-5), and a field with nothing in it is
+// no choice for a form and no row for a document.
 func Fields(data *ProjectExport) []FieldOption {
 	if data == nil {
 		return nil
@@ -257,7 +261,7 @@ func Fields(data *ProjectExport) []FieldOption {
 		}
 	}
 	for _, k := range defined {
-		if added[k] {
+		if added[k] || counts[k] == 0 {
 			continue
 		}
 		out = append(out, FieldOption{Key: k, Label: labels[k], Count: counts[k], Custom: true})

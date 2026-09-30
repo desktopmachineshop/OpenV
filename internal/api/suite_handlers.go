@@ -244,6 +244,15 @@ func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// A run's baseline is one of its project's, answered as every route
+	// answers a baseline that does not exist (REQ-6): an id no baseline has,
+	// a malformed one and another project's are 404, and nothing is stored.
+	if req.BaselineID != nil {
+		if _, err := h.baselineService.GetProjectBaseline(projectID, *req.BaselineID); err != nil {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
+	}
 	req.ProjectID = projectID
 	run, err := h.vvService.CreateRun(req, CurrentUserID(r))
 	if err != nil {

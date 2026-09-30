@@ -283,6 +283,17 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 		data.BaselineName = baselineName
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatExcel)
 	case FormatReqIF:
+		// ReqIF types an enum attribute as an enumeration by the attribute
+		// definitions, as the ReqIF standard and the importer read it: the
+		// live project takes the definitions in effect from the one function
+		// the export takes them from (REQ-6), a baseline the ones it kept
+		// (none for one captured before baselines kept them, whose enum
+		// attributes stay strings rather than be typed by later definitions
+		// its values may not fit). data is the narrowed copy, so the loaded
+		// snapshot is left alone.
+		if !snap.IsBaseline() {
+			data.AttributeDefs = s.exportService.Definitions(req.ProjectID)
+		}
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatReqIF)
 	case FormatPDF, FormatDOCX:
 		var opts reports.RenderOptions
