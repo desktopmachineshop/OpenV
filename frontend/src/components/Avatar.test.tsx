@@ -48,6 +48,22 @@ describe('Avatar', () => {
     expect(img.src).toBe('http://localhost:8080/api/v1/users/u1/avatar?v=7');
   });
 
+  // The API answers 404 for a picture to anyone who shares no workspace with
+  // its owner (#379's decision 14): the initial stands in for it.
+  it('shows the initial when the picture does not load', () => {
+    act(() => root.render(<Avatar src="/api/v1/users/u1/avatar?v=7" name="dave" />));
+    const img = container.querySelector('img') as HTMLImageElement;
+    act(() => {
+      img.dispatchEvent(new Event('error'));
+    });
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.textContent).toBe('D');
+    act(() => root.render(<Avatar src="/api/v1/users/u1/avatar?v=8" name="dave" />));
+    expect((container.querySelector('img') as HTMLImageElement).src).toBe(
+      'http://localhost:8080/api/v1/users/u1/avatar?v=8'
+    );
+  });
+
   it('falls back to a question mark with no name', () => {
     act(() => root.render(<Avatar />));
     expect(container.textContent).toBe('?');

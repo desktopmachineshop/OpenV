@@ -182,7 +182,7 @@ GET /api/v1/test-runs/{id}: project:viewer
 GET /api/v1/test-runs/{id}/citations: project:viewer
 GET /api/v1/test-runs/{id}/results: project:viewer
 GET /api/v1/users: -
-GET /api/v1/users/{id}/avatar: -
+GET /api/v1/users/{id}/avatar: user-visible
 GET /api/v1/work-items/{id}: project:viewer
 GET /health: -
 HEAD /api/v1/public/connector/download: -

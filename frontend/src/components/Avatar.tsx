@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { resolveAvatarUrl } from '../api/baseURL';
 
 interface AvatarProps {
@@ -18,8 +18,15 @@ interface AvatarProps {
  * set is still a flex item that shrinks: it was squeezed to the width of its
  * one letter and became a tall oval (issue #319). The circle here refuses to
  * shrink, and a picture is cropped to the circle rather than stretched.
+ *
+ * A picture that does not load shows the initial instead of an empty
+ * circle: the API answers 404 for an uploaded picture to anyone who shares
+ * no workspace with its owner (the picture of a project member from outside
+ * the workspace, say), as it does for a picture that is gone.
  */
 export const Avatar: React.FC<AvatarProps> = ({ src, name, size = 28 }) => {
+  // The URL that failed, so that another picture is tried afresh.
+  const [failed, setFailed] = useState('');
   const box: React.CSSProperties = {
     width: size,
     height: size,
@@ -31,8 +38,15 @@ export const Avatar: React.FC<AvatarProps> = ({ src, name, size = 28 }) => {
   };
 
   const resolved = resolveAvatarUrl(src);
-  if (resolved) {
-    return <img src={resolved} alt="" style={{ ...box, objectFit: 'cover', display: 'block' }} />;
+  if (resolved && resolved !== failed) {
+    return (
+      <img
+        src={resolved}
+        alt=""
+        onError={() => setFailed(resolved)}
+        style={{ ...box, objectFit: 'cover', display: 'block' }}
+      />
+    );
   }
 
   return (
