@@ -170,3 +170,59 @@ func TestALegacyReleaseKeepsItsPlainerCopy(t *testing.T) {
 		t.Errorf("body = %q", body)
 	}
 }
+
+// TestPlainNoteDropsTheMarkdown: a release note is Markdown, and the bell,
+// the email and the push show text, so the notification carries each note
+// as plain text: emphasis and strikethrough markers and code-span ticks go,
+// a link keeps its text, an escape the character it escapes, and what is
+// not Markdown (a name with underscores in it, a lone asterisk, text inside
+// a code span) stays as written. The notes used to be copied verbatim, so
+// "**bold**" markers showed in all three (#379, bug 62).
+func TestPlainNoteDropsTheMarkdown(t *testing.T) {
+	for _, tc := range []struct{ md, want string }{
+		{"**Baselines compare side by side.** Pick two baselines.", "Baselines compare side by side. Pick two baselines."},
+		{"__Strong__ and *em* and _em_ and ~~gone~~", "Strong and em and em and gone"},
+		{"***Both at once***", "Both at once"},
+		{"**The *Runs & runners* page** explains it", "The Runs & runners page explains it"},
+		{"Run `codex login` again", "Run codex login again"},
+		{"Set `WORKER_API_KEY` and `**not bold**`", "Set WORKER_API_KEY and **not bold**"},
+		{"``a ` tick`` inside", "a ` tick inside"},
+		{"See [the manual](https://openv.app/manual) or ![a chart](chart.png)", "See the manual or a chart"},
+		{"[**Bold link**](https://openv.app \"title\")", "Bold link"},
+		{"Write to <mailto:ops@example.com> or <https://openv.app>", "Write to mailto:ops@example.com or https://openv.app"},
+		{`Literal \*stars\* and \_underscores\_ and a \\ backslash`, `Literal *stars* and _underscores_ and a \ backslash`},
+		{"hosted_runner_minutes_month and snake_case_name stay", "hosted_runner_minutes_month and snake_case_name stay"},
+		{"2 * 3 * 4 = 24, and a lone ` tick", "2 * 3 * 4 = 24, and a lone ` tick"},
+		{"Zürich — ≤ 50 N, unchanged", "Zürich — ≤ 50 N, unchanged"},
+		{"A private-use  and  character stays", "A private-use  and  character stays"},
+		{"**Bold with a `code` span**", "Bold with a code span"},
+		// A one-character span closes at its own marker, not at the next
+		// span's on the same line (0.14.0's notes bold key names).
+		{"Press **J** or **K**", "Press J or K"},
+		{"*x* and *y*", "x and y"},
+		{"_a_ and _b_", "a and b"},
+		{"__a__ and __b__", "a and b"},
+		{"~~x~~ y ~~z~~", "x y z"},
+		{"**J** and **Kx**", "J and Kx"},
+		{"An artifact now carries **‹** and **›** and says where you are: *12 of 148*.", "An artifact now carries ‹ and › and says where you are: 12 of 148."},
+		{"**J and K on a keyboard.** **J** moves to the next artifact and **K** to the previous one", "J and K on a keyboard. J moves to the next artifact and K to the previous one"},
+		{"", ""},
+	} {
+		if got := plainNote(tc.md); got != tc.want {
+			t.Errorf("plainNote(%q) = %q, want %q", tc.md, got, tc.want)
+		}
+	}
+}
+
+// TestReleaseMessageCarriesPlainText: the announcement's bullets are the
+// notes as plain text, each still a "• " line under its group.
+func TestReleaseMessageCarriesPlainText(t *testing.T) {
+	_, body := ReleaseMessage(grouped("0.16.0",
+		release.Category{Name: release.CategoryFeatures, Notes: []string{"**Baselines compare side by side.** Pick two."}},
+		release.Category{Name: release.CategoryFixes, Notes: []string{"**`HOME` comes back.** See [the guide](https://openv.app/g)."}},
+	))
+	want := "New features\n• Baselines compare side by side. Pick two.\nBug fixes\n• HOME comes back. See the guide."
+	if body != want {
+		t.Errorf("body = %q, want %q", body, want)
+	}
+}

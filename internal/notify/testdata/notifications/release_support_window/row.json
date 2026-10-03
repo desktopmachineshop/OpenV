@@ -24,7 +24,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 24 days",
+        "Title": "Upgrade OpenV within 25 days",
         "Type": "release_support_window",
         "UserID": "user-ada"
       },
@@ -52,7 +52,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 24 days",
+        "Title": "Upgrade OpenV within 25 days",
         "Type": "release_support_window",
         "UserID": "user-dee"
       },
@@ -80,7 +80,7 @@
         "ID": "<uuid>",
         "OrgID": "org-zurich",
         "Read": false,
-        "Title": "Upgrade OpenV within 24 days",
+        "Title": "Upgrade OpenV within 25 days",
         "Type": "release_support_window",
         "UserID": "user-gus"
       },
@@ -108,7 +108,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 6 days",
+        "Title": "Upgrade OpenV within 7 days",
         "Type": "release_support_window",
         "UserID": "user-ada"
       },
@@ -136,7 +136,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 6 days",
+        "Title": "Upgrade OpenV within 7 days",
         "Type": "release_support_window",
         "UserID": "user-dee"
       },
@@ -164,7 +164,7 @@
         "ID": "<uuid>",
         "OrgID": "org-zurich",
         "Read": false,
-        "Title": "Upgrade OpenV within 6 days",
+        "Title": "Upgrade OpenV within 7 days",
         "Type": "release_support_window",
         "UserID": "user-gus"
       },
@@ -192,7 +192,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 1 days",
+        "Title": "Upgrade OpenV within 2 days",
         "Type": "release_support_window",
         "UserID": "user-ada"
       },
@@ -220,7 +220,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 1 days",
+        "Title": "Upgrade OpenV within 2 days",
         "Type": "release_support_window",
         "UserID": "user-dee"
       },
@@ -248,7 +248,7 @@
         "ID": "<uuid>",
         "OrgID": "org-zurich",
         "Read": false,
-        "Title": "Upgrade OpenV within 1 days",
+        "Title": "Upgrade OpenV within 2 days",
         "Type": "release_support_window",
         "UserID": "user-gus"
       },
@@ -276,7 +276,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 0 days",
+        "Title": "Upgrade OpenV today",
         "Type": "release_support_window",
         "UserID": "user-ada"
       },
@@ -304,7 +304,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Upgrade OpenV within 0 days",
+        "Title": "Upgrade OpenV today",
         "Type": "release_support_window",
         "UserID": "user-dee"
       },
@@ -332,7 +332,7 @@
         "ID": "<uuid>",
         "OrgID": "org-zurich",
         "Read": false,
-        "Title": "Upgrade OpenV within 0 days",
+        "Title": "Upgrade OpenV today",
         "Type": "release_support_window",
         "UserID": "user-gus"
       },

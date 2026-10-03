@@ -3,7 +3,9 @@ package notify
 import (
 	"bytes"
 	"log/slog"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -23,6 +25,18 @@ func credentialWarning(name string) string {
 	return `level=WARN msg="a credential setting has spaces or a line break around it; it is used exactly as set" var=` + name
 }
 
+// credentialRuns numbers the runs of the tests below within one test binary.
+var credentialRuns atomic.Int64
+
+// freshCredential is a credential value no earlier run in this process has
+// set: internal/envparse warns once per variable and value for the life of
+// the process, by design, so a repeated run (go test -count=2) setting the
+// same value would see no warning and fail on what a fresh process does.
+// prefix and suffix are the spaces or line break around it under test.
+func freshCredential(prefix, value, suffix string) string {
+	return prefix + value + "_" + strconv.FormatInt(credentialRuns.Add(1), 10) + suffix
+}
+
 // TestMailerFromEnvKeepsTheCredentialsExactlyAsSet: the SMTP user and
 // password are credentials, used exactly as set (#379, question 24), and one
 // with spaces or a line break around it is named once in the log, never
@@ -31,19 +45,21 @@ func TestMailerFromEnvKeepsTheCredentialsExactlyAsSet(t *testing.T) {
 	log := captureSlog(t)
 	t.Setenv("OPENV_SMTP_HOST", "smtp.example.com")
 	t.Setenv("OPENV_SMTP_PORT", "")
-	t.Setenv("OPENV_SMTP_USER", " apikey")
-	t.Setenv("OPENV_SMTP_PASSWORD", "sk_smtp_do_not_log\n")
+	user := freshCredential(" ", "apikey", "")
+	pass := freshCredential("", "sk_smtp_do_not_log", "\n")
+	t.Setenv("OPENV_SMTP_USER", user)
+	t.Setenv("OPENV_SMTP_PASSWORD", pass)
 	t.Setenv("OPENV_SMTP_FROM", "ops@example.com")
 	m := MailerFromEnv()
-	if m.user != " apikey" || m.pass != "sk_smtp_do_not_log\n" {
-		t.Errorf("user %q, password %q: want both exactly as set", m.user, m.pass)
+	if m.user != user || m.pass != pass {
+		t.Errorf("user %q, password %q: want both exactly as set (%q, %q)", m.user, m.pass, user, pass)
 	}
 	for _, name := range []string{"OPENV_SMTP_USER", "OPENV_SMTP_PASSWORD"} {
 		if strings.Count(log.String(), credentialWarning(name)+"\n") != 1 {
 			t.Errorf("want one warning naming %s, got:\n%s", name, log.String())
 		}
 	}
-	if strings.Contains(log.String(), "sk_smtp") || strings.Contains(log.String(), " apikey") {
+	if strings.Contains(log.String(), "sk_smtp") || strings.Contains(log.String(), "apikey") {
 		t.Errorf("the log printed a credential:\n%s", log.String())
 	}
 }
@@ -86,10 +102,11 @@ func TestVAPIDFromEnvKeepsThePrivateKeyExactlyAsSet(t *testing.T) {
 	log := captureSlog(t)
 	t.Setenv("OPENV_VAPID_PUBLIC_KEY", "pub")
 	t.Setenv("OPENV_VAPID_SUBJECT", "mailto:ops@example.com")
-	t.Setenv("OPENV_VAPID_PRIVATE_KEY", "vapid_do_not_log\n")
+	key := freshCredential("", "vapid_do_not_log", "\n")
+	t.Setenv("OPENV_VAPID_PRIVATE_KEY", key)
 	c := VAPIDFromEnv()
-	if c.PrivateKey != "vapid_do_not_log\n" || !c.Enabled() {
-		t.Errorf("private key %q, enabled %v: want it exactly as set, and push on", c.PrivateKey, c.Enabled())
+	if c.PrivateKey != key || !c.Enabled() {
+		t.Errorf("private key %q, enabled %v: want it exactly as set (%q), and push on", c.PrivateKey, c.Enabled(), key)
 	}
 	if strings.Count(log.String(), credentialWarning("OPENV_VAPID_PRIVATE_KEY")+"\n") != 1 {
 		t.Errorf("want one warning naming OPENV_VAPID_PRIVATE_KEY, got:\n%s", log.String())

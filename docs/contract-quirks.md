@@ -219,18 +219,32 @@ the Phase 3 consolidations that give quirks their names.
 - **Pinned today:** S6 pins the 27 event type strings
   (`internal/domain/events/event_types_test.go`), not the TS subsets.
 
-## Q7. Bell deep links differ from email and push links
+## Q7. Bell deep links differed from email and push links (resolved)
 
-- **Where:** `pathForNotification`
-  (`frontend/src/components/NotificationBell.tsx:31`) and `notificationPath`
-  (`internal/notify/email.go:253`) map the same notification to different
-  routes.
-- **Pinned by, named as:** S10 *(planned)*; the X4 fixture keeps separate
-  `go` and `ts` expectations *(planned)*. Pain points fe-shell-v2,
-  services-7.
-- **Pinned today:** S12's deep-link snapshot pins the backend-built links it
-  resolves (`frontend/src/arch/__snapshots__/deepLinks.txt`), not the bell's
-  mapping.
+- **Resolved:** fixed under R7 by the release-noted bug-fix pull request
+  for #379's bugs 58 and 59 (OpenV REQ-78, REQ-109, REQ-122, REQ-179), so
+  it is no longer a quirk to preserve. `notificationPath`
+  (`internal/notify/email.go`), which builds both the email's link and the
+  web push's `url`, now mirrors `pathForNotification`
+  (`frontend/src/components/NotificationBell.tsx`) case for case. Email and
+  push sent workspace membership and access changes, releases (published
+  and scheduled) and the support window to `/projects`, and a project's
+  membership change to `/projects/<id>`; they now open
+  `/org/settings?tab=members`, `/whats-new`, `/org/settings` and
+  `/projects/<id>/settings?tab=members`, as the bell does. The cloud runner
+  minutes alert
+  (`hosted_minutes`, kind `org_limits`), whose text points at the Billing
+  tab, opened `/projects` on every channel, the bell's included; it now
+  opens `/org/settings?tab=billing` on all three.
+- **Pinned by:** S10. `TestEmailAndPushLinkWhereTheBellOpens`
+  (`internal/notify/email_test.go`) and the bell's own table ("where a row
+  opens", `NotificationBell.test.tsx`) pin every type and kind on each
+  side; `src/components/__snapshots__/NotificationBell.paths.txt` pins the
+  14 links of the S10 goldens with none differing, and its test fails on a
+  row that differs. The X4 fixture still keeps separate `go` and `ts`
+  expectations *(planned)*. S12's `deepLinks.txt` resolves the five links
+  the fix added against `App.tsx`, and S5c's `mail_password_admin.json`
+  holds the join mail's link.
 
 ## Q8. Seven `limit` parsers; events and runs reset to 100
 

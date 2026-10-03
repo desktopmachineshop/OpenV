@@ -2,8 +2,10 @@ package notify
 
 import (
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -114,6 +116,10 @@ func (a *ReleaseAnnouncer) Announce(rel *release.Release) int {
 // not what anyone wants to know. A member wants to tell a new capability
 // apart from a fix to something that was annoying them, at a glance, without
 // opening the page.
+//
+// The bell, the email and the push show text, not Markdown, so each bullet
+// is rendered as plain text (plainNote); the What's new page renders the
+// notes' Markdown itself.
 func ReleaseMessage(rel *release.Release) (title, body string) {
 	title = release.Headline(rel.Version)
 	var b strings.Builder
@@ -136,7 +142,7 @@ func ReleaseMessage(rel *release.Release) (title, body string) {
 		}
 		for _, l := range shown {
 			b.WriteString("• ")
-			b.WriteString(l)
+			b.WriteString(plainNote(l))
 			b.WriteString("\n")
 		}
 	}
@@ -147,4 +153,125 @@ func ReleaseMessage(rel *release.Release) (title, body string) {
 		b.WriteString("See What's new for details.")
 	}
 	return title, strings.TrimSpace(b.String())
+}
+
+// The inline Markdown plainNote reads. A code span's text and an escaped
+// character are set aside first, each replaced by a private-use character
+// that stands for it (mdSetAside), so that nothing inside them is read as a
+// marker. A span's text is one character or more, and the rest of it is
+// optional lazily (??): a one-character span such as **J** closes at its own
+// marker rather than at the next span's on the same line.
+var (
+	mdLink     = regexp.MustCompile(`!?\[([^\]]*)\]\([^()\s]*(?:\s+"[^"]*")?\)`)
+	mdAutolink = regexp.MustCompile(`<((?:https?|mailto):[^<>\s]+)>`)
+	mdStrong   = regexp.MustCompile(`\*\*(\S(?:.*?\S)??)\*\*`)
+	mdStrike   = regexp.MustCompile(`~~(\S(?:.*?\S)??)~~`)
+	mdEm       = regexp.MustCompile(`\*(\S(?:.*?\S)??)\*`)
+	// Underscores mark emphasis only at a word's edge, never inside one, so
+	// a name such as hosted_runner_minutes keeps them.
+	mdUnderStrong = regexp.MustCompile(`(^|[^\p{L}\p{N}_])__(\S(?:.*?\S)??)__($|[^\p{L}\p{N}_])`)
+	mdUnderEm     = regexp.MustCompile(`(^|[^\p{L}\p{N}_])_(\S(?:.*?\S)??)_($|[^\p{L}\p{N}_])`)
+)
+
+// mdSetAside is the first of the private-use characters (U+E000 to U+F8FF)
+// that stand for the text set aside, the nth for the nth piece. A note's own
+// character in that range is set aside too, so it comes back as written.
+const (
+	mdSetAside     = '\uE000'
+	mdSetAsideLast = '\uF8FF'
+)
+
+// plainNote renders one release note, Markdown as RELEASE_NOTES.md has it,
+// as plain text (#379, bug 62): emphasis and strikethrough markers and a
+// code span's backticks are dropped, a link or an image keeps its text and
+// an autolink its address, and a backslash escape keeps the character it
+// escapes. Only inline Markdown is read, since a note is the text of one
+// bullet; anything else stays as written.
+func plainNote(md string) string {
+	var aside []string
+	var b strings.Builder
+	setAside := func(text string) {
+		b.WriteRune(mdSetAside + rune(len(aside)))
+		aside = append(aside, text)
+	}
+	for i := 0; i < len(md); {
+		if mdSetAside+rune(len(aside)) > mdSetAsideLast {
+			// More pieces to set aside than characters to stand for
+			// them, which no note comes near: shown as written.
+			return md
+		}
+		c := md[i]
+		if c == '\\' && i+1 < len(md) && strings.IndexByte("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~", md[i+1]) >= 0 {
+			setAside(md[i+1 : i+2])
+			i += 2
+			continue
+		}
+		if c == '`' {
+			ticks := len(md[i:]) - len(strings.TrimLeft(md[i:], "`"))
+			if end := closingTicks(md, i+ticks, ticks); end >= 0 {
+				setAside(codeSpanText(md[i+ticks : end]))
+				i = end + ticks
+				continue
+			}
+			// No closing run: the ticks are text.
+			b.WriteString(md[i : i+ticks])
+			i += ticks
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(md[i:])
+		if r >= mdSetAside && r <= mdSetAsideLast {
+			setAside(string(r))
+		} else {
+			b.WriteRune(r)
+		}
+		i += size
+	}
+	s := mdLink.ReplaceAllString(b.String(), "$1")
+	s = mdAutolink.ReplaceAllString(s, "$1")
+	for {
+		next := mdStrong.ReplaceAllString(s, "$1")
+		next = mdUnderStrong.ReplaceAllString(next, "${1}${2}${3}")
+		next = mdStrike.ReplaceAllString(next, "$1")
+		next = mdEm.ReplaceAllString(next, "$1")
+		next = mdUnderEm.ReplaceAllString(next, "${1}${2}${3}")
+		if next == s {
+			break
+		}
+		s = next
+	}
+	var out strings.Builder
+	for _, r := range s {
+		if k := int(r - mdSetAside); r >= mdSetAside && k < len(aside) {
+			out.WriteString(aside[k])
+			continue
+		}
+		out.WriteRune(r)
+	}
+	return out.String()
+}
+
+// closingTicks finds the run of exactly n backticks that closes a code span
+// opened before from, or -1.
+func closingTicks(md string, from, n int) int {
+	for i := from; i < len(md); {
+		if md[i] != '`' {
+			i++
+			continue
+		}
+		run := len(md[i:]) - len(strings.TrimLeft(md[i:], "`"))
+		if run == n {
+			return i
+		}
+		i += run
+	}
+	return -1
+}
+
+// codeSpanText is a code span's text: one space on each side is padding
+// when both are there and the text is not only spaces.
+func codeSpanText(s string) string {
+	if len(s) >= 2 && s[0] == ' ' && s[len(s)-1] == ' ' && strings.Trim(s, " ") != "" {
+		return s[1 : len(s)-1]
+	}
+	return s
 }

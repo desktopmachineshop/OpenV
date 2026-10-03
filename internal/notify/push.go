@@ -28,6 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 
@@ -393,10 +394,46 @@ type PushPayload struct {
 func renderPush(n *notifications.Notification) PushPayload {
 	return PushPayload{
 		Title: n.Title,
-		Body:  truncate(n.Body, pushBodyLimit),
+		Body:  pushBody(n.Body),
 		URL:   notificationPath(n.EntityRef),
 		Tag:   pushTag(n),
 	}
+}
+
+// pushBody shortens a body to the pushBodyLimit characters a phone banner
+// shows. It cuts after the last whole word or line that fits, never inside
+// a word (unless one word is longer than the limit), drops a bullet that
+// would be left with no text after it, and the spaces and the full stop,
+// comma, colon or semicolon before the cut, and ends with an ellipsis. It
+// used to cut at the limit wherever that fell, so a release's notes could
+// end mid-word or on a bare "•…" (#379, bug 62). Every type's push goes
+// through it; the bell and the email carry the whole body.
+func pushBody(s string) string {
+	runes := []rune(s)
+	if len(runes) <= pushBodyLimit {
+		return s
+	}
+	// One character of the limit is the ellipsis.
+	cut := runes[:pushBodyLimit-1]
+	if !unicode.IsSpace(runes[len(cut)]) {
+		// The limit falls inside a word: back up to the space or line
+		// break before it.
+		for i := len(cut) - 1; i > 0; i-- {
+			if unicode.IsSpace(cut[i]) {
+				cut = cut[:i]
+				break
+			}
+		}
+	}
+	kept := strings.TrimRightFunc(string(cut), unicode.IsSpace)
+	for {
+		line := kept[strings.LastIndex(kept, "\n")+1:]
+		if strings.TrimSpace(line) != "•" {
+			break
+		}
+		kept = strings.TrimRightFunc(kept[:len(kept)-len(line)], unicode.IsSpace)
+	}
+	return strings.TrimRight(kept, ".,;:") + "…"
 }
 
 // pushTag scopes coalescing to one type within one project (or workspace, for

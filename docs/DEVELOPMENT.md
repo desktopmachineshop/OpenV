@@ -554,12 +554,16 @@ A new notification type needs a scenario in `ncScenarios`
 (`notification_content_test.go`): until it has one and its goldens, that
 test and `TestEveryNotificationTypeHasAContentGolden` in
 `internal/domain/notifications` fail. The bell builds its own deep links
-(`pathForNotification` in `NotificationBell.tsx`), which differ from the
-email and push links for releases, support windows and membership changes
-(quirk Q7); `src/components/NotificationBell.paths.test.tsx` feeds the bell
-every notification in the Go goldens and pins where each lands beside the
-Go link in `src/components/__snapshots__/NotificationBell.paths.txt`, so a
-change on either side shows there: regenerate it, after the Go goldens,
+(`pathForNotification` in `NotificationBell.tsx`), and the email and push
+links open the same page (`notificationPath` in `internal/notify/email.go`
+mirrors it case for case; quirk Q7, resolved), so a new entity kind is
+added on both sides, with a row in each side's table
+(`TestEmailAndPushLinkWhereTheBellOpens`, and the bell's "where a row
+opens"). `src/components/NotificationBell.paths.test.tsx` feeds the bell
+every notification in the Go goldens, pins where each lands beside the Go
+link in `src/components/__snapshots__/NotificationBell.paths.txt`, and
+fails when the two differ, so a change on either side shows there:
+regenerate it, after the Go goldens,
 with `cd frontend && npx vitest run src/components/NotificationBell.paths.test.tsx -u`.
 These three test files and the recording harness beside the Go one are
 guard code (`GUARD_CODE` row S10 in `scripts/refactor/refactor_guard.py`):
@@ -621,6 +625,35 @@ took alone, without waiting a claim tick; `make check` and CI run them all.
 These test files are guard code of their own (`GUARD_CODE` row S15a in
 `scripts/refactor/refactor_guard.py`): a refactor pull request may change
 them only in a class C or T commit.
+
+The three ways an automation launches a run are characterized where each
+lives (refactor plan step S11, OpenV REQ-24). In `internal/scheduler`,
+against a stand-in repository that models the claim SQL, the scheduler's
+tests pin catch-up at start (done before `Start` returns: an automation
+that fell due while the server was down gets one run with `catch_up` and
+none without, and its row is claimed either way), a tick, the claim a
+replica must win before it fires (two schedulers racing for one due
+automation launch one run), a cron expression that does not parse (the
+automation fires once and its `next_run_at` becomes NULL, so it is never
+due again, though it stays enabled), the prompt (`Scheduled run of
+automation: <name>` when the template renders empty), the target, and
+`ResolveTarget`, which all three paths call. In `internal/automation`, the
+trigger matcher's tests pin the event filter (each value compared as `fmt`
+prints it, so a filter's number matches an int below a million), the
+guards in their order (an event caused by one of the automation's own
+runs, actor `agent:<run>`, then the cooldown, then the hourly cap), the
+prompt variables, the run launched and the `last_run_at` stamp, and that
+`Start` subscribes to the event bus. `TestRunNowCopy` in `internal/api`
+pins run-now's copy (`Manual run of automation: <name>`, the caller as
+launcher, no guard and no stamp), and `TestSchedulersShareTheRealClaim`
+in `internal/persistence/postgres` races two real schedulers on the real
+claim when `OPENV_TEST_DATABASE_URL` is set (both CI legs run it). There
+is no golden: a change to any of this fails an expectation in these tests,
+which the pull request then changes with it. The scheduler and matcher
+read the clock themselves, so the tests check each time they stamp against
+the window of the call. These test files are guard code (`GUARD_CODE` row
+S11 in `scripts/refactor/refactor_guard.py`): a refactor pull request may
+change them only in a class C or T commit.
 
 The migration generator for M10 (refactor plan step S14d,
 `internal/tools/liftmigrations`) has goldens of its own, what it makes of

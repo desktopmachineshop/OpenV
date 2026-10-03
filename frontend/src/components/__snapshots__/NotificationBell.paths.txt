@@ -1,9 +1,9 @@
 # Where the bell (pathForNotification, NotificationBell.tsx) and the email and web push
 # (notificationPath, internal/notify/email.go) send a member, for every notification the Go
 # goldens under internal/notify/testdata/notifications deliver: refactor plan step S10.
-# They differ by design today (quirk Q7); aligning them is a release-noted change.
+# They open the same page (quirk Q7, fixed under R7 for #379's bugs 58 and 59).
 # Regenerate: npx vitest run src/components/NotificationBell.paths.test.tsx -u
-# 12 types; 14 distinct links; 6 differ.
+# 12 types; 14 distinct links; 0 differ.
 
 type                    entity_ref.kind     bell                                         email and push
 proposal_pending        proposal            /projects/proj-apollo/agent-runs?run=run-42  /projects/proj-apollo/agent-runs?run=run-42  same
@@ -13,10 +13,10 @@ interview_completed     interview           /projects/proj-apollo/interviews    
 mention                 artifact            /projects/proj-apollo/requirements           /projects/proj-apollo/requirements           same
 review_requested        artifact            /projects/proj-apollo/requirements           /projects/proj-apollo/requirements           same
 budget_threshold        org_usage           /org/settings?tab=usage                      /org/settings?tab=usage                      same
-hosted_minutes          org_limits          /projects                                    /projects                                    same
-access_changed          membership          /org/settings?tab=members                    /projects                                    differs
-access_changed          project_membership  /projects/proj-apollo/settings?tab=members   /projects/proj-apollo                        differs
-membership_changed      membership          /org/settings?tab=members                    /projects                                    differs
-release_published       release             /whats-new                                   /projects                                    differs
-release_scheduled       release             /whats-new                                   /projects                                    differs
-release_support_window  support_window      /org/settings                                /projects                                    differs
+hosted_minutes          org_limits          /org/settings?tab=billing                    /org/settings?tab=billing                    same
+access_changed          membership          /org/settings?tab=members                    /org/settings?tab=members                    same
+access_changed          project_membership  /projects/proj-apollo/settings?tab=members   /projects/proj-apollo/settings?tab=members   same
+membership_changed      membership          /org/settings?tab=members                    /org/settings?tab=members                    same
+release_published       release             /whats-new                                   /whats-new                                   same
+release_scheduled       release             /whats-new                                   /whats-new                                   same
+release_support_window  support_window      /org/settings                                /org/settings                                same

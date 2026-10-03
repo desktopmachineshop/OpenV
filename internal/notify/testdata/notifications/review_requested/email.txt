@@ -17,7 +17,7 @@ Content-Type: text/plain; charset=UTF-8
 
 Artifact ready for review
 
-"Brake \"pedal\" force ≤ 50 N" is waiting in the review queue.
+"Brake "pedal" force ≤ 50 N" is waiting in the review queue.
 
 Open it in OpenV:
 https://openv.example.test/projects/proj-apollo/requirements

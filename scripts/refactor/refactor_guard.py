@@ -200,8 +200,9 @@ PROTECTED_PATHS = [
 # class A, this guard, M4's, M10's and M11a's class B and F1's move, so a
 # commit of another class may not edit them either. Nor are S9, whose tests
 # are P1's guard and X14b's characterization, S10, whose tests are X6's
-# characterization, and S15a, whose tests are M15a's guard and M15b's
-# characterization.
+# characterization, S11, whose tests pin the three automation launch paths
+# that M4 and M7 move the callers of, and S15a, whose tests are M15a's guard
+# and M15b's characterization.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -327,6 +328,24 @@ GUARD_CODE = [
     ("S10", ["internal/notify/notification_content_test.go", "internal/notify/notification_content_harness_test.go",
              "internal/domain/notifications/content_golden_test.go",
              "frontend/src/components/NotificationBell.paths.test.tsx"]),
+    # S11's characterization of the three ways an automation launches a run
+    # (OpenV REQ-24): the scheduler (catch-up, the claim won or lost, an
+    # invalid cron, the prompt, the target, ResolveTarget) and its stand-ins;
+    # the trigger matcher (filters, the agent: self-trigger skip, cooldown,
+    # the hourly cap, prompt variables, the launch and stamp, the bus
+    # subscription) and its stand-ins; run-now's copy in internal/api; and
+    # two real schedulers racing on the claim SQL in
+    # internal/persistence/postgres. They pin with no golden, so the
+    # assertions are what is frozen. §7.6 puts S11 before M3 and M4, which
+    # move main()'s wiring of the scheduler and matcher into a stage, and M7
+    # moves RunAutomationNow into automation_handlers.go; listing the files
+    # here keeps a commit of another class, such as those moves, from
+    # relaxing them. A later merge of the three launch copies (services-5;
+    # P5, which named S11 as its guard, is dropped) would be class E and name
+    # them in Refactor-Characterization trailers.
+    ("S11", ["internal/scheduler/scheduler_test.go", "internal/scheduler/scheduler_harness_test.go",
+             "internal/automation/matcher_test.go", "internal/automation/matcher_harness_test.go",
+             "internal/api/automation_run_now_test.go", "internal/persistence/postgres/scheduler_claim_test.go"]),
     # S15a's characterization of internal/runner: the tests that write its
     # run failure goldens and pin slot accounting, sign-in to claim and pool
     # leases, and the stand-in API and CLIs they share. M15a (class B) names

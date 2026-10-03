@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"Artifact ready for review\",\"body\":\"\\\"Brake \\\\\\\"pedal\\\\\\\" force ≤ 50 N\\\" is waiting in the review queue.\",\"url\":\"/projects/proj-apollo/requirements\",\"tag\":\"review_requested:proj-apollo\"}"
+          "payload": "{\"title\":\"Artifact ready for review\",\"body\":\"\\\"Brake \\\"pedal\\\" force ≤ 50 N\\\" is waiting in the review queue.\",\"url\":\"/projects/proj-apollo/requirements\",\"tag\":\"review_requested:proj-apollo\"}"
         }
       ],
       "sent with the default allow-list": true,

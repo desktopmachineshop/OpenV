@@ -20,7 +20,7 @@ Cloud runner minutes nearly used up
 This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=billing
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -41,7 +41,7 @@ Cloud runner minutes nearly used up
 This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=billing
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -62,7 +62,7 @@ Cloud runner minutes used up
 This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agent Connector are not affected. A workspace admin can raise the allowance from the Billing tab.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=billing
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -83,7 +83,7 @@ Cloud runner minutes used up
 This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agent Connector are not affected. A workspace admin can raise the allowance from the Billing tab.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=billing
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.

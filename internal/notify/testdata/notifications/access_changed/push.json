@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"url\":\"/projects\",\"tag\":\"access_changed:org-acme\"}"
+          "payload": "{\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"url\":\"/org/settings?tab=members\",\"tag\":\"access_changed:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"url\":\"/projects\",\"tag\":\"access_changed:org-acme\"}"
+          "payload": "{\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"url\":\"/org/settings?tab=members\",\"tag\":\"access_changed:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -34,7 +34,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"You were removed from a workspace\",\"body\":\"You no longer have access to this workspace.\",\"url\":\"/projects\",\"tag\":\"access_changed:org-acme\"}"
+          "payload": "{\"title\":\"You were removed from a workspace\",\"body\":\"You no longer have access to this workspace.\",\"url\":\"/org/settings?tab=members\",\"tag\":\"access_changed:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -47,7 +47,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"url\":\"/projects/proj-apollo\",\"tag\":\"access_changed:proj-apollo\"}"
+          "payload": "{\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"url\":\"/projects/proj-apollo/settings?tab=members\",\"tag\":\"access_changed:proj-apollo\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -60,7 +60,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"Your project access changed\",\"body\":\"Your role in this project is now a viewer.\",\"url\":\"/projects/proj-apollo\",\"tag\":\"access_changed:proj-apollo\"}"
+          "payload": "{\"title\":\"Your project access changed\",\"body\":\"Your role in this project is now a viewer.\",\"url\":\"/projects/proj-apollo/settings?tab=members\",\"tag\":\"access_changed:proj-apollo\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -73,7 +73,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"You were removed from a project\",\"body\":\"You no longer have access to this project.\",\"url\":\"/projects/proj-apollo\",\"tag\":\"access_changed:proj-apollo\"}"
+          "payload": "{\"title\":\"You were removed from a project\",\"body\":\"You no longer have access to this project.\",\"url\":\"/projects/proj-apollo/settings?tab=members\",\"tag\":\"access_changed:proj-apollo\"}"
         }
       ],
       "sent with the default allow-list": true,
