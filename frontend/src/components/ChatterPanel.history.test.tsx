@@ -1,12 +1,10 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { ChatterPanel } from './ChatterPanel';
 import { chatterAPI } from '../api/client';
 
-vi.mock('../api/client', () => ({
-  chatterAPI: { list: vi.fn(), create: vi.fn() },
-  artifactAPI: { list: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 // The assistant tab and the to-do controls are not what these tests are
 // about; stubbing them keeps the panel to its history.

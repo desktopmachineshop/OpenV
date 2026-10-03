@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { ResetPassword } from './ResetPassword';
 
 // Password reset landing (REQ-158). Same router recipe as VerifyEmail.test:
@@ -14,16 +15,17 @@ vi.mock('react-router-dom', () => ({
 
 const calls: any[][] = [];
 let mockConfirmError: any = null;
-vi.mock('../api/client', () => ({
-  DEFAULT_MIN_PASSWORD_LENGTH: 8,
-  authAPI: {
-    policy: () => Promise.resolve({ data: { registration: 'open', min_password_length: 10 } }),
-    confirmPasswordReset: (...args: any[]) => {
-      calls.push(args);
-      return mockConfirmError ? Promise.reject(mockConfirmError) : Promise.resolve({});
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    authAPI: {
+      policy: () => Promise.resolve({ data: { registration: 'open', min_password_length: 10 } }),
+      confirmPasswordReset: (...args: any[]) => {
+        calls.push(args);
+        return mockConfirmError ? Promise.reject(mockConfirmError) : Promise.resolve({});
+      },
     },
-  },
-}));
+  })
+);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 

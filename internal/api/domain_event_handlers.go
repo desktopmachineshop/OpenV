@@ -6,11 +6,17 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
 // --- Domain events ---
+
+// registerDomainEventRoutes wires the domain event audit.
+func (h *Handler) registerDomainEventRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/events", h.ListDomainEvents).Methods("GET")
+}
 
 // listOrg is the workspace a list read filters by: a named project's, which
 // the project guard just let the caller read, so that the list holds that

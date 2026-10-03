@@ -327,7 +327,6 @@
     "internal/domain/links"
   ],
   "file_lines": {
-    "internal/api/agent_handlers.go": 2414,
     "internal/api/org_handlers.go": 1552,
     "internal/api/suite_handlers.go": 2245,
     "internal/domain/exports/reqif.go": 958,
@@ -336,13 +335,11 @@
     "internal/domain/reports/report.go": 1104
   },
   "func_lines": {
-    "cmd/server:main": 721,
     "internal/api:Handler.CreateLink": 115,
     "internal/api:Handler.OIDCCallback": 115,
     "internal/api:Handler.UpdateArtifact": 168,
     "internal/api:Handler.buildChangesList": 114,
     "internal/api:Handler.processManagedLinkChanges": 143,
-    "internal/api:Handler.registerAgentRoutes": 112,
     "internal/api:buildAIMap": 132,
     "internal/api:buildGuidedCopilotPrompt": 140,
     "internal/domain/artifacts:DefaultService.UpdateArtifact": 115,
