@@ -336,8 +336,8 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S10", "S12", "S12b", "S14a", "S14b",
-                  "S14c", "S14d", "S14e", "S14f", "S15a"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S10", "S11", "S12", "S12b", "S14a",
+                  "S14b", "S14c", "S14d", "S14e", "S14f", "S15a"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -466,6 +466,30 @@ class DataTest(unittest.TestCase):
                      "frontend/src/components/NotificationBell.test.tsx"):
             with self.subTest(path=path):
                 self.assertIsNone(rg.guard_code_step(path))
+
+    def test_s11_automation_launch_characterization(self):
+        # S11 pins the scheduler, the trigger matcher and run-now's copy with
+        # no golden: its six test files are its guard code, so a refactor
+        # (M4's and M7's moves among them) may not relax them outside a
+        # class C or T commit. The matcher's earlier regression test, the
+        # other tests beside them and the production files are not, and S11
+        # adds no golden entry: the golden list keeps 21.
+        for path in ("internal/scheduler/scheduler_test.go", "internal/scheduler/scheduler_harness_test.go",
+                     "internal/automation/matcher_test.go", "internal/automation/matcher_harness_test.go",
+                     "internal/api/automation_run_now_test.go",
+                     "internal/persistence/postgres/scheduler_claim_test.go"):
+            with self.subTest(path=path):
+                self.assertTrue(os.path.isfile(os.path.join(REPO, path)), path)
+                self.assertEqual(rg.guard_code_step(path), "S11")
+        for path in ("internal/automation/triggers_test.go", "internal/automation/triggers.go",
+                     "internal/scheduler/scheduler.go", "internal/api/agent_handlers.go",
+                     "internal/api/launch_run_token_test.go",
+                     "internal/persistence/postgres/automation_repository_test.go",
+                     "internal/persistence/postgres/automation_repository.go"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertNotIn("S11", {step for step, _, _ in rg.GOLDEN_LIST})
+        self.assertEqual(len(rg.GOLDEN_LIST), 21)
 
     def test_s15a_run_failure_goldens(self):
         # Both of S15a's goldens are on the list under their own entry, not
