@@ -1,0 +1,48 @@
+# Email for notification type interview_completed (notifications.TypeInterviewCompleted): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): no. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== chatter.created: an interview participant finished | delivery 1 of 2 | to user-ada
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Interview session finished
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Interview session finished
+
+An interview participant completed their session.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/interviews
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== chatter.created: an interview participant finished | delivery 2 of 2 | to user-ben
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Interview session finished
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Interview session finished
+
+An interview participant completed their session.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/interviews
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

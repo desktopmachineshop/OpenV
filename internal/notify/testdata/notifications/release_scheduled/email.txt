@@ -1,0 +1,153 @@
+# Email for notification type release_scheduled (notifications.TypeReleaseScheduled): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): no. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== stable cut, the workspace's window eight days away | delivery 1 of 1 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Stable release 0.15.0 is ready for Zürich Labs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 is ready for Zürich Labs
+
+It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== stable cut announced, the window opens tomorrow | delivery 1 of 1 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Stable release 0.15.0 turns on for Zürich Labs tomorrow
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 turns on for Zürich Labs tomorrow
+
+Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== first run inside the reminder's day: announced and reminded at once | delivery 1 of 2 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Stable release 0.15.0 is ready for Zürich Labs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 is ready for Zürich Labs
+
+It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== first run inside the reminder's day: announced and reminded at once | delivery 2 of 2 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Stable release 0.15.0 turns on for Zürich Labs tomorrow
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 turns on for Zürich Labs tomorrow
+
+Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== first run after the window has passed: announced and turned on at once | delivery 1 of 3 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Stable release 0.15.0 is ready for Zürich Labs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 is ready for Zürich Labs
+
+It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== stable cut for a workspace with no upgrade window | delivery 1 of 5 | to user-ada
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Stable release 0.15.0 is ready for Acme Rockets
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 is ready for Acme Rockets
+
+It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== stable cut for a workspace with no upgrade window | delivery 2 of 5 | to user-dee
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Stable release 0.15.0 is ready for Acme Rockets
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Stable release 0.15.0 is ready for Acme Rockets
+
+It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

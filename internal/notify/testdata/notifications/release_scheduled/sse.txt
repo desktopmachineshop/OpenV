@@ -1,0 +1,47 @@
+# SSE frames for notification type release_scheduled (notifications.TypeReleaseScheduled): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== stable cut, the workspace's window eight days away | delivery 1 of 1 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_scheduled","title":"Stable release 0.15.0 is ready for Zürich Labs","body":"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== stable cut announced, the window opens tomorrow | delivery 1 of 1 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_scheduled","title":"Stable release 0.15.0 turns on for Zürich Labs tomorrow","body":"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== first run inside the reminder's day: announced and reminded at once | delivery 1 of 2 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_scheduled","title":"Stable release 0.15.0 is ready for Zürich Labs","body":"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== first run inside the reminder's day: announced and reminded at once | delivery 2 of 2 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_scheduled","title":"Stable release 0.15.0 turns on for Zürich Labs tomorrow","body":"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== first run after the window has passed: announced and turned on at once | delivery 1 of 3 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_scheduled","title":"Stable release 0.15.0 is ready for Zürich Labs","body":"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== stable cut for a workspace with no upgrade window | delivery 1 of 5 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_scheduled","title":"Stable release 0.15.0 is ready for Acme Rockets","body":"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== stable cut for a workspace with no upgrade window | delivery 2 of 5 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_scheduled","title":"Stable release 0.15.0 is ready for Acme Rockets","body":"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

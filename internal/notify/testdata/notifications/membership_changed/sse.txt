@@ -1,0 +1,53 @@
+# SSE frames for notification type membership_changed (notifications.TypeMembershipChanged): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== org.member_added: an admin adds a member | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"membership_changed","title":"Someone joined the workspace","body":"Ben Okafor joined this workspace as a member.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.invitation_sent: an admin invites an address as an admin | delivery 1 of 1 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"membership_changed","title":"An invitation was sent","body":"frank@example.test was invited to this workspace as an admin.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":""},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.invitation_accepted: someone with no display name joins | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"membership_changed","title":"Someone joined the workspace","body":"Someone joined this workspace as a member.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-eve"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.invitation_accepted: someone with no display name joins | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"membership_changed","title":"Someone joined the workspace","body":"Someone joined this workspace as a member.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-eve"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.member_role_changed: a member is made an admin | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"membership_changed","title":"A workspace role changed","body":"Ben Okafor is now an admin in this workspace (was a member).","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.member_removed by an admin | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"membership_changed","title":"Someone was removed from the workspace","body":"Ben Okafor was removed from this workspace.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.member_removed: a member leaves | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"membership_changed","title":"Someone left the workspace","body":"Ben Okafor left this workspace.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.member_removed: a member leaves | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"membership_changed","title":"Someone left the workspace","body":"Ben Okafor left this workspace.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

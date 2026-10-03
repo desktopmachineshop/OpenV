@@ -1,0 +1,11 @@
+# SSE frames for notification type run_failed (notifications.TypeRunFailed): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== agentrun.finished, failed, launched by a member | delivery 1 of 1 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"run_failed","title":"Agent run failed","body":"An agent run you launched finished with an error.","entity_ref":{"kind":"run","project_id":"proj-apollo","run_id":"run-42"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

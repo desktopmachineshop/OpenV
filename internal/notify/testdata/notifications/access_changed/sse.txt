@@ -1,0 +1,41 @@
+# SSE frames for notification type access_changed (notifications.TypeAccessChanged): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== org.member_added: an admin adds a member | delivery 1 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"access_changed","title":"You joined a workspace","body":"You are now a member of this workspace with a member role.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.member_role_changed: a member is made an admin | delivery 1 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"access_changed","title":"Your workspace access changed","body":"Your role in this workspace is now an admin.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== org.member_removed by an admin | delivery 1 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"access_changed","title":"You were removed from a workspace","body":"You no longer have access to this workspace.","entity_ref":{"kind":"membership","org_id":"org-acme","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== project.member_added as an editor | delivery 1 of 1 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"access_changed","title":"You were added to a project","body":"You now have editor access to this project.","entity_ref":{"kind":"project_membership","org_id":"org-acme","project_id":"proj-apollo","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== project.member_role_changed from editor to viewer | delivery 1 of 1 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"access_changed","title":"Your project access changed","body":"Your role in this project is now a viewer.","entity_ref":{"kind":"project_membership","org_id":"org-acme","project_id":"proj-apollo","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== project.member_removed by an owner | delivery 1 of 1 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"access_changed","title":"You were removed from a project","body":"You no longer have access to this project.","entity_ref":{"kind":"project_membership","org_id":"org-acme","project_id":"proj-apollo","user_id":"user-ben"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

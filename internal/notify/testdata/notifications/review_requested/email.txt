@@ -1,0 +1,69 @@
+# Email for notification type review_requested (notifications.TypeReviewRequested): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): yes. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== artifact.status_changed to in_review by its owner, titled with quotes | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Artifact ready for review
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Artifact ready for review
+
+"Brake \"pedal\" force ≤ 50 N" is waiting in the review queue.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/requirements
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== artifact.status_changed to in_review with no title, by the system | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Artifact ready for review
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Artifact ready for review
+
+An artifact is waiting in the review queue.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/requirements
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== artifact.status_changed to in_review with no title, by the system | delivery 2 of 2 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Artifact ready for review
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Artifact ready for review
+
+An artifact is waiting in the review queue.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/requirements
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

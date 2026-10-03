@@ -317,22 +317,26 @@ class DataTest(unittest.TestCase):
         # renaming a golden or its directory cannot drop it from the list
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
-        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16", "S12b",
+        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S10", "S12, S12b, S16", "S12b",
                   "S15a"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 19)
+        self.assertEqual(len(entries), 20)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
                                 f"no tracked file matches {patterns}: rename the entry with its golden")
+                if step == "S10":
+                    # S10's entry names two goldens; each must still exist.
+                    for p in patterns:
+                        self.assertTrue(any(rg.matches(f, [p]) for f in files), f"no tracked file matches {p}")
 
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S12b", "S14a", "S14b",
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S10", "S12", "S12b", "S14a", "S14b",
                   "S14c", "S14d", "S14e", "S14f", "S15a"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
@@ -426,6 +430,42 @@ class DataTest(unittest.TestCase):
         for path in ("cmd/newcmd/sub/cli_test.go", "frontend/env_parse_test.go", "internal/archtest/env_parse_test.go"):
             with self.subTest(path=path):
                 self.assertNotEqual(rg.guard_code_step(path), "S8")
+
+    def test_s10_notification_content_goldens(self):
+        # Every notification type's four goldens are on the list under S10's
+        # entry, as is the bell's deep-link table, which S10's entry claims
+        # ahead of S12's frontend snapshots (S12's own stay S12's), so a pull
+        # request that changes what a notification delivers needs a release
+        # note and a refactor (X6 above all) may not change it. The tests
+        # that write and read them are S10's guard code; the notifier's other
+        # tests and its production files are not.
+        files = subprocess.run(["git", "ls-files", "internal/notify/testdata/notifications"], cwd=REPO,
+                               capture_output=True, text=True, check=True).stdout.split()
+        goldens = [f for f in files if not f.endswith(".gitattributes")]
+        types = sorted({f.split("/")[4] for f in goldens})
+        self.assertGreaterEqual(len(types), 12, types)
+        for t in types:
+            with self.subTest(type=t):
+                self.assertEqual(sorted(os.path.basename(f) for f in goldens if f.split("/")[4] == t),
+                                 ["email.txt", "push.json", "row.json", "sse.txt"])
+        for path in goldens + ["frontend/src/components/__snapshots__/NotificationBell.paths.txt"]:
+            with self.subTest(path=path):
+                self.assertTrue(os.path.isfile(os.path.join(REPO, path)), path)
+                self.assertEqual(rg.golden_entry(path), ("S10", "notification content"))
+        self.assertEqual(rg.golden_entry("frontend/src/arch/__snapshots__/deepLinks.txt"),
+                         ("S12, S12b, S16", "frontend file snapshots"))
+        for path in ("internal/notify/notification_content_test.go",
+                     "internal/notify/notification_content_harness_test.go",
+                     "internal/domain/notifications/content_golden_test.go",
+                     "frontend/src/components/NotificationBell.paths.test.tsx"):
+            with self.subTest(path=path):
+                self.assertTrue(os.path.isfile(os.path.join(REPO, path)), path)
+                self.assertEqual(rg.guard_code_step(path), "S10")
+        for path in ("internal/notify/notifier_test.go", "internal/notify/email.go", "internal/notify/stable.go",
+                     "internal/domain/notifications/notifications.go", "frontend/src/components/NotificationBell.tsx",
+                     "frontend/src/components/NotificationBell.test.tsx"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
 
     def test_s15a_run_failure_goldens(self):
         # Both of S15a's goldens are on the list under their own entry, not

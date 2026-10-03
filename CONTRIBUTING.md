@@ -267,6 +267,13 @@ prints:
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`
+- notification content (S10): `UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'`
+  for `internal/notify/testdata/notifications/<type>/` (each type's stored
+  row, SSE frame, email and web push), then
+  `cd frontend && npx vitest run src/components/NotificationBell.paths.test.tsx -u`
+  for the bell's deep links beside them,
+  `frontend/src/components/__snapshots__/NotificationBell.paths.txt`, which
+  reads the Go goldens
 - run failure outcomes and classes (S15a): `UPDATE_GOLDEN=1 go test ./internal/runner -count=1 -run '^(TestRunFailureClassesGolden|TestRunFailureTaxonomyGolden)$'`
   for `internal/runner/testdata/run_failures/` (what the runner reports
   for each terminal outcome of a run, and the taxonomy behind it)
