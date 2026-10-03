@@ -9,6 +9,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import { isPublicPath } from '../utils/publicPaths';
 import { getAPIBaseURL } from './baseURL';
+import { ORG_HEADER, readActiveOrg } from '../state/activeOrgStorage';
 import type { UploadProgressHandler } from './types/attachments';
 
 const API_BASE_URL = getAPIBaseURL();
@@ -24,17 +25,13 @@ const client: AxiosInstance = axios.create({
 
 // Attach the active workspace (org) to every request. The backend validates
 // membership and falls back server-side when the header is invalid.
+// This tab's workspace wins over the browser's last used; with neither (or
+// no storage) the request goes without the header.
 client.interceptors.request.use((config) => {
-  try {
-    const activeOrg =
-      sessionStorage.getItem('openv_active_org') ||
-      localStorage.getItem('openv_active_org') ||
-      '';
-    if (activeOrg) {
-      config.headers['X-Org-ID'] = activeOrg;
-    }
-  } catch {
-    // storage unavailable (private mode etc.) — proceed without the header
+  const { tabOrg, lastUsed } = readActiveOrg();
+  const activeOrg = tabOrg || lastUsed;
+  if (activeOrg) {
+    config.headers[ORG_HEADER] = activeOrg;
   }
   return config;
 });
