@@ -1,0 +1,114 @@
+{
+  "description": "Refactor step M9, class A (docs/plans/codebase-refactor.md §6.5, K1 and K3 in §4.3): internal/api's org_handlers.go splits along its ten // --- section markers into one file per area and keeps only registerOrgRoutes. Each section's handlers go with their own helpers, in source order: the workspaces themselves to org_core_handlers.go (with ActivateOrg, which sat after the logo handlers but sets the session's active workspace and is registered with the workspace routes), the workspace logo to org_logo_handlers.go (uploadIsRasterImage, on the helper-home allowlist already for avatar_handlers.go, goes with it), the workspace members to org_member_handlers.go (with GetOrgLimits, the first handler of that section), people-teams to org_team_handlers.go, worker keys to worker_key_handlers.go, personal runner keys to runner_key_handlers.go, the hosted runner to hosted_runner_handlers.go (with hostedRunnerKeyName and workerOnlineWindow, constants the worker status and the guided copilot also read), worker status to worker_status_handlers.go (with GetOrgUsage and its window bounds), Agent Connector pairing and download to connector_handlers.go and project team grants to project_team_access_handlers.go. No helper is used by more than one of the new files, so none goes to a K3 home and the helper-home allowlist (M5) is unchanged. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M9.json",
+  "package": "internal/api",
+  "targets": [
+    {
+      "file": "org_core_handlers.go",
+      "decls": [
+        "(*Handler).ListOrgs",
+        "(*Handler).DeleteOrg",
+        "(*Handler).SetOrgPlan",
+        "(*Handler).RestoreOrg",
+        "(*Handler).CreateOrg",
+        "(*Handler).GetOrg",
+        "(*Handler).UpdateOrg",
+        "orgUpdate",
+        "(*Handler).checkOrgUpdate",
+        "(*Handler).ActivateOrg"
+      ]
+    },
+    {
+      "file": "org_logo_handlers.go",
+      "decls": [
+        "maxOrgLogoBytes",
+        "rasterImageExtensions",
+        "uploadIsRasterImage",
+        "(*Handler).orgLogoPath",
+        "(*Handler).UploadOrgLogo",
+        "(*Handler).GetOrgLogo",
+        "(*Handler).DeleteOrgLogo"
+      ]
+    },
+    {
+      "file": "org_member_handlers.go",
+      "decls": [
+        "(*Handler).GetOrgLimits",
+        "(*Handler).ListOrgMembers",
+        "(*Handler).AddOrgMember",
+        "(*Handler).UpdateOrgMember",
+        "(*Handler).RemoveOrgMember"
+      ]
+    },
+    {
+      "file": "org_team_handlers.go",
+      "decls": [
+        "(*Handler).ListOrgTeams",
+        "(*Handler).CreateOrgTeam",
+        "(*Handler).orgTeamChecked",
+        "(*Handler).UpdateOrgTeam",
+        "(*Handler).DeleteOrgTeam",
+        "(*Handler).AddOrgTeamMember",
+        "(*Handler).RemoveOrgTeamMember"
+      ]
+    },
+    {
+      "file": "worker_key_handlers.go",
+      "decls": [
+        "(*Handler).ListWorkerKeys",
+        "(*Handler).CreateWorkerKey",
+        "(*Handler).RevokeWorkerKey"
+      ]
+    },
+    {
+      "file": "runner_key_handlers.go",
+      "decls": [
+        "(*Handler).GetMyRunnerKey",
+        "(*Handler).CreateMyRunnerKey",
+        "(*Handler).RevokeMyRunnerKey"
+      ]
+    },
+    {
+      "file": "hosted_runner_handlers.go",
+      "decls": [
+        "hostedRunnerKeyName",
+        "workerOnlineWindow",
+        "hostedProviderEnv",
+        "hostedContainerName",
+        "(*Handler).hostedRunnersEnabled",
+        "(*Handler).keyOnline",
+        "(*Handler).GetHostedRunner",
+        "(*Handler).CreateHostedRunner",
+        "(*Handler).hostedRunnerChecked",
+        "(*Handler).StartHostedRunner",
+        "(*Handler).StopHostedRunner",
+        "(*Handler).DeleteHostedRunner"
+      ]
+    },
+    {
+      "file": "worker_status_handlers.go",
+      "decls": [
+        "(*Handler).GetWorkerStatus",
+        "defaultUsageDays",
+        "maxUsageDays",
+        "(*Handler).GetOrgUsage"
+      ]
+    },
+    {
+      "file": "connector_handlers.go",
+      "decls": [
+        "(*Handler).CreateConnectorPairing",
+        "(*Handler).ExchangeConnectorPairing",
+        "(*Handler).DownloadConnector",
+        "fileExists"
+      ]
+    },
+    {
+      "file": "project_team_access_handlers.go",
+      "decls": [
+        "(*Handler).ListProjectTeamAccess",
+        "(*Handler).GrantProjectTeamAccess",
+        "(*Handler).RevokeProjectTeamAccess"
+      ]
+    }
+  ]
+}
