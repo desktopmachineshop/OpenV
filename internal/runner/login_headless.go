@@ -101,9 +101,9 @@ const ptyNudgeAfter = 8 * time.Second
 
 // handlePTYLogin drives a TUI sign-in over a pseudo-terminal, relaying its
 // URL out and the member's pasted code back in.
-func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
+func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
 	if !ptySupported {
-		w.loginProgress(login.ID, providers.LoginFailed, "",
+		b.loginProgress(login.ID, providers.LoginFailed, "",
 			"this runner cannot open a terminal for the sign-in flow")
 		return
 	}
@@ -114,7 +114,7 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 
 	tty, err := startPTY(cmd)
 	if err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open a terminal for the sign-in: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to open a terminal for the sign-in: "+err.Error())
 		return
 	}
 	defer tty.Close()
@@ -161,7 +161,7 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 	for {
 		select {
 		case err := <-done:
-			w.finishLogin(ctx, login, err, ctx.Err(), tail)
+			b.finishLogin(ctx, login, err, ctx.Err(), tail)
 			return
 		case chunk, ok := <-chunks:
 			if !ok {
@@ -173,7 +173,7 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 			}
 			if !urlReported {
 				if authURL := authURLPattern.FindString(stripANSI(chunk)); authURL != "" {
-					w.loginProgressKind(login.ID, providers.LoginAwaitingCode, authURL, pasteDetail, providers.PasteKindCode)
+					b.loginProgressKind(login.ID, providers.LoginAwaitingCode, authURL, pasteDetail, providers.PasteKindCode)
 					urlReported = true
 				}
 			}
@@ -184,7 +184,7 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				if msg := tuiError(screen.String()); msg != "" && msg != reportedErr {
 					reportedErr = msg
 					log.Printf("login %s: the sign-in terminal reported: %s", login.ID, msg)
-					w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+					b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
 						msg+" — paste the code again, in full, to retry.", providers.PasteKindCode)
 				}
 			}
@@ -198,13 +198,13 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				continue
 			}
 			if !urlReported {
-				w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+				b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
 					"The sign-in CLI has not printed a link yet. Output so far: "+tail.String(),
 					providers.PasteKindCode)
 				urlReported = true
 			}
 		case <-pollTicker.C:
-			current, err := w.client.GetLoginFull(login.ID)
+			current, err := b.client.GetLoginFull(login.ID)
 			if err != nil {
 				continue
 			}
@@ -234,12 +234,12 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				continue
 			}
 			log.Printf("login %s: code submitted to the sign-in terminal", login.ID)
-			w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+			b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
 				"Code received — completing the sign-in on the runner…", providers.PasteKindCode)
 		case <-ctx.Done():
 			killTree(cmd)
 			<-done
-			w.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+			b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
 			return
 		}
 	}
@@ -272,19 +272,19 @@ func (b *screenBuffer) String() string { return b.text.String() }
 func (b *screenBuffer) reset() { b.text.Reset() }
 
 // finishLogin reports the terminal state of a sign-in the CLI has exited.
-func (w *Worker) finishLogin(ctx context.Context, login *providers.LoginRequest, waitErr, ctxErr error, tail *lineTail) {
+func (b *loginBroker) finishLogin(ctx context.Context, login *providers.LoginRequest, waitErr, ctxErr error, tail *lineTail) {
 	if ctxErr == context.DeadlineExceeded {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+		b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
 		return
 	}
 	if waitErr != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "",
+		b.loginProgress(login.ID, providers.LoginFailed, "",
 			signInFailure(login.Provider,
 				"sign-in command failed: "+waitErr.Error()+" — output tail: "+tail.String()))
 		return
 	}
-	w.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")
-	w.redetect(ctx, login.Provider)
+	b.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")
+	b.redetect(ctx, login.Provider)
 	log.Printf("login %s: %s sign-in completed", login.ID, login.Provider)
 }
 
@@ -297,18 +297,18 @@ const loopbackDetail = "Open the sign-in link and authorize. Your browser will t
 // handleLoopbackLogin drives a CLI whose OAuth redirect points at a port on
 // the machine running it. The member pastes the redirect back and the runner
 // replays it against its own loopback listener, which completes the flow.
-func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
+func (b *loginBroker) handleLoopbackLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
 	cmd := exec.CommandContext(ctx, flow.command[0], flow.command[1:]...)
 	cmd.Env = childEnv(flow.env...)
 
 	out, err := pipeOutput(cmd)
 	if err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdout: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdout: "+err.Error())
 		return
 	}
 	defer out.close()
 	if err := out.start(cmd); err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to start login command: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to start login command: "+err.Error())
 		return
 	}
 
@@ -345,24 +345,24 @@ func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.Login
 			if err != nil {
 				out.drain(ctx)
 			}
-			w.finishLogin(ctx, login, err, ctx.Err(), tail)
+			b.finishLogin(ctx, login, err, ctx.Err(), tail)
 			return
 		case authURL := <-urlCh:
 			if reported {
 				continue
 			}
 			loopback = loopbackBaseFrom(authURL)
-			w.loginProgressKind(login.ID, providers.LoginAwaitingCode, authURL, loopbackDetail, providers.PasteKindURL)
+			b.loginProgressKind(login.ID, providers.LoginAwaitingCode, authURL, loopbackDetail, providers.PasteKindURL)
 			reported = true
 		case <-announce.C:
 			if !reported {
-				w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+				b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
 					"The sign-in CLI has not printed a link yet. Output so far: "+tail.String(),
 					providers.PasteKindURL)
 				reported = true
 			}
 		case <-pollTicker.C:
-			current, err := w.client.GetLoginFull(login.ID)
+			current, err := b.client.GetLoginFull(login.ID)
 			if err != nil {
 				continue
 			}
@@ -379,12 +379,12 @@ func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.Login
 				// The paste was unusable. Say so and let the member try
 				// again rather than failing the whole request.
 				replayed = false
-				w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "", err.Error(), providers.PasteKindURL)
+				b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "", err.Error(), providers.PasteKindURL)
 			}
 		case <-ctx.Done():
 			killTree(cmd)
 			<-done
-			w.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+			b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
 			return
 		}
 	}

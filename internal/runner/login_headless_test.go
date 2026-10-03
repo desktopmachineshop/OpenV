@@ -371,7 +371,7 @@ func TestLoopbackLoginReportsAURLPaste(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		worker.handleLoopbackLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderCodexCLI}, flow)
+		worker.logins.handleLoopbackLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderCodexCLI}, flow)
 	}()
 
 	post := awaitPasteStep(t, posts)
@@ -401,7 +401,7 @@ func TestPTYLoginReportsACodePaste(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		worker.handlePTYLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderClaudeCode}, flow)
+		worker.logins.handlePTYLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderClaudeCode}, flow)
 	}()
 
 	post := awaitPasteStep(t, posts)

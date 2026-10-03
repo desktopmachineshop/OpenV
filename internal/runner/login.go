@@ -100,9 +100,28 @@ func flowFor(provider string) (loginFlow, bool) {
 	return loginFlow{}, false
 }
 
+// loginBroker serves the provider sign-ins a member starts from the UI on a
+// personal or headless runner: it claims each request, drives the vendor
+// CLI's sign-in, reports its progress and, once it succeeds, detects the
+// provider again and adds it to the providers the worker's next claim
+// reports. NewWorker wires it, and it holds only what that takes from the
+// worker: the worker's API client, which is never reassigned, a lookup into
+// the worker's adapter registry made when a sign-in completes, and the
+// worker's addProvider, which takes the worker's providersMu as it always
+// has.
+type loginBroker struct {
+	client *Client
+	// headless is Options.Headless.
+	headless bool
+	// adapter looks a provider's adapter up in the worker's registry.
+	adapter func(provider string) (Adapter, bool)
+	// addProvider is the worker's Worker.addProvider.
+	addProvider func(name string)
+}
+
 // loginLoop polls for pending sign-in requests and executes them one at a
 // time (CLI credential stores don't like concurrent logins).
-func (w *Worker) loginLoop(ctx context.Context) {
+func (b *loginBroker) loginLoop(ctx context.Context) {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -110,7 +129,7 @@ func (w *Worker) loginLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			login, err := w.client.ClaimLogin()
+			login, err := b.client.ClaimLogin()
 			if err != nil {
 				log.Printf("login claim failed: %v", err)
 				continue
@@ -118,20 +137,20 @@ func (w *Worker) loginLoop(ctx context.Context) {
 			if login == nil {
 				continue
 			}
-			w.handleLogin(ctx, login)
+			b.handleLogin(ctx, login)
 		}
 	}
 }
 
-func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest) {
+func (b *loginBroker) handleLogin(ctx context.Context, login *providers.LoginRequest) {
 	log.Printf("login %s: starting %s sign-in", login.ID, login.Provider)
 	flow, ok := flowFor(login.Provider)
 	if !ok {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "provider does not support CLI sign-in")
+		b.loginProgress(login.ID, providers.LoginFailed, "", "provider does not support CLI sign-in")
 		return
 	}
 	if _, err := exec.LookPath(flow.command[0]); err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "",
+		b.loginProgress(login.ID, providers.LoginFailed, "",
 			fmt.Sprintf("the %q CLI is not installed on the worker host — install it first, then retry", flow.command[0]))
 		return
 	}
@@ -143,15 +162,15 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 	// console to open nor a browser to catch a redirect, so both of those
 	// flows are relayed to the member's own browser instead.
 	if flow.interactive {
-		if w.headless {
-			w.handlePTYLogin(runCtx, login, flow)
+		if b.headless {
+			b.handlePTYLogin(runCtx, login, flow)
 		} else {
-			w.handleInteractiveLogin(runCtx, login, flow)
+			b.handleInteractiveLogin(runCtx, login, flow)
 		}
 		return
 	}
-	if flow.loopback && w.headless {
-		w.handleLoopbackLogin(runCtx, login, flow)
+	if flow.loopback && b.headless {
+		b.handleLoopbackLogin(runCtx, login, flow)
 		return
 	}
 
@@ -160,18 +179,18 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdin: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdin: "+err.Error())
 		return
 	}
 	// stdout and stderr interleave; we only scan for URLs and keep a tail.
 	out, err := pipeOutput(cmd)
 	if err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdout: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdout: "+err.Error())
 		return
 	}
 	defer out.close()
 	if err := out.start(cmd); err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to start login command: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to start login command: "+err.Error())
 		return
 	}
 
@@ -202,10 +221,10 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 	urlReported := false
 	select {
 	case url := <-urlCh:
-		w.loginProgressKind(login.ID, status, url, detail, pasteKind)
+		b.loginProgressKind(login.ID, status, url, detail, pasteKind)
 		urlReported = true
 	case <-time.After(20 * time.Second):
-		w.loginProgressKind(login.ID, status, "", detail, pasteKind)
+		b.loginProgressKind(login.ID, status, "", detail, pasteKind)
 	case <-runCtx.Done():
 	}
 
@@ -221,26 +240,26 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 		case err := <-done:
 			_ = stdin.Close()
 			if runCtx.Err() == context.DeadlineExceeded {
-				w.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+				b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
 				return
 			}
 			if err != nil {
 				out.drain(runCtx)
-				w.loginProgress(login.ID, providers.LoginFailed, "",
+				b.loginProgress(login.ID, providers.LoginFailed, "",
 					"sign-in command failed: "+err.Error()+" — output tail: "+tail.String())
 				return
 			}
-			w.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")
-			w.redetect(ctx, login.Provider)
+			b.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")
+			b.redetect(ctx, login.Provider)
 			log.Printf("login %s: %s sign-in completed", login.ID, login.Provider)
 			return
 		case url := <-urlCh:
 			if !urlReported {
-				w.loginProgressKind(login.ID, status, url, detail, pasteKind)
+				b.loginProgressKind(login.ID, status, url, detail, pasteKind)
 				urlReported = true
 			}
 		case <-pollTicker.C:
-			current, err := w.client.GetLoginFull(login.ID)
+			current, err := b.client.GetLoginFull(login.ID)
 			if err != nil {
 				continue
 			}
@@ -259,7 +278,7 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 		case <-runCtx.Done():
 			killTree(cmd)
 			<-done
-			w.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+			b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
 			return
 		}
 	}
@@ -267,16 +286,16 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 
 // handleInteractiveLogin runs a TUI CLI's sign-in in a visible console
 // window on the worker host and reports completion when it exits.
-func (w *Worker) handleInteractiveLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
+func (b *loginBroker) handleInteractiveLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
 	cmd := exec.Command(flow.command[0], flow.command[1:]...)
 	cmd.Env = childEnv(flow.env...)
 	configureInteractiveConsole(cmd)
 
 	if err := cmd.Start(); err != nil {
-		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open the sign-in terminal: "+err.Error())
+		b.loginProgress(login.ID, providers.LoginFailed, "", "failed to open the sign-in terminal: "+err.Error())
 		return
 	}
-	w.loginProgress(login.ID, providers.LoginURLReady, "",
+	b.loginProgress(login.ID, providers.LoginURLReady, "",
 		"A sign-in terminal has opened on the machine running agentd — complete the sign-in there. This page updates automatically when it finishes.")
 
 	done := make(chan error, 1)
@@ -288,16 +307,16 @@ func (w *Worker) handleInteractiveLogin(ctx context.Context, login *providers.Lo
 		select {
 		case err := <-done:
 			if err != nil {
-				w.loginProgress(login.ID, providers.LoginFailed, "",
+				b.loginProgress(login.ID, providers.LoginFailed, "",
 					signInFailure(login.Provider, "the sign-in terminal closed without completing: "+err.Error()))
 				return
 			}
-			w.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")
-			w.redetect(ctx, login.Provider)
+			b.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")
+			b.redetect(ctx, login.Provider)
 			log.Printf("login %s: %s interactive sign-in completed", login.ID, login.Provider)
 			return
 		case <-pollTicker.C:
-			current, err := w.client.GetLoginFull(login.ID)
+			current, err := b.client.GetLoginFull(login.ID)
 			if err != nil {
 				continue
 			}
@@ -309,15 +328,15 @@ func (w *Worker) handleInteractiveLogin(ctx context.Context, login *providers.Lo
 		case <-ctx.Done():
 			killTree(cmd)
 			<-done
-			w.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+			b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
 			return
 		}
 	}
 }
 
 // redetect refreshes and reports the provider's availability after a login.
-func (w *Worker) redetect(ctx context.Context, provider string) {
-	adapter, ok := w.adapters[provider]
+func (b *loginBroker) redetect(ctx context.Context, provider string) {
+	adapter, ok := b.adapter(provider)
 	if !ok {
 		return
 	}
@@ -330,24 +349,24 @@ func (w *Worker) redetect(ctx context.Context, provider string) {
 			"detail":    av.Detail,
 		},
 	}
-	if err := w.client.ReportDetection(report); err != nil {
+	if err := b.client.ReportDetection(report); err != nil {
 		log.Printf("post-login detection report failed: %v", err)
 	}
 	if av.Installed {
-		w.addProvider(provider)
+		b.addProvider(provider)
 	}
 }
 
-func (w *Worker) loginProgress(id, status, authURL, detail string) {
-	w.loginProgressKind(id, status, authURL, detail, "")
+func (b *loginBroker) loginProgress(id, status, authURL, detail string) {
+	b.loginProgressKind(id, status, authURL, detail, "")
 }
 
 // loginProgressKind reports progress on a step that is waiting for the member
 // to paste something back, naming which kind of paste it is. Only the worker
 // knows: it is the flow it is driving, not something to be read back out of
 // the instruction text.
-func (w *Worker) loginProgressKind(id, status, authURL, detail, pasteKind string) {
-	if err := w.client.LoginProgress(id, status, authURL, detail, pasteKind); err != nil {
+func (b *loginBroker) loginProgressKind(id, status, authURL, detail, pasteKind string) {
+	if err := b.client.LoginProgress(id, status, authURL, detail, pasteKind); err != nil {
 		log.Printf("login %s: progress update failed: %v", id, err)
 	}
 }

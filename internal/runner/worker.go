@@ -51,7 +51,6 @@ type Worker struct {
 	mcpBinary        string
 	apiURL           string
 	hosted           bool
-	headless         bool
 
 	workspaceRetention time.Duration
 
@@ -63,6 +62,9 @@ type Worker struct {
 	// login loop's post-sign-in redetect can append to it concurrently.
 	providersMu sync.RWMutex
 	providers   []string
+
+	// logins serves provider sign-ins (login*.go).
+	logins *loginBroker
 }
 
 // defaultWorkspaceRetention is how long run workspaces are kept before the
@@ -116,7 +118,7 @@ func NewWorker(client *Client, opts Options) *Worker {
 	if opts.WorkspaceRetention <= 0 {
 		opts.WorkspaceRetention = defaultWorkspaceRetention
 	}
-	return &Worker{
+	w := &Worker{
 		client:             client,
 		adapters:           adapters,
 		workerID:           opts.WorkerID,
@@ -126,9 +128,20 @@ func NewWorker(client *Client, opts Options) *Worker {
 		mcpBinary:          opts.MCPBinary,
 		apiURL:             opts.APIURL,
 		hosted:             opts.Hosted,
-		headless:           opts.Headless,
 		workspaceRetention: opts.WorkspaceRetention,
 	}
+	w.logins = &loginBroker{
+		client:   w.client,
+		headless: opts.Headless,
+		// The map w.adapters holds when a sign-in completes, as before the
+		// broker: the run failure and slot tests replace it after NewWorker.
+		adapter: func(provider string) (Adapter, bool) {
+			a, ok := w.adapters[provider]
+			return a, ok
+		},
+		addProvider: w.addProvider,
+	}
+	return w
 }
 
 // Run detects providers, then polls the queue until the context ends.
@@ -167,7 +180,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	// Provider sign-in requests from the UI are handled alongside runs
 	// (personal/workspace machines only — hosted runners are token-mode).
 	if !w.hosted {
-		go w.loginLoop(ctx)
+		go w.logins.loginLoop(ctx)
 	}
 
 	// Slot pools: normal runs plus dedicated child/interview slots so a
