@@ -1,0 +1,77 @@
+{
+  "description": "Refactor step M12a, class A (docs/plans/codebase-refactor.md §6.5): internal/persistence/postgres's org_repository.go splits by concern. The plan, the provider's subscription snapshot, grandfathering and the budget and hosted-minutes alert claims go to org_repository_billing.go, with keepNightlySQL, which SetPlan and ApplyBillingState share; the release channel, stable release, upgrade window, the channel lists with effectiveChannelSQL, and a member's early switch to the next stable release to org_repository_release.go; memberships to org_repository_membership.go; people-teams (orgs.TeamRepository) to org_repository_team.go; soft delete, restore, the deleted-workspace lists and PurgeOrg to org_repository_purge.go. org_repository.go keeps the type, its constructor, the column lists, scanOrg and the workspace row's own reads and writes. declmove does not move a free-floating comment, so the two section markers (billing, people-teams) are deleted from org_repository.go and each new file gets a header naming its concern. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M12a.json",
+  "package": "internal/persistence/postgres",
+  "targets": [
+    {
+      "file": "org_repository_billing.go",
+      "header": "// OrgRepository's billing: the plan, the provider's subscription snapshot\n// (migration 45), grandfathering, and the budget and hosted-minutes alert\n// claims.",
+      "decls": [
+        "(*OrgRepository).SetBudget",
+        "(*OrgRepository).SetPlan",
+        "keepNightlySQL",
+        "(*OrgRepository).ClaimBudgetAlert",
+        "(*OrgRepository).ClaimMinutesAlert",
+        "(*OrgRepository).SetBillingCustomer",
+        "(*OrgRepository).ApplyBillingState",
+        "(*OrgRepository).SetBilledSeats",
+        "(*OrgRepository).ClearBillingSubscription",
+        "(*OrgRepository).SetGrandfathered",
+        "(*OrgRepository).GrandfatherBefore",
+        "(*OrgRepository).FindOrgByBillingRef",
+        "(*OrgRepository).ListBillingOrgs"
+      ]
+    },
+    {
+      "file": "org_repository_release.go",
+      "header": "// OrgRepository's release settings: the channel, the stable release, the\n// upgrade window, the lists by effective channel, and a member's early\n// switch to the next stable release.",
+      "decls": [
+        "(*OrgRepository).SetReleaseChannel",
+        "(*OrgRepository).SetStableRelease",
+        "(*OrgRepository).SetUpgradeWindow",
+        "effectiveChannelSQL",
+        "(*OrgRepository).ListOrgsByChannel",
+        "(*OrgRepository).ListMemberUserIDsByChannel",
+        "(*OrgRepository).MemberPreview",
+        "(*OrgRepository).SetMemberPreview"
+      ]
+    },
+    {
+      "file": "org_repository_membership.go",
+      "header": "// OrgRepository's memberships (org_members): roles, the member list and the\n// admin count.",
+      "decls": [
+        "(*OrgRepository).UpsertMember",
+        "(*OrgRepository).RemoveMember",
+        "(*OrgRepository).MemberRole",
+        "(*OrgRepository).MemberRoleAny",
+        "(*OrgRepository).ListMembers",
+        "collectOrgMembers",
+        "(*OrgRepository).CountAdmins"
+      ]
+    },
+    {
+      "file": "org_repository_team.go",
+      "header": "// OrgRepository's people-teams (orgs.TeamRepository).",
+      "decls": [
+        "(*OrgRepository).SaveTeam",
+        "(*OrgRepository).UpdateTeam",
+        "(*OrgRepository).FindTeamByID",
+        "(*OrgRepository).ListTeams",
+        "(*OrgRepository).DeleteTeam",
+        "(*OrgRepository).AddTeamMember",
+        "(*OrgRepository).RemoveTeamMember",
+        "(*OrgRepository).ListTeamMembers"
+      ]
+    },
+    {
+      "file": "org_repository_purge.go",
+      "header": "// OrgRepository's workspace deletion: soft delete and restore, the lists of\n// deleted workspaces, and the hard purge.",
+      "decls": [
+        "(*OrgRepository).SoftDeleteOrg",
+        "(*OrgRepository).RestoreOrg",
+        "(*OrgRepository).ListDeletedOrgsForUser",
+        "(*OrgRepository).ListExpiredDeletedOrgIDs",
+        "(*OrgRepository).PurgeOrg"
+      ]
+    }
+  ]
+}
