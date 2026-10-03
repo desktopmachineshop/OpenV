@@ -1,18 +1,18 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { mockApi } from '../test/mockApi';
 import { ReviewQueue } from './ReviewQueue';
 import { linkAPI, reviewAPI } from '../api/client';
 
-vi.mock('../api/client', () => ({
-  reviewAPI: { get: vi.fn(), startRound: vi.fn() },
-  linkAPI: { confirm: vi.fn() },
-  artifactAPI: { changeStatus: vi.fn() },
-  attachmentAPI: {
-    listByProject: vi.fn(() => Promise.resolve({ data: [] })),
-    getDownloadUrl: (id: string) => `/dl/${id}`,
-  },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    attachmentAPI: {
+      listByProject: () => Promise.resolve({ data: [] }),
+      getDownloadUrl: (id: string) => `/dl/${id}`,
+    },
+  })
+);
 
 // The rejection dialog's composer is the notes panel's; it is exercised in
 // ReviewQueue.decisions.test.tsx and only gets in the way here.
