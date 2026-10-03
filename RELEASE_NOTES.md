@@ -87,6 +87,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   they now match the other buttons in settings. And in a workspace that
   does not have share links yet, project settings no longer load them.
 
+- **An assistant card added to the project from the guided wizard says it
+  was added.** When you added a card that creates an artifact in the
+  project from the V&V Assistant beside the guided wizard, the artifact was
+  created but the card said "The change could not be applied." and kept
+  its "+ Add to project" button, so a second click created a duplicate.
+  The card now shows "✓ Added to project", stays marked as added when you
+  come back to the wizard, and offers no second add.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
