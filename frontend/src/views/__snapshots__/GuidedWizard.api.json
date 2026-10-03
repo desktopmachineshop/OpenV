@@ -1,0 +1,4690 @@
+[
+  {
+    "call": "guidedAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "guidedAPI.start",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "productProfileAPI.get",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "guidedAPI.listMessages",
+    "args": [
+      "gs-1"
+    ]
+  },
+  {
+    "call": "EventSource",
+    "args": [
+      "/api/v1/guided-sessions/gs-1/chat/stream",
+      {
+        "withCredentials": true
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.kickoffChat",
+    "args": [
+      "gs-1",
+      1,
+      {
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": []
+        },
+        "step_2_ids": [],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": []
+      },
+      null
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      1,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": []
+        },
+        "step_2_ids": [],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1"
+        ]
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      2,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": []
+        },
+        "step_2_ids": [],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1"
+        ]
+      },
+      "saved step 1 (\"Product framing\") and moved on to step 2 (\"Personas\")"
+    ]
+  },
+  {
+    "call": "productProfileAPI.update",
+    "args": [
+      "p1",
+      {
+        "vision": "Every machine on the floor reports its state before anyone touches it.",
+        "problem_statement": "Operators cannot tell which spindles are live.",
+        "target_users": "Machinists, shop leads and maintenance planners."
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      2,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": []
+        },
+        "step_2_ids": [],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1"
+        ]
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      2,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state"
+            }
+          ]
+        },
+        "step_2_ids": [],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5"
+        ]
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      3,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5"
+        ]
+      },
+      "saved step 2 (\"Personas\") and moved on to step 3 (\"User needs\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Personas",
+          "body": "",
+          "sort_order": 10
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "persona",
+          "title": "Maya the Machinist",
+          "body": "**Role:** Senior CNC operator\n\n**Goals:**\nRun jobs without surprises\n\n**Pain points:**\nSpindles start without warning",
+          "parent_id": "art-3"
+        },
+        {
+          "type": "persona",
+          "title": "Sam the Shop Lead",
+          "body": "**Role:** Supervisor\n\n**Goals:**\nKeep the floor safe\n\n**Pain points:**\nNo overview of machine state",
+          "parent_id": "art-3"
+        },
+        {
+          "type": "persona",
+          "title": "Pat the Planner",
+          "body": "**Role:** Maintenance planner\n\n**Goals:**\nPlan downtime\n\n**Pain points:**\nSurprise breakdowns",
+          "parent_id": "art-3"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      3,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": []
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5"
+        ],
+        "section_ids": {
+          "personas": "art-3"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      3,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses"
+            }
+          ]
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5"
+        ],
+        "section_ids": {
+          "personas": "art-3"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      4,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced"
+            }
+          ]
+        },
+        "step_3_ids": [],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5"
+        ],
+        "section_ids": {
+          "personas": "art-3"
+        }
+      },
+      "saved step 3 (\"User needs\") and moved on to step 4 (\"Requirements\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "User Needs",
+          "body": "",
+          "sort_order": 20
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "user-need",
+          "title": "As Sam the Shop Lead, I need a live view of each spindle that is running so that I can clear the floor before mainten…",
+          "body": "As Sam the Shop Lead, I need a live view of each spindle that is running so that I can clear the floor before maintenance",
+          "links": [
+            {
+              "type": "relates-to",
+              "to_id": "art-5"
+            }
+          ],
+          "parent_id": "art-7"
+        },
+        {
+          "type": "user-need",
+          "title": "As Pat the Planner , I need to see who started a job so that I can follow up on near misses",
+          "body": "As Pat the Planner , I need to see who started a job so that I can follow up on near misses",
+          "links": [
+            {
+              "type": "relates-to",
+              "to_id": "art-6"
+            }
+          ],
+          "parent_id": "art-7"
+        },
+        {
+          "type": "user-need",
+          "title": "As Pat the Planner , I need a weekly list of machines due for service so that downtime is planned, not forced",
+          "body": "As Pat the Planner , I need a weekly list of machines due for service so that downtime is planned, not forced",
+          "links": [
+            {
+              "type": "relates-to",
+              "to_id": "art-6"
+            }
+          ],
+          "parent_id": "art-7"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      4,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": []
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      4,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test"
+            }
+          ]
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      5,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis"
+            }
+          ]
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7"
+        }
+      },
+      "saved step 4 (\"Requirements\") and moved on to step 5 (\"NFRs & constraints\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Requirements",
+          "body": "",
+          "sort_order": 30
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "requirement",
+          "title": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop but…",
+          "body": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.\n\n**Fit criterion:** Measured from button press to spindle at rest",
+          "attributes": {
+            "verification_method": "test"
+          },
+          "links": [
+            {
+              "type": "derives-from",
+              "to_id": "art-8"
+            }
+          ],
+          "parent_id": "art-11"
+        },
+        {
+          "type": "requirement",
+          "title": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+          "body": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead\n\n**Fit criterion:** Shown until a lead clears it",
+          "attributes": {
+            "verification_method": "test"
+          },
+          "links": [
+            {
+              "type": "derives-from",
+              "to_id": "art-9"
+            }
+          ],
+          "parent_id": "art-11"
+        },
+        {
+          "type": "requirement",
+          "title": "The system shall list the machines due for service each Monday",
+          "body": "The system shall list the machines due for service each Monday\n\n**Fit criterion:** Matches the maintenance plan",
+          "attributes": {
+            "verification_method": "analysis"
+          },
+          "links": [
+            {
+              "type": "derives-from",
+              "to_id": "art-10"
+            }
+          ],
+          "parent_id": "art-11"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      5,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      5,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test"
+            }
+          ]
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      6,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test"
+            }
+          ]
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11"
+        }
+      },
+      "saved step 5 (\"NFRs & constraints\") and moved on to step 6 (\"Hazards\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Non-Functional Requirements & Constraints",
+          "body": "",
+          "sort_order": 40
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Performance",
+          "body": "",
+          "sort_order": 10,
+          "parent_id": "art-15"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Security",
+          "body": "",
+          "sort_order": 40,
+          "parent_id": "art-15"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Usability",
+          "body": "",
+          "sort_order": 30,
+          "parent_id": "art-15"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "requirement",
+          "title": "The system shall show any spindle state change on all connected screens within 500 ms of it happe…",
+          "body": "The system shall show any spindle state change on all connected screens within 500 ms of it happening\n\n**Fit criterion:** 95th percentile over a shift",
+          "attributes": {
+            "verification_method": "test",
+            "category": "Performance"
+          },
+          "parent_id": "art-16"
+        },
+        {
+          "type": "requirement",
+          "title": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+          "body": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+          "attributes": {
+            "verification_method": "analysis",
+            "category": "Performance"
+          },
+          "parent_id": "art-16"
+        },
+        {
+          "type": "requirement",
+          "title": "The system shall require a badge to clear an interlock",
+          "body": "The system shall require a badge to clear an interlock\n\n**Fit criterion:** Checked at every interlock",
+          "attributes": {
+            "verification_method": "test",
+            "category": "Security"
+          },
+          "parent_id": "art-17"
+        },
+        {
+          "type": "requirement",
+          "title": "The system shall show machine state in colours readable with gloves on",
+          "body": "The system shall show machine state in colours readable with gloves on",
+          "attributes": {
+            "verification_method": "test",
+            "category": "Usability"
+          },
+          "parent_id": "art-18"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      6,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      6,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      7,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18"
+        }
+      },
+      "skipped step 6 (\"Hazards\") and moved on to step 7 (\"Verification stubs\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      7,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      7,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18"
+        }
+      },
+      "saved step 6 (\"Hazards\") and moved on to step 7 (\"Verification stubs\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Hazards & Risks",
+          "body": "",
+          "sort_order": 50
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Safety Hazards",
+          "body": "",
+          "sort_order": 10,
+          "parent_id": "art-23"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Security Hazards",
+          "body": "",
+          "sort_order": 30,
+          "parent_id": "art-23"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Operational Hazards",
+          "body": "",
+          "sort_order": 50,
+          "parent_id": "art-23"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "hazard",
+          "title": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+          "body": "**Category:** Safety\n\n**Potential harm:** Crushed or severed fingers\n\n**Severity:** moderate",
+          "attributes": {
+            "severity": "moderate",
+            "category": "Safety"
+          },
+          "parent_id": "art-24"
+        },
+        {
+          "type": "hazard",
+          "title": "A spoofed network command restarts a stopped spindle",
+          "body": "**Category:** Security\n\n**Potential harm:** Injury during maintenance\n\n**Severity:** critical",
+          "attributes": {
+            "severity": "critical",
+            "category": "Security"
+          },
+          "parent_id": "art-25"
+        },
+        {
+          "type": "hazard",
+          "title": "Coolant mist hides the spindle state lamp",
+          "body": "**Category:** Operational\n\n**Potential harm:** Operator misreads machine state \n\n**Severity:** moderate",
+          "attributes": {
+            "severity": "moderate",
+            "category": "Operational"
+          },
+          "parent_id": "art-26"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      7,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      8,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26"
+        }
+      },
+      "skipped step 7 (\"Verification stubs\") and moved on to step 8 (\"Review & commit\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      8,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26"
+        }
+      }
+    ]
+  },
+  {
+    "call": "artifactAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "guidedAPI.nudgeChat",
+    "args": [
+      "gs-1",
+      8,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {}
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26"
+        }
+      },
+      "saved step 7 (\"Verification stubs\") and moved on to step 8 (\"Review & commit\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Verification Tests",
+          "body": "",
+          "sort_order": 60
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Functional",
+          "body": "",
+          "sort_order": 10,
+          "parent_id": "art-30"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Performance",
+          "body": "",
+          "sort_order": 20,
+          "parent_id": "art-30"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Security",
+          "body": "",
+          "sort_order": 50,
+          "parent_id": "art-30"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Usability",
+          "body": "",
+          "sort_order": 40,
+          "parent_id": "art-30"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "test-case",
+          "title": "Verify: The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+          "body": "Test case stub for requirement: The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.\n\nDefine steps, preconditions and expected results.",
+          "parent_id": "art-31",
+          "links": [
+            {
+              "type": "verifies",
+              "to_id": "art-12"
+            }
+          ]
+        },
+        {
+          "type": "test-case",
+          "title": "Verify: The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+          "body": "Test case stub for requirement: The system shall show any spindle state change on all connected screens within 500 ms of it happening\n\nDefine steps, preconditions and expected results.",
+          "parent_id": "art-32",
+          "links": [
+            {
+              "type": "verifies",
+              "to_id": "art-19"
+            }
+          ]
+        },
+        {
+          "type": "test-case",
+          "title": "Verify: The system shall require a badge to clear an interlock",
+          "body": "Test case stub for requirement: The system shall require a badge to clear an interlock\n\nDefine steps, preconditions and expected results.",
+          "parent_id": "art-33",
+          "links": [
+            {
+              "type": "verifies",
+              "to_id": "art-21"
+            }
+          ]
+        },
+        {
+          "type": "test-case",
+          "title": "Verify: The system shall show machine state in colours readable with gloves on",
+          "body": "Test case stub for requirement: The system shall show machine state in colours readable with gloves on\n\nDefine steps, preconditions and expected results.",
+          "parent_id": "art-34",
+          "links": [
+            {
+              "type": "verifies",
+              "to_id": "art-22"
+            }
+          ]
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      8,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {
+            "art-12": "art-35",
+            "art-19": "art-36",
+            "art-21": "art-37",
+            "art-22": "art-38"
+          }
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26",
+          "tests": "art-30",
+          "tests:Functional": "art-31",
+          "tests:Performance": "art-32",
+          "tests:Security": "art-33",
+          "tests:Usability": "art-34"
+        }
+      }
+    ]
+  },
+  {
+    "call": "artifactAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "artifactAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "artifactAPI.create",
+    "args": [
+      {
+        "project_id": "p1",
+        "type": "design-item",
+        "title": "Interlock wiring between the emergency stop chain, the guard door switch and the spindle drive enable inputs of a mac…",
+        "body": "Per drawing E-12.",
+        "attributes": {
+          "status": "draft"
+        },
+        "parent_id": "art-1",
+        "sort_order": 2
+      }
+    ]
+  },
+  {
+    "call": "artifactAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "guidedAPI.commit",
+    "args": [
+      "gs-1"
+    ]
+  },
+  {
+    "call": "baselineAPI.create",
+    "args": [
+      "p1",
+      "Initial requirements"
+    ]
+  },
+  {
+    "call": "guidedAPI.start",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-2",
+      1,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {
+            "art-12": "art-35",
+            "art-19": "art-36",
+            "art-21": "art-37",
+            "art-22": "art-38"
+          }
+        },
+        "copilot_applied": [],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26",
+          "tests": "art-30",
+          "tests:Functional": "art-31",
+          "tests:Performance": "art-32",
+          "tests:Security": "art-33",
+          "tests:Usability": "art-34"
+        }
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.listMessages",
+    "args": [
+      "gs-2"
+    ]
+  },
+  {
+    "call": "EventSource",
+    "args": [
+      "/api/v1/guided-sessions/gs-2/chat/stream",
+      {
+        "withCredentials": true
+      }
+    ]
+  },
+  {
+    "call": "guidedAPI.kickoffChat",
+    "args": [
+      "gs-2",
+      1,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {
+            "art-12": "art-35",
+            "art-19": "art-36",
+            "art-21": "art-37",
+            "art-22": "art-38"
+          }
+        },
+        "copilot_applied": [],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26",
+          "tests": "art-30",
+          "tests:Functional": "art-31",
+          "tests:Performance": "art-32",
+          "tests:Security": "art-33",
+          "tests:Usability": "art-34"
+        }
+      },
+      null
+    ]
+  }
+]
