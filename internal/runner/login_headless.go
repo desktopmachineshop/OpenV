@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -302,33 +301,29 @@ func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.Login
 	cmd := exec.CommandContext(ctx, flow.command[0], flow.command[1:]...)
 	cmd.Env = childEnv(flow.env...)
 
-	stdout, err := cmd.StdoutPipe()
+	out, err := pipeOutput(cmd)
 	if err != nil {
 		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdout: "+err.Error())
 		return
 	}
-	cmd.Stderr = cmd.Stdout
-	if err := cmd.Start(); err != nil {
+	defer out.close()
+	if err := out.start(cmd); err != nil {
 		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to start login command: "+err.Error())
 		return
 	}
 
 	urlCh := make(chan string, 1)
 	tail := newLineTail(40)
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			line := stripANSI(scanner.Text())
-			tail.add(line)
-			if u := authURLPattern.FindString(line); u != "" {
-				select {
-				case urlCh <- u:
-				default:
-				}
+	out.scan(func(line string) {
+		line = stripANSI(line)
+		tail.add(line)
+		if u := authURLPattern.FindString(line); u != "" {
+			select {
+			case urlCh <- u:
+			default:
 			}
 		}
-	}()
+	})
 
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
@@ -347,6 +342,9 @@ func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.Login
 	for {
 		select {
 		case err := <-done:
+			if err != nil {
+				out.drain(ctx)
+			}
 			w.finishLogin(ctx, login, err, ctx.Err(), tail)
 			return
 		case authURL := <-urlCh:

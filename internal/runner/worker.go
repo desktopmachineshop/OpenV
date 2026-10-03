@@ -252,6 +252,14 @@ func (w *Worker) tryClaim(ctx context.Context, slots chan struct{}, minPriority 
 			slots <- struct{}{}
 			return
 		}
+		if claim.Run == nil || claim.Run.ID == "" {
+			// A 200 that names no run claimed nothing: there is no run to
+			// execute or to report on, so the slot goes back as for an empty
+			// queue.
+			log.Printf("worker %s: the claim answer named no run; nothing claimed", w.workerID)
+			slots <- struct{}{}
+			return
+		}
 		w.runsWG.Add(1)
 		go func() {
 			defer w.runsWG.Done()
@@ -267,6 +275,14 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	run := claim.Run
 	defer func() {
 		if r := recover(); r != nil {
+			// The recovery must never panic itself: nothing above it would
+			// catch that, and the whole process, with every run in flight,
+			// would go down with this one. tryClaim hands over no claim
+			// without a run, but should one arrive there is none to finish.
+			if run == nil || run.ID == "" {
+				log.Printf("worker %s: panic executing a claim with no run: %v\n%s", w.workerID, r, debug.Stack())
+				return
+			}
 			log.Printf("run %s: panic: %v\n%s", run.ID, r, debug.Stack())
 			_ = w.client.Finish(run.ID, agentruns.FinishRequest{
 				Status:     agentruns.StatusFailed,

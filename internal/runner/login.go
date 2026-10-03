@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/providers"
@@ -16,6 +18,11 @@ import (
 
 // loginTimeout bounds one CLI sign-in attempt.
 const loginTimeout = 10 * time.Minute
+
+// outputDrainTimeout bounds how long a failed sign-in waits, once its CLI
+// has exited, for the rest of the CLI's output to be read: no time at all
+// unless something the CLI started still holds that output open.
+const outputDrainTimeout = 2 * time.Second
 
 var authURLPattern = regexp.MustCompile(`https://[^\s"'\)\]]+`)
 
@@ -156,14 +163,14 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdin: "+err.Error())
 		return
 	}
-	stdout, err := cmd.StdoutPipe()
+	// stdout and stderr interleave; we only scan for URLs and keep a tail.
+	out, err := pipeOutput(cmd)
 	if err != nil {
 		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to open stdout: "+err.Error())
 		return
 	}
-	cmd.Stderr = cmd.Stdout // interleave; we only scan for URLs and keep a tail
-
-	if err := cmd.Start(); err != nil {
+	defer out.close()
+	if err := out.start(cmd); err != nil {
 		w.loginProgress(login.ID, providers.LoginFailed, "", "failed to start login command: "+err.Error())
 		return
 	}
@@ -171,20 +178,15 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 	// Scan output for the auth URL; keep a tail for diagnostics.
 	urlCh := make(chan string, 1)
 	tail := newLineTail(30)
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			line := scanner.Text()
-			tail.add(line)
-			if url := authURLPattern.FindString(line); url != "" {
-				select {
-				case urlCh <- url:
-				default:
-				}
+	out.scan(func(line string) {
+		tail.add(line)
+		if url := authURLPattern.FindString(line); url != "" {
+			select {
+			case urlCh <- url:
+			default:
 			}
 		}
-	}()
+	})
 
 	status := providers.LoginURLReady
 	detail := flow.browserDetail
@@ -223,6 +225,7 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 				return
 			}
 			if err != nil {
+				out.drain(runCtx)
 				w.loginProgress(login.ID, providers.LoginFailed, "",
 					"sign-in command failed: "+err.Error()+" — output tail: "+tail.String())
 				return
@@ -349,8 +352,11 @@ func (w *Worker) loginProgressKind(id, status, authURL, detail, pasteKind string
 	}
 }
 
-// lineTail keeps the last n lines of output for diagnostics.
+// lineTail keeps the last n lines of output for diagnostics. A sign-in's
+// output reader adds to it while the flow reads it, so it is safe for
+// concurrent use.
 type lineTail struct {
+	mu    sync.Mutex
 	lines []string
 	max   int
 }
@@ -360,6 +366,8 @@ func newLineTail(max int) *lineTail {
 }
 
 func (t *lineTail) add(line string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.lines = append(t.lines, line)
 	if len(t.lines) > t.max {
 		t.lines = t.lines[len(t.lines)-t.max:]
@@ -367,5 +375,67 @@ func (t *lineTail) add(line string) {
 }
 
 func (t *lineTail) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	return strings.Join(t.lines, " | ")
+}
+
+// cliOutput is a sign-in CLI's stdout and stderr, on one pipe this side
+// owns. exec's StdoutPipe is closed by Cmd.Wait as soon as the CLI exits,
+// which can cut its reader off before the CLI's last lines: the ones that
+// say why a sign-in failed.
+type cliOutput struct {
+	r, w    *os.File
+	scanned chan struct{}
+}
+
+// pipeOutput points cmd's stdout and stderr at a new pipe.
+func pipeOutput(cmd *exec.Cmd) (*cliOutput, error) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stdout, cmd.Stderr = w, w
+	return &cliOutput{r: r, w: w, scanned: make(chan struct{})}, nil
+}
+
+// start starts cmd and lets go of this side's write end, so that the reader
+// meets the end of the output once the CLI, and anything it left holding
+// the pipe, is gone.
+func (o *cliOutput) start(cmd *exec.Cmd) error {
+	err := cmd.Start()
+	_ = o.w.Close()
+	return err
+}
+
+// scan hands each line of the output to onLine, on a goroutine of its own.
+func (o *cliOutput) scan(onLine func(line string)) {
+	go func() {
+		defer close(o.scanned)
+		scanner := bufio.NewScanner(o.r)
+		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			onLine(scanner.Text())
+		}
+	}()
+}
+
+// drain, called once the CLI has exited, waits for the reader to reach the
+// end of the output and stop, so that a failure quotes all of it. The wait
+// is bounded by outputDrainTimeout and ctx, in case something the CLI
+// started still holds the pipe; the reader is then cut off.
+func (o *cliOutput) drain(ctx context.Context) {
+	select {
+	case <-o.scanned:
+	case <-time.After(outputDrainTimeout):
+	case <-ctx.Done():
+	}
+	_ = o.r.Close()
+	<-o.scanned
+}
+
+// close releases the pipe, cutting the reader off if it is still running.
+func (o *cliOutput) close() {
+	_ = o.r.Close()
+	_ = o.w.Close()
 }
