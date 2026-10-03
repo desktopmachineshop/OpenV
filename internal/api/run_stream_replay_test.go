@@ -60,8 +60,8 @@ func TestStreamAgentRunDrainsEveryLogPage(t *testing.T) {
 	} {
 		t.Run("after_seq="+tc.afterSeq, func(t *testing.T) {
 			logs := &pagedRunLogs{fakeRunService: svc, entries: entries, pageSize: 2}
-			h.runService = logs
-			h.sseHub = NewSSEHub()
+			withRunService(logs)(h)
+			withSSEHub(NewSSEHub())(h)
 			r := httptest.NewRequest(http.MethodGet, "/api/v1/agent-runs/run-1/stream?after_seq="+tc.afterSeq, nil)
 			// A cancelled request: ServeStream replays, then returns at once.
 			ctx, cancel := context.WithCancel(r.Context())
