@@ -26,6 +26,7 @@ type ratchets struct {
 	SideEffectVars     []string            `json:"side_effect_vars"`
 	Counts             map[string]int      `json:"counts"`
 	EnvReads           map[string]int      `json:"env_reads"`
+	HelperHomes        []string            `json:"helper_homes"`
 }
 
 func readRatchets(path string) (*ratchets, error) {
@@ -61,7 +62,7 @@ func (r *ratchets) normalise() {
 			*mp = map[string]int{}
 		}
 	}
-	for _, list := range []*[]string{&r.LayeringExceptions, &r.DomainReflect, &r.SideEffectVars} {
+	for _, list := range []*[]string{&r.LayeringExceptions, &r.DomainReflect, &r.SideEffectVars, &r.HelperHomes} {
 		if *list == nil {
 			*list = []string{}
 		}

@@ -112,3 +112,36 @@ func respondError(w http.ResponseWriter, r *http.Request, status int, publicMsg 
 func respondInternal(w http.ResponseWriter, r *http.Request, publicMsg string, err error) {
 	respondError(w, r, http.StatusInternalServerError, publicMsg, err)
 }
+
+// notFound is the answer to an id no row has: its status and message. The
+// guards give exactly this answer to a caller with no access at all, so that
+// a refusal tells nothing of whether the id exists (I3, OpenV REQ-17): a
+// project no row has and one the caller cannot reach both answer the project
+// guard's 404 "project not found", and a workspace likewise "workspace not
+// found". A guard that stands for a resource the handler looked up by its
+// own id answers that resource's own not-found (missing), the answer the
+// lookup gives an id no row has. A caller who reaches the project or
+// workspace but lacks the role a write needs still gets 403: the resource
+// exists for it. The zero notFound stands for the guard's own answer.
+type notFound struct {
+	status  int
+	message string
+}
+
+var (
+	unknownProject   = notFound{http.StatusNotFound, "project not found"}
+	unknownWorkspace = notFound{http.StatusNotFound, "workspace not found"}
+)
+
+// missing is a resource's not-found answer: 404 with its message.
+func missing(message string) notFound { return notFound{http.StatusNotFound, message} }
+
+// or is n, or def when n is the zero notFound.
+func (n notFound) or(def notFound) notFound {
+	if n == (notFound{}) {
+		return def
+	}
+	return n
+}
+
+func (n notFound) write(w http.ResponseWriter) { writeJSONError(w, n.status, n.message) }
