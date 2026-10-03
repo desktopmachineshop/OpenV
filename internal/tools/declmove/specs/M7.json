@@ -1,0 +1,134 @@
+{
+  "description": "Refactor step M7, class A (docs/plans/codebase-refactor.md §6.5, K1 and K3 in §4.3): internal/api's agent_handlers.go splits along its // --- section markers into one file per area and keeps only registerAgentRoutes. Each section's handlers go with their own helpers, in source order: agent definitions to agent_definition_handlers.go, runs (with launchParent and launchRun, already on the helper-home allowlist for the suite handlers' use) to agent_run_handlers.go, the worker endpoints to worker_protocol_handlers.go, automations to automation_handlers.go, proposals to proposal_handlers.go, repo connections to repo_connection_handlers.go, provider settings to provider_settings_handlers.go, the provider CLI login broker to provider_login_handlers.go, and teams (crews) to crew_handlers.go. The last section, domain events (listOrg, ListDomainEvents), is in domain_event_handlers.go already. No helper is used by more than one of the new files, so none goes to a K3 home and the helper-home allowlist (M5) gains nothing. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M7.json",
+  "package": "internal/api",
+  "targets": [
+    {
+      "file": "agent_definition_handlers.go",
+      "decls": [
+        "(*Handler).ListAgents",
+        "(*Handler).CreateAgent",
+        "(*Handler).GetAgent",
+        "(*Handler).UpdateAgent",
+        "(*Handler).DeleteAgent",
+        "(*Handler).GetAgentRaw",
+        "(*Handler).SaveAgentRaw",
+        "(*Handler).SyncAgents"
+      ]
+    },
+    {
+      "file": "agent_run_handlers.go",
+      "decls": [
+        "launchParent",
+        "(*Handler).launchRun",
+        "(*Handler).LaunchAgentRun",
+        "(*Handler).DraftTestCases",
+        "(*Handler).ListAgentRuns",
+        "(*Handler).GetAgentRun",
+        "(*Handler).GetAgentRunTree",
+        "(*Handler).GetAgentRunLogs",
+        "(*Handler).StreamAgentRun",
+        "(*Handler).CancelAgentRun",
+        "(*Handler).RetryAgentRun"
+      ]
+    },
+    {
+      "file": "worker_protocol_handlers.go",
+      "decls": [
+        "(*Handler).ClaimAgentRun",
+        "(*Handler).releaseFailedClaim",
+        "(*Handler).resolveRunAuth",
+        "(*Handler).StartAgentRun",
+        "(*Handler).ReleaseAgentRun",
+        "(*Handler).AppendAgentRunLogs",
+        "decodeRunLogBody",
+        "(*Handler).FinishAgentRun",
+        "(*Handler).DelegateRun",
+        "teamNodeRef",
+        "(*Handler).DelegateStatus"
+      ]
+    },
+    {
+      "file": "automation_handlers.go",
+      "decls": [
+        "(*Handler).ListAutomations",
+        "(*Handler).CreateAutomation",
+        "(*Handler).GetAutomation",
+        "(*Handler).UpdateAutomation",
+        "(*Handler).DeleteAutomation",
+        "(*Handler).RunAutomationNow"
+      ]
+    },
+    {
+      "file": "proposal_handlers.go",
+      "decls": [
+        "(*Handler).ListProposals",
+        "(*Handler).reviewProposal",
+        "isProposalValidationError",
+        "proposalReviewErrorMessage",
+        "(*Handler).ApproveProposal",
+        "bulkOutcome",
+        "(*Handler).BulkReviewProposals",
+        "(*Handler).RejectProposal",
+        "(*Handler).orderProposalsForApply"
+      ]
+    },
+    {
+      "file": "repo_connection_handlers.go",
+      "decls": [
+        "(*Handler).ListRepoConnections",
+        "(*Handler).SetMyRepoPath",
+        "(*Handler).CreateRepoConnection",
+        "(*Handler).UpdateRepoConnection",
+        "(*Handler).DeleteRepoConnection"
+      ]
+    },
+    {
+      "file": "provider_settings_handlers.go",
+      "decls": [
+        "(*Handler).ListProviderSettings",
+        "(*Handler).UpsertProviderSetting",
+        "(*Handler).RecordProviderDetection"
+      ]
+    },
+    {
+      "file": "provider_login_handlers.go",
+      "decls": [
+        "(*Handler).StartProviderLogin",
+        "(*Handler).userLoginChecked",
+        "(*Handler).userLoginWriteChecked",
+        "(*Handler).GetProviderLogin",
+        "(*Handler).SubmitProviderLoginCode",
+        "(*Handler).CancelProviderLogin",
+        "(*Handler).ClaimProviderLogin",
+        "(*Handler).workerLoginChecked",
+        "(*Handler).ProgressProviderLogin",
+        "(*Handler).GetProviderLoginFull"
+      ]
+    },
+    {
+      "file": "crew_handlers.go",
+      "decls": [
+        "(*Handler).ListTeams",
+        "(*Handler).CreateTeam",
+        "(*Handler).GetTeam",
+        "(*Handler).teamWriteChecked",
+        "(*Handler).UpdateTeam",
+        "(*Handler).DeleteTeam",
+        "(*Handler).CloneTeam",
+        "(*Handler).ExportCrew",
+        "(*Handler).ImportCrew",
+        "(*Handler).ListCrewTemplates",
+        "crewPinNotFound",
+        "optionalProjectID",
+        "crewExportFilename",
+        "(*Handler).AddTeamNode",
+        "(*Handler).UpdateTeamNode",
+        "(*Handler).RemoveTeamNode",
+        "(*Handler).AddTeamEdge",
+        "(*Handler).UpdateTeamEdge",
+        "(*Handler).RemoveTeamEdge",
+        "(*Handler).LaunchTeamRun"
+      ]
+    }
+  ]
+}
