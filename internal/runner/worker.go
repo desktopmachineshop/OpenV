@@ -270,7 +270,9 @@ func (w *Worker) tryClaim(ctx context.Context, slots chan struct{}, minPriority 
 }
 
 // execute runs one claimed run end to end, recovering from panics so a bad
-// run never takes down the loop.
+// run never takes down the loop. It sequences the run's steps: preflight up
+// to the start transition, the run's environment and spec, the adapter and
+// its log pump, and the request that finishes the run.
 func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	run := claim.Run
 	defer func() {
@@ -291,21 +293,87 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			})
 		}
 	}()
-	log.Printf("run %s: claimed (agent %s, provider %s)", run.ID, claim.Agent.Name, claim.Agent.Provider)
+	prep, ok := w.preflight(ctx, claim)
+	if !ok {
+		return
+	}
+	// Covers every early-return failure path (and the panic recovery above);
+	// stopHeartbeat is idempotent, so the explicit hand-off below is fine.
+	defer prep.cancelPrep()
+	defer prep.stopHeartbeat()
 
-	// heartbeat_at is stamped at claim time, but the next refresh would
-	// otherwise come from the log pump, which only starts after the adapter
-	// does. Everything in between — PrepareWorkspace in particular clones
-	// real repositories — can outlast the server reaper's stale window on a
-	// slow network or a large repo, deterministically failing the run before
-	// it ever starts. Beat explicitly until the pump takes over: an empty
-	// log push is exactly the heartbeat call the pump itself makes.
-	//
-	// The heartbeat response also carries cancel_requested, so a run
-	// cancelled during workspace prep aborts the prep (prepCtx cancels any
-	// in-flight git clone) instead of running to completion anyway.
+	env, ok := w.runEnv(claim)
+	if !ok {
+		return
+	}
+	handle, err := prep.adapter.Start(ctx, w.buildRunSpec(claim, prep.workDir, env))
+	if err != nil {
+		w.failRun(run.ID, "adapter start failed: "+err.Error(), siteAdapterStart, err)
+		return
+	}
+
+	// Hand liveness over to the log pump: it flushes (and thereby heartbeats)
+	// every 750ms. stopHeartbeat blocks until any in-flight beat has
+	// finished, so the pump never races a straggler push.
+	prep.stopHeartbeat()
+	cancelled := w.pump(run.ID, handle)
+	result, waitErr := handle.Wait()
+	FinishWorkspace(prep.workDir, prep.repoUsed)
+
+	req, ok := w.finishRequestFor(ctx, run.ID, cancelled, result, waitErr)
+	if !ok {
+		return
+	}
+	w.finish(run.ID, req)
+	if result.DurationMs > 0 {
+		// Split the wall time so a slow run can be read off the runner log:
+		// the model's share versus CLI start-up, tool calls and MCP traffic.
+		log.Printf("run %s: finished (%s) in %.1fs: model %.1fs over %d turn(s), overhead %.1fs",
+			run.ID, req.Status,
+			float64(result.DurationMs)/1000, float64(result.DurationAPIMs)/1000, result.NumTurns,
+			float64(result.DurationMs-result.DurationAPIMs)/1000)
+	} else {
+		log.Printf("run %s: finished (%s)", run.ID, req.Status)
+	}
+}
+
+// preparedRun is what preflight hands execute: the adapter to start, the
+// workspace it prepared, and the pre-pump heartbeat, still beating, with the
+// context of the workspace preparation it can cancel.
+type preparedRun struct {
+	adapter       Adapter
+	workDir       string
+	repoUsed      bool
+	stopHeartbeat func()
+	cancelPrep    context.CancelFunc
+}
+
+// preflight takes a claimed run up to its start transition: it starts the
+// pre-pump heartbeat, refuses a run that cannot succeed, prepares the
+// workspace and moves the run to running. It reports false when it finished
+// the run instead; the heartbeat has then stopped, and on true execute stops
+// it.
+//
+// heartbeat_at is stamped at claim time, but the next refresh would
+// otherwise come from the log pump, which only starts after the adapter
+// does. Everything in between — PrepareWorkspace in particular clones
+// real repositories — can outlast the server reaper's stale window on a
+// slow network or a large repo, deterministically failing the run before
+// it ever starts. Beat explicitly until the pump takes over: an empty
+// log push is exactly the heartbeat call the pump itself makes.
+//
+// The heartbeat response also carries cancel_requested, so a run
+// cancelled during workspace prep aborts the prep (prepCtx cancels any
+// in-flight git clone) instead of running to completion anyway.
+func (w *Worker) preflight(ctx context.Context, claim *ClaimResponse) (prep preparedRun, ok bool) {
+	run := claim.Run
+	log.Printf("run %s: claimed (agent %s, provider %s)", run.ID, claim.Agent.Name, claim.Agent.Provider)
 	prepCtx, cancelPrep := context.WithCancel(ctx)
-	defer cancelPrep()
+	defer func() {
+		if !ok {
+			cancelPrep()
+		}
+	}()
 	var prepCancelled atomic.Bool
 	stopHeartbeat := startHeartbeat(prepHeartbeatInterval, func() {
 		cancelRequested, _, err := w.client.PushLogs(run.ID, nil, "")
@@ -318,18 +386,18 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			cancelPrep()
 		}
 	})
-	// Covers every early-return failure path (and the panic recovery above);
-	// stopHeartbeat is idempotent, so the explicit hand-off below is fine.
-	defer stopHeartbeat()
+	// Covers every early-return failure path (and a panic) here; once the
+	// run is prepared, execute stops the heartbeat instead.
+	defer func() {
+		if !ok {
+			stopHeartbeat()
+		}
+	}()
 
-	adapter, ok := w.adapters[claim.Agent.Provider]
-	if !ok {
-		w.finish(run.ID, agentruns.FinishRequest{
-			Status:     agentruns.StatusFailed,
-			Error:      "no adapter for provider " + claim.Agent.Provider,
-			ErrorClass: classifySite(siteNoAdapter, nil),
-		})
-		return
+	adapter, found := w.adapters[claim.Agent.Provider]
+	if !found {
+		w.failRun(run.ID, "no adapter for provider "+claim.Agent.Provider, siteNoAdapter, nil)
+		return prep, false
 	}
 
 	// No allowlist, no run (REQ-91). Checked here, before a repository is
@@ -338,13 +406,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	// by name, and a person reading the failed run needs to be told which
 	// definition to fix.
 	if len(agents.NonEmptyTools(claim.Agent.AllowedTools)) == 0 {
-		w.finish(run.ID, agentruns.FinishRequest{
-			Status: agentruns.StatusFailed,
-			Error: "agent " + agentLabel(claim.Agent) + " names no tools it may use: " +
-				agents.AllowedToolsRequired,
-			ErrorClass: classifySite(siteAgentPolicy, nil),
-		})
-		return
+		w.failRun(run.ID, "agent "+agentLabel(claim.Agent)+" names no tools it may use: "+
+			agents.AllowedToolsRequired, siteAgentPolicy, nil)
+		return prep, false
 	}
 
 	// Repository access on a provider that cannot confine edits per tool is
@@ -354,13 +418,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	// to start. The definition cannot be saved this way either; this catches
 	// the one written before that rule, or edited on disk.
 	if claim.Agent.RepoAccess && claim.Agent.Provider != providers.ProviderClaudeCode {
-		w.finish(run.ID, agentruns.FinishRequest{
-			Status: agentruns.StatusFailed,
-			Error: "agent " + agentLabel(claim.Agent) + ": " +
-				agents.RepoAccessUnsupported(claim.Agent.Provider).Error(),
-			ErrorClass: classifySite(siteAgentPolicy, nil),
-		})
-		return
+		w.failRun(run.ID, "agent "+agentLabel(claim.Agent)+": "+
+			agents.RepoAccessUnsupported(claim.Agent.Provider).Error(), siteAgentPolicy, nil)
+		return prep, false
 	}
 
 	var conns []*repoconns.RepoConnection
@@ -377,15 +437,11 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		// the periodic CleanupOld sweep, like any failed run's.
 		w.finish(run.ID, agentruns.FinishRequest{Status: agentruns.StatusCancelled})
 		log.Printf("run %s: cancelled during workspace prep", run.ID)
-		return
+		return prep, false
 	}
 	if err != nil {
-		w.finish(run.ID, agentruns.FinishRequest{
-			Status:     agentruns.StatusFailed,
-			Error:      "workspace preparation failed: " + err.Error(),
-			ErrorClass: classifySite(siteWorkspacePrep, nil),
-		})
-		return
+		w.failRun(run.ID, "workspace preparation failed: "+err.Error(), siteWorkspacePrep, nil)
+		return prep, false
 	}
 	repoUsed := note != ""
 	if note != "" {
@@ -393,14 +449,24 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	}
 
 	if err := w.client.Start(run.ID); err != nil {
-		w.finish(run.ID, agentruns.FinishRequest{
-			Status:     agentruns.StatusFailed,
-			Error:      "start transition failed: " + err.Error(),
-			ErrorClass: classifySite(siteStartTransition, nil),
-		})
-		return
+		w.failRun(run.ID, "start transition failed: "+err.Error(), siteStartTransition, nil)
+		return prep, false
 	}
+	return preparedRun{
+		adapter:       adapter,
+		workDir:       workDir,
+		repoUsed:      repoUsed,
+		stopHeartbeat: stopHeartbeat,
+		cancelPrep:    cancelPrep,
+	}, true
+}
 
+// runEnv is the environment the run's CLI and its MCP server are given: the
+// API to call and the run's token, and for a project on api-key auth the
+// provider key from the runner host's environment. It reports false when it
+// failed the run because that key cannot be handed over.
+func (w *Worker) runEnv(claim *ClaimResponse) (map[string]string, bool) {
+	run := claim.Run
 	env := map[string]string{
 		"OPENV_API_URL":   w.apiURL,
 		"OPENV_RUN_TOKEN": claim.RunToken,
@@ -417,23 +483,17 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		// a row written before that rule, or an API this runner does not
 		// trust, still must not turn the runner into a host-secret reader.
 		if !providers.IsAllowedAPIKeyEnv(keyEnv) {
-			w.finish(run.ID, agentruns.FinishRequest{
-				Status: agentruns.StatusFailed,
-				Error: "this project's provider setting names " + keyEnv +
-					" as its API key variable, which is not a provider key variable; fix the provider setting in workspace settings",
-				ErrorClass: classifySite(siteAPIKeyMissing, nil),
-			})
-			return
+			w.failRun(run.ID, "this project's provider setting names "+keyEnv+
+				" as its API key variable, which is not a provider key variable; fix the provider setting in workspace settings",
+				siteAPIKeyMissing, nil)
+			return nil, false
 		}
 		key := os.Getenv(keyEnv)
 		if key == "" {
-			w.finish(run.ID, agentruns.FinishRequest{
-				Status: agentruns.StatusFailed,
-				Error: "this project uses API-key auth, but " + keyEnv +
-					" is not set on the runner host — set it (or switch the project back to user-account auth)",
-				ErrorClass: classifySite(siteAPIKeyMissing, nil),
-			})
-			return
+			w.failRun(run.ID, "this project uses API-key auth, but "+keyEnv+
+				" is not set on the runner host — set it (or switch the project back to user-account auth)",
+				siteAPIKeyMissing, nil)
+			return nil, false
 		}
 		if native := providers.DefaultAPIKeyEnv(claim.Agent.Provider); native != "" {
 			env[native] = key
@@ -441,7 +501,15 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			env[keyEnv] = key
 		}
 	}
-	spec := RunSpec{
+	return env, true
+}
+
+// buildRunSpec is what the adapter starts: the claimed run's prompt in its
+// prepared workspace, under its agent's definition, with the run's
+// environment for the CLI and its MCP server.
+func (w *Worker) buildRunSpec(claim *ClaimResponse, workDir string, env map[string]string) RunSpec {
+	run := claim.Run
+	return RunSpec{
 		RunID:   run.ID,
 		WorkDir: workDir,
 		Prompt:  run.Prompt,
@@ -467,25 +535,13 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		TimeoutSec: claim.Agent.TimeoutSeconds,
 		Env:        env,
 	}
+}
 
-	handle, err := adapter.Start(ctx, spec)
-	if err != nil {
-		w.finish(run.ID, agentruns.FinishRequest{
-			Status:     agentruns.StatusFailed,
-			Error:      "adapter start failed: " + err.Error(),
-			ErrorClass: classifySite(siteAdapterStart, err),
-		})
-		return
-	}
-
-	// Hand liveness over to the log pump: it flushes (and thereby heartbeats)
-	// every 750ms. stopHeartbeat blocks until any in-flight beat has
-	// finished, so the pump never races a straggler push.
-	stopHeartbeat()
-	cancelled := w.pump(run.ID, handle)
-	result, waitErr := handle.Wait()
-	FinishWorkspace(workDir, repoUsed)
-
+// finishRequestFor is the request that finishes a run whose adapter has
+// returned: its result, with the status and error class of how it ended. A
+// worker shutting down releases the run back to the queue instead and
+// reports false, as there is then nothing to finish.
+func (w *Worker) finishRequestFor(ctx context.Context, runID string, cancelled bool, result Result, waitErr error) (agentruns.FinishRequest, bool) {
 	exitCode := result.ExitCode
 	req := agentruns.FinishRequest{
 		ExitCode:  &exitCode,
@@ -502,12 +558,12 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		// this run's subprocess mid-flight. That's not the run's fault, so
 		// release the claim back to the queue for another (or a restarted)
 		// worker to pick up rather than burning it as failed.
-		if err := w.client.Release(run.ID, w.workerID); err != nil {
-			log.Printf("run %s: release on shutdown failed: %v", run.ID, err)
+		if err := w.client.Release(runID, w.workerID); err != nil {
+			log.Printf("run %s: release on shutdown failed: %v", runID, err)
 		} else {
-			log.Printf("run %s: released back to queue on shutdown", run.ID)
+			log.Printf("run %s: released back to queue on shutdown", runID)
 		}
-		return
+		return agentruns.FinishRequest{}, false
 	case errors.Is(waitErr, context.DeadlineExceeded):
 		req.Status = agentruns.StatusTimedOut
 		req.Error = "run exceeded its timeout"
@@ -528,17 +584,17 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	default:
 		req.Status = agentruns.StatusSucceeded
 	}
-	w.finish(run.ID, req)
-	if result.DurationMs > 0 {
-		// Split the wall time so a slow run can be read off the runner log:
-		// the model's share versus CLI start-up, tool calls and MCP traffic.
-		log.Printf("run %s: finished (%s) in %.1fs: model %.1fs over %d turn(s), overhead %.1fs",
-			run.ID, req.Status,
-			float64(result.DurationMs)/1000, float64(result.DurationAPIMs)/1000, result.NumTurns,
-			float64(result.DurationMs-result.DurationAPIMs)/1000)
-	} else {
-		log.Printf("run %s: finished (%s)", run.ID, req.Status)
-	}
+	return req, true
+}
+
+// failRun finishes a run as failed, with the message a person reads and the
+// error class of the site that failed it.
+func (w *Worker) failRun(runID, message string, site finishSite, err error) {
+	w.finish(runID, agentruns.FinishRequest{
+		Status:     agentruns.StatusFailed,
+		Error:      message,
+		ErrorClass: classifySite(site, err),
+	})
 }
 
 // prepHeartbeatInterval is how often the pre-pump heartbeat refreshes a

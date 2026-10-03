@@ -369,7 +369,6 @@
     "internal/persistence/postgres:InitOrgSchema": 261,
     "internal/persistence/postgres:InitSchema": 260,
     "internal/persistence/postgres:InitSuiteSchema": 257,
-    "internal/runner:Worker.execute": 287,
     "internal/runner:Worker.handleLogin": 155,
     "internal/runner:Worker.handlePTYLogin": 157,
     "internal/runner:startProc": 184,
