@@ -198,9 +198,10 @@ PROTECTED_PATHS = [
 # fills its slot in a class T commit when it lands. S14a, S14b, S14c, S14d,
 # S14e and S14f are not in the plan's list: they are the tools that prove
 # class A, this guard, M4's, M10's and M11a's class B and F1's move, so a
-# commit of another class may not edit them either. Nor are S10, whose tests
-# are X6's characterization, and S15a, whose tests are M15a's guard and
-# M15b's characterization.
+# commit of another class may not edit them either. Nor are S9, whose tests
+# are P1's guard and X14b's characterization, S10, whose tests are X6's
+# characterization, and S15a, whose tests are M15a's guard and M15b's
+# characterization.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -247,6 +248,26 @@ GUARD_CODE = [
     ("S8", ["cmd/*/cli_test.go", "cmd/*/cli_harness_test.go",
             "cmd/*/env_parse_test.go", "cmd/*/env_parse_helpers_test.go",
             "internal/**/env_parse_test.go", "internal/**/env_parse_helpers_test.go"]),
+    # S9's format, payload and import-field goldens are written by these
+    # tests, by file name: the format fixture, its views and the goldens
+    # through the real handlers (and the ReqIF typing check), the proposal
+    # payloads, the import-field classification, and the docs/exports round
+    # trip over Postgres. P1 (class D) and X14b (class E) name S9 as their
+    # guard, so neither may relax them in the commit they prove; X14b names
+    # them in Refactor-Characterization trailers. A class C or T commit may
+    # still edit them (M13 retires the vvHandler literal they reuse); a class
+    # R commit may not, so M14's, which renames the Handler fields NewHandler
+    # copies from HandlerDeps in test code too, would be refused at the
+    # assignments in newS9Fixture (formats_fixture_test.go:525-531) and
+    # s9Propose (proposal_payloads_test.go:216-217). A class C commit ahead
+    # of it (M13's, or M14's own) first moves them into option helpers
+    # declared in internal/api/testkit_test.go, which is no guard code, and
+    # does the same for the S5a-S5e row's run_stream_replay_test.go:63-64
+    # and the S6 row's event_payload_drives_test.go:214.
+    ("S9", ["internal/api/formats_fixture_test.go", "internal/api/formats_views_test.go",
+            "internal/api/formats_golden_test.go", "internal/api/proposal_payloads_test.go",
+            "internal/domain/exports/import_fields_test.go",
+            "internal/persistence/postgres/export_roundtrip_test.go"]),
     # S12b's cascade test and K14 size budgets sit among S12's guards in
     # src/arch, so its row comes first to name them; bundle-check and its
     # test pin the bundle's shape.

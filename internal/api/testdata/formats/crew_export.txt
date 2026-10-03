@@ -1,0 +1,6 @@
+GET /api/v1/crews/<crew>/export
+status: 200
+Content-Disposition: attachment; filename="review-crew-s9.crew.json"
+Content-Type: application/json
+body: text, 1 lines, ends with a newline: true
+{"kind":"openv.crew","version":"1.0","name":"Review crew: \"S9\"","description":"Reads, then checks.","entry_node_key":"Lead","nodes":[{"key":"Lead","agent_slug":"lead-reviewer","label":"Lead","department":"Review","position":{"org":{"x":10,"y":20}}},{"key":"Lead-2","agent_slug":"checker","label":"Lead"}],"edges":[{"from":"Lead","to":"Lead-2","edge_type":"delegates","config":{"max":2}}],"exported_at":"<now RFC 3339 with fraction>"}
