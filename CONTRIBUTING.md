@@ -277,6 +277,17 @@ prints:
   `TestEnvParse` writes its sections of (a failure prints the command for
   its own package); and `UPDATE_GOLDEN=1 go test -count=1 -run '^TestCLI$' ./cmd/agentd ./cmd/openv-connector ./cmd/openv-mcp ./cmd/openv-vapid`
   for the command lines under `cmd/<command>/testdata/cli/`
+- export, report and download formats, proposal payloads and import fields
+  (S9): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^(TestFormatsGolden|TestProposalPayloadsGolden)$'`
+  for `internal/api/testdata/formats/` (every export, report and download
+  the API renders, through the real handlers) and
+  `internal/api/testdata/proposal_payloads/`;
+  `UPDATE_GOLDEN=1 go test ./internal/domain/exports -count=1 -run '^TestImportFields$'`
+  for `internal/domain/exports/testdata/import_fields.txt`; and
+  `UPDATE_GOLDEN=1 OPENV_TEST_DATABASE_URL=<server URL> go test ./internal/persistence/postgres -count=1 -run '^TestExportDocsRoundTrip$'`
+  for the round trip of `docs/exports/*.json` under
+  `internal/persistence/postgres/testdata/formats/roundtrip/` (a server with
+  or without pgvector)
 - frontend snapshots (S12, and S12b's CSS cascade,
   `frontend/src/arch/__snapshots__/cssOrder.txt`): `cd frontend && npx vitest run src/arch -u`
 - bundle shape (S12b, `frontend/scripts/testdata/bundle-shape.json`): `cd frontend && npm run build && UPDATE_BUNDLE_SHAPE=1 node scripts/bundle-check.mjs`

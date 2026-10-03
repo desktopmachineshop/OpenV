@@ -317,13 +317,13 @@ class DataTest(unittest.TestCase):
         # renaming a golden or its directory cannot drop it from the list
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
-        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16", "S12b",
+        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S9", "S12, S12b, S16", "S12b",
                   "S15a"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 19)
+        self.assertEqual(len(entries), 20)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
@@ -332,7 +332,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S12b", "S14a", "S14b",
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S9", "S12", "S12b", "S14a", "S14b",
                   "S14c", "S14d", "S14e", "S14f", "S15a"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
@@ -454,6 +454,55 @@ class DataTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIsNone(rg.guard_code_step(path))
         self.assertEqual(rg.guard_code_step("internal/runner/wire_golden_test.go"), "S7")
+
+    def test_s9_formats_payloads_and_import_fields(self):
+        # Every one of S9's goldens is under S9's single golden entry, with
+        # its three patterns: the format goldens of the API and the export
+        # round trip (testdata/formats/), the proposal payloads and the
+        # import-field classification. The round trip has a golden for each
+        # document under docs/exports/ and none other, and those documents
+        # are S9's frozen data. The tests that write the goldens are S9's
+        # guard code, so P1's class D commit cannot relax what proves it
+        # (X14b, class E, names them as its characterization); the other
+        # tests beside them, and the code they pin, are not.
+        s9 = ("S9", "export, import and report formats")
+        files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
+                               check=True).stdout.split("\n")
+        files = [f for f in files if f and not f.endswith(".gitattributes")]
+        formats = [f for f in files if f.startswith("internal/api/testdata/formats/")]
+        payloads = [f for f in files if f.startswith("internal/api/testdata/proposal_payloads/")]
+        roundtrip = [f for f in files if f.startswith("internal/persistence/postgres/testdata/formats/")]
+        docs = [f for f in files if f.startswith("docs/exports/") and f.endswith(".json")]
+        self.assertTrue(formats)
+        self.assertEqual(sorted(os.path.basename(f) for f in payloads),
+                         ["create_artifact.txt", "create_link.txt", "delete_artifact.txt", "delete_link.txt",
+                          "record_test_result.txt", "update_artifact.txt"])
+        self.assertEqual(len(docs), 4)
+        self.assertEqual(sorted(os.path.basename(f) for f in roundtrip),
+                         sorted(os.path.basename(f)[:-len(".json")] + ".txt" for f in docs))
+        for path in formats + payloads + roundtrip + ["internal/domain/exports/testdata/import_fields.txt"]:
+            with self.subTest(path=path):
+                self.assertIn(path, files)
+                self.assertEqual(rg.golden_entry(path), s9)
+        for path in docs:
+            with self.subTest(path=path):
+                self.assertIsNone(rg.golden_entry(path))
+                self.assertIn(("S9", "docs/exports/*.json"),
+                              [(step, p) for step, p in rg.FROZEN_DATA if rg.matches(path, [p])])
+        writers = ("internal/api/formats_fixture_test.go", "internal/api/formats_views_test.go",
+                   "internal/api/formats_golden_test.go", "internal/api/proposal_payloads_test.go",
+                   "internal/domain/exports/import_fields_test.go",
+                   "internal/persistence/postgres/export_roundtrip_test.go")
+        for path in writers:
+            with self.subTest(path=path):
+                self.assertTrue(os.path.isfile(os.path.join(REPO, path)), path)
+                self.assertEqual(rg.guard_code_step(path), "S9")
+        for path in ("internal/api/export_handlers_test.go", "internal/api/vv_result_handler_test.go",
+                     "internal/domain/exports/import_test.go", "internal/domain/exports/export.go",
+                     "internal/domain/reports/pdf_report.go", "internal/persistence/postgres/testdb_test.go"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertEqual(rg.guard_code_step("internal/persistence/postgres/migration_freeze_test.go"), "S3")
 
     def test_merged_s14d_generator_is_guarded(self):
         # S14d's generator (internal/tools/liftmigrations: the tool, its

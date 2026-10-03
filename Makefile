@@ -170,7 +170,8 @@ test:
 ## at a database, as it does in CI; they skip otherwise. CI runs them twice,
 ## on postgres:15 (no vector extension) and on pgvector (backend-pgvector),
 ## and fails if either variant only skipped (a skipped subtest counts), the
-## stored-data freeze's schema and purge goldens (refactor plan S3) included;
+## stored-data freeze's schema and purge goldens (refactor plan S3) and the
+## docs/exports round trip through an import and a JSON export (S9) included;
 ## locally there is one server, so the assertion requires whichever variant
 ## that server supports to have run. The boot harness in cmd/server (refactor
 ## plan S4a's profiles, S4b's environment matrix and misconfigured boots)
@@ -230,12 +231,12 @@ check:
 	else \
 		log="$$(mktemp)"; \
 		go test ./internal/persistence/postgres/ -count=1 -v \
-			-run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable|TestNearestByEmbedding|TestDuplicateCandidates|TestEmbeddingRepositoryUpsert|TestVectorReconcileCreatesWhenExtensionAppears|TestSchemaGolden|TestPurgeCatalog)$$' > "$$log"; rc=$$?; \
+			-run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable|TestNearestByEmbedding|TestDuplicateCandidates|TestEmbeddingRepositoryUpsert|TestVectorReconcileCreatesWhenExtensionAppears|TestSchemaGolden|TestPurgeCatalog|TestExportDocsRoundTrip)$$' > "$$log"; rc=$$?; \
 		ran() { for t in "$$@"; do grep -q -- "^--- PASS: $$t " "$$log" && ! grep -Eq -- "--- SKIP: $$t( |/)" "$$log" || return 1; done; }; \
 		if [ $$rc -ne 0 ]; then cat "$$log"; \
-		elif ran TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable TestSchemaGolden TestPurgeCatalog; then \
+		elif ran TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable TestSchemaGolden TestPurgeCatalog TestExportDocsRoundTrip; then \
 			echo "Postgres tests ran without the vector extension (CI's postgres:15 leg)"; \
-		elif ran TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog; then \
+		elif ran TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog TestExportDocsRoundTrip; then \
 			echo "Postgres tests ran with the vector extension (CI's backend-pgvector leg)"; \
 		else cat "$$log"; echo "neither the vector nor the no-vector Postgres tests ran; they only skipped"; rc=1; fi; \
 		rm -f "$$log"; exit $$rc; \
