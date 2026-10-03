@@ -23,22 +23,41 @@
 // does a stage with a value receiver (its field writes would go to a
 // copy), and a stage that contains defer, recover or a return other than
 // its last statement, outside function literals: those would run when the
-// stage returns rather than when the function does. With -base it prints a
-// diff of the flattened statements at the ref against the head side, for
-// review. That diff does not fail: locals that became a.field show as
-// changed lines, so it does not by itself prove that only such renames
-// differ. Normalising those renames, and failing on what is left, is an
-// open follow-up that must land with S14c's stageextract, before M4.
+// stage returns rather than when the function does.
 //
-// Exit status: 0 on success (a -flatten -base diff included), 1 when
-// -flatten finds a violation, 2 on a
-// usage or read error, or when the directory holds no declaration on any
-// side (a mistyped path, or a ./... pattern, which is not expanded).
+// With -base it is the proof of a stage split (refactor step M4, made by
+// internal/tools/stageextract): it flattens the function at the ref and on
+// the head side, undoes on both what stageextract rewrites (normalise.go,
+// S14c): the recv := &T{} line goes, recv.x reads as x for a field x of T,
+// the first top-level write of a field reads as its :=, a var a stage
+// declares a local with just before writing it goes, a var of a field
+// goes or reads as :=, and a cleanup a stage returns and the function
+// binds and defers at once reads as the defer it was. Then it compares
+// the statements and what each identifier names (a package-level name, a
+// top-level local or field, a local of a nested block, the receiver),
+// and fails, with the diff, on any difference left: a statement moved
+// across a stage boundary, dropped or changed, or a name that now binds
+// otherwise. It also fails what equal text would not show: a top-level
+// local of a stage named like a field; a local declared at the top of two
+// of the function's bodies (its own and its stages') that a function
+// literal captures, whose address is taken (explicitly, or by a pointer
+// method or slicing), or whose copy one body reads after another body
+// wrote its own (main()'s err read in the tail after a stage's err); and
+// a field, or a top-level local, whose type is not the base's local's.
+// For the last two it type-checks both sides, against the packages they
+// import as the go command builds them here (normalise_types.go).
+//
+// Exit status: 0 on success (with -base, when both sides flatten to the
+// same statements once normalised), 1 when -flatten finds a violation or
+// -base a difference, 2 on a usage or read error, when -flatten -base
+// cannot type-check a side, or when the directory holds no declaration on
+// any side (a mistyped path, or a ./... pattern, which is not expanded).
 package main
 
 import (
 	"flag"
 	"fmt"
+	"go/ast"
 	"io"
 	"os"
 	"sort"
@@ -84,7 +103,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return parsePackage(srcs, tests)
 	}
 	if *flat != "" {
-		return flattenCmd(load, *flat, *recv, *base, *head, stdout, stderr)
+		return flattenCmd(load, dir, *flat, *recv, *base, *head, stdout, stderr)
 	}
 	h, err := load(*head, *tests)
 	if err != nil {
@@ -168,32 +187,33 @@ func files(names []string) string {
 	return strings.Join(names, ", ")
 }
 
-// flattenCmd prints the flattened function, or with base a diff of it.
-func flattenCmd(load func(string, bool) (*pkgInfo, error), name, recv, base, head string, stdout, stderr io.Writer) int {
-	side := func(ref string) ([]string, int) {
+// flattenCmd prints the flattened function, or with base compares it with
+// the base's, both normalised (normalise.go), and fails on a difference.
+func flattenCmd(load func(string, bool) (*pkgInfo, error), dir, name, recv, base, head string, stdout, stderr io.Writer) int {
+	side := func(ref string) (*flattener, []ast.Stmt, int) {
 		p, err := load(ref, false)
 		if err != nil {
 			fmt.Fprintln(stderr, "movecheck:", err)
-			return nil, 2
+			return nil, nil, 2
 		}
-		stmts, err := flatten(p, name, recv)
+		fl, list, err := flattenStmts(p, name, recv)
 		if err != nil {
 			fmt.Fprintln(stderr, "movecheck:", err)
-			return nil, 1
+			return nil, nil, 1
 		}
-		return strings.Split(strings.Join(stmts, "\n"), "\n"), 0
+		return fl, list, 0
 	}
-	h, code := side(head)
+	hfl, hlist, code := side(head)
 	if code != 0 {
 		return code
 	}
 	if base == "" {
-		for _, l := range h {
+		for _, l := range strings.Split(strings.Join(hfl.renderAll(hlist), "\n"), "\n") {
 			fmt.Fprintln(stdout, l)
 		}
 		return 0
 	}
-	b, code := side(base)
+	bfl, blist, code := side(base)
 	if code != 0 {
 		return code
 	}
@@ -201,13 +221,80 @@ func flattenCmd(load func(string, bool) (*pkgInfo, error), name, recv, base, hea
 	if headName == "" {
 		headName = "the working tree"
 	}
-	d := unifiedDiff(b, h, base, headName)
-	if len(d) == 0 {
+	hs, bs := newSide(hfl, hlist), newSide(bfl, blist)
+	fields := map[string]bool{}
+	for f := range hs.fields {
+		fields[f] = true
+	}
+	for f := range bs.fields {
+		fields[f] = true
+	}
+	h, err := hs.normalise(fields)
+	if err != nil {
+		fmt.Fprintf(stderr, "movecheck: %s: %v\n", headName, err)
+		return 1
+	}
+	b, err := bs.normalise(fields)
+	if err != nil {
+		fmt.Fprintf(stderr, "movecheck: %s: %v\n", base, err)
+		return 1
+	}
+	if d := unifiedDiff(b, h, base, headName); len(d) > 0 {
+		for _, l := range d {
+			fmt.Fprintln(stdout, l)
+		}
+		fmt.Fprintf(stderr, "movecheck: %s flattens to other statements in %s than in %s (the diff above, both sides "+
+			"normalised): only a local that became a field of the stages' receiver (%s.x), its := and var forms, and a "+
+			"cleanup a stage returns for %s to defer may differ; anything else is a change\n", name, headName, base, recv, name)
+		return 1
+	}
+	if msg := bindingMismatch(bs, hs, base, headName); msg != "" {
+		fmt.Fprintln(stderr, "movecheck:", msg)
+		return 1
+	}
+	msg, err := typedChecks(dir, bfl.p, hfl.p, base, headName, name, recv)
+	if err != nil {
+		fmt.Fprintln(stderr, "movecheck:", err)
+		return 2
+	}
+	if msg != "" {
+		fmt.Fprintln(stderr, "movecheck: "+strings.ReplaceAll(msg, "\n", "\nmovecheck: "))
+		return 1
+	}
+	renamed := len(hs.renamed) + len(bs.renamed)
+	cleanups := hs.cleanups + bs.cleanups
+	if renamed+cleanups == 0 {
 		fmt.Fprintf(stdout, "movecheck: %s flattens to the same statements in %s and %s\n", name, base, headName)
 		return 0
 	}
-	for _, l := range d {
-		fmt.Fprintln(stdout, l)
-	}
+	fmt.Fprintf(stdout, "movecheck: %s flattens to the same statements in %s and %s once the stage rewrites are undone (%s, %s)\n",
+		name, base, headName, count(renamed, "local became a field of "+recv, "locals became fields of "+recv),
+		count(cleanups, "cleanup returned for "+name+" to defer", "cleanups returned for "+name+" to defer"))
 	return 0
+}
+
+// count is "1 thing" or "n things".
+func count(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
+// bindingMismatch compares what the identifiers of two normalised sides
+// name, which equal text alone does not show, and describes the first
+// that differs.
+func bindingMismatch(base, head *side, baseName, headName string) string {
+	b, h := base.bindings(), head.bindings()
+	for i := 0; i < len(b) && i < len(h); i++ {
+		if b[i].name != h[i].name || b[i].bind != h[i].bind {
+			line := strings.SplitN(head.fl.render(head.list[h[i].stmt]), "\n", 2)[0]
+			return fmt.Sprintf("%s: in %q, %s names %s in %s but %s in %s", head.fl.p.fset.Position(h[i].pos), line,
+				h[i].name, h[i].bind, headName, b[i].bind, baseName)
+		}
+	}
+	if len(b) != len(h) {
+		return fmt.Sprintf("the normalised sides read alike but name %d identifiers in %s and %d in %s", len(b), baseName, len(h), headName)
+	}
+	return ""
 }

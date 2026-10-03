@@ -30,36 +30,60 @@ type flattener struct {
 	// nested block to the statements it expands to.
 	placeholders map[string][]ast.Stmt
 	errs         []string
+	target       *ast.FuncDecl
+	// parts holds the statements the normalisation rebuilt from nodes of
+	// more than one file, which render prints from their parts.
+	parts map[ast.Stmt]bool
 }
 
 // flatten returns the statements of the named function with its stage
 // calls inlined, each rendered by go/printer.
 func flatten(p *pkgInfo, name, recv string) ([]string, error) {
+	fl, list, err := flattenStmts(p, name, recv)
+	if err != nil {
+		return nil, err
+	}
+	return fl.renderAll(list), nil
+}
+
+// renderAll renders a flattened statement list.
+func (fl *flattener) renderAll(list []ast.Stmt) []string {
+	out := make([]string, 0, len(list))
+	for _, s := range list {
+		out = append(out, fl.render(s))
+	}
+	return out
+}
+
+// flattenStmts returns the named function's statements with its stage
+// calls inlined, and the flattener that holds what rendering them needs.
+func flattenStmts(p *pkgInfo, name, recv string) (*flattener, []ast.Stmt, error) {
 	var target *decl
 	for _, d := range p.decls {
 		if d.key == name && d.file.set == "" && (d.kind == "func" || d.kind == "method") {
 			if target != nil {
-				return nil, fmt.Errorf("%s is declared in %s and %s", name, target.file.name, d.file.name)
+				return nil, nil, fmt.Errorf("%s is declared in %s and %s", name, target.file.name, d.file.name)
 			}
 			target = d
 		}
 	}
 	if target == nil {
-		return nil, fmt.Errorf("no function %s", name)
+		return nil, nil, fmt.Errorf("no function %s", name)
 	}
 	fd := target.node.(*ast.FuncDecl)
 	if fd.Body == nil {
-		return nil, fmt.Errorf("%s has no body", name)
+		return nil, nil, fmt.Errorf("%s has no body", name)
 	}
-	fl := &flattener{p: p, recv: recv, stages: map[string]*stage{}, active: map[*stage]bool{},
-		files: map[ast.Stmt]*goFile{}, synth: map[ast.Stmt]bool{}, placeholders: map[string][]ast.Stmt{}}
+	fl := &flattener{p: p, recv: recv, target: fd, stages: map[string]*stage{}, active: map[*stage]bool{},
+		files: map[ast.Stmt]*goFile{}, synth: map[ast.Stmt]bool{}, placeholders: map[string][]ast.Stmt{},
+		parts: map[ast.Stmt]bool{}}
 	for _, d := range p.decls {
 		if d.kind != "method" || d.file.set != "" || !strings.HasPrefix(d.file.name, "wire_") {
 			continue
 		}
 		sfd := d.node.(*ast.FuncDecl)
 		if prev := fl.stages[sfd.Name.Name]; prev != nil {
-			return nil, fmt.Errorf("stage methods %s (%s) and %s (%s) share a name", funcKey(prev.fd), prev.file.name, d.key, d.file.name)
+			return nil, nil, fmt.Errorf("stage methods %s (%s) and %s (%s) share a name", funcKey(prev.fd), prev.file.name, d.key, d.file.name)
 		}
 		fl.stages[sfd.Name.Name] = &stage{fd: sfd, file: d.file}
 	}
@@ -70,13 +94,9 @@ func flatten(p *pkgInfo, name, recv string) ([]string, error) {
 	}
 	sort.Strings(fl.errs)
 	if len(fl.errs) > 0 {
-		return nil, errors.New(strings.Join(fl.errs, "\n"))
+		return nil, nil, errors.New(strings.Join(fl.errs, "\n"))
 	}
-	out := make([]string, 0, len(list))
-	for _, s := range list {
-		out = append(out, fl.render(s))
-	}
-	return out, nil
+	return fl, list, nil
 }
 
 // call is a stage call in statement position.
@@ -312,8 +332,21 @@ func (fl *flattener) render(s ast.Stmt) string {
 	if a, ok := s.(*ast.AssignStmt); ok && fl.synth[a] {
 		return fl.exprs(a.Lhs) + " " + a.Tok.String() + " " + fl.exprs(a.Rhs)
 	}
+	if d, ok := s.(*ast.DeferStmt); ok && fl.parts[d] {
+		return "defer " + fl.exprs([]ast.Expr{d.Call.Fun}) + "()"
+	}
 	var text string
-	if f := fl.files[s]; f != nil {
+	f := fl.files[s]
+	if ds, ok := s.(*ast.DeclStmt); ok {
+		// A declaration's lead comment is above the statement, like any
+		// other statement's, which is not printed: leave it out here too.
+		if gd, ok := ds.Decl.(*ast.GenDecl); ok && gd.Doc != nil {
+			bare := *gd
+			bare.Doc = nil
+			s = &ast.DeclStmt{Decl: &bare}
+		}
+	}
+	if f != nil {
 		text = printNode(fl.p.fset, f, s)
 	} else {
 		var b bytes.Buffer

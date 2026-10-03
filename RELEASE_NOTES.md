@@ -919,6 +919,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.15.0 — 2026-09-22
 
+Stable channel release since 2026-10-01.
+
 ### New features
 
 - **A workspace admin can subscribe to Business Lite or Business from the

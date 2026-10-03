@@ -1,0 +1,43 @@
+{
+  "description": "stageextract's fixture spec (refactor plan step S14c): testdata/fixture's main() into five stages in three files.",
+  "package": "internal/tools/stageextract/testdata/fixture",
+  "main_budget": 30,
+  "stages": [
+    {
+      "name": "signals",
+      "file": "wire_start.go",
+      "doc": "// signals makes the root context and the ticker, and returns their stops\n// for main() to defer.",
+      "lines": "16-22",
+      "starts": "// Root context, and a ticker, both stopped when main returns."
+    },
+    {
+      "name": "settings",
+      "file": "wire_start.go",
+      "lines": "26-39",
+      "starts": "// Settings."
+    },
+    {
+      "name": "connect",
+      "file": "wire_start.go",
+      "doc": "// connect opens the store and returns its Close for main() to defer.",
+      "lines": "41-45",
+      "starts": "// Connect."
+    },
+    {
+      "name": "services",
+      "file": "wire_services.go",
+      "lines": "50-67",
+      "starts": "// Services."
+    },
+    {
+      "name": "jobs",
+      "file": "wire_jobs.go",
+      "lines": "69-80",
+      "starts": "// Jobs."
+    }
+  ],
+  "main": {
+    "line": 82,
+    "starts": "// The tail stays in main."
+  }
+}

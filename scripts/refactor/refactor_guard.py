@@ -167,10 +167,10 @@ PROTECTED_PATHS = [
 # (2) Guard code (§6.4 S14b): M or D only in a class C or T commit that
 # modifies or deletes no golden. (owning step, patterns). An empty list is a
 # slot: the plan names no file for that step's guard code yet, and the step
-# fills its slot in a class T commit when it lands. S14a, S14b, S14d, S14e
-# and S14f are not in the plan's list: they are the tools that prove class A,
-# this guard, M10's and M11a's class B and F1's move, so a commit of another
-# class may not edit them either.
+# fills its slot in a class T commit when it lands. S14a, S14b, S14c, S14d,
+# S14e and S14f are not in the plan's list: they are the tools that prove
+# class A, this guard, M4's, M10's and M11a's class B and F1's move, so a
+# commit of another class may not edit them either.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -237,6 +237,13 @@ GUARD_CODE = [
     # only: M11a may still edit its spec (specs/*.json) in any class, and
     # its testdata/ is frozen data like every other.
     ("S14e", ["internal/tools/splittools/*.go"]),
+    # S14c's stageextract generates M4 (main() into wire_<stage>.go stages)
+    # and checks its own result; movecheck's -flatten -base, with the
+    # normalisation S14c gave it, is M4's proof (the split flattens to the
+    # old main() once the stage rewrites are undone), and its map is M6-M9's.
+    # Their sources and tests only: M4 may still edit its spec
+    # (specs/*.json) in any class, and testdata/ is frozen data.
+    ("S14c", ["internal/tools/stageextract/*.go", "internal/tools/movecheck/*.go"]),
     # S14f's tsdeclmove generates F1 (client.ts behind a barrel) and checks
     # what it writes as this guard's class A check will (tsdeclhash
     # --no-module and tsmovecheck over src/, and the barrel's surface); its
