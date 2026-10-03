@@ -599,7 +599,7 @@ func (w *Worker) failRun(runID, message string, site finishSite, err error) {
 
 // prepHeartbeatInterval is how often the pre-pump heartbeat refreshes a
 // claimed run's liveness. Comfortably inside the server reaper's 2-minute
-// stale window (cmd/server/main.go).
+// stale window (runReaper, cmd/server/jobs.go).
 const prepHeartbeatInterval = 30 * time.Second
 
 // startHeartbeat invokes beat every interval on a background goroutine until
