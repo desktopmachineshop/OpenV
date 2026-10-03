@@ -10,9 +10,10 @@ deliberately (plan §9.2), never labelled `refactor`.
 
 Each entry gives:
 
-- **Where**: the code that produces the quirk, checked against `master` at
-  `863b470` (the plan's own references are at `d11dee8`; where a reference
-  has moved, the entry says so);
+- **Where**: the code that produces the quirk, named by function and file,
+  since line numbers stopped holding once Phase 1 split the hub files (a
+  frontend line number, where an entry still gives one, is at `863b470`;
+  the plan's own references are at `d11dee8`);
 - **Pinned by, named as**: copied from the plan's §3.1 table, with the
   analysis's pain-point id; a step not yet merged is marked *(planned)*;
 - **Pinned today**: what already fails if the quirk changes.
@@ -26,11 +27,11 @@ the Phase 3 consolidations that give quirks their names.
 
 - **Where:** handlers that call `json.NewEncoder(w).Encode` without setting
   the header first, for example `ListAgents`
-  (`internal/api/agent_handlers.go:163`) and `CreateOrg`
-  (`internal/api/org_handlers.go:254`); `internal/api` has 249 raw encodes
+  (`internal/api/agent_definition_handlers.go`) and `CreateOrg`
+  (`internal/api/org_core_handlers.go`); `internal/api` has 249 raw encodes
   (S1's `raw_json_encodes` ratchet). Below 1,400 bytes the server then
   answers `text/plain`, and a gzipped body carries no type.
-  `ContentTypeMiddleware` (`internal/api/handlers.go:1594`) sets no type
+  `ContentTypeMiddleware` (`internal/api/middleware_content_type.go`) sets no type
   despite its name.
 - **Pinned by, named as:** S5 (S5a for the requirements core, S5b for V&V
   and the suite, S5c for identity and the workspace, S5d for agents and the
@@ -102,7 +103,7 @@ the Phase 3 consolidations that give quirks their names.
   artifact the caller cannot reach answers alike (I3).
 - **Where it was:** `artifact_repository.go` returned an ad hoc
   `errors.New("artifact not found")` instead of `artifacts.ErrNotFound`
-  (`internal/domain/artifacts/artifact.go:15`), so the 404 branch of
+  (`internal/domain/artifacts/artifact.go`), so the 404 branch of
   `ChangeArtifactStatus` (`internal/api/handlers.go`) never matched and the
   request fell to `respondInternal`; the update and the restore sent any
   lookup error to `respondInternal`.
@@ -148,14 +149,15 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
-- **Where:** `UpdateArtifact` (`internal/api/handlers.go:753`) applies
+- **Where:** `UpdateArtifact` (`internal/api/artifact_handlers.go`) applies
   `pending_link_adds` and removals through `processManagedLinkChanges`
-  (`:2985`). Unlike `POST /links` it skips the FeatureFlowDown gate
-  (`CreateLink` checks it at `:1368`), publishes no `LinkCreated` or
-  `LinkDeleted` event (`CreateLink` and `DeleteLink` do, at `:1393` and
-  `:1582`), silently skips an invalid add (`continue` at `:3033`–`:3079`),
+  (`internal/api/managed_link_edits.go`). Unlike `POST /links` it skips the
+  FeatureFlowDown gate, which `CreateLink` checks
+  (`internal/api/link_handlers.go`), publishes no `LinkCreated` or
+  `LinkDeleted` event (`CreateLink` and `DeleteLink` do), silently skips an
+  invalid add (the `continue`s of `processManagedLinkChanges`' add loop),
   and the version note lists the *requested* links
-  (`linksFromPendingAdds`, `:824`), not the ones created.
+  (`linksFromPendingAdds`, `managed_link_edits.go`), not the ones created.
 - **Pinned by, named as:** S5a; X11a *(planned)*; explicit `Policy` flags in
   X11b *(planned)*. Pain point api-requirements-3.
 - **Pinned today:** the S5a tour, `cmd/server/testdata/tour/s5a/links_managed_edits.json`:
@@ -173,10 +175,10 @@ the Phase 3 consolidations that give quirks their names.
 ## Q4. `links_snapshot` and auto-version numbering
 
 - **Where:** `UpdateArtifact` writes `links_snapshot` only when at least one
-  link remains (`internal/api/handlers.go:857`), while
-  `autoVersionLinkedArtifacts` (`:3117`) always writes it; the chatter note
-  names auto-version N as the version read before the update plus 1
-  (`:3182`).
+  link remains (`internal/api/artifact_handlers.go`), while
+  `autoVersionLinkedArtifacts` (`internal/api/managed_link_edits.go`) always
+  writes it; the chatter note it writes names auto-version N as the version
+  read before the update plus 1.
 - **Pinned by, named as:** S5a; X11a *(planned)*.
 - **Pinned today:** the S5a tour, `cmd/server/testdata/tour/s5a/links_managed_edits.json`: a
   managed removal that leaves no link carries the previous `links_snapshot`
@@ -186,10 +188,10 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q5. `POST /api/v1/orgs` returns unresolved derived fields
 
-- **Where:** `CreateOrg` (`internal/api/org_handlers.go:221`) encodes the
+- **Where:** `CreateOrg` (`internal/api/org_core_handlers.go`) encodes the
   workspace the domain service returns; only a read through the repository's
   `scanOrg` sets `has_logo` and resolves the release channel
-  (`internal/persistence/postgres/org_repository.go:68-72`), so the create
+  (`internal/persistence/postgres/org_repository.go`), so the create
   response says `release_channel ""` and `locked false`.
 - **Pinned by, named as:** S5c. Pain point domain-platform-v2.
 - **Pinned today:** the S5c tour. `POST /api/v1/orgs` answers
@@ -205,7 +207,7 @@ the Phase 3 consolidations that give quirks their names.
 ## Q6. Go and TypeScript vocabularies have drifted
 
 - **Where:** the `refines` link rule's description differs between
-  `internal/domain/links/validation.go:61` and
+  `internal/domain/links/validation.go` and
   `frontend/src/config/linkTypeRules.ts:52`; the event-type filters in
   `frontend/src/views/ActivityLog.tsx:9` and
   `frontend/src/views/AutomationsPage.tsx:15` are subsets of the 27 types in
@@ -249,16 +251,17 @@ the Phase 3 consolidations that give quirks their names.
 ## Q8. Seven `limit` parsers; events and runs reset to 100
 
 - **Where:** the seven query parsers are in `ListArtifacts`
-  (`internal/api/handlers.go:715`), `ListAgentRuns`
-  (`internal/api/agent_handlers.go:458`), `ListDomainEvents` (`:2214`),
-  `ListNotifications` (`internal/api/notification_handlers.go:130`),
-  `GlobalSearch` (`internal/api/search_handlers.go:65`),
-  `ListSharedProducts` (`internal/api/shared_product_handlers.go:64`) and
-  `ListProjectInterviewSessions` (`internal/api/suite_handlers.go:1632`).
+  (`internal/api/artifact_handlers.go`), `ListAgentRuns`
+  (`internal/api/agent_run_handlers.go`), `ListDomainEvents`
+  (`internal/api/domain_event_handlers.go`), `ListNotifications`
+  (`internal/api/notification_handlers.go`), `GlobalSearch`
+  (`internal/api/search_handlers.go`), `ListSharedProducts`
+  (`internal/api/shared_product_handlers.go`) and
+  `ListProjectInterviewSessions` (`internal/api/interview_handlers.go`).
   The event and run repositories reset a limit at or below 0 or above 500 to
-  100 instead of clamping it
-  (`internal/persistence/postgres/event_repository.go:39-41`,
-  `agent_run_repository.go:147-149`).
+  100 instead of clamping it (`EventRepository.List`,
+  `internal/persistence/postgres/event_repository.go`, and
+  `AgentRunRepository.List`, `agent_run_repository.go`).
 - **Pinned by, named as:** S5 (S5a for `ListArtifacts` and `GlobalSearch`,
   S5b for `ListSharedProducts` and `ListProjectInterviewSessions`, S5c for
   `ListNotifications`, S5d for the event and run resets); named
@@ -292,7 +295,7 @@ the Phase 3 consolidations that give quirks their names.
   `X-Next-Cursor`), and limit 500 with all 101 (steps 66–75 of
   `cmd/server/testdata/tour/s5d/proposals_events.json`). For the events the
   handler resets the limit the same way before the repository sees it
-  (`internal/api/agent_handlers.go:2215`), so the event repository's own
+  (`ListDomainEvents`, `internal/api/domain_event_handlers.go`), so the event repository's own
   reset is not reached from outside: a change to it alone changes no golden,
   where a change to the handler's, or to the run repository's, changes
   steps 69 and 74.
@@ -300,11 +303,12 @@ the Phase 3 consolidations that give quirks their names.
 ## Q9. `ErrBudgetExceeded` answers 402, 400 or 500 by route
 
 - **Where:** 402 on two launch routes, `LaunchAgentRun` and
-  `DraftTestCases` (`internal/api/agent_handlers.go:351`, `:438`); 400 on
-  three, `RunAutomationNow` (`:1117`), `LaunchTeamRun` (`:2196`) and
-  `LaunchTestRunAgent` (`internal/api/suite_handlers.go:458`), which pass
+  `DraftTestCases` (`internal/api/agent_run_handlers.go`); 400 on three,
+  `RunAutomationNow` (`internal/api/automation_handlers.go`),
+  `LaunchTeamRun` (`internal/api/crew_handlers.go`) and
+  `LaunchTestRunAgent` (`internal/api/vv_handlers.go`), which pass
   `err.Error()` through; 500 on delegation, `DelegateRun`
-  (`internal/api/agent_handlers.go:950`).
+  (`internal/api/worker_protocol_handlers.go`).
 - **Pinned by, named as:** S5d; `launchErrs402`, `launchErrs400` and
   `launchErrsDelegate` (X3) *(planned)*. Pain point api-suite-org-7.
 - **Pinned today:** the S5d tour, booted with `OPENV_BUDGET_ENFORCE=true`,
@@ -314,7 +318,7 @@ the Phase 3 consolidations that give quirks their names.
   500 `failed to launch delegated run` (steps 43–48 of
   `cmd/server/testdata/tour/s5d/orchestration_budget.json`). Beyond this
   entry's six, a retry answers 500 `failed to retry run`
-  (`RetryAgentRun`, `internal/api/agent_handlers.go:625`; step 49), and a
+  (`RetryAgentRun`, `internal/api/agent_run_handlers.go`; step 49), and a
   crew run that finishes over budget launches none of its agent successors
   (steps 50 and 51), while its hand-off to a person, who views the project,
   is still made (step 50). Where the refusal was only logged, the run now
@@ -328,10 +332,11 @@ the Phase 3 consolidations that give quirks their names.
 ## Q10. `RunFinished` is published twice, or never
 
 - **Where:** a proposal-mode run publishes `RunFinished` when it finishes
-  into `awaiting_approval` (`internal/domain/agentruns/agentruns.go:968`)
-  and again when its proposals are resolved (`FinalizeIfResolved`,
-  `:1193`); a cancel of a queued run (`RequestCancel`, `:1084-1095`)
-  notifies the status change but never publishes it.
+  into `awaiting_approval` (`Finish`,
+  `internal/domain/agentruns/lifecycle.go`) and again when its proposals
+  are resolved (`FinalizeIfResolved`, the same file); a cancel of a queued
+  run (`RequestCancel`, the same file) notifies the status change but never
+  publishes it.
 - **Pinned by, named as:** S5d events.
 - **Pinned today:** the S5d tour records each step's events. A
   proposal-mode run publishes `agentrun.finished` when its finish leaves it
@@ -347,10 +352,11 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q11. `NewHandler` rewires billing after `billing.Start`
 
-- **Where:** `cmd/server/main.go:793` starts the billing service's
-  goroutines, then `api.NewHandler` (`:797`) calls `SetSeatCounter` and
-  `DefaultReturnURL` on it (`internal/api/handlers.go:372-377`; the plan's
-  I17 row cites `:373-379` at `d11dee8`).
+- **Where:** the composition root's `billing` stage starts the billing
+  service's goroutines, then its `handlers` stage calls `api.NewHandler`
+  (both in `cmd/server/wire_http.go`), which calls `SetSeatCounter` and
+  `DefaultReturnURL` on it (`NewHandler`, `internal/api/handlers.go`; the
+  plan's I17 row cites `handlers.go:373-379` at `d11dee8`).
 - **Pinned by, named as:** S4a `boot_steps.txt` (statement order) and the
   S4b billing profile's boot log; X12 keeps the point *(planned)*. Pain
   point boot-v1.
@@ -382,25 +388,24 @@ the Phase 3 consolidations that give quirks their names.
 ## Q12. `FRONTEND_URL` has two fallback chains; reports read raw `UPLOADS_DIR`
 
 - **Where:** `FRONTEND_URL`, then `PUBLIC_URL`, then
-  `http://localhost:3000` for email links and the handler
-  (`cmd/server/main.go:538`, `:824`); `FRONTEND_URL`, then
-  `http://localhost:3000` for the Google and OIDC sign-in configurations
-  (`:738`, `:760`). The report service reads `UPLOADS_DIR` with
-  `os.Getenv` (`internal/domain/reports/report.go:735`), not the server's
-  `./uploads` default (`cmd/server/main.go:141`). Both reads trim the
+  `http://localhost:3000` for email links and the handler (the `notify` and
+  `handlers` stages, `cmd/server/wire_notify.go` and `wire_http.go`);
+  `FRONTEND_URL`, then `http://localhost:3000` for the Google and OIDC
+  sign-in configurations (the `sso` stage, `wire_sso.go`). The report
+  service reads `UPLOADS_DIR` with `os.Getenv` (`resolveAttachmentPath`,
+  `internal/domain/reports/report.go`), not the server's `./uploads` default
+  (the `config` stage, `cmd/server/wire_config.go`). Both reads trim the
   value, as every setting but a credential has been read since the R7 fix
   of #379's question 15 (`internal/envparse`), so spaces round it do not
   send the two to different directories; the quirk is the missing default,
-  not the spaces. The lines are as that fix left them, each one or two from
-  `863b470`'s (`main.go:539`, `:825`, `:739`, `:761` and `:139`, and
-  `report.go:733`).
+  not the spaces. [env-vars.md](env-vars.md) lists both defaults.
 - **Pinned by, named as:** the S5c tour for the two chains; S8's env
   inventory for both reads of each variable; X10 keeps distinct fields
   *(planned)*. Pain point boot-3.
 - **Pinned today:** S1's env-read ratchet counts the direct read in
   `internal/domain/reports`. The S5c tour boots a server with `PUBLIC_URL`
   set and `FRONTEND_URL` unset, and pins each site: an invitation's link
-  (`main.go`'s email link base) and a share link's `url` (the handler's
+  (the `notify` stage's email link base) and a share link's `url` (the handler's
   `FrontendURL`) are on `PUBLIC_URL` (the first chain), and Google's
   `redirect_uri` is on it too, while an OIDC sign-in and a Google sign-in
   land on `http://localhost:3000` (the second) (steps 4, 44, 42, 31 and 43
@@ -449,10 +454,12 @@ the Phase 3 consolidations that give quirks their names.
 
 - **Where:** a repository that builds its result with `var result []*T`
   returns `nil` for no rows, and the handler encodes it as is: for example
-  `GET /api/v1/agents` (`internal/persistence/postgres/agent_repository.go:125`,
-  `internal/api/agent_handlers.go:163`) answers `null` for a workspace with no
-  agents, while the project repository's lists start from an empty slice
-  (`project_repository.go:62`) and answer `[]`.
+  `GET /api/v1/agents` (`AgentRepository.List`,
+  `internal/persistence/postgres/agent_repository.go`, and `ListAgents`,
+  `internal/api/agent_definition_handlers.go`) answers `null` for a
+  workspace with no agents, while the project repository's lists start from
+  an empty slice (`ProjectRepository.GetAll`, `project_repository.go`) and
+  answer `[]`.
 - **Pinned by, named as:** S5a (the requirements core), S5b (V&V and the
   suite); later slices pin their own lists. Pain point api-suite-org-v6.
 - **Pinned today:** the S5a tour records each empty list as the bytes the
@@ -508,10 +515,10 @@ the Phase 3 consolidations that give quirks their names.
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 
 - **Where:** `AuthMiddleware` refuses before the router sees the request
-  (`internal/api/authmiddleware.go:177`), so a path no route matches answers
-  401, not 404, unless it is public. `CORSMiddleware` answers every
-  `OPTIONS` with 200 itself (`internal/api/security_headers.go:58-61`),
-  outside the request log. The chain is built by `buildHTTPHandler` in
+  (`AuthMiddleware.Wrap`, `internal/api/authmiddleware.go`), so a path no
+  route matches answers 401, not 404, unless it is public. `CORSMiddleware`
+  answers every `OPTIONS` with 200 itself
+  (`internal/api/middleware_cors.go`), outside the request log. The chain is built by `buildHTTPHandler` in
   `cmd/server/http.go`.
 - **Pinned by, named as:** S4a. Pain point boot-v4.
 - **Pinned today:** S4a's `TestBootSmoke` (`cmd/server/boot_smoke_test.go`):
@@ -533,26 +540,27 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q17. The purge list has gaps not covered by cascade
 
-- **Where:** `PurgeOrg` (`internal/persistence/postgres/org_repository.go:580`)
+- **Where:** `PurgeOrg` (`internal/persistence/postgres/org_repository_purge.go`)
   deletes a hand-maintained list of tables; `attachment_figure_counters`,
   keyed by `artifact_id` with no foreign key, keeps its rows.
 - **Pinned by, named as:** S3 purge-catalog allowlist, `purgeGapAllowlist`.
   Pain point persistence-4.
 - **Pinned today:** S3: `TestPurgeCatalog`
-  (`internal/persistence/postgres/migration_freeze_purge_test.go:53`) and
+  (`internal/persistence/postgres/migration_freeze_purge_test.go`) and
   `testdata/purge/catalog.txt`. The allowlist may only shrink, and closing a
   gap is a release-noted change of its own.
 
 ## Q18. Rate-limit buckets are shared across endpoints
 
-- **Where:** `authIPLimiter` (`internal/api/handlers.go:242`), the sign-in
-  budget per client address, is also spent by `VerifyEmail`
-  (`internal/api/email_verification_handlers.go:52`) and by password reset
-  (`internal/api/password_reset_handlers.go:66`, `:121`), besides `Login`
-  (`internal/api/auth_handlers.go:328`).
-  Likewise `invitePreviewLimiter` (`internal/api/handlers.go:255`), the
+- **Where:** `authIPLimiter` (a `Handler` field `NewHandler` builds,
+  `internal/api/handlers.go`), the sign-in budget per client address, is
+  also spent by `VerifyEmail` (`internal/api/email_verification_handlers.go`)
+  and by password reset (`RequestPasswordReset` and `ConfirmPasswordReset`,
+  `internal/api/password_reset_handlers.go`), besides `Login`
+  (`internal/api/auth_handlers.go`).
+  Likewise `invitePreviewLimiter` (`internal/api/handlers.go` too), the
   invitation-preview budget, is also spent by every share-link token lookup
-  and share accept (`allowPublicShare`, `internal/api/share_handlers.go:199`),
+  and share accept (`allowPublicShare`, `internal/api/share_handlers.go`),
   which answer its 429 with no `Retry-After`.
 - **Pinned by, named as:** S5c's shared-bucket probe, which exercises the
   real call sites; S5a for the share routes. Pain point api-core-v2.
@@ -592,7 +600,7 @@ the Phase 3 consolidations that give quirks their names.
 ## Q19. Three error-message conventions
 
 - **Where:** one site answers `"Invalid request body"` with a capital I
-  (`internal/api/handlers.go:2582`); 124 `writeJSONError` calls in
+  (`RenameAttachment`, `internal/api/attachment_handlers.go`); 124 `writeJSONError` calls in
   `internal/api` pass `err.Error()` through (the same count as at
   `d11dee8`); 58 sites map any error to 404 (the plan's count at `d11dee8`,
   not re-counted here).
@@ -641,7 +649,7 @@ the Phase 3 consolidations that give quirks their names.
   without a lookup keep the driver's 400 above, since text that is not a
   UUID cannot be stored as a phantom id is. `UpdateOrg`
   still passes the service's not-found through as a 400
-  (`internal/api/org_handlers.go:309`), but no step reaches it: the
+  (`internal/api/org_core_handlers.go`), but no step reaches it: the
   workspace guard answers a workspace no row has with its 404 first, the
   platform admin's rename of one among them (step 101 of
   `workspaces_logo.json`). The S5d tour, for agents and the worker
@@ -692,9 +700,9 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q22. Token redaction applies only to the access log
 
-- **Where:** `redactPath` (`internal/api/requestlog.go:93`) hides interview
-  and share tokens in the request log (`:63`), but the error log writes the
-  raw path (`internal/api/httperr.go:89`).
+- **Where:** `redactPath` (`internal/api/requestlog.go`) hides interview
+  and share tokens in the request log (`RequestLogMiddleware`), but the
+  error log writes the raw path (`respondError`, `internal/api/httperr.go`).
 - **Pinned by, named as:** untouched; the security fix is a separate pull
   request. Pain point api-core-v3.
 - **Pinned today:** nothing beyond this entry.

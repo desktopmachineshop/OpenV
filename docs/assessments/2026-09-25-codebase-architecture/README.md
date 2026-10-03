@@ -26,6 +26,17 @@ contract drift, configuration and deployment, and change amplification
 history. The sections below were then written
 against the code and every figure in them re-measured at `d11dee8`.
 
+> **Reading the references today.** Every `file:line` here is at `d11dee8`.
+> Phase 1 of the refactor plan has since split most of the files they name:
+> `cmd/server/main.go` into the `wire_*.go` stages (M3, M4);
+> `internal/api/handlers.go` into area files and `routes.go` (M5, M6);
+> `agent_handlers.go`, `suite_handlers.go` and `org_handlers.go` into area
+> files, leaving each only its ordered list of sub-registrars (M7, M8, M9);
+> `migrations.go` into a file per migration (M10); the MCP tool table into
+> a file per area (M11); and the large domain and repository files by
+> concern (M12). Find the code by the function a reference names;
+> [`docs/architecture.md`](../../architecture.md) maps it as it is now.
+
 ## Contents
 
 | File | Sections |

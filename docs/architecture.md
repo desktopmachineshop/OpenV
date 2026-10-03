@@ -208,8 +208,9 @@ schema, ledger and purge catalogue, checked against a real server.
 and sign-in flows, the worker loop and API client, the pool node
 (`pool.go`), and `childEnv`, through which every process it starts gets its
 environment, less the runner's own credentials. `internal/mcp` is the tool
-table (`tools.go`, filtered by `OPENV_MCP_TOOLS`) and the client that calls
-the API; `openv-mcp` serves it over stdio, the runner configures it for
+table (`Tools()` in `tools.go`, built from one constructor per area in the
+`tools_<area>.go` files and filtered by `OPENV_MCP_TOOLS`) and the client
+that calls the API; `openv-mcp` serves it over stdio, the runner configures it for
 each run, and `internal/seeds` reads its tool names for the default agents.
 The API's side of the wire is `worker_protocol_handlers.go` and the runner
 key, session and status handler files.

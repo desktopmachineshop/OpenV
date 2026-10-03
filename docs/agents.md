@@ -923,7 +923,8 @@ agent drafts requirements, another reviews for testability).
 
 The canonical API is `/api/v1/crews` (with `/crew-nodes`, `/crew-edges`); the
 old `/api/v1/teams` (and `/team-nodes`, `/team-edges`) paths remain as
-deprecated aliases of the same handlers (`internal/api/agent_handlers.go`).
+deprecated aliases of the same handlers (`registerCrewRoutes`,
+`internal/api/crew_handlers.go`).
 Crews pinned to a project require project editor rights to modify;
 workspace-wide crews require workspace admin.
 

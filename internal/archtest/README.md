@@ -202,9 +202,12 @@ list. X9 replaces it with a typed port and removes the entry.
 ## K14 file size
 
 **Enforces.** A production Go file that is not generated has at most 800
-lines. The 13 files over it at `d11dee8` are grandfathered in `file_lines`
-with a ceiling of their size plus R6 headroom: 10%, at most 150 lines.
-`internal/api/handlers.go`, 3,369 lines, may reach 3,519.
+lines. The 13 files over it at `d11dee8` were grandfathered in `file_lines`
+with a ceiling of their size plus R6 headroom: 10%, at most 150 lines
+(`internal/api/handlers.go`, then 3,369 lines, could reach 3,519). Nine
+have since gone under the budget, `handlers.go` among them; four remain:
+`exports/reqif.go` and `reports`' `report.go`, `pdf_report.go` and
+`docx_report.go`.
 
 **Why.** K14: small files are findable and conflict less. Headroom means a
 feature PR touching a giant is never blocked. The ceiling never rises; it
@@ -223,9 +226,10 @@ once the file is within 800 lines.
 
 **Enforces.** A function or method in production code spans at most 100
 lines, from its `func` line to its closing brace. The 34 over it at
-`d11dee8` are grandfathered in `func_lines`, keyed `package:Func` or
-`package:Receiver.Method`, with the same headroom: `cmd/server:main`, 853
-lines, may reach 938. The key names no file, so a function keeps its
+`d11dee8` were grandfathered in `func_lines`, keyed `package:Func` or
+`package:Receiver.Method`, with the same headroom (`cmd/server:main`, then
+853 lines, could reach 938, until M4 cut it to about 50); 30 remain. The
+key names no file, so a function keeps its
 ceiling when it moves within its package; a renamed function is a new one.
 
 **Why.** K14, as for files.
@@ -280,7 +284,7 @@ regenerate command.
 ## One router
 
 **Enforces.** One router: the one `mux.NewRouter()` call in `cmd/server`
-(`main.go` today). In production code a second `mux.NewRouter()`, in
+(`buildHTTPHandler`, `http.go`, since M4). In production code a second `mux.NewRouter()`, in
 `cmd/server` or anywhere else, and any `http.NewServeMux()` fail, as do
 `.Subrouter(...)`, `.PathPrefix(...)`, `NotFoundHandler` and
 `MethodNotAllowedHandler` (set on a value or in a composite literal). There
@@ -303,12 +307,13 @@ two-argument `.HandleFunc(...)` or `.Handle(...)` call, or a one-argument
 `.HandlerFunc(...)` or `.Handler(...)` that ends a route-builder chain
 (`r.Path(p).Methods(m).HandlerFunc(h)`, `r.NewRoute().Handler(h)`); a
 conversion such as `http.HandlerFunc(fn)` is not. The ceiling
-`counts.handle_func_outside_registrars` is 53 at `d11dee8`: the 52 routes
-`RegisterRoutes` registers inline, `/health` included, and `/metrics` in
-`cmd/server/main.go`.
+`counts.handle_func_outside_registrars` was 53 at `d11dee8`: the 52 routes
+`RegisterRoutes` registered inline, `/health` included, and `/metrics` in
+`cmd/server/main.go`. M6 moved the 52 into registrars, so it is 1:
+`/metrics`, now in `cmd/server/http.go`.
 
 **Why.** K1: an area's routes live in its registrar, and `RegisterRoutes`
-is only the ordered list of registrar calls. M6 moves the inline routes.
+(`routes.go`) is only the ordered list of registrar calls.
 
 **Fix.** Register the route in the area's `register<Area>Routes`.
 
@@ -341,8 +346,8 @@ subpackages outside `respond.go`. The ceiling `counts.raw_json_encodes` is
 (X1 adds `writeJSON` and `writeJSONBare`), so headers are decided in one
 place.
 
-**Fix.** Write through `respondJSON` (in `evidence_handlers.go` until M5
-moves it to `respond.go`) or the X1 writers. Encodes inside `respond.go`
+**Fix.** Write through `respondJSON` (`respond.go`, where M5 moved it) or
+the X1 writers. Encodes inside `respond.go`
 are not counted.
 
 **Regenerate.** X1 takes the count to 0; lower the ceiling as it falls.
@@ -367,16 +372,16 @@ so the count does not rise.
 
 **Enforces.** Counts functions and methods named `require<Something>`
 declared in `internal/api` outside `authz.go`. The ceiling
-`counts.require_outside_authz` is 10 at `d11dee8`; M5 moves 8 of them,
-leaving `requireWritable` (`limits.go`) and
-`requireAttributeDefinitionWrite`.
+`counts.require_outside_authz` was 10 at `d11dee8`; M5 moved 8 of them, so
+it is 2: `requireWritable` (`limits.go`) and
+`requireAttributeDefinitionWrite` (`attribute_definition_handlers.go`).
 
 **Why.** K3: every guard has one home, so the checks a handler runs can be
 read in one file.
 
 **Fix.** Declare the guard in `authz.go`.
 
-**Regenerate.** Lower the ceiling after M5.
+**Regenerate.** Lower the ceiling as the count falls.
 
 ## K3 helper homes
 
@@ -447,9 +452,11 @@ instead `decodeErrorSources`, also in `decode_test.go`, maps the name of a
 function or method whose returned error carries such a decode error to the
 alias type, and an error assigned from a call by that name counts as the
 decode's. The sites known today are `Handler.projectExport`
-(`suite_handlers.go`); the export service's `ImportProject`
-(`handlers.go:1892`) and `ImportProjectWithOverrides` (`handlers.go:2168`),
-which decode in `internal/domain/exports`, outside `internal/api`; and the
+(`project_snapshot.go`); the export service's `ImportProject` and
+`ImportProjectWithOverrides`, called by the handlers `ImportProject`
+(`project_io_handlers.go`) and `CreateProjectFromTemplate`
+(`template_handlers.go`), which decode in `internal/domain/exports`,
+outside `internal/api`; and the
 report service's `GenerateProjectReport` and `GenerateProjectReportDOCX`
 (through `loadReportExport`) and `GenerateVVReport`. Both lists are empty
 today; P1 adds `ProjectExport` with those six names, after checking for
