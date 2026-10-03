@@ -37,8 +37,12 @@ func newTestHandler(t testing.TB, opts ...func(*Handler)) *Handler {
 	return h
 }
 
-// --- fakes: embed the interface so only the methods requireProjectRole
-// touches need real implementations (anything else would panic loudly).
+// --- shared fakes. Each embeds the interface it stands in for and leaves it
+// nil, so it implements only the methods tests call: any other method
+// panics through the nil interface when called, and a method added to the
+// interface is one the embedding already supplies, so widening a Service
+// breaks no fake. fakeOrgService embeds the narrow interfaces orgs.Service
+// is made of (M12b) instead of orgs.Service itself.
 
 type fakeProjectService struct {
 	projects.Service
@@ -80,7 +84,16 @@ func (f *fakeProjectService) ListProjectsByOrg(orgID string) ([]*projects.Projec
 }
 
 type fakeOrgService struct {
-	orgs.Service
+	// It answers methods of Workspaces, Membership, ChannelSettings and
+	// Alerts below. BillingStore's are left to the fakes that embed this one
+	// (billingOrgFake, purchaseOrgFake, planOrgFake); it is embedded so that
+	// the fake, with all five, is an orgs.Service.
+	orgs.Workspaces
+	orgs.Membership
+	orgs.BillingStore
+	orgs.ChannelSettings
+	orgs.Alerts
+
 	// roles maps orgID -> userID -> role
 	roles map[string]map[string]string
 
