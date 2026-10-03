@@ -126,18 +126,46 @@ so the Dockerfiles, compose files and deployment docs kept working across the
 move. Values are read through `import.meta.env` rather than `process.env`,
 which Vite does not shim in the browser.
 
-Four commands make up the frontend gate, and CI runs all four:
+Five commands make up the frontend gate, and CI runs all five:
 
 ```bash
 npx tsc --noEmit    # types
 npm run lint        # eslint — see frontend/eslint.config.js
 npm test            # vitest, once (npm run test:watch to iterate)
 npm run build       # vite build, into frontend/build/
+node scripts/bundle-check.mjs   # the bundle's shape, read from build/
 ```
 
 `npm run lint` exists because CRA used to run eslint inside the build and
 fail on warnings when `CI=true`; Vite does not, so the gate is a step of its
 own.
+
+Two of the checks pin how the app's code and styles load (refactor plan step
+S12b, invariant I20). `src/arch/cssOrder.test.ts` snapshots the order in
+which the bundler emits the stylesheets, eager ones from `src/index.tsx` and
+those each lazy page adds, in `src/arch/__snapshots__/cssOrder.txt`: a later
+rule wins a tie, so moving a stylesheet import, or importing a lazy view
+eagerly, changes the cascade. `scripts/bundle-check.mjs` reads the build and
+compares `scripts/testdata/bundle-shape.json`: whether each dependency in
+`package.json` lands in the entry chunk (loaded on every page) or only in
+lazy chunks, and whether each module the app loads through `import()` is
+still a chunk of its own. A pull request that means to change either
+regenerates in the same change, with a release note:
+`cd frontend && npx vitest run src/arch -u` for the cascade, and
+`cd frontend && npm run build && UPDATE_BUNDLE_SHAPE=1 node scripts/bundle-check.mjs`
+for the bundle shape (only the value `1` writes; a failure prints the
+command). A new lazy page or a new dependency changes the shape too.
+
+`src/arch/sizeBudget.test.ts` holds the size budgets for production
+TypeScript (refactor plan convention K14, Go's being in `internal/archtest`):
+a file of at most 600 lines and a component of at most 300. The files and
+components already over them are listed with a ceiling, their size when the
+test landed plus 10% (at most 150 lines), so a change that touches one is
+not blocked, and the count of files over 1,000 lines may not grow. A
+ceiling only falls: a new file or component over budget is split, not
+listed (on a refactor pull request the Refactor guard fails a raised or
+added entry). When your change shrinks a listed one, lower its ceiling, or
+remove its entry once it is within budget.
 
 In the composed stack the frontend container runs `npm start` itself; for
 quick iteration, `docker compose build frontend && docker compose up -d
@@ -169,7 +197,7 @@ to `./cmd/... ./internal/...` with a Postgres service (`OPENV_TEST_DATABASE_URL`
 enables the integration tests), the Postgres-backed tests again on
 `pgvector/pgvector:pg15` so the embedding tests that need the vector
 extension run too (the main job's plain `postgres:15` covers the paths
-without it), a frontend `npm ci` + `tsc` + build, Docker
+without it), a frontend `npm ci` + `tsc` + build + bundle check, Docker
 image builds, a Playwright smoke journey against the composed stack, and the
 vulnerability scan below. Still run `make test` locally before pushing.
 

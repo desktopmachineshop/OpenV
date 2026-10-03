@@ -273,6 +273,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Refactor plan S12b (invariant I20): where each dependency lands (the
+      # entry chunk or lazy chunks) and which import() targets are still
+      # dynamic entries, read from the build above and compared with
+      # scripts/testdata/bundle-shape.json. A failure prints the regenerate
+      # command, for a pull request that means to change the bundle.
+      - name: Bundle shape (S12b)
+        run: node scripts/bundle-check.mjs
+
   # REQ-98: a supply-chain gate on every pull request. Two scanners, one job.
   #
   # govulncheck is not a dependency-list scanner: it resolves the call graph

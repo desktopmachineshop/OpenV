@@ -28,10 +28,21 @@ A pull request labelled `refactor` or `refactor:<anything>` also fails on:
   - an entry of internal/archtest/ratchets.json raised or added (in a
     commit of any class), apart from class D's new-package entries and a
     class T commit's new rule key;
-  - an entry of an S12 lint allowlist added or raised;
+  - an entry of an S12 lint allowlist added or raised, or a ceiling in guard
+    code (GUARD_CODE_CEILINGS: S12's error chains, S12b's K14 size budgets)
+    raised or added, and an allowlist or ceiling map holding anything but
+    entries of its one form (LITERAL_FORMS), the only form the guard reads;
   - the per-commit class checks of §4.2, read from each commit's
     Refactor-Class trailer (CLASS_TRAILER), with Refactor-Script (class R)
-    and Refactor-Characterization (class E).
+    and Refactor-Characterization (class E);
+  - S12b's build identity, when the change touches a file under
+    frontend/src that ships (not a test, src/arch, src/test, testdata or a
+    snapshot), or a Vite or PostCSS config beside frontend/package.json:
+    the base and the head are built, and every chunk's build/assets/*.css
+    must be byte-identical, lazy chunks included (a file kept byte for byte
+    under another chunk's name is noted, not failed); when a class T commit
+    changes shipped TypeScript (TS the build erases), build/assets/*.js
+    must be as well. .map files are left out, since they embed the sources.
 Something the pull request itself adds (a golden, a guard test, an
 allowlist) is not frozen until it merges, so its later commits may refine
 it; ratchets, allowlists and ceilings are judged against the base as well as
@@ -60,7 +71,10 @@ standard output and, as Markdown, to --summary or $GITHUB_STEP_SUMMARY.
 Class A runs `go run ./internal/tools/declhash` and, for TypeScript,
 frontend/scripts/tsdeclhash.mjs and tsmovecheck.mjs (which need `npm ci` in
 frontend/); class R re-runs the named script in a scratch worktree of the
-commit's parent.
+commit's parent. The build identity builds frontend/ at the base and at the
+head, each exported from git into a scratch directory with the working
+tree's frontend/node_modules linked in (`npm ci` there first), with
+`npm run build`.
 
 Standard library only. Tests:
   python3 -m unittest scripts/refactor/refactor_guard_test.py
@@ -69,6 +83,7 @@ Standard library only. Tests:
 import argparse
 import ast
 import importlib.util
+import io
 import json
 import os
 import re
@@ -76,6 +91,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 
 # ---------------------------------------------------------------------------
@@ -217,8 +233,12 @@ GUARD_CODE = [
     ("S8", ["cmd/*/cli_test.go", "cmd/*/cli_harness_test.go",
             "cmd/*/env_parse_test.go", "cmd/*/env_parse_helpers_test.go",
             "internal/**/env_parse_test.go", "internal/**/env_parse_helpers_test.go"]),
+    # S12b's cascade test and K14 size budgets sit among S12's guards in
+    # src/arch, so its row comes first to name them; bundle-check and its
+    # test pin the bundle's shape.
+    ("S12b", ["frontend/src/**/cssOrder.test.ts", "frontend/src/**/sizeBudget.test.ts",
+              "frontend/scripts/bundle-check.mjs", "frontend/scripts/bundle-check.test.mjs"]),
     ("S12", ["frontend/src/arch/**", "frontend/eslint.config.js"]),
-    ("S12b", ["frontend/src/**/cssOrder.test.ts", "frontend/scripts/bundle-check.mjs"]),
     ("S13", []),  # slot: the Go vocabulary writer and the vitest parity test
     ("S14a", ["internal/tools/declhash/**", "frontend/scripts/tsdeclhash.mjs", "frontend/scripts/tsmovecheck.mjs"]),
     # S14d's migration generator, its tests and their fixture and goldens.
@@ -245,6 +265,9 @@ GUARD_CODE_EXCEPT = ["internal/archtest/ratchets.json"]
 # entry is allowed in a commit of any class and is not a guard-code edit
 # (X4b, X15b-X15e); adding or raising one fails in any class. The kind says
 # what an entry holds: "list" (file -> targets) or "count" (file -> number).
+# Each holds only entries of its kind's one form ('file': ['target', ...] or
+# 'file': <decimal integer>) and // comments; anything else there fails in
+# any class (LITERAL_FORMS).
 LINT_ALLOWLIST_FILE = "frontend/eslint.config.js"
 LINT_ALLOWLISTS = {"COMPONENTS_IMPORTING_VIEWS": "list", "EVENT_SOURCE_SITES": "count"}
 
@@ -271,11 +294,22 @@ X2B_CALL_SHAPE_CHANGES = [
 ]
 
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
-# (quirk Q20). Lowering one is allowed in a commit of any class and is not a
-# guard-code edit (X15b-X15e convert the chains in the files they touch and
-# lower it, as the test asks); raising one fails in any class, like a
-# ratchet. {file: [constant names]}, each a `const NAME = <number>;` line.
-GUARD_CODE_CEILINGS = {"frontend/src/arch/errorChains.test.ts": ["CEILING"]}
+# (quirk Q20), and S12b's K14 size budgets for production TypeScript with
+# their grandfathered ceilings and §10's count of files over 1,000 lines.
+# Lowering one is allowed in a commit of any class and is not a guard-code
+# edit (X15b-X15e convert the chains in the files they touch and lower the
+# chains' ceiling, as the test asks; F1 and F6-F8 shrink the giants and lower
+# theirs); raising one fails in any class, like a ratchet. {file: [names]},
+# each a `const NAME = <number>;` line or a `const NAME = { 'key': <number>,
+# ... };` literal, whose entries may be lowered or removed but not raised or
+# added. A literal holds only such entries, each a quoted key and a decimal
+# integer, and // comments; anything else there fails in any class
+# (LITERAL_FORMS), since the carve-out below lets any class edit it.
+GUARD_CODE_CEILINGS = {
+    "frontend/src/arch/errorChains.test.ts": ["CEILING"],
+    "frontend/src/arch/sizeBudget.test.ts": ["FILE_BUDGET", "COMPONENT_BUDGET", "OVER_1000", "FILE_CEILINGS",
+                                             "COMPONENT_CEILINGS"],
+}
 
 # Parts of guard-code files that are data a commit of the given classes may
 # edit without that counting as a guard-code edit: {file: {name: classes}},
@@ -296,9 +330,14 @@ C_HELPERS = ["frontend/src/arch/**", "frontend/src/test/**"]
 C_ADDED_ONLY = ["**/testdata/**", "**/__snapshots__/**", "contracts/**"]
 
 # Class T (§4.2): CI, the Makefile, the Dockerfiles' build commands (M1),
-# lint config, templates, docs and the tooling directories. TS the build
-# erases (X5) also counts once S12b's base-vs-head build identity exists;
-# until then any other frontend/src file fails a class T commit.
+# lint config, templates, docs and the tooling directories. TypeScript under
+# frontend/src (T_TS) is class T too when the production build erases it
+# (X5's type-only assertions): S12b's build identity then requires the base's
+# and the head's build/assets/*.js and *.css to be byte-identical. That is
+# the production build's proof, so code it drops (a branch only the dev
+# server takes) is the reviewer's to read. Tests, src/arch, src/test and test
+# data under frontend/src (FRONTEND_TEST_ONLY) are class C, not T, and any
+# other frontend/src file (a stylesheet, say) fails a class T commit.
 T_PATHS = [".github/workflows/**", ".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE/**",
            ".github/ISSUE_TEMPLATE/**", "Makefile", "Dockerfile*", "frontend/Dockerfile*", "frontend/eslint.config.js",
            "**/*.md", "docs/**", ".git-blame-ignore-revs", "internal/tools/**", "internal/archtest/**",
@@ -310,6 +349,33 @@ T_PATHS = [".github/workflows/**", ".github/pull_request_template.md", ".github/
 A_PATHS = ["**/*.go", "frontend/src/**/*.ts", "frontend/src/**/*.tsx", RATCHETS_FILE,
            "internal/tools/declmove/specs/*.json"]
 A_TS = ["frontend/src/**/*.ts", "frontend/src/**/*.tsx"]
+T_TS = A_TS
+
+# S12b's build identity (§6.4 S12b, invariant I20). A refactor pull request
+# whose change touches a file under frontend/src that ships (FRONTEND_SRC, but
+# not FRONTEND_NOT_SHIPPED), or a config outside it that the build reads and
+# that can change the CSS it emits (FRONTEND_BUILD_CONFIGS), builds frontend/
+# at the base and at the head and requires byte-identical BUILD_ASSETS/*.css
+# for every chunk, lazy ones included, and, when a class T commit changes
+# shipped TypeScript there, byte-identical *.js as well. Source maps embed the
+# TypeScript sources, so they are left out. Chunk files are named
+# <chunk>-<8-character hash>.<ext>.
+FRONTEND_SRC = ["frontend/src/**"]
+FRONTEND_TEST_ONLY = TEST_FILES + C_HELPERS + ["**/testdata/**", "**/__snapshots__/**"]
+FRONTEND_NOT_SHIPPED = FRONTEND_TEST_ONLY + ["**/*.d.ts"]
+# Vite takes the first of vite.config.{js,mjs,ts,cjs,mts,cts} it finds, so an
+# added vite.config.js replaces the protected vite.config.ts; PostCSS takes a
+# postcss.config.* or .postcssrc* beside package.json (package.json itself is
+# protected). The protected-path rule fails a change to a file the base has,
+# not one the pull request adds, so these start the build identity. The
+# TypeScript config and the .env files change only the JavaScript, which a
+# refactor other than a type-only one may change.
+FRONTEND_BUILD_CONFIGS = ["frontend/vite.config.*", "frontend/postcss.config.*", "frontend/.postcssrc*"]
+BUILD_ASSETS = "build/assets"
+BUILD_IDENTITY_EXTS = {"css": (".css",), "type-only": (".css", ".js")}
+HASHED_ASSET = re.compile(r"^(?P<chunk>.+)-(?P<hash>[A-Za-z0-9_-]{8})(?P<ext>\.[a-z]+)$")
+# A chunk's name for another emitted file, as it appears in its bytes.
+HASHED_REFERENCE = re.compile(rb"([A-Za-z0-9_.$-]+)-[A-Za-z0-9_-]{8}(\.(?:js|css))\b")
 
 INLINE_SNAPSHOT = re.compile(r"\b(toMatchInlineSnapshot|toThrowErrorMatchingInlineSnapshot)\b")
 INLINE_SNAPSHOT_FILES = ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/*.test.js",
@@ -375,6 +441,113 @@ def guard_code_step(path):
 
 def is_test_file(path):
     return matches(path, TEST_FILES)
+
+
+def ships_in_frontend(path):
+    """A file under frontend/src that the production build may read: not a
+    test, S12's test-only helpers, F2's mock helper, test data, a snapshot or
+    a declaration file."""
+    return matches(path, FRONTEND_SRC) and not matches(path, FRONTEND_NOT_SHIPPED)
+
+
+def feeds_frontend_build(path):
+    """A file whose change starts S12b's build identity: one that ships under
+    frontend/src, or a Vite or PostCSS config beside frontend/package.json."""
+    return ships_in_frontend(path) or matches(path, FRONTEND_BUILD_CONFIGS)
+
+
+def chunk_name(file_name):
+    """An emitted asset's chunk, its content hash left out:
+    ModuleView-BtaBQDBL.css -> ModuleView.css."""
+    m = HASHED_ASSET.match(file_name)
+    return m.group("chunk") + m.group("ext") if m else file_name
+
+
+def first_difference(a, b):
+    """Where two byte strings first differ, with the bytes around it."""
+    n = min(len(a), len(b))
+    i = next((k for k in range(n) if a[k] != b[k]), n)
+    line = a[:i].count(b"\n") + 1
+    show = lambda x: repr(x[max(0, i - 40):i + 40].decode("utf-8", "replace"))  # noqa: E731
+    return (f"first difference at byte {i} (line {line}):\n"
+            f"        base: {show(a)}\n        head: {show(b)}")
+
+
+def without_hashes(data):
+    """An emitted file's bytes with every content-hashed file name it holds
+    (an import of another chunk, a preload list) reduced to its chunk name."""
+    return HASHED_REFERENCE.sub(rb"\1\2", data)
+
+
+def compare_assets(base_dir, head_dir, exts):
+    """[(chunk, detail, kind)] for every emitted file with one of exts that
+    one build/assets directory does not hold byte for byte under the same
+    name as the other. Files pair by name, then by chunk (a changed file has a
+    new content hash), so a difference names the chunk it is in, then by
+    bytes: the bundler names a chunk that several modules share after one of
+    them, so a refactor that changes which one renames the chunk with no byte
+    of it changed. kind is "content" for a file whose own bytes changed,
+    "references" for one that differs only in the hashed file names of the
+    chunks it loads (a change elsewhere renames them, so it shows there),
+    "only" for a file one side emits and the other has no twin of, and
+    "renamed" for a file the other side emits with the same bytes under
+    another chunk's name, which is not a difference."""
+    def listing(d):
+        return {f: os.path.join(d, f) for f in sorted(os.listdir(d))
+                if f.endswith(exts) and not f.endswith(".map") and os.path.isfile(os.path.join(d, f))}
+
+    def read(path):
+        with open(path, "rb") as f:
+            return f.read()
+
+    def compared(chunk, label, a, b):
+        if a == b:
+            return (chunk, f"{label}: the same bytes under another name", "content")
+        na, nb = without_hashes(a), without_hashes(b)
+        if na == nb:
+            return (chunk, f"{label}: only the hashed names of the chunks it loads differ", "references")
+        return (chunk, f"{label}: {len(a)} -> {len(b)} bytes, chunk file names aside {first_difference(na, nb)}",
+                "content")
+
+    def content_hash(f):
+        m = HASHED_ASSET.match(f)
+        return m.group("hash") if m else None
+
+    base, head = listing(base_dir), listing(head_dir)
+    problems = []
+    for f in sorted(set(base) & set(head)):
+        a, b = read(base[f]), read(head[f])
+        if a != b:
+            problems.append(compared(chunk_name(f), f"{f} differs", a, b))
+    only_base = [f for f in base if f not in head]
+    only_head = [f for f in head if f not in base]
+    by_chunk = {}
+    for f in only_head:
+        by_chunk.setdefault(chunk_name(f), []).append(f)
+    unpaired_base = []
+    for f in only_base:
+        twins = by_chunk.get(chunk_name(f)) or []
+        if len(twins) == 1:
+            h = twins.pop()
+            problems.append(compared(chunk_name(f), f"{f} -> {h}", read(base[f]), read(head[h])))
+        else:
+            unpaired_base.append(f)
+    unpaired_head = sorted(f for files in by_chunk.values() for f in files)
+    for f in unpaired_base:
+        data = read(base[f])
+        # A name carries a hash of the content: a twin with the same hash
+        # first, then any with the same bytes.
+        twins = sorted(unpaired_head, key=lambda h: content_hash(h) != content_hash(f))
+        h = next((h for h in twins if read(head[h]) == data), None)
+        if h:
+            unpaired_head.remove(h)
+            problems.append((chunk_name(f), f"{f} -> {h}: the same bytes under another chunk's name", "renamed"))
+        else:
+            problems.append((chunk_name(f), f"{f} is emitted only by the base: no file of the head's pairs with it "
+                             "by name, chunk or bytes", "only"))
+    problems.extend((chunk_name(h), f"{h} is emitted only by the head: no file of the base's pairs with it by "
+                     "name, chunk or bytes", "only") for h in unpaired_head)
+    return sorted(problems)
 
 
 def modifies(status):
@@ -540,6 +713,54 @@ class ToolHashers:
         return p.returncode == 0, out
 
 
+class FrontendBuilder:
+    """Builds frontend/ at a revision the way frontend/Dockerfile.prod does,
+    from the frontend/ tree alone: `git archive <rev> frontend` into a scratch
+    directory, the working tree's frontend/node_modules linked in (package.json
+    and the lockfile are protected paths, so base and head install the same),
+    then `npm run build`. build() returns (the build/assets directory, or None,
+    and the log); the tests inject a stub with the same shape."""
+
+    def __init__(self):
+        self.dirs = []
+
+    def build(self, git, rev, label):
+        modules = os.path.join(git.root, "frontend", "node_modules")
+        if not os.path.isdir(modules):
+            return None, f"{modules} is missing: run `npm ci` in frontend/ first (the job does)"
+        tmp = tempfile.mkdtemp(prefix=f"refactor-guard-{label}-")
+        self.dirs.append(tmp)
+        try:
+            archive = git.run("archive", "--format=tar", rev, "frontend", text=False).stdout
+            with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+                try:
+                    tar.extractall(tmp, filter="data")
+                except TypeError:  # a Python without extraction filters
+                    tar.extractall(tmp)  # noqa: S202 - our own repository's tree
+        except (GitError, tarfile.TarError, OSError) as e:
+            return None, f"cannot export frontend/ at {label}: {e}"
+        front = os.path.join(tmp, "frontend")
+        try:
+            os.symlink(modules, os.path.join(front, "node_modules"))
+        except OSError as e:
+            return None, f"cannot link {modules} into the {label}'s frontend/: {e}"
+        cmd = ["npm", "run", "build"]
+        shown = f"$ (cd <{label}>/frontend && {' '.join(cmd)})\n"
+        try:
+            p = subprocess.run(cmd, cwd=front, capture_output=True, text=True, timeout=1800)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return None, f"{shown}{e}"
+        out = shown + p.stdout + p.stderr
+        if p.returncode != 0:
+            return None, out + f"(exit {p.returncode})"
+        return os.path.join(front, *BUILD_ASSETS.split("/")), out
+
+    def cleanup(self):
+        for d in self.dirs:
+            shutil.rmtree(d, ignore_errors=True)
+        self.dirs = []
+
+
 def load_release_notes():
     """scripts/release_notes.py, the parser the release-notes job uses."""
     path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "release_notes.py")
@@ -607,19 +828,57 @@ def block_text(text, name):
     return "\n".join(lines[span[0]:span[1] + 1])
 
 
+# The one form an entry of an allowlist or ceiling map may take, by kind: a
+# quoted key (no escapes) and a decimal integer, or a list of quoted strings.
+# The guard reads no other, so a literal that holds anything else (an
+# unquoted or computed key, a spread, arithmetic, a hex number, a name)
+# fails closed: such an entry could raise or add a ceiling unseen.
+LITERAL_FORMS = {"count": "quoted-key: integer", "list": "quoted-key: [quoted strings]"}
+_QUOTED = r"""(?:'[^'"\\\n]*'|"[^'"\\\n]*")"""
+_ENTRY = {
+    "count": re.compile(r"""\s*(['"])([^'"\\\n]+)\1\s*:\s*(0|[1-9][0-9]*)\s*(?:,|(?=\s*$))"""),
+    "list": re.compile(r"""\s*(['"])([^'"\\\n]+)\1\s*:\s*(\[\s*(?:""" + _QUOTED + r"""\s*,\s*)*(?:""" + _QUOTED +
+                       r"""\s*)?\])\s*(?:,|(?=\s*$))"""),
+}
+
+
+def read_literal(text, name, kind):
+    """(entries, stray) of an eslint.config.js allowlist or a ceiling map in
+    guard code, a `const NAME = { ... };` literal: entries is {key: [targets]}
+    for a list and {key: count} for a count, and stray is the first line of
+    the literal, // comments aside, that is not entries of that form
+    (LITERAL_FORMS), or None when there is none. An absent literal is
+    ({}, None)."""
+    block = re.sub(r"//[^\n]*", "", block_text(text or "", name))
+    if not block:
+        return {}, None
+    code = block.split("=", 1)[1] if "=" in block else block
+    shape = re.fullmatch(r"\s*\{(.*)\}\s*;?\s*", code, re.S)
+    if not shape:
+        lines = [line.strip() for line in block.split("\n") if line.strip()]
+        return {}, lines[-1] if code.lstrip().startswith("{") else lines[0]
+    body, pos, entries, stray = shape.group(1), 0, {}, None
+    while body[pos:].strip():
+        m = _ENTRY[kind].match(body, pos)
+        if m:
+            key, value = m.group(2), m.group(3)
+            entries[key] = (int(value) if kind == "count" else
+                            [t[1] for t in re.findall(r"""(['"])([^'"]*)\1""", value)])
+            pos = m.end()
+            continue
+        # Not an entry: note the rest of its line and read on from the next.
+        start = len(body) - len(body[pos:].lstrip())
+        end = body.find("\n", start)
+        pos = len(body) if end < 0 else end
+        stray = stray or body[start:pos].strip()
+    return entries, stray
+
+
 def parse_allowlist(text, name, kind):
-    """The entries of an eslint.config.js allowlist: {file: [targets]} for a
-    list, {file: count} for a count. An absent block is empty."""
-    body = re.sub(r"//[^\n]*", "", block_text(text or "", name))
-    body = body.split("=", 1)[1] if "=" in body else ""
-    entries = {}
-    for m in re.finditer(r"""(['"])([^'"]+)\1\s*:\s*(\[[^\]]*\]|\d+)""", body):
-        key, value = m.group(2), m.group(3)
-        if kind == "count":
-            entries[key] = int(value) if value.isdigit() else 0
-        else:
-            entries[key] = [t[1] for t in re.findall(r"""(['"])([^'"]*)\1""", value)]
-    return entries
+    """The entries of an eslint.config.js allowlist, or of a ceiling literal
+    in guard code: {key: [targets]} for a list, {key: count} for a count,
+    those of the one form read_literal reads. An absent block is empty."""
+    return read_literal(text, name, kind)[0]
 
 
 def x2b_changes_in(text):
@@ -736,10 +995,11 @@ class Commit:
 
 
 class Guard:
-    def __init__(self, git, base, head, merge, labels, hashers=None):
+    def __init__(self, git, base, head, merge, labels, hashers=None, builder=None):
         self.git, self.base, self.head, self.merge = git, base, head, merge
         self.labels = sorted(set(l for l in labels if l))
         self.hashers = hashers or ToolHashers()
+        self.builder = builder or FrontendBuilder()
         self.failures, self.warnings, self.notes = [], [], []
         self.refactor = any(l == REFACTOR_LABEL or l.startswith(REFACTOR_LABEL_PREFIX) for l in self.labels)
         self.behavior_change = BEHAVIOR_CHANGE_LABEL in self.labels
@@ -802,6 +1062,7 @@ class Guard:
             for c in self.commits:
                 self.check_commit(c)
             self.check_class_mixing()
+            self.check_build_identity()
         return not self.failures
 
     def load_commits(self):
@@ -1064,10 +1325,14 @@ class Guard:
         for s, p in c.changes:
             if matches(p, T_PATHS):
                 continue
+            test_only = matches(p, FRONTEND_TEST_ONLY)
+            if matches(p, T_TS) and not test_only:
+                continue  # TS the build erases: S12b's build identity proves it (check_build_identity)
             if p.startswith("frontend/src/"):
-                self.fail("class T", "a tooling commit may change TS under frontend/src only once S12b's "
-                          "base-vs-head build proves the build output identical, and S12b has not landed",
-                          "declare the class this change is (A, B, C or E), or wait for S12b", commit=c, path=p)
+                self.fail("class T", "a tooling commit may change only TypeScript under frontend/src that the "
+                          "production build erases (type-only code, proved by S12b's build identity); this file is "
+                          + ("a test or test-only code, which is class C" if test_only else "not TypeScript"),
+                          "declare the class this change is (A, B, C or E), or split the commit", commit=c, path=p)
                 continue
             self.fail("class T", "a tooling commit changes only CI, the Makefile, Dockerfile build commands, lint "
                       "config, templates, docs and the tooling directories (§4.2)", "split the commit: put this "
@@ -1165,6 +1430,83 @@ class Guard:
                           "a class E change is proved by characterization tests that stay as they are", commit=c,
                           path=path)
         c.notes.append("characterized by " + ", ".join(values))
+
+    # ---- S12b: the build identity, once per pull request
+
+    def check_build_identity(self):
+        """A refactor pull request that touches a shipped file under
+        frontend/src, or a Vite or PostCSS config the build reads, builds
+        frontend/ at the base (HEAD^1) and at the head (the merge commit) and
+        requires every chunk's CSS byte-identical; when a class T commit
+        changes shipped TypeScript (TS the build erases), every chunk's JS as
+        well. It runs once for the whole change, so a type-only commit shares
+        its pull request only with commits that leave the build as it is."""
+        shipped = sorted({p for _, p in self.pr_changes if feeds_frontend_build(p)})
+        if not shipped:
+            return
+        type_only = [c for c in self.commits if c.klass == "T"
+                     and any(ships_in_frontend(p) and matches(p, T_TS) for _, p in c.changes)]
+        kind = "type-only" if type_only else "css"
+        exts = BUILD_IDENTITY_EXTS[kind]
+        what = " and ".join(f"*{e}" for e in exts)
+        rule = "S12b build identity"
+        why = (f"class T commit {type_only[0].short} \"{type_only[0].subject}\" changes TypeScript under frontend/src, "
+               "which only TS the build erases may do" if type_only else
+               f"the pull request changes {len(shipped)} file(s) the frontend build reads, such as {shipped[0]}")
+        try:
+            dirs = {}
+            for label, rev in (("base", self.base), ("head", self.merge)):
+                d, log = self.builder.build(self.git, rev, label)
+                if d is None:
+                    self.fail(rule, f"cannot build the {label} ({self.git.short(rev)}):\n" + indent(log[-3000:]),
+                              "the build identity builds frontend/ at the base and the head: run `npm ci` in "
+                              "frontend/, and make sure each builds (`npm run build`)")
+                    return
+                if not os.path.isdir(d) or not [f for f in os.listdir(d) if not f.endswith(".map")]:
+                    self.fail(rule, f"the {label}'s build wrote no {BUILD_ASSETS} (or only .map files):\n" +
+                              indent(log[-3000:]), "npm run build must write frontend/build/assets "
+                              "(vite.config.ts's build.outDir); a build that writes nothing proves nothing")
+                    return
+                dirs[label] = d
+            compared = [f for f in os.listdir(dirs["base"]) if f.endswith(exts)]
+            if not compared:
+                self.fail(rule, f"the base's {BUILD_ASSETS} holds no {what} file to compare",
+                          "the build identity compares the emitted stylesheets; a build that emits none proves "
+                          "nothing")
+                return
+            problems = compare_assets(dirs["base"], dirs["head"], exts)
+        finally:
+            self.builder.cleanup()
+        renamed = [detail for _, detail, kind in problems if kind == "renamed"]
+        problems = [p for p in problems if p[2] != "renamed"]
+        if not problems:
+            self.notes.append(f"{rule}: the base and the head emit the same {len(compared)} {what} file(s) "
+                              f"(.map files left out{', and chunk names aside' if renamed else ''}); {why}")
+        if renamed:
+            self.notes.append(f"{rule}: {len(renamed)} file(s) keep every byte under another chunk's name (the "
+                              "bundler names a shared chunk after one of its modules): " +
+                              "; ".join(d.split(":")[0] for d in renamed))
+        if not problems:
+            return
+        fix = ("a type-only (class T) change must leave the emitted JavaScript and CSS byte-identical: keep it to "
+               "what TypeScript erases (types, interfaces, `import type`), and put a commit that changes the build "
+               "in a pull request of its own" if type_only else
+               "a refactor leaves the emitted CSS byte-identical (invariant I20): keep every stylesheet import in "
+               "its module and in its order, eager and lazy (src/arch/cssOrder.test.ts shows the order); if the "
+               "cascade must change, it is not a refactor (R3)")
+        content = [(chunk, detail, kind) for chunk, detail, kind in problems if kind in ("content", "only")]
+        for chunk, detail, kind in content[:20]:
+            self.fail(rule, f"{BUILD_ASSETS}/{chunk} is not byte-identical between the base and the head: {detail}"
+                      if kind == "content" else f"{BUILD_ASSETS}/{chunk}: {detail}",
+                      fix, path=f"frontend/{BUILD_ASSETS}/{chunk}")
+        if len(content) > 20:
+            self.fail(rule, f"{len(content) - 20} more chunk(s) differ: " +
+                      ", ".join(chunk for chunk, _, _ in content[20:]), fix)
+        echoes = [chunk for chunk, _, kind in problems if kind == "references"]
+        if echoes:
+            self.fail(rule, f"{len(echoes)} more chunk(s) differ only in the hashed file names of the chunks they "
+                      "load: " + ", ".join(echoes),
+                      "fix the difference above; these follow from it" if content else fix)
 
     # ---- guard code, ratchets and allowlists, every class
 
@@ -1290,6 +1632,12 @@ class Guard:
         # A tree without the file (deleted earlier in this pull request) judges
         # nothing; the base, which has it, still does.
         olds = [self.git.text(tree, LINT_ALLOWLIST_FILE) for tree in self.judged_against(c)]
+        for name in sorted(frozen):
+            self.check_literal_form(c, "(2) lint allowlist", LINT_ALLOWLIST_FILE, name, LINT_ALLOWLISTS[name], new,
+                                    olds, "write each entry as 'file': <decimal integer> or 'file': ['target', ...], "
+                                    "with nothing else there but // comments: the guard reads no other form (an "
+                                    "unquoted or computed key, a spread, arithmetic, a hex number, a name), so such "
+                                    "an entry could add or raise an allowance unseen")
         per_parent = [{(n, k): d for n, k, d in allowlist_growth_keyed(old, new)} for old in olds if old is not None]
         for name, key in sorted(k for k in set.intersection(*(set(d) for d in per_parent)) if k[0] in frozen):
             desc = per_parent[-1][(name, key)]
@@ -1297,23 +1645,52 @@ class Guard:
                       "open the stream through the shared hook instead (§6.4 S12)", commit=c,
                       path=LINT_ALLOWLIST_FILE)
 
+    def check_literal_form(self, c, rule, path, name, kind, new, olds, fix):
+        """Fails an allowlist or ceiling map that holds anything but entries
+        of its one form (LITERAL_FORMS), in a commit of any class: the
+        carve-out lets any class edit the literal, and the growth checks see
+        only what read_literal reads. A commit that leaves the literal as one
+        of the trees it is judged against has it is not failed for it; the
+        commit that wrote it is."""
+        stray = read_literal(new, name, kind)[1]
+        if stray is None or block_text(new, name) in [block_text(old, name) for old in olds if old is not None]:
+            return
+        self.fail(rule, f"{name} may hold only {LITERAL_FORMS[kind]} entries, not `{stray}`", fix, commit=c, path=path)
+
     def check_guard_ceilings(self, c):
         for path, names in GUARD_CODE_CEILINGS.items():
             if not any(p == path and s in ("M", "A") for s, p in c.changes):
                 continue  # an A is a re-add when the base has the constant
             new = self.git.text(c.sha, path) or ""
+            base_text = self.git.text(self.base, path) or ""
+            olds = [t for t in (self.git.text(tree, path) for tree in self.judged_against(c)) if t is not None]
             for name in names:
                 now = find_constant(new, name)
-                if not now:
-                    continue  # renamed or gone: the guard-code rule judges the edit
-                if not find_constant(self.git.text(self.base, path) or "", name):
-                    continue  # created by this pull request
-                olds = [self.git.text(tree, path) for tree in self.judged_against(c)]
-                before = [find_constant(old, name) for old in olds if old is not None]
-                if all(b is None or now[1] > b[1] for b in before):
-                    self.fail("(2) guard ceiling", f"raises {name} from {max(b[1] for b in before if b)} to {now[1]}",
-                              "this ceiling only falls: fix the code that pushed the count up instead", commit=c,
-                              path=path)
+                if now:
+                    if not find_constant(base_text, name):
+                        continue  # created by this pull request
+                    before = [find_constant(old, name) for old in olds]
+                    if all(b is None or now[1] > b[1] for b in before):
+                        self.fail("(2) guard ceiling", f"raises {name} from {max(b[1] for b in before if b)} to "
+                                  f"{now[1]}", "this ceiling only falls: fix the code that pushed the count up "
+                                  "instead", commit=c, path=path)
+                    continue
+                if not find_block(new, name) or not find_block(base_text, name):
+                    continue  # renamed, gone or created by this pull request: the guard-code rule judges the edit
+                self.check_literal_form(c, "(2) guard ceiling", path, name, "count", new, olds,
+                                        "write each ceiling as 'key': <decimal integer>, with nothing else there but "
+                                        "// comments: the guard reads no other form (an unquoted or computed key, a "
+                                        "spread, arithmetic, a hex number, a name), so such an entry could raise or "
+                                        "add a ceiling unseen")
+                entries = parse_allowlist(new, name, "count")
+                before = [parse_allowlist(old, name, "count") for old in olds if find_block(old, name)]
+                for key, value in sorted(entries.items()):
+                    if not all(key not in b or value > b[key] for b in before):
+                        continue  # within what one of the trees it is judged against allows
+                    had = [b[key] for b in before if key in b]
+                    self.fail("(2) guard ceiling", f"raises '{key}' in {name} from {max(had)} to {value}" if had
+                              else f"adds '{key}' to {name}", "these ceilings only fall: shrink or split the code "
+                              "that outgrew one instead (R6)", commit=c, path=path)
 
     # ---- output
 
