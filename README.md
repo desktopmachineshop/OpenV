@@ -103,7 +103,7 @@ export DB_NAME=openv
 export PORT=8080
 
 # Run the server
-go run cmd/server/main.go
+go run ./cmd/server
 ```
 
 **Frontend (React)**

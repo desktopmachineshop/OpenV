@@ -25,7 +25,7 @@ COPY release_notes.go RELEASE_NOTES.md ./
 # are NOT built here for the server's own use: they run on the operator's
 # machine next to the vendor CLIs (claude/codex/gemini) — build them with
 # `make worker` instead.
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server
 
 # Agent Connector downloads, served at /api/v1/public/connector/download
 # (same recipe as `make connector-dist`): one self-contained executable per

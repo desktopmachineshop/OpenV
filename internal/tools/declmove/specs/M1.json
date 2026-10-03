@@ -1,0 +1,19 @@
+{
+  "description": "Refactor step M1, class A (docs/plans/codebase-refactor.md §6.4): cmd/server's settings, logging and request-body helpers leave main.go for config.go, logging.go and http.go. The comment above envOr in main.go, which introduces the settings helpers, becomes config.go's header; declmove does not move a free-floating comment, so the commit deletes it from main.go. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M1.json",
+  "package": "cmd/server",
+  "targets": [
+    {
+      "file": "config.go",
+      "header": "// The server's settings follow internal/envparse's one rule: a value is\n// trimmed, and a malformed count or boolean reads as its fallback with one\n// warning naming the variable; a credential is exact (envSecret, at the end).",
+      "decls": ["envOr", "envInt", "envBool", "envSecret"]
+    },
+    {
+      "file": "logging.go",
+      "decls": ["initLogging", "fatal"]
+    },
+    {
+      "file": "http.go",
+      "decls": ["maxRequestBodyBytes"]
+    }
+  ]
+}

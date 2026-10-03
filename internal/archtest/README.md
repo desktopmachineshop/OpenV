@@ -464,6 +464,42 @@ embedded asset, add its path to the Dockerfile's `COPY` list.
 
 **Regenerate.** Nothing to regenerate: the `COPY` list is the allowlist.
 
+## Build by package path
+
+**Enforces.** No README, doc, script, `Makefile`, Dockerfile, compose file
+or workflow builds or runs a single `.go` file under `cmd/` (step M1): a
+`go build`, `go run` or `go install` whose arguments name a `.go` file
+there, with or without `./`, fails, naming the file, the line and the
+package command to use instead. The rule reads, besides Go code, every
+`*.md`, every `README*` file, `.txt` files under `docs/`, `*.sh`, `*.bash`,
+`*.ps1`, every file under `scripts/`, `Makefile`s and `*.mk`, Dockerfiles,
+compose files and the YAML under `.github/`. It joins lines ending in `\`,
+cuts a line into commands at Markdown code-span ticks and at the shell's
+unquoted separators, and splits a command into words as a shell would,
+reading a quoted span that holds a blank as a line of its own; so a fenced
+block, an inline code span, a `RUN` continued over lines, a command inside
+`sh -c '...'` and a Python argument list (`["go", "build", ...]`) all
+count. A `go run` stops at its package, since what follows is the
+program's arguments. It skips test files (`*_test.*`, `*.test.*`,
+`*.spec.*`), which quote commands as fixtures; the directories the go
+command skips (`testdata`, names starting with `.` or `_`), except
+`.github`; `node_modules`; and the records in `buildPathRecords`
+(`buildpath_test.go`), which quote the commands M1 replaced: the refactor
+plan and the dated assessments under `docs/assessments/`.
+`TestBuildByPackagePath` proves the rule on a fixture.
+
+**Why.** Given files, `go build` and `go run` compile those files alone,
+not their package. `cmd/server` is several files from M1 on, so a build
+of `cmd/server/main.go` alone stops compiling, and it fails only where it
+runs: in the API image, which CI's Go jobs never build, or in a README
+step nobody runs in CI.
+
+**Fix.** Name the package: `go build ./cmd/server`, `go run ./cmd/server`.
+There is no allowlist; `buildPathRecords` holds only records of the past,
+and grows only for another one, in a class T commit.
+
+**Regenerate.** Nothing to regenerate.
+
 ## Env var inventory (S8)
 
 **Enforces.** `TestEnvInventory` lists every environment variable the

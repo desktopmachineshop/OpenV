@@ -60,6 +60,7 @@ var rules = []rule{
 	{"direct env reads", "direct-env-reads", "env_reads", inRatchets("env_reads", "a ceiling per package that may only fall; a package not listed may read none"), checkEnvReads},
 	{"R8 decode errors", "r8-decode-errors", "", "none: the protected types are decodeAliasTypes in decode_test.go, a list that only grows", checkDecodeAliases},
 	{"build context", "build-context", "", "none: the Dockerfile's COPY list is the allowlist", checkBuildContext},
+	{"build by package path", "build-by-package-path", "", "none: name the package (go build ./cmd/<name>); buildPathRecords in buildpath_test.go lists the records that may quote a file-path build", checkBuildByPackagePath},
 }
 
 // TestArchitecture runs every rule against the module and compares the
