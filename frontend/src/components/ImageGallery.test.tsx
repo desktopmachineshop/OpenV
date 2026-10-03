@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { ImageGallery, figureName, versionKind } from './ImageGallery';
 import { Attachment, AttachmentVersion } from '../api/client';
 
@@ -11,12 +12,14 @@ let mockFeatureOn = true;
 let mockPromptAnswer: string | null = null;
 const mockPromptCalls: any[] = [];
 
-vi.mock('../api/client', () => ({
-  attachmentAPI: {
-    getDownloadUrl: (id: string, v?: number) => `/dl/${id}/${v || ''}`,
-    listVersions: () => Promise.resolve({ data: [] }),
-  },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    attachmentAPI: {
+      getDownloadUrl: (id: string, v?: number) => `/dl/${id}/${v || ''}`,
+      listVersions: () => Promise.resolve({ data: [] }),
+    },
+  })
+);
 
 vi.mock('./ui', () => ({
   useAlert: () => () => Promise.resolve(),

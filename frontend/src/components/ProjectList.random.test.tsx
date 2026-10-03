@@ -1,23 +1,19 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { ProjectList } from './ProjectList';
 import { sharedProductsAPI, projectAPI, templateAPI, workerStatusAPI } from '../api/client';
 
 // The random-product mode of the new-project form: the vote control on the
 // rolled card and the two Top 5 filters beside the roller.
 //
-// Everything the page talks to is mocked — the api module builds an axios
-// client at import time, and the point here is the pool, not the projects
-// list around it.
-vi.mock('../api/client', () => ({
-  agentRunsAPI: { get: vi.fn() },
-  agentsAPI: { list: vi.fn().mockResolvedValue({ data: [] }), launchRun: vi.fn() },
-  guidedAPI: { start: vi.fn(), saveStep: vi.fn() },
-  projectAPI: { list: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), import: vi.fn() },
-  sharedProductsAPI: { list: vi.fn(), publish: vi.fn(), report: vi.fn(), vote: vi.fn(), unvote: vi.fn() },
-  templateAPI: { list: vi.fn(), create: vi.fn(), createProject: vi.fn() },
-  workerStatusAPI: { get: vi.fn() },
-}));
+// Everything the page talks to is mocked — every client method is stubbed,
+// and the point here is the pool, not the projects list around it.
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    agentsAPI: { list: () => Promise.resolve({ data: [] }) },
+  })
+);
 
 // The list reads the query string as well as navigating (the settings tabs
 // open by ?tab=), so the router double has to answer both.

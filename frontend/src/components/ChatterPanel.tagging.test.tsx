@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { ChatterPanel } from './ChatterPanel';
 import {
   artifactAPI,
@@ -10,14 +11,7 @@ import {
   workItemsAPI,
 } from '../api/client';
 
-vi.mock('../api/client', () => ({
-  chatterAPI: { list: vi.fn(), create: vi.fn() },
-  artifactAPI: { list: vi.fn() },
-  attachmentAPI: { listByProject: vi.fn() },
-  linkAPI: { listForArtifact: vi.fn() },
-  membersAPI: { list: vi.fn() },
-  workItemsAPI: { create: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 vi.mock('./wizard/GuidedChatPanel', () => ({ GuidedChatPanel: () => null }));
 vi.mock('./wizard/assistantSession', () => ({ resolveAssistantSessionId: async () => '' }));

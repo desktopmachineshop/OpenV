@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { sharedProductsAPI } from '../api/client';
 import { RandomProduct } from '../utils/randomProduct';
 import { TopSharedProducts, voteDisabledReason } from './SharedProductVotes';
@@ -7,9 +8,7 @@ import { TopSharedProducts, voteDisabledReason } from './SharedProductVotes';
 // The two pieces of the vote UI that have rules of their own: which products
 // can be voted for (and what to say about the ones that cannot), and a
 // leaderboard whose fetches race each other when the filter is switched.
-vi.mock('../api/client', () => ({
-  sharedProductsAPI: { list: vi.fn(), vote: vi.fn(), unvote: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 const api = vi.mocked(sharedProductsAPI);
 

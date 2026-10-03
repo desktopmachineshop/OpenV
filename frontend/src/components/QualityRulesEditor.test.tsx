@@ -1,18 +1,12 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { QualityRulesEditor } from './QualityRulesEditor';
 import { qualityRulesAPI, QualityRules, QualityRuleSet } from '../api/client';
 
-// The editor talks to the quality-rules endpoints; the module also builds an
-// axios client at import time, so it is mocked wholesale.
-vi.mock('../api/client', () => ({
-  qualityRulesAPI: {
-    forWorkspace: vi.fn(),
-    forProject: vi.fn(),
-    setForWorkspace: vi.fn(),
-    setForProject: vi.fn(),
-  },
-}));
+// The editor talks to the quality-rules endpoints; every client method is
+// stubbed, and the tests answer the ones the editor calls.
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 // vi.mock is hoisted above the imports, so the imported binding is the mock.
 const api = vi.mocked(qualityRulesAPI);
