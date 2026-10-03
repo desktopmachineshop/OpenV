@@ -69,6 +69,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   break in a workspace's name no longer reaches the email's headers: the
   subject shows it as a space.
 
+- **An artifact in a baseline is read-only.** Reading an artifact in a
+  baseline still offered Edit, Delete, Submit for review and History, and
+  they acted on the live artifact, not on the baseline: Delete removed it
+  from the live project, a status change moved the live artifact along, and
+  Edit left the document pane blank. A baseline now shows its artifacts
+  without those buttons. To change an artifact, switch back to Live
+  Project.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
