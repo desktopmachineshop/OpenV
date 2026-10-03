@@ -236,7 +236,8 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14d", "S14e"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14d", "S14e",
+                  "S14f"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -373,6 +374,34 @@ class DataTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIsNone(rg.guard_code_step(path))
         self.assertTrue(rg.matches("internal/tools/splittools/testdata/d11dee8/tools.go", [p for _, p in rg.FROZEN_DATA]))
+
+    def test_s14f_row_covers_tsdeclmove(self):
+        # tsdeclmove and its tests are guard code of S14f's row (a module
+        # added beside them under the same name is covered with no edit to
+        # the row), and S14a's TS proofs stay S14a's. F1's spec is not guard
+        # code, so F1 may adjust it when it regenerates the move (R4); the
+        # fixture, its goldens and the d11dee8 copy under testdata/ are
+        # frozen data instead. The tool and the spec are class T, the tests
+        # class C.
+        self.assertTrue(os.path.isfile(os.path.join(REPO, "frontend/scripts/tsdeclmove.mjs")))
+        for path in ("frontend/scripts/tsdeclmove.mjs", "frontend/scripts/tsdeclmove.test.mjs"):
+            with self.subTest(path=path):
+                self.assertEqual(rg.guard_code_step(path), "S14f")
+        for path in ("frontend/scripts/tsdeclhash.mjs", "frontend/scripts/tsmovecheck.mjs"):
+            with self.subTest(path=path):
+                self.assertEqual(rg.guard_code_step(path), "S14a")
+        for path in ("frontend/scripts/specs/F1.json", "frontend/scripts/testdata/tsdeclmove/fixture/src/api/client.ts",
+                     "frontend/scripts/testdata/tsdeclmove/want/src/api/client.ts",
+                     "frontend/scripts/testdata/tsdeclmove/d11dee8/src/api/client.ts", "frontend/src/api/client.ts"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertTrue(rg.matches("frontend/scripts/testdata/tsdeclmove/d11dee8/src/api/client.ts",
+                                   [p for _, p in rg.FROZEN_DATA]))
+        self.assertTrue(rg.is_test_file("frontend/scripts/tsdeclmove.test.mjs"))
+        for path in ("frontend/scripts/tsdeclmove.mjs", "frontend/scripts/specs/F1.json"):
+            with self.subTest(path=path):
+                self.assertTrue(rg.matches(path, rg.T_PATHS))
+                self.assertFalse(rg.matches(path, rg.A_PATHS))
 
     def test_classification(self):
         self.assertEqual(rg.guard_code_step("internal/archtest/graph_test.go"), "S1")

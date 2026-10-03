@@ -146,8 +146,9 @@ On a **refactor** pull request, also:
    `frontend/src/arch/**`, the boundary rules in `frontend/eslint.config.js`,
    the move proofs, the migration generator that writes M10
    (`internal/tools/liftmigrations/**`, S14d), M11a's split proof
-   `internal/tools/splittools` (S14e) and this guard) may be modified or
-   deleted only in a
+   `internal/tools/splittools` (S14e), F1's generator
+   `frontend/scripts/tsdeclmove.mjs` with its tests (S14f) and this guard)
+   may be modified or deleted only in a
    class C or T commit that modifies or deletes no golden. The plan asks such
    an edit to be green against the production code of its parent; since a C
    or T commit cannot change production code, that is what the pull
@@ -246,8 +247,11 @@ The refactor tools' own goldens are not on the golden list: they change
 with the tool, not with the product. `liftmigrations` (S14d) pins what it
 makes of its fixture under `internal/tools/liftmigrations/testdata/want/`;
 regenerate with
-`UPDATE_GOLDEN=1 go test ./internal/tools/liftmigrations -count=1 -run '^(TestLiftFixture|TestSpecFixture)$'`
-in a pull request without the refactor labels, since a refactor pull
+`UPDATE_GOLDEN=1 go test ./internal/tools/liftmigrations -count=1 -run '^(TestLiftFixture|TestSpecFixture)$'`;
+`tsdeclmove` (S14f) pins what it makes of its fixture under
+`frontend/scripts/testdata/tsdeclmove/want/`; regenerate with
+`cd frontend && UPDATE_GOLDEN=1 node --test scripts/tsdeclmove.test.mjs`.
+Either in a pull request without the refactor labels, since a refactor pull
 request may add files under `testdata/` but not change them.
 
 For `UPDATE_GOLDEN` only the value `1` regenerates; any other value
