@@ -1,0 +1,62 @@
+{
+  "description": "Refactor step M12c, class A (docs/plans/codebase-refactor.md §6.5): internal/domain/users's users.go splits by concern. users.go keeps the account: the auth providers, the errors, User, Repository, Service, DefaultService and its constructor, NormalizeEmail, Register, and the account's reads and settings (GetByID, FindByEmail, ListUsers, SetAdmin, the notification, default-workspace and trial flags, the avatar). Session, the session policy's setter and reader, the sign-ins (Login, LoginWithGoogle, LoginWithSSO), createSession, Logout, sessionLive, lastSeen, GetBySessionToken, SessionByToken and SetActiveOrg go to session.go, beside session_policy.go; EmailVerificationTTL, EmailVerificationPolicy, EmailVerification, SetEmailVerificationPolicy, IssueEmailVerification, ConfirmEmailVerification and MarkEmailVerified to verification.go; MinPasswordLength, the reset link's constants, ErrResetInvalid, PasswordReset, IssuePasswordReset, ResetPassword and ChangePassword to password.go; HashToken and NewToken to token.go. users.go has no free-floating comment, so nothing is deleted from it. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M12c-users.json",
+  "package": "internal/domain/users",
+  "targets": [
+    {
+      "file": "session.go",
+      "header": "// Sessions (REQ-99): signing in with a password or through an identity\n// provider, the session that opens, resolving a session token against the\n// session policy (session_policy.go) on every request, the session's\n// workspace, and signing out.",
+      "decls": [
+        "Session",
+        "(*DefaultService).SetSessionPolicy",
+        "(*DefaultService).SessionLifetime",
+        "(*DefaultService).Login",
+        "(*DefaultService).LoginWithGoogle",
+        "(*DefaultService).LoginWithSSO",
+        "(*DefaultService).createSession",
+        "(*DefaultService).Logout",
+        "(*DefaultService).sessionLive",
+        "lastSeen",
+        "(*DefaultService).GetBySessionToken",
+        "(*DefaultService).SessionByToken",
+        "(*DefaultService).SetActiveOrg"
+      ]
+    },
+    {
+      "file": "verification.go",
+      "header": "// Email verification (SEC-15 / REQ-95): the deployment's policy, the\n// emailed link that proves control of an address, or changes it, and\n// marking an account verified on other proof.",
+      "decls": [
+        "EmailVerificationTTL",
+        "EmailVerificationPolicy",
+        "EmailVerification",
+        "(*DefaultService).SetEmailVerificationPolicy",
+        "(*DefaultService).IssueEmailVerification",
+        "(*DefaultService).ConfirmEmailVerification",
+        "(*DefaultService).MarkEmailVerified"
+      ]
+    },
+    {
+      "file": "password.go",
+      "header": "// Passwords: the length rule, a change by the account's owner, and the\n// reset link (REQ-158) that sets a new one.",
+      "decls": [
+        "MinPasswordLength",
+        "PasswordResetTTL",
+        "AdminPasswordResetTTL",
+        "ResetDeliveryEmail",
+        "ResetDeliveryAdmin",
+        "ErrResetInvalid",
+        "PasswordReset",
+        "(*DefaultService).IssuePasswordReset",
+        "(*DefaultService).ResetPassword",
+        "(*DefaultService).ChangePassword"
+      ]
+    },
+    {
+      "file": "token.go",
+      "header": "// Tokens: minting one, and the hashed form that a session, a run, an\n// email verification or a password reset stores in place of the token.",
+      "decls": [
+        "HashToken",
+        "NewToken"
+      ]
+    }
+  ]
+}
