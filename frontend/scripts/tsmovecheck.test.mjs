@@ -215,3 +215,52 @@ test('a statement with side effects moves only with all of its module\'s, to a n
   const existing = { ...b, 'src/api/http.ts': 'export const x = 1;\n' };
   assert.equal(moveCheck(tree(existing), tree({ ...f1, 'src/api/http.ts': http + 'export const x = 1;\n' })).failures.filter((f) => f.includes('changes when it runs')).length, 2);
 });
+
+test('loading a module runs its imports\' side effects and its own in the same order', () => {
+  // client.ts loads csrf.ts, which sets an axios default, before it runs
+  // axios.create; only accountAPI uses csrf.ts.
+  const b = {
+    'src/utils/csrf.ts': "import axios from 'axios';\naxios.defaults.headers.common['X-CSRF'] = 'on';\nexport const csrfField = 'csrf';\n",
+    'src/api/client.ts': [
+      "import axios from 'axios';",
+      "import { csrfField } from '../utils/csrf';",
+      'const client = axios.create();',
+      'client.interceptors.request.use((c) => c);',
+      'export const accountAPI = { me: () => client.get("/me", { params: { csrfField } }) };',
+      'export default client;',
+      '',
+    ].join('\n'),
+    'src/consumer.ts': "import client from './api/client';\nexport const base = () => client.defaults.baseURL;\n",
+  };
+  // F1's shape: the instance and its interceptor move to http.ts, which the
+  // barrel loads first; accounts.ts, loaded after it, alone imports csrf.ts.
+  const split = (barrel) => ({
+    ...b,
+    'src/api/http.ts': "import axios from 'axios';\nconst client = axios.create();\nclient.interceptors.request.use((c) => c);\nexport { client };\n",
+    'src/api/accounts.ts': "import { csrfField } from '../utils/csrf';\nimport { client } from './http';\nexport const accountAPI = { me: () => client.get(\"/me\", { params: { csrfField } }) };\n",
+    'src/api/client.ts': barrel,
+  });
+  const late = split("import { client } from './http';\nexport default client;\nexport * from './accounts';\n");
+  // Each module keeps its statements and imports in order, and the effects
+  // move together to a new module client.ts loads; only the sequence shows
+  // that the default is now set after axios.create copied the defaults. The
+  // module that loads client.ts says nothing more.
+  assert.deepEqual(moveCheck(tree(b), tree(late)).failures, [
+    'effects reordered when src/api/client.ts loads: client in src/api/http.ts now runs before (statement) in src/utils/csrf.ts',
+  ]);
+  // Loading accounts.ts first keeps the order.
+  const early = split("export * from './accounts';\nimport { client } from './http';\nexport default client;\n");
+  assert.deepEqual(moveCheck(tree(b), tree(early)).failures, []);
+  // A module that no longer loads another, its import now naming a new
+  // module, no longer runs that one's effects: those are not compared.
+  const x = {
+    'src/x.ts': 'export const L = 1;\nsetup();\n',
+    'src/y.ts': "import { L } from './x';\nexport const M = L * 2;\nstart();\n",
+  };
+  const l = {
+    'src/x.ts': "import { L } from './l';\nexport { L };\nsetup();\n",
+    'src/l.ts': 'export const L = 1;\n',
+    'src/y.ts': "import { L } from './l';\nexport const M = L * 2;\nstart();\n",
+  };
+  assert.deepEqual(moveCheck(tree(x), tree(l)).failures, []);
+});

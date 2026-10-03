@@ -1,0 +1,383 @@
+{
+  "description": "Refactor step F1, class A (docs/plans/codebase-refactor.md \u00a76.5): the declarations of src/api/client.ts move to api/http.ts (the axios instance, both interceptors, uploadConfig, API_BASE_URL, saveBlob, downloadBlob), api/types/<area>.ts (the types) and api/<area>.ts (the xxxAPI objects and the other values), and client.ts becomes a barrel with the same exports. Preview with: node frontend/scripts/tsdeclmove.mjs -n --spec frontend/scripts/specs/F1.json",
+  "source": "src/api/client.ts",
+  "barrelHeader": "// The API client: everything src/api offers the app, re-exported from the\n// modules that hold it (refactor plan F1). Code outside src/api imports\n// from here only (K12), so a whole-module vi.mock('../api/client') still\n// stubs every call. An endpoint goes in its area's module, api/<area>.ts,\n// and its types in api/types/<area>.ts; the axios instance and its\n// interceptors are in api/http.ts.",
+  "default": {
+    "types": "src/api/types/platform.ts",
+    "values": "src/api/platform.ts"
+  },
+  "modules": [
+    {
+      "path": "src/api/http.ts",
+      "header": "// The one axios instance every API call goes through, its two interceptors\n// (the active workspace header on the way out; the sign-in and\n// verify-email redirects on the way back), the upload config and the\n// download helpers. Loading this module creates the instance and installs\n// the interceptors, in that order; api/client loads it before any area\n// module. Nothing outside src/api imports it (refactor plan F1, K12).",
+      "declarations": [
+        "API_BASE_URL",
+        "client",
+        "uploadConfig",
+        "saveBlob",
+        "downloadBlob"
+      ]
+    },
+    {
+      "path": "src/api/types/artifacts.ts",
+      "header": "// The types api/artifacts.ts sends and receives.\n// Artifacts, trace links, review rounds, the chatter feed, requirement\n// quality rules and findings, search and duplicate detection.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "ArtifactStatus",
+        "Artifact",
+        "Link",
+        "LinkedArtifact",
+        "SuspectLink",
+        "ReviewQueue",
+        "ReviewRoundResult",
+        "ChatterEntry",
+        "NoteMention",
+        "NoteTodo",
+        "QualityFinding",
+        "QualityScore",
+        "QualityReport",
+        "QualityConvention",
+        "QualitySeverity",
+        "QualityRuleSet",
+        "QualityRulesCatalog",
+        "QualityRules",
+        "SearchHit",
+        "SearchMode",
+        "SearchResponse",
+        "DuplicatePair",
+        "DuplicatesResponse"
+      ]
+    },
+    {
+      "path": "src/api/types/projects.ts",
+      "header": "// The types api/projects.ts sends and receives.\n// Projects: their settings, downloads, baselines and baseline diffs,\n// templates, artifact types and link rules, attribute definitions, the\n// product profile, and the work items on a project's board.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "Project",
+        "Party",
+        "Baseline",
+        "Template",
+        "ProjectExport",
+        "DownloadOptions",
+        "DownloadSection",
+        "DownloadField",
+        "DownloadContent",
+        "DownloadTemplate",
+        "DownloadSelection",
+        "DownloadFormat",
+        "BaselineDiffRef",
+        "BaselineDiffArtifact",
+        "BaselineDiffModified",
+        "BaselineDiffLink",
+        "BaselineDiff",
+        "ArtifactTypeDef",
+        "LinkTypeRule",
+        "AttributeDataType",
+        "AttributeDefinition",
+        "ProductProfile",
+        "WorkItem",
+        "WorkItemActivity"
+      ]
+    },
+    {
+      "path": "src/api/types/attachments.ts",
+      "header": "// The types api/attachments.ts sends and receives.\n// Files attached to artifacts, their versions, uploads and downloads.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "UploadProgressHandler",
+        "AttachmentKind",
+        "Attachment",
+        "AttachmentVersion"
+      ]
+    },
+    {
+      "path": "src/api/types/vv.ts",
+      "header": "// The types api/vv.ts sends and receives.\n// Verification and validation: test runs and results, execution methods,\n// coverage, the traceability matrix, impact analysis and evidence bundles.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "TestRun",
+        "TestResult",
+        "ExecutionMethod",
+        "CoverageEntry",
+        "Refinement",
+        "CoverageReport",
+        "MatrixRow",
+        "ImpactDirection",
+        "ImpactNode",
+        "ImpactGroup",
+        "ImpactReport",
+        "EvidenceFile",
+        "EvidenceCitation",
+        "EvidenceBundle",
+        "EvidenceBundleInput"
+      ]
+    },
+    {
+      "path": "src/api/types/guided.ts",
+      "header": "// The types api/guided.ts sends and receives.\n// The guided wizard's sessions and chat, and stakeholder interviews,\n// including the public side an interviewee answers without a session.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "GuidedSession",
+        "GuidedChatMessage",
+        "Interview",
+        "InterviewSession",
+        "InterviewMessage"
+      ]
+    },
+    {
+      "path": "src/api/types/agents.ts",
+      "header": "// The types api/agents.ts sends and receives.\n// Agents and their runs, automations, proposals, repository\n// connections, AI provider settings and sign-ins, and crews.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "AgentDef",
+        "AgentRun",
+        "RunLogEntry",
+        "Automation",
+        "Proposal",
+        "BulkProposalOutcome",
+        "RepoConnection",
+        "ProviderModel",
+        "ProviderSetting",
+        "ProviderLogin",
+        "Crew",
+        "CrewNode",
+        "CrewEdge",
+        "CrewGraph",
+        "PortableCrewNode",
+        "PortableCrewEdge",
+        "PortableCrew",
+        "CrewTemplate",
+        "CrewImportResult"
+      ]
+    },
+    {
+      "path": "src/api/types/account.ts",
+      "header": "// The types api/account.ts sends and receives.\n// The signed-in account: sign-in and registration, invitations it\n// accepts, passwords, the avatar and the default workspace.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "User",
+        "AuthConfig",
+        "InvitationOutcome",
+        "RegisterResult",
+        "InvitationPreview",
+        "DefaultWorkspace"
+      ]
+    },
+    {
+      "path": "src/api/types/orgs.ts",
+      "header": "// The types api/orgs.ts sends and receives.\n// Workspaces (orgs): members, teams, invitations, usage, limits and\n// features, and who may reach a project (its members and team grants).\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "OrgInvitation",
+        "OrgInvitationCreated",
+        "ProjectMember",
+        "Org",
+        "OrgMember",
+        "OrgTeam",
+        "TeamGrant",
+        "OrgUsageTotals",
+        "OrgAgentUsage",
+        "OrgDailyUsage",
+        "OrgUsageSummary",
+        "LimitUsage",
+        "WorkspaceLimits",
+        "OrgFeatures"
+      ]
+    },
+    {
+      "path": "src/api/types/billing.ts",
+      "header": "// The types api/billing.ts sends and receives.\n// Plans and prices, and a workspace's billing: checkout, plan changes\n// and the billing portal.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "PublicPrice",
+        "PublicPlan",
+        "PublicPlans",
+        "BillingSnapshot",
+        "BillingState"
+      ]
+    },
+    {
+      "path": "src/api/types/runners.ts",
+      "header": "// The types api/runners.ts sends and receives.\n// Runners: worker keys, the member's own runner key, cloud runner\n// sessions, worker status, hosted runners and connector pairing.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "WorkerKey",
+        "WorkerStatusWorker",
+        "WorkerStatusQueue",
+        "WorkerStatus",
+        "HostedRunnerRecord",
+        "HostedRunnerStatus",
+        "RunnerSession",
+        "RunnerPoolStatus",
+        "RunnerPoolLoad",
+        "RunnerSessionPayload",
+        "ConnectorPairing"
+      ]
+    },
+    {
+      "path": "src/api/types/community.ts",
+      "header": "// The types api/community.ts sends and receives.\n// What members share: shared products, share links and the open-source\n// showcase.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "SharedProductVotes",
+        "SharedProductSort",
+        "ShareLinkRole",
+        "ShareLink",
+        "SharedProject",
+        "OpenSourceProject"
+      ]
+    },
+    {
+      "path": "src/api/types/notifications.ts",
+      "header": "// The types api/notifications.ts sends and receives.\n// Notifications: the bell's list, notification preferences, web push\n// subscriptions, and the domain event feed.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "NotificationPrefs",
+        "PushConfig",
+        "PushSubscriptionRecord",
+        "DomainEvent",
+        "AppNotification",
+        "NotificationView",
+        "NotificationList"
+      ]
+    },
+    {
+      "path": "src/api/types/platform.ts",
+      "header": "// The types api/platform.ts sends and receives.\n// The platform itself: the release a workspace runs and its notes, and\n// the site administrator's views of workspaces and users. A declaration\n// the F1 spec does not name joins this module (or its types module).\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "ReleaseCategory",
+        "ReleaseEntry",
+        "StableRelease",
+        "ReleaseInfo",
+        "AdminWorkspace",
+        "AdminUser"
+      ]
+    },
+    {
+      "path": "src/api/artifacts.ts",
+      "header": "// Artifacts, trace links, review rounds, the chatter feed, requirement\n// quality rules and findings, search and duplicate detection.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "ARTIFACT_PAGE_LIMIT",
+        "artifactAPI",
+        "linkAPI",
+        "reviewAPI",
+        "chatterAPI",
+        "qualifiedRef",
+        "qualityRulesAPI",
+        "qualityAPI",
+        "searchAPI",
+        "duplicatesAPI"
+      ]
+    },
+    {
+      "path": "src/api/projects.ts",
+      "header": "// Projects: their settings, downloads, baselines and baseline diffs,\n// templates, artifact types and link rules, attribute definitions, the\n// product profile, and the work items on a project's board.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "projectAPI",
+        "baselineAPI",
+        "templateAPI",
+        "metaAPI",
+        "attributeDefinitionAPI",
+        "productProfileAPI",
+        "workItemsAPI"
+      ]
+    },
+    {
+      "path": "src/api/attachments.ts",
+      "header": "// Files attached to artifacts, their versions, uploads and downloads.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "attachmentAPI"
+      ]
+    },
+    {
+      "path": "src/api/vv.ts",
+      "header": "// Verification and validation: test runs and results, execution methods,\n// coverage, the traceability matrix, impact analysis and evidence bundles.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "EXECUTION_METHODS",
+        "executionMethodOf",
+        "evidenceAPI",
+        "vvAPI"
+      ]
+    },
+    {
+      "path": "src/api/guided.ts",
+      "header": "// The guided wizard's sessions and chat, and stakeholder interviews,\n// including the public side an interviewee answers without a session.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "guidedAPI",
+        "interviewsAPI",
+        "publicInterviewAPI"
+      ]
+    },
+    {
+      "path": "src/api/agents.ts",
+      "header": "// Agents and their runs, automations, proposals, repository\n// connections, AI provider settings and sign-ins, and crews.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "agentsAPI",
+        "agentRunsAPI",
+        "automationsAPI",
+        "proposalsAPI",
+        "repoConnectionsAPI",
+        "providerSettingsAPI",
+        "providerLoginsAPI",
+        "crewsAPI",
+        "crewTemplatesAPI"
+      ]
+    },
+    {
+      "path": "src/api/account.ts",
+      "header": "// The signed-in account: sign-in and registration, invitations it\n// accepts, passwords, the avatar and the default workspace.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "DEFAULT_MIN_PASSWORD_LENGTH",
+        "authAPI",
+        "passwordAPI",
+        "avatarAPI",
+        "defaultWorkspaceAPI"
+      ]
+    },
+    {
+      "path": "src/api/orgs.ts",
+      "header": "// Workspaces (orgs): members, teams, invitations, usage, limits and\n// features, and who may reach a project (its members and team grants).\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "orgsAPI",
+        "orgTeamsAPI",
+        "projectTeamAccessAPI",
+        "membersAPI"
+      ]
+    },
+    {
+      "path": "src/api/billing.ts",
+      "header": "// Plans and prices, and a workspace's billing: checkout, plan changes\n// and the billing portal.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "billingAPI"
+      ]
+    },
+    {
+      "path": "src/api/runners.ts",
+      "header": "// Runners: worker keys, the member's own runner key, cloud runner\n// sessions, worker status, hosted runners and connector pairing.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "workerKeysAPI",
+        "myRunnerKeyAPI",
+        "cloudRunnerAPI",
+        "workerStatusAPI",
+        "hostedRunnerAPI",
+        "connectorAPI"
+      ]
+    },
+    {
+      "path": "src/api/community.ts",
+      "header": "// What members share: shared products, share links and the open-source\n// showcase.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "sharedProductsAPI",
+        "shareLinkAPI",
+        "openSourceAPI"
+      ]
+    },
+    {
+      "path": "src/api/notifications.ts",
+      "header": "// Notifications: the bell's list, notification preferences, web push\n// subscriptions, and the domain event feed.\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "notificationPrefsAPI",
+        "pushAPI",
+        "eventsAPI",
+        "notificationsAPI"
+      ]
+    },
+    {
+      "path": "src/api/platform.ts",
+      "header": "// The platform itself: the release a workspace runs and its notes, and\n// the site administrator's views of workspaces and users. A declaration\n// the F1 spec does not name joins this module (or its types module).\n// Code outside src/api imports these from api/client, which re-exports\n// this module (refactor plan F1, K12).",
+      "declarations": [
+        "releaseAPI",
+        "adminAPI",
+        "PLANS"
+      ]
+    }
+  ]
+}

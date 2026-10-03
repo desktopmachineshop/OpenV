@@ -266,7 +266,9 @@ jobs:
         run: npm test
 
       # tsdeclhash and tsmovecheck (S14a), the class-A proof for TypeScript
-      # moves: vitest, tsc and eslint reach only src/.
+      # moves, and tsdeclmove (S14f), F1's generator, whose working-tree test
+      # generates F1 on a copy of the repository and runs the steps above
+      # and the build on it: vitest, tsc and eslint reach only src/.
       - name: Refactor tool tests (Node)
         run: node --test 'scripts/*.test.mjs'
 

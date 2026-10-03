@@ -1,0 +1,22 @@
+package main
+
+import (
+	"fmt"
+)
+
+// jobs is one stage of main(), which calls its stages in order.
+func (a *app) jobs() {
+	// Jobs.
+	const greeting = "hello"
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		fmt.Fprintln(a.log, greeting, a.label, a.total, a.first, a.count, a.ctx.Err() == nil)
+	}()
+	<-done
+	var err error
+	err = check(a.total)
+	if err != nil {
+		fatal("check", err)
+	}
+}
