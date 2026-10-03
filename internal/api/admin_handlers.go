@@ -23,21 +23,6 @@ func (h *Handler) registerAdminRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/admin/users/{id}/admin", h.AdminSetUserAdmin).Methods("PUT")
 }
 
-// requirePlatformAdmin writes 401/403 and answers nil unless the caller is
-// a signed-in platform admin.
-func (h *Handler) requirePlatformAdmin(w http.ResponseWriter, r *http.Request) *users.User {
-	user := CurrentUser(r)
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return nil
-	}
-	if !user.IsAdmin {
-		writeJSONError(w, http.StatusForbidden, "platform admins only")
-		return nil
-	}
-	return user
-}
-
 // adminWorkspace is one row of the workspace listing.
 type adminWorkspace struct {
 	*orgs.Org

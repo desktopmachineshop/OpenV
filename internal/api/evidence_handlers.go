@@ -48,13 +48,6 @@ func (h *Handler) registerEvidenceRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/test-runs/{id}/citations", h.ListRunCitations).Methods("GET")
 }
 
-// respondJSON writes a status and a JSON body, which every handler here does.
-func respondJSON(w http.ResponseWriter, status int, body interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
 // nextFilePart walks a multipart stream to the first part that carries a file,
 // skipping ordinary form fields. Walking rather than parsing the whole form is
 // what keeps the upload streamed: ParseMultipartForm would buffer it first.

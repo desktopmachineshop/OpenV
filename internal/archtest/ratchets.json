@@ -388,8 +388,8 @@
     "handle_func_outside_registrars": 53,
     "handler_literals_in_tests": 137,
     "invalid_request_body_literals": 106,
-    "raw_json_encodes": 249,
-    "require_outside_authz": 10
+    "raw_json_encodes": 248,
+    "require_outside_authz": 2
   },
   "env_reads": {
     "internal/api": 10,
@@ -412,16 +412,12 @@
     "internal/api:Handler.memberFeatureEnabled",
     "internal/api:Handler.orgForProject",
     "internal/api:Handler.orgIDForProject",
-    "internal/api:Handler.partitionedCookies",
     "internal/api:Handler.projectFeatureEnabled",
     "internal/api:Handler.provisionPersonalWorkspace",
     "internal/api:Handler.qualityRuleSetFor",
-    "internal/api:Handler.requireHumanUser",
-    "internal/api:Handler.requirePlatformAdmin",
     "internal/api:Handler.seatsChanged",
     "internal/api:Handler.sendVerificationAsync",
     "internal/api:Handler.sessionUser",
-    "internal/api:Handler.setSessionCookie",
     "internal/api:Handler.throttleSSO",
     "internal/api:Handler.touchRunnerSession",
     "internal/api:Handler.verifiedByInvitation",
@@ -430,9 +426,6 @@
     "internal/api:accountKey",
     "internal/api:launchParent",
     "internal/api:maxEvidenceBytes",
-    "internal/api:requireJSONBody",
-    "internal/api:requireUser",
-    "internal/api:respondJSON",
     "internal/api:uploadIsRasterImage",
     "internal/api:writeAddOrInviteOutcome"
   ]
