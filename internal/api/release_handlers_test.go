@@ -20,8 +20,8 @@ func releaseReq(userID string) *http.Request {
 }
 
 // releaseHandler is a handler serving notes as the release notes.
-func releaseHandler(notes *release.Notes) *Handler {
-	return &Handler{releaseService: staticRelease{notes: notes}}
+func releaseHandler(t *testing.T, notes *release.Notes) *Handler {
+	return newTestHandler(t, func(h *Handler) { h.releaseService = staticRelease{notes: notes} })
 }
 
 // TestGetReleaseAnswersCurrentAndHistory: the current section's version,
@@ -31,7 +31,7 @@ func TestGetReleaseAnswersCurrentAndHistory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	h := &Handler{releaseService: staticRelease{notes: notes}}
+	h := newTestHandler(t, func(h *Handler) { h.releaseService = staticRelease{notes: notes} })
 	w := httptest.NewRecorder()
 	h.GetRelease(w, releaseReq("u1"))
 	if w.Code != http.StatusOK {
@@ -74,7 +74,7 @@ const stableNotes = "## 0.3.0\n\n### New features\n\n- n\n\n## 0.2.0\n\nStable c
 // stable with the day it was designated, cacheable, and nothing else.
 func TestGetPublicReleaseFeed(t *testing.T) {
 	notes, _ := release.Parse(stableNotes)
-	h := &Handler{releaseService: staticRelease{notes: notes}}
+	h := newTestHandler(t, func(h *Handler) { h.releaseService = staticRelease{notes: notes} })
 	w := httptest.NewRecorder()
 	h.GetPublicRelease(w, httptest.NewRequest(http.MethodGet, "/api/v1/public/release", nil))
 	if w.Code != http.StatusOK || w.Header().Get("Cache-Control") != "public, max-age=300" {
@@ -93,7 +93,10 @@ func TestGetPublicReleaseFeed(t *testing.T) {
 // the stable release comes with the notes merged since the previous one.
 func TestGetReleaseCarriesTheStable(t *testing.T) {
 	notes, _ := release.Parse(stableNotes)
-	h := &Handler{releaseService: staticRelease{notes: notes}, deploymentKind: "dedicated"}
+	h := newTestHandler(t, func(h *Handler) {
+		h.releaseService = staticRelease{notes: notes}
+		h.deploymentKind = "dedicated"
+	})
 	w := httptest.NewRecorder()
 	h.GetRelease(w, releaseReq("u1"))
 	var resp releaseResponse
@@ -112,7 +115,7 @@ func TestGetReleaseCarriesTheStable(t *testing.T) {
 // answers empty fields and an empty notes list, never null.
 func TestGetReleaseWithoutARelease(t *testing.T) {
 	notes, _ := release.Parse("## Unreleased\n")
-	h := releaseHandler(notes)
+	h := releaseHandler(t, notes)
 	w := httptest.NewRecorder()
 	h.GetRelease(w, releaseReq("u1"))
 	var resp releaseResponse
@@ -138,7 +141,7 @@ func TestGetReleaseBytes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	h := releaseHandler(notes)
+	h := releaseHandler(t, notes)
 	w := httptest.NewRecorder()
 	h.GetRelease(w, releaseReq("u1"))
 	const want = `{"version":"0.3.0","date":"","notes":["n"],"categories":[{"name":"New features","notes":["n"]}],"markdown":"### New features\n\n- n"` +

@@ -42,7 +42,7 @@ func (p *pagedRunLogs) Logs(runID string, afterSeq int) ([]agentruns.LogEntry, e
 // (cmd/server's worker_wire area) holds fewer entries than one page of the
 // repository's read, so it cannot see a replay that stops after the first.
 func TestStreamAgentRunDrainsEveryLogPage(t *testing.T) {
-	h, svc := partialTextFixture()
+	h, svc := partialTextFixture(t)
 	launcher := "user-1"
 	svc.byID["run-1"].LaunchedBy = &launcher
 	entries := []agentruns.LogEntry{

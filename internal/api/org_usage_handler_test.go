@@ -31,12 +31,12 @@ func TestGetOrgUsageAccess(t *testing.T) {
 	const orgID = "org-1"
 	newFixture := func() (*Handler, *fakeRunService) {
 		runSvc := &fakeRunService{}
-		h := &Handler{
-			runService: runSvc,
-			orgService: &fakeOrgService{roles: map[string]map[string]string{
+		h := newTestHandler(t, func(h *Handler) {
+			h.runService = runSvc
+			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
-			}},
-		}
+			}}
+		})
 		return h, runSvc
 	}
 
@@ -79,12 +79,12 @@ func TestGetOrgUsageWindow(t *testing.T) {
 			ByAgent: []agentruns.AgentUsage{{AgentSlug: "reviewer", Runs: 2, TokensIn: 10, TokensOut: 5, CostUSD: 0.25}},
 			ByDay:   []agentruns.DailyUsage{{Day: "2026-08-01", Runs: 2, TokensIn: 10, TokensOut: 5, CostUSD: 0.25}},
 		}}
-		h := &Handler{
-			runService: runSvc,
-			orgService: &fakeOrgService{roles: map[string]map[string]string{
+		h := newTestHandler(t, func(h *Handler) {
+			h.runService = runSvc
+			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"member": orgs.RoleMember},
-			}},
-		}
+			}}
+		})
 		return h, runSvc
 	}
 

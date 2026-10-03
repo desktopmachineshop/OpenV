@@ -61,7 +61,7 @@ func (f *fakeResetService) ResetPassword(token, password string) (*users.User, e
 	return &users.User{ID: "u-owner"}, nil
 }
 
-func newResetHandler(mailerOn bool) (*Handler, *fakeResetService, *testMailer) {
+func newResetHandler(t *testing.T, mailerOn bool) (*Handler, *fakeResetService, *testMailer) {
 	owner := &users.User{ID: "u-owner", Email: "owner@example.com", Name: "Owner", PasswordHash: "x"}
 	sso := &users.User{ID: "u-sso", Email: "sso@example.com", Name: "SSO", AuthProvider: "oidc"}
 	svc := &fakeResetService{
@@ -70,13 +70,13 @@ func newResetHandler(mailerOn bool) (*Handler, *fakeResetService, *testMailer) {
 	}
 	mailer := newTestMailer()
 	mailer.enabled = mailerOn
-	h := &Handler{
-		userService:          svc,
-		mailer:               mailer,
-		emailLinkBase:        "https://app.example.com",
-		authIPLimiter:        newRateLimiter(100, 1),
-		passwordResetLimiter: newRateLimiter(2, 1),
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.mailer = mailer
+		h.emailLinkBase = "https://app.example.com"
+		h.authIPLimiter = newRateLimiter(100, 1)
+		h.passwordResetLimiter = newRateLimiter(2, 1)
+	})
 	return h, svc, mailer
 }
 
@@ -90,7 +90,7 @@ func waitForSend(t *testing.T, mailer *testMailer) {
 }
 
 func TestRequestPasswordResetEmailsAKnownAddressAndSaysNothingAboutAnUnknownOne(t *testing.T) {
-	h, svc, mailer := newResetHandler(true)
+	h, svc, mailer := newResetHandler(t, true)
 	do := func(body string) *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()
 		h.RequestPasswordReset(w, jsonReq(http.MethodPost, "/api/v1/auth/password-reset", body, ""))
@@ -141,7 +141,7 @@ func TestRequestPasswordResetEmailsAKnownAddressAndSaysNothingAboutAnUnknownOne(
 // left until the expiry it had just minted, a moment under the hour, which
 // the renderer counts in whole minutes.
 func TestThePasswordResetMailStatesTheLinksWholeHour(t *testing.T) {
-	h, _, mailer := newResetHandler(true)
+	h, _, mailer := newResetHandler(t, true)
 	w := httptest.NewRecorder()
 	h.RequestPasswordReset(w, jsonReq(http.MethodPost, "/api/v1/auth/password-reset", `{"email":"owner@example.com"}`, ""))
 	if w.Code != http.StatusAccepted {
@@ -156,7 +156,7 @@ func TestThePasswordResetMailStatesTheLinksWholeHour(t *testing.T) {
 }
 
 func TestRequestPasswordResetWithoutAMailerSaysSo(t *testing.T) {
-	h, svc, _ := newResetHandler(false)
+	h, svc, _ := newResetHandler(t, false)
 	w := httptest.NewRecorder()
 	h.RequestPasswordReset(w, jsonReq(http.MethodPost, "/api/v1/auth/password-reset", `{"email":"owner@example.com"}`, ""))
 	if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), ErrCodeResetEmailUnavailable) {
@@ -180,7 +180,7 @@ func TestConfirmPasswordReset(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, svc, _ := newResetHandler(true)
+			h, svc, _ := newResetHandler(t, true)
 			svc.resetErr = tc.err
 			w := httptest.NewRecorder()
 			h.ConfirmPasswordReset(w, jsonReq(http.MethodPost, "/api/v1/auth/password-reset/confirm", `{"token":"raw-reset-token","new_password":"brand-new-password"}`, ""))
@@ -198,7 +198,7 @@ func TestConfirmPasswordReset(t *testing.T) {
 			}
 		})
 	}
-	h, _, _ := newResetHandler(true)
+	h, _, _ := newResetHandler(t, true)
 	w := httptest.NewRecorder()
 	h.ConfirmPasswordReset(w, jsonReq(http.MethodPost, "/api/v1/auth/password-reset/confirm", `{`, ""))
 	if w.Code != http.StatusBadRequest {
@@ -217,7 +217,7 @@ func adminResetReq(id string, user *users.User) *http.Request {
 
 func TestAdminIssuePasswordReset(t *testing.T) {
 	root := &users.User{ID: "root", IsAdmin: true}
-	h, svc, mailer := newResetHandler(false)
+	h, svc, mailer := newResetHandler(t, false)
 	w := httptest.NewRecorder()
 	h.AdminIssuePasswordReset(w, adminResetReq("u-owner", root))
 	if w.Code != http.StatusOK {
@@ -256,7 +256,7 @@ func TestAdminIssuePasswordReset(t *testing.T) {
 	}
 	for _, tc := range refusals {
 		t.Run(tc.name, func(t *testing.T) {
-			h, svc, _ := newResetHandler(false)
+			h, svc, _ := newResetHandler(t, false)
 			w := httptest.NewRecorder()
 			h.AdminIssuePasswordReset(w, adminResetReq(tc.id, tc.user))
 			if w.Code != tc.status {
@@ -274,7 +274,7 @@ func TestAdminIssuePasswordReset(t *testing.T) {
 
 func TestAuthConfigReportsWhetherResetMailIsAvailable(t *testing.T) {
 	for _, on := range []bool{true, false} {
-		h, _, _ := newResetHandler(on)
+		h, _, _ := newResetHandler(t, on)
 		w := httptest.NewRecorder()
 		h.AuthConfig(w, httptest.NewRequest(http.MethodGet, "/api/v1/auth/config", nil))
 		var got map[string]any

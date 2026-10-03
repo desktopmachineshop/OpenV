@@ -63,17 +63,17 @@ func TestReviewQueue(t *testing.T) {
 				{ID: "a-rev", ProjectID: projectID, Type: "requirement", Title: "In review", Status: artifacts.StatusInReview},
 			},
 		}}
-		h := &Handler{
-			linkService:     linkSvc,
-			artifactService: artSvc,
-			projectService: &fakeProjectService{byID: map[string]*projects.Project{
+		h := newTestHandler(t, func(h *Handler) {
+			h.linkService = linkSvc
+			h.artifactService = artSvc
+			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 				projectID: {ID: projectID, OrgID: orgID},
-			}},
-			orgService: &fakeOrgService{roles: map[string]map[string]string{orgID: {}}},
-			memberService: &fakeMemberService{roles: map[string]map[string]string{
+			}}
+			h.orgService = &fakeOrgService{roles: map[string]map[string]string{orgID: {}}}
+			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 				projectID: {"viewer": members.RoleViewer},
-			}},
-		}
+			}}
+		})
 		return h, linkSvc, artSvc
 	}
 

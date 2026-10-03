@@ -34,23 +34,23 @@ func draftReq(userID, projectID, body string) *http.Request {
 	return mux.SetURLVars(r.WithContext(ctx), map[string]string{"id": projectID})
 }
 
-func newDraftFixture() (*Handler, *fakeRunService) {
+func newDraftFixture(t *testing.T) (*Handler, *fakeRunService) {
 	runSvc := &fakeRunService{}
-	return &Handler{
-		runService: runSvc,
-		agentService: &fakeAgentService{byID: map[string]*agents.Agent{
+	return newTestHandler(t, func(h *Handler) {
+		h.runService = runSvc
+		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
 			"tca": {ID: "tca", OrgID: "org-1", Slug: seeds.TestCaseAuthorSlug, Name: "Test Case Author", Provider: "claude-code"},
-		}},
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+		}}
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
-		}},
-		orgService: &fakeOrgService{roles: map[string]map[string]string{
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"org-admin": orgs.RoleAdmin, "editor": orgs.RoleMember, "viewer": orgs.RoleMember},
-		}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"editor": members.RoleEditor, "viewer": members.RoleViewer},
-		}},
-	}, runSvc
+		}}
+	}), runSvc
 }
 
 // TestDraftTestCasesAuthz locks in that the launch action mirrors the project
@@ -70,7 +70,7 @@ func TestDraftTestCasesAuthz(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, runSvc := newDraftFixture()
+			h, runSvc := newDraftFixture(t)
 			w := httptest.NewRecorder()
 			h.DraftTestCases(w, draftReq(tc.userID, "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
 			if tc.wantCode == 0 {
@@ -92,7 +92,7 @@ func TestDraftTestCasesAuthz(t *testing.T) {
 // dropped), scoped to the right agent, project and org — so the lean-context
 // agent can fetch each requirement at run time.
 func TestDraftTestCasesRoundTrip(t *testing.T) {
-	h, runSvc := newDraftFixture()
+	h, runSvc := newDraftFixture(t)
 	w := httptest.NewRecorder()
 	// Includes a blank and a duplicate to prove normalization.
 	h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"," ","`+draftReqUUID2+`","`+draftReqUUID1+`"]}`))
@@ -134,7 +134,7 @@ func TestDraftTestCasesRoundTrip(t *testing.T) {
 // never reach the run service: no usable IDs, and a missing seeded agent.
 func TestDraftTestCasesValidation(t *testing.T) {
 	t.Run("empty ids answers 400", func(t *testing.T) {
-		h, runSvc := newDraftFixture()
+		h, runSvc := newDraftFixture(t)
 		w := httptest.NewRecorder()
 		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":[" ",""]}`))
 		if w.Code != http.StatusBadRequest {
@@ -146,7 +146,7 @@ func TestDraftTestCasesValidation(t *testing.T) {
 	})
 
 	t.Run("non-uuid id answers 400 before launch", func(t *testing.T) {
-		h, runSvc := newDraftFixture()
+		h, runSvc := newDraftFixture(t)
 		w := httptest.NewRecorder()
 		// One valid UUID and one malformed id: the whole request is rejected
 		// before the prompt is built (issue #245).
@@ -160,7 +160,7 @@ func TestDraftTestCasesValidation(t *testing.T) {
 	})
 
 	t.Run("missing seeded agent answers 404", func(t *testing.T) {
-		h, runSvc := newDraftFixture()
+		h, runSvc := newDraftFixture(t)
 		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{}} // agent not seeded
 		w := httptest.NewRecorder()
 		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
@@ -187,7 +187,7 @@ func TestDraftTestCasesRefusesAProposalModeRun(t *testing.T) {
 		return mux.SetURLVars(r.WithContext(ctx), map[string]string{"id": "proj-1"})
 	}
 	withAgents := func() (*Handler, *fakeRunService) {
-		h, runSvc := newDraftFixture()
+		h, runSvc := newDraftFixture(t)
 		catalog := h.agentService.(*fakeAgentService)
 		catalog.byID["agent-proposal"] = &agents.Agent{ID: "agent-proposal", OrgID: "org-1", Slug: "drafter", WriteMode: agents.WriteModeProposal}
 		catalog.byID["agent-direct"] = &agents.Agent{ID: "agent-direct", OrgID: "org-1", Slug: "helper", WriteMode: agents.WriteModeDirect}

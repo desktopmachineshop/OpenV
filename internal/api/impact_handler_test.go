@@ -22,7 +22,7 @@ import (
 //
 //	need N1 <-derives-from- req R1 <-satisfies- design D1
 //	req R1 <-verifies- test T1
-func newImpactHandler() *Handler {
+func newImpactHandler(t *testing.T) *Handler {
 	snapshot := `{
 		"project_name": "Widget Spec",
 		"project_id": "proj-a",
@@ -46,16 +46,16 @@ func newImpactHandler() *Handler {
 			Snapshot:  json.RawMessage(snapshot),
 		},
 	}})
-	return &Handler{
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+	return newTestHandler(t, func(h *Handler) {
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
-		}},
-		orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"viewer-a": members.RoleViewer},
-		}},
-		baselineService: baselineSvc,
-	}
+		}}
+		h.baselineService = baselineSvc
+	})
 }
 
 func impactRequest(userID, query string) *http.Request {
@@ -68,7 +68,7 @@ func impactRequest(userID, query string) *http.Request {
 
 func TestGetImpact_ViewerBothDirections(t *testing.T) {
 	w := httptest.NewRecorder()
-	newImpactHandler().GetImpact(w, impactRequest("viewer-a", "&artifact=R1"))
+	newImpactHandler(t).GetImpact(w, impactRequest("viewer-a", "&artifact=R1"))
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
@@ -91,7 +91,7 @@ func TestGetImpact_ViewerBothDirections(t *testing.T) {
 
 func TestGetImpact_DirectionFilter(t *testing.T) {
 	w := httptest.NewRecorder()
-	newImpactHandler().GetImpact(w, impactRequest("viewer-a", "&artifact=R1&direction=upstream"))
+	newImpactHandler(t).GetImpact(w, impactRequest("viewer-a", "&artifact=R1&direction=upstream"))
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", w.Code)
@@ -113,7 +113,7 @@ func TestGetImpact_DirectionFilter(t *testing.T) {
 
 func TestGetImpact_MissingArtifactParam(t *testing.T) {
 	w := httptest.NewRecorder()
-	newImpactHandler().GetImpact(w, impactRequest("viewer-a", ""))
+	newImpactHandler(t).GetImpact(w, impactRequest("viewer-a", ""))
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", w.Code)
 	}
@@ -121,7 +121,7 @@ func TestGetImpact_MissingArtifactParam(t *testing.T) {
 
 func TestGetImpact_UnknownArtifact(t *testing.T) {
 	w := httptest.NewRecorder()
-	newImpactHandler().GetImpact(w, impactRequest("viewer-a", "&artifact=nope"))
+	newImpactHandler(t).GetImpact(w, impactRequest("viewer-a", "&artifact=nope"))
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 	}
@@ -131,7 +131,7 @@ func TestGetImpact_UnknownArtifact(t *testing.T) {
 // has (I3).
 func TestGetImpact_NotFoundForNonMember(t *testing.T) {
 	w := httptest.NewRecorder()
-	newImpactHandler().GetImpact(w, impactRequest("stranger", "&artifact=R1"))
+	newImpactHandler(t).GetImpact(w, impactRequest("stranger", "&artifact=R1"))
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 	}

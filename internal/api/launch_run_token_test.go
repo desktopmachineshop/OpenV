@@ -324,7 +324,7 @@ func TestARunsLaunchRecordsItsParent(t *testing.T) {
 	}
 
 	t.Run("POST /api/v1/projects/{id}/draft-test-cases", func(t *testing.T) {
-		h, runs := newDraftFixture()
+		h, runs := newDraftFixture(t)
 		h.agentService.(*fakeAgentService).byID["agent-direct"] = &agents.Agent{ID: "agent-direct", OrgID: "org-1",
 			Slug: "helper", WriteMode: agents.WriteModeDirect}
 		pid := "proj-1"

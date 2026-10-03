@@ -97,16 +97,16 @@ func (f *applierLinkService) DeleteLink(id string) error {
 func (f *applierLinkService) GetLinksFrom(string) ([]*links.Link, error) { return nil, nil }
 func (f *applierLinkService) GetLinksTo(string) ([]*links.Link, error)   { return nil, nil }
 
-func newApplierHandler(bus *recordingBus, artSvc *applierArtifactService, linkSvc *applierLinkService) *Handler {
-	return &Handler{
-		artifactService: artSvc,
-		linkService:     linkSvc,
-		chatterService:  &fakeChatterService{},
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+func newApplierHandler(t *testing.T, bus *recordingBus, artSvc *applierArtifactService, linkSvc *applierLinkService) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.artifactService = artSvc
+		h.linkService = linkSvc
+		h.chatterService = &fakeChatterService{}
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
-		}},
-		bus: bus,
-	}
+		}}
+		h.bus = bus
+	})
 }
 
 // TestApplyUpdateArtifactRejectsLinkOps is the #176 no-silent-drop guarantee:
@@ -119,7 +119,7 @@ func TestApplyUpdateArtifactRejectsLinkOps(t *testing.T) {
 	artSvc := &applierArtifactService{byID: map[string]*artifacts.Artifact{
 		"art-1": {ID: "art-1", ProjectID: "proj-1", Type: "requirement", Title: "Req", Version: 1},
 	}}
-	h := newApplierHandler(bus, artSvc, &applierLinkService{})
+	h := newApplierHandler(t, bus, artSvc, &applierLinkService{})
 
 	cases := []struct {
 		name    string
@@ -167,7 +167,7 @@ func TestApplyCreateLinkValidatesLinkType(t *testing.T) {
 		"art-2": {ID: "art-2", ProjectID: "proj-1", Type: "requirement", Title: "To", Version: 1},
 	}}
 	linkSvc := &applierLinkService{}
-	h := newApplierHandler(bus, artSvc, linkSvc)
+	h := newApplierHandler(t, bus, artSvc, linkSvc)
 
 	_, err := h.applyCreateLink(map[string]interface{}{"from_id": "art-1", "to_id": "art-2", "type": "verifies"})
 	if err == nil {
@@ -208,7 +208,7 @@ func TestApplyArtifactAppliersPublishEvents(t *testing.T) {
 	artSvc := &applierArtifactService{byID: map[string]*artifacts.Artifact{
 		"art-1": {ID: "art-1", ProjectID: "proj-1", Type: "requirement", Title: "Req", Version: 2},
 	}}
-	h := newApplierHandler(bus, artSvc, &applierLinkService{})
+	h := newApplierHandler(t, bus, artSvc, &applierLinkService{})
 
 	// create
 	id, err := h.applyCreateArtifact(map[string]interface{}{"project_id": "proj-1", "type": "requirement", "title": "New"})
@@ -268,7 +268,7 @@ func TestApplyLinkAppliersPublishAndAutoVersion(t *testing.T) {
 	linkSvc := &applierLinkService{byID: map[string]*links.Link{
 		"link-1": {ID: "link-1", FromID: "art-1", ToID: "art-2", Type: "verifies"},
 	}}
-	h := newApplierHandler(bus, artSvc, linkSvc)
+	h := newApplierHandler(t, bus, artSvc, linkSvc)
 
 	// create link
 	if _, err := h.applyCreateLink(map[string]interface{}{"from_id": "art-1", "to_id": "art-2", "type": "verifies"}); err != nil {

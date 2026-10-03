@@ -235,7 +235,7 @@ func proposalRun() *agentruns.Run {
 // services the other drives reach.
 func newPayloadFixture(t *testing.T) *payloadFixture {
 	t.Helper()
-	h, logins, invites := newRegistrationHandler("")
+	h, logins, invites := newRegistrationHandler(t, "")
 	// The services are set through HandlerDeps's exported names, which a
 	// rename of Handler's private fields (plan M14) leaves alone.
 	var deps HandlerDeps

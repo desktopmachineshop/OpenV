@@ -18,17 +18,17 @@ func appendLogs(t *testing.T, h *Handler, body string) *httptest.ResponseRecorde
 	return w
 }
 
-func partialTextFixture() (*Handler, *fakeRunService) {
+func partialTextFixture(t *testing.T) (*Handler, *fakeRunService) {
 	svc := &fakeRunService{byID: map[string]*agentruns.Run{
 		"run-1": {ID: "run-1", OrgID: "org-1", Status: agentruns.StatusRunning},
 	}}
-	return &Handler{runService: svc}, svc
+	return newTestHandler(t, func(h *Handler) { h.runService = svc }), svc
 }
 
 // The streaming body carries the whole answer so far alongside the batch, and
 // the handler hands both to the service.
 func TestAppendAgentRunLogsStoresPartialText(t *testing.T) {
-	h, svc := partialTextFixture()
+	h, svc := partialTextFixture(t)
 	body := `{"entries":[{"run_id":"run-1","seq":1,"kind":"text","payload":{"text":"hi"}}],"partial_text":"Your vision statement"}`
 	if w := appendLogs(t, h, body); w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body %q", w.Code, w.Body.String())
@@ -59,7 +59,7 @@ func TestAppendAgentRunLogsStoresPartialText(t *testing.T) {
 // A runner built before streaming posts a bare array. It must keep working —
 // its logs and its heartbeat depend on this endpoint.
 func TestAppendAgentRunLogsAcceptsLegacyArrayBody(t *testing.T) {
-	h, svc := partialTextFixture()
+	h, svc := partialTextFixture(t)
 	body := `[{"run_id":"run-1","seq":1,"kind":"text","payload":{"text":"hi"}}]`
 	if w := appendLogs(t, h, body); w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body %q", w.Code, w.Body.String())
@@ -74,7 +74,7 @@ func TestAppendAgentRunLogsAcceptsLegacyArrayBody(t *testing.T) {
 
 // Garbage is still a bad request, in either shape.
 func TestAppendAgentRunLogsRejectsGarbage(t *testing.T) {
-	h, _ := partialTextFixture()
+	h, _ := partialTextFixture(t)
 	for _, body := range []string{`not json`, `{"entries":"nope"}`, `[{"seq":"one"}]`} {
 		if w := appendLogs(t, h, body); w.Code != http.StatusBadRequest {
 			t.Fatalf("body %q answered %d, want 400", body, w.Code)
@@ -85,7 +85,7 @@ func TestAppendAgentRunLogsRejectsGarbage(t *testing.T) {
 // The pump sends the answer so far, not a delta, so a batch lost on the wire
 // cannot corrupt what the reader sees: the next one repairs it.
 func TestPartialTextIsWholeTextNotDelta(t *testing.T) {
-	h, svc := partialTextFixture()
+	h, svc := partialTextFixture(t)
 	appendLogs(t, h, `{"entries":[],"partial_text":"One"}`)
 	// ...second batch lost...
 	appendLogs(t, h, `{"entries":[],"partial_text":"One two three"}`)

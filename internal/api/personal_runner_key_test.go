@@ -90,7 +90,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 			t.Run(action+" by "+key.name, func(t *testing.T) {
 				svc := &fakeProposalService{byID: map[string]*proposals.Proposal{"pr-1": {ID: "pr-1", RunID: "run-1",
 					ProjectID: project, Op: proposals.OpCreateArtifact, Status: proposals.StatusPending}}}
-				h := proposalTestHandler(svc, map[string]*projects.Project{project: {ID: project, OrgID: org}}, nil)
+				h := proposalTestHandler(t, svc, map[string]*projects.Project{project: {ID: project, OrgID: org}}, nil)
 				h.orgService, h.memberService = roles()
 				r := httptest.NewRequest(http.MethodPost, "/api/v1/proposals/pr-1/"+action, strings.NewReader(`{}`))
 				r = mux.SetURLVars(keyCtx(r, key.holder), map[string]string{"id": "pr-1"})
@@ -104,7 +104,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 			})
 		}
 		t.Run("create an artifact with "+key.name, func(t *testing.T) {
-			h, _ := copyHandler()
+			h, _ := copyHandler(t)
 			h.orgService, h.memberService = roles()
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/artifacts",
 				strings.NewReader(`{"project_id":"p1","type":"requirement","title":"New","body":"x"}`))
@@ -150,8 +150,8 @@ func (f *fakeRepoConnService) ListByProjectForUser(projectID, userID string) ([]
 // personalKeyReadsHandler has two projects of workspace o1: a viewer of p1
 // (val), a member with no role in either (mo) and the workspace's admin
 // (ada), with local paths for val and ada.
-func personalKeyReadsHandler() (*Handler, *fakeRepoConnService) {
-	h := proposalTestHandler(nil, map[string]*projects.Project{
+func personalKeyReadsHandler(t *testing.T) (*Handler, *fakeRepoConnService) {
+	h := proposalTestHandler(t, nil, map[string]*projects.Project{
 		"p1": {ID: "p1", OrgID: "o1", Name: "Pump"},
 		"p2": {ID: "p2", OrgID: "o1", Name: "Valve"},
 	}, map[string]map[string]string{"p1": {"val": members.RoleViewer}})
@@ -195,7 +195,7 @@ func TestPersonalRunnerKeyReadsOnlyWhereItsHolderCan(t *testing.T) {
 	}
 	for _, key := range keys {
 		t.Run("read p1's repository connections with "+key.name, func(t *testing.T) {
-			h, conns := personalKeyReadsHandler()
+			h, conns := personalKeyReadsHandler(t)
 			r := httptest.NewRequest(http.MethodGet, "/api/v1/projects/p1/repo-connections", nil)
 			r = mux.SetURLVars(keyCtx(r, key.holder), map[string]string{"id": "p1"})
 			w := httptest.NewRecorder()
@@ -214,7 +214,7 @@ func TestPersonalRunnerKeyReadsOnlyWhereItsHolderCan(t *testing.T) {
 			}
 		})
 		t.Run("list the workspace's projects with "+key.name, func(t *testing.T) {
-			h, _ := personalKeyReadsHandler()
+			h, _ := personalKeyReadsHandler(t)
 			w := httptest.NewRecorder()
 			h.ListProjects(w, keyCtx(httptest.NewRequest(http.MethodGet, "/api/v1/projects", nil), key.holder))
 			var got []projects.Project
@@ -260,7 +260,7 @@ func TestRunTokenReadsItsProjectsRepoConnections(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, conns := personalKeyReadsHandler()
+			h, conns := personalKeyReadsHandler(t)
 			r := httptest.NewRequest(http.MethodGet, "/api/v1/projects/p1/repo-connections", nil)
 			r = mux.SetURLVars(r.WithContext(context.WithValue(r.Context(), ctxRun, tc.run)), map[string]string{"id": "p1"})
 			w := httptest.NewRecorder()
@@ -281,7 +281,7 @@ func TestRunTokenReadsItsProjectsRepoConnections(t *testing.T) {
 		})
 	}
 	t.Run("the token connects no repository: a run is at most an editor, the route an owner's", func(t *testing.T) {
-		h, _ := personalKeyReadsHandler()
+		h, _ := personalKeyReadsHandler(t)
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/projects/p1/repo-connections",
 			strings.NewReader(`{"name":"x","remote_url":"https://example.com/x.git"}`))
 		run := &agentruns.Run{ID: "run-1", OrgID: "o1", ProjectID: &p1, ClaimedBy: &val}

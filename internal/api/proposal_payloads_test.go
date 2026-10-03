@@ -212,7 +212,7 @@ func (s9ProposalAgents) Get(id string) (*agents.Agent, error) {
 func s9Propose(t *testing.T, op string, target *string, dto interface{}) *proposals.Proposal {
 	t.Helper()
 	repo := &s9ProposalRepo{}
-	h := vvHandler(nil) // K6: reuse a literal, add none (see newS9Fixture)
+	h := vvHandler(t, nil) // K6: reuse vvHandler (see newS9Fixture)
 	h.agentService = s9ProposalAgents{}
 	h.proposalService = proposals.NewDefaultService(repo, proposals.Appliers{})
 	r := httptest.NewRequest(http.MethodPost, "/", nil)

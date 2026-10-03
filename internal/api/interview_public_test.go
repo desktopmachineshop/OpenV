@@ -65,7 +65,7 @@ func (f *fakeInterviewService) GetTranscript(sessionID string) ([]*interviews.Me
 	return f.messages, nil
 }
 
-func newInterviewTestHandler() (*Handler, *fakeInterviewService) {
+func newInterviewTestHandler(t *testing.T) (*Handler, *fakeInterviewService) {
 	fake := &fakeInterviewService{
 		// AgentID nil => launchInterviewTurn fails fast and the handler
 		// appends the "interviewer unavailable" system note instead of
@@ -73,13 +73,13 @@ func newInterviewTestHandler() (*Handler, *fakeInterviewService) {
 		interview: &interviews.Interview{ID: "int-1", ProjectID: "proj-1", Name: "Test Interview", Status: interviews.InterviewStatusOpen},
 		invite:    &interviews.Invite{ID: "inv-1", InterviewID: "int-1"},
 	}
-	h := &Handler{
-		interviewService:       fake,
-		sseHub:                 NewSSEHub(),
-		interviewMsgLimiter:    newRateLimiter(defaultInterviewMsgBurst, defaultInterviewMsgRefill),
-		interviewIPLimiter:     newRateLimiter(defaultInterviewIPBurst, defaultInterviewIPRefill),
-		interviewStreamLimiter: newRateLimiter(defaultInterviewStreamBurst, defaultInterviewStreamRefill),
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.interviewService = fake
+		h.sseHub = NewSSEHub()
+		h.interviewMsgLimiter = newRateLimiter(defaultInterviewMsgBurst, defaultInterviewMsgRefill)
+		h.interviewIPLimiter = newRateLimiter(defaultInterviewIPBurst, defaultInterviewIPRefill)
+		h.interviewStreamLimiter = newRateLimiter(defaultInterviewStreamBurst, defaultInterviewStreamRefill)
+	})
 	return h, fake
 }
 
@@ -93,7 +93,7 @@ func postMessage(h *Handler, token string) *httptest.ResponseRecorder {
 }
 
 func TestPublicInterviewMessageRateLimited(t *testing.T) {
-	h, fake := newInterviewTestHandler()
+	h, fake := newInterviewTestHandler(t)
 
 	for i := 0; i < defaultInterviewMsgBurst; i++ {
 		w := postMessage(h, "good-token")
@@ -132,7 +132,7 @@ func TestPublicInterviewMessageRateLimited(t *testing.T) {
 }
 
 func TestPublicInterviewMessageInvalidToken(t *testing.T) {
-	h, _ := newInterviewTestHandler()
+	h, _ := newInterviewTestHandler(t)
 	w := postMessage(h, "bogus")
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("invalid token: status = %d, want 404", w.Code)
@@ -140,7 +140,7 @@ func TestPublicInterviewMessageInvalidToken(t *testing.T) {
 }
 
 func TestPublicInterviewIntroDoesNotCreateSession(t *testing.T) {
-	h, fake := newInterviewTestHandler()
+	h, fake := newInterviewTestHandler(t)
 
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/public/interviews/good-token", nil)
 	r = mux.SetURLVars(r, map[string]string{"token": "good-token"})
@@ -169,7 +169,7 @@ func TestPublicInterviewIntroDoesNotCreateSession(t *testing.T) {
 }
 
 func TestPublicInterviewIntroPerIPRateLimited(t *testing.T) {
-	h, _ := newInterviewTestHandler()
+	h, _ := newInterviewTestHandler(t)
 
 	intro := func() *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodGet, "/api/v1/public/interviews/good-token", nil)
@@ -215,7 +215,7 @@ func streamRequest(ip string) *http.Request {
 // client that reconnects through network hiccups must neither be locked out
 // by intro page loads nor eat the intro budget.
 func TestPublicInterviewStreamUsesOwnBucket(t *testing.T) {
-	h, _ := newInterviewTestHandler()
+	h, _ := newInterviewTestHandler(t)
 	const ip = "203.0.113.5:4444"
 
 	// Exhaust the intro bucket for this IP.
@@ -260,7 +260,7 @@ func TestPublicInterviewStreamUsesOwnBucket(t *testing.T) {
 // — internal error text must never reach the public.
 func TestPublicInterviewMessageInternalErrorIsSanitized(t *testing.T) {
 	const internalDetail = "pq: connection refused host=db.internal"
-	h, fake := newInterviewTestHandler()
+	h, fake := newInterviewTestHandler(t)
 	fake.startErr = errors.New(internalDetail)
 
 	w := postMessage(h, "good-token")

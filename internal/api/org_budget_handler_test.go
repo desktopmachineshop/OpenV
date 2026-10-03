@@ -21,13 +21,13 @@ func updateOrgReq(userID, orgID, body string) *http.Request {
 	return mux.SetURLVars(r, map[string]string{"id": orgID})
 }
 
-func budgetFixture() *Handler {
+func budgetFixture(t *testing.T) *Handler {
 	const orgID = "org-1"
-	return &Handler{
-		orgService: &fakeOrgService{roles: map[string]map[string]string{
+	return newTestHandler(t, func(h *Handler) {
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 			orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
-		}},
-	}
+		}}
+	})
 }
 
 // TestUpdateOrgBudgetAuthz locks in the admin-only budget write: admins may
@@ -48,7 +48,7 @@ func TestUpdateOrgBudgetAuthz(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := budgetFixture()
+			h := budgetFixture(t)
 			w := httptest.NewRecorder()
 			h.UpdateOrg(w, updateOrgReq(tc.userID, orgID, `{"monthly_budget_usd": 250.5}`))
 			if w.Code != tc.wantCode {
@@ -74,7 +74,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 	const orgID = "org-1"
 
 	t.Run("null clears the budget", func(t *testing.T) {
-		h := budgetFixture()
+		h := budgetFixture(t)
 		w := httptest.NewRecorder()
 		h.UpdateOrg(w, updateOrgReq("admin", orgID, `{"monthly_budget_usd": null}`))
 		if w.Code != http.StatusOK {
@@ -87,7 +87,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 	})
 
 	t.Run("a plain rename never touches the budget", func(t *testing.T) {
-		h := budgetFixture()
+		h := budgetFixture(t)
 		w := httptest.NewRecorder()
 		h.UpdateOrg(w, updateOrgReq("admin", orgID, `{"name": "Renamed"}`))
 		if w.Code != http.StatusOK {
@@ -103,7 +103,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 	})
 
 	t.Run("a non-numeric budget is a 400", func(t *testing.T) {
-		h := budgetFixture()
+		h := budgetFixture(t)
 		w := httptest.NewRecorder()
 		h.UpdateOrg(w, updateOrgReq("admin", orgID, `{"monthly_budget_usd": "lots"}`))
 		if w.Code != http.StatusBadRequest {
@@ -116,7 +116,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 	})
 
 	t.Run("a negative budget surfaces the validation error as 400", func(t *testing.T) {
-		h := budgetFixture()
+		h := budgetFixture(t)
 		h.orgService.(*fakeOrgService).budgetErr = orgs.ErrInvalidBudget
 		w := httptest.NewRecorder()
 		h.UpdateOrg(w, updateOrgReq("admin", orgID, `{"monthly_budget_usd": -5}`))
@@ -159,7 +159,7 @@ func TestUpdateOrgRefusedRequestChangesNothing(t *testing.T) {
 			if tc.tiers {
 				enforceTiers(t)
 			}
-			h := budgetFixture()
+			h := budgetFixture(t)
 			fake := h.orgService.(*fakeOrgService)
 			fake.plan = orgs.PlanSingle
 			w := httptest.NewRecorder()
@@ -177,7 +177,7 @@ func TestUpdateOrgRefusedRequestChangesNothing(t *testing.T) {
 
 	// The same parts, each valid on a plan that may choose its channel, are
 	// all written, in one request.
-	h := budgetFixture()
+	h := budgetFixture(t)
 	fake := h.orgService.(*fakeOrgService)
 	fake.plan = orgs.PlanBusiness
 	w := httptest.NewRecorder()

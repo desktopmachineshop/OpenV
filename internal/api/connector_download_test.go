@@ -19,7 +19,7 @@ import (
 // legacy zip only as a fallback, and an actionable 404 otherwise.
 func TestDownloadConnectorServesTheSingleExecutable(t *testing.T) {
 	dir := t.TempDir()
-	h := &Handler{connectorDistDir: dir}
+	h := newTestHandler(t, func(h *Handler) { h.connectorDistDir = dir })
 
 	// Nothing built yet: say so, and say what to run — never a 500.
 	w := httptest.NewRecorder()

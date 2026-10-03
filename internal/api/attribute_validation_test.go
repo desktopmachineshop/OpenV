@@ -25,12 +25,12 @@ func (erroringAttributeService) EffectiveForProject(orgID, projectID string) ([]
 // answer a sanitized 500), because required-attribute enforcement only matters
 // on create.
 func TestValidateArtifactAttributesFailDirection(t *testing.T) {
-	h := &Handler{
-		attributeService: erroringAttributeService{},
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+	h := newTestHandler(t, func(h *Handler) {
+		h.attributeService = erroringAttributeService{}
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
-		}},
-	}
+		}}
+	})
 	attrs := map[string]interface{}{"priority": "high"}
 
 	// Update: fail open — a transient catalog error must not block a legit edit.
@@ -53,7 +53,7 @@ func TestValidateArtifactAttributesFailDirection(t *testing.T) {
 // TestValidateArtifactAttributesNoServiceNoop: with no attribute service wired,
 // both directions are a clean no-op regardless of enforcement.
 func TestValidateArtifactAttributesNoServiceNoop(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 	if err := h.validateArtifactAttributes("proj-1", "requirement", map[string]interface{}{"a": 1}, true); err != nil {
 		t.Errorf("no attribute service should be a no-op, got %v", err)
 	}

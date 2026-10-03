@@ -33,17 +33,17 @@ func (f *fakeProjectSessionLister) ListProjectSessions(projectID string, limit i
 	return f.sessions, nil
 }
 
-func newProjectSessionsHandler(fake *fakeProjectSessionLister) *Handler {
-	return &Handler{
-		interviewService: fake,
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+func newProjectSessionsHandler(t *testing.T, fake *fakeProjectSessionLister) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.interviewService = fake
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
-		}},
-		orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"viewer": members.RoleViewer},
-		}},
-	}
+		}}
+	})
 }
 
 func getProjectSessions(h *Handler, userID, query string) *httptest.ResponseRecorder {
@@ -69,7 +69,7 @@ func TestListProjectInterviewSessions(t *testing.T) {
 
 	t.Run("viewer gets sessions across interviews", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{sessions: sessions}
-		w := getProjectSessions(newProjectSessionsHandler(fake), "viewer", "?limit=7")
+		w := getProjectSessions(newProjectSessionsHandler(t, fake), "viewer", "?limit=7")
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 		}
@@ -102,7 +102,7 @@ func TestListProjectInterviewSessions(t *testing.T) {
 
 	t.Run("missing limit defaults to zero for the service to fill", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{}
-		if w := getProjectSessions(newProjectSessionsHandler(fake), "viewer", ""); w.Code != http.StatusOK {
+		if w := getProjectSessions(newProjectSessionsHandler(t, fake), "viewer", ""); w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 		}
 		if fake.gotLimit != 0 {
@@ -112,7 +112,7 @@ func TestListProjectInterviewSessions(t *testing.T) {
 
 	t.Run("empty result encodes as an array, not null", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{}
-		w := getProjectSessions(newProjectSessionsHandler(fake), "viewer", "")
+		w := getProjectSessions(newProjectSessionsHandler(t, fake), "viewer", "")
 		if body := w.Body.String(); body != "[]\n" {
 			t.Fatalf("body = %q, want an empty JSON array", body)
 		}
@@ -120,7 +120,7 @@ func TestListProjectInterviewSessions(t *testing.T) {
 
 	t.Run("non-integer limit gets 400", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{}
-		w := getProjectSessions(newProjectSessionsHandler(fake), "viewer", "?limit=lots")
+		w := getProjectSessions(newProjectSessionsHandler(t, fake), "viewer", "?limit=lots")
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d, want 400 (body %q)", w.Code, w.Body.String())
 		}
@@ -131,7 +131,7 @@ func TestListProjectInterviewSessions(t *testing.T) {
 
 	t.Run("non-member gets 404", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{sessions: sessions}
-		w := getProjectSessions(newProjectSessionsHandler(fake), "stranger", "")
+		w := getProjectSessions(newProjectSessionsHandler(t, fake), "stranger", "")
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 		}
@@ -142,7 +142,7 @@ func TestListProjectInterviewSessions(t *testing.T) {
 
 	t.Run("unauthenticated gets 401", func(t *testing.T) {
 		fake := &fakeProjectSessionLister{sessions: sessions}
-		w := getProjectSessions(newProjectSessionsHandler(fake), "", "")
+		w := getProjectSessions(newProjectSessionsHandler(t, fake), "", "")
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("status = %d, want 401 (body %q)", w.Code, w.Body.String())
 		}

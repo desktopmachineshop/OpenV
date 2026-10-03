@@ -92,7 +92,10 @@ func notificationReq(method, target, body string, user *users.User) *http.Reques
 // service.
 func TestNotificationEndpointsRequireUser(t *testing.T) {
 	svc := &fakeNotificationService{}
-	h := &Handler{notificationService: svc, sseHub: NewSSEHub()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.notificationService = svc
+		h.sseHub = NewSSEHub()
+	})
 
 	calls := []struct {
 		name string
@@ -129,7 +132,7 @@ func TestListNotificationsScopedToSessionUser(t *testing.T) {
 		list:   []*notifications.Notification{{ID: "n-1", UserID: "u-1", Title: "t"}},
 		unread: 4,
 	}
-	h := &Handler{notificationService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.notificationService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -169,7 +172,7 @@ func TestListNotificationsScopedToSessionUser(t *testing.T) {
 // the service (the SQL scopes the update), and validates the body.
 func TestMarkReadScopedToSessionUser(t *testing.T) {
 	svc := &fakeNotificationService{unread: 1}
-	h := &Handler{notificationService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.notificationService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -202,7 +205,7 @@ func TestMarkReadScopedToSessionUser(t *testing.T) {
 // from that number, and a cleared row never counts towards it.
 func TestClearNotificationsArchivesForSessionUser(t *testing.T) {
 	svc := &fakeNotificationService{unread: 4}
-	h := &Handler{notificationService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.notificationService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -237,7 +240,7 @@ func TestClearNotificationsArchivesForSessionUser(t *testing.T) {
 // destructive call, and it is keyed by the session user like everything else.
 func TestDeleteClearedNotificationsScopedToSessionUser(t *testing.T) {
 	svc := &fakeNotificationService{unread: 0}
-	h := &Handler{notificationService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.notificationService = svc })
 
 	w := httptest.NewRecorder()
 	h.DeleteClearedNotifications(w, notificationReq(http.MethodDelete, "/api/v1/notifications/cleared", "", &users.User{ID: "u-1"}))
@@ -261,7 +264,7 @@ func TestDeleteClearedNotificationsScopedToSessionUser(t *testing.T) {
 // serving the first page again.
 func TestListNotificationsHonoursViewAndCursor(t *testing.T) {
 	svc := &fakeNotificationService{}
-	h := &Handler{notificationService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.notificationService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -298,7 +301,7 @@ func TestListNotificationsHonoursViewAndCursor(t *testing.T) {
 // cannot be used to discover that a notification exists.
 func TestFlagNotification(t *testing.T) {
 	svc := &fakeNotificationService{flagFound: true}
-	h := &Handler{notificationService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.notificationService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
