@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { UserSettingsPanel } from './UserSettingsPanel';
 import { defaultWorkspaceAPI } from '../api/client';
 
@@ -16,23 +17,22 @@ vi.mock('react-router-dom', () => ({
 // Plain functions, not vi.fn(): mocks are cleared between tests, which
 // would strip a factory-set implementation and leave the panel's mount
 // effects awaiting undefined (the push test explains the same trap).
-vi.mock('../api/client', () => ({
-  notificationPrefsAPI: {
-    get: () => Promise.resolve({ data: { email_notifications: true, push_notifications: false } }),
-    update: () => Promise.resolve({ data: {} }),
-  },
-  providerSettingsAPI: { list: () => Promise.resolve({ data: [] }) },
-  pushAPI: {
-    config: () => Promise.resolve({ data: { enabled: false } }),
-    list: () => Promise.resolve({ data: { subscriptions: [] } }),
-    subscribe: () => Promise.resolve({ data: {} }),
-    unsubscribe: () => Promise.resolve({ data: {} }),
-  },
-  DEFAULT_MIN_PASSWORD_LENGTH: 8,
-  passwordAPI: { change: vi.fn() },
-  authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
-  defaultWorkspaceAPI: { get: vi.fn(), set: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    notificationPrefsAPI: {
+      get: () => Promise.resolve({ data: { email_notifications: true, push_notifications: false } }),
+      update: () => Promise.resolve({ data: {} }),
+    },
+    providerSettingsAPI: { list: () => Promise.resolve({ data: [] }) },
+    pushAPI: {
+      config: () => Promise.resolve({ data: { enabled: false } }),
+      list: () => Promise.resolve({ data: { subscriptions: [] } }),
+      subscribe: () => Promise.resolve({ data: {} }),
+      unsubscribe: () => Promise.resolve({ data: {} }),
+    },
+    authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
+  })
+);
 vi.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
 vi.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
 vi.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));

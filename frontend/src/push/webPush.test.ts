@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { mockApi } from '../test/mockApi';
 import {
   NO_SERVICE_WORKER_MESSAGE,
   SERVICE_WORKER_READY_TIMEOUT_MS,
@@ -14,16 +15,8 @@ import {
 } from './webPush';
 import { pushAPI } from '../api/client';
 
-// The client module builds an axios instance at import time, so it is mocked
-// wholesale; only the push endpoints matter here.
-vi.mock('../api/client', () => ({
-  pushAPI: {
-    config: vi.fn(),
-    list: vi.fn(),
-    subscribe: vi.fn(),
-    unsubscribe: vi.fn(),
-  },
-}));
+// Every client method is stubbed; only the push endpoints matter here.
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 const api = vi.mocked(pushAPI);
 
