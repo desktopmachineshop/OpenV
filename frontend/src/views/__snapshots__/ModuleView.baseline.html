@@ -1,0 +1,155 @@
+<div style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+<div style="display: flex; align-items: center; gap: 10px; padding: 16px 20px 12px; flex-wrap: wrap; flex-shrink: 0;">
+<h2 style="color: var(--text); margin: 0px;">Requirements</h2>
+<div style="flex: 1 1 0%;">
+</div>
+<select title="Select baseline" style="height: 36px; padding: 0px 10px; border-radius: 4px; border: 1px solid var(--neutral-mid); font-size: 12px; background-color: var(--surface); cursor: pointer; width: auto; min-width: 180px; max-width: 100%;">
+<option value="live">Live Project</option>
+<option value="bl-2">Design freeze · 2026-03-15 · Dana Reyes</option>
+<option value="bl-1">Kickoff · 2026-01-03</option>
+</select>
+<button style="height: 36px; padding: 0px 12px; background-color: var(--accent); color: var(--accent-fg); border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Compare this baseline against another baseline or the live project">Compare</button>
+<button style="height: 36px; padding: 0px 10px; background-color: var(--danger); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Delete selected baseline">🗑</button>
+<button style="height: 36px; padding: 0px 12px; background-color: var(--success-bright); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;">Capture Baseline</button>
+<button style="height: 36px; padding: 0px 12px; background-color: var(--neutral-mid); color: white; border: medium; border-radius: 4px; cursor: not-allowed; font-size: 12px;" title="Draft test cases for the selected requirement (as proposals)" disabled="">🧪 Draft test cases</button>
+<button style="height: 36px; padding: 0px 12px; background-color: var(--accent-alt); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Download this project — choose a format, sections and attachments">↓ Download</button>
+</div>
+<div style="display: flex; gap: 0px; padding-left: 20px; padding-right: 20px; padding-bottom: 10px; flex: 1 1 0%; min-height: 0px; overflow: hidden;">
+<div style="width: 400px; min-width: 200px; max-width: 800px; display: flex; flex-direction: column; overflow-x: hidden; overflow-y: hidden; min-height: 0px; padding-right: 10px;">
+<div style="margin-bottom: 20px;">
+<label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--text);">Filter and Search:</label>
+<div style="display: flex; gap: 8px; align-items: center;">
+<div style="position: relative; flex: 1 1 0%;">
+<input type="text" placeholder="Search..." style="width: 100%; padding: 8px 160px 8px 8px; border-radius: 4px; border: 1px solid var(--neutral-mid); font-size: 14px; background-color: var(--surface);" value="">
+<div style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); font-size: 12px; color: var(--text-muted); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;" title="No filters applied">No filters applied</div>
+</div>
+<button class="button-secondary" style="padding: 6px 10px; font-size: 14px;" title="Toggle filters">⚙</button>
+</div>
+<div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+<button class="button-secondary" style="padding: 6px 10px; font-size: 12px;">Collapse all</button>
+<button class="button-secondary" style="padding: 6px 10px; font-size: 12px;">Expand all</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; flex: 1 1 0%; min-height: 0px;">
+<h3 style="margin-top: 0px;">Artifacts</h3>
+<div style="overflow-y: auto; flex: 1 1 0%; min-height: 0px;">
+<div draggable="false" style="position: relative; padding: 12px; border-bottom: 1px solid var(--border-soft); cursor: pointer; background-color: transparent; transition: background-color 0.2s; box-shadow: none; outline: none; opacity: 1;">
+<div style="display: flex; justify-content: space-between;">
+<div style="flex: 1 1 0%;">
+<div style="font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px;">
+<button aria-label="Collapse children" style="border: medium; background: transparent; padding: 0px; cursor: pointer; color: var(--text-muted); font-size: 14px; width: 32px; min-height: 32px; margin: -6px -9px; text-align: center;" title="Collapse">▾</button>Pumping</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+<code style="background: var(--surface-alt); border: 1px solid var(--border-soft); border-radius: 3px; padding: 0px 4px; font-size: 12px;" title="Stable reference — cite this; it never changes or gets reused">SEC-1</code>
+<span>heading • v1<span style="margin-left: 6px; color: var(--neutral);">(2)</span>
+</span>
+</div>
+</div>
+</div>
+</div>
+<div draggable="false" style="position: relative; padding: 12px 12px 12px 32px; border-bottom: 1px solid var(--border-soft); cursor: pointer; background-color: var(--tint-blue); transition: background-color 0.2s; box-shadow: none; outline: none; opacity: 1;">
+<div style="display: flex; justify-content: space-between;">
+<div style="flex: 1 1 0%;">
+<div style="font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px;">
+<span style="color: var(--neutral); font-size: 12px;">└</span>The pump shall start within 5 seconds</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+<code style="background: var(--surface-alt); border: 1px solid var(--border-soft); border-radius: 3px; padding: 0px 4px; font-size: 12px;" title="Stable reference — cite this; it never changes or gets reused">REQ-1</code>
+<span>requirement • v2</span>
+</div>
+</div>
+</div>
+</div>
+<div draggable="false" style="position: relative; padding: 12px 12px 12px 32px; border-bottom: 1px solid var(--border-soft); cursor: pointer; background-color: transparent; transition: background-color 0.2s; box-shadow: none; outline: none; opacity: 1;">
+<div style="display: flex; justify-content: space-between;">
+<div style="flex: 1 1 0%;">
+<div style="font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px;">
+<span style="color: var(--neutral); font-size: 12px;">└</span>The pump shall log faults</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+<code style="background: var(--surface-alt); border: 1px solid var(--border-soft); border-radius: 3px; padding: 0px 4px; font-size: 12px;" title="Stable reference — cite this; it never changes or gets reused">REQ-2</code>
+<span>requirement • v1</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div style="width: 10px; cursor: col-resize; background-color: transparent; border-left: 1px solid var(--border); border-right: 1px solid var(--border); transition: background-color 0.2s; flex-shrink: 0;">
+</div>
+<div style="display: flex; flex: 1 1 0%; gap: 0px; min-width: 0px; overflow: hidden;">
+<div role="region" aria-label="Artifact document" style="flex: 1 1 0%; min-width: 0px; overflow: auto; display: flex; flex-direction: column; padding-left: 10px; padding-right: 5px;">
+<div class="measure" style="width: 100%;">
+<div class="card" style="margin-bottom: 20px;">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;" aria-label="Artifact navigation" role="group">
+<button type="button" class="button-secondary" style="min-width: 28px; min-height: 28px; padding: 0px; line-height: 1; font-size: 16px;" aria-label="Previous artifact" title="Previous artifact (K)">‹</button>
+<button type="button" class="button-secondary" style="min-width: 28px; min-height: 28px; padding: 0px; line-height: 1; font-size: 16px;" aria-label="Next artifact" title="Next artifact (J)">›</button>
+<span aria-hidden="true" style="color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums;">2 of 3</span>
+<span class="sr-only" aria-live="polite" aria-atomic="true">REQ-1 The pump shall start within 5 seconds, 2 of 3</span>
+</div>
+<div style="display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 20px;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<h3 style="margin: 0px 0px 8px;">
+<code style="margin-right: 8px; font-size: 0.8em; color: var(--text-muted); background: var(--surface-alt); border: 1px solid var(--border-soft); border-radius: 3px; padding: 0px 5px;" title="Stable reference — unique in this project and never reissued">REQ-1</code>The pump shall start within 5 seconds</h3>
+<div style="display: flex; gap: 8px 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+<span style="display: inline-block; background-color: var(--accent); color: var(--accent-fg); padding: 4px 8px; border-radius: 3px; font-size: 12px; white-space: nowrap;">requirement</span>
+<span title="Review status: Draft" style="display: inline-block; background-color: var(--neutral); color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px; white-space: nowrap;">Draft</span>
+<span style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">Version 2</span>
+<span style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">• 1 total</span>
+</div>
+<div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+<button style="background-color: transparent; color: var(--warning); border: 1px solid var(--warning); padding: 6px 12px; min-height: 36px; border-radius: 3px; cursor: pointer; font-size: 12px; opacity: 1;">Submit for review</button>
+</div>
+<p style="margin: 0px; font-size: 12px; color: var(--text-muted);">UID: <code style="background-color: var(--neutral-soft); padding: 2px 6px; border-radius: 3px; word-break: break-all;">req-1</code>
+</p>
+</div>
+<div style="display: flex; gap: 8px; flex-direction: column; flex-wrap: wrap;">
+<button style="background-color: var(--accent); color: var(--accent-fg); border: medium; padding: 6px 12px; min-height: 36px; border-radius: 3px; cursor: pointer; font-size: 12px; opacity: 1;">Edit</button>
+<button style="background-color: var(--danger); color: white; border: medium; padding: 6px 12px; min-height: 36px; border-radius: 3px; cursor: pointer; font-size: 12px; opacity: 1;">Delete</button>
+<button style="background-color: var(--success); color: white; border: medium; padding: 6px 12px; min-height: 36px; border-radius: 3px; cursor: pointer; font-size: 12px;">History</button>
+</div>
+</div>
+</div>
+<div class="card">
+<h3>The pump shall start within 5 seconds</h3>
+<div style="margin-bottom: 15px;">
+<span style="display: inline-block; background-color: var(--accent); color: var(--accent-fg); padding: 4px 8px; border-radius: 3px; font-size: 12px; margin-right: 10px;">requirement</span>
+<span style="font-size: 12px; color: var(--text-muted);">Version 2</span>
+<a title="Trace what a change to this artifact would affect" style="margin-left: 10px; font-size: 12px; color: var(--accent-strong); text-decoration: none; display: inline-block; padding: 9px 0px;" href="/projects/p1/impact?artifact=req-1" data-discover="true">Show impact →</a>
+</div>
+<div style="margin-bottom: 15px;">
+<strong>Description:</strong>
+<div style="margin-top: 8px;">
+<div class="markdown-content">
+<p>The pump shall start within 5 seconds.</p>
+</div>
+</div>
+</div>
+<div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border);">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+<h4 style="margin: 0px;">Quality</h4>
+<span title="Requirement quality: 82/100 (Good) · 1 finding" aria-label="Requirement quality: 82/100 (Good) · 1 finding" style="display: inline-flex; align-items: center; gap: 4px; background-color: var(--tint-green); border: 1px solid var(--tint-green-border); color: var(--success); border-radius: 10px; padding: 1px 7px; font-size: 12px; font-weight: 700; line-height: 1.6; white-space: nowrap;">Q 82</span>
+<span style="font-size: 12px; color: var(--text-muted);">1 finding</span>
+</div>
+<ul style="list-style: none; margin: 0px; padding: 0px; display: flex; flex-direction: column; gap: 8px;">
+<li style="border-left: 3px solid var(--warning-text); background-color: var(--surface-alt); border-radius: 2px; padding: 8px 10px; font-size: 12px;">
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+<strong style="color: var(--warning-text);">vague-term</strong>
+<span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted);">warning</span>
+</div>
+<div style="color: var(--text-body);">Finding 1</div>
+<code style="display: inline-block; margin-top: 4px; font-size: 12px; background-color: var(--surface-inset); padding: 1px 5px; border-radius: 2px; color: var(--text);">The</code>
+</li>
+</ul>
+</div>
+<div style="margin-top: 15px; font-size: 12px; color: var(--text-muted);">
+<p>Created: 2026-01-02T08:00:00.000Z</p>
+<p>Updated: 2026-01-10T10:00:00.000Z</p>
+</div>
+</div>
+</div>
+</div>
+<button type="button" class="panel-edge-strip" aria-label="Show the notes panel" aria-expanded="false" title="Show the notes panel (Auto-hide) — the button inside the panel changes the mode" style="width: 24px; min-width: 24px; border-left: 1px solid var(--border); border-top: medium; border-right: medium; border-bottom: medium; background: var(--surface-alt); cursor: pointer; display: flex; align-items: flex-start; justify-content: center; padding: 12px 0px 0px; color: var(--text-muted);">
+<span class="panel-edge-strip-knob" aria-hidden="true">‹</span>
+</button>
+</div>
+</div>
+</div>
