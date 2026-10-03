@@ -363,7 +363,7 @@
     "OPENV_LIMITS": {
       "area": "tenancy-identity",
       "read_by": "server",
-      "text": "A JSON object of workspace limit values that overrides any limit across the deployment, such as `{\"max_upload_mb\": 1024}`. An unknown key or a value that is not a number stops the server."
+      "text": "A JSON object of workspace limit values that overrides any limit across the deployment, such as `{\"max_upload_mb\": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server."
     },
     "OPENV_LOG_LEVEL": {
       "area": "platform-http",

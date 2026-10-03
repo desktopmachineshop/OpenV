@@ -528,15 +528,17 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q16. The wizard and the notes panel build different artifact text
 
-- **Where:** `GuidedWizard.tsx` materialises artifacts from its own section
-  table and templates (`frontend/src/views/GuidedWizard.tsx:63`, bodies at
-  `:781`, `:817`); the notes panel's path uses
-  `frontend/src/components/wizard/suggestionDrafts.ts` (bodies at `:171-194`,
-  sections at `:290`).
-- **Pinned by, named as:** F5 golden strings *(planned)*, which keep both
-  variants as named exports of `artifactTemplates.ts`. Pain point
-  fe-suite-org-3.
-- **Pinned today:** nothing beyond this entry.
+- **Where:** since F5 (#471) both variants are named exports of
+  `frontend/src/components/wizard/artifactTemplates.ts`: the wizard's
+  `wizard*Text` functions, which `GuidedWizard.tsx`'s Next handlers call
+  with the entry in its form, and the notes panel's `notesPanel*Text`
+  functions, which `planSuggestion` in `suggestionDrafts.ts` calls. They
+  differ in which fields are trimmed and which titles are cut.
+- **Pinned by, named as:** no golden-string test of its own; F5 kept the
+  strings byte-identical. Pain point fe-suite-org-3.
+- **Pinned today:** S16b's `GuidedWizard.api.json` snapshot, the payload of
+  every `artifactAPI.create` the wizard sends, and `suggestionDrafts.test.ts`
+  for the notes panel's drafts.
 
 ## Q17. The purge list has gaps not covered by cascade
 

@@ -96,7 +96,7 @@ buckets live in the API process, so they assume a single API instance.
 | `OPENV_INVITE_PREVIEW_BURST` | server | `60` | Invite-link previews one client address may make at once; share-link lookups and accepts spend the same bucket (contract quirk Q18). |
 | `OPENV_INVITE_PREVIEW_REFILL_PER_HOUR` | server | `240` | Invite-link previews per client address per hour, steady state. |
 | `OPENV_INVITE_REFILL_PER_HOUR` | server | `60` | Workspace invitations per inviting account per hour, steady state. |
-| `OPENV_LIMITS` | server | none | A JSON object of workspace limit values that overrides any limit across the deployment, such as `{"max_upload_mb": 1024}`. An unknown key or a value that is not a number stops the server. |
+| `OPENV_LIMITS` | server | none | A JSON object of workspace limit values that overrides any limit across the deployment, such as `{"max_upload_mb": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server. |
 | `OPENV_OIDC_CLIENT_ID` | server | none | OIDC single sign-on's client id. |
 | `OPENV_OIDC_CLIENT_SECRET` | server | none | OIDC single sign-on's client secret. A credential, used exactly as set. |
 | `OPENV_OIDC_ISSUER` | server | none | Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured. |
