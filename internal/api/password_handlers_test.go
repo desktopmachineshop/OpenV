@@ -41,16 +41,16 @@ func passwordReq(body, cookie string, user *users.User) *http.Request {
 	return r
 }
 
-func newPasswordHandler(err error) (*Handler, *fakePasswordService) {
+func newPasswordHandler(t *testing.T, err error) (*Handler, *fakePasswordService) {
 	svc := &fakePasswordService{err: err}
-	return &Handler{
-		userService:        svc,
-		authAccountLimiter: newRateLimiter(100, 1),
-	}, svc
+	return newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.authAccountLimiter = newRateLimiter(100, 1)
+	}), svc
 }
 
 func TestChangePasswordSucceeds(t *testing.T) {
-	h, svc := newPasswordHandler(nil)
+	h, svc := newPasswordHandler(t, nil)
 	user := &users.User{ID: "u-1", Email: "owner@example.com"}
 
 	rec := httptest.NewRecorder()
@@ -81,7 +81,7 @@ func TestChangePasswordStatusPerDomainError(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, _ := newPasswordHandler(tc.err)
+			h, _ := newPasswordHandler(t, tc.err)
 			rec := httptest.NewRecorder()
 			h.ChangePassword(rec, passwordReq(`{"current_password":"x","new_password":"y"}`, "c",
 				&users.User{ID: "u-1", Email: "owner@example.com"}))
@@ -100,7 +100,7 @@ func TestChangePasswordStatusPerDomainError(t *testing.T) {
 }
 
 func TestChangePasswordRefusesAnAnonymousCaller(t *testing.T) {
-	h, svc := newPasswordHandler(nil)
+	h, svc := newPasswordHandler(t, nil)
 	rec := httptest.NewRecorder()
 	h.ChangePassword(rec, passwordReq(`{"current_password":"x","new_password":"y"}`, "c", nil))
 	if rec.Code != http.StatusUnauthorized {
@@ -115,7 +115,10 @@ func TestChangePasswordRefusesAnAnonymousCaller(t *testing.T) {
 // borrowed browser cannot brute-force it.
 func TestChangePasswordThrottlesGuesses(t *testing.T) {
 	svc := &fakePasswordService{err: users.ErrPasswordIncorrect}
-	h := &Handler{userService: svc, authAccountLimiter: newRateLimiter(3, 1)}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.authAccountLimiter = newRateLimiter(3, 1)
+	})
 	user := &users.User{ID: "u-1", Email: "Owner@Example.com"}
 
 	for i := 0; i < 3; i++ {

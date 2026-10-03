@@ -102,11 +102,11 @@ func loginReq(email, password string) *http.Request {
 }
 
 func TestLoginThrottlesAnAccountAfterRepeatedFailures(t *testing.T) {
-	h := &Handler{
-		userService:        &fakeLoginService{},
-		authIPLimiter:      newRateLimiter(100, 1),
-		authAccountLimiter: newRateLimiter(3, 1),
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = &fakeLoginService{}
+		h.authIPLimiter = newRateLimiter(100, 1)
+		h.authAccountLimiter = newRateLimiter(3, 1)
+	})
 	for i := 0; i < 3; i++ {
 		rec := httptest.NewRecorder()
 		h.Login(rec, loginReq("Dave@Example.com", "wrong"))
@@ -133,11 +133,11 @@ func TestLoginThrottlesAnAccountAfterRepeatedFailures(t *testing.T) {
 }
 
 func TestLoginSuccessDoesNotChargeTheAccount(t *testing.T) {
-	h := &Handler{
-		userService:        &fakeLoginService{},
-		authIPLimiter:      newRateLimiter(100, 1),
-		authAccountLimiter: newRateLimiter(2, 1),
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = &fakeLoginService{}
+		h.authIPLimiter = newRateLimiter(100, 1)
+		h.authAccountLimiter = newRateLimiter(2, 1)
+	})
 	for i := 0; i < 10; i++ {
 		rec := httptest.NewRecorder()
 		h.Login(rec, loginReq("dave@example.com", "right"))
@@ -148,11 +148,11 @@ func TestLoginSuccessDoesNotChargeTheAccount(t *testing.T) {
 }
 
 func TestLoginThrottlesAnAddressAcrossAccounts(t *testing.T) {
-	h := &Handler{
-		userService:        &fakeLoginService{},
-		authIPLimiter:      newRateLimiter(2, 1),
-		authAccountLimiter: newRateLimiter(100, 1),
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = &fakeLoginService{}
+		h.authIPLimiter = newRateLimiter(2, 1)
+		h.authAccountLimiter = newRateLimiter(100, 1)
+	})
 	codes := []int{}
 	for i := 0; i < 3; i++ {
 		rec := httptest.NewRecorder()
@@ -166,7 +166,10 @@ func TestLoginThrottlesAnAddressAcrossAccounts(t *testing.T) {
 
 func TestRegisterThrottlesAnAddress(t *testing.T) {
 	svc := &fakeLoginService{}
-	h := &Handler{userService: svc, registerIPLimiter: newRateLimiter(1, 1)}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.registerIPLimiter = newRateLimiter(1, 1)
+	})
 	body := `{"email":"new@example.com","password":"password1","name":"New"}`
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(body))
@@ -185,7 +188,7 @@ func TestRegisterThrottlesAnAddress(t *testing.T) {
 }
 
 func TestNilThrottlesAllowEverything(t *testing.T) {
-	h := &Handler{userService: &fakeLoginService{}}
+	h := newTestHandler(t, func(h *Handler) { h.userService = &fakeLoginService{} })
 	for i := 0; i < 50; i++ {
 		rec := httptest.NewRecorder()
 		h.Login(rec, loginReq("dave@example.com", "wrong"))

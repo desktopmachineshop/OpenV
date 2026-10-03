@@ -31,7 +31,7 @@ func TestUpdateOrgReleaseChannel(t *testing.T) {
 			plan:  plan,
 			roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin, "member": orgs.RoleMember}},
 		}
-		return &Handler{orgService: svc}, svc
+		return newTestHandler(t, func(h *Handler) { h.orgService = svc }), svc
 	}
 
 	h, svc := newHandler(orgs.PlanBusiness)
