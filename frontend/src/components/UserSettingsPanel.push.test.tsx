@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { UserSettingsPanel } from './UserSettingsPanel';
 import { notificationPrefsAPI, providerSettingsAPI, pushAPI } from '../api/client';
 import { SERVICE_WORKER_READY_TIMEOUT_MS } from '../push/webPush';
@@ -12,23 +13,19 @@ vi.mock('react-router-dom', () => ({
 }));
 
 // The panel's own dependencies, mocked down to what the push toggle needs:
-// the client module builds an axios instance at import time, and the runner /
-// provider cards fetch on mount and are irrelevant here.
-vi.mock('../api/client', () => ({
-  notificationPrefsAPI: { get: vi.fn(), update: vi.fn() },
-  providerSettingsAPI: { list: vi.fn() },
-  pushAPI: { config: vi.fn(), list: vi.fn(), subscribe: vi.fn(), unsubscribe: vi.fn() },
-  // The panel also carries the change-password form (REQ-99), which asks the
-  // server for its own minimum length on mount. These tests are about push, so
-  // the policy call is stubbed rather than asserted — but it has to exist, or
-  // the effect throws and takes the whole panel down with it.
-  DEFAULT_MIN_PASSWORD_LENGTH: 8,
-  passwordAPI: { change: vi.fn() },
-  // A plain function, not vi.fn(): mocks are cleared between tests, which
-  // would strip a factory-set resolved value and leave the effect awaiting
-  // undefined.
-  authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
-}));
+// every client method is stubbed, and the runner / provider cards fetch on
+// mount and are irrelevant here.
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    // The panel also carries the change-password form (REQ-99), which asks the
+    // server for its own minimum length on mount. These tests are about push,
+    // so the policy call is stubbed rather than asserted.
+    // A plain function, not vi.fn(): mocks are cleared between tests, which
+    // would strip a factory-set resolved value and leave the effect awaiting
+    // undefined.
+    authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
+  })
+);
 vi.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
 vi.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
 vi.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));

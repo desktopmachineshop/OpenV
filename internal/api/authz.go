@@ -10,6 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/events"
+	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
@@ -775,4 +776,16 @@ func (h *Handler) requireRunnerSessions(w http.ResponseWriter) bool {
 		return false
 	}
 	return true
+}
+
+func (h *Handler) getGuidedSessionChecked(w http.ResponseWriter, r *http.Request, minRole string) *guided.Session {
+	session, err := h.guidedService.GetSession(mux.Vars(r)["id"])
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "guided session not found", err)
+		return nil
+	}
+	if !h.requireProjectRoleFor(w, r, session.ProjectID, minRole, missing("guided session not found")) {
+		return nil
+	}
+	return session
 }

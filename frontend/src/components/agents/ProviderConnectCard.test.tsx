@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
 import { ProviderConnectCard, pasteKind } from './ProviderConnectCard';
 import { providerCaution } from './providerCautions';
 
@@ -34,17 +35,18 @@ const mockStarted = () => ({
   updated_at: '',
 });
 
-vi.mock('../../api/client', () => ({
-  providerLoginsAPI: {
-    start: () => Promise.resolve({ data: mockStarted() }),
-    get: () => (mockPoll.data ? Promise.resolve({ data: mockPoll.data }) : new Promise(() => {})),
-    submitCode: (id: string, code: string) => {
-      mockSubmitted.push(`${id}:${code}`);
-      return Promise.resolve({ data: {} });
+vi.mock('../../api/client', async (orig) =>
+  mockApi(await orig(), {
+    providerLoginsAPI: {
+      start: () => Promise.resolve({ data: mockStarted() }),
+      get: () => (mockPoll.data ? Promise.resolve({ data: mockPoll.data }) : new Promise(() => {})),
+      submitCode: (id: string, code: string) => {
+        mockSubmitted.push(`${id}:${code}`);
+        return Promise.resolve({ data: {} });
+      },
     },
-    cancel: () => new Promise(() => {}),
-  },
-}));
+  })
+);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
