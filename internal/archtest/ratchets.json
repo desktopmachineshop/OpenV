@@ -335,8 +335,7 @@
     "internal/domain/exports/reqif.go": 958,
     "internal/domain/reports/docx_report.go": 1193,
     "internal/domain/reports/pdf_report.go": 1463,
-    "internal/domain/reports/report.go": 1104,
-    "internal/domain/users/users.go": 1016
+    "internal/domain/reports/report.go": 1104
   },
   "func_lines": {
     "cmd/server:main": 935,
