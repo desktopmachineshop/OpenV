@@ -81,9 +81,6 @@ func (r *OrgRepository) PurgeOrg(id string) error {
 	}
 	defer tx.Rollback()
 
-	const orgProjects = `SELECT id FROM projects WHERE org_id = $1`
-	const orgArtifacts = `SELECT DISTINCT id FROM artifacts WHERE project_id IN (` + orgProjects + `)`
-
 	// artifact_embeddings only exists when the pgvector migration ran.
 	var embeddingsTable sql.NullString
 	if err := tx.QueryRow(`SELECT to_regclass('artifact_embeddings')::text`).Scan(&embeddingsTable); err != nil {
@@ -95,34 +92,44 @@ func (r *OrgRepository) PurgeOrg(id string) error {
 		}
 	}
 
-	stmts := []string{
-		`DELETE FROM chatter WHERE artifact_id IN (` + orgArtifacts + `)`,
-		`DELETE FROM attachments WHERE artifact_id IN (` + orgArtifacts + `)`,
-		`DELETE FROM link_artifacts WHERE artifact_id IN (` + orgArtifacts + `)`,
-		`DELETE FROM links WHERE from_id IN (` + orgArtifacts + `) OR to_id IN (` + orgArtifacts + `)`,
-		`DELETE FROM test_runs WHERE project_id IN (` + orgProjects + `)`,  // test_results cascade
-		`DELETE FROM work_items WHERE project_id IN (` + orgProjects + `)`, // activity cascades
-		`DELETE FROM interviews WHERE project_id IN (` + orgProjects + `)`, // invites/sessions/messages cascade
-		`DELETE FROM attribute_definitions WHERE org_id = $1 OR project_id IN (` + orgProjects + `)`,
-		`DELETE FROM artifact_ref_counters WHERE project_id IN (` + orgProjects + `)`,
-		`DELETE FROM artifacts WHERE project_id IN (` + orgProjects + `)`,
-		`DELETE FROM projects WHERE org_id = $1`, // baselines, product_profiles, repo_connections, project_members, team access cascade
-		`DELETE FROM agent_runs WHERE org_id = $1`,
-		`DELETE FROM agents WHERE org_id = $1`,      // remaining runs/proposals/team nodes cascade
-		`DELETE FROM agent_teams WHERE org_id = $1`, // nodes/edges cascade
-		`DELETE FROM automations WHERE org_id = $1`,
-		`DELETE FROM guided_sessions WHERE org_id = $1`, // messages cascade
-		`DELETE FROM domain_events WHERE org_id = $1`,
-		`DELETE FROM notifications WHERE org_id = $1`,
-		`DELETE FROM provider_settings WHERE org_id = $1`,
-		`DELETE FROM provider_logins WHERE org_id = $1`,
-		`DELETE FROM templates WHERE org_id = $1`,
-		`DELETE FROM organizations WHERE id = $1`, // members, teams, worker keys, pairings, hosted workers cascade
-	}
-	for _, stmt := range stmts {
+	for _, stmt := range purgeOrgStatements {
 		if _, err := tx.Exec(stmt, id); err != nil {
 			return fmt.Errorf("purge org %s: %q: %w", id, stmt, err)
 		}
 	}
 	return tx.Commit()
+}
+
+// orgProjects and orgArtifacts select a workspace's projects and their
+// artifacts, the workspace id being $1, for PurgeOrg's statements.
+const orgProjects = `SELECT id FROM projects WHERE org_id = $1`
+const orgArtifacts = `SELECT DISTINCT id FROM artifacts WHERE project_id IN (` + orgProjects + `)`
+
+// purgeOrgStatements is PurgeOrg's list, sent in this order after the
+// artifact_embeddings statement, each with the workspace id as $1: children
+// before the artifacts and projects they hang off, the workspace itself
+// last. TestPurgeCatalog (migration_freeze_purge_test.go) pins the order.
+var purgeOrgStatements = []string{
+	`DELETE FROM chatter WHERE artifact_id IN (` + orgArtifacts + `)`,
+	`DELETE FROM attachments WHERE artifact_id IN (` + orgArtifacts + `)`,
+	`DELETE FROM link_artifacts WHERE artifact_id IN (` + orgArtifacts + `)`,
+	`DELETE FROM links WHERE from_id IN (` + orgArtifacts + `) OR to_id IN (` + orgArtifacts + `)`,
+	`DELETE FROM test_runs WHERE project_id IN (` + orgProjects + `)`,  // test_results cascade
+	`DELETE FROM work_items WHERE project_id IN (` + orgProjects + `)`, // activity cascades
+	`DELETE FROM interviews WHERE project_id IN (` + orgProjects + `)`, // invites/sessions/messages cascade
+	`DELETE FROM attribute_definitions WHERE org_id = $1 OR project_id IN (` + orgProjects + `)`,
+	`DELETE FROM artifact_ref_counters WHERE project_id IN (` + orgProjects + `)`,
+	`DELETE FROM artifacts WHERE project_id IN (` + orgProjects + `)`,
+	`DELETE FROM projects WHERE org_id = $1`, // baselines, product_profiles, repo_connections, project_members, team access cascade
+	`DELETE FROM agent_runs WHERE org_id = $1`,
+	`DELETE FROM agents WHERE org_id = $1`,      // remaining runs/proposals/team nodes cascade
+	`DELETE FROM agent_teams WHERE org_id = $1`, // nodes/edges cascade
+	`DELETE FROM automations WHERE org_id = $1`,
+	`DELETE FROM guided_sessions WHERE org_id = $1`, // messages cascade
+	`DELETE FROM domain_events WHERE org_id = $1`,
+	`DELETE FROM notifications WHERE org_id = $1`,
+	`DELETE FROM provider_settings WHERE org_id = $1`,
+	`DELETE FROM provider_logins WHERE org_id = $1`,
+	`DELETE FROM templates WHERE org_id = $1`,
+	`DELETE FROM organizations WHERE id = $1`, // members, teams, worker keys, pairings, hosted workers cascade
 }
