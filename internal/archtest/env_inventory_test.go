@@ -98,7 +98,7 @@ var envExemptions = []envExemption{
 		at: []string{"internal/runner:ClaudeCodeAdapter.Detect", "internal/runner:CodexCLIAdapter.Detect", "internal/runner:GeminiCLIAdapter.Detect",
 			"internal/runner:AntigravityAdapter.Detect", "internal/runner:codexAuthPath"},
 		reason: "a provider's detection probes, run at registration and on each lease, see the environment the provider CLI will see, HOME included, which a pool lease changes"},
-	{id: "runner-provider-api-key", kind: "unresolved", at: []string{"internal/runner:Worker.execute"},
+	{id: "runner-provider-api-key", kind: "unresolved", at: []string{"internal/runner:Worker.runEnv"},
 		reason: "per run: the claimed run's API-key variable, named by the API or the provider's default and limited by providers.IsAllowedAPIKeyEnv to ANTHROPIC_API_KEY, GEMINI_API_KEY, GOOGLE_API_KEY and OPENAI_API_KEY"},
 }
 
