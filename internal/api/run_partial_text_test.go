@@ -22,7 +22,7 @@ func partialTextFixture(t *testing.T) (*Handler, *fakeRunService) {
 	svc := &fakeRunService{byID: map[string]*agentruns.Run{
 		"run-1": {ID: "run-1", OrgID: "org-1", Status: agentruns.StatusRunning},
 	}}
-	return newTestHandler(t, func(h *Handler) { h.runService = svc }), svc
+	return newTestHandler(t, func(h *Handler) { h.RunService = svc }), svc
 }
 
 // The streaming body carries the whole answer so far alongside the batch, and

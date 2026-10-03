@@ -104,12 +104,12 @@ func aiMapRequest(query string) *http.Request {
 func TestProjectAIMapHandler(t *testing.T) {
 	arts, lks := mapFixture()
 	h := newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"p1": {ID: "p1", Name: "Demo"},
 		}}
-		h.artifactService = &aiMapArtifactService{arts: arts}
-		h.linkService = &aiMapLinkService{lks: lks}
-		h.baselineService = &fakeBaselineService{baseline: &baselines.Baseline{
+		h.ArtifactService = &aiMapArtifactService{arts: arts}
+		h.LinkService = &aiMapLinkService{lks: lks}
+		h.BaselineService = &fakeBaselineService{baseline: &baselines.Baseline{
 			ID:        "b1",
 			ProjectID: "p1",
 			Name:      "v0.2.0",

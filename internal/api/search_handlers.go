@@ -139,7 +139,7 @@ func (h *Handler) searchableProjects(w http.ResponseWriter, r *http.Request) ([]
 		return nil, nil, false
 	}
 
-	projectList, err := h.projectService.ListProjectsByOrg(activeOrg)
+	projectList, err := h.ProjectService.ListProjectsByOrg(activeOrg)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve searchable projects", err)
 		return nil, nil, false
@@ -149,8 +149,8 @@ func (h *Handler) searchableProjects(w http.ResponseWriter, r *http.Request) ([]
 	if !h.isOrgAdmin(r, activeOrg) {
 		user := CurrentUser(r)
 		allowed := map[string]bool{}
-		if h.memberService != nil {
-			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+		if h.MemberService != nil {
+			ids, err := h.MemberService.ProjectIDsForUser(user.ID)
 			if err != nil {
 				respondInternal(w, r, "failed to resolve project memberships", err)
 				return nil, nil, false
@@ -180,7 +180,7 @@ func (h *Handler) searchableProjects(w http.ResponseWriter, r *http.Request) ([]
 // keywordSearch is the original trigram/ILIKE path. opts carries the ref gate:
 // it is threaded through every mode because hybrid runs this path too.
 func (h *Handler) keywordSearch(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, error) {
-	hits, err := h.artifactService.SearchArtifacts(projectIDs, query, limit, opts)
+	hits, err := h.ArtifactService.SearchArtifacts(projectIDs, query, limit, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -194,11 +194,11 @@ func (h *Handler) keywordSearch(projectIDs []string, query string, limit int, op
 // embeddings are unconfigured or the vector store is unavailable. It returns
 // the mode that actually ran.
 func (h *Handler) semanticSearch(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, string, error) {
-	if h.embeddingService == nil || !h.embeddingService.Enabled() {
+	if h.EmbeddingService == nil || !h.EmbeddingService.Enabled() {
 		hits, err := h.keywordSearch(projectIDs, query, limit, opts)
 		return hits, modeKeyword, err
 	}
-	near, err := h.embeddingService.SemanticSearch(projectIDs, query, limit)
+	near, err := h.EmbeddingService.SemanticSearch(projectIDs, query, limit)
 	if err != nil {
 		// Any semantic failure degrades to keyword rather than failing the
 		// search (issue #243). ErrDisabled/ErrVectorUnavailable are the expected
@@ -224,10 +224,10 @@ func (h *Handler) hybridSearch(projectIDs []string, query string, limit int, opt
 		return nil, "", err
 	}
 
-	if h.embeddingService == nil || !h.embeddingService.Enabled() {
+	if h.EmbeddingService == nil || !h.EmbeddingService.Enabled() {
 		return keywordHits, modeKeyword, nil
 	}
-	near, err := h.embeddingService.SemanticSearch(projectIDs, query, limit)
+	near, err := h.EmbeddingService.SemanticSearch(projectIDs, query, limit)
 	if err != nil {
 		// On any semantic failure, return the keyword hits already computed above
 		// rather than 500 (issue #243). Expected "no vector path" signals stay

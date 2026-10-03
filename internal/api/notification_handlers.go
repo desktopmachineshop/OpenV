@@ -85,14 +85,14 @@ func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request
 		PushNotifications:  user.PushNotifications,
 	}
 	if req.EmailNotifications != nil {
-		if err := h.userService.SetEmailNotifications(user.ID, *req.EmailNotifications); err != nil {
+		if err := h.UserService.SetEmailNotifications(user.ID, *req.EmailNotifications); err != nil {
 			respondInternal(w, r, "failed to update notification preferences", err)
 			return
 		}
 		prefs.EmailNotifications = *req.EmailNotifications
 	}
 	if req.PushNotifications != nil {
-		if err := h.userService.SetPushNotifications(user.ID, *req.PushNotifications); err != nil {
+		if err := h.UserService.SetPushNotifications(user.ID, *req.PushNotifications); err != nil {
 			respondInternal(w, r, "failed to update notification preferences", err)
 			return
 		}
@@ -139,12 +139,12 @@ func (h *Handler) ListNotifications(w http.ResponseWriter, r *http.Request) {
 		query.BeforeTime, query.BeforeID = at, id
 	}
 
-	list, err := h.notificationService.List(userID, query)
+	list, err := h.NotificationService.List(userID, query)
 	if err != nil {
 		respondInternal(w, r, "failed to load notifications", err)
 		return
 	}
-	unread, err := h.notificationService.CountUnread(userID)
+	unread, err := h.NotificationService.CountUnread(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to count unread notifications", err)
 		return
@@ -199,7 +199,7 @@ func (h *Handler) MarkNotificationsRead(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "ids is required")
 		return
 	}
-	updated, err := h.notificationService.MarkRead(userID, req.IDs)
+	updated, err := h.NotificationService.MarkRead(userID, req.IDs)
 	if err != nil {
 		respondInternal(w, r, "failed to mark notifications read", err)
 		return
@@ -213,7 +213,7 @@ func (h *Handler) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	updated, err := h.notificationService.MarkAllRead(userID)
+	updated, err := h.NotificationService.MarkAllRead(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to mark notifications read", err)
 		return
@@ -232,7 +232,7 @@ func (h *Handler) ClearNotifications(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	cleared, err := h.notificationService.ClearInbox(userID)
+	cleared, err := h.NotificationService.ClearInbox(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to clear notifications", err)
 		return
@@ -248,7 +248,7 @@ func (h *Handler) DeleteClearedNotifications(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
-	deleted, err := h.notificationService.DeleteCleared(userID)
+	deleted, err := h.NotificationService.DeleteCleared(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to delete cleared notifications", err)
 		return
@@ -274,7 +274,7 @@ func (h *Handler) FlagNotification(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "flagged must be true or false")
 		return
 	}
-	found, err := h.notificationService.SetFlagged(userID, mux.Vars(r)["id"], *body.Flagged)
+	found, err := h.NotificationService.SetFlagged(userID, mux.Vars(r)["id"], *body.Flagged)
 	if err != nil {
 		respondInternal(w, r, "failed to flag notification", err)
 		return
@@ -291,7 +291,7 @@ func (h *Handler) FlagNotification(w http.ResponseWriter, r *http.Request) {
 // touched, under the name of what actually happened to them, plus the unread
 // count the bell badge reads from.
 func (h *Handler) respondNotificationAction(w http.ResponseWriter, r *http.Request, userID, verb string, n int64) {
-	unread, err := h.notificationService.CountUnread(userID)
+	unread, err := h.NotificationService.CountUnread(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to count unread notifications", err)
 		return
@@ -304,7 +304,7 @@ func (h *Handler) respondNotificationAction(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *Handler) respondNotificationCount(w http.ResponseWriter, r *http.Request, userID string, updated int64) {
-	unread, err := h.notificationService.CountUnread(userID)
+	unread, err := h.NotificationService.CountUnread(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to count unread notifications", err)
 		return
@@ -324,5 +324,5 @@ func (h *Handler) StreamNotifications(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	h.sseHub.ServeStream(w, r, notify.StreamKey(userID), nil)
+	h.SSEHub.ServeStream(w, r, notify.StreamKey(userID), nil)
 }

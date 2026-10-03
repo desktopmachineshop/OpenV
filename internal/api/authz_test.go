@@ -52,13 +52,13 @@ func TestRequireProjectRole(t *testing.T) {
 
 	newHandler := func() *Handler {
 		return newTestHandler(t, func(h *Handler) {
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				projectID: {ID: projectID, OrgID: orgID},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"org-admin": orgs.RoleAdmin, "org-member": orgs.RoleMember},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				projectID: {
 					"direct-editor": members.RoleEditor,
 					"team-viewer":   members.RoleViewer,
@@ -370,11 +370,11 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 			t.Run(ep.name+"/"+tc.name, func(t *testing.T) {
 				runSvc := &fakeRunService{byID: newRuns()}
 				h := newTestHandler(t, func(h *Handler) {
-					h.runService = runSvc
-					h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {
+					h.RunService = runSvc
+					h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {
 						"user-1": orgs.RoleMember, "user-2": orgs.RoleMember, "user-3": orgs.RoleMember,
 						"user-admin": orgs.RoleAdmin}}}
-					h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+					h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 						project: {"user-2": members.RoleViewer}}}
 				})
 				w := httptest.NewRecorder()
@@ -404,21 +404,21 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 // art-a lives in proj-a, art-b in proj-b.
 func linkTestHandler(t *testing.T, linkSvc *fakeLinkService) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
 			"proj-b": {ID: "proj-b", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"editor-a": members.RoleEditor, "editor-both": members.RoleEditor, "editor-a-viewer-b": members.RoleEditor},
 			"proj-b": {"editor-both": members.RoleEditor, "editor-a-viewer-b": members.RoleViewer},
 		}}
-		h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+		h.ArtifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"art-a": {ID: "art-a", ProjectID: "proj-a", Type: "requirement"},
 			"art-b": {ID: "art-b", ProjectID: "proj-b", Type: "requirement"},
 		}}
-		h.linkService = linkSvc
-		h.chatterService = &fakeChatterService{}
+		h.LinkService = linkSvc
+		h.ChatterService = &fakeChatterService{}
 	})
 }
 
@@ -515,19 +515,19 @@ func TestUpdateArtifactAddedLinkChatter(t *testing.T) {
 	linkSvc := &fakeLinkService{}
 	chatterSvc := &fakeChatterService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"editor-a": members.RoleEditor},
 		}}
-		h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+		h.ArtifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"art-a": {ID: "art-a", ProjectID: "proj-a", Type: "requirement", Title: "Login required"},
 			"art-b": {ID: "art-b", ProjectID: "proj-a", Type: "requirement", Title: "Password policy"},
 		}}
-		h.linkService = linkSvc
-		h.chatterService = chatterSvc
+		h.LinkService = linkSvc
+		h.ChatterService = chatterSvc
 	})
 
 	body := `{"pendingLinkAdds":[{"from_id":"art-a","to_id":"art-b","type":"relates-to"}]}`
@@ -572,16 +572,16 @@ func TestUpdateArtifactHandlerParentPresence(t *testing.T) {
 			"art-a": {ID: "art-a", ProjectID: "proj-a", ParentID: &parent, Type: "requirement", Title: "Child"},
 		}}
 		h := newTestHandler(t, func(h *Handler) {
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				"proj-a": {ID: "proj-a", OrgID: "org-1"},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				"proj-a": {"editor-a": members.RoleEditor},
 			}}
-			h.artifactService = artifactSvc
-			h.linkService = &fakeLinkService{}
-			h.chatterService = &fakeChatterService{}
+			h.ArtifactService = artifactSvc
+			h.LinkService = &fakeLinkService{}
+			h.ChatterService = &fakeChatterService{}
 		})
 		return h, artifactSvc
 	}
@@ -635,13 +635,13 @@ func TestListDomainEventsScoping(t *testing.T) {
 	const orgID = "org-1"
 	newHandler := func() *Handler {
 		return newTestHandler(t, func(h *Handler) {
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				"proj-1": {"member": members.RoleViewer},
 			}}
-			h.eventRepo = &fakeEventRepo{byOrg: map[string][]events.Event{
+			h.EventRepo = &fakeEventRepo{byOrg: map[string][]events.Event{
 				orgID: {
 					{ID: "e1", OrgID: orgID, ProjectID: "proj-1", EventType: "artifact.updated"},
 					{ID: "e2", OrgID: orgID, ProjectID: "proj-2", EventType: "artifact.updated"},
@@ -693,14 +693,14 @@ func TestListAgentRunsScoping(t *testing.T) {
 	newFixture := func() (*Handler, *fakeRunService) {
 		runSvc := &fakeRunService{}
 		h := newTestHandler(t, func(h *Handler) {
-			h.runService = runSvc
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.RunService = runSvc
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
 			}}
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				"proj-1": {ID: "proj-1", OrgID: orgID},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				"proj-1": {"member": members.RoleViewer},
 			}}
 		})
@@ -792,8 +792,8 @@ func TestClaimHandshakeFailureReleasesRun(t *testing.T) {
 			agentSvc.byID["agent-1"] = &agents.Agent{ID: "agent-1", Name: "Agent", Provider: "claude"}
 		}
 		return newTestHandler(t, func(h *Handler) {
-			h.runService = runSvc
-			h.agentService = agentSvc
+			h.RunService = runSvc
+			h.AgentService = agentSvc
 		}), runSvc
 	}
 

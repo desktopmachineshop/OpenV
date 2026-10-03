@@ -31,9 +31,9 @@ func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	list, err := h.orgService.ListForUser(user.ID)
+	list, err := h.OrgService.ListForUser(user.ID)
 	if r.URL.Query().Get("deleted") == "true" {
-		list, err = h.orgService.ListDeletedForUser(user.ID)
+		list, err = h.OrgService.ListDeletedForUser(user.ID)
 	}
 	if err != nil {
 		respondInternal(w, r, "failed to list workspaces", err)
@@ -54,7 +54,7 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
-	org, err := h.orgService.DeleteOrg(orgID)
+	org, err := h.OrgService.DeleteOrg(orgID)
 	if err != nil {
 		switch {
 		case errors.Is(err, orgs.ErrPersonalOrgDelete):
@@ -68,7 +68,7 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 	}
 	// A paid workspace stops being billed when its paid period ends, not
 	// before: a restore inside the grace period takes this back.
-	h.billing.OnWorkspaceDeleted(r.Context(), org)
+	h.BillingService.OnWorkspaceDeleted(r.Context(), org)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"deleted_at":  org.DeletedAt,
 		"purge_after": org.DeletedAt.Add(orgs.DeletionGraceDays * 24 * time.Hour),
@@ -99,7 +99,7 @@ func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	org, err := h.orgService.SetPlan(mux.Vars(r)["id"], req.Plan)
+	org, err := h.OrgService.SetPlan(mux.Vars(r)["id"], req.Plan)
 	if err != nil {
 		switch {
 		case errors.Is(err, orgs.ErrInvalidPlan):
@@ -132,7 +132,7 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.IsAdmin {
-		role, err := h.orgService.RoleInOrgAny(orgID, user.ID)
+		role, err := h.OrgService.RoleInOrgAny(orgID, user.ID)
 		if err != nil {
 			respondInternal(w, r, "failed to resolve workspace access", err)
 			return
@@ -146,7 +146,7 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	org, err := h.orgService.RestoreOrg(orgID)
+	org, err := h.OrgService.RestoreOrg(orgID)
 	if err != nil {
 		switch {
 		case errors.Is(err, orgs.ErrNotDeleted):
@@ -158,7 +158,7 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	h.billing.OnWorkspaceRestored(r.Context(), org)
+	h.BillingService.OnWorkspaceRestored(r.Context(), org)
 	json.NewEncoder(w).Encode(org)
 }
 
@@ -183,13 +183,13 @@ func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to check the workspace limit", err)
 		return
 	}
-	org, err := h.orgService.CreateOrg(req.Name, orgs.TypeCompany, user.ID)
+	org, err := h.OrgService.CreateOrg(req.Name, orgs.TypeCompany, user.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if h.orgSeeder != nil {
-		if err := h.orgSeeder(org.ID); err != nil {
+	if h.OrgSeeder != nil {
+		if err := h.OrgSeeder(org.ID); err != nil {
 			// Non-fatal: the workspace exists; defaults can be re-seeded.
 			respondInternal(w, r, "workspace created but seeding defaults failed", err)
 			return
@@ -205,7 +205,7 @@ func (h *Handler) GetOrg(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
@@ -243,7 +243,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	org, err := h.orgService.UpdateOrg(orgID, req.Name)
+	org, err := h.OrgService.UpdateOrg(orgID, req.Name)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -252,7 +252,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	// Budget is only touched when the key is present. json.RawMessage is nil
 	// for an absent key; "null" clears the budget, a number sets it.
 	if len(req.MonthlyBudgetUSD) > 0 {
-		org, err = h.orgService.SetMonthlyBudget(orgID, update.budget)
+		org, err = h.OrgService.SetMonthlyBudget(orgID, update.budget)
 		if err != nil {
 			if errors.Is(err, orgs.ErrInvalidBudget) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -264,7 +264,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.ReleaseChannel != nil {
-		org, err = h.orgService.SetReleaseChannel(orgID, *req.ReleaseChannel)
+		org, err = h.OrgService.SetReleaseChannel(orgID, *req.ReleaseChannel)
 		if err != nil {
 			if errors.Is(err, orgs.ErrInvalidChannel) || errors.Is(err, orgs.ErrChannelLocked) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -276,7 +276,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(req.UpgradeWindow) > 0 {
-		org, err = h.orgService.SetUpgradeWindow(orgID, update.day, update.hour, update.timezone)
+		org, err = h.OrgService.SetUpgradeWindow(orgID, update.day, update.hour, update.timezone)
 		if err != nil {
 			if errors.Is(err, orgs.ErrInvalidWindow) || errors.Is(err, orgs.ErrChannelLocked) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -310,7 +310,7 @@ type orgUpdate struct {
 // whether the update may go ahead.
 func (h *Handler) checkOrgUpdate(w http.ResponseWriter, orgID string, budget json.RawMessage, channel *string, window json.RawMessage) (orgUpdate, bool) {
 	var update orgUpdate
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return update, false
@@ -364,7 +364,7 @@ func (h *Handler) ActivateOrg(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	if _, err := h.orgService.Get(orgID); err != nil {
+	if _, err := h.OrgService.Get(orgID); err != nil {
 		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
 	}
@@ -373,7 +373,7 @@ func (h *Handler) ActivateOrg(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "session required")
 		return
 	}
-	if err := h.userService.SetActiveOrg(cookie.Value, orgID); err != nil {
+	if err := h.UserService.SetActiveOrg(cookie.Value, orgID); err != nil {
 		respondInternal(w, r, "failed to switch workspace", err)
 		return
 	}

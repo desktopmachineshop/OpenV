@@ -44,7 +44,7 @@ func (h *Handler) DownloadOptions(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	opts, err := h.downloadService.Options(projectID, r.URL.Query().Get("baseline_id"))
+	opts, err := h.DownloadService.Options(projectID, r.URL.Query().Get("baseline_id"))
 	if err != nil {
 		if errors.Is(err, baselines.ErrNotFound) {
 			respondError(w, r, http.StatusNotFound, "baseline not found", err)
@@ -96,7 +96,7 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 		return
 	}
 
-	result, err := h.downloadService.Download(downloads.Request{
+	result, err := h.DownloadService.Download(downloads.Request{
 		ProjectID:  projectID,
 		BaselineID: r.URL.Query().Get("baseline_id"),
 		Format:     format,

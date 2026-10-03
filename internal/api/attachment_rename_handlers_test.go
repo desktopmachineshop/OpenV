@@ -63,12 +63,12 @@ func renameHandler(t *testing.T, plan string) (*Handler, *renameAttachmentFake, 
 	}}
 	notes := &fakeChatterService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.attachmentService = att
-		h.artifactService = art
-		h.chatterService = notes
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}}
-		h.orgService = &fakeOrgService{plan: plan}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor", "u2": "viewer"}}}
+		h.AttachmentService = att
+		h.ArtifactService = art
+		h.ChatterService = notes
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}}
+		h.OrgService = &fakeOrgService{plan: plan}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor", "u2": "viewer"}}}
 	})
 	return h, att, art, notes
 }

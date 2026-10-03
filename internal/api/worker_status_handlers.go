@@ -25,14 +25,14 @@ func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	keys, err := h.workerKeyService.List(orgID)
+	keys, err := h.WorkerKeyService.List(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to list worker keys", err)
 		return
 	}
 	hostedKeyID := ""
-	if h.hostedWorkerService != nil {
-		if record, err := h.hostedWorkerService.Get(orgID); err == nil && record != nil && record.WorkerKeyID != nil {
+	if h.HostedWorkerService != nil {
+		if record, err := h.HostedWorkerService.Get(orgID); err == nil && record != nil && record.WorkerKeyID != nil {
 			hostedKeyID = *record.WorkerKeyID
 		}
 	}
@@ -50,7 +50,7 @@ func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {
 			"last_used_at": key.LastUsedAt,
 		})
 	}
-	queue, err := h.runService.QueueStats(orgID)
+	queue, err := h.RunService.QueueStats(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to load queue stats", err)
 		return
@@ -98,7 +98,7 @@ func (h *Handler) GetOrgUsage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	since := time.Now().UTC().AddDate(0, 0, -days)
-	summary, err := h.runService.Usage(orgID, since)
+	summary, err := h.RunService.Usage(orgID, since)
 	if err != nil {
 		respondInternal(w, r, "failed to load usage", err)
 		return
@@ -108,7 +108,7 @@ func (h *Handler) GetOrgUsage(w http.ResponseWriter, r *http.Request) {
 	// window, and the same figure budget alerts fire against.
 	now := time.Now().UTC()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	if spend, err := h.runService.MonthlySpend(orgID, monthStart); err == nil {
+	if spend, err := h.RunService.MonthlySpend(orgID, monthStart); err == nil {
 		summary.MonthToDateCostUSD = spend
 	}
 	json.NewEncoder(w).Encode(summary)

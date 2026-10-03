@@ -27,10 +27,10 @@ func (h *Handler) registerAttributeDefinitionRoutes(router *mux.Router) {
 
 // orgForProject resolves a project's owning org id ("" on failure).
 func (h *Handler) orgForProject(projectID string) string {
-	if projectID == "" || h.projectService == nil {
+	if projectID == "" || h.ProjectService == nil {
 		return ""
 	}
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil || project == nil {
 		return ""
 	}
@@ -43,7 +43,7 @@ func (h *Handler) orgForProject(projectID string) string {
 // renders. Without project_id the caller gets the org-wide set for the active
 // workspace (any member).
 func (h *Handler) MetaAttributeDefinitions(w http.ResponseWriter, r *http.Request) {
-	if h.attributeService == nil {
+	if h.AttributeService == nil {
 		writeJSONError(w, http.StatusNotFound, "attribute definitions are not available")
 		return
 	}
@@ -62,7 +62,7 @@ func (h *Handler) MetaAttributeDefinitions(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	defs, err := h.attributeService.EffectiveForProject(orgID, projectID)
+	defs, err := h.AttributeService.EffectiveForProject(orgID, projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load attribute definitions", err)
 		return
@@ -75,7 +75,7 @@ func (h *Handler) MetaAttributeDefinitions(w http.ResponseWriter, r *http.Reques
 // scope, for the management UI. Exactly one of project_id or org_id must be
 // given. project_id → project viewer; org_id → org member.
 func (h *Handler) ListAttributeDefinitions(w http.ResponseWriter, r *http.Request) {
-	if h.attributeService == nil {
+	if h.AttributeService == nil {
 		writeJSONError(w, http.StatusNotFound, "attribute definitions are not available")
 		return
 	}
@@ -92,12 +92,12 @@ func (h *Handler) ListAttributeDefinitions(w http.ResponseWriter, r *http.Reques
 		if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 			return
 		}
-		defs, err = h.attributeService.ListByProject(projectID)
+		defs, err = h.AttributeService.ListByProject(projectID)
 	case orgID != "":
 		if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 			return
 		}
-		defs, err = h.attributeService.ListByOrg(orgID)
+		defs, err = h.AttributeService.ListByOrg(orgID)
 	default:
 		writeJSONError(w, http.StatusBadRequest, "project_id or org_id is required")
 		return
@@ -130,7 +130,7 @@ func (h *Handler) requireAttributeDefinitionWrite(w http.ResponseWriter, r *http
 // definitions (org_id) require org admin; project-scoped (project_id) require
 // project editor.
 func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Request) {
-	if h.attributeService == nil {
+	if h.AttributeService == nil {
 		writeJSONError(w, http.StatusNotFound, "attribute definitions are not available")
 		return
 	}
@@ -142,7 +142,7 @@ func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 	if !h.requireAttributeDefinitionWrite(w, r, req.OrgID, req.ProjectID, notFound{}) {
 		return
 	}
-	def, err := h.attributeService.CreateDefinition(req)
+	def, err := h.AttributeService.CreateDefinition(req)
 	if err != nil {
 		writeAttributeDefinitionError(w, err)
 		return
@@ -155,12 +155,12 @@ func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 // UpdateAttributeDefinition replaces a definition's editable fields. The write
 // gate follows the existing definition's scope.
 func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Request) {
-	if h.attributeService == nil {
+	if h.AttributeService == nil {
 		writeJSONError(w, http.StatusNotFound, "attribute definitions are not available")
 		return
 	}
 	id := mux.Vars(r)["id"]
-	existing, err := h.attributeService.GetDefinition(id)
+	existing, err := h.AttributeService.GetDefinition(id)
 	if err != nil {
 		if errors.Is(err, attributes.ErrNotFound) {
 			writeJSONError(w, http.StatusNotFound, "attribute definition not found")
@@ -177,7 +177,7 @@ func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	def, err := h.attributeService.UpdateDefinition(id, req)
+	def, err := h.AttributeService.UpdateDefinition(id, req)
 	if err != nil {
 		writeAttributeDefinitionError(w, err)
 		return
@@ -189,12 +189,12 @@ func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 // DeleteAttributeDefinition removes a definition. Values already stored in
 // artifact attributes under its key are left untouched.
 func (h *Handler) DeleteAttributeDefinition(w http.ResponseWriter, r *http.Request) {
-	if h.attributeService == nil {
+	if h.AttributeService == nil {
 		writeJSONError(w, http.StatusNotFound, "attribute definitions are not available")
 		return
 	}
 	id := mux.Vars(r)["id"]
-	existing, err := h.attributeService.GetDefinition(id)
+	existing, err := h.AttributeService.GetDefinition(id)
 	if err != nil {
 		if errors.Is(err, attributes.ErrNotFound) {
 			writeJSONError(w, http.StatusNotFound, "attribute definition not found")
@@ -206,7 +206,7 @@ func (h *Handler) DeleteAttributeDefinition(w http.ResponseWriter, r *http.Reque
 	if !h.requireAttributeDefinitionWrite(w, r, existing.OrgID, existing.ProjectID, missing("attribute definition not found")) {
 		return
 	}
-	if err := h.attributeService.DeleteDefinition(id); err != nil {
+	if err := h.AttributeService.DeleteDefinition(id); err != nil {
 		respondInternal(w, r, "failed to delete attribute definition", err)
 		return
 	}

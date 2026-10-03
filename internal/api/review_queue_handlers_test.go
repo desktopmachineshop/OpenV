@@ -64,13 +64,13 @@ func TestReviewQueue(t *testing.T) {
 			},
 		}}
 		h := newTestHandler(t, func(h *Handler) {
-			h.linkService = linkSvc
-			h.artifactService = artSvc
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.LinkService = linkSvc
+			h.ArtifactService = artSvc
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				projectID: {ID: projectID, OrgID: orgID},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{orgID: {}}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{orgID: {}}}
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				projectID: {"viewer": members.RoleViewer},
 			}}
 		})

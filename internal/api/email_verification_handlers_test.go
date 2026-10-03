@@ -98,10 +98,10 @@ func newVerifyHandler(t *testing.T, required bool) (*Handler, *fakeVerifyService
 	}
 	mailer := newTestMailer()
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.mailer = mailer
-		h.emailLinkBase = "https://app.example.com"
-		h.emailVerification = users.EmailVerificationPolicy{Required: required}
+		h.UserService = svc
+		h.Mailer = mailer
+		h.EmailLinkBase = "https://app.example.com"
+		h.EmailVerification = users.EmailVerificationPolicy{Required: required}
 	})
 	return h, svc, mailer
 }
@@ -252,7 +252,7 @@ func TestResendVerification(t *testing.T) {
 		t.Errorf("issue conflict: status = %d, want 409", w.Code)
 	}
 
-	h.emailVerification.Required = false
+	h.EmailVerification.Required = false
 	svc.issueErr = nil
 	if w := do("cookie-pending", ""); w.Code != http.StatusBadRequest {
 		t.Errorf("policy off: status = %d, want 400", w.Code)

@@ -58,7 +58,7 @@ func (h *Handler) launchRun(r *http.Request, launch agentruns.LaunchRequest) (*a
 	if launch.ParentRunID == nil {
 		launch.ParentRunID = launchParent(r)
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, _, err := h.RunService.Launch(launch)
 	return run, err
 }
 
@@ -67,7 +67,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireNoProposalRunLaunch(w, r) {
 		return
 	}
-	agent, err := h.agentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
+	agent, err := h.AgentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
 	if err != nil || agent == nil {
 		writeJSONError(w, http.StatusNotFound, "agent not found")
 		return
@@ -94,7 +94,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	// caller's active workspace.
 	orgID := ActiveOrg(r)
 	if req.ProjectID != "" {
-		if project, err := h.projectService.GetProject(req.ProjectID); err == nil && project != nil && project.OrgID != "" {
+		if project, err := h.ProjectService.GetProject(req.ProjectID); err == nil && project != nil && project.OrgID != "" {
 			orgID = project.OrgID
 		}
 	}
@@ -181,11 +181,11 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 
 	// The run belongs to the project's org.
 	orgID := ActiveOrg(r)
-	if project, err := h.projectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
+	if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
 		orgID = project.OrgID
 	}
 
-	agent, err := h.agentService.GetBySlug(orgID, seeds.TestCaseAuthorSlug)
+	agent, err := h.AgentService.GetBySlug(orgID, seeds.TestCaseAuthorSlug)
 	if err != nil {
 		respondInternal(w, r, "failed to load the test-case author agent", err)
 		return
@@ -248,7 +248,7 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 	if projectID == "" && !h.isOrgAdmin(r, activeOrg) {
 		filter.LaunchedBy = CurrentUser(r).ID
 	}
-	runs, err := h.runService.List(filter)
+	runs, err := h.RunService.List(filter)
 	if err != nil {
 		respondInternal(w, r, "failed to list agent runs", err)
 		return
@@ -260,7 +260,7 @@ func (h *Handler) GetAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	run, err := h.runService.Get(mux.Vars(r)["id"])
+	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return
@@ -275,7 +275,7 @@ func (h *Handler) GetAgentRunTree(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	run, err := h.runService.Get(mux.Vars(r)["id"])
+	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return
@@ -283,7 +283,7 @@ func (h *Handler) GetAgentRunTree(w http.ResponseWriter, r *http.Request) {
 	if !h.requireRunAccess(w, r, run, members.RoleViewer) {
 		return
 	}
-	tree, err := h.runService.Tree(run.ID)
+	tree, err := h.RunService.Tree(run.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load run tree", err)
 		return
@@ -296,7 +296,7 @@ func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	run, err := h.runService.Get(mux.Vars(r)["id"])
+	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return
@@ -305,7 +305,7 @@ func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	afterSeq, _ := strconv.Atoi(r.URL.Query().Get("after_seq"))
-	logs, err := h.runService.Logs(run.ID, afterSeq)
+	logs, err := h.RunService.Logs(run.ID, afterSeq)
 	if err != nil {
 		respondInternal(w, r, "failed to load run logs", err)
 		return
@@ -322,7 +322,7 @@ func (h *Handler) StreamAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	runID := mux.Vars(r)["id"]
-	run, err := h.runService.Get(runID)
+	run, err := h.RunService.Get(runID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return
@@ -331,13 +331,13 @@ func (h *Handler) StreamAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	afterSeq, _ := strconv.Atoi(r.URL.Query().Get("after_seq"))
-	h.sseHub.ServeStream(w, r, runID, func(emit func(event string, data interface{})) error {
+	h.SSEHub.ServeStream(w, r, runID, func(emit func(event string, data interface{})) error {
 		// Logs is paged (bounded per call), so drain every page before the live
 		// tail takes over: keep advancing the cursor to the last seq seen until
 		// a page comes back empty. seq strictly increases, so this terminates.
 		cursor := afterSeq
 		for {
-			logs, err := h.runService.Logs(runID, cursor)
+			logs, err := h.RunService.Logs(runID, cursor)
 			if err != nil {
 				return err
 			}
@@ -358,7 +358,7 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	run, err := h.runService.Get(mux.Vars(r)["id"])
+	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return
@@ -366,7 +366,7 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireRunAccess(w, r, run, members.RoleEditor) {
 		return
 	}
-	cancelled, err := h.runService.RequestCancel(run.ID)
+	cancelled, err := h.RunService.RequestCancel(run.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to cancel run", err)
 		return
@@ -388,7 +388,7 @@ func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	run, err := h.runService.Get(mux.Vars(r)["id"])
+	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return
@@ -396,7 +396,7 @@ func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireRunAccess(w, r, run, members.RoleEditor) {
 		return
 	}
-	retried, err := h.runService.Retry(run.ID, CurrentUserID(r))
+	retried, err := h.RunService.Retry(run.ID, CurrentUserID(r))
 	if err != nil {
 		if errors.Is(err, agentruns.ErrNotRetryable) {
 			writeJSONError(w, http.StatusConflict, err.Error())

@@ -35,16 +35,16 @@ func (h *Handler) ProposalAppliers() proposals.Appliers {
 // of band from the review request, so the actor is the platform itself
 // rather than the reviewing user or the originating agent run.
 func (h *Handler) publishApplied(eventType, projectID, entityID string, payload map[string]interface{}) {
-	if h.bus == nil {
+	if h.Bus == nil {
 		return
 	}
 	orgID := ""
-	if projectID != "" && h.projectService != nil {
-		if project, err := h.projectService.GetProject(projectID); err == nil && project != nil {
+	if projectID != "" && h.ProjectService != nil {
+		if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil {
 			orgID = project.OrgID
 		}
 	}
-	h.bus.Publish(events.New(eventType, projectID, entityID, events.ActorSystem, payload).WithOrg(orgID))
+	h.Bus.Publish(events.New(eventType, projectID, entityID, events.ActorSystem, payload).WithOrg(orgID))
 }
 
 // decodeProposalPayload re-hydrates a stored proposal payload into a typed
@@ -63,7 +63,7 @@ func (h *Handler) applyCreateArtifact(payload map[string]interface{}) (string, e
 		return "", err
 	}
 	artifact := artifacts.NewArtifact(req)
-	if err := h.artifactService.CreateArtifact(artifact); err != nil {
+	if err := h.ArtifactService.CreateArtifact(artifact); err != nil {
 		return "", err
 	}
 	h.publishApplied(events.ArtifactCreated, artifact.ProjectID, artifact.ID, map[string]interface{}{
@@ -90,7 +90,7 @@ func (h *Handler) applyUpdateArtifact(targetID string, payload map[string]interf
 	if len(req.PendingLinkAdds) > 0 || len(req.PendingLinkRemoves) > 0 {
 		return "", errors.New("proposal carries managed link edits (pendingLinkAdds/pendingLinkRemoves) that cannot be applied here; propose the link changes as separate create_link/delete_link operations")
 	}
-	updated, err := h.artifactService.UpdateArtifact(targetID, req)
+	updated, err := h.ArtifactService.UpdateArtifact(targetID, req)
 	if err != nil {
 		return "", err
 	}
@@ -105,10 +105,10 @@ func (h *Handler) applyUpdateArtifact(targetID string, payload map[string]interf
 func (h *Handler) applyDeleteArtifact(targetID string) error {
 	// Capture identity before the row is gone so the event can carry it.
 	projectID, artifactType, title := "", "", ""
-	if a, err := h.artifactService.GetArtifact(targetID); err == nil && a != nil {
+	if a, err := h.ArtifactService.GetArtifact(targetID); err == nil && a != nil {
 		projectID, artifactType, title = a.ProjectID, a.Type, a.Title
 	}
-	if err := h.artifactService.DeleteArtifact(targetID); err != nil {
+	if err := h.ArtifactService.DeleteArtifact(targetID); err != nil {
 		return err
 	}
 	h.publishApplied(events.ArtifactDeleted, projectID, targetID, map[string]interface{}{
@@ -133,11 +133,11 @@ func (h *Handler) applyCreateLink(payload map[string]interface{}) (string, error
 	// link type exists and its from/to constraints hold; on failure return an
 	// error so the proposal resolves to apply_failed with a clear message and no
 	// link is created.
-	fromArtifact, err := h.artifactService.GetArtifact(req.FromID)
+	fromArtifact, err := h.ArtifactService.GetArtifact(req.FromID)
 	if err != nil {
 		return "", fmt.Errorf("cannot apply create_link: source artifact %q not found: %w", req.FromID, err)
 	}
-	toArtifact, err := h.artifactService.GetArtifact(req.ToID)
+	toArtifact, err := h.ArtifactService.GetArtifact(req.ToID)
 	if err != nil {
 		return "", fmt.Errorf("cannot apply create_link: target artifact %q not found: %w", req.ToID, err)
 	}
@@ -145,7 +145,7 @@ func (h *Handler) applyCreateLink(payload map[string]interface{}) (string, error
 		return "", fmt.Errorf("cannot apply create_link: %w", err)
 	}
 	link := links.NewLink(req)
-	if err := h.linkService.CreateLink(link); err != nil {
+	if err := h.LinkService.CreateLink(link); err != nil {
 		return "", err
 	}
 	// Refresh both endpoints' link snapshots, exactly as the CreateLink
@@ -160,8 +160,8 @@ func (h *Handler) applyCreateLink(payload map[string]interface{}) (string, error
 }
 
 func (h *Handler) applyDeleteLink(targetID string) error {
-	link, _ := h.linkService.GetLink(targetID)
-	if err := h.linkService.DeleteLink(targetID); err != nil {
+	link, _ := h.LinkService.GetLink(targetID)
+	if err := h.LinkService.DeleteLink(targetID); err != nil {
 		return err
 	}
 	if link != nil {
@@ -189,7 +189,7 @@ func (h *Handler) applyRecordTestResult(payload map[string]interface{}) (string,
 	// Applying an approved proposal: a human signed off on this result, so it
 	// is not stamped as agent-executed. vvService already publishes
 	// TestRunRecorded through its own bus, so no publishApplied is needed here.
-	result, err := h.vvService.UpsertResult(runID, req, nil, "system", "")
+	result, err := h.VVService.UpsertResult(runID, req, nil, "system", "")
 	if err != nil {
 		return "", err
 	}

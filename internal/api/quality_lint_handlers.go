@@ -45,7 +45,7 @@ func (h *Handler) GetProjectQuality(w http.ResponseWriter, r *http.Request) {
 // linter does not judge (headings, test cases, etc.) so the caller gets a clear
 // signal rather than an empty score.
 func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
-	artifact, err := h.artifactService.GetArtifact(mux.Vars(r)["id"])
+	artifact, err := h.ArtifactService.GetArtifact(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "artifact not found", err)
 		return
@@ -77,14 +77,14 @@ func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
 // linked" — the difference decides whether every citation in the artifact
 // is flagged as untraceable.
 func (h *Handler) linkedRefsFor(artifactID string) (map[string]bool, bool) {
-	if h.linkService == nil || h.artifactService == nil {
+	if h.LinkService == nil || h.ArtifactService == nil {
 		return nil, false
 	}
-	outgoing, err := h.linkService.GetLinksFrom(artifactID)
+	outgoing, err := h.LinkService.GetLinksFrom(artifactID)
 	if err != nil {
 		return nil, false
 	}
-	incoming, err := h.linkService.GetLinksTo(artifactID)
+	incoming, err := h.LinkService.GetLinksTo(artifactID)
 	if err != nil {
 		return nil, false
 	}
@@ -99,7 +99,7 @@ func (h *Handler) linkedRefsFor(artifactID string) (map[string]bool, bool) {
 		if id == artifactID {
 			return ""
 		}
-		if a, err := h.artifactService.GetArtifact(id); err == nil && a != nil {
+		if a, err := h.ArtifactService.GetArtifact(id); err == nil && a != nil {
 			return a.Ref
 		}
 		return ""

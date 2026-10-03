@@ -26,8 +26,8 @@ func (erroringAttributeService) EffectiveForProject(orgID, projectID string) ([]
 // on create.
 func TestValidateArtifactAttributesFailDirection(t *testing.T) {
 	h := newTestHandler(t, func(h *Handler) {
-		h.attributeService = erroringAttributeService{}
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.AttributeService = erroringAttributeService{}
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
 		}}
 	})

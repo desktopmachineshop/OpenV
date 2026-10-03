@@ -52,47 +52,47 @@ func newTestHandler(t testing.TB, opts ...func(*Handler)) *Handler {
 // instead. Any test may use them like any other option.
 
 func withProjectService(s projects.Service) func(*Handler) {
-	return func(h *Handler) { h.projectService = s }
+	return func(h *Handler) { h.ProjectService = s }
 }
 
 func withExportService(s exports.Service) func(*Handler) {
-	return func(h *Handler) { h.exportService = s }
+	return func(h *Handler) { h.ExportService = s }
 }
 
 func withBaselineService(s baselines.Service) func(*Handler) {
-	return func(h *Handler) { h.baselineService = s }
+	return func(h *Handler) { h.BaselineService = s }
 }
 
 func withReportService(s reports.Service) func(*Handler) {
-	return func(h *Handler) { h.reportService = s }
+	return func(h *Handler) { h.ReportService = s }
 }
 
 func withDownloadService(s downloads.Service) func(*Handler) {
-	return func(h *Handler) { h.downloadService = s }
+	return func(h *Handler) { h.DownloadService = s }
 }
 
 func withTeamService(s teams.Service) func(*Handler) {
-	return func(h *Handler) { h.teamService = s }
+	return func(h *Handler) { h.TeamService = s }
 }
 
 func withAgentService(s agents.Service) func(*Handler) {
-	return func(h *Handler) { h.agentService = s }
+	return func(h *Handler) { h.AgentService = s }
 }
 
 func withProposalService(s proposals.Service) func(*Handler) {
-	return func(h *Handler) { h.proposalService = s }
+	return func(h *Handler) { h.ProposalService = s }
 }
 
 func withRunService(s agentruns.Service) func(*Handler) {
-	return func(h *Handler) { h.runService = s }
+	return func(h *Handler) { h.RunService = s }
 }
 
 func withSSEHub(hub *SSEHub) func(*Handler) {
-	return func(h *Handler) { h.sseHub = hub }
+	return func(h *Handler) { h.SSEHub = hub }
 }
 
 // runServiceOf is the run service h holds.
-func runServiceOf(h *Handler) agentruns.Service { return h.runService }
+func runServiceOf(h *Handler) agentruns.Service { return h.RunService }
 
 // --- shared fakes. Each embeds the interface it stands in for and leaves it
 // nil, so it implements only the methods tests call: any other method

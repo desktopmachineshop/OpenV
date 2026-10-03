@@ -54,14 +54,14 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 
 	project := projects.NewProject(req)
 	project.OrgID = orgID
-	if err := h.projectService.CreateProject(project); err != nil {
+	if err := h.ProjectService.CreateProject(project); err != nil {
 		respondInternal(w, r, "failed to create project", err)
 		return
 	}
 
 	// Creator becomes the project owner.
-	if user := CurrentUser(r); user != nil && h.memberService != nil {
-		if err := h.memberService.AddMember(project.ID, user.ID, members.RoleOwner); err != nil {
+	if user := CurrentUser(r); user != nil && h.MemberService != nil {
+		if err := h.MemberService.AddMember(project.ID, user.ID, members.RoleOwner); err != nil {
 			slog.Warn("api: failed to add creator as project owner", "project_id", project.ID, "error", err)
 		}
 	}
@@ -78,7 +78,7 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
 		return
 	}
-	project, err := h.projectService.GetProject(id)
+	project, err := h.ProjectService.GetProject(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "project not found", err)
 		return
@@ -105,7 +105,7 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectList, err := h.projectService.ListProjectsByOrg(activeOrg)
+	projectList, err := h.ProjectService.ListProjectsByOrg(activeOrg)
 	if err != nil {
 		respondInternal(w, r, "failed to list projects", err)
 		return
@@ -128,16 +128,16 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	if user := CurrentUser(r); user != nil && !user.IsAdmin {
 		person = user.ID
 	}
-	if person != "" && h.memberService != nil {
+	if person != "" && h.MemberService != nil {
 		// Org admins of the active workspace see all of its projects.
 		isOrgAdmin := false
-		if h.orgService != nil {
-			if role, err := h.orgService.RoleInOrg(activeOrg, person); err == nil && role == orgs.RoleAdmin {
+		if h.OrgService != nil {
+			if role, err := h.OrgService.RoleInOrg(activeOrg, person); err == nil && role == orgs.RoleAdmin {
 				isOrgAdmin = true
 			}
 		}
 		if !isOrgAdmin {
-			ids, err := h.memberService.ProjectIDsForUser(person)
+			ids, err := h.MemberService.ProjectIDsForUser(person)
 			if err != nil {
 				respondInternal(w, r, "failed to list projects", err)
 				return
@@ -182,7 +182,7 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := h.projectService.UpdateProject(id, req)
+	project, err := h.ProjectService.UpdateProject(id, req)
 	if err != nil {
 		switch {
 		case errors.Is(err, projects.ErrParentNotFound), errors.Is(err, projects.ErrParentOtherOrg),
@@ -212,7 +212,7 @@ func (h *Handler) ListChildProjects(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
 		return
 	}
-	children, err := h.projectService.ListChildren(id)
+	children, err := h.ProjectService.ListChildren(id)
 	if err != nil {
 		respondInternal(w, r, "failed to list child projects", err)
 		return
@@ -233,7 +233,7 @@ func (h *Handler) ListLinkedArtifacts(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
 		return
 	}
-	linked, err := h.exportService.LinkedArtifacts(id)
+	linked, err := h.ExportService.LinkedArtifacts(id)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve linked artifacts", err)
 		return
@@ -253,7 +253,7 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.projectService.DeleteProject(id)
+	err := h.ProjectService.DeleteProject(id)
 	if err != nil {
 		respondInternal(w, r, "failed to delete project", err)
 		return

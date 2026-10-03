@@ -12,19 +12,19 @@ import (
 // the owning org (the project's org when project-scoped, else the caller's
 // active workspace).
 func (h *Handler) publish(r *http.Request, eventType, projectID, entityID string, payload map[string]interface{}) {
-	if h.bus == nil {
+	if h.Bus == nil {
 		return
 	}
 	orgID := ""
-	if projectID != "" && h.projectService != nil {
-		if project, err := h.projectService.GetProject(projectID); err == nil && project != nil {
+	if projectID != "" && h.ProjectService != nil {
+		if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil {
 			orgID = project.OrgID
 		}
 	}
 	if orgID == "" {
 		orgID = ActiveOrg(r)
 	}
-	h.bus.Publish(events.New(eventType, projectID, entityID, Actor(r), payload).WithOrg(orgID))
+	h.Bus.Publish(events.New(eventType, projectID, entityID, Actor(r), payload).WithOrg(orgID))
 }
 
 // publishOrgEvent publishes a workspace-level event, where the tenant comes
@@ -41,10 +41,10 @@ func (h *Handler) publishOrgEvent(r *http.Request, eventType, orgID, entityID st
 // notifying the actor about their own action, so naming the right one is what
 // stops somebody being told what they just did.
 func (h *Handler) publishOrgEventAs(actor, eventType, orgID, entityID string, payload map[string]interface{}) {
-	if h.bus == nil || orgID == "" {
+	if h.Bus == nil || orgID == "" {
 		return
 	}
-	h.bus.Publish(events.New(eventType, "", entityID, actor, payload).WithOrg(orgID))
+	h.Bus.Publish(events.New(eventType, "", entityID, actor, payload).WithOrg(orgID))
 }
 
 // logAutoNote writes a system note of the given type to an artifact's feed,
@@ -60,7 +60,7 @@ func (h *Handler) logAutoNote(r *http.Request, artifactID, message, entryType st
 			entry.AuthorName = user.Email
 		}
 	}
-	if err := h.chatterService.CreateEntry(entry); err != nil {
+	if err := h.ChatterService.CreateEntry(entry); err != nil {
 		slog.Warn("api: failed to log note", "type", entryType, "artifact_id", artifactID, "error", err)
 	}
 }

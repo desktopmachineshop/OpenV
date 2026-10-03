@@ -104,7 +104,7 @@ func TestBulkReviewProposalsValidation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := &fakeProposalService{byID: map[string]*proposals.Proposal{}}
-			h := newTestHandler(t, func(h *Handler) { h.proposalService = svc })
+			h := newTestHandler(t, func(h *Handler) { h.ProposalService = svc })
 			w := httptest.NewRecorder()
 			h.BulkReviewProposals(w, bulkReq(t, tc.body, tc.user))
 			if w.Code != tc.wantCode {
@@ -137,7 +137,7 @@ func TestBulkReviewProposalsPartialFailure(t *testing.T) {
 			"p-stale": proposals.ErrNotPending,
 		},
 	}
-	h := newTestHandler(t, func(h *Handler) { h.proposalService = svc })
+	h := newTestHandler(t, func(h *Handler) { h.ProposalService = svc })
 
 	w := httptest.NewRecorder()
 	body := `{"ids":["p-ok","p-missing","p-boom","p-stale"],"action":"approve","note":"batch"}`

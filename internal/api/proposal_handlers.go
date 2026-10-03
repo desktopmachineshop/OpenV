@@ -44,7 +44,7 @@ func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "project_id is required")
 		return
 	}
-	list, err := h.proposalService.List(orgID, projectID, q.Get("status"), q.Get("run_id"))
+	list, err := h.ProposalService.List(orgID, projectID, q.Get("status"), q.Get("run_id"))
 	if err != nil {
 		respondInternal(w, r, "failed to list proposals", err)
 		return
@@ -61,7 +61,7 @@ func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve
 		return
 	}
 	id := mux.Vars(r)["id"]
-	proposal, err := h.proposalService.Get(id)
+	proposal, err := h.ProposalService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "proposal not found", err)
 		return
@@ -75,9 +75,9 @@ func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	if approve {
-		proposal, err = h.proposalService.Approve(id, CurrentUserID(r), req.Note)
+		proposal, err = h.ProposalService.Approve(id, CurrentUserID(r), req.Note)
 	} else {
-		proposal, err = h.proposalService.Reject(id, CurrentUserID(r), req.Note)
+		proposal, err = h.ProposalService.Reject(id, CurrentUserID(r), req.Note)
 	}
 	if err != nil {
 		// Genuine proposal-domain validation errors are safe to surface; an
@@ -175,7 +175,7 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 	reviewer := CurrentUserID(r)
 	results := make([]bulkOutcome, 0, len(req.IDs))
 	for _, id := range req.IDs {
-		proposal, err := h.proposalService.Get(id)
+		proposal, err := h.ProposalService.Get(id)
 		if err != nil {
 			results = append(results, bulkOutcome{ID: id, Error: "proposal not found"})
 			continue
@@ -191,9 +191,9 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if req.Action == "approve" {
-			_, err = h.proposalService.Approve(id, reviewer, req.Note)
+			_, err = h.ProposalService.Approve(id, reviewer, req.Note)
 		} else {
-			_, err = h.proposalService.Reject(id, reviewer, req.Note)
+			_, err = h.ProposalService.Reject(id, reviewer, req.Note)
 		}
 		if err != nil {
 			results = append(results, bulkOutcome{ID: id, Error: proposalReviewErrorMessage(r, id, err)})
@@ -218,7 +218,7 @@ func (h *Handler) orderProposalsForApply(ids []string) {
 	prio := make(map[string]int, len(ids))
 	for _, id := range ids {
 		prio[id] = 1
-		if p, err := h.proposalService.Get(id); err == nil && p != nil {
+		if p, err := h.ProposalService.Get(id); err == nil && p != nil {
 			switch p.Op {
 			case proposals.OpCreateArtifact:
 				prio[id] = 0

@@ -56,7 +56,7 @@ func TestDuplicateCandidatesDisabled(t *testing.T) {
 
 	t.Run("disabled service", func(t *testing.T) {
 		disabled := embeddings.NewService(fakeEmbedProvider{enabled: false}, &fakeEmbedStore{}, nil)
-		h := newTestHandler(t, func(h *Handler) { h.embeddingService = disabled })
+		h := newTestHandler(t, func(h *Handler) { h.EmbeddingService = disabled })
 		w := httptest.NewRecorder()
 		h.DuplicateCandidates(w, requestWithProjectVar("proj-1"))
 		resp := decode(t, w)

@@ -89,9 +89,9 @@ func (h *Handler) GetPushConfig(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.requireHumanUser(w, r); !ok {
 		return
 	}
-	cfg := pushConfig{Enabled: h.vapid.Enabled()}
+	cfg := pushConfig{Enabled: h.VAPID.Enabled()}
 	if cfg.Enabled {
-		cfg.PublicKey = h.vapid.PublicKey
+		cfg.PublicKey = h.VAPID.PublicKey
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cfg)
@@ -105,11 +105,11 @@ func (h *Handler) ListPushSubscriptions(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	if h.pushSubService == nil {
+	if h.PushSubService == nil {
 		writePushSubscriptions(w, nil)
 		return
 	}
-	list, err := h.pushSubService.ListForUser(userID)
+	list, err := h.PushSubService.ListForUser(userID)
 	if err != nil {
 		respondInternal(w, r, "failed to load push subscriptions", err)
 		return
@@ -136,7 +136,7 @@ func (h *Handler) CreatePushSubscription(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	if h.pushSubService == nil {
+	if h.PushSubService == nil {
 		writeJSONError(w, http.StatusServiceUnavailable, "push notifications are not available on this server")
 		return
 	}
@@ -163,7 +163,7 @@ func (h *Handler) CreatePushSubscription(w http.ResponseWriter, r *http.Request)
 	// created_at rather than the ones generated a moment ago for a row that
 	// was never inserted — the 201 body matches what GET lists.
 	sub := pushsubs.New(userID, endpoint, p256dh, auth, userAgent)
-	if err := h.pushSubService.Subscribe(sub); err != nil {
+	if err := h.PushSubService.Subscribe(sub); err != nil {
 		respondInternal(w, r, "failed to store push subscription", err)
 		return
 	}
@@ -272,7 +272,7 @@ func (h *Handler) DeletePushSubscription(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	if h.pushSubService == nil {
+	if h.PushSubService == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -288,7 +288,7 @@ func (h *Handler) DeletePushSubscription(w http.ResponseWriter, r *http.Request)
 		writeJSONError(w, http.StatusBadRequest, "endpoint is required")
 		return
 	}
-	if _, err := h.pushSubService.Unsubscribe(userID, endpoint); err != nil {
+	if _, err := h.PushSubService.Unsubscribe(userID, endpoint); err != nil {
 		respondInternal(w, r, "failed to remove push subscription", err)
 		return
 	}

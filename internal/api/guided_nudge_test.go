@@ -72,16 +72,16 @@ func nudgeFixture(t *testing.T, runStatus string) (*Handler, *fakeGuidedNudgeSer
 		runID: {ID: runID, OrgID: "org-1", Status: runStatus},
 	}}
 	h := newTestHandler(t, func(h *Handler) {
-		h.guidedService = guidedSvc
-		h.runService = runSvc
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.GuidedService = guidedSvc
+		h.RunService = runSvc
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"editor-1": members.RoleEditor},
 		}}
-		h.workerKeyService = &fakeWorkerKeyService{}
+		h.WorkerKeyService = &fakeWorkerKeyService{}
 		// No copilot agent in this workspace: a launch attempt fails
 		// cleanly, which is enough to tell it apart from parking.
-		h.agentService = &fakeAgentDefService{bySlug: map[string]*agents.Agent{}}
+		h.AgentService = &fakeAgentDefService{bySlug: map[string]*agents.Agent{}}
 	})
 	return h, guidedSvc, runSvc
 }

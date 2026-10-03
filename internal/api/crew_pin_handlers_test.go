@@ -283,8 +283,8 @@ func TestACrewLaunchAnswersWhoMayNotKnowOfItAsForACrewNoRowHas(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h, _, _ := crewPinFixture()
-			h.memberService.(*fakeMemberService).roles["proj-p"]["outsider"] = members.RoleEditor
-			h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
+			h.MemberService.(*fakeMemberService).roles["proj-p"]["outsider"] = members.RoleEditor
+			h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 				"agent-direct": {ID: "agent-direct", OrgID: "org-w", WriteMode: agents.WriteModeDirect}}}
 			w := httptest.NewRecorder()
 			h.LaunchTeamRun(w, tc.req)

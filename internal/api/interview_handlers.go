@@ -61,13 +61,13 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 	}
 	// The interviewer agent lives in the project's workspace.
 	interviewOrg := ActiveOrg(r)
-	if project, err := h.projectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
+	if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
 		interviewOrg = project.OrgID
 	}
-	if agent, err := h.agentService.GetBySlug(interviewOrg, slug); err == nil && agent != nil {
+	if agent, err := h.AgentService.GetBySlug(interviewOrg, slug); err == nil && agent != nil {
 		agentID = &agent.ID
 	}
-	interview, err := h.interviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, req.PersonaArtifactID, CurrentUserID(r))
+	interview, err := h.InterviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, req.PersonaArtifactID, CurrentUserID(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -81,7 +81,7 @@ func (h *Handler) ListInterviews(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	list, err := h.interviewService.ListInterviews(projectID)
+	list, err := h.InterviewService.ListInterviews(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list interviews", err)
 		return
@@ -90,7 +90,7 @@ func (h *Handler) ListInterviews(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, minRole string) *interviews.Interview {
-	interview, err := h.interviewService.GetInterview(mux.Vars(r)["id"])
+	interview, err := h.InterviewService.GetInterview(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return nil
@@ -109,7 +109,7 @@ func (h *Handler) validPersonaForProject(w http.ResponseWriter, r *http.Request,
 	if personaArtifactID == nil {
 		return true
 	}
-	artifact, err := h.artifactService.GetArtifact(*personaArtifactID)
+	artifact, err := h.ArtifactService.GetArtifact(*personaArtifactID)
 	if err != nil || artifact == nil {
 		personaNotFound.write(w)
 		return false
@@ -149,7 +149,7 @@ func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
 	if !h.validPersonaForProject(w, r, req.PersonaArtifactID, interview.ProjectID) {
 		return
 	}
-	updated, err := h.interviewService.SetInterviewPersona(interview.ID, req.PersonaArtifactID)
+	updated, err := h.InterviewService.SetInterviewPersona(interview.ID, req.PersonaArtifactID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -162,7 +162,7 @@ func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
 	if interview == nil {
 		return
 	}
-	closed, err := h.interviewService.CloseInterview(interview.ID)
+	closed, err := h.InterviewService.CloseInterview(interview.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -186,7 +186,7 @@ func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	invite, token, err := h.interviewService.CreateInvite(interview.ID, req.InviteeLabel, req.ExpiresAt)
+	invite, token, err := h.InterviewService.CreateInvite(interview.ID, req.InviteeLabel, req.ExpiresAt)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -204,7 +204,7 @@ func (h *Handler) ListInterviewInvites(w http.ResponseWriter, r *http.Request) {
 	if interview == nil {
 		return
 	}
-	list, err := h.interviewService.ListInvites(interview.ID)
+	list, err := h.InterviewService.ListInvites(interview.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to list invites", err)
 		return
@@ -216,12 +216,12 @@ func (h *Handler) RevokeInterviewInvite(w http.ResponseWriter, r *http.Request) 
 	if !requireUser(w, r) {
 		return
 	}
-	invite, err := h.interviewService.GetInvite(mux.Vars(r)["id"])
+	invite, err := h.InterviewService.GetInvite(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "invite not found", err)
 		return
 	}
-	interview, err := h.interviewService.GetInterview(invite.InterviewID)
+	interview, err := h.InterviewService.GetInterview(invite.InterviewID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return
@@ -229,7 +229,7 @@ func (h *Handler) RevokeInterviewInvite(w http.ResponseWriter, r *http.Request) 
 	if !h.requireProjectRoleFor(w, r, interview.ProjectID, members.RoleEditor, missing("invite not found")) {
 		return
 	}
-	if err := h.interviewService.RevokeInvite(invite.ID); err != nil {
+	if err := h.InterviewService.RevokeInvite(invite.ID); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -241,7 +241,7 @@ func (h *Handler) ListInterviewSessions(w http.ResponseWriter, r *http.Request) 
 	if interview == nil {
 		return
 	}
-	list, err := h.interviewService.ListSessions(interview.ID)
+	list, err := h.InterviewService.ListSessions(interview.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to list interview sessions", err)
 		return
@@ -267,7 +267,7 @@ func (h *Handler) ListProjectInterviewSessions(w http.ResponseWriter, r *http.Re
 		}
 		limit = n
 	}
-	list, err := h.interviewService.ListProjectSessions(projectID, limit)
+	list, err := h.InterviewService.ListProjectSessions(projectID, limit)
 	if err != nil {
 		respondInternal(w, r, "failed to list interview sessions", err)
 		return
@@ -282,12 +282,12 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 	if !requireUser(w, r) {
 		return
 	}
-	session, err := h.interviewService.GetSession(mux.Vars(r)["id"])
+	session, err := h.InterviewService.GetSession(mux.Vars(r)["id"])
 	if err != nil || session == nil {
 		writeJSONError(w, http.StatusNotFound, "interview session not found")
 		return
 	}
-	interview, err := h.interviewService.GetInterview(session.InterviewID)
+	interview, err := h.InterviewService.GetInterview(session.InterviewID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return
@@ -295,7 +295,7 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 	if !h.requireProjectRoleFor(w, r, interview.ProjectID, members.RoleViewer, missing("interview session not found")) {
 		return
 	}
-	transcript, err := h.interviewService.GetTranscript(session.ID)
+	transcript, err := h.InterviewService.GetTranscript(session.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load transcript", err)
 		return

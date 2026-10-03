@@ -34,7 +34,7 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 			}
 
 			// Try to get the other artifact's title
-			otherArtifact, err := h.artifactService.GetArtifact(otherArtifactID)
+			otherArtifact, err := h.ArtifactService.GetArtifact(otherArtifactID)
 			var artifactTitle string
 			if err == nil {
 				artifactTitle = otherArtifact.Title
@@ -64,7 +64,7 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 			}
 
 			// Try to get the other artifact's title
-			otherArtifact, err := h.artifactService.GetArtifact(otherArtifactID)
+			otherArtifact, err := h.ArtifactService.GetArtifact(otherArtifactID)
 			var artifactTitle string
 			if err == nil {
 				artifactTitle = otherArtifact.Title
@@ -244,7 +244,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 	// canEditLinkedArtifact reports whether the caller may edit the project
 	// the given artifact belongs to (the base project is already authorized).
 	canEditLinkedArtifact := func(artifactID string) bool {
-		artifact, err := h.artifactService.GetArtifact(artifactID)
+		artifact, err := h.ArtifactService.GetArtifact(artifactID)
 		if err != nil || artifact == nil {
 			return false
 		}
@@ -259,7 +259,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		}
 
 		// Get the link before deleting to determine affected artifact
-		link, err := h.linkService.GetLink(linkID)
+		link, err := h.LinkService.GetLink(linkID)
 		if err == nil && link != nil {
 			// Both endpoints may live outside the base project; the caller
 			// needs editor rights on their projects to remove the link.
@@ -276,7 +276,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		}
 
 		// Hard delete the link
-		err = h.linkService.DeleteLink(linkID)
+		err = h.LinkService.DeleteLink(linkID)
 		if err != nil {
 			slog.Warn("api: failed to delete link", "link_id", linkID, "error", err)
 		}
@@ -311,13 +311,13 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		}
 
 		// Validate link type against artifact types
-		fromArtifact, err := h.artifactService.GetArtifact(fromID)
+		fromArtifact, err := h.ArtifactService.GetArtifact(fromID)
 		if err != nil {
 			slog.Warn("api: failed to get source artifact for link validation", "artifact_id", fromID, "error", err)
 			continue
 		}
 
-		toArtifact, err := h.artifactService.GetArtifact(toID)
+		toArtifact, err := h.ArtifactService.GetArtifact(toID)
 		if err != nil {
 			slog.Warn("api: failed to get target artifact for link validation", "artifact_id", toID, "error", err)
 			continue
@@ -347,7 +347,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 			Attributes: attributes,
 		}
 		link := links.NewLink(linkReq)
-		err = h.linkService.CreateLink(link)
+		err = h.LinkService.CreateLink(link)
 		if err != nil {
 			slog.Warn("api: failed to create link", "from_id", fromID, "to_id", toID, "error", err)
 			continue
@@ -372,7 +372,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 // autoVersionLinkedArtifacts creates new versions for artifacts that had link changes
 func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error {
 	for _, artifactID := range affectedArtifactIDs {
-		artifact, err := h.artifactService.GetArtifact(artifactID)
+		artifact, err := h.ArtifactService.GetArtifact(artifactID)
 		if err != nil {
 			slog.Warn("api: could not find artifact for auto-versioning", "artifact_id", artifactID, "error", err)
 			continue
@@ -382,13 +382,13 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		seenLinkIDs := make(map[string]bool)
 		allLinks := make([]interface{}, 0)
 
-		incomingLinks, err := h.linkService.GetLinksTo(artifactID)
+		incomingLinks, err := h.LinkService.GetLinksTo(artifactID)
 		if err != nil {
 			slog.Warn("api: could not get incoming links", "artifact_id", artifactID, "error", err)
 			continue
 		}
 
-		outgoingLinks, err := h.linkService.GetLinksFrom(artifactID)
+		outgoingLinks, err := h.LinkService.GetLinksFrom(artifactID)
 		if err != nil {
 			slog.Warn("api: could not get outgoing links", "artifact_id", artifactID, "error", err)
 			continue
@@ -428,7 +428,7 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 			Attributes: attributes,
 		}
 
-		_, err = h.artifactService.UpdateArtifact(artifactID, updateReq)
+		_, err = h.ArtifactService.UpdateArtifact(artifactID, updateReq)
 		if err != nil {
 			slog.Warn("api: failed to auto-version artifact", "artifact_id", artifactID, "error", err)
 			continue
@@ -438,7 +438,7 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		newVersion := artifact.Version + 1
 		chatterMessage := fmt.Sprintf("Auto-updated to version %d due to link changes", newVersion)
 		chatterEntry := chatter.NewChatterEntry(artifactID, chatterMessage, true, "link-change")
-		if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
+		if err := h.ChatterService.CreateEntry(chatterEntry); err != nil {
 			slog.Warn("api: failed to create chatter entry for auto-versioned artifact", "artifact_id", artifactID, "error", err)
 		}
 

@@ -36,7 +36,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 		claimant = *run.ClaimedBy
 	}
 	if claimant != "" {
-		list, err := h.repoConnService.ListByProjectForUser(projectID, claimant)
+		list, err := h.RepoConnService.ListByProjectForUser(projectID, claimant)
 		if err != nil {
 			respondInternal(w, r, "failed to list repo connections", err)
 			return
@@ -47,7 +47,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 
 	// Users see the project's connections plus their own my_local_path.
 	if user := CurrentUser(r); user != nil {
-		list, err := h.repoConnService.ListByProjectForUser(projectID, user.ID)
+		list, err := h.RepoConnService.ListByProjectForUser(projectID, user.ID)
 		if err != nil {
 			respondInternal(w, r, "failed to list repo connections", err)
 			return
@@ -56,7 +56,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list, err := h.repoConnService.ListByProject(projectID)
+	list, err := h.RepoConnService.ListByProject(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list repo connections", err)
 		return
@@ -72,7 +72,7 @@ func (h *Handler) SetMyRepoPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
-	conn, err := h.repoConnService.Get(id)
+	conn, err := h.RepoConnService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "repo connection not found", err)
 		return
@@ -88,7 +88,7 @@ func (h *Handler) SetMyRepoPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := CurrentUser(r)
-	if err := h.repoConnService.SetMyPath(user.ID, id, strings.TrimSpace(req.LocalPath)); err != nil {
+	if err := h.RepoConnService.SetMyPath(user.ID, id, strings.TrimSpace(req.LocalPath)); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -107,7 +107,7 @@ func (h *Handler) CreateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.ProjectID = projectID
-	conn, err := h.repoConnService.Create(req)
+	conn, err := h.RepoConnService.Create(req)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -118,7 +118,7 @@ func (h *Handler) CreateRepoConnection(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	conn, err := h.repoConnService.Get(id)
+	conn, err := h.RepoConnService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "repo connection not found", err)
 		return
@@ -131,7 +131,7 @@ func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.repoConnService.Update(id, req)
+	updated, err := h.RepoConnService.Update(id, req)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -141,7 +141,7 @@ func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteRepoConnection(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	conn, err := h.repoConnService.Get(id)
+	conn, err := h.RepoConnService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "repo connection not found", err)
 		return
@@ -149,7 +149,7 @@ func (h *Handler) DeleteRepoConnection(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, conn.ProjectID, members.RoleOwner, missing("repo connection not found")) {
 		return
 	}
-	if err := h.repoConnService.Delete(id); err != nil {
+	if err := h.RepoConnService.Delete(id); err != nil {
 		respondInternal(w, r, "failed to delete repo connection", err)
 		return
 	}

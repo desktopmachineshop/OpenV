@@ -48,7 +48,7 @@ func (f *fakeAgentDefService) SaveDefinition(orgID string, def *agents.Definitio
 func TestCreateAgentDuplicateSlug(t *testing.T) {
 	createAgent := func(t *testing.T, svc *fakeAgentDefService) *httptest.ResponseRecorder {
 		t.Helper()
-		h := newTestHandler(t, func(h *Handler) { h.agentService = svc })
+		h := newTestHandler(t, func(h *Handler) { h.AgentService = svc })
 		body := `{"slug":"reviewer","name":"Reviewer","provider":"claude","allowed_tools":["mcp__openv__*"]}`
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/agents", strings.NewReader(body))
 		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true})
@@ -108,7 +108,7 @@ func TestAgentDefinitionRequiresAllowedTools(t *testing.T) {
 	call := func(t *testing.T, method, body string) (*httptest.ResponseRecorder, *fakeAgentDefService) {
 		t.Helper()
 		svc := &fakeAgentDefService{bySlug: map[string]*agents.Agent{}}
-		h := newTestHandler(t, func(h *Handler) { h.agentService = svc })
+		h := newTestHandler(t, func(h *Handler) { h.AgentService = svc })
 		r := httptest.NewRequest(method, "/api/v1/agents/reviewer", strings.NewReader(body))
 		r = mux.SetURLVars(r, map[string]string{"slug": "reviewer"})
 		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true})
@@ -176,7 +176,7 @@ func TestWorkerLifecycleErrorContract(t *testing.T) {
 
 	for _, ep := range endpoints {
 		t.Run(ep.name+"/invalid transition answers 409 with sentinel", func(t *testing.T) {
-			h := newTestHandler(t, func(h *Handler) { h.runService = ep.svc(transitionErr) })
+			h := newTestHandler(t, func(h *Handler) { h.RunService = ep.svc(transitionErr) })
 			w := httptest.NewRecorder()
 			ep.call(h, w, workerRunReq(ep.body, "org-1", "", "run-1"))
 			if w.Code != http.StatusConflict {
@@ -188,7 +188,7 @@ func TestWorkerLifecycleErrorContract(t *testing.T) {
 		})
 
 		t.Run(ep.name+"/internal error answers 500 without leaking", func(t *testing.T) {
-			h := newTestHandler(t, func(h *Handler) { h.runService = ep.svc(errors.New(internalDetail)) })
+			h := newTestHandler(t, func(h *Handler) { h.RunService = ep.svc(errors.New(internalDetail)) })
 			w := httptest.NewRecorder()
 			ep.call(h, w, workerRunReq(ep.body, "org-1", "", "run-1"))
 			if w.Code != http.StatusInternalServerError {
@@ -226,14 +226,14 @@ func TestRetryAgentRunAuthz(t *testing.T) {
 			retryRun: &agentruns.Run{ID: "run-new", OrgID: orgID, Status: agentruns.StatusQueued},
 		}
 		h := newTestHandler(t, func(h *Handler) {
-			h.runService = runSvc
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.RunService = runSvc
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				project: {ID: project, OrgID: orgID},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"org-admin": orgs.RoleAdmin, "org-member": orgs.RoleMember, "editor": orgs.RoleMember, "viewer": orgs.RoleMember, launcher: orgs.RoleMember},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				project: {"editor": members.RoleEditor, "viewer": members.RoleViewer},
 			}}
 		})
@@ -297,7 +297,7 @@ func TestRetryAgentRunErrorContract(t *testing.T) {
 			},
 			retryErr: retryErr,
 		}
-		return newTestHandler(t, func(h *Handler) { h.runService = runSvc }), runSvc
+		return newTestHandler(t, func(h *Handler) { h.RunService = runSvc }), runSvc
 	}
 
 	t.Run("not retryable answers 409 with sentinel", func(t *testing.T) {

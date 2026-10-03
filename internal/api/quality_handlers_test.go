@@ -20,14 +20,14 @@ import (
 
 func newQualityHandler(t *testing.T) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"viewer-a": members.RoleViewer},
 		}}
-		h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+		h.ArtifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"req-weak": {
 				ID:        "req-weak",
 				ProjectID: "proj-a",
@@ -43,7 +43,7 @@ func newQualityHandler(t *testing.T) *Handler {
 				Body:      "Intro",
 			},
 		}}
-		h.exportService = &fakeExportService{data: []byte(`{
+		h.ExportService = &fakeExportService{data: []byte(`{
 			"project_id": "proj-a",
 			"artifacts": [
 				{"id":"req-weak","project_id":"proj-a","type":"requirement","title":"Speed","body":"The system should be fast and user-friendly."},
@@ -169,14 +169,14 @@ func unlinkedCitations(findings []quality.Finding) []string {
 // artifact it holds no link to is flagged by both.
 func TestTheReportAndTheLintAgreeOnACrossProjectCitation(t *testing.T) {
 	h := newQualityHandler(t)
-	arts := h.artifactService.(*fakeArtifactService).byID
+	arts := h.ArtifactService.(*fakeArtifactService).byID
 	arts["req-cites"] = &artifacts.Artifact{ID: "req-cites", ProjectID: "proj-a", Ref: "REQ-1",
 		Type: artifacts.TypeRequirement, Title: "Archive",
 		Body: "The archive shall keep each record #REQ-4 names, as ##REQ-7 does."}
 	arts["far-req"] = &artifacts.Artifact{ID: "far-req", ProjectID: "proj-b", Ref: "REQ-4",
 		Type: artifacts.TypeRequirement, Title: "Records", Body: "Records shall be kept."}
-	h.linkService = &qualityLinks{all: []*links.Link{{ID: "l1", FromID: "req-cites", ToID: "far-req", Type: "refines"}}}
-	h.exportService = &fakeExportService{data: []byte(`{
+	h.LinkService = &qualityLinks{all: []*links.Link{{ID: "l1", FromID: "req-cites", ToID: "far-req", Type: "refines"}}}
+	h.ExportService = &fakeExportService{data: []byte(`{
 		"project_id": "proj-a",
 		"artifacts": [
 			{"id":"req-cites","project_id":"proj-a","ref":"REQ-1","type":"requirement","title":"Archive",

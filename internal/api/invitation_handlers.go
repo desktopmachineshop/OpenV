@@ -164,7 +164,7 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 	if err := h.checkOrgSeats(orgID, 1); err != nil {
 		return nil, err
 	}
-	user, err := h.userService.FindByEmail(email)
+	user, err := h.UserService.FindByEmail(email)
 	if err != nil {
 		return nil, err
 	}
@@ -176,17 +176,17 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		h.seatsChanged(orgID)
 		return &memberOrInvitation{Invitation: resp}, nil
 	}
-	if h.orgService == nil {
+	if h.OrgService == nil {
 		return nil, errors.New("the workspace service is not configured on this server")
 	}
-	existing, err := h.orgService.RoleInOrg(orgID, user.ID)
+	existing, err := h.OrgService.RoleInOrg(orgID, user.ID)
 	if err != nil {
 		return nil, err
 	}
 	if existing != "" {
 		return nil, errAlreadyOrgMember
 	}
-	if h.emailVerification.Required && !user.EmailVerified {
+	if h.EmailVerification.Required && !user.EmailVerified {
 		resp, err := h.inviteToOrg(r, orgID, email, role)
 		if err != nil {
 			return nil, err
@@ -194,7 +194,7 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		h.seatsChanged(orgID)
 		return &memberOrInvitation{Invitation: resp}, nil
 	}
-	if err := h.orgService.AddMember(orgID, user.ID, role); err != nil {
+	if err := h.OrgService.AddMember(orgID, user.ID, role); err != nil {
 		return nil, err
 	}
 	h.seatsChanged(orgID)
@@ -234,10 +234,10 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 // send mail to an address the sender chose — the endpoint is a relay, and
 // an unbounded one spends the deployment's sending reputation.
 func (h *Handler) inviteToOrg(r *http.Request, orgID, email, role string) (*invitationResponse, error) {
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		return nil, errInvitationsUnavailable
 	}
-	if h.mailer != nil && h.mailer.Enabled() {
+	if h.Mailer != nil && h.Mailer.Enabled() {
 		if pending := h.unchangedPendingInvitation(orgID, email, role); pending != nil {
 			return &invitationResponse{Invitation: pending, Reason: inviteReasonRecentlySent}, nil
 		}
@@ -252,11 +252,11 @@ func (h *Handler) inviteToOrg(r *http.Request, orgID, email, role string) (*invi
 	if user := CurrentUser(r); user != nil {
 		invitedBy = &user.ID
 	}
-	inv, token, err := h.invitationService.Create(orgID, email, role, invitedBy)
+	inv, token, err := h.InvitationService.Create(orgID, email, role, invitedBy)
 	if err != nil {
 		return nil, err
 	}
-	link := notify.InvitationLink(h.emailLinkBase, token)
+	link := notify.InvitationLink(h.EmailLinkBase, token)
 	// Admins are told an invitation went out. The invitee is not notified in
 	// app — the address usually has no account yet, so there is nobody to
 	// notify; the invitation email IS their notification.
@@ -294,7 +294,7 @@ func inviteBudgetKey(r *http.Request) string {
 // fails: failing to suppress a mail is better than failing to invite
 // somebody.
 func (h *Handler) unchangedPendingInvitation(orgID, email, role string) *invitations.Invitation {
-	inv, err := h.invitationService.FindPending(orgID, email)
+	inv, err := h.InvitationService.FindPending(orgID, email)
 	if err != nil || inv == nil {
 		return nil
 	}
@@ -317,16 +317,16 @@ func (h *Handler) unchangedPendingInvitation(orgID, email, role string) *invitat
 // row, so a failed one is re-sent by the next click rather than suppressed
 // as "already emailed".
 func (h *Handler) sendInvitationMailAsync(inv *invitations.Invitation, link string) bool {
-	if h.mailer == nil || !h.mailer.Enabled() {
+	if h.Mailer == nil || !h.Mailer.Enabled() {
 		return false
 	}
 	subject, body := notify.RenderInvitationEmail(inv.OrgName, inv.InvitedByName, link, invitations.DefaultTTL)
 	go func() {
-		if err := notify.SendWithTimeout(h.mailer, inv.Email, subject, body, notify.VerificationSendTimeout); err != nil {
+		if err := notify.SendWithTimeout(h.Mailer, inv.Email, subject, body, notify.VerificationSendTimeout); err != nil {
 			slog.Warn("invitation: failed to send invitation email", "org_id", inv.OrgID, "error", err)
 			return
 		}
-		if err := h.invitationService.MarkEmailed(inv.ID, time.Now()); err != nil {
+		if err := h.InvitationService.MarkEmailed(inv.ID, time.Now()); err != nil {
 			slog.Warn("invitation: could not record that the link was emailed",
 				"invitation_id", inv.ID, "org_id", inv.OrgID, "error", err)
 		}
@@ -372,11 +372,11 @@ func (h *Handler) ListOrgInvitations(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		json.NewEncoder(w).Encode([]*invitations.Invitation{})
 		return
 	}
-	list, err := h.invitationService.ListPending(orgID)
+	list, err := h.InvitationService.ListPending(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to list invitations", err)
 		return
@@ -393,11 +393,11 @@ func (h *Handler) RevokeOrgInvitation(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, vars["id"], orgs.RoleAdmin) {
 		return
 	}
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		writeJSONError(w, http.StatusNotFound, errInvitationsUnavailable.Error())
 		return
 	}
-	if err := h.invitationService.Revoke(vars["id"], vars["invId"]); err != nil {
+	if err := h.InvitationService.Revoke(vars["id"], vars["invId"]); err != nil {
 		h.writeInvitationError(w, r, err)
 		return
 	}
@@ -424,7 +424,7 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
 		return
 	}
@@ -443,7 +443,7 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 	// evidence that the token is wrong, and answering "invalid or expired"
 	// to it sends the invitee off to ask for a new invitation that will fail
 	// exactly the same way; it is reported as the server fault it is.
-	inv, err := h.invitationService.Lookup(req.Token)
+	inv, err := h.InvitationService.Lookup(req.Token)
 	if err != nil || inv == nil {
 		if err == nil || errors.Is(err, invitations.ErrInvalidToken) {
 			writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
@@ -488,11 +488,11 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
 		return
 	}
-	acc, err := h.invitationService.AcceptTokenForEmail(req.Token, user.Email, user.ID)
+	acc, err := h.InvitationService.AcceptTokenForEmail(req.Token, user.Email, user.ID)
 	if err != nil {
 		switch {
 		case errors.Is(err, invitations.ErrEmailMismatch):
@@ -541,10 +541,10 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 // the sign-in the person actually asked for still succeeds, and the
 // invitation stays pending so its link can take it up later.
 func (h *Handler) acceptInvitationsForProviderVerifiedEmail(userID, email string) {
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		return
 	}
-	accepted, err := h.invitationService.AcceptAllForProviderVerifiedEmail(email, userID)
+	accepted, err := h.InvitationService.AcceptAllForProviderVerifiedEmail(email, userID)
 	if err != nil {
 		slog.Error("invitation: a provider-verified address could not join every workspace that invited it",
 			"user_id", userID, "error", err)
@@ -604,10 +604,10 @@ const (
 // person followed a link to join a workspace, and if they did not join, the
 // outcome says so and the page can tell them.
 func (h *Handler) acceptResolvedInvitation(inv *invitations.Invitation, user *users.User) string {
-	if inv == nil || h.invitationService == nil || user == nil {
+	if inv == nil || h.InvitationService == nil || user == nil {
 		return InviteOutcomeInvalid
 	}
-	acc, err := h.invitationService.AcceptResolvedForEmail(inv, user.Email, user.ID)
+	acc, err := h.InvitationService.AcceptResolvedForEmail(inv, user.Email, user.ID)
 	if err != nil {
 		slog.Warn("invitation: registration token was not accepted", "user_id", user.ID, "error", err)
 		if errors.Is(err, invitations.ErrEmailMismatch) {
