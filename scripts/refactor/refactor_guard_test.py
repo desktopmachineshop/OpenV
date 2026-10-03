@@ -1414,6 +1414,19 @@ class AllowlistTest(RepoTest):
         self.assertOnlyForm(g, "COMPONENTS_IMPORTING_VIEWS", "quoted-key: [quoted strings]",
                             "'src/components/ProjectLayout.tsx': ['src/views/TodoList', ...VIEWS],")
 
+    def test_an_entry_after_a_lone_cr_adds_an_allowance_in_class_b(self):
+        g = self.allowlists_in_class_b("  'src/views/InterviewChat.tsx': 1,\n",
+                                       "  'src/views/InterviewChat.tsx': 1, // Q21\r  'src/views/Login.tsx': 1,\n")
+        self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/views/Login.tsx'")
+        self.assertFailsWith(g, "(2) guard code", "eslint.config.js")
+
+    def test_a_target_after_a_hidden_line_end_adds_an_import_in_class_b(self):
+        g = self.allowlists_in_class_b("  'src/components/ProjectLayout.tsx': ['src/views/TodoList'],\n",
+                                       "  'src/components/ProjectLayout.tsx': ['src/views/TodoList'], // F2\u2029"
+                                       "  'src/components/New.tsx': ['src/views/Y'],\n")
+        self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/components/New.tsx'")
+        self.assertFailsWith(g, "(2) guard code", "eslint.config.js")
+
     def test_a_target_list_over_several_lines_is_read(self):
         g = self.allowlists_in_class_b("'src/components/ProjectLayout.tsx': ['src/views/TodoList'],",
                                        "'src/components/ProjectLayout.tsx': [\n    'src/views/TodoList',\n"
@@ -1443,6 +1456,15 @@ class AllowlistTest(RepoTest):
         self.commit("X2b list", {"scripts/refactor/refactor_guard.py": filled},
                     trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
         self.assertPasses(self.guard("refactor"))
+
+    def test_python_after_a_lone_cr_beside_the_x2b_block_fails_in_class_e(self):
+        # Python, too, ends a line at a lone CR: OTHER = 2 is code, not part
+        # of the comment on the X2b list's closer.
+        self.commit("X2b list", {"scripts/refactor/refactor_guard.py":
+                                 GUARD_PY.replace("X2B_CALL_SHAPE_CHANGES = [\n]",
+                                                  "X2B_CALL_SHAPE_CHANGES = [\n]  # X2b fills this\rOTHER = 2")},
+                    trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
 
     def test_x2b_block_edit_in_class_b_fails(self):
         filled = GUARD_PY.replace("X2B_CALL_SHAPE_CHANGES = [\n]",
@@ -1532,6 +1554,53 @@ class CeilingTest(RepoTest):
         f = self.assertFailsWith(g, "(2) guard ceiling",
                                  "COMPONENT_CEILINGS may hold only quoted-key: integer entries")
         self.assertIn("`} as const;`", f.message)
+
+    # A lone CR ends a line in JavaScript (and Python), and U+2028 and U+2029
+    # end one in JavaScript: hidden in a // comment, one turns the rest of the
+    # physical line into code. The guard reads such a line end as the line
+    # end it is (HIDDEN_EOL), and never carves out a span holding one.
+
+    def test_an_entry_after_a_hidden_line_end_raises_a_ceiling_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n",
+                                          "  'views/Login.tsx': 778, // F8 trims this next\u2028"
+                                          "  'views/Login.tsx': 5000,\n")
+        self.assertFailsWith(g, "(2) guard ceiling", "raises 'views/Login.tsx' in FILE_CEILINGS from 778 to 5000")
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_an_entry_after_a_lone_cr_adds_a_ceiling_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'Login': 733,\n", "  'Login': 733, // see F8\r  'Wizard': 900,\n")
+        self.assertFailsWith(g, "(2) guard ceiling", "adds 'Wizard' to COMPONENT_CEILINGS")
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_code_after_a_hidden_line_end_on_a_closer_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n};",
+                                          "  'views/Login.tsx': 778,\n}; // end\u2029console.log('ran');")
+        f = self.assertFailsWith(g, "(2) guard ceiling", "FILE_CEILINGS may hold only quoted-key: integer entries")
+        self.assertIn("`console.log('ran');`", f.message)
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_code_after_a_hidden_line_end_on_a_constant_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("const OVER_1000 = 5;", "const OVER_1000 = 5; // §10\u2028globalThis.ran = 1;")
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_code_after_a_hidden_line_end_on_the_error_chains_ceiling_fails_in_class_b(self):
+        self.commit("skip", {"frontend/src/arch/errorChains.test.ts":
+                             ERROR_CHAINS.replace("const CEILING = 53;", "const CEILING = 53; //\u2028it.skip = it;")},
+                    trailers("B"))
+        self.assertFailsWith(self.guard(*REFACTOR), "(2) guard code", "errorChains.test.ts")
+
+    def test_a_crlf_line_end_in_a_size_ceiling_map_passes(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n", "  'views/Login.tsx': 700, // F8\r\n")
+        self.assertPasses(g)
+
+    def test_a_map_failed_for_its_form_is_not_also_read_for_growth(self):
+        # FILE_CEILINGS closed with `} as const;` runs on into
+        # COMPONENT_CEILINGS; its one failure is the form, not 'adds' lines
+        # for the next map's entries.
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n};", "  'views/Login.tsx': 778,\n} as const;")
+        ceilings = [f for f in g.failures if f.rule == "(2) guard ceiling"]
+        self.assertEqual(len(ceilings), 1, [f.render() for f in g.failures])
+        self.assertIn("FILE_CEILINGS may hold only quoted-key: integer entries", ceilings[0].message)
 
     def test_a_quoted_size_ceiling_raised_in_class_b_fails(self):
         g = self.size_ceilings_in_class_b("'Login': 733", "'Login': 900")

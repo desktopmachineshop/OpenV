@@ -804,6 +804,13 @@ def load_release_notes():
 
 # ------------------------------------------------------------- JS/Py blocks
 
+# Line ends that text.split("\n") does not see but the languages do: a lone
+# CR ends a line in JavaScript and Python, and U+2028 and U+2029 end one in
+# JavaScript. Hidden in a // or # comment, one turns the rest of the physical
+# line into code the guard would read as part of the comment.
+HIDDEN_EOL = re.compile("\r(?!\n)|[\u2028\u2029]")
+
+
 def find_block(text, name):
     """(start, end) line indexes of a top-level `NAME = [` or `const NAME = {`
     literal: its opening line, and the first later line that closes it at
@@ -848,7 +855,10 @@ def blank_blocks(text, names):
         if span:
             spans.append((span, name))
     for (start, end), name in sorted(spans, reverse=True):
-        lines[start:end + 1] = [f"<{name}>"]
+        # A span holding a hidden line end is never blanked: what follows it
+        # on the physical line is code, so it stays in the comparison.
+        if not HIDDEN_EOL.search("\n".join(lines[start:end + 1])):
+            lines[start:end + 1] = [f"<{name}>"]
     return "\n".join(lines)
 
 
@@ -881,7 +891,9 @@ def read_literal(text, name, kind):
     the literal, // comments aside, that is not entries of that form
     (LITERAL_FORMS), or None when there is none. An absent literal is
     ({}, None)."""
-    block = re.sub(r"//[^\n]*", "", block_text(text or "", name))
+    # Read hidden line ends as the line ends they are (HIDDEN_EOL), so an
+    # entry or code after one is read, not dropped with the comment.
+    block = re.sub(r"//[^\n]*", "", HIDDEN_EOL.sub("\n", block_text(text or "", name)))
     if not block:
         return {}, None
     code = block.split("=", 1)[1] if "=" in block else block
@@ -1664,14 +1676,17 @@ class Guard:
         # A tree without the file (deleted earlier in this pull request) judges
         # nothing; the base, which has it, still does.
         olds = [self.git.text(tree, LINT_ALLOWLIST_FILE) for tree in self.judged_against(c)]
+        unread = set()  # failed for their form: what read_literal reads of them is no measure of growth
         for name in sorted(frozen):
-            self.check_literal_form(c, "(2) lint allowlist", LINT_ALLOWLIST_FILE, name, LINT_ALLOWLISTS[name], new,
+            if self.check_literal_form(c, "(2) lint allowlist", LINT_ALLOWLIST_FILE, name, LINT_ALLOWLISTS[name], new,
                                     olds, "write each entry as 'file': <decimal integer> or 'file': ['target', ...], "
                                     "with nothing else there but // comments: the guard reads no other form (an "
                                     "unquoted or computed key, a spread, arithmetic, a hex number, a name), so such "
-                                    "an entry could add or raise an allowance unseen")
+                                    "an entry could add or raise an allowance unseen"):
+                unread.add(name)
         per_parent = [{(n, k): d for n, k, d in allowlist_growth_keyed(old, new)} for old in olds if old is not None]
-        for name, key in sorted(k for k in set.intersection(*(set(d) for d in per_parent)) if k[0] in frozen):
+        for name, key in sorted(k for k in set.intersection(*(set(d) for d in per_parent))
+                                if k[0] in frozen - unread):
             desc = per_parent[-1][(name, key)]
             self.fail("(2) lint allowlist", f"{desc} in {name}", "S12's allowlists only shrink: fix the import or "
                       "open the stream through the shared hook instead (§6.4 S12)", commit=c,
@@ -1686,8 +1701,9 @@ class Guard:
         commit that wrote it is."""
         stray = read_literal(new, name, kind)[1]
         if stray is None or block_text(new, name) in [block_text(old, name) for old in olds if old is not None]:
-            return
+            return False
         self.fail(rule, f"{name} may hold only {LITERAL_FORMS[kind]} entries, not `{stray}`", fix, commit=c, path=path)
+        return True
 
     def check_guard_ceilings(self, c):
         for path, names in GUARD_CODE_CEILINGS.items():
@@ -1709,11 +1725,12 @@ class Guard:
                     continue
                 if not find_block(new, name) or not find_block(base_text, name):
                     continue  # renamed, gone or created by this pull request: the guard-code rule judges the edit
-                self.check_literal_form(c, "(2) guard ceiling", path, name, "count", new, olds,
-                                        "write each ceiling as 'key': <decimal integer>, with nothing else there but "
-                                        "// comments: the guard reads no other form (an unquoted or computed key, a "
-                                        "spread, arithmetic, a hex number, a name), so such an entry could raise or "
-                                        "add a ceiling unseen")
+                if self.check_literal_form(c, "(2) guard ceiling", path, name, "count", new, olds,
+                                           "write each ceiling as 'key': <decimal integer>, with nothing else there "
+                                           "but // comments: the guard reads no other form (an unquoted or computed "
+                                           "key, a spread, arithmetic, a hex number, a name), so such an entry could "
+                                           "raise or add a ceiling unseen"):
+                    continue  # what read_literal reads of it is no measure of growth
                 entries = parse_allowlist(new, name, "count")
                 before = [parse_allowlist(old, name, "count") for old in olds if find_block(old, name)]
                 for key, value in sorted(entries.items()):
