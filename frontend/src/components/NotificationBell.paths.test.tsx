@@ -9,11 +9,11 @@
 // clicked; the Go link is the push payload's url (notificationPath in
 // internal/notify/email.go), which the email's "Open it in OpenV" link must
 // equal once its base is stripped. The table pins pathForNotification
-// (NotificationBell.tsx) for every notification type and its drift from
-// notificationPath, which is today's behavior (Q7): aligning them is a
-// release-noted change that regenerates this snapshot. X4b later replaces
-// the mirrored cases with a shared fixture that keeps separate go and ts
-// expectations.
+// (NotificationBell.tsx) for every notification type beside
+// notificationPath. They drifted apart (Q7) until the R7 fix for #379's bugs
+// 58 and 59 sent every link to the page the bell opens, so the test now
+// also fails when one differs. X4b later replaces the mirrored cases with a
+// shared fixture that keeps separate go and ts expectations.
 //
 // Regenerate (a deliberate, release-noted behavior change only):
 //   npx vitest run src/components/NotificationBell.paths.test.tsx -u
@@ -232,11 +232,14 @@ describe("the bell's deep link for every notification type", () => {
     expect(missing).toEqual([]);
 
     const unique = [...new Set(rows.map((r) => r.slice(0, 5).join('\t')))].map((r) => r.split('\t'));
+    // The email and the push open the page the bell does (quirk Q7, fixed
+    // under R7 for #379's bugs 58 and 59).
+    expect(unique.filter((r) => r[4] !== 'same').map((r) => `${r[0]} ${r[1]}: bell ${r[2]}, email and push ${r[3]}`)).toEqual([]);
     const text = [
       '# Where the bell (pathForNotification, NotificationBell.tsx) and the email and web push',
       '# (notificationPath, internal/notify/email.go) send a member, for every notification the Go',
       '# goldens under internal/notify/testdata/notifications deliver: refactor plan step S10.',
-      '# They differ by design today (quirk Q7); aligning them is a release-noted change.',
+      '# They open the same page (quirk Q7, fixed under R7 for #379\'s bugs 58 and 59).',
       `# Regenerate: ${REGENERATE}`,
       `# ${types.length} types; ${unique.length} distinct links; ${unique.filter((r) => r[4] === 'differs').length} differ.`,
       '',

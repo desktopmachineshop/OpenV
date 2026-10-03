@@ -38,6 +38,37 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   fails to start, and removes the directory a failed lease made. This
   matters only if you run your own runner pool.
 
+- **A notification's email and phone alert open the page the bell does.**
+  The link in a notification email, and a tap on its phone alert, took you
+  to your projects list, or to the project's overview, for a change to your
+  workspace or project access, someone joining or leaving the workspace, a
+  release, and a dedicated instance's support window. They now open the
+  same page as the notification in the bell: the workspace's or the
+  project's members, What's new, or the workspace settings. A cloud runner
+  minutes alert, which tells an admin to raise the allowance from the
+  Billing tab, opened your projects list everywhere, the bell included; it
+  now opens the workspace's Billing tab.
+
+- **Notifications read as written.** A review request for an artifact
+  whose title has quotes or a backslash in it showed extra backslashes, as
+  in `"Brake \"pedal\" force"`; the title now reads exactly as written. A
+  release announcement showed the release notes' formatting marks, such as
+  the `**` around each headline; it now shows plain text. A phone alert too
+  long for the screen could end in the middle of a word, and a release
+  announcement's on a bare bullet; it now ends after a whole word, with an
+  ellipsis. On a dedicated instance, the support window warning read
+  "Upgrade OpenV within 1 days", and "within 0 days" on the last day; it
+  now counts the days left, rounding up, as "within 2 days" or "within 1
+  day", says "Upgrade OpenV today" on the last day, and the notice that the
+  window has closed arrives when it closes rather than a day later.
+
+- **Notification emails show a workspace's name correctly in the subject.**
+  A subject naming a workspace whose name has accented or other non-English
+  letters, such as Zürich Labs, could show garbled in some mail programs;
+  it is now encoded so that every mail program shows it as written. A line
+  break in a workspace's name no longer reaches the email's headers: the
+  subject shows it as a space.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

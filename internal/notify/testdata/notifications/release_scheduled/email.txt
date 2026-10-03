@@ -11,7 +11,7 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Stable release 0.15.0 is ready for Zürich Labs
+Subject: =?utf-8?q?Stable_release_0.15.0_is_ready_for_Z=C3=BCrich_Labs?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
@@ -20,7 +20,7 @@ Stable release 0.15.0 is ready for Zürich Labs
 It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -32,7 +32,7 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Stable release 0.15.0 turns on for Zürich Labs tomorrow
+Subject: =?utf-8?q?Stable_release_0.15.0_turns_on_for_Z=C3=BCrich_Labs_tomorrow?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
@@ -41,7 +41,7 @@ Stable release 0.15.0 turns on for Zürich Labs tomorrow
 Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -53,7 +53,7 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Stable release 0.15.0 is ready for Zürich Labs
+Subject: =?utf-8?q?Stable_release_0.15.0_is_ready_for_Z=C3=BCrich_Labs?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
@@ -62,7 +62,7 @@ Stable release 0.15.0 is ready for Zürich Labs
 It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -74,7 +74,7 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Stable release 0.15.0 turns on for Zürich Labs tomorrow
+Subject: =?utf-8?q?Stable_release_0.15.0_turns_on_for_Z=C3=BCrich_Labs_tomorrow?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
@@ -83,7 +83,7 @@ Stable release 0.15.0 turns on for Zürich Labs tomorrow
 Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -95,7 +95,7 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Stable release 0.15.0 is ready for Zürich Labs
+Subject: =?utf-8?q?Stable_release_0.15.0_is_ready_for_Z=C3=BCrich_Labs?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
@@ -104,7 +104,7 @@ Stable release 0.15.0 is ready for Zürich Labs
 It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -125,7 +125,7 @@ Stable release 0.15.0 is ready for Acme Rockets
 It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -146,7 +146,7 @@ Stable release 0.15.0 is ready for Acme Rockets
 It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.

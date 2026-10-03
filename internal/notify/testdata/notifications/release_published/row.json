@@ -5,7 +5,7 @@
     {
       "delivery": "1 of 2",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\n• **Requirements import keeps enum attributes.**\n• **The bell opens on the tab you left.**\nMaintenance updates\n• **Projects load faster.**\n• **Exports are named after their project.**\n…and more under What's new.",
+        "Body": "New features\n• Baselines compare side by side. Pick two baselines and see what changed between them.\n• Requirements import keeps enum attributes.\n• The bell opens on the tab you left.\nMaintenance updates\n• Projects load faster.\n• Exports are named after their project.\n…and more under What's new.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -29,7 +29,7 @@
     {
       "delivery": "2 of 2",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\n• **Requirements import keeps enum attributes.**\n• **The bell opens on the tab you left.**\nMaintenance updates\n• **Projects load faster.**\n• **Exports are named after their project.**\n…and more under What's new.",
+        "Body": "New features\n• Baselines compare side by side. Pick two baselines and see what changed between them.\n• Requirements import keeps enum attributes.\n• The bell opens on the tab you left.\nMaintenance updates\n• Projects load faster.\n• Exports are named after their project.\n…and more under What's new.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -149,7 +149,7 @@
     {
       "delivery": "1 of 2",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -175,7 +175,7 @@
     {
       "delivery": "2 of 2",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -201,7 +201,7 @@
     {
       "delivery": "2 of 3",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -227,7 +227,7 @@
     {
       "delivery": "3 of 3",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -253,7 +253,7 @@
     {
       "delivery": "3 of 5",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -279,7 +279,7 @@
     {
       "delivery": "4 of 5",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -305,7 +305,7 @@
     {
       "delivery": "5 of 5",
       "row": {
-        "Body": "New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**",
+        "Body": "New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {

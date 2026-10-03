@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Cloud runner minutes nearly used up\",\"body\":\"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).\",\"url\":\"/projects\",\"tag\":\"hosted_minutes:org-acme\"}"
+          "payload": "{\"title\":\"Cloud runner minutes nearly used up\",\"body\":\"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).\",\"url\":\"/org/settings?tab=billing\",\"tag\":\"hosted_minutes:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Cloud runner minutes nearly used up\",\"body\":\"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).\",\"url\":\"/projects\",\"tag\":\"hosted_minutes:org-acme\"}"
+          "payload": "{\"title\":\"Cloud runner minutes nearly used up\",\"body\":\"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).\",\"url\":\"/org/settings?tab=billing\",\"tag\":\"hosted_minutes:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -34,7 +34,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Cloud runner minutes used up\",\"body\":\"This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agen…\",\"url\":\"/projects\",\"tag\":\"hosted_minutes:org-acme\"}"
+          "payload": "{\"title\":\"Cloud runner minutes used up\",\"body\":\"This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the…\",\"url\":\"/org/settings?tab=billing\",\"tag\":\"hosted_minutes:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -47,7 +47,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Cloud runner minutes used up\",\"body\":\"This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agen…\",\"url\":\"/projects\",\"tag\":\"hosted_minutes:org-acme\"}"
+          "payload": "{\"title\":\"Cloud runner minutes used up\",\"body\":\"This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the…\",\"url\":\"/org/settings?tab=billing\",\"tag\":\"hosted_minutes:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
