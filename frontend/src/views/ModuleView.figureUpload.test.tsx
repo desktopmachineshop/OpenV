@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { mockApi } from '../test/mockApi';
 import { ModuleView } from './ModuleView';
 import { artifactAPI, attachmentAPI } from '../api/client';
 import { DialogProvider } from '../components/ui';
@@ -9,26 +10,17 @@ import { DialogProvider } from '../components/ui';
 // as a figure's new file and a rename already did, so the view reloads the
 // artifact after an upload rather than keep showing the version it had.
 
-vi.mock('../api/client', () => ({
-  artifactAPI: { list: vi.fn(), getVersions: vi.fn() },
-  linkAPI: { list: vi.fn(), listForArtifact: vi.fn() },
-  attachmentAPI: {
-    listByProject: vi.fn(),
-    listByArtifact: vi.fn(),
-    upload: vi.fn(),
-    getDownloadUrl: (id: string) => `/dl/${id}`,
-  },
-  baselineAPI: { list: vi.fn() },
-  qualityAPI: { project: vi.fn(), artifact: vi.fn() },
-  projectAPI: { get: vi.fn(), linkedArtifacts: vi.fn(), parties: vi.fn() },
-  agentsAPI: {},
-  membersAPI: { list: vi.fn().mockResolvedValue({ data: [] }) },
-  metaAPI: {
-    attributeDefinitions: vi.fn().mockResolvedValue({ data: [] }),
-    artifactTypes: vi.fn().mockResolvedValue({ data: [] }),
-    linkTypes: vi.fn().mockResolvedValue({ data: [] }),
-  },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    attachmentAPI: { getDownloadUrl: (id: string) => `/dl/${id}` },
+    membersAPI: { list: () => Promise.resolve({ data: [] }) },
+    metaAPI: {
+      attributeDefinitions: () => Promise.resolve({ data: [] }),
+      artifactTypes: () => Promise.resolve({ data: [] }),
+      linkTypes: () => Promise.resolve({ data: [] }),
+    },
+  })
+);
 
 vi.mock('../hooks/useViewport', () => ({
   useViewport: () => ({ width: 1280, cls: 'desktop', isPhone: false, isCompact: false, coarsePointer: false }),

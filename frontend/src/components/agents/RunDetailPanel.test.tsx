@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
 import { RunDetailPanel } from './RunDetailPanel';
 import { agentRunsAPI } from '../../api/client';
 
@@ -11,16 +12,11 @@ import { agentRunsAPI } from '../../api/client';
 // text} and `status` {run_id, status}. Below, the reconnect policy the same
 // move turns into a hook parameter (plan Q21).
 
-vi.mock('../../api/client', () => ({
-  agentRunsAPI: {
-    get: vi.fn(),
-    tree: vi.fn(),
-    logs: vi.fn(),
-    cancel: vi.fn(),
-    retry: vi.fn(),
-    streamUrl: (id: string, afterSeq = 0) => `/stream/${id}?after_seq=${afterSeq}`,
-  },
-}));
+vi.mock('../../api/client', async (orig) =>
+  mockApi(await orig(), {
+    agentRunsAPI: { streamUrl: (id: string, afterSeq = 0) => `/stream/${id}?after_seq=${afterSeq}` },
+  })
+);
 
 const api = vi.mocked(agentRunsAPI);
 

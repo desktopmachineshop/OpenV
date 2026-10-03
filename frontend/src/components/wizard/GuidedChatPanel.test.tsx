@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
 import { GuidedChatPanel } from './GuidedChatPanel';
 import { guidedAPI } from '../../api/client';
 
@@ -10,15 +11,11 @@ vi.mock('react-router-dom', () => ({
     require('react').createElement('a', { href: String(to), ...rest }, children),
 }));
 
-vi.mock('../../api/client', () => ({
-  guidedAPI: {
-    listMessages: vi.fn(),
-    kickoffChat: vi.fn(),
-    nudgeChat: vi.fn(),
-    sendMessage: vi.fn(),
-    chatStreamUrl: (id: string) => `/stream/${id}`,
-  },
-}));
+vi.mock('../../api/client', async (orig) =>
+  mockApi(await orig(), {
+    guidedAPI: { chatStreamUrl: (id: string) => `/stream/${id}` },
+  })
+);
 
 const api = vi.mocked(guidedAPI);
 
