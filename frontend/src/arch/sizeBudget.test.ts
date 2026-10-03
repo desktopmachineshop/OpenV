@@ -33,11 +33,10 @@ import { productionSources, srcRel } from './repo';
 
 const FILE_BUDGET = 600;
 const COMPONENT_BUDGET = 300;
-const OVER_1000 = 5;
+const OVER_1000 = 4;
 
 // Each file over FILE_BUDGET when this test landed: its lines then plus headroom.
 const FILE_CEILINGS = {
-  'api/client.ts': 3036,
   'components/ArtifactDetails.tsx': 766,
   'components/ArtifactEditor.tsx': 710,
   'components/ArtifactList.tsx': 738,
