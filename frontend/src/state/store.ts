@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Artifact, ArtifactTypeDef, Link, LinkTypeRule, Org, OrgFeatures, Project, User } from '../api/client';
+import { writeActiveOrg } from './activeOrgStorage';
 
 interface MetaState {
   artifactTypes: ArtifactTypeDef[];
@@ -70,12 +71,7 @@ export const useAppStore = create<AppState>((set) => ({
   setFeatures: (features: OrgFeatures | null) => set({ features }),
   activeOrgId: '',
   setActiveOrgId: (id: string, opts?: { clearProjects?: boolean }) => {
-    try {
-      sessionStorage.setItem('openv_active_org', id);
-      localStorage.setItem('openv_active_org', id);
-    } catch {
-      // storage unavailable — in-memory state still works
-    }
+    writeActiveOrg(id);
     const clearProjects = opts?.clearProjects !== false;
     set((state) => ({
       activeOrgId: id,
