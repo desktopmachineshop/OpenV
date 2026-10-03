@@ -8,8 +8,10 @@ import (
 )
 
 // The link rule table is the contract the API enforces on every link that is
-// created (internal/api/handlers.go) and on every link an agent proposes
-// (internal/api/proposal_appliers.go), and the frontend mirrors it in
+// created (CreateLink, internal/api/link_handlers.go, and the managed link
+// edits of an artifact update, internal/api/managed_link_edits.go) and on
+// every link an agent proposes (internal/api/proposal_appliers.go), and the
+// frontend mirrors it in
 // frontend/src/config/linkTypeRules.ts. These tests pin the table's
 // behaviour rule by rule: every allowed from/to pair is accepted, every
 // other artifact type in the catalog is rejected on both sides unless the
