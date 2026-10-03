@@ -1,9 +1,14 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"testing"
@@ -374,6 +379,112 @@ func TestRunSlotsSurviveClaimFailures(t *testing.T) {
 	awaitFinish(t, api, "n1")
 	stopWorker(t, cancel, done)
 	checkClaimBodies(t, api, "w-retry", false, 0)
+}
+
+// TestRunSlotsSurviveClaimsThatNameNoRun: a claim answered 200 whose body
+// names no run ({}, "run":null, or a run without an id) claimed nothing.
+// The worker logs it, naming itself, hands the slot back and claims the next
+// real run. It used to hand such a claim to execute, which panicked reading
+// the missing run and again in its own recovery, taking the whole process
+// down with every run in flight; so the worker runs in a child test process,
+// where a crash fails this test instead of ending the suite.
+func TestRunSlotsSurviveClaimsThatNameNoRun(t *testing.T) {
+	if testing.Short() {
+		t.Skip("waits on the worker's 2-second claim ticks")
+	}
+	t.Parallel()
+	if !inChildProcess(t, "TestRunSlotsSurviveClaimsThatNameNoRun") {
+		return
+	}
+	logs := &lockedBuffer{}
+	log.SetOutput(io.MultiWriter(os.Stderr, logs))
+	defer log.SetOutput(os.Stderr)
+
+	agent := agentJSON("fake", "Slot Agent", "slot-agent", fieldTools, false)
+	noRun := []string{
+		`{}`,
+		`{"run":null,"agent":` + agent + `,"run_token":"rt-none","auth":{"mode":"user-account"}}`,
+		`{"run":{"id":"","org_id":"org-1","agent_id":"agent-1","status":"claimed","priority":0,"prompt":"hold"},"agent":` +
+			agent + `,"run_token":"rt-none","auth":{"mode":"user-account"}}`,
+	}
+	queue := newSlotQueue(t, map[int]int{0: 1})
+	queue.push(0, "n1")
+	var mu sync.Mutex
+	api := newFakeAPI(t, func(c apiCall) (int, string) {
+		mu.Lock()
+		if isClaim(c) && len(noRun) > 0 {
+			body := noRun[0]
+			noRun = noRun[1:]
+			mu.Unlock()
+			return http.StatusOK, body
+		}
+		mu.Unlock()
+		return queue.respond(c)
+	})
+	runs := newHeldRuns()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := startSlotWorker(t, ctx, api, Options{WorkerID: "w-norun", Concurrency: 1, WorkspaceBase: t.TempDir()}, runs, false)
+
+	// One claim a tick: three that name no run, each handing the only slot
+	// back, or the fourth, which names n1, would never be sent.
+	awaitStarted(t, api, runs, "three claims that named no run each handed the slot back", "n1")
+	runs.get(t, "n1").end(Result{ExitCode: 0, FinalText: "ok"}, nil, false)
+	if req := awaitFinish(t, api, "n1"); req.Status != agentruns.StatusSucceeded {
+		t.Errorf("n1 finished %q, want %q", req.Status, agentruns.StatusSucceeded)
+	}
+	stopWorker(t, cancel, done)
+
+	for _, c := range api.Calls() {
+		if strings.HasPrefix(c.Path, "/api/v1/agent-runs/") && runIDOf(c) == "" {
+			t.Errorf("request #%d, %s %s, names no run", c.Seq, c.Method, c.Path)
+		}
+	}
+	line := "worker w-norun: the claim answer named no run; nothing claimed"
+	if n := strings.Count(logs.String(), line); n != 3 {
+		t.Errorf("the worker logged %q %d time(s), want once for each of the 3 claims that named no run", line, n)
+	}
+	checkClaimBodies(t, api, "w-norun", false, 0)
+}
+
+// childTestEnv marks the child test process inChildProcess starts, naming
+// the test it runs.
+const childTestEnv = "OPENV_RUNNER_CHILD_TEST"
+
+// inChildProcess reports whether this is the child test process that runs
+// test on its own. Otherwise it starts that process, fails the test if the
+// child fails or dies, and reports false, so a test whose subject can take
+// the whole process down fails instead of ending the suite.
+func inChildProcess(t *testing.T, test string) bool {
+	t.Helper()
+	if os.Getenv(childTestEnv) == test {
+		return true
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^"+test+"$", "-test.count=1", "-test.v", "-test.timeout=2m")
+	cmd.Env = append(os.Environ(), childTestEnv+"="+test)
+	out, err := cmd.CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "--- PASS: "+test+" ") {
+		t.Errorf("%s, run in a child test process, did not pass (%v):\n%s", test, err, out)
+	}
+	return false
+}
+
+// lockedBuffer is a bytes.Buffer safe for the logger and a test to share.
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 // TestRunClaimsNothingWithoutProviders: a worker whose adapters detect no

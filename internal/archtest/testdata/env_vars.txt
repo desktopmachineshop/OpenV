@@ -45,7 +45,7 @@ GOOGLE_CLIENT_SECRET	cmd/server:envSecret(key)	""
 GOOGLE_GEMINI_BASE_URL	os.Getenv !=""	-
 GOOGLE_GENAI_USE_GCA	os.Getenv !=""	-
 GOOGLE_GENAI_USE_VERTEXAI	os.Getenv !=""	-
-HOME	os.Getenv	-
+HOME	os.LookupEnv	-
 HOSTED_RUNNERS	internal/hosting:envOr(key)	""
 HOSTED_RUNNER_PIDS_LIMIT	os.Getenv	-
 OPENAI_API_KEY	os.Getenv !=""	-

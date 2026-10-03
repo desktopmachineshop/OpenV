@@ -200,6 +200,19 @@ func wantHome(t *testing.T, when, want string) {
 	}
 }
 
+// wantHomeSet holds HOME to being set to want, or, with set false, to being
+// unset, which os.Getenv cannot tell from set but empty.
+func wantHomeSet(t *testing.T, when, want string, set bool) {
+	t.Helper()
+	got, isSet := os.LookupEnv("HOME")
+	switch {
+	case set && (!isSet || got != want):
+		t.Errorf("%s: HOME = %q (set %v), want %q, set", when, got, isSet, want)
+	case !set && isSet:
+		t.Errorf("%s: HOME = %q, want it unset", when, got)
+	}
+}
+
 func wantDir(t *testing.T, path string) {
 	t.Helper()
 	info, err := os.Stat(path)
@@ -363,8 +376,10 @@ func TestPoolLeaseStartSupersedeAndEnd(t *testing.T) {
 // TestPoolLeaseStartFailures: a lease whose directories cannot be made
 // starts no worker. When its HOME cannot be made, HOME stays the process's;
 // when its workspaces cannot, HOME has already moved to the lease's
-// directory and stays there, with the directory left on disk, until another
-// lease starts (pinned as found; see the S15a pull request).
+// directory, and is put back at once, the directory removed, where both
+// used to stay until another lease started (#379's bug 54, fixed under R7).
+// A heartbeat that hands the lease over again tries it afresh, and fails
+// the same way.
 func TestPoolLeaseStartFailures(t *testing.T) {
 	t.Run("session home", func(t *testing.T) {
 		root := t.TempDir()
@@ -398,7 +413,7 @@ func TestPoolLeaseStartFailures(t *testing.T) {
 		if err := os.WriteFile(blocker, nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		newPoolNode(t)
+		base := newPoolNode(t)
 		world := newPoolWorld(t, "node-1")
 		p := NewPoolAgent(PoolOptions{APIURL: world.api.URL(), PoolKey: "pool-key", NodeName: "node-a",
 			SessionRoot: sessions, WorkspaceBase: blocker})
@@ -408,12 +423,18 @@ func TestPoolLeaseStartFailures(t *testing.T) {
 		world.assign(lease1, "lease-key-1")
 		p.beat(context.Background())
 		home1 := filepath.Join(sessions, lease1)
-		wantHome(t, "a lease whose workspaces cannot be made", home1)
-		wantDir(t, home1)
+		wantHome(t, "a lease whose workspaces cannot be made", base)
+		wantGone(t, home1)
+		p.beat(context.Background())
+		wantHome(t, "that lease handed over again", base)
+		wantGone(t, home1)
 		world.assign("", "")
 		p.beat(context.Background())
-		wantHome(t, "after that lease's end", home1)
-		wantDir(t, home1)
+		wantHome(t, "after that lease's end", base)
+		wantGone(t, home1)
+		if info, err := os.Stat(blocker); err != nil || info.IsDir() {
+			t.Errorf("the file standing where the workspaces go: %v, %v; want it left as it was", info, err)
+		}
 		if n := count(world.api.Calls(), func(c apiCall) bool { return c.Auth == "lease-key-1" }); n != 0 {
 			t.Errorf("a worker sent %d request(s) as the lease's key, want none started", n)
 		}
@@ -423,27 +444,41 @@ func TestPoolLeaseStartFailures(t *testing.T) {
 	})
 }
 
-// TestPoolLeaseEndKeepsTheLeaseHOMEWhenTheProcessHadNone: a node started
-// with HOME empty has no HOME to put back, so after a lease HOME still names
-// the lease's wiped directory (pinned as found; see the S15a pull request).
-func TestPoolLeaseEndKeepsTheLeaseHOMEWhenTheProcessHadNone(t *testing.T) {
-	sessions := filepath.Join(t.TempDir(), "sessions")
-	newPoolNode(t)
-	t.Setenv("HOME", "")
-	world := newPoolWorld(t, "node-1")
-	p := NewPoolAgent(PoolOptions{APIURL: world.api.URL(), PoolKey: "pool-key", NodeName: "node-a", SessionRoot: sessions})
-	if err := p.register(context.Background()); err != nil {
-		t.Fatal(err)
+// TestPoolLeaseEndPutsHOMEBackAsTheProcessHadIt: a node started with HOME
+// set but empty has it set but empty again once a lease ends, and one
+// started with HOME unset has it unset again, where both used to keep HOME
+// naming the lease's wiped directory (#379's bug 55, fixed under R7).
+func TestPoolLeaseEndPutsHOMEBackAsTheProcessHadIt(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		set  bool
+	}{{"set but empty", true}, {"unset", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			sessions := filepath.Join(t.TempDir(), "sessions")
+			newPoolNode(t)
+			t.Setenv("HOME", "")
+			if !tc.set {
+				// t.Setenv above still puts the test's HOME back when it ends.
+				if err := os.Unsetenv("HOME"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			world := newPoolWorld(t, "node-1")
+			p := NewPoolAgent(PoolOptions{APIURL: world.api.URL(), PoolKey: "pool-key", NodeName: "node-a", SessionRoot: sessions})
+			if err := p.register(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			world.assign(lease1, "lease-key-1")
+			p.beat(context.Background())
+			home1 := filepath.Join(sessions, lease1)
+			wantHomeSet(t, "lease 1 started", home1, true)
+			world.awaitLeaseWorker("lease-key-1")
+			world.assign("", "")
+			world.endLeaseBeat(context.Background(), p, lease1, "lease-key-1")
+			wantHomeSet(t, "lease 1 ended on a node started with HOME "+tc.name, "", tc.set)
+			wantGone(t, home1)
+		})
 	}
-	world.assign(lease1, "lease-key-1")
-	p.beat(context.Background())
-	home1 := filepath.Join(sessions, lease1)
-	wantHome(t, "lease 1 started", home1)
-	world.awaitLeaseWorker("lease-key-1")
-	world.assign("", "")
-	world.endLeaseBeat(context.Background(), p, lease1, "lease-key-1")
-	wantHome(t, "lease 1 ended on a node started without HOME", home1)
-	wantGone(t, home1)
 }
 
 // TestPoolRunPurgesRegistersAndEndsTheLeaseOnShutdown drives PoolAgent.Run:

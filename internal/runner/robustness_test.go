@@ -121,6 +121,33 @@ func testClaim() *ClaimResponse {
 	}
 }
 
+// TestExecuteRecoversFromAPanicWithNoRun: execute's panic recovery reports
+// the run that panicked. Handed a claim with no run, which tryClaim no
+// longer does, it must log the panic rather than panic again reading the
+// run: nothing above it would recover that, and the process would go down
+// with every run in flight. There is no run to finish, so it sends nothing.
+func TestExecuteRecoversFromAPanicWithNoRun(t *testing.T) {
+	rs := newRecordingServer()
+	defer rs.srv.Close()
+	w := newTestWorker(rs, &fakeAdapter{start: func(context.Context, RunSpec) (RunHandle, error) {
+		t.Error("execute started a claim with no run")
+		return nil, errors.New("no run")
+	}})
+	claim := testClaim()
+	claim.Run = nil
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("execute panicked out of its own recovery: %v", r)
+		}
+	}()
+	w.execute(context.Background(), claim)
+	for _, name := range []string{"start", "logs", "finish", "release"} {
+		if n := rs.hit(name); n != 0 {
+			t.Errorf("execute with no run sent %d %s request(s), want none", n, name)
+		}
+	}
+}
+
 // TestExecuteReleasesOnShutdown: when the worker's context is cancelled
 // (SIGINT) while a run is in flight, execute must RELEASE the claim back to the
 // queue, not finish it as failed.

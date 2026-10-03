@@ -52,8 +52,10 @@ type PoolAgent struct {
 	client *Client
 	nodeID string
 
-	// baseHome is the process's own HOME, restored after each lease.
+	// baseHome is the process's own HOME and hasHome whether it had one at
+	// all, so that HOME is put back exactly as it was after each lease.
 	baseHome string
+	hasHome  bool
 
 	mu      sync.Mutex
 	current *leasedSession
@@ -82,10 +84,12 @@ func NewPoolAgent(opts PoolOptions) *PoolAgent {
 	if opts.Concurrency <= 0 {
 		opts.Concurrency = 1
 	}
+	home, hasHome := os.LookupEnv("HOME")
 	return &PoolAgent{
 		opts:     opts,
 		client:   NewClient(opts.APIURL, opts.PoolKey),
-		baseHome: os.Getenv("HOME"),
+		baseHome: home,
+		hasHome:  hasHome,
 	}
 }
 
@@ -212,6 +216,7 @@ func (p *PoolAgent) startLease(parent context.Context, a *PoolAssignment) {
 	// unambiguous here.
 	if err := os.Setenv("HOME", home); err != nil {
 		log.Printf("lease %s: cannot set session HOME: %v", a.SessionID, err)
+		p.abandonLease(a.SessionID, home)
 		return
 	}
 
@@ -221,6 +226,7 @@ func (p *PoolAgent) startLease(parent context.Context, a *PoolAssignment) {
 	}
 	if err := os.MkdirAll(workspaces, 0o700); err != nil {
 		log.Printf("lease %s: cannot create workspace dir: %v", a.SessionID, err)
+		p.abandonLease(a.SessionID, home)
 		return
 	}
 
@@ -278,9 +284,7 @@ func (p *PoolAgent) endLease(ctx context.Context, reason string) {
 		log.Printf("lease %s: worker did not stop in time; wiping anyway", current.id)
 	}
 
-	if p.baseHome != "" {
-		_ = os.Setenv("HOME", p.baseHome)
-	}
+	p.restoreHome()
 	if err := os.RemoveAll(current.home); err != nil {
 		log.Printf("lease %s: wiping session home failed: %v", current.id, err)
 	}
@@ -298,6 +302,30 @@ func (p *PoolAgent) endLease(ctx context.Context, reason string) {
 	if err := p.client.ReleasePoolNode(p.nodeID, current.id); err != nil {
 		log.Printf("lease %s: release report failed: %v", current.id, err)
 	}
+}
+
+// abandonLease undoes a lease that failed to start once its session home
+// was made: no lease is recorded, so endLease will never run for it. HOME
+// goes back as endLease puts it, and the session home is removed, with the
+// workspaces when they live in it (under a WorkspaceBase they are the
+// directory that could not be made). A later heartbeat that hands the lease
+// over again tries it afresh.
+func (p *PoolAgent) abandonLease(id, home string) {
+	p.restoreHome()
+	if err := os.RemoveAll(home); err != nil {
+		log.Printf("lease %s: removing session home failed: %v", id, err)
+	}
+}
+
+// restoreHome puts HOME back as the process had it before any lease: its
+// own value when it had one, even an empty one, and unset when it had none,
+// so that nothing the node starts between leases sees a lease's directory.
+func (p *PoolAgent) restoreHome() {
+	if p.hasHome {
+		_ = os.Setenv("HOME", p.baseHome)
+		return
+	}
+	_ = os.Unsetenv("HOME")
 }
 
 // purgeSessionRoot clears leftovers from a previous process.
