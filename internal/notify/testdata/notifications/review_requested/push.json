@@ -1,0 +1,48 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeReviewRequested",
+  "deliveries": [
+    {
+      "delivery": "1 of 1",
+      "scenario": "artifact.status_changed to in_review by its owner, titled with quotes",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Artifact ready for review\",\"body\":\"\\\"Brake \\\\\\\"pedal\\\\\\\" force ≤ 50 N\\\" is waiting in the review queue.\",\"url\":\"/projects/proj-apollo/requirements\",\"tag\":\"review_requested:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "artifact.status_changed to in_review with no title, by the system",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Artifact ready for review\",\"body\":\"An artifact is waiting in the review queue.\",\"url\":\"/projects/proj-apollo/requirements\",\"tag\":\"review_requested:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "artifact.status_changed to in_review with no title, by the system",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Artifact ready for review\",\"body\":\"An artifact is waiting in the review queue.\",\"url\":\"/projects/proj-apollo/requirements\",\"tag\":\"review_requested:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    }
+  ],
+  "pushed by default": true,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "review_requested"
+}

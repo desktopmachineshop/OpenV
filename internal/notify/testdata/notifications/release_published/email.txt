@@ -1,0 +1,344 @@
+# Email for notification type release_published (notifications.TypeReleasePublished): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): no. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== a release with more notes than the announcement shows | delivery 1 of 2 | to user-ada
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: OpenV version upgraded to 0.16.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+OpenV version upgraded to 0.16.0
+
+New features
+• **Baselines compare side by side.** Pick two baselines and see what changed between them.
+• **Requirements import keeps enum attributes.**
+• **The bell opens on the tab you left.**
+Maintenance updates
+• **Projects load faster.**
+• **Exports are named after their project.**
+…and more under What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a release with more notes than the announcement shows | delivery 2 of 2 | to user-ben
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: OpenV version upgraded to 0.16.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+OpenV version upgraded to 0.16.0
+
+New features
+• **Baselines compare side by side.** Pick two baselines and see what changed between them.
+• **Requirements import keeps enum attributes.**
+• **The bell opens on the tab you left.**
+Maintenance updates
+• **Projects load faster.**
+• **Exports are named after their project.**
+…and more under What's new.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a release from before version numbers | delivery 1 of 2 | to user-ada
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: OpenV update 2026-01-15
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+OpenV update 2026-01-15
+
+• Interview links expire after 30 days.
+• The requirements table remembers its sort.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a release from before version numbers | delivery 2 of 2 | to user-ben
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: OpenV update 2026-01-15
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+OpenV update 2026-01-15
+
+• Interview links expire after 30 days.
+• The requirements table remembers its sort.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a release with no notes | delivery 1 of 2 | to user-ada
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: OpenV version upgraded to 0.16.1
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+OpenV version upgraded to 0.16.1
+
+See What's new for details.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a release with no notes | delivery 2 of 2 | to user-ben
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: OpenV version upgraded to 0.16.1
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+OpenV version upgraded to 0.16.1
+
+See What's new for details.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== the workspace's window opens | delivery 1 of 2 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Zürich Labs moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Zürich Labs moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== the workspace's window opens | delivery 2 of 2 | to user-hal
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO hal@example.test, no auth
+-------- message
+From: openv@example.test
+To: hal@example.test
+Subject: Zürich Labs moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Zürich Labs moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== first run after the window has passed: announced and turned on at once | delivery 2 of 3 | to user-gus
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@example.test, no auth
+-------- message
+From: openv@example.test
+To: gus@example.test
+Subject: Zürich Labs moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Zürich Labs moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== first run after the window has passed: announced and turned on at once | delivery 3 of 3 | to user-hal
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO hal@example.test, no auth
+-------- message
+From: openv@example.test
+To: hal@example.test
+Subject: Zürich Labs moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Zürich Labs moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== stable cut for a workspace with no upgrade window | delivery 3 of 5 | to user-ada
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Acme Rockets moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Acme Rockets moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== stable cut for a workspace with no upgrade window | delivery 4 of 5 | to user-ben
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Acme Rockets moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Acme Rockets moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== stable cut for a workspace with no upgrade window | delivery 5 of 5 | to user-dee
+with the default allow-list: not sent; with the override: sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Acme Rockets moved to stable release 0.15.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Acme Rockets moved to stable release 0.15.0
+
+New features
+• **Baselines compare side by side.**
+• **Requirements import keeps enum attributes.**
+Maintenance updates
+• **Projects load faster.**
+Bug fixes
+• **The bell counts only unread rows.**
+• **Exports keep line breaks.**
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

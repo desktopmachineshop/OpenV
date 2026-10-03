@@ -1,0 +1,100 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeReleaseScheduled",
+  "deliveries": [
+    {
+      "delivery": "1 of 1",
+      "scenario": "stable cut, the workspace's window eight days away",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see Wh…\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "stable cut announced, the window opens tomorrow",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Stable release 0.15.0 turns on for Zürich Labs tomorrow\",\"body\":\"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "first run inside the reminder's day: announced and reminded at once",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see Wh…\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "first run inside the reminder's day: announced and reminded at once",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Stable release 0.15.0 turns on for Zürich Labs tomorrow\",\"body\":\"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "1 of 3",
+      "scenario": "first run after the window has passed: announced and turned on at once",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "1 of 5",
+      "scenario": "stable cut for a workspace with no upgrade window",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Acme Rockets\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 5",
+      "scenario": "stable cut for a workspace with no upgrade window",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Acme Rockets\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-dee"
+    }
+  ],
+  "pushed by default": false,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "release_scheduled"
+}

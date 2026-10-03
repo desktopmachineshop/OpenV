@@ -1,0 +1,29 @@
+# SSE frames for notification type hosted_minutes (notifications.TypeHostedMinutes): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== a lease takes the month's cloud runner minutes past 80% of the allowance | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"hosted_minutes","title":"Cloud runner minutes nearly used up","body":"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== a lease takes the month's cloud runner minutes past 80% of the allowance | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"hosted_minutes","title":"Cloud runner minutes nearly used up","body":"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== a lease uses up the month's cloud runner minutes | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"hosted_minutes","title":"Cloud runner minutes used up","body":"This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agent Connector are not affected. A workspace admin can raise the allowance from the Billing tab.","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":100},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== a lease uses up the month's cloud runner minutes | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"hosted_minutes","title":"Cloud runner minutes used up","body":"This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agent Connector are not affected. A workspace admin can raise the allowance from the Billing tab.","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":100},"read":false,"flagged":false,"created_at":"<created_at>"}
+

@@ -1,0 +1,29 @@
+# SSE frames for notification type proposal_pending (notifications.TypeProposalPending): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== proposal.created by an agent run: the project's editors and owners | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"proposal_pending","title":"Agent proposal pending review","body":"An agent submitted a change that needs your approval.","entity_ref":{"kind":"proposal","project_id":"proj-apollo","proposal_id":"prop-7","run_id":"run-42"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== proposal.created by an agent run: the project's editors and owners | delivery 2 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"proposal_pending","title":"Agent proposal pending review","body":"An agent submitted a change that needs your approval.","entity_ref":{"kind":"proposal","project_id":"proj-apollo","proposal_id":"prop-7","run_id":"run-42"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== proposal.created with no run id in its payload | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"proposal_pending","title":"Agent proposal pending review","body":"An agent submitted a change that needs your approval.","entity_ref":{"kind":"proposal","project_id":"proj-apollo","proposal_id":"prop-8","run_id":""},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== proposal.created with no run id in its payload | delivery 2 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"proposal_pending","title":"Agent proposal pending review","body":"An agent submitted a change that needs your approval.","entity_ref":{"kind":"proposal","project_id":"proj-apollo","proposal_id":"prop-8","run_id":""},"read":false,"flagged":false,"created_at":"<created_at>"}
+

@@ -1,0 +1,35 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeInterviewCompleted",
+  "deliveries": [
+    {
+      "delivery": "1 of 2",
+      "scenario": "chatter.created: an interview participant finished",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Interview session finished\",\"body\":\"An interview participant completed their session.\",\"url\":\"/projects/proj-apollo/interviews\",\"tag\":\"interview_completed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "chatter.created: an interview participant finished",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Interview session finished\",\"body\":\"An interview participant completed their session.\",\"url\":\"/projects/proj-apollo/interviews\",\"tag\":\"interview_completed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ben"
+    }
+  ],
+  "pushed by default": false,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "interview_completed"
+}

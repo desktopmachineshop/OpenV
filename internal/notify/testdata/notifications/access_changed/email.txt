@@ -1,0 +1,132 @@
+# Email for notification type access_changed (notifications.TypeAccessChanged): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): yes. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== org.member_added: an admin adds a member | delivery 1 of 2 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: You joined a workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+You joined a workspace
+
+You are now a member of this workspace with a member role.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.member_role_changed: a member is made an admin | delivery 1 of 2 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Your workspace access changed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Your workspace access changed
+
+Your role in this workspace is now an admin.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.member_removed by an admin | delivery 1 of 2 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: You were removed from a workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+You were removed from a workspace
+
+You no longer have access to this workspace.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== project.member_added as an editor | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: You were added to a project
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+You were added to a project
+
+You now have editor access to this project.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== project.member_role_changed from editor to viewer | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Your project access changed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Your project access changed
+
+Your role in this project is now a viewer.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== project.member_removed by an owner | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: You were removed from a project
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+You were removed from a project
+
+You no longer have access to this project.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

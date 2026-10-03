@@ -1,0 +1,95 @@
+# SSE frames for notification type release_support_window (notifications.TypeReleaseSupportWindow): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== support for the running stable ends in 24 days | delivery 1 of 3 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_support_window","title":"Upgrade OpenV within 24 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends in 24 days | delivery 2 of 3 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_support_window","title":"Upgrade OpenV within 24 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends in 24 days | delivery 3 of 3 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_support_window","title":"Upgrade OpenV within 24 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends in 6 days | delivery 1 of 3 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_support_window","title":"Upgrade OpenV within 6 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends in 6 days | delivery 2 of 3 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_support_window","title":"Upgrade OpenV within 6 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends in 6 days | delivery 3 of 3 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_support_window","title":"Upgrade OpenV within 6 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends tomorrow | delivery 1 of 3 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_support_window","title":"Upgrade OpenV within 1 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends tomorrow | delivery 2 of 3 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_support_window","title":"Upgrade OpenV within 1 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends tomorrow | delivery 3 of 3 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_support_window","title":"Upgrade OpenV within 1 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends today | delivery 1 of 3 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_support_window","title":"Upgrade OpenV within 0 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends today | delivery 2 of 3 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_support_window","title":"Upgrade OpenV within 0 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable ends today | delivery 3 of 3 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_support_window","title":"Upgrade OpenV within 0 days","body":"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable has ended | delivery 1 of 3 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_support_window","title":"OpenV support window has closed","body":"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable has ended | delivery 2 of 3 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_support_window","title":"OpenV support window has closed","body":"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== support for the running stable has ended | delivery 3 of 3 | to user-gus
+(stream notify:user-gus)
+event: notification
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_support_window","title":"OpenV support window has closed","body":"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.","entity_ref":{"available":"0.15.0","closes":"2026-11-30","kind":"support_window","running":"0.14.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

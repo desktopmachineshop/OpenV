@@ -1,0 +1,90 @@
+# Email for notification type budget_threshold (notifications.TypeBudgetThreshold): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): yes. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== agentrun.finished takes the month's spend past 80% of the budget | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Workspace nearing budget
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Workspace nearing budget
+
+This month's agent spend has reached $212.50 of the $250.00 budget (80%).
+
+Open it in OpenV:
+https://openv.example.test/org/settings?tab=usage
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== agentrun.finished takes the month's spend past 80% of the budget | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Workspace nearing budget
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Workspace nearing budget
+
+This month's agent spend has reached $212.50 of the $250.00 budget (80%).
+
+Open it in OpenV:
+https://openv.example.test/org/settings?tab=usage
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== agentrun.finished takes the month's spend past the budget | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Workspace over budget
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Workspace over budget
+
+This month's agent spend has reached $263.46 of the $250.00 budget (100%).
+
+Open it in OpenV:
+https://openv.example.test/org/settings?tab=usage
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== agentrun.finished takes the month's spend past the budget | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Workspace over budget
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Workspace over budget
+
+This month's agent spend has reached $263.46 of the $250.00 budget (100%).
+
+Open it in OpenV:
+https://openv.example.test/org/settings?tab=usage
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
