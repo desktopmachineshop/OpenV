@@ -1856,7 +1856,7 @@ class CeilingTest(RepoTest):
         self.assertEqual(files["views/Login.tsx"], 708 + 70)
         components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
         self.assertEqual(len(components), 41)
-        self.assertEqual(components["ModuleView"], 2076 + 150)  # F4 moved the filter engine out
+        self.assertEqual(components["ModuleView"], 1590 + 150)  # F7 moved the panes out
 
 
 class ReAddTest(RepoTest):
