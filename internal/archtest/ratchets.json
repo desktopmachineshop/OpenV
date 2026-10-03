@@ -338,7 +338,7 @@
     "internal/domain/reports/pdf_report.go": 1463,
     "internal/domain/reports/report.go": 1104,
     "internal/domain/users/users.go": 1016,
-    "internal/mcp/tools.go": 1281,
+    "internal/mcp/tools.go": 950,
     "internal/persistence/postgres/migrations.go": 1950
   },
   "func_lines": {
