@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { WhatsNew } from './WhatsNew';
 import { releaseAPI } from '../api/client';
 
@@ -10,9 +11,7 @@ import { releaseAPI } from '../api/client';
 // page was asked for: the version you were upgraded to, then what is new,
 // what was tidied and what was fixed, kept apart.
 
-vi.mock('../api/client', () => ({
-  releaseAPI: { current: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 vi.mock('../components/Navbar', () => ({
   Navbar: ({ title }: any) => require('react').createElement('div', null, title),

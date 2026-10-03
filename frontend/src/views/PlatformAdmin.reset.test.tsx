@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { PlatformAdmin } from './PlatformAdmin';
 import { useAppStore } from '../state/store';
 
@@ -17,24 +18,26 @@ vi.mock('../components/ui', () => ({
 }));
 
 const issued: string[] = [];
-vi.mock('../api/client', () => ({
-  PLANS: [{ value: 'business', label: 'Business' }],
-  adminAPI: {
-    workspaces: () => Promise.resolve({ data: [] }),
-    users: () =>
-      Promise.resolve({
-        data: [
-          { id: 'root', name: 'Root', email: 'root@example.com', auth_provider: 'password', is_admin: true, created_at: '2026-09-01T00:00:00Z' },
-          { id: 'dave', name: 'Dave', email: 'dave@example.com', auth_provider: 'password', is_admin: false, created_at: '2026-09-01T00:00:00Z' },
-          { id: 'sso', name: 'Sso', email: 'sso@example.com', auth_provider: 'oidc', is_admin: false, created_at: '2026-09-01T00:00:00Z' },
-        ],
-      }),
-    issuePasswordReset: (id: string) => {
-      issued.push(id);
-      return Promise.resolve({ data: { link: 'https://app.example/reset-password?token=raw', expires_at: '2026-09-15T14:00:00Z' } });
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    PLANS: [{ value: 'business', label: 'Business' }],
+    adminAPI: {
+      workspaces: () => Promise.resolve({ data: [] }),
+      users: () =>
+        Promise.resolve({
+          data: [
+            { id: 'root', name: 'Root', email: 'root@example.com', auth_provider: 'password', is_admin: true, created_at: '2026-09-01T00:00:00Z' },
+            { id: 'dave', name: 'Dave', email: 'dave@example.com', auth_provider: 'password', is_admin: false, created_at: '2026-09-01T00:00:00Z' },
+            { id: 'sso', name: 'Sso', email: 'sso@example.com', auth_provider: 'oidc', is_admin: false, created_at: '2026-09-01T00:00:00Z' },
+          ],
+        }),
+      issuePasswordReset: (id: string) => {
+        issued.push(id);
+        return Promise.resolve({ data: { link: 'https://app.example/reset-password?token=raw', expires_at: '2026-09-15T14:00:00Z' } });
+      },
     },
-  },
-}));
+  })
+);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 

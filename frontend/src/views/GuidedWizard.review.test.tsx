@@ -1,22 +1,11 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { mockApi } from '../test/mockApi';
 import { GuidedWizard } from './GuidedWizard';
 import { artifactAPI, guidedAPI } from '../api/client';
 
-vi.mock('../api/client', () => ({
-  guidedAPI: {
-    list: vi.fn(),
-    commit: vi.fn(),
-    start: vi.fn(),
-    saveStep: vi.fn(),
-    materializeDrafts: vi.fn(),
-    abandon: vi.fn(),
-  },
-  artifactAPI: { list: vi.fn(), delete: vi.fn() },
-  baselineAPI: { create: vi.fn() },
-  productProfileAPI: { get: vi.fn(), update: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 // The assistant column talks to its own endpoints; the review step does not
 // need it.

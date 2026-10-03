@@ -1,11 +1,10 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { GlobalSearch } from './GlobalSearch';
 import { searchAPI } from '../api/client';
 
-vi.mock('../api/client', () => ({
-  searchAPI: { global: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 let refSearchOn = true;
 vi.mock('../hooks/useFeature', () => ({ useFeature: () => refSearchOn }));
