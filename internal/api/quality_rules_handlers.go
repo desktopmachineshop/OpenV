@@ -21,10 +21,19 @@ import (
 
 // registerProjectQualityRuleRoutes wires reading and updating a project's
 // quality rule set, its override of the workspace house style. The
-// workspace's own rule set is registered with the workspace routes.
+// workspace's own rule set is registered with the workspace routes, by
+// registerWorkspaceQualityRuleRoutes.
 func (h *Handler) registerProjectQualityRuleRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.GetProjectQualityRules).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.UpdateProjectQualityRules).Methods("PUT")
+}
+
+// registerWorkspaceQualityRuleRoutes wires the workspace's requirement
+// quality house style: readable by any member, set by admins, inherited by
+// every project in the workspace.
+func (h *Handler) registerWorkspaceQualityRuleRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/quality-rules", h.GetWorkspaceQualityRules).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/quality-rules", h.UpdateWorkspaceQualityRules).Methods("PUT")
 }
 
 // qualityRulesCatalog is the vocabulary the UI needs to render the editor

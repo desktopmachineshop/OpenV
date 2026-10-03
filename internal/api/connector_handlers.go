@@ -11,6 +11,15 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerConnectorRoutes wires Agent Connector pairing and download: the
+// browser issues a one-time code, and the local connector exchanges it on a
+// public route, where the code is the credential.
+func (h *Handler) registerConnectorRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/connector-pairing", h.CreateConnectorPairing).Methods("POST")
+	router.HandleFunc("/api/v1/public/connector/pair", h.ExchangeConnectorPairing).Methods("POST")
+	router.HandleFunc("/api/v1/public/connector/download", h.DownloadConnector).Methods("GET", "HEAD")
+}
+
 // CreateConnectorPairing issues a one-time pairing code plus the deep link
 // the browser uses to hand it to the local connector.
 func (h *Handler) CreateConnectorPairing(w http.ResponseWriter, r *http.Request) {

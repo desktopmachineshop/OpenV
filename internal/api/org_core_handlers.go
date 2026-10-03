@@ -10,6 +10,20 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerOrgCoreRoutes wires the workspaces themselves: listing and
+// creating them, reading, updating and deleting one, its plan, restoring a
+// deleted one, and making one the session's active workspace.
+func (h *Handler) registerOrgCoreRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs", h.ListOrgs).Methods("GET")
+	router.HandleFunc("/api/v1/orgs", h.CreateOrg).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}", h.GetOrg).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}", h.UpdateOrg).Methods("PUT")
+	router.HandleFunc("/api/v1/orgs/{id}", h.alwaysWritable(h.DeleteOrg)).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/plan", h.SetOrgPlan).Methods("PUT")
+	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/activate", h.alwaysWritable(h.ActivateOrg)).Methods("POST")
+}
+
 // ListOrgs returns the caller's workspaces with roles.
 func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 	user := CurrentUser(r)

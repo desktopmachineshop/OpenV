@@ -9,6 +9,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerRunnerKeyRoutes wires personal runner keys: every member manages
+// their own.
+func (h *Handler) registerRunnerKeyRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.GetMyRunnerKey).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.CreateMyRunnerKey).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.alwaysWritable(h.RevokeMyRunnerKey)).Methods("DELETE")
+}
+
 // GetMyRunnerKey returns the caller's personal runner key metadata (no
 // plaintext) plus online state.
 func (h *Handler) GetMyRunnerKey(w http.ResponseWriter, r *http.Request) {

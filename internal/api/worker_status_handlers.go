@@ -10,6 +10,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerWorkerStatusRoutes wires the worker status, the workspace's runner
+// fleet and queue depth, and the usage rollup, its run counts, tokens and
+// cost by agent and by day (both member).
+func (h *Handler) registerWorkerStatusRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/worker-status", h.GetWorkerStatus).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/usage", h.GetOrgUsage).Methods("GET")
+}
+
 // GetWorkerStatus returns the workspace's runner fleet and queue depth
 // (member).
 func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {

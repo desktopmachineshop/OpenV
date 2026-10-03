@@ -12,6 +12,16 @@ import (
 	"github.com/openv/requirements-platform/internal/hosting"
 )
 
+// registerHostedRunnerRoutes wires the hosted runner: one platform-managed
+// container per workspace (admin).
+func (h *Handler) registerHostedRunnerRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/hosted-runner", h.GetHostedRunner).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/hosted-runner", h.CreateHostedRunner).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/hosted-runner/start", h.StartHostedRunner).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/hosted-runner/stop", h.StopHostedRunner).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/hosted-runner", h.DeleteHostedRunner).Methods("DELETE")
+}
+
 // hostedRunnerKeyName is the worker key name minted for hosted runners.
 const hostedRunnerKeyName = "hosted-runner"
 

@@ -10,6 +10,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerProjectTeamAccessRoutes wires a project's grants to people-teams.
+func (h *Handler) registerProjectTeamAccessRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/team-access", h.ListProjectTeamAccess).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/team-access", h.GrantProjectTeamAccess).Methods("PUT")
+	router.HandleFunc("/api/v1/projects/{id}/team-access/{teamId}", h.RevokeProjectTeamAccess).Methods("DELETE")
+}
+
 func (h *Handler) ListProjectTeamAccess(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {

@@ -8,6 +8,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerWorkerKeyRoutes wires a workspace's worker keys (admin).
+func (h *Handler) registerWorkerKeyRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/worker-keys", h.ListWorkerKeys).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/worker-keys", h.CreateWorkerKey).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/worker-keys/{keyId}", h.alwaysWritable(h.RevokeWorkerKey)).Methods("DELETE")
+}
+
 func (h *Handler) ListWorkerKeys(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {

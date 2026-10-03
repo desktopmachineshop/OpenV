@@ -11,6 +11,15 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerOrgLogoRoutes wires the workspace logo: any member may fetch it
+// (it is shown in the app and on download cover pages); admins upload and
+// remove it.
+func (h *Handler) registerOrgLogoRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/logo", h.GetOrgLogo).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/logo", h.UploadOrgLogo).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/logo", h.DeleteOrgLogo).Methods("DELETE")
+}
+
 // maxOrgLogoBytes caps a workspace logo upload. A logo is a small raster
 // image for a cover page, not an attachment, so it gets its own limit rather
 // than the attachment cap.

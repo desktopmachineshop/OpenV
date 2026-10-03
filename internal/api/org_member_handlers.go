@@ -10,6 +10,15 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerOrgMemberRoutes wires a workspace's limits and its members.
+func (h *Handler) registerOrgMemberRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/limits", h.GetOrgLimits).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/members", h.ListOrgMembers).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/members", h.AddOrgMember).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/members/{userId}", h.UpdateOrgMember).Methods("PUT")
+	router.HandleFunc("/api/v1/orgs/{id}/members/{userId}", h.alwaysWritable(h.RemoveOrgMember)).Methods("DELETE")
+}
+
 // GetOrgLimits returns every limit this workspace is subject to, with usage
 // where usage can be counted. Any member may read it: knowing what the
 // workspace allows is not privileged, and hiding it only produces a surprise
