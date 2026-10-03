@@ -201,8 +201,9 @@ PROTECTED_PATHS = [
 # commit of another class may not edit them either. Nor are S9, whose tests
 # are P1's guard and X14b's characterization, S10, whose tests are X6's
 # characterization, S11, whose tests pin the three automation launch paths
-# that M4 and M7 move the callers of, and S15a, whose tests are M15a's guard
-# and M15b's characterization.
+# that M4 and M7 move the callers of, S15a, whose tests are M15a's guard
+# and M15b's characterization, and S15b, whose round trips hold the five
+# repositories still while M12 and X13 rework them.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -356,6 +357,26 @@ GUARD_CODE = [
     ("S15a", ["internal/runner/fakeapi_test.go", "internal/runner/run_failures_test.go",
               "internal/runner/run_slots_test.go", "internal/runner/signin_claim_test.go",
               "internal/runner/pool_lease_test.go"]),
+    # S15b's Postgres round trips of the team, work item, project, agent and
+    # member repositories (OpenV REQ-23), each file by name, and the helpers
+    # they share: every exported method's fields, time zone and precision,
+    # list order and tie-breaks, not-found shape, nil or [] and malformed-id
+    # answer, pinned as found with no golden, so the assertions are what is
+    # frozen. M12 (class A, then B for the narrowed interfaces) splits the
+    # repository and domain files by concern, and X13a-X13t (class E, one
+    # repository a pull request, S15 among their guards) give each
+    # repository a columns const and a scan function with nil vs [] and the
+    # not-found conventions kept per method (Q2); neither may relax these
+    # tests in the commits they prove, and X13's name them in
+    # Refactor-Characterization trailers. The package's other tests
+    # (workitem_repository_test.go's board order, the malformed-id and
+    # time-zone tests) are not S15b's.
+    ("S15b", ["internal/persistence/postgres/repository_roundtrip_helpers_test.go",
+              "internal/persistence/postgres/team_repository_roundtrip_test.go",
+              "internal/persistence/postgres/workitem_repository_roundtrip_test.go",
+              "internal/persistence/postgres/project_repository_roundtrip_test.go",
+              "internal/persistence/postgres/agent_repository_roundtrip_test.go",
+              "internal/persistence/postgres/member_repository_roundtrip_test.go"]),
 ]
 # Under a guard-code pattern but governed by the ratchet rule instead.
 GUARD_CODE_EXCEPT = ["internal/archtest/ratchets.json"]

@@ -337,7 +337,7 @@ class DataTest(unittest.TestCase):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
         merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S12b", "S13",
-                  "S14a", "S14b", "S14c", "S14d", "S14e", "S14f", "S15a"}
+                  "S14a", "S14b", "S14c", "S14d", "S14e", "S14f", "S15a", "S15b"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -518,6 +518,42 @@ class DataTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIsNone(rg.guard_code_step(path))
         self.assertEqual(rg.guard_code_step("internal/runner/wire_golden_test.go"), "S7")
+
+    def test_s15b_repository_round_trips(self):
+        # S15b pins the team, work item, project, agent and member
+        # repositories with no golden: its five round-trip files and the
+        # helpers they share are its guard code, so M12's class A and B
+        # commits and X13's class E ones may not relax them. The package's
+        # earlier tests beside them (the board order, the malformed-id and
+        # time-zone tests, the test database), the repositories themselves
+        # and the other steps' Postgres tests are not S15b's, and S15b adds
+        # no golden entry: the golden list keeps 21.
+        mine = ["internal/persistence/postgres/repository_roundtrip_helpers_test.go"] + [
+            f"internal/persistence/postgres/{r}_repository_roundtrip_test.go"
+            for r in ("team", "workitem", "project", "agent", "member")]
+        files = subprocess.run(["git", "ls-files", "internal/persistence/postgres"], cwd=REPO,
+                               capture_output=True, text=True, check=True).stdout.split()
+        self.assertEqual(sorted(f for f in files if rg.guard_code_step(f) == "S15b"), sorted(mine))
+        for path in mine:
+            with self.subTest(path=path):
+                self.assertTrue(os.path.isfile(os.path.join(REPO, path)), path)
+                self.assertEqual(rg.guard_code_step(path), "S15b")
+        for path in ("internal/persistence/postgres/workitem_repository_test.go",
+                     "internal/persistence/postgres/malformed_id_test.go",
+                     "internal/persistence/postgres/timestamptz_test.go",
+                     "internal/persistence/postgres/testdb_test.go",
+                     "internal/persistence/postgres/team_repository.go",
+                     "internal/persistence/postgres/workitem_repository.go",
+                     "internal/persistence/postgres/project_repository.go",
+                     "internal/persistence/postgres/project_info_repository.go",
+                     "internal/persistence/postgres/agent_repository.go",
+                     "internal/persistence/postgres/member_repository.go"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertEqual(rg.guard_code_step("internal/persistence/postgres/export_roundtrip_test.go"), "S9")
+        self.assertEqual(rg.guard_code_step("internal/persistence/postgres/scheduler_claim_test.go"), "S11")
+        self.assertNotIn("S15b", {step for step, _, _ in rg.GOLDEN_LIST})
+        self.assertEqual(len(rg.GOLDEN_LIST), 21)
 
     def test_s9_formats_payloads_and_import_fields(self):
         # Every one of S9's goldens is under S9's single golden entry, with

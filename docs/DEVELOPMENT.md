@@ -655,6 +655,35 @@ the window of the call. These test files are guard code (`GUARD_CODE` row
 S11 in `scripts/refactor/refactor_guard.py`): a refactor pull request may
 change them only in a class C or T commit.
 
+Five repositories in `internal/persistence/postgres` have Postgres round
+trips of their own (refactor plan step S15b, OpenV REQ-23): the team
+repository (crews, their nodes and edges), work items and their activity,
+projects (with the export side's project lookup), the agent registry and
+project membership (direct roles and people-team grants), in
+`<name>_repository_roundtrip_test.go` beside each, with the helpers they
+share in `repository_roundtrip_helpers_test.go`. They run when
+`OPENV_TEST_DATABASE_URL` is set, so on both CI legs. Every exported method
+is driven through create, read, update, list and delete, and the tests pin
+what each answers as it is found, where it looks wrong too: every field read
+back; a time in a `TIMESTAMP` column as the wall clock it was sent with (an
+offset is dropped, not converted), to the microsecond, in lib/pq's unnamed
+zone at offset 0, and a work item's due date (`TIMESTAMPTZ`) as its instant
+in UTC; each list's `ORDER BY` and the keys that break its ties, where rows
+that tie on every key are compared as a set, since Postgres promises no
+order for them; what a read answers for a row no one has (no row and no
+error, `workitems.ErrNotFound`, or an error of the repository's own that
+reads `project not found`); whether a list that matches nothing is `nil`,
+which the API answers as `null`, or `[]` (the project lists alone); what a
+malformed id does; and that any other failure is handed back, not taken for
+a row no one has. There is no golden: a change to any of this fails an
+expectation, which the pull request then changes with it. The times are
+fixed instants and the ids are those inserted, so the tests hold under
+`-count=3 -shuffle=on`, and the names they sort sort alike under the C and
+`en_US` collations, since a local server and CI's `postgres:15` image may
+differ. These test files are guard code (`GUARD_CODE` row S15b in
+`scripts/refactor/refactor_guard.py`): a refactor pull request may change
+them only in a class C or T commit.
+
 The migration generator for M10 (refactor plan step S14d,
 `internal/tools/liftmigrations`) has goldens of its own, what it makes of
 its fixture, under `internal/tools/liftmigrations/testdata/want/`. They
