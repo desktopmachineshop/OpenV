@@ -157,7 +157,8 @@ test('the project list and settings pages fit the phone', async () => {
   const projectTabs = page.getByRole('tablist');
   await expect(projectTabs).toBeVisible();
   await expectNoHorizontalScroll(page);
-  await projectTabs.getByRole('button').last().click();
+  // The project's tabs carry role="tab"; the workspace's are still buttons.
+  await projectTabs.getByRole('tab').last().click();
   await expectNoHorizontalScroll(page);
 
   await page.goto('/org/settings');

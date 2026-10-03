@@ -77,6 +77,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   without those buttons. To change an artifact, switch back to Live
   Project.
 
+- **Project settings keep your quality-rule changes, and screen readers
+  can tell which tab is open.** An unsaved change on the Quality rules tab
+  was lost when you switched to another tab, and the rules loaded again on
+  every visit; the change is now still there when you come back, as on the
+  other tabs, and the rules load once. A screen reader now announces the
+  settings tabs as tabs and says which one is selected. The Add party and
+  Remove buttons under Reference parties looked like plain browser buttons;
+  they now match the other buttons in settings. And in a workspace that
+  does not have share links yet, project settings no longer load them.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
