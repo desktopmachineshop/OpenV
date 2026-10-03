@@ -214,7 +214,8 @@ func TestFlattenDiffAgainstBase(t *testing.T) {
 		"wire_conf.go": "package main\n\nfunc (a *app) config() {\n\ta.name = \"demo\"\n\tprintln(a.name)\n}\n",
 	})
 	code, out, errs := runTool("-flatten", "main", "-base", "HEAD", pkg)
-	want := "--- HEAD\n+++ the working tree\n@@ -1,3 +1,4 @@\n-name := \"demo\"\n-println(name)\n+a := &app{}\n+a.name = \"demo\"\n+println(a.name)\n println(\"serving\")\n"
+	want := "movecheck: main flattens to the same statements in HEAD and the working tree once the stage rewrites are undone " +
+		"(1 local became a field of a, 0 cleanups returned for main to defer)\n"
 	if code != 0 || out != want {
 		t.Fatalf("exit %d (%s):\n%s\nwant:\n%s", code, errs, out, want)
 	}

@@ -1,0 +1,30 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+// services is one stage of main(), which calls its stages in order.
+func (a *app) services() {
+	// Services.
+	if err := a.db.Ping(); err != nil {
+		fatal("ping", err)
+	}
+	a.subs = []string{"first"}
+	a.svc = &service{subs: a.subs}
+	a.count = a.limit * 2
+	a.names = []string{}
+	for i := 0; i < a.limit; i++ {
+		a.names = append(a.names, fmt.Sprint("n", i))
+	}
+	lookup := func() string { return a.db.name + ":" + a.port }
+	a.svc.Subscribe(lookup())
+	a.label, a.total = shout(a.port), a.count+len(a.names)
+	var rest int
+	a.first, rest = a.names[0], len(a.names)-1
+	fmt.Println("rest", rest)
+	var err error
+	err = errors.New("reset")
+	fmt.Println("reset:", err)
+}

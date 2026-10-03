@@ -1,0 +1,51 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	str "strconv"
+)
+
+// signals makes the root context and the ticker, and returns their stops
+// for main() to defer.
+func (a *app) signals() (func(), func()) {
+	// Root context, and a ticker, both stopped when main returns.
+	var cancel context.CancelFunc
+	a.ctx, cancel = context.WithCancel(context.Background())
+	a.stop = func() {
+		fmt.Println("stop")
+		cancel()
+	}
+	a.tick = newTicker("1h")
+	return a.stop, a.tick.Stop
+}
+
+// settings is one stage of main(), which calls its stages in order.
+func (a *app) settings() {
+	// Settings.
+	if v := os.Getenv("FIXTURE_DSN"); v != "" {
+		a.dsn = v
+	} else {
+		a.dsn = "memory"
+	}
+	a.port = envOr("FIXTURE_PORT", "8080")
+	scratch := a.port + "/scratch" // used by this range only: it stays a local
+	fmt.Println("scratch", scratch)
+	var err error
+	a.limit, err = str.Atoi(envOr("FIXTURE_LIMIT", "3"))
+	if err != nil {
+		fatal("limit", err)
+	}
+}
+
+// connect opens the store and returns its Close for main() to defer.
+func (a *app) connect() func() error {
+	// Connect.
+	var err error
+	a.db, err = openStore(a.dsn)
+	if err != nil {
+		fatal("connect", err)
+	}
+	return a.db.Close
+}

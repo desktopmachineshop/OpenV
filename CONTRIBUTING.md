@@ -144,8 +144,9 @@ On a **refactor** pull request, also:
    `openv-nginx/**`, `Dockerfile.prod`, `railway.json`, `vite.config.ts`).
    Guard code (`GUARD_CODE`: the Phase 0 guard tests, `internal/archtest/**`,
    `frontend/src/arch/**`, the boundary rules in `frontend/eslint.config.js`,
-   the move proofs, the migration generator that writes M10
-   (`internal/tools/liftmigrations/**`, S14d), M11a's split proof
+   the move proofs, M4's generator and proof `internal/tools/stageextract`
+   and `internal/tools/movecheck` (S14c), the migration generator that
+   writes M10 (`internal/tools/liftmigrations/**`, S14d), M11a's split proof
    `internal/tools/splittools` (S14e) and this guard) may be modified or
    deleted only in a
    class C or T commit that modifies or deletes no golden. The plan asks such
@@ -246,9 +247,12 @@ The refactor tools' own goldens are not on the golden list: they change
 with the tool, not with the product. `liftmigrations` (S14d) pins what it
 makes of its fixture under `internal/tools/liftmigrations/testdata/want/`;
 regenerate with
-`UPDATE_GOLDEN=1 go test ./internal/tools/liftmigrations -count=1 -run '^(TestLiftFixture|TestSpecFixture)$'`
-in a pull request without the refactor labels, since a refactor pull
-request may add files under `testdata/` but not change them.
+`UPDATE_GOLDEN=1 go test ./internal/tools/liftmigrations -count=1 -run '^(TestLiftFixture|TestSpecFixture)$'`.
+`stageextract` (S14c) pins what it makes of its fixture under
+`internal/tools/stageextract/testdata/want/`; regenerate with
+`UPDATE_GOLDEN=1 go test ./internal/tools/stageextract -count=1 -run '^TestFixture$'`.
+Either goes in a pull request without the refactor labels, since a
+refactor pull request may add files under `testdata/` but not change them.
 
 For `UPDATE_GOLDEN` only the value `1` regenerates; any other value
 compares (`UPDATE_ROUTES` regenerates with any non-empty value).
