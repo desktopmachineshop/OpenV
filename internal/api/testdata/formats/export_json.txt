@@ -1,0 +1,433 @@
+GET /api/v1/projects/<P>/export
+status: 200
+Content-Disposition: attachment; filename="project_Formats fixture  Ü & co_<now 20060102_150405>.json"
+Content-Type: application/json
+body: text, 428 lines, ends with a newline: false
+{
+  "exported_at": "<now RFC 3339 with fraction>",
+  "version": "1.0",
+  "project_id": "5e9a0000-0000-4000-8000-000000000011",
+  "project_name": "Formats \"fixture\" / Ü \u0026 co",
+  "project_description": "The S9 format fixture: \u003cevery\u003e renderer \u0026 its escaping.",
+  "artifacts": [
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000101",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "type": "heading",
+      "ref": "HDG-1",
+      "title": "Scope",
+      "body": "What the fixture covers; see REQ-1.",
+      "sort_order": 1,
+      "status": "approved",
+      "attributes": {
+        "status": "approved"
+      },
+      "version": 2,
+      "valid_from": "2025-06-02T08:31:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:01:00Z",
+      "updated_at": "2025-06-02T08:31:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000106",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "type": "heading",
+      "ref": "HDG-2",
+      "title": "Safety",
+      "body": "",
+      "sort_order": 2,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:36:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:06:00Z",
+      "updated_at": "2025-06-02T08:36:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000111",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "type": "other",
+      "ref": "ART-1",
+      "title": "Loose note",
+      "body": "A note no section owns.",
+      "sort_order": 3,
+      "status": "draft",
+      "attributes": {
+        "owner": "carol",
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:41:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:11:00Z",
+      "updated_at": "2025-06-02T08:41:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000102",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000101",
+      "type": "description",
+      "ref": "DSC-1",
+      "title": "Purpose",
+      "body": "Why the fixture exists, in *one* line.",
+      "sort_order": 1,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:32:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:02:00Z",
+      "updated_at": "2025-06-02T08:32:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000103",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000101",
+      "type": "user-need",
+      "ref": "NEED-1",
+      "title": "Operators need answers",
+      "body": "Operators wait for answers.",
+      "sort_order": 2,
+      "status": "approved",
+      "attributes": {
+        "owner": "alice",
+        "status": "approved"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:33:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:03:00Z",
+      "updated_at": "2025-06-02T08:33:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000104",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000101",
+      "type": "requirement",
+      "ref": "REQ-1",
+      "title": "Answer in time",
+      "body": "The system shall answer within **2 s** of a request, measured at the _client_.\n\n- Logged with `answer_ms`\n- Checked against [the budget](https://example.com/budget)\n\n| Load | Limit |\n| --- | --- |\n| idle | 1 s |\n| peak | 2 s |\n\nSee REQ-2 and REQ-1-FIG-1; quote \"as is\", a \u003c b \u0026 c \u003e d, 5 µs, Ü.\n\n```\nanswer(ctx)\n```",
+      "sort_order": 3,
+      "status": "approved",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "from_id": "5e9a0000-0000-4000-8000-000000000107",
+            "id": "5e9a0000-0000-4000-8000-000000000202",
+            "suspect": false,
+            "to_id": "5e9a0000-0000-4000-8000-000000000104",
+            "type": "verifies",
+            "valid_from": "2025-06-02T08:52:00Z",
+            "version": 1
+          }
+        ],
+        "owner": "alice",
+        "priority": "must",
+        "risk": "high",
+        "safety": true,
+        "status": "approved",
+        "tags": [
+          "timing",
+          "core"
+        ],
+        "verification_method": "test",
+        "weight": 3
+      },
+      "version": 3,
+      "valid_from": "2025-06-02T08:34:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:04:00Z",
+      "updated_at": "2025-06-02T08:34:00.123456789Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000105",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000101",
+      "type": "requirement",
+      "ref": "REQ-2",
+      "title": "Log each answer \u0026 error \u003ccode\u003e",
+      "body": "The system shall log each answer.\nThe log shall survive a restart.",
+      "sort_order": 4,
+      "status": "draft",
+      "attributes": {
+        "owner": "bob",
+        "priority": "should",
+        "risk": "low",
+        "safety": false,
+        "status": "draft",
+        "verification_method": "inspection",
+        "verification_status": "verified"
+      },
+      "version": 2,
+      "valid_from": "2025-06-02T08:35:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:05:00Z",
+      "updated_at": "2025-06-02T08:35:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000107",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000101",
+      "type": "test-case",
+      "ref": "TC-1",
+      "title": "Time the answer",
+      "body": "Measure the answer time under load.",
+      "sort_order": 5,
+      "status": "approved",
+      "attributes": {
+        "execution_method": "manual",
+        "status": "approved"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:37:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:07:00Z",
+      "updated_at": "2025-06-02T08:37:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000108",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000101",
+      "type": "test-case",
+      "ref": "TC-2",
+      "title": "Check the log",
+      "body": "Restart, then read the log.",
+      "sort_order": 6,
+      "status": "draft",
+      "attributes": {
+        "execution_method": "agent",
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:38:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:08:00Z",
+      "updated_at": "2025-06-02T08:38:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000109",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000106",
+      "type": "hazard",
+      "ref": "HAZ-1",
+      "title": "Lost record",
+      "body": "An answer goes unlogged.",
+      "sort_order": 1,
+      "status": "draft",
+      "attributes": {
+        "severity": "major",
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:39:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:09:00Z",
+      "updated_at": "2025-06-02T08:39:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000110",
+      "project_id": "5e9a0000-0000-4000-8000-000000000011",
+      "parent_id": "5e9a0000-0000-4000-8000-000000000106",
+      "type": "design-item",
+      "ref": "DES-1",
+      "title": "Write-ahead log",
+      "body": "Append before answering.",
+      "sort_order": 2,
+      "status": "draft",
+      "attributes": {
+        "owner": "bob",
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2025-06-02T08:40:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:10:00Z",
+      "updated_at": "2025-06-02T08:40:00Z"
+    }
+  ],
+  "links": [
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000207",
+      "from_id": "5e9a0000-0000-4000-8000-000000000111",
+      "to_id": "5e9a0000-0000-4000-8000-000000000104",
+      "type": "relates-to",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:57:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:57:00Z",
+      "updated_at": "2025-06-02T08:57:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000206",
+      "from_id": "5e9a0000-0000-4000-8000-000000000121",
+      "to_id": "5e9a0000-0000-4000-8000-000000000104",
+      "type": "refines",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:56:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:56:00Z",
+      "updated_at": "2025-06-02T08:56:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000205",
+      "from_id": "5e9a0000-0000-4000-8000-000000000108",
+      "to_id": "5e9a0000-0000-4000-8000-000000000105",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:55:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:55:00Z",
+      "updated_at": "2025-06-02T08:55:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000204",
+      "from_id": "5e9a0000-0000-4000-8000-000000000110",
+      "to_id": "5e9a0000-0000-4000-8000-000000000109",
+      "type": "mitigates",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:54:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:54:00Z",
+      "updated_at": "2025-06-02T08:54:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000203",
+      "from_id": "5e9a0000-0000-4000-8000-000000000110",
+      "to_id": "5e9a0000-0000-4000-8000-000000000105",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:53:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:53:00Z",
+      "updated_at": "2025-06-02T08:53:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000202",
+      "from_id": "5e9a0000-0000-4000-8000-000000000107",
+      "to_id": "5e9a0000-0000-4000-8000-000000000104",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:52:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:52:00Z",
+      "updated_at": "2025-06-02T08:52:00Z"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000201",
+      "from_id": "5e9a0000-0000-4000-8000-000000000104",
+      "to_id": "5e9a0000-0000-4000-8000-000000000103",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "2025-06-02T08:51:00Z",
+      "valid_to": null,
+      "created_at": "2025-06-02T08:51:00Z",
+      "updated_at": "2025-06-02T08:51:00Z"
+    }
+  ],
+  "attachments": [
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000301",
+      "artifact_id": "5e9a0000-0000-4000-8000-000000000104",
+      "filename": "REQ-1-FIG-1.png",
+      "original_filename": "timing.png",
+      "title": "Timing plot",
+      "mime_type": "image/png",
+      "file_path": "<uploads>/timing.png",
+      "file_size": 99,
+      "figure_ref": "REQ-1-FIG-1",
+      "figure_num": 1,
+      "version": 1,
+      "created_at": "2025-06-02T09:10:00Z",
+      "kind": "image"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000302",
+      "artifact_id": "5e9a0000-0000-4000-8000-000000000104",
+      "filename": "REQ-1-FIG-2.pdf",
+      "original_filename": "datasheet.pdf",
+      "title": "",
+      "mime_type": "application/pdf",
+      "file_path": "<uploads>/datasheet-not-on-disk.pdf",
+      "file_size": 1234,
+      "figure_ref": "REQ-1-FIG-2",
+      "figure_num": 2,
+      "version": 2,
+      "created_at": "2025-06-02T09:11:00Z",
+      "kind": "document"
+    },
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000303",
+      "artifact_id": "5e9a0000-0000-4000-8000-000000000110",
+      "filename": "DES-1-FIG-1.svg",
+      "original_filename": "drawing.svg",
+      "title": "Log layout",
+      "mime_type": "image/svg+xml",
+      "file_path": "<uploads>/drawing.svg",
+      "file_size": 95,
+      "figure_ref": "DES-1-FIG-1",
+      "figure_num": 1,
+      "version": 1,
+      "created_at": "2025-06-02T09:12:00Z",
+      "kind": "image"
+    }
+  ],
+  "product_profile": {
+    "project_id": "5e9a0000-0000-4000-8000-000000000011",
+    "vision": "Answers before anyone asks.",
+    "problem_statement": "Operators wait \u0026 guess.",
+    "target_users": "Operators and engineers",
+    "constraints": [
+      {
+        "text": "Runs offline"
+      },
+      {
+        "description": "Fits on one rack"
+      }
+    ],
+    "success_metrics": [
+      {
+        "current": "1.4 s",
+        "name": "Answer time",
+        "target": "2 s"
+      },
+      {
+        "title": "Uptime"
+      }
+    ],
+    "settings": {
+      "units": "metric"
+    },
+    "created_at": "2025-06-02T08:04:00Z",
+    "updated_at": "2025-06-02T08:05:00Z"
+  },
+  "linked_artifacts": [
+    {
+      "id": "5e9a0000-0000-4000-8000-000000000121",
+      "project_id": "5e9a0000-0000-4000-8000-000000000012",
+      "project_name": "Formats supplier",
+      "ref": "REQ-1",
+      "type": "requirement",
+      "title": "Cache hits",
+      "status": "approved"
+    }
+  ]
+}
