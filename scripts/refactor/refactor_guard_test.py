@@ -1846,13 +1846,13 @@ class CeilingTest(RepoTest):
                 self.assertTrue(rg.find_constant(text, name) or rg.find_block(text, name), name)
         self.assertEqual(rg.find_constant(text, "FILE_BUDGET")[1], 600)
         self.assertEqual(rg.find_constant(text, "COMPONENT_BUDGET")[1], 300)
-        self.assertEqual(rg.find_constant(text, "OVER_1000")[1], 5)
+        self.assertEqual(rg.find_constant(text, "OVER_1000")[1], 4)
         for name in ("FILE_CEILINGS", "COMPONENT_CEILINGS"):
             with self.subTest(name=name):
                 self.assertIsNone(rg.read_literal(text, name, "count")[1], f"{name} holds an entry the guard cannot read")
         files = rg.parse_allowlist(text, "FILE_CEILINGS", "count")
-        self.assertEqual(len(files), 17)
-        self.assertEqual(files["api/client.ts"], 2886 + 150)  # R6: its size plus 10%, at most 150
+        self.assertEqual(len(files), 16)
+        self.assertNotIn("api/client.ts", files)  # F1 made it a barrel within budget
         self.assertEqual(files["views/Login.tsx"], 708 + 70)
         components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
         self.assertEqual(len(components), 41)

@@ -167,20 +167,15 @@ listed (on a refactor pull request the Refactor guard fails a raised or
 added entry). When your change shrinks a listed one, lower its ceiling, or
 remove its entry once it is within budget.
 
-Until refactor step F1 splits it into `api/http.ts`, `api/types/<area>.ts`
-and `api/<area>.ts` behind a barrel, `src/api/client.ts` is also split, on a
-copy of the repository, by the working-tree test of
-`frontend/scripts/tsdeclmove.test.mjs` (step S14f, in CI's *Refactor tool
-tests (Node)* step and `make check`), as F1 will be generated from
-`frontend/scripts/specs/F1.json`, and the first four commands above run on
-the split. A new type, endpoint object or helper needs no edit there: one the
-spec does not name joins `api/types/platform.ts` or `api/platform.ts` with a
-note. If tsdeclmove refuses the split for a reason the spec settles, such as
-a module that would pass 400 lines, the test skips and names it; that is for
-F1 to fix when it regenerates the move, not for your pull request. A gate
-that fails only on the split still fails it, and the test prints that
-command's output. The test's fixture goldens change only with the tool:
-`cd frontend && UPDATE_GOLDEN=1 node --test scripts/tsdeclmove.test.mjs`.
+Refactor step F1 split `src/api/client.ts` into `api/http.ts` (the axios
+instance, its interceptors and the download helpers), `api/types/<area>.ts`
+and `api/<area>.ts`, with `client.ts` left as a barrel over them. A new
+endpoint goes in its area's module and its types in that area's types module.
+Outside `src/api`, import only `api/client`, `api/errors`, `api/baseURL` and
+`api/contentDisposition`; ESLint enforces it (K12). The working-tree test of
+`frontend/scripts/tsdeclmove.test.mjs` now skips itself, since `client.ts`
+declares nothing left to split. The test's fixture goldens change only with
+the tool: `cd frontend && UPDATE_GOLDEN=1 node --test scripts/tsdeclmove.test.mjs`.
 
 In the composed stack the frontend container runs `npm start` itself; for
 quick iteration, `docker compose build frontend && docker compose up -d
