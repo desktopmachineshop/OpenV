@@ -475,6 +475,37 @@ changes them; regenerate with
 Every scenario ends on its own without the network: stdin is empty, so a
 prompt reads end of input, and none gets as far as a request.
 
+The runner (`internal/runner`, refactor plan step S15a) is characterized
+against a stand-in API, with stand-in vendor CLIs (shell scripts, so these
+tests skip on Windows). `TestRunFailureClassesGolden` has the real
+`Worker.Run` claim one run per terminal outcome and records what the runner
+reported for each, the finish or release body byte for byte and its error
+class, and what it handed the provider adapter (the environment and the rest
+of the run spec), in `internal/runner/testdata/run_failures/outcomes.txt`;
+`TestRunFailureTaxonomyGolden` records the class of every finish site and
+the CLI failure-text signals that decide one in `classes.txt` beside it.
+A changed failure message, a new finish site, a new or dropped signal, a
+change to which classes are retried (OpenV REQ-84), or a change to what a
+run's CLI is started with (its prompt, system prompt, model, effort, MCP
+server, tools, trust and repository flags, turn and time limits) changes
+them: regenerate in the same pull request, which then needs a release note,
+with
+`UPDATE_GOLDEN=1 go test ./internal/runner -count=1 -run '^(TestRunFailureClassesGolden|TestRunFailureTaxonomyGolden)$'`.
+A new finish site needs a row in the taxonomy test, and a new outcome a
+scenario in `failureScenarios`. Beside them, `run_slots_test.go` pins
+`Worker.Run`'s two slot pools (a pool never claims past its limit, and a
+slot comes back however its run ends), `signin_claim_test.go` that a
+successful sign-in adds its provider to the next claim, in each of the four
+sign-in flows, and `pool_lease_test.go` how a pool node starts, replaces and
+ends a lease, stopping the lease's worker at once, and puts `HOME` back.
+The ones that wait on the worker's own 2- and 3-second ticks or the node's
+5-second heartbeat skip under `-short` (`make check-fast`), where a lease
+that ends is checked to have stopped its worker by the time the heartbeat
+took alone, without waiting a claim tick; `make check` and CI run them all.
+These test files are guard code of their own (`GUARD_CODE` row S15a in
+`scripts/refactor/refactor_guard.py`): a refactor pull request may change
+them only in a class C or T commit.
+
 The migration generator for M10 (refactor plan step S14d,
 `internal/tools/liftmigrations`) has goldens of its own, what it makes of
 its fixture, under `internal/tools/liftmigrations/testdata/want/`. They

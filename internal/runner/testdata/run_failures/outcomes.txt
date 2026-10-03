@@ -1,0 +1,216 @@
+# What the runner reports for each terminal outcome of a claimed run
+# (refactor plan step S15a; OpenV REQ-84). Written by TestRunFailureClassesGolden
+# in internal/runner, which has the real Worker.Run claim every scenario from a
+# stand-in API and records, per run, the requests it sent (log pushes left out),
+# each finish or release body byte for byte, and the error class that reached
+# the API with whether the platform retries it (agentruns.IsRetryableClass).
+# Requests go as the worker key unless marked "(as <credential>)"; "adapter
+# called with env" is the environment the worker handed the provider adapter,
+# and "adapter called with spec" the rest of what it handed it: answer_rule
+# says the system prompt is the agent's own followed by agentruns'
+# AnswerLengthRule, and mcp_env=env that the MCP server gets that environment.
+# Not covered: a cancel noticed during workspace preparation, which the
+# 30-second preparation heartbeat (prepHeartbeatInterval) reports. A refactor
+# leaves this file byte-identical; a deliberate change regenerates it with
+#   UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run TestRunFailureClassesGolden
+
+## no-adapter
+given: the agent's provider, gemini-cli, has no adapter on this runner
+POST /api/v1/agent-runs/no-adapter/finish {"status":"failed","final_text":"","error":"no adapter for provider gemini-cli","error_class":"provider_unavailable","tokens_in":0,"tokens_out":0}
+class: provider_unavailable (retried)
+
+## no-adapter-blank-provider
+given: the agent names no provider
+POST /api/v1/agent-runs/no-adapter-blank-provider/finish {"status":"failed","final_text":"","error":"no adapter for provider ","error_class":"provider_unavailable","tokens_in":0,"tokens_out":0}
+class: provider_unavailable (retried)
+
+## no-tools
+given: the agent's allowed_tools is empty
+POST /api/v1/agent-runs/no-tools/finish {"status":"failed","final_text":"","error":"agent Field Agent (field-agent) names no tools it may use: agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
+
+## no-tools-blank-entries
+given: the agent's allowed_tools holds only blanks, and the agent has a slug and no name
+POST /api/v1/agent-runs/no-tools-blank-entries/finish {"status":"failed","final_text":"","error":"agent field-agent names no tools it may use: agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
+
+## no-tools-unnamed
+given: the agent's allowed_tools is null, and the agent has neither name nor slug
+POST /api/v1/agent-runs/no-tools-unnamed/finish {"status":"failed","final_text":"","error":"agent (unnamed) names no tools it may use: agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
+
+## repo-access-unsupported
+given: a codex-cli agent with repository access
+POST /api/v1/agent-runs/repo-access-unsupported/finish {"status":"failed","final_text":"","error":"agent Field Agent (field-agent): repository access requires the claude-code provider: codex-cli cannot confine edits per tool; use claude-code or turn repo access off","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
+
+## null-agent
+given: the claim's agent is null (the worker panics reading it)
+POST /api/v1/agent-runs/null-agent/finish {"status":"failed","final_text":"","error":"worker panic during run execution","error_class":"worker_error","tokens_in":0,"tokens_out":0}
+class: worker_error (retried)
+
+## workspace-prep-fails
+given: a file stands where the run's workspace directory goes
+POST /api/v1/agent-runs/workspace-prep-fails/finish {"status":"failed","final_text":"","error":"workspace preparation failed: mkdir <workspaces>/workspace-prep-fails: not a directory","error_class":"workspace","tokens_in":0,"tokens_out":0}
+class: workspace (not retried)
+
+## repo-connections-unreadable
+given: a claude-code agent with repository access whose project's connections answer 403; the run goes on without a repository
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-repo-connections-unreadable
+adapter called with spec: workdir=<workspaces>/repo-connections-unreadable prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=true repo_access=true max_turns=50 timeout=600
+GET /api/v1/projects/p-repo-connections-unreadable/repo-connections (as rt-repo-connections-unreadable)
+POST /api/v1/agent-runs/repo-connections-unreadable/start
+POST /api/v1/agent-runs/repo-connections-unreadable/finish {"status":"succeeded","exit_code":0,"final_text":"Done.","error":"","tokens_in":0,"tokens_out":0}
+class: none
+
+## start-transition-refused
+given: the API answers the start transition 409
+POST /api/v1/agent-runs/start-transition-refused/start
+POST /api/v1/agent-runs/start-transition-refused/finish {"status":"failed","final_text":"","error":"start transition failed: api returned 409: {\"error\":\"run is not claimed by this worker\",\"code\":\"conflict\"}","error_class":"worker_error","tokens_in":0,"tokens_out":0}
+class: worker_error (retried)
+
+## api-key-variable-not-allowed
+given: api-key auth naming WORKER_API_KEY, which is not a provider key variable
+POST /api/v1/agent-runs/api-key-variable-not-allowed/start
+POST /api/v1/agent-runs/api-key-variable-not-allowed/finish {"status":"failed","final_text":"","error":"this project's provider setting names WORKER_API_KEY as its API key variable, which is not a provider key variable; fix the provider setting in workspace settings","error_class":"auth","tokens_in":0,"tokens_out":0}
+class: auth (not retried)
+
+## api-key-missing
+given: api-key auth with the provider's default variable, ANTHROPIC_API_KEY, unset on the runner host
+POST /api/v1/agent-runs/api-key-missing/start
+POST /api/v1/agent-runs/api-key-missing/finish {"status":"failed","final_text":"","error":"this project uses API-key auth, but ANTHROPIC_API_KEY is not set on the runner host — set it (or switch the project back to user-account auth)","error_class":"auth","tokens_in":0,"tokens_out":0}
+class: auth (not retried)
+
+## api-key-missing-named
+given: api-key auth naming GOOGLE_API_KEY, unset on the runner host
+POST /api/v1/agent-runs/api-key-missing-named/start
+POST /api/v1/agent-runs/api-key-missing-named/finish {"status":"failed","final_text":"","error":"this project uses API-key auth, but GOOGLE_API_KEY is not set on the runner host — set it (or switch the project back to user-account auth)","error_class":"auth","tokens_in":0,"tokens_out":0}
+class: auth (not retried)
+
+## api-key-present
+given: a codex-cli agent on api-key auth naming GEMINI_API_KEY, which is set on the runner host
+adapter called with env: OPENAI_API_KEY=gemini-key-from-the-runner-host OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-api-key-present
+adapter called with spec: workdir=<workspaces>/api-key-present prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/api-key-present/start
+POST /api/v1/agent-runs/api-key-present/finish {"status":"succeeded","exit_code":0,"final_text":"Done.","error":"","tokens_in":0,"tokens_out":0}
+class: none
+
+## adapter-start-fails
+given: the adapter cannot launch its CLI
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-adapter-start-fails
+adapter called with spec: workdir=<workspaces>/adapter-start-fails prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/adapter-start-fails/start
+POST /api/v1/agent-runs/adapter-start-fails/finish {"status":"failed","final_text":"","error":"adapter start failed: exec: \"claude\": executable file not found in $PATH","error_class":"provider_unavailable","tokens_in":0,"tokens_out":0}
+class: provider_unavailable (retried)
+
+## adapter-refuses-definition
+given: the adapter refuses the definition (an ErrAgentPolicy error)
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-adapter-refuses-definition
+adapter called with spec: workdir=<workspaces>/adapter-refuses-definition prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/adapter-refuses-definition/start
+POST /api/v1/agent-runs/adapter-refuses-definition/finish {"status":"failed","final_text":"","error":"adapter start failed: agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
+
+## adapter-panics
+given: the adapter panics in Start
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-adapter-panics
+adapter called with spec: workdir=<workspaces>/adapter-panics prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/adapter-panics/start
+POST /api/v1/agent-runs/adapter-panics/finish {"status":"failed","final_text":"","error":"worker panic during run execution","error_class":"worker_error","tokens_in":0,"tokens_out":0}
+class: worker_error (retried)
+
+## succeeded
+given: the CLI exits 0 with an answer, tokens and a cost
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-succeeded
+adapter called with spec: workdir=<workspaces>/succeeded prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/succeeded/start
+POST /api/v1/agent-runs/succeeded/finish {"status":"succeeded","exit_code":0,"final_text":"Done.","error":"","tokens_in":1200,"tokens_out":340,"cost_usd":0.0123}
+class: none
+
+## succeeded-nonzero-exit
+given: the run ends with exit code 2 and no error
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-succeeded-nonzero-exit
+adapter called with spec: workdir=<workspaces>/succeeded-nonzero-exit prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/succeeded-nonzero-exit/start
+POST /api/v1/agent-runs/succeeded-nonzero-exit/finish {"status":"succeeded","exit_code":2,"final_text":"","error":"","tokens_in":0,"tokens_out":0}
+class: none
+
+## agent-fails
+given: the CLI fails with text naming no auth or provider signal
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-agent-fails
+adapter called with spec: workdir=<workspaces>/agent-fails prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/agent-fails/start
+POST /api/v1/agent-runs/agent-fails/finish {"status":"failed","exit_code":1,"final_text":"","error":"exit status 1: tool Bash failed: no such file or directory","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
+
+## agent-fails-auth
+given: the CLI fails with text carrying an auth signal
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-agent-fails-auth
+adapter called with spec: workdir=<workspaces>/agent-fails-auth prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/agent-fails-auth/start
+POST /api/v1/agent-runs/agent-fails-auth/finish {"status":"failed","exit_code":1,"final_text":"","error":"exit status 1: Invalid API key · Please run /login","error_class":"auth","tokens_in":0,"tokens_out":0}
+class: auth (not retried)
+
+## agent-fails-provider
+given: the CLI fails with text carrying a provider signal
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-agent-fails-provider
+adapter called with spec: workdir=<workspaces>/agent-fails-provider prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/agent-fails-provider/start
+POST /api/v1/agent-runs/agent-fails-provider/finish {"status":"failed","exit_code":1,"final_text":"","error":"exit status 1: API Error: 529 {\"type\":\"overloaded_error\"}","error_class":"provider_unavailable","tokens_in":0,"tokens_out":0}
+class: provider_unavailable (retried)
+
+## agent-fails-auth-over-provider
+given: the CLI fails with text carrying both an auth and a provider signal
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-agent-fails-auth-over-provider
+adapter called with spec: workdir=<workspaces>/agent-fails-auth-over-provider prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/agent-fails-auth-over-provider/start
+POST /api/v1/agent-runs/agent-fails-auth-over-provider/finish {"status":"failed","exit_code":1,"final_text":"","error":"exit status 1: 503 Service Unavailable: not logged in","error_class":"auth","tokens_in":0,"tokens_out":0}
+class: auth (not retried)
+
+## timeout-with-detail
+given: the adapter's watchdog fires with the parser's error
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-timeout-with-detail
+adapter called with spec: workdir=<workspaces>/timeout-with-detail prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/timeout-with-detail/start
+POST /api/v1/agent-runs/timeout-with-detail/finish {"status":"timed_out","exit_code":-1,"final_text":"","error":"run exceeded its timeout (stuck waiting on tool result)","error_class":"timeout","tokens_in":0,"tokens_out":0}
+class: timeout (retried)
+
+## timeout-without-detail
+given: the adapter's watchdog fires before the parser has an error
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-timeout-without-detail
+adapter called with spec: workdir=<workspaces>/timeout-without-detail prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/timeout-without-detail/start
+POST /api/v1/agent-runs/timeout-without-detail/finish {"status":"timed_out","exit_code":-1,"final_text":"","error":"run exceeded its timeout","error_class":"timeout","tokens_in":0,"tokens_out":0}
+class: timeout (retried)
+
+## deadline-exceeded
+given: the run ends with context.DeadlineExceeded itself
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-deadline-exceeded
+adapter called with spec: workdir=<workspaces>/deadline-exceeded prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/deadline-exceeded/start
+POST /api/v1/agent-runs/deadline-exceeded/finish {"status":"timed_out","exit_code":-1,"final_text":"","error":"run exceeded its timeout","error_class":"timeout","tokens_in":0,"tokens_out":0}
+class: timeout (retried)
+
+## wait-panics
+given: the CLI handle panics in Wait
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-wait-panics
+adapter called with spec: workdir=<workspaces>/wait-panics prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/wait-panics/start
+POST /api/v1/agent-runs/wait-panics/finish {"status":"failed","final_text":"","error":"worker panic during run execution","error_class":"worker_error","tokens_in":0,"tokens_out":0}
+class: worker_error (retried)
+
+## cancelled-by-member
+given: the log push answers cancel_requested while the CLI runs
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-cancelled-by-member
+adapter called with spec: workdir=<workspaces>/cancelled-by-member prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/cancelled-by-member/start
+POST /api/v1/agent-runs/cancelled-by-member/finish {"status":"cancelled","exit_code":-1,"final_text":"","error":"","tokens_in":0,"tokens_out":0}
+class: none
+
+## worker-shutdown
+given: the worker shuts down while the CLI runs
+adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-worker-shutdown
+adapter called with spec: workdir=<workspaces>/worker-shutdown prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
+POST /api/v1/agent-runs/worker-shutdown/start
+POST /api/v1/agent-runs/worker-shutdown/release {"worker_id":"w-failures"}
+class: none

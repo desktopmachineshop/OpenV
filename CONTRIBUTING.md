@@ -267,6 +267,9 @@ prints:
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`
+- run failure outcomes and classes (S15a): `UPDATE_GOLDEN=1 go test ./internal/runner -count=1 -run '^(TestRunFailureClassesGolden|TestRunFailureTaxonomyGolden)$'`
+  for `internal/runner/testdata/run_failures/` (what the runner reports
+  for each terminal outcome of a run, and the taxonomy behind it)
 - env vars and command lines (S8): `UPDATE_GOLDEN=1 go test ./internal/archtest -count=1 -run '^TestEnvInventory$'`
   for the inventory, `internal/archtest/testdata/env_vars.txt`;
   `UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/api ./internal/billing ./internal/domain/users ./internal/hosting ./internal/notify`

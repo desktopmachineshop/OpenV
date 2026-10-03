@@ -1,0 +1,90 @@
+# The run failure taxonomy (refactor plan step S15a; OpenV REQ-84): the class
+# each runner finish site reports, the substrings of a CLI's failure text that
+# decide a failed run's class, and which classes the platform retries. Written
+# by TestRunFailureTaxonomyGolden in internal/runner; the outcomes these
+# produce are in outcomes.txt beside it. A refactor leaves this file
+# byte-identical; a deliberate change regenerates it with
+#   UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run TestRunFailureTaxonomyGolden
+
+## finish sites (classifySite)
+siteNoAdapter, no error -> provider_unavailable
+siteWorkspacePrep, no error -> workspace
+siteStartTransition, no error -> worker_error
+siteAPIKeyMissing, no error -> auth
+siteAdapterStart, "exec: not found" -> provider_unavailable
+siteAdapterStart, "refused" (ErrAgentPolicy) -> agent_error
+siteAdapterStart, "wrapped: refused" (ErrAgentPolicy) -> agent_error
+siteAgentResult, no error -> ""
+siteAgentResult, "exit status 1" -> agent_error
+siteTimeout, "context deadline exceeded" -> timeout
+sitePanic, no error -> worker_error
+siteAgentPolicy, no error -> agent_error
+(a site with no case), no error -> worker_error
+
+## auth signals, checked first (authSignals)
+"401" -> auth
+"403" -> auth
+"api key" -> auth
+"authenticated" -> auth
+"authentication" -> auth
+"credential" -> auth
+"forbidden" -> auth
+"invalid api key" -> auth
+"invalid_api_key" -> auth
+"login required" -> auth
+"not logged in" -> auth
+"permission denied" -> auth
+"please log in" -> auth
+"please login" -> auth
+"sign in" -> auth
+"unauthorized" -> auth
+
+## provider signals, checked second (providerSignals)
+"429" -> provider_unavailable
+"500" -> provider_unavailable
+"502" -> provider_unavailable
+"503" -> provider_unavailable
+"504" -> provider_unavailable
+"bad gateway" -> provider_unavailable
+"capacity" -> provider_unavailable
+"connection refused" -> provider_unavailable
+"connection reset" -> provider_unavailable
+"econnrefused" -> provider_unavailable
+"gateway timeout" -> provider_unavailable
+"internal server error" -> provider_unavailable
+"network" -> provider_unavailable
+"no route to host" -> provider_unavailable
+"overload" -> provider_unavailable
+"overloaded" -> provider_unavailable
+"quota" -> provider_unavailable
+"rate limit" -> provider_unavailable
+"rate_limit" -> provider_unavailable
+"server error" -> provider_unavailable
+"service unavailable" -> provider_unavailable
+"temporarily unavailable" -> provider_unavailable
+"usage limit" -> provider_unavailable
+
+## failure texts (classifyAgentError: lower-cased, then a substring match)
+"" -> ""
+"exit status 1" -> agent_error
+"Error: 401 Unauthorized" -> auth
+"UNAUTHORIZED" -> auth
+"Please Log In to continue" -> auth
+"API Error: 429 Too Many Requests" -> provider_unavailable
+"upstream connect error: Connection Reset by peer" -> provider_unavailable
+"503 Service Unavailable: not logged in" -> auth
+"rate limit exceeded; check your API key" -> auth
+"tool Read failed: wrote 403 lines" -> auth
+"processed 1500 files before the tool failed" -> provider_unavailable
+"the network tool is disabled for this agent" -> provider_unavailable
+"Credentials file is missing a field the tool expects" -> auth
+"panic: index out of range" -> agent_error
+
+## classes the platform retries (agentruns.IsRetryableClass)
+provider_unavailable -> true
+auth -> false
+workspace -> false
+timeout -> true
+agent_error -> false
+worker_error -> true
+"" -> false
