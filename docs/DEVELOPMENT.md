@@ -596,6 +596,35 @@ These test files are guard code of their own (`GUARD_CODE` row S15a in
 `scripts/refactor/refactor_guard.py`): a refactor pull request may change
 them only in a class C or T commit.
 
+The three ways an automation launches a run are characterized where each
+lives (refactor plan step S11, OpenV REQ-24). In `internal/scheduler`,
+against a stand-in repository that models the claim SQL, the scheduler's
+tests pin catch-up at start (done before `Start` returns: an automation
+that fell due while the server was down gets one run with `catch_up` and
+none without, and its row is claimed either way), a tick, the claim a
+replica must win before it fires (two schedulers racing for one due
+automation launch one run), a cron expression that does not parse (the
+automation fires once and its `next_run_at` becomes NULL, so it is never
+due again, though it stays enabled), the prompt (`Scheduled run of
+automation: <name>` when the template renders empty), the target, and
+`ResolveTarget`, which all three paths call. In `internal/automation`, the
+trigger matcher's tests pin the event filter (each value compared as `fmt`
+prints it, so a filter's number matches an int below a million), the
+guards in their order (an event caused by one of the automation's own
+runs, actor `agent:<run>`, then the cooldown, then the hourly cap), the
+prompt variables, the run launched and the `last_run_at` stamp, and that
+`Start` subscribes to the event bus. `TestRunNowCopy` in `internal/api`
+pins run-now's copy (`Manual run of automation: <name>`, the caller as
+launcher, no guard and no stamp), and `TestSchedulersShareTheRealClaim`
+in `internal/persistence/postgres` races two real schedulers on the real
+claim when `OPENV_TEST_DATABASE_URL` is set (both CI legs run it). There
+is no golden: a change to any of this fails an expectation in these tests,
+which the pull request then changes with it. The scheduler and matcher
+read the clock themselves, so the tests check each time they stamp against
+the window of the call. These test files are guard code (`GUARD_CODE` row
+S11 in `scripts/refactor/refactor_guard.py`): a refactor pull request may
+change them only in a class C or T commit.
+
 The migration generator for M10 (refactor plan step S14d,
 `internal/tools/liftmigrations`) has goldens of its own, what it makes of
 its fixture, under `internal/tools/liftmigrations/testdata/want/`. They
