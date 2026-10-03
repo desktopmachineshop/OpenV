@@ -55,6 +55,7 @@ shrink.
 | `counts` | the five count ratchets below | one ceiling each |
 | `env_reads` | [Direct env reads](#direct-env-reads) | a ceiling per package |
 | `helper_homes` | [K3 helper homes](#k3-helper-homes) | grandfathered `package:Func` or `package:Receiver.Method` helpers declared in an area file and used from another file |
+| `api_spec_undocumented_routes` | [API spec drift](#api-spec-drift) | a ceiling on the routes `docs/api-spec.md` does not document |
 
 Any PR may lower or remove an entry. A refactor PR never raises or adds
 one (the Refactor guard job, S14b, refuses it), with the
@@ -531,6 +532,33 @@ There is no allowlist; `buildPathRecords` holds only records of the past,
 and grows only for another one, in a class T commit.
 
 **Regenerate.** Nothing to regenerate.
+
+## API spec drift
+
+**Enforces.** Counts the routes S2's route inventory,
+`internal/api/testdata/routes.txt`, lists that `docs/api-spec.md` does not
+document, against `api_spec_undocumented_routes` (step D1). A route is
+documented by a row of one of the spec's tables whose first cell holds its
+method, alone or with others (`GET/HEAD`), and whose second cell is a code
+span holding its path exactly, variable names included (`/api/v1/orgs/{id}`);
+a brace group with a comma stands for each of its alternatives
+(`/download/{json,csv}`). Prose does not count. The ceiling was 36 of 341
+when D1 added the rule: the 15 deprecated `/api/v1/teams*` and
+`/api/v1/team-*` aliases of the crew routes, the four attribute-definition
+routes, the OIDC sign-in pair and 15 others.
+`TestAPISpecRule` proves the parse on a fixture.
+
+**Why.** tooling-8 and api-core-14: the spec is written by hand, and the
+route inventory is the only machine-checked list of what the router
+serves, so without a count nothing tells a pull request that adds a route
+it left the spec behind.
+
+**Fix.** Add a row for the new route in the spec's route inventory, in the
+table of its area: method, path as the router registers it, purpose and
+who may call it.
+
+**Regenerate.** Lower the ceiling as routes are documented or removed; the
+regenerate command does it.
 
 ## Env var inventory (S8)
 
