@@ -17,6 +17,7 @@ func artifactReadTools() []Tool {
 	return []Tool{
 		{
 			Name:        "list_artifacts",
+			ReadOnly:    true,
 			Description: "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
@@ -37,6 +38,7 @@ func artifactReadTools() []Tool {
 		},
 		{
 			Name:        "get_artifact",
+			ReadOnly:    true,
 			Description: "Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \"REQ-12\") instead of a UUID when project_id is also given.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id":         str("Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)"),
@@ -60,6 +62,7 @@ func artifactOverviewTools() []Tool {
 	return []Tool{
 		{
 			Name:        "get_project_map",
+			ReadOnly:    true,
 			Description: "The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id":  str("Project ID"),
@@ -76,6 +79,7 @@ func artifactOverviewTools() []Tool {
 		},
 		{
 			Name:        "get_context",
+			ReadOnly:    true,
 			Description: "One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.",
 			InputSchema: schema([]string{"project_id", "id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
@@ -87,6 +91,7 @@ func artifactOverviewTools() []Tool {
 		},
 		{
 			Name:        "get_project_tree",
+			ReadOnly:    true,
 			Description: "Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
@@ -123,6 +128,7 @@ func artifactSearchTools() []Tool {
 	return []Tool{
 		{
 			Name:        "search_artifacts",
+			ReadOnly:    true,
 			Description: "Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\"REQ-30\", case-insensitive) returns that artifact first.",
 			InputSchema: schema([]string{"project_id", "query"}, map[string]interface{}{
 				"project_id": str("Project ID"),

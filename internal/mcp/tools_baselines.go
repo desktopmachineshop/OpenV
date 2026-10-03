@@ -8,6 +8,7 @@ func baselineTools() []Tool {
 	return []Tool{
 		{
 			Name:        "list_baselines",
+			ReadOnly:    true,
 			Description: "List a project's baselines.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
@@ -19,6 +20,7 @@ func baselineTools() []Tool {
 		},
 		{
 			Name:        "get_baseline",
+			ReadOnly:    true,
 			Description: "Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id": str("Baseline ID"),

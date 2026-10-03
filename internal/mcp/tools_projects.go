@@ -8,6 +8,7 @@ func projectTools() []Tool {
 	return []Tool{
 		{
 			Name:        "list_projects",
+			ReadOnly:    true,
 			Description: "List all projects visible to this agent.",
 			InputSchema: schema(nil, map[string]interface{}{}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {

@@ -14,6 +14,7 @@ func vvTools() []Tool {
 	return []Tool{
 		{
 			Name:        "get_vv_coverage",
+			ReadOnly:    true,
 			Description: "Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
@@ -49,6 +50,7 @@ func vvTools() []Tool {
 		},
 		{
 			Name:        "get_vv_gaps",
+			ReadOnly:    true,
 			Description: "Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
