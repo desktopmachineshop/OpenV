@@ -192,8 +192,9 @@ REFACTOR = ("refactor", "no-release-notes")
 
 
 class DataTest(unittest.TestCase):
-    def test_the_golden_list_has_20_entries(self):
-        self.assertEqual(len(rg.GOLDEN_LIST), 20)
+    def test_the_golden_list_has_21_entries(self):
+        # The plan's 20, plus S15a's run failure goldens.
+        self.assertEqual(len(rg.GOLDEN_LIST), 21)
 
     def test_globs(self):
         cases = [
@@ -222,12 +223,12 @@ class DataTest(unittest.TestCase):
         # renaming a golden or its directory cannot drop it from the list
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
-        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16"}
+        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16", "S15a"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 17)
+        self.assertEqual(len(entries), 18)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
@@ -236,7 +237,8 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14d", "S14e"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14d", "S14e",
+                  "S15a"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -329,6 +331,34 @@ class DataTest(unittest.TestCase):
         for path in ("cmd/newcmd/sub/cli_test.go", "frontend/env_parse_test.go", "internal/archtest/env_parse_test.go"):
             with self.subTest(path=path):
                 self.assertNotEqual(rg.guard_code_step(path), "S8")
+
+    def test_s15a_run_failure_goldens(self):
+        # Both of S15a's goldens are on the list under their own entry, not
+        # S7's worker wire beside them, so a pull request that changes what
+        # the runner reports for a failed run needs a release note. The
+        # tests that write them, the other S15a tests and their shared
+        # stand-ins are guard code of S15a's row, so M15a's class B commit
+        # cannot relax what proves it (M15b, class E, names them as its
+        # characterization); the rest of the runner's tests are not, and S7's
+        # wire test stays S7's.
+        files = subprocess.run(["git", "ls-files", "internal/runner/testdata/run_failures"], cwd=REPO,
+                               capture_output=True, text=True, check=True).stdout.split()
+        goldens = [f for f in files if not f.endswith(".gitattributes")]
+        self.assertEqual(sorted(os.path.basename(f) for f in goldens), ["classes.txt", "outcomes.txt"])
+        for path in goldens:
+            with self.subTest(path=path):
+                self.assertEqual(rg.golden_entry(path), ("S15a", "run failure outcomes and classes"))
+        self.assertEqual(rg.golden_entry("internal/runner/testdata/wire/finish.json"), ("S7", "worker wire"))
+        for path in ("internal/runner/run_failures_test.go", "internal/runner/run_slots_test.go",
+                     "internal/runner/signin_claim_test.go", "internal/runner/pool_lease_test.go",
+                     "internal/runner/fakeapi_test.go"):
+            with self.subTest(path=path):
+                self.assertTrue(os.path.isfile(os.path.join(REPO, path)), path)
+                self.assertEqual(rg.guard_code_step(path), "S15a")
+        for path in ("internal/runner/worker_test.go", "internal/runner/worker.go", "internal/runner/pool.go"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertEqual(rg.guard_code_step("internal/runner/wire_golden_test.go"), "S7")
 
     def test_merged_s14d_generator_is_guarded(self):
         # S14d's generator (internal/tools/liftmigrations: the tool, its

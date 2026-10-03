@@ -12,7 +12,7 @@ request's edits to the lists and rules below take effect once it merges;
 X2B_CALL_SHAPE_CHANGES alone is read from the pull request's tree.
 
 Every pull request:
-  (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 20 entries)
+  (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 21 entries)
       fails unless the change adds a RELEASE_NOTES.md bullet under
       "## Unreleased" or carries the maintainer's behavior-change label;
       inline snapshots (toMatchInlineSnapshot,
@@ -104,6 +104,8 @@ CHARACTERIZATION_TRAILER = "Refactor-Characterization"
 # An entry for a step not yet merged is the pattern the plan names; it
 # matches nothing until that step lands its goldens. X4a/X5 add one entry
 # in a class T commit (S17, which would have added another, is dropped).
+# S15a added one the plan's count of 20 did not foresee: its row asks for
+# "error-class goldens" without naming a path.
 GOLDEN_LIST = [
     ("I1, pre-S2", "HTTP route set", ["internal/api/testdata/routes.txt"]),
     ("S2", "route binding in registration order", ["internal/api/testdata/route_handlers.txt"]),
@@ -119,6 +121,10 @@ GOLDEN_LIST = [
     ("S6, S13", "cross-language contracts", ["contracts/**"]),
     ("S7", "MCP tools and JSON-RPC", ["internal/mcp/testdata/**"]),
     ("S7", "worker wire", ["internal/runner/testdata/wire/**"]),
+    # What the runner reports for each terminal outcome of a run, and the
+    # taxonomy behind it (OpenV REQ-84); M15a's "messages and error classes
+    # unchanged" is these two files staying byte-identical.
+    ("S15a", "run failure outcomes and classes", ["internal/runner/testdata/run_failures/**"]),
     ("S8", "env var inventory and parse table", ["internal/archtest/testdata/env_*.txt"]),
     ("S8", "CLI surfaces", ["cmd/*/testdata/cli/**"]),
     ("S9", "export, import and report formats",
@@ -170,7 +176,8 @@ PROTECTED_PATHS = [
 # fills its slot in a class T commit when it lands. S14a, S14b, S14d and S14e
 # are not in the plan's list: they are the tools that prove class A, this
 # guard and M10's and M11a's class B, so a commit of another class may not
-# edit them either.
+# edit them either. Nor is S15a, whose tests are M15a's guard and M15b's
+# characterization.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -237,6 +244,16 @@ GUARD_CODE = [
     # only: M11a may still edit its spec (specs/*.json) in any class, and
     # its testdata/ is frozen data like every other.
     ("S14e", ["internal/tools/splittools/*.go"]),
+    # S15a's characterization of internal/runner: the tests that write its
+    # run failure goldens and pin slot accounting, sign-in to claim and pool
+    # leases, and the stand-in API and CLIs they share. M15a (class B) names
+    # them as its guard, so its extraction cannot relax them in the commit
+    # they prove; M15b (class E) names them in Refactor-Characterization
+    # trailers. M15a's own class C commit (S8's exemptions) may still edit
+    # them.
+    ("S15a", ["internal/runner/fakeapi_test.go", "internal/runner/run_failures_test.go",
+              "internal/runner/run_slots_test.go", "internal/runner/signin_claim_test.go",
+              "internal/runner/pool_lease_test.go"]),
 ]
 # Under a guard-code pattern but governed by the ratchet rule instead.
 GUARD_CODE_EXCEPT = ["internal/archtest/ratchets.json"]
