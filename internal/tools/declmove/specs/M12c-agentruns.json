@@ -1,0 +1,65 @@
+{
+  "description": "Refactor step M12c, class A (docs/plans/codebase-refactor.md §6.5): internal/domain/agentruns's agentruns.go splits by concern. agentruns.go keeps the types: the status, priority, error-class and log-kind constants, the retry and answer-length rules, the errors, Run and the request, usage and filter types, Repository, Service and DefaultGraceSeconds. DefaultService, its constructor and the policies wired into it, AttachWorkItem and the reads (Get, GetByToken, List, Tree, Logs, CountRunsSince, QueueStats, Usage, MonthlySpend) go to service.go; the lifecycle, Launch and Retry, Claim, ReleaseClaim, ReissueToken, MarkRunning, AppendLogs with the partial-text cap, Finish with its auto-retry and backoff, RequestCancel, Heartbeat, FailStale and FinalizeIfResolved, to lifecycle.go; Subscriber, AddSubscriber, notifyStatus and publishRunFinished to subscribers.go. agentruns.go has no free-floating comment, so nothing is deleted from it. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M12c-agentruns.json",
+  "package": "internal/domain/agentruns",
+  "targets": [
+    {
+      "file": "service.go",
+      "header": "// DefaultService, the run service: its constructor and the policies wired\n// into it (retry, routing, budget), the link from a run to its kanban card,\n// and the reads: a run, its tree and its logs, the queue and the usage\n// rollups.",
+      "decls": [
+        "DefaultService",
+        "NewDefaultService",
+        "(*DefaultService).SetRetryPolicy",
+        "(*DefaultService).SetRoutingPolicy",
+        "(*DefaultService).SetBudgetGuard",
+        "(*DefaultService).AttachWorkItem",
+        "(*DefaultService).Get",
+        "(*DefaultService).GetByToken",
+        "(*DefaultService).List",
+        "(*DefaultService).Tree",
+        "(*DefaultService).Logs",
+        "(*DefaultService).CountRunsSince",
+        "(*DefaultService).QueueStats",
+        "(*DefaultService).Usage",
+        "(*DefaultService).MonthlySpend"
+      ]
+    },
+    {
+      "file": "lifecycle.go",
+      "header": "// A run's lifecycle as DefaultService drives it: launch and retry, claim\n// and release, running, logs and heartbeats, finish with its auto-retry,\n// cancel, the stale reaper, and the resolution of a run awaiting approval.",
+      "decls": [
+        "(*DefaultService).Launch",
+        "retryableStatuses",
+        "(*DefaultService).Retry",
+        "(*DefaultService).Claim",
+        "(*DefaultService).ReleaseClaim",
+        "(*DefaultService).ReissueToken",
+        "(*DefaultService).MarkRunning",
+        "(*DefaultService).AppendLogs",
+        "PartialTextLimit",
+        "TruncatePartial",
+        "applyFailedError",
+        "terminalStatuses",
+        "(*DefaultService).Finish",
+        "finishRefusal",
+        "retryBackoffBase",
+        "retryBackoffMax",
+        "retryBackoff",
+        "(*DefaultService).maybeAutoRetry",
+        "(*DefaultService).RequestCancel",
+        "(*DefaultService).Heartbeat",
+        "(*DefaultService).FailStale",
+        "(*DefaultService).FinalizeIfResolved"
+      ]
+    },
+    {
+      "file": "subscribers.go",
+      "header": "// Who hears of a run's changes: the Subscribers registered at wiring (the\n// SSE hub and the crew and kanban hooks), and the event bus, which carries\n// RunFinished for every terminal status.",
+      "decls": [
+        "Subscriber",
+        "(*DefaultService).AddSubscriber",
+        "(*DefaultService).notifyStatus",
+        "(*DefaultService).publishRunFinished"
+      ]
+    }
+  ]
+}
