@@ -56,7 +56,7 @@ func prefReq(method, body string, user *users.User) *http.Request {
 // signed-in user, and the service is never reached.
 func TestNotificationPrefsRequireUser(t *testing.T) {
 	svc := &fakeUserPrefService{}
-	h := &Handler{userService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.userService = svc })
 
 	for _, tc := range []struct {
 		name string
@@ -82,7 +82,7 @@ func TestNotificationPrefsRequireUser(t *testing.T) {
 // TestGetNotificationPrefsReflectsUser: GET returns the session user's stored
 // opt-out value.
 func TestGetNotificationPrefsReflectsUser(t *testing.T) {
-	h := &Handler{userService: &fakeUserPrefService{}}
+	h := newTestHandler(t, func(h *Handler) { h.userService = &fakeUserPrefService{} })
 	for _, want := range []bool{true, false} {
 		user := &users.User{ID: "u-1", EmailNotifications: want}
 		w := httptest.NewRecorder()
@@ -104,7 +104,7 @@ func TestGetNotificationPrefsReflectsUser(t *testing.T) {
 // the SESSION user's id — never an id from the request body or URL.
 func TestUpdateNotificationPrefsOwnUserOnly(t *testing.T) {
 	svc := &fakeUserPrefService{}
-	h := &Handler{userService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.userService = svc })
 	user := &users.User{ID: "u-session", EmailNotifications: true}
 
 	w := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestUpdateNotificationPrefsOwnUserOnly(t *testing.T) {
 // alone — the settings panel flips them independently.
 func TestNotificationPrefsCarryPushFlag(t *testing.T) {
 	svc := &fakeUserPrefService{}
-	h := &Handler{userService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.userService = svc })
 	user := &users.User{ID: "u-1", EmailNotifications: true, PushNotifications: true}
 
 	// GET reflects both stored values.

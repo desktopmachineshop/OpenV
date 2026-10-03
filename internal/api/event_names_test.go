@@ -56,38 +56,38 @@ func (f *fakeNameBaselineService) GetBaseline(id string) (*baselines.Baseline, e
 	return nil, baselines.ErrNotFound
 }
 
-func namingHandler() (*Handler, *fakeNameUserService) {
+func namingHandler(t *testing.T) (*Handler, *fakeNameUserService) {
 	userSvc := &fakeNameUserService{byID: map[string]*users.User{
 		"u1": {ID: "u1", Name: "Dana Ross", Email: "dana@example.com"},
 		"u2": {ID: "u2", Email: "sam@example.com"}, // no display name
 	}}
-	return &Handler{
-		userService: userSvc,
-		artifactService: &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+	return newTestHandler(t, func(h *Handler) {
+		h.userService = userSvc
+		h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"a1": {ID: "a1", Ref: "REQ-12", Title: "The positioner shall comply with UL1740"},
 			"a2": {ID: "a2", Ref: "TC-3", Title: "Compliance test"},
 			"a3": {ID: "a3", Title: "Untitled ref-less artifact"},
-		}},
-		workItemService: &fakeNameWorkItemService{byID: map[string]*workitems.WorkItem{
+		}}
+		h.workItemService = &fakeNameWorkItemService{byID: map[string]*workitems.WorkItem{
 			"w1": {ID: "w1", Title: "Wire the safety interlock"},
-		}},
-		baselineService: &fakeNameBaselineService{byID: map[string]*baselines.Baseline{
+		}}
+		h.baselineService = &fakeNameBaselineService{byID: map[string]*baselines.Baseline{
 			"b1": {ID: "b1", Name: "Release 1.2"},
-		}},
-		runService: &fakeRunService{byID: map[string]*agentruns.Run{
+		}}
+		h.runService = &fakeRunService{byID: map[string]*agentruns.Run{
 			"r1": {ID: "r1", AgentID: "ag1"},
-		}},
-		agentService: &fakeAgentService{byID: map[string]*agents.Agent{
+		}}
+		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
 			"ag1": {ID: "ag1", Slug: "req-analyst", Name: "Requirements Analyst"},
-		}},
-	}, userSvc
+		}}
+	}), userSvc
 }
 
 // TestDecorateEventsNames locks in issue: the activity log names the user and
 // the entity behind each event's raw IDs, using the payload the publisher
 // stamped in where it has one and a lookup where it does not.
 func TestDecorateEventsNames(t *testing.T) {
-	h, _ := namingHandler()
+	h, _ := namingHandler(t)
 
 	cases := []struct {
 		name       string
@@ -221,7 +221,7 @@ func TestDecorateEventsNames(t *testing.T) {
 // A page repeats the same actor on most rows; the resolver must not query the
 // user once per row.
 func TestDecorateEventsMemoizesLookups(t *testing.T) {
-	h, userSvc := namingHandler()
+	h, userSvc := namingHandler(t)
 
 	var page []events.Event
 	for i := 0; i < 25; i++ {
@@ -238,7 +238,7 @@ func TestDecorateEventsMemoizesLookups(t *testing.T) {
 // Services are optional on the handler (and a lookup can fail); naming must
 // degrade to the raw IDs rather than panicking.
 func TestDecorateEventsWithoutServices(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 	got := h.decorateEvents([]events.Event{
 		{EventType: events.ArtifactDeleted, EntityID: "a1", Actor: "user:u1"},
 		{EventType: events.RunFinished, EntityID: "r1", Actor: "agent:r1"},
@@ -260,7 +260,7 @@ func TestDecorateEventsWithoutServices(t *testing.T) {
 // actor/entity IDs the activity log still shows.
 func TestListDomainEventsServesNames(t *testing.T) {
 	const orgID = "org-1"
-	h, _ := namingHandler()
+	h, _ := namingHandler(t)
 	h.eventRepo = &fakeEventRepo{byOrg: map[string][]events.Event{
 		orgID: {{
 			ID: "e1", OrgID: orgID, ProjectID: "proj-1", EventType: events.ArtifactUpdated,

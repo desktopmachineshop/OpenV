@@ -16,7 +16,7 @@ import (
 // validation runs before eventRepo is touched, so a nil repo is fine here — a
 // bad cursor must never get that far.
 func TestListDomainEventsBadCursor(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 
 	for _, bad := range []string{"not-a-uuid", "123", "'; DROP TABLE domain_events;--", "abcd"} {
 		target := "/api/v1/events?" + url.Values{"before": {bad}}.Encode()

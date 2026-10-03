@@ -71,7 +71,7 @@ const (
 
 func TestRouteBinding(t *testing.T) {
 	src := parseAPISource(t)
-	router := routeTable()
+	router := routeTable(t)
 	routes := bindRoutes(t, src, router)
 
 	t.Run("handlers", func(t *testing.T) {
