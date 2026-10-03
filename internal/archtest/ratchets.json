@@ -327,7 +327,7 @@
     "internal/domain/links"
   ],
   "file_lines": {
-    "cmd/server/main.go": 1073,
+    "cmd/server/main.go": 1049,
     "internal/api/agent_handlers.go": 2414,
     "internal/api/handlers.go": 3519,
     "internal/api/org_handlers.go": 1552,

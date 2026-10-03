@@ -59,7 +59,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
-	"github.com/openv/requirements-platform/internal/envparse"
 	eventbus "github.com/openv/requirements-platform/internal/events"
 	"github.com/openv/requirements-platform/internal/hosting"
 	"github.com/openv/requirements-platform/internal/metrics"
@@ -69,53 +68,6 @@ import (
 	"github.com/openv/requirements-platform/internal/scheduler"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
-
-// The server's settings follow internal/envparse's one rule: a value is
-// trimmed, and a malformed count or boolean reads as its fallback with one
-// warning naming the variable; a credential is exact (envSecret, at the end).
-
-// envOr reads a text setting, trimmed, falling back when that leaves
-// nothing.
-func envOr(key, fallback string) string {
-	return envparse.Text(os.Getenv(key), fallback)
-}
-
-// envInt reads a count, a whole number above 0.
-func envInt(key string, fallback int) int {
-	return envparse.Count(key, os.Getenv(key), fallback)
-}
-
-// envBool reads a boolean: true or false in any case, or 1 or 0.
-func envBool(key string, fallback bool) bool {
-	return envparse.Bool(key, os.Getenv(key), fallback)
-}
-
-// initLogging installs the process-wide slog default: a text handler on
-// stderr with the level taken from OPENV_LOG_LEVEL (debug|info|warn|error,
-// default info).
-func initLogging() {
-	level := slog.LevelInfo
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("OPENV_LOG_LEVEL"))) {
-	case "debug":
-		level = slog.LevelDebug
-	case "warn", "warning":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
-	case "", "info":
-		// default
-	default:
-		// Unknown value: keep info, but say so once.
-		defer slog.Warn("unrecognized OPENV_LOG_LEVEL, using info", "value", os.Getenv("OPENV_LOG_LEVEL"))
-	}
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
-}
-
-// fatal logs a boot-blocking error and exits.
-func fatal(msg string, err error) {
-	slog.Error(msg, "error", err)
-	os.Exit(1)
-}
 
 func main() {
 	initLogging()
@@ -966,25 +918,6 @@ func main() {
 		<-errCh // wait for ListenAndServe to return
 		slog.Info("server stopped")
 	}
-}
-
-// maxRequestBodyBytes is the cap the API places on any single request body.
-// OPENV_MAX_BODY_MB overrides the 32 MB default; attachment uploads carry a
-// tighter cap of their own (OPENV_MAX_UPLOAD_MB).
-func maxRequestBodyBytes() int64 {
-	return int64(envInt("OPENV_MAX_BODY_MB", 32)) * 1024 * 1024
-}
-
-// envSecret reads a credential exactly as set (#379, question 24): never
-// trimmed, since a key, token, password or private key cut short of its
-// spaces is another one, with one warning naming the variable, never the
-// value, when spaces or a line break sit around it. Only an unset or empty
-// variable falls back.
-func envSecret(key, fallback string) string {
-	if v := envparse.Secret(key, os.Getenv(key)); v != "" {
-		return v
-	}
-	return fallback
 }
 
 // handoffReach is who a crew's hand-off card may go to (OpenV REQ-23,
