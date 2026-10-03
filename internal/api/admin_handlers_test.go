@@ -71,21 +71,21 @@ func adminReq(method, path, body string, user *users.User, vars map[string]strin
 	return r
 }
 
-func newAdminHandler() (*Handler, *adminUserFake) {
+func newAdminHandler(t *testing.T) (*Handler, *adminUserFake) {
 	uf := &adminUserFake{byID: map[string]*users.User{
 		"root":  {ID: "root", Name: "Root", Email: "root@example.com", IsAdmin: true},
 		"dave":  {ID: "dave", Name: "Dave", Email: "dave@example.com"},
 		"other": {ID: "other", Name: "Other", Email: "other@example.com", IsAdmin: true},
 	}}
-	h := &Handler{
-		orgService:  &adminOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"org-1", "org-2"}},
-		userService: uf,
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.orgService = &adminOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"org-1", "org-2"}}
+		h.userService = uf
+	})
 	return h, uf
 }
 
 func TestAdminListingsAreGated(t *testing.T) {
-	h, _ := newAdminHandler()
+	h, _ := newAdminHandler(t)
 	for name, user := range map[string]*users.User{"visitor": nil, "member": {ID: "dave"}} {
 		w := httptest.NewRecorder()
 		h.AdminListWorkspaces(w, adminReq(http.MethodGet, "/api/v1/admin/workspaces", "", user, nil))
@@ -105,7 +105,7 @@ func TestAdminListingsAreGated(t *testing.T) {
 }
 
 func TestAdminListWorkspacesAndUsers(t *testing.T) {
-	h, _ := newAdminHandler()
+	h, _ := newAdminHandler(t)
 	root := &users.User{ID: "root", IsAdmin: true}
 
 	w := httptest.NewRecorder()
@@ -139,7 +139,7 @@ func TestAdminListWorkspacesAndUsers(t *testing.T) {
 }
 
 func TestAdminSetUserAdmin(t *testing.T) {
-	h, uf := newAdminHandler()
+	h, uf := newAdminHandler(t)
 	root := &users.User{ID: "root", IsAdmin: true}
 	vars := func(id string) map[string]string { return map[string]string{"id": id} }
 

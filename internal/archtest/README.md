@@ -54,6 +54,7 @@ shrink.
 | `side_effect_vars` | [Side-effecting package variables](#side-effecting-package-variables) | grandfathered `package:var` |
 | `counts` | the five count ratchets below | one ceiling each |
 | `env_reads` | [Direct env reads](#direct-env-reads) | a ceiling per package |
+| `helper_homes` | [K3 helper homes](#k3-helper-homes) | grandfathered `package:Func` or `package:Receiver.Method` helpers declared in an area file and used from another file |
 
 Any PR may lower or remove an entry. A refactor PR never raises or adds
 one (the Refactor guard job, S14b, refuses it), with the
@@ -317,17 +318,17 @@ is only the ordered list of registrar calls. M6 moves the inline routes.
 **Enforces.** Counts `api.Handler` composite literals (`&Handler{...}` or
 `Handler{...}`, or `api.Handler` from another package) in test files other
 than `testkit_test.go`. The ceiling `counts.handler_literals_in_tests` is
-137, in 60 files, at `d11dee8`. `NewHandler`'s own literal is production
-code and not counted.
+0 since M13a–M13d (137, in 60 files, at `d11dee8`). `NewHandler`'s own
+literal is production code and not counted.
 
 **Why.** K6: tests build handlers with `newTestHandler` (M13), so a new
 dependency is one option, not sixty edits.
 
-**Fix.** Build the handler with `newTestHandler` from `testkit_test.go`
-(added by M13a).
+**Fix.** Build the handler with `newTestHandler(t, opts...)` from
+`testkit_test.go`, setting each field in an option:
+`newTestHandler(t, func(h *Handler) { h.exportService = fake })`.
 
-**Regenerate.** M13a–M13d migrate the literals; lower the ceiling as they
-go.
+**Regenerate.** Nothing to regenerate: the ceiling is 0.
 
 ## Raw JSON encodes
 
@@ -375,6 +376,37 @@ read in one file.
 **Fix.** Declare the guard in `authz.go`.
 
 **Regenerate.** Lower the ceiling after M5.
+
+## K3 helper homes
+
+**Enforces.** An unexported function or method declared in a
+`*_handlers.go` file (an area file, K1) of `internal/api`, or of a package
+below it, may be used only in that file. One referenced from another
+production file of the package fails, unless `helper_homes` lists it,
+keyed `package:Func` or `package:Receiver.Method` as `func_lines` keys it,
+so a helper keeps its entry when it moves between area files. `register<Area>Routes` is K1's,
+not a helper, and is left out; so are exported names, `handlers.go`, which
+is not an area file, and test files. The allowlist is the 33 helpers the
+tree had when M5 added the rule, which M5 shrinks by the ones it moves.
+
+The rule reads syntax only: a function counts as used where its bare name
+appears (a call or a function value), and a method where a selector names
+it (`h.helper`, `h.helper(...)`), whatever the receiver, so a local, a
+field or another type's method spelled like a helper counts too. Rename
+the look-alike if that ever bites.
+
+**Why.** K3: a helper that several areas use has one home, so it is found
+where its kind lives, not in whichever area happened to need it first, and
+an area file can move (M6) without dragging another area's helpers along.
+
+**Fix.** Move the helper to its home: `respond.go` (JSON in and out),
+`httperr.go` (error writers), `errmap.go` (per-area error tables),
+`authz.go` (every `require*`), `publish.go`, `cookies.go` or a
+`middleware_*.go` file, or another file that is not an area file;
+otherwise keep it in the one area file that uses it.
+
+**Regenerate.** Remove an entry once its helper has moved or is used by one
+file; `UPDATE_RATCHETS=1` does it.
 
 ## Direct env reads
 

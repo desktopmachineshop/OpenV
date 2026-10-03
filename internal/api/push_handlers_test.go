@@ -97,7 +97,10 @@ const validSubscriptionBody = `{"endpoint":"https://fcm.googleapis.com/fcm/send/
 // signed-in user, and the service is never reached.
 func TestPushEndpointsRequireUser(t *testing.T) {
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc, vapid: notify.VAPIDConfig{PublicKey: "pub", PrivateKey: "priv", Subject: "mailto:ops@example.com"}}
+	h := newTestHandler(t, func(h *Handler) {
+		h.pushSubService = svc
+		h.vapid = notify.VAPIDConfig{PublicKey: "pub", PrivateKey: "priv", Subject: "mailto:ops@example.com"}
+	})
 
 	for _, tc := range []struct {
 		name string
@@ -127,7 +130,9 @@ func TestPushEndpointsRequireUser(t *testing.T) {
 func TestGetPushConfig(t *testing.T) {
 	user := &users.User{ID: "u-1"}
 
-	on := &Handler{vapid: notify.VAPIDConfig{PublicKey: "the-public-key", PrivateKey: "the-private-key", Subject: "mailto:ops@example.com"}}
+	on := newTestHandler(t, func(h *Handler) {
+		h.vapid = notify.VAPIDConfig{PublicKey: "the-public-key", PrivateKey: "the-private-key", Subject: "mailto:ops@example.com"}
+	})
 	w := httptest.NewRecorder()
 	on.GetPushConfig(w, pushReq(http.MethodGet, "", user))
 	var cfg pushConfig
@@ -141,7 +146,7 @@ func TestGetPushConfig(t *testing.T) {
 		t.Fatal("the private key leaked into the config response")
 	}
 
-	off := &Handler{}
+	off := newTestHandler(t)
 	w = httptest.NewRecorder()
 	off.GetPushConfig(w, pushReq(http.MethodGet, "", user))
 	cfg = pushConfig{}
@@ -157,7 +162,7 @@ func TestGetPushConfig(t *testing.T) {
 // user, answers 201, and never echoes the encryption keys.
 func TestCreatePushSubscription(t *testing.T) {
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 	user := &users.User{ID: "u-session"}
 
 	w := httptest.NewRecorder()
@@ -196,7 +201,7 @@ func TestCreatePushSubscription(t *testing.T) {
 // refreshes the keys instead of adding a device.
 func TestCreatePushSubscriptionIdempotent(t *testing.T) {
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 	user := &users.User{ID: "u-1"}
 
 	for _, body := range []string{
@@ -221,7 +226,7 @@ func TestCreatePushSubscriptionIdempotent(t *testing.T) {
 // reach the store; an https-less endpoint is refused outright.
 func TestCreatePushSubscriptionValidation(t *testing.T) {
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 	user := &users.User{ID: "u-1"}
 
 	for _, tc := range []struct{ name, body string }{
@@ -266,7 +271,7 @@ func TestListPushSubscriptionsOwnUserOnly(t *testing.T) {
 	mine := pushsubs.New("u-1", "https://fcm.googleapis.com/fcm/send/mine", "MyP256", "MyAuth", "Pixel")
 	theirs := pushsubs.New("u-2", "https://fcm.googleapis.com/fcm/send/theirs", "TheirP256", "TheirAuth", "iPad")
 	svc := &fakePushSubService{subs: []*pushsubs.Subscription{mine, theirs}}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 
 	w := httptest.NewRecorder()
 	h.ListPushSubscriptions(w, pushReq(http.MethodGet, "", &users.User{ID: "u-1"}))
@@ -306,7 +311,7 @@ func TestDeletePushSubscription(t *testing.T) {
 	mine := pushsubs.New("u-1", "https://fcm.googleapis.com/fcm/send/mine", "p", "a", "Pixel")
 	theirs := pushsubs.New("u-2", "https://fcm.googleapis.com/fcm/send/theirs", "p", "a", "iPad")
 	svc := &fakePushSubService{subs: []*pushsubs.Subscription{mine, theirs}}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -340,7 +345,7 @@ func TestDeletePushSubscription(t *testing.T) {
 // TestPushEndpointsWithoutService: a deployment wired without the push
 // service (nil) answers sensibly instead of panicking.
 func TestPushEndpointsWithoutService(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -365,7 +370,7 @@ func TestPushEndpointsWithoutService(t *testing.T) {
 // TestCreatePushSubscriptionStoreError: a store failure is a 500, not a
 // silent success.
 func TestCreatePushSubscriptionStoreError(t *testing.T) {
-	h := &Handler{pushSubService: &fakePushSubService{subscribeErr: errors.New("db down")}}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = &fakePushSubService{subscribeErr: errors.New("db down")} })
 	w := httptest.NewRecorder()
 	h.CreatePushSubscription(w, pushReq(http.MethodPost, validSubscriptionBody, &users.User{ID: "u-1"}))
 	if w.Code != http.StatusInternalServerError {
@@ -380,7 +385,7 @@ func TestCreatePushSubscriptionStoreError(t *testing.T) {
 // was never inserted.
 func TestCreatePushSubscriptionReturnsThePersistedRow(t *testing.T) {
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 	user := &users.User{ID: "u-1"}
 
 	created := func(body string) pushsubs.Subscription {
@@ -432,7 +437,7 @@ func TestCreatePushSubscriptionReturnsThePersistedRow(t *testing.T) {
 // the cut is on a rune boundary.
 func TestPushUserAgentIsCutOnARuneBoundary(t *testing.T) {
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 
 	// A two-byte rune sits exactly on the byte-slicing cut.
 	agent := strings.Repeat("u", maxPushUserAgentLen-1) + "é" + strings.Repeat("v", 50)
@@ -535,7 +540,7 @@ func TestPushEndpointHostOverride(t *testing.T) {
 
 	// End to end: the override is what the handler applies.
 	svc := &fakePushSubService{}
-	h := &Handler{pushSubService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.pushSubService = svc })
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()

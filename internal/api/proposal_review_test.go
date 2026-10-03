@@ -19,12 +19,12 @@ import (
 // proposalTestHandler is the Handler the proposal review tests drive: the
 // proposals, the projects they belong to, and each account's effective role
 // in those projects.
-func proposalTestHandler(svc *fakeProposalService, byID map[string]*projects.Project, roles map[string]map[string]string) *Handler {
-	return &Handler{
-		proposalService: svc,
-		projectService:  &fakeProjectService{byID: byID},
-		memberService:   &fakeMemberService{roles: roles},
-	}
+func proposalTestHandler(t *testing.T, svc *fakeProposalService, byID map[string]*projects.Project, roles map[string]map[string]string) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.proposalService = svc
+		h.projectService = &fakeProjectService{byID: byID}
+		h.memberService = &fakeMemberService{roles: roles}
+	})
 }
 
 // TestReviewProposalRefusesRunTokens is the regression test for an agent
@@ -77,7 +77,7 @@ func TestReviewProposalRefusesRunTokens(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(action+" by "+tc.name, func(t *testing.T) {
 				svc := &fakeProposalService{byID: map[string]*proposals.Proposal{"p-1": proposal()}}
-				h := proposalTestHandler(svc,
+				h := proposalTestHandler(t, svc,
 					map[string]*projects.Project{project: {ID: project, OrgID: "org-1"}},
 					map[string]map[string]string{project: {"eve": members.RoleEditor, "val": members.RoleViewer}})
 				r := httptest.NewRequest(http.MethodPost, "/api/v1/proposals/p-1/"+action, strings.NewReader(`{}`))

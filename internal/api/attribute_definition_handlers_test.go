@@ -53,19 +53,19 @@ func (f *fakeAttributeService) ListByProject(projectID string) ([]*attributes.De
 	return []*attributes.Definition{}, nil
 }
 
-func attrTestHandler(attrSvc *fakeAttributeService) *Handler {
-	return &Handler{
-		attributeService: attrSvc,
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+func attrTestHandler(t *testing.T, attrSvc *fakeAttributeService) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.attributeService = attrSvc
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
-		}},
-		orgService: &fakeOrgService{roles: map[string]map[string]string{
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"org-admin": orgs.RoleAdmin, "org-member": orgs.RoleMember},
-		}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"proj-editor": members.RoleEditor, "proj-viewer": members.RoleViewer},
-		}},
-	}
+		}}
+	})
 }
 
 func withUser(r *http.Request, id string) *http.Request {
@@ -90,7 +90,7 @@ func TestCreateAttributeDefinitionAuthz(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			attrSvc := &fakeAttributeService{}
-			h := attrTestHandler(attrSvc)
+			h := attrTestHandler(t, attrSvc)
 			r := withUser(httptest.NewRequest(http.MethodPost, "/api/v1/attribute-definitions", strings.NewReader(tc.body)), tc.userID)
 			w := httptest.NewRecorder()
 			h.CreateAttributeDefinition(w, r)
@@ -131,7 +131,7 @@ func TestUpdateDeleteAttributeDefinitionAuthz(t *testing.T) {
 	for _, tc := range cases {
 		t.Run("update/"+tc.name, func(t *testing.T) {
 			attrSvc := newSvc()
-			h := attrTestHandler(attrSvc)
+			h := attrTestHandler(t, attrSvc)
 			r := withUser(httptest.NewRequest(http.MethodPut, "/api/v1/attribute-definitions/"+tc.defID, strings.NewReader(body)), tc.userID)
 			r = mux.SetURLVars(r, map[string]string{"id": tc.defID})
 			w := httptest.NewRecorder()
@@ -142,7 +142,7 @@ func TestUpdateDeleteAttributeDefinitionAuthz(t *testing.T) {
 		})
 		t.Run("delete/"+tc.name, func(t *testing.T) {
 			attrSvc := newSvc()
-			h := attrTestHandler(attrSvc)
+			h := attrTestHandler(t, attrSvc)
 			r := withUser(httptest.NewRequest(http.MethodDelete, "/api/v1/attribute-definitions/"+tc.defID, nil), tc.userID)
 			r = mux.SetURLVars(r, map[string]string{"id": tc.defID})
 			w := httptest.NewRecorder()

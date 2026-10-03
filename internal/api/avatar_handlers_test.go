@@ -56,7 +56,11 @@ func avatarFixture(t *testing.T) (*Handler, *fakeAvatarUsers) {
 		"w1": {"u1": "admin", "u2": "member"},
 		"w2": {"u3": "admin"},
 	}}
-	return &Handler{uploadsDir: t.TempDir(), userService: svc, orgService: workspaces}, svc
+	return newTestHandler(t, func(h *Handler) {
+		h.uploadsDir = t.TempDir()
+		h.userService = svc
+		h.orgService = workspaces
+	}), svc
 }
 
 // avatarReqAs is r as the signed-in account userID, a platform admin when

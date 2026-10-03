@@ -53,7 +53,7 @@ func TestSetOrgPlan(t *testing.T) {
 		plan:  orgs.PlanBusiness,
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin, "member": orgs.RoleMember}},
 	}}
-	h := &Handler{orgService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.orgService = svc })
 	root := &users.User{ID: "root", IsAdmin: true}
 
 	w := httptest.NewRecorder()

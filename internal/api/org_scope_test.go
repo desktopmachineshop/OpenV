@@ -21,17 +21,17 @@ import (
 func TestListProjectsFailsClosedOnEmptyActiveOrg(t *testing.T) {
 	const orgID = "org-1"
 	newHandler := func() *Handler {
-		return &Handler{
-			projectService: &fakeProjectService{byID: map[string]*projects.Project{
+		return newTestHandler(t, func(h *Handler) {
+			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 				"proj-1":     {ID: "proj-1", OrgID: orgID, Name: "Alpha"},
 				"proj-2":     {ID: "proj-2", OrgID: orgID, Name: "Beta"},
 				"proj-other": {ID: "proj-other", OrgID: "org-2", Name: "Elsewhere"},
-			}},
-			orgService: &fakeOrgService{roles: map[string]map[string]string{
+			}}
+			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin},
-			}},
-			memberService: &fakeMemberService{roles: map[string]map[string]string{}},
-		}
+			}}
+			h.memberService = &fakeMemberService{roles: map[string]map[string]string{}}
+		})
 	}
 
 	list := func(t *testing.T, h *Handler, user *users.User, activeOrg string) []projects.Project {
@@ -87,15 +87,15 @@ func TestGlobalSearchFailsClosedOnEmptyActiveOrg(t *testing.T) {
 	artifactSvc := &searchArtifactService{hits: []*artifacts.SearchHit{
 		{ArtifactID: "art-1", ProjectID: "proj-1", Title: "Login"},
 	}}
-	h := &Handler{
-		artifactService: artifactSvc,
-		projectService: &searchProjectService{list: []*projects.Project{
+	h := newTestHandler(t, func(h *Handler) {
+		h.artifactService = artifactSvc
+		h.projectService = &searchProjectService{list: []*projects.Project{
 			{ID: "proj-1", OrgID: "org-1", Name: "Alpha"},
 			{ID: "proj-other", OrgID: "org-2", Name: "Elsewhere"},
-		}},
-		orgService:    &fakeOrgService{roles: map[string]map[string]string{}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{}},
-	}
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{}}
+	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/search?q=login", nil)
 	// Authenticated, but no active org resolved.
@@ -125,13 +125,13 @@ func TestGlobalSearchFailsClosedOnEmptyActiveOrg(t *testing.T) {
 // filter that would page across every tenant, even for a platform admin.
 func TestListAgentRunsFailsClosedOnEmptyActiveOrg(t *testing.T) {
 	runSvc := &fakeRunService{}
-	h := &Handler{
-		runService: runSvc,
-		orgService: &fakeOrgService{roles: map[string]map[string]string{}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+	h := newTestHandler(t, func(h *Handler) {
+		h.runService = runSvc
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"member": members.RoleViewer},
-		}},
-	}
+		}}
+	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/agent-runs", nil)
 	// Platform admin, but no active org resolved.

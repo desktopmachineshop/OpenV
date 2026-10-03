@@ -36,7 +36,10 @@ func featureFixture(t *testing.T, plan, stableRelease string) (*Handler, *fakeOr
 		roles:         map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin, "member": orgs.RoleMember}},
 		previews:      map[string]bool{},
 	}
-	return &Handler{orgService: svc, releaseService: staticRelease{notes: notes}}, svc
+	return newTestHandler(t, func(h *Handler) {
+		h.orgService = svc
+		h.releaseService = staticRelease{notes: notes}
+	}), svc
 }
 
 func featuresReq(t *testing.T, method, userID, body string) *http.Request {

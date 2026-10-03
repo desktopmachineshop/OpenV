@@ -205,17 +205,17 @@ func (m *memUserRepo) SetPasswordHash(userID, hash string, at time.Time) error {
 
 // --- tests -----------------------------------------------------------------
 
-func newOIDCTestHandler(cfg *OIDCConfig) (*Handler, *memUserRepo) {
+func newOIDCTestHandler(t *testing.T, cfg *OIDCConfig) (*Handler, *memUserRepo) {
 	repo := newMemUserRepo()
-	return &Handler{
-		userService: users.NewDefaultService(repo),
-		oidc:        cfg,
-	}, repo
+	return newTestHandler(t, func(h *Handler) {
+		h.userService = users.NewDefaultService(repo)
+		h.oidc = cfg
+	}), repo
 }
 
 func TestOIDCLoginBuildsAuthorizeURL(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
-	h, _ := newOIDCTestHandler(stub.config("client-abc", "https://app/api/v1/auth/oidc/callback"))
+	h, _ := newOIDCTestHandler(t, stub.config("client-abc", "https://app/api/v1/auth/oidc/callback"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/login", nil)
 	rec := httptest.NewRecorder()
@@ -264,7 +264,7 @@ func TestOIDCLoginBuildsAuthorizeURL(t *testing.T) {
 func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
 	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
-	h, repo := newOIDCTestHandler(cfg)
+	h, repo := newOIDCTestHandler(t, cfg)
 
 	const nonce = "the-expected-nonce"
 	stub.idToken = stub.signIDToken(t, map[string]any{
@@ -347,7 +347,7 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stub := newOIDCStub(t, "client-abc")
 			cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
-			h, repo := newOIDCTestHandler(cfg)
+			h, repo := newOIDCTestHandler(t, cfg)
 			invites := newFakeInviteService()
 			invites.invite("org-1", "verify@example.com", orgs.RoleAdmin)
 			h.invitationService = invites
@@ -405,7 +405,7 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
 	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
-	h, repo := newOIDCTestHandler(cfg)
+	h, repo := newOIDCTestHandler(t, cfg)
 
 	// Pre-existing password account with the same email.
 	existing, err := h.userService.Register("collide@example.com", "hunter2pw", "Pw User")
@@ -455,7 +455,7 @@ func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 func TestOIDCCallbackRejectsBadNonce(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
 	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
-	h, repo := newOIDCTestHandler(cfg)
+	h, repo := newOIDCTestHandler(t, cfg)
 
 	// Token is signed with a nonce that differs from the cookie.
 	stub.idToken = stub.signIDToken(t, map[string]any{
@@ -480,7 +480,7 @@ func TestOIDCCallbackRejectsBadNonce(t *testing.T) {
 
 func TestOIDCCallbackRejectsBadState(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
-	h, _ := newOIDCTestHandler(stub.config("client-abc", "https://app/cb"))
+	h, _ := newOIDCTestHandler(t, stub.config("client-abc", "https://app/cb"))
 
 	// State cookie does not match the query state -> CSRF rejection, before any
 	// token exchange happens.
@@ -500,7 +500,7 @@ func TestOIDCCallbackRejectsBadState(t *testing.T) {
 
 func TestOIDCNotConfigured(t *testing.T) {
 	// Nil OIDC config -> endpoints report not-configured, nothing else changes.
-	h, _ := newOIDCTestHandler(nil)
+	h, _ := newOIDCTestHandler(t, nil)
 
 	for _, path := range []string{"/api/v1/auth/oidc/login", "/api/v1/auth/oidc/callback"} {
 		rec := httptest.NewRecorder()
@@ -518,7 +518,7 @@ func TestOIDCNotConfigured(t *testing.T) {
 
 func TestAuthConfigReportsOIDC(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
-	h, _ := newOIDCTestHandler(stub.config("client-abc", "https://app/cb"))
+	h, _ := newOIDCTestHandler(t, stub.config("client-abc", "https://app/cb"))
 
 	rec := httptest.NewRecorder()
 	h.AuthConfig(rec, httptest.NewRequest(http.MethodGet, "/api/v1/auth/config", nil))
@@ -539,7 +539,7 @@ func TestAuthConfigReportsOIDC(t *testing.T) {
 	}
 
 	// And false when unconfigured.
-	h2, _ := newOIDCTestHandler(nil)
+	h2, _ := newOIDCTestHandler(t, nil)
 	rec2 := httptest.NewRecorder()
 	h2.AuthConfig(rec2, httptest.NewRequest(http.MethodGet, "/api/v1/auth/config", nil))
 	if strings.Contains(rec2.Body.String(), fmt.Sprintf("%q:true", "oidc_enabled")) {

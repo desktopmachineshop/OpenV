@@ -13,28 +13,12 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
-	"mime"
 	"net/http"
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/notify"
 )
-
-// requireJSONBody refuses a cookie-authenticated POST that did not declare a
-// JSON body. A cross-site HTML form can post text/plain without a CORS
-// preflight; requiring application/json forces the preflight, which the
-// CORS middleware answers only for the configured frontend origin. That is
-// what keeps a hostile page from redirecting a walled account's
-// verification mail through the victim's own browser.
-func requireJSONBody(w http.ResponseWriter, r *http.Request) bool {
-	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mediaType != "application/json" {
-		writeJSONError(w, http.StatusUnsupportedMediaType, "expected a JSON body (Content-Type: application/json)")
-		return false
-	}
-	return true
-}
 
 // VerifyEmail confirms an emailed link. Open: the person may follow the link
 // in a browser that holds no session, or one that does. It sets no cookie;

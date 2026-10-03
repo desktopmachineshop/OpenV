@@ -73,7 +73,10 @@ func defaultWorkspaceReq(method, body string, user *users.User) *http.Request {
 
 func TestDefaultWorkspaceRequiresUser(t *testing.T) {
 	svc := &fakeUserPrefService{}
-	h := &Handler{userService: svc, orgService: defaultOrgsFixture()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.orgService = defaultOrgsFixture()
+	})
 	for _, tc := range []struct {
 		name string
 		do   func(http.ResponseWriter, *http.Request)
@@ -97,7 +100,10 @@ func TestDefaultWorkspaceRequiresUser(t *testing.T) {
 // SESSION user, never an id from the body.
 func TestSetDefaultWorkspaceStoresAMembersChoice(t *testing.T) {
 	svc := &fakeUserPrefService{}
-	h := &Handler{userService: svc, orgService: defaultOrgsFixture()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.orgService = defaultOrgsFixture()
+	})
 	user := &users.User{ID: "u-1"}
 
 	w := httptest.NewRecorder()
@@ -126,7 +132,10 @@ func TestSetDefaultWorkspaceStoresAMembersChoice(t *testing.T) {
 // learn which workspaces there are.
 func TestSetDefaultWorkspaceRefusesAWorkspaceTheMemberIsNotIn(t *testing.T) {
 	svc := &fakeUserPrefService{defaultOrg: "keep"}
-	h := &Handler{userService: svc, orgService: defaultOrgsFixture()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.orgService = defaultOrgsFixture()
+	})
 	for _, id := range []string{"acme", "nowhere"} {
 		w := httptest.NewRecorder()
 		h.SetDefaultWorkspace(w, defaultWorkspaceReq(http.MethodPut, `{"org_id":"`+id+`"}`, &users.User{ID: "u-2"}))
@@ -145,7 +154,10 @@ func TestSetDefaultWorkspaceRefusesAWorkspaceTheMemberIsNotIn(t *testing.T) {
 func TestSetDefaultWorkspacePersonalMeansNone(t *testing.T) {
 	for _, body := range []string{`{"org_id":""}`, `{"org_id":"personal"}`} {
 		svc := &fakeUserPrefService{defaultOrg: "acme"}
-		h := &Handler{userService: svc, orgService: defaultOrgsFixture()}
+		h := newTestHandler(t, func(h *Handler) {
+			h.userService = svc
+			h.orgService = defaultOrgsFixture()
+		})
 		w := httptest.NewRecorder()
 		h.SetDefaultWorkspace(w, defaultWorkspaceReq(http.MethodPut, body, &users.User{ID: "u-1"}))
 		if w.Code != http.StatusOK || svc.defaultOrg != "" {
@@ -158,7 +170,10 @@ func TestSetDefaultWorkspacePersonalMeansNone(t *testing.T) {
 // chosen yet; the refusal names the remedy rather than failing silently.
 func TestSetDefaultWorkspaceIsGatedByTheWorkspacesChannel(t *testing.T) {
 	svc := &fakeUserPrefService{}
-	h := &Handler{userService: svc, orgService: defaultOrgsFixture()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.orgService = defaultOrgsFixture()
+	})
 	w := httptest.NewRecorder()
 	h.SetDefaultWorkspace(w, defaultWorkspaceReq(http.MethodPut, `{"org_id":"bigco"}`, &users.User{ID: "u-1"}))
 	if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "next stable release") {

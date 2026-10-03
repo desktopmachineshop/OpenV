@@ -26,12 +26,12 @@ const logoOrgID = "org-logo"
 
 func logoFixture(t *testing.T) *Handler {
 	t.Helper()
-	return &Handler{
-		uploadsDir: t.TempDir(),
-		orgService: &fakeOrgService{roles: map[string]map[string]string{
+	return newTestHandler(t, func(h *Handler) {
+		h.uploadsDir = t.TempDir()
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 			logoOrgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
-		}},
-	}
+		}}
+	})
 }
 
 // smallPNG encodes a real 4x4 PNG so the content sniff agrees with the

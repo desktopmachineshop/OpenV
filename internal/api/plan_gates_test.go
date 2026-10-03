@@ -76,11 +76,11 @@ func TestTheSecondInviteIsRefusedOnAFreeSharedWorkspace(t *testing.T) {
 func TestTheHostedClaimIsRefusedForAFreeWorkspaceWhileAConnectorClaimSucceeds(t *testing.T) {
 	enforceTiers(t)
 	run := &agentruns.Run{ID: "run-1", OrgID: "org-1", AgentID: "agent-1", Status: agentruns.StatusClaimed, WorkerID: "w-1"}
-	h := &Handler{
-		runService:   &fakeRunService{claimRun: run},
-		agentService: &fakeAgentService{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Agent", Provider: "claude"}}},
-		orgService:   &seatedOrgService{org: &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle}},
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.runService = &fakeRunService{claimRun: run}
+		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Agent", Provider: "claude"}}}
+		h.orgService = &seatedOrgService{org: &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle}}
+	})
 	claim := func(body string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/agent-runs/claim", strings.NewReader(body))
 		r = r.WithContext(context.WithValue(r.Context(), ctxWorkerOrg, "org-1"))
@@ -263,7 +263,10 @@ func TestALeaseIsCutToTheMonthsAllowanceAndRefusedAtIt(t *testing.T) {
 	t.Cleanup(func() { orgs.SetDeploymentLimits(nil) })
 	orgs.SetDeploymentLimits(map[string]interface{}{orgs.LimitHostedRunnerMinutesMonth: 100})
 	svc := &fakeRunnerSessions{minutesUsed: 90, session: &runnersessions.Session{ID: "s1", OrgID: "org-1", UserID: "user-1", Status: runnersessions.StatusActive}}
-	h := &Handler{runnerSessionService: svc, orgService: memberOrgService()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.runnerSessionService = svc
+		h.orgService = memberOrgService()
+	})
 
 	w := httptest.NewRecorder()
 	h.StartRunnerSession(w, memberRequest(http.MethodPost, "/api/v1/orgs/org-1/runner-session"))

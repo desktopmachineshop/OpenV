@@ -50,12 +50,12 @@ func (f *recordedBaselines) Delete(id string) error {
 
 // baselineRecordFixture is project P (proj-1) of workspace org-1, with an
 // owner, an editor and a viewer, and baseline B1 of P.
-func baselineRecordFixture(exportSvc *fakeExportService) (*Handler, *recordedBaselines, *recordingBus) {
+func baselineRecordFixture(t *testing.T, exportSvc *fakeExportService) (*Handler, *recordedBaselines, *recordingBus) {
 	repo := &recordedBaselines{byID: map[string]*baselines.Baseline{
 		"b1": {ID: "b1", ProjectID: "proj-1", Name: "Release 1", Snapshot: json.RawMessage(`{"artifacts":[]}`)},
 	}}
 	baselineSvc := baselines.NewService(repo)
-	h := vvRoutesHandler(map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}},
+	h := vvRoutesHandler(t, map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}},
 		map[string]map[string]string{"proj-1": {
 			"owner": members.RoleOwner, "editor": members.RoleEditor, "viewer": members.RoleViewer,
 		}}, exportSvc, baselineSvc, &fakeVVService{})
@@ -87,7 +87,7 @@ func TestABaselineSnapshotKeepsTheAttributeDefinitions(t *testing.T) {
 		data:     []byte(`{"artifacts":[]}`),
 		snapshot: []byte(`{"artifacts":[],"attribute_definitions":[{"key":"risk","data_type":"enum"}]}`),
 	}
-	h, repo, _ := baselineRecordFixture(exportSvc)
+	h, repo, _ := baselineRecordFixture(t, exportSvc)
 
 	w := baselineRoute(h, http.MethodPost, "/api/v1/projects/proj-1/baselines", `{"name":"Release 2"}`, "editor")
 	if w.Code != http.StatusCreated {
@@ -108,7 +108,7 @@ func TestABaselineSnapshotKeepsTheAttributeDefinitions(t *testing.T) {
 // a refused or missing delete publishes nothing. The delete published no
 // event.
 func TestAnOwnersBaselineDeleteIsPublished(t *testing.T) {
-	h, repo, bus := baselineRecordFixture(&fakeExportService{})
+	h, repo, bus := baselineRecordFixture(t, &fakeExportService{})
 
 	if w := baselineRoute(h, http.MethodDelete, "/api/v1/baselines/b1", "", "editor"); w.Code != http.StatusForbidden {
 		t.Errorf("the editor's delete = %d %s, want 403", w.Code, w.Body.String())
@@ -145,7 +145,7 @@ func TestAnOwnersBaselineDeleteIsPublished(t *testing.T) {
 // or read it names: the download answered 500 until #419, and this pins
 // every route beside it.
 func TestAMissingBaselineIsNotFoundOnEveryRouteThatTakesOne(t *testing.T) {
-	h, repo, _ := baselineRecordFixture(&fakeExportService{})
+	h, repo, _ := baselineRecordFixture(t, &fakeExportService{})
 	repo.byID["b-other"] = &baselines.Baseline{ID: "b-other", ProjectID: "proj-2", Name: "Other"}
 
 	for _, id := range []string{"11111111-1111-4111-8111-111111111111", "not-a-uuid", "b-other"} {
@@ -203,7 +203,7 @@ func (f *runRecordingVV) CreateRun(req vv.CreateRunRequest, createdBy *string) (
 // The create stored any well-formed id, and answered a malformed one 400 with
 // the driver's text.
 func TestATestRunsBaselineIsOneOfItsProject(t *testing.T) {
-	h, repo, _ := baselineRecordFixture(&fakeExportService{})
+	h, repo, _ := baselineRecordFixture(t, &fakeExportService{})
 	repo.byID["b-other"] = &baselines.Baseline{ID: "b-other", ProjectID: "proj-2", Name: "Other"}
 	runs := &runRecordingVV{}
 	h.vvService = runs

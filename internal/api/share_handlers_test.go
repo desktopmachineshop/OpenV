@@ -135,23 +135,23 @@ func shareExport() *exports.ProjectExport {
 func shareHandler(t *testing.T) (*Handler, *shareMemberFake) {
 	t.Helper()
 	member := &shareMemberFake{}
-	h := &Handler{
-		frontendURL:          "https://app.example",
-		publicAPIURL:         "https://app.example",
-		invitePreviewLimiter: newRateLimiter(100, 1),
-		shareLinkService: &shareLinkFake{byToken: map[string]*sharelinks.Link{
+	h := newTestHandler(t, func(h *Handler) {
+		h.frontendURL = "https://app.example"
+		h.publicAPIURL = "https://app.example"
+		h.invitePreviewLimiter = newRateLimiter(100, 1)
+		h.shareLinkService = &shareLinkFake{byToken: map[string]*sharelinks.Link{
 			"pub": {ID: "l1", ProjectID: "p1", Role: sharelinks.RolePublic, Label: "Customer"},
 			"rev": {ID: "l2", ProjectID: "p1", Role: sharelinks.RoleReviewer, Label: "Reviewers"},
-		}},
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+		}}
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"p1": {ID: "p1", OrgID: "o1", Name: "OpenV Platform", Description: "The requirements of OpenV itself."},
-		}},
-		orgService:      &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanOpenSource}, ids: []string{"o1"}},
-		exportService:   &shareExportFake{export: shareExport()},
-		memberService:   member,
-		userService:     &shareUserFake{user: &users.User{ID: "u1", Email: "r@example.com"}},
-		baselineService: baselines.NewService(&shareBaselineRepo{}),
-	}
+		}}
+		h.orgService = &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanOpenSource}, ids: []string{"o1"}}
+		h.exportService = &shareExportFake{export: shareExport()}
+		h.memberService = member
+		h.userService = &shareUserFake{user: &users.User{ID: "u1", Email: "r@example.com"}}
+		h.baselineService = baselines.NewService(&shareBaselineRepo{})
+	})
 	return h, member
 }
 
@@ -483,11 +483,11 @@ func TestOpenSourceLogsABaselineItCannotRead(t *testing.T) {
 
 // The reviewer role passes the viewer gate and fails the editor gate.
 func TestReviewerRoleOnTheLadder(t *testing.T) {
-	h := &Handler{
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}},
-		memberService:  &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": members.RoleReviewer}}},
-		orgService:     &fakeOrgService{},
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": members.RoleReviewer}}}
+		h.orgService = &fakeOrgService{}
+	})
 	r := httptest.NewRequest(http.MethodGet, "/x", nil)
 	r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "u1"}))
 	for role, want := range map[string]bool{members.RoleViewer: true, members.RoleReviewer: true, members.RoleEditor: false, members.RoleOwner: false} {

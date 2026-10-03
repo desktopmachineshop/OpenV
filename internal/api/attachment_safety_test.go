@@ -91,7 +91,7 @@ func TestStoreUploadAnswersTheHeadOfALargeFile(t *testing.T) {
 // The figure cap is a workspace limit now (issue #364): it follows the plan
 // where no operator override is set, and the override still wins where it is.
 func TestUploadLimitFollowsTheWorkspacePlan(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 	t.Setenv(envMaxUploadMB, "")
 	if got, want := h.uploadLimitBytes(""), int64(defaultMaxUploadMB)*bytesPerMB; got != want {
 		t.Fatalf("no workspace gave %d, want the free plan's %d", got, want)

@@ -1,0 +1,63 @@
+{
+  "description": "Refactor step M5, class A (docs/plans/codebase-refactor.md §6.5, K3 in §4.3): internal/api's shared helpers leave the area files for their homes. respondJSON goes to respond.go. The require* guards of the area files go to authz.go, with runnerSessionsEnabled, which requireRunnerSessions reads and which the K3 rule would otherwise fail; to keep authz.go within K14's 800 lines, the guards' notFound answer (the type, its methods, missing, unknownProject and unknownWorkspace) leaves it for httperr.go, the home of the error writers. CORSMiddleware, with the error it returns, and BodyLimitMiddleware, with the upload test it calls, leave security_headers.go for middleware_cors.go and middleware_body_limit.go. The session and OIDC cookie writers, with partitionedCookies, which both use, go to cookies.go. handlers.go is not touched. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M5.json",
+  "package": "internal/api",
+  "targets": [
+    {
+      "file": "respond.go",
+      "decls": [
+        "respondJSON"
+      ]
+    },
+    {
+      "file": "httperr.go",
+      "decls": [
+        "notFound",
+        "unknownProject",
+        "unknownWorkspace",
+        "missing",
+        "notFound.or",
+        "notFound.write"
+      ]
+    },
+    {
+      "file": "authz.go",
+      "decls": [
+        "requireUser",
+        "requireWorker",
+        "(*Handler).requireWorkerRun",
+        "(*Handler).requireHumanUser",
+        "(*Handler).requirePlatformAdmin",
+        "requireJSONBody",
+        "requirePoolNode",
+        "(*Handler).runnerSessionsEnabled",
+        "(*Handler).requireRunnerSessions"
+      ]
+    },
+    {
+      "file": "middleware_cors.go",
+      "decls": [
+        "CORSMiddleware",
+        "ErrCORSOriginNotAllowed",
+        "errCORSOrigin",
+        "errCORSOrigin.Error"
+      ]
+    },
+    {
+      "file": "middleware_body_limit.go",
+      "decls": [
+        "BodyLimitMiddleware",
+        "isFileUpload"
+      ]
+    },
+    {
+      "file": "cookies.go",
+      "decls": [
+        "(*Handler).setSessionCookie",
+        "(*Handler).clearSessionCookie",
+        "(*Handler).partitionedCookies",
+        "(*Handler).setOIDCFlowCookie",
+        "(*Handler).clearOIDCFlowCookie"
+      ]
+    }
+  ]
+}

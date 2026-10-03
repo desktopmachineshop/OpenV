@@ -88,7 +88,7 @@ func (m *testMailer) Send(to, subject, body string) error {
 	return m.err
 }
 
-func newVerifyHandler(required bool) (*Handler, *fakeVerifyService, *testMailer) {
+func newVerifyHandler(t *testing.T, required bool) (*Handler, *fakeVerifyService, *testMailer) {
 	svc := &fakeVerifyService{
 		sessions: map[string]*users.User{
 			"cookie-pending":  {ID: "u-pending", Email: "pending@example.com", Name: "Pending"},
@@ -97,12 +97,12 @@ func newVerifyHandler(required bool) (*Handler, *fakeVerifyService, *testMailer)
 		confirmOK: "good-token",
 	}
 	mailer := newTestMailer()
-	h := &Handler{
-		userService:       svc,
-		mailer:            mailer,
-		emailLinkBase:     "https://app.example.com",
-		emailVerification: users.EmailVerificationPolicy{Required: required},
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.userService = svc
+		h.mailer = mailer
+		h.emailLinkBase = "https://app.example.com"
+		h.emailVerification = users.EmailVerificationPolicy{Required: required}
+	})
 	return h, svc, mailer
 }
 
@@ -128,7 +128,7 @@ func waitSent(t *testing.T, m *testMailer) {
 }
 
 func TestRegisterSendsVerificationLinkWhenRequired(t *testing.T) {
-	h, _, mailer := newVerifyHandler(true)
+	h, _, mailer := newVerifyHandler(t, true)
 	w := httptest.NewRecorder()
 	h.Register(w, jsonReq(http.MethodPost, "/api/v1/auth/register", `{"email":"New@Example.com","password":"password1","name":"New"}`, ""))
 	if w.Code != http.StatusOK {
@@ -151,7 +151,7 @@ func TestRegisterSendsVerificationLinkWhenRequired(t *testing.T) {
 }
 
 func TestRegisterSucceedsWhenTheMailFails(t *testing.T) {
-	h, _, mailer := newVerifyHandler(true)
+	h, _, mailer := newVerifyHandler(t, true)
 	mailer.err = errors.New("smtp down")
 	w := httptest.NewRecorder()
 	h.Register(w, jsonReq(http.MethodPost, "/api/v1/auth/register", `{"email":"a@example.com","password":"password1"}`, ""))
@@ -162,7 +162,7 @@ func TestRegisterSucceedsWhenTheMailFails(t *testing.T) {
 }
 
 func TestRegisterSendsNothingWhenNotRequired(t *testing.T) {
-	h, _, mailer := newVerifyHandler(false)
+	h, _, mailer := newVerifyHandler(t, false)
 	w := httptest.NewRecorder()
 	h.Register(w, jsonReq(http.MethodPost, "/api/v1/auth/register", `{"email":"a@example.com","password":"password1"}`, ""))
 	if w.Code != http.StatusOK {
@@ -176,7 +176,7 @@ func TestRegisterSendsNothingWhenNotRequired(t *testing.T) {
 }
 
 func TestVerifyEmailOutcomes(t *testing.T) {
-	h, svc, _ := newVerifyHandler(true)
+	h, svc, _ := newVerifyHandler(t, true)
 	cases := []struct {
 		name string
 		body string
@@ -199,7 +199,7 @@ func TestVerifyEmailOutcomes(t *testing.T) {
 }
 
 func TestResendVerification(t *testing.T) {
-	h, svc, mailer := newVerifyHandler(true)
+	h, svc, mailer := newVerifyHandler(t, true)
 	h.verifyResendLimiter = newRateLimiterFromEnv("OPENV_TEST_UNSET_BURST", "OPENV_TEST_UNSET_REFILL", 2, 1)
 
 	do := func(cookie, contentType string) *httptest.ResponseRecorder {
@@ -260,7 +260,7 @@ func TestResendVerification(t *testing.T) {
 }
 
 func TestChangeVerificationEmail(t *testing.T) {
-	h, svc, mailer := newVerifyHandler(true)
+	h, svc, mailer := newVerifyHandler(t, true)
 	w := httptest.NewRecorder()
 	h.ChangeVerificationEmail(w, jsonReq(http.MethodPost, "/api/v1/auth/verify-email/change", `{"email":"fixed@example.com"}`, "cookie-pending"))
 	if w.Code != http.StatusAccepted {
@@ -285,7 +285,7 @@ func TestChangeVerificationEmail(t *testing.T) {
 
 func TestAuthConfigReportsVerificationRequirement(t *testing.T) {
 	for _, required := range []bool{true, false} {
-		h, _, _ := newVerifyHandler(required)
+		h, _, _ := newVerifyHandler(t, required)
 		w := httptest.NewRecorder()
 		h.AuthConfig(w, httptest.NewRequest(http.MethodGet, "/api/v1/auth/config", nil))
 		var resp map[string]any

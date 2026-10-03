@@ -12,7 +12,7 @@ import (
 // invitation, policy and password routes must resolve to their handlers, and
 // registering them must not panic on a conflicting pattern.
 func TestRegisterRoutesResolvesTheNewPaths(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 	router := mux.NewRouter()
 	h.RegisterRoutes(router)
 

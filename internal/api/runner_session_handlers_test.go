@@ -77,7 +77,10 @@ func memberRequest(method, path string) *http.Request {
 // that says how loaded the pool is, so the UI can explain the wait.
 func TestStartRunnerSessionWithEmptyPool(t *testing.T) {
 	svc := &fakeRunnerSessions{startErr: runnersessions.ErrNoNodes, counts: runnersessions.PoolCounts{Total: 2, Leased: 2}}
-	h := &Handler{runnerSessionService: svc, orgService: memberOrgService()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.runnerSessionService = svc
+		h.orgService = memberOrgService()
+	})
 
 	w := httptest.NewRecorder()
 	h.StartRunnerSession(w, memberRequest(http.MethodPost, "/api/v1/orgs/org-1/runner-session"))
@@ -134,7 +137,10 @@ func TestARepeatedLeaseRequestAnswers200(t *testing.T) {
 // for the card that used to print "1 of 3 free".
 func TestRunnerSessionPayloadNamesNoCounts(t *testing.T) {
 	svc := &fakeRunnerSessions{counts: runnersessions.PoolCounts{Total: 5, Idle: 4, Leased: 1}}
-	h := &Handler{runnerSessionService: svc, orgService: memberOrgService()}
+	h := newTestHandler(t, func(h *Handler) {
+		h.runnerSessionService = svc
+		h.orgService = memberOrgService()
+	})
 
 	w := httptest.NewRecorder()
 	h.GetRunnerSession(w, memberRequest(http.MethodGet, "/api/v1/orgs/org-1/runner-session"))
@@ -159,7 +165,7 @@ func TestRunnerSessionPayloadNamesNoCounts(t *testing.T) {
 
 // A deployment with no runner pool says so plainly rather than 500-ing.
 func TestRunnerSessionDisabledDeployment(t *testing.T) {
-	h := &Handler{orgService: memberOrgService()}
+	h := newTestHandler(t, func(h *Handler) { h.orgService = memberOrgService() })
 
 	w := httptest.NewRecorder()
 	h.GetRunnerSession(w, memberRequest(http.MethodGet, "/api/v1/orgs/org-1/runner-session"))
@@ -183,7 +189,7 @@ func TestRunnerSessionDisabledDeployment(t *testing.T) {
 // cookie, or a workspace worker key, must not be able to register a node or
 // collect somebody's lease credential.
 func TestPoolEndpointsRequirePoolCredentials(t *testing.T) {
-	h := &Handler{runnerSessionService: &fakeRunnerSessions{}}
+	h := newTestHandler(t, func(h *Handler) { h.runnerSessionService = &fakeRunnerSessions{} })
 
 	for _, tc := range []struct {
 		name string
@@ -262,7 +268,7 @@ func TestPoolKeyGrantsOnlyPoolIdentity(t *testing.T) {
 // lease, and an ordinary worker key touches nothing.
 func TestTouchRunnerSessionOnlyForLeasedCredentials(t *testing.T) {
 	svc := &fakeRunnerSessions{}
-	h := &Handler{runnerSessionService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.runnerSessionService = svc })
 
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/agent-runs/claim", nil)
 	h.touchRunnerSession(r.WithContext(context.WithValue(r.Context(), ctxWorkerOrg, "org-1")))
