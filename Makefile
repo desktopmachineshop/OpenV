@@ -164,8 +164,8 @@ test:
 ## the refactor tools' Python tests; the Postgres vector assertion) and the
 ## frontend job (tsc, lint, vitest, the refactor tools' Node tests, among
 ## them tsdeclmove's F1 run, which repeats those gates on a copy of the tree
-## with F1 generated, vite build). From .github/workflows/release-notes.yml:
-## the release-notes job.
+## with F1 generated, vite build and the bundle-shape check of refactor plan
+## S12b). From .github/workflows/release-notes.yml: the release-notes job.
 ## The Postgres-backed Go tests run only when OPENV_TEST_DATABASE_URL points
 ## at a database, as it does in CI; they skip otherwise. CI runs them twice,
 ## on postgres:15 (no vector extension) and on pgvector (backend-pgvector),
@@ -204,8 +204,10 @@ test:
 ## no-release-notes"` runs the refactor class checks and, as CI does for a
 ## refactor, fails if internal/archtest/ratchets.json can be tightened (the
 ## tightened file is left in the working tree to commit). Like the job, it
-## runs the merge base's copy of refactor_guard.py when there is one. It
-## reads commits, so commit first. Needs a host Go toolchain, Node with
+## runs the merge base's copy of refactor_guard.py when there is one; for a
+## refactor that changes a shipped file under frontend/src or a Vite or
+## PostCSS config, that builds the frontend at the merge base and at HEAD
+## (refactor plan S12b's build identity). It reads commits, so commit first. Needs a host Go toolchain, Node with
 ## `npm ci` run in frontend/, Python 3 and git; no Docker. The Docker builds,
 ## e2e and security scans stay in CI (`make vuln` and `make secrets` run the
 ## last two locally).
@@ -310,6 +312,7 @@ check:
 	cd frontend && npm test
 	cd frontend && node --test 'scripts/*.test.mjs'
 	cd frontend && npm run build
+	cd frontend && node scripts/bundle-check.mjs
 
 ## A quick gate to run while working, well under a minute and without Docker:
 ## gofmt over ./cmd ./internal, go vet over the module, go test -short on the
@@ -320,8 +323,10 @@ check:
 ## ratchets in internal/archtest (import edges, size budgets, env reads,
 ## bans), the S6 SSE and domain-event tests in internal/api, which read every
 ## package's sources whether or not internal/api imports it (an event name
-## sent from internal/orchestration, say), and the frontend type check.
-## `make check` is still the gate before pushing.
+## sent from internal/orchestration, say), and the frontend type check; then
+## refactor plan S12b's CSS cascade test, which walks the whole frontend
+## import graph, and a production build (a few seconds with Vite) for its
+## bundle-shape check. `make check` is still the gate before pushing.
 check-fast:
 	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
 	if [ -n "$$unformatted" ]; then \
@@ -352,3 +357,5 @@ check-fast:
 	go test ./internal/archtest
 	go test -short -run '^(TestSSE|TestEventPayload)' ./internal/api
 	cd frontend && npx tsc --noEmit
+	cd frontend && npx vitest run src/arch/cssOrder.test.ts
+	cd frontend && npm run build --silent -- --logLevel warn && node scripts/bundle-check.mjs
