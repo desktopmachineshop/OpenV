@@ -348,7 +348,11 @@ export const GuidedWizard: React.FC = () => {
     // re-clicking (or a stale button after a remount) can never duplicate.
     const results = items.map(({ suggestion, key }) => {
       if (appliedSuggestions[key]) return null;
-      if (isProjectEditKind(suggestion.kind)) return projectResults.get(key) ?? 'The change could not be applied.';
+      // null is a project card applied; only a card with no result at all
+      // failed to apply.
+      if (isProjectEditKind(suggestion.kind)) {
+        return projectResults.has(key) ? (projectResults.get(key) as string | null) : 'The change could not be applied.';
+      }
       return applySuggestionToDraft(d, suggestion);
     });
     setVision(d.vision);
