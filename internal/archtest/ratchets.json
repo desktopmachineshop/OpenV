@@ -386,7 +386,7 @@
   ],
   "counts": {
     "handle_func_outside_registrars": 53,
-    "handler_literals_in_tests": 137,
+    "handler_literals_in_tests": 0,
     "invalid_request_body_literals": 106,
     "raw_json_encodes": 249,
     "require_outside_authz": 10

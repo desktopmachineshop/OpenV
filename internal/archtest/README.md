@@ -317,17 +317,17 @@ is only the ordered list of registrar calls. M6 moves the inline routes.
 **Enforces.** Counts `api.Handler` composite literals (`&Handler{...}` or
 `Handler{...}`, or `api.Handler` from another package) in test files other
 than `testkit_test.go`. The ceiling `counts.handler_literals_in_tests` is
-137, in 60 files, at `d11dee8`. `NewHandler`'s own literal is production
-code and not counted.
+0 since M13a–M13d (137, in 60 files, at `d11dee8`). `NewHandler`'s own
+literal is production code and not counted.
 
 **Why.** K6: tests build handlers with `newTestHandler` (M13), so a new
 dependency is one option, not sixty edits.
 
-**Fix.** Build the handler with `newTestHandler` from `testkit_test.go`
-(added by M13a).
+**Fix.** Build the handler with `newTestHandler(t, opts...)` from
+`testkit_test.go`, setting each field in an option:
+`newTestHandler(t, func(h *Handler) { h.exportService = fake })`.
 
-**Regenerate.** M13a–M13d migrate the literals; lower the ceiling as they
-go.
+**Regenerate.** Nothing to regenerate: the ceiling is 0.
 
 ## Raw JSON encodes
 
