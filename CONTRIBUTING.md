@@ -266,6 +266,13 @@ prints:
   merge them by hand
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
+- Go↔TS vocabularies (S13): `UPDATE_GOLDEN=1 go test ./internal/vocabparity -count=1 -run '^TestVocabulary$'`
+  for `contracts/vocab.json` (the vocabularies the frontend copies, read
+  from the Go catalogues), then
+  `cd frontend && UPDATE_GOLDEN=1 npx vitest run src/arch/vocabParity.test.ts`
+  for `contracts/vocab-allowed-diffs.json`, the differences between those
+  and their TypeScript copies that the change keeps (a fixed drift leaves
+  it, a deliberate new one joins it)
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`
 - notification content (S10): `UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'`
   for `internal/notify/testdata/notifications/<type>/` (each type's stored

@@ -324,7 +324,9 @@ check:
 ## ratchets in internal/archtest (import edges, size budgets, env reads,
 ## bans), the S6 SSE and domain-event tests in internal/api, which read every
 ## package's sources whether or not internal/api imports it (an event name
-## sent from internal/orchestration, say), and the frontend type check; then
+## sent from internal/orchestration, say), S13's Go vocabularies in
+## internal/vocabparity, which parse packages it does not import (an error
+## code in internal/api, an event type), and the frontend type check; then
 ## refactor plan S12b's CSS cascade test, which walks the whole frontend
 ## import graph, S10's table of the notification bell's deep links, which
 ## reads the Go notification goldens under internal/notify/testdata (so a
@@ -360,6 +362,7 @@ check-fast:
 	fi
 	go test ./internal/archtest
 	go test -short -run '^(TestSSE|TestEventPayload)' ./internal/api
+	go test ./internal/vocabparity
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx vitest run src/arch/cssOrder.test.ts src/components/NotificationBell.paths.test.tsx
 	cd frontend && npm run build --silent -- --logLevel warn && node scripts/bundle-check.mjs
