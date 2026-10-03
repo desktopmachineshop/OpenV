@@ -1,0 +1,168 @@
+{
+  "description": "Refactor step M6, class A (docs/plans/codebase-refactor.md §6.5, K1 and K3 in §4.3): internal/api's handlers.go splits into one file per area and keeps only HandlerDeps, Handler and NewHandler, so in-flight dependency edits still apply cleanly. RegisterRoutes goes to routes.go; publish, publishOrgEvent and publishOrgEventAs to publish.go; ContentTypeMiddleware to middleware_content_type.go; Health and each area's handlers and their own helpers to <area>_handlers.go. The managed link edits of an artifact update (processManagedLinkChanges, autoVersionLinkedArtifacts, which proposal_appliers.go and the link handlers also call, linksFromPendingAdds) and the version-change summary (buildChangesSummary) go to managed_link_edits.go, which is not an area file. Three helpers more than one area file would use go to their K3 homes instead, so that the helper-home allowlist (M5) gains no entry: respondArtifactLookup (artifact and artifact-history handlers) to httperr.go, the home of the error writers; logAutoNote (the artifact copy note and the attachment figure notes) to publish.go, beside publish, as the other record a handler leaves of what it did; buildChangesList (the restore message and the update summary) to managed_link_edits.go, beside buildChangesSummary. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M6.json",
+  "package": "internal/api",
+  "targets": [
+    {
+      "file": "publish.go",
+      "decls": [
+        "(*Handler).publish",
+        "(*Handler).publishOrgEvent",
+        "(*Handler).publishOrgEventAs",
+        "(*Handler).logAutoNote"
+      ]
+    },
+    {
+      "file": "routes.go",
+      "decls": [
+        "(*Handler).RegisterRoutes"
+      ]
+    },
+    {
+      "file": "health_handlers.go",
+      "decls": [
+        "(*Handler).Health"
+      ]
+    },
+    {
+      "file": "middleware_content_type.go",
+      "decls": [
+        "ContentTypeMiddleware"
+      ]
+    },
+    {
+      "file": "httperr.go",
+      "decls": [
+        "respondArtifactLookup"
+      ]
+    },
+    {
+      "file": "artifact_handlers.go",
+      "decls": [
+        "(*Handler).CreateArtifact",
+        "(*Handler).noteCopiedFrom",
+        "errAttributeDefinitionsUnavailable",
+        "(*Handler).validateArtifactAttributes",
+        "(*Handler).GetArtifact",
+        "defaultArtifactPageLimit",
+        "maxArtifactPageLimit",
+        "(*Handler).ListArtifacts",
+        "(*Handler).UpdateArtifact",
+        "(*Handler).ChangeArtifactStatus",
+        "(*Handler).DeleteArtifact"
+      ]
+    },
+    {
+      "file": "artifact_history_handlers.go",
+      "decls": [
+        "(*Handler).GetArtifactVersions",
+        "(*Handler).artifactHistory",
+        "(*Handler).RestoreArtifactVersion",
+        "(*Handler).buildRestoreMessage",
+        "(*Handler).GetArtifactVersionLinks"
+      ]
+    },
+    {
+      "file": "link_handlers.go",
+      "decls": [
+        "sourceArtifactNotFound",
+        "targetArtifactNotFound",
+        "(*Handler).CreateLink",
+        "(*Handler).GetLink",
+        "(*Handler).ListLinks",
+        "(*Handler).UpdateLink",
+        "(*Handler).ConfirmLink",
+        "(*Handler).DeleteLink"
+      ]
+    },
+    {
+      "file": "managed_link_edits.go",
+      "decls": [
+        "(*Handler).buildChangesSummary",
+        "(*Handler).buildChangesList",
+        "linksFromPendingAdds",
+        "(*Handler).processManagedLinkChanges",
+        "(*Handler).autoVersionLinkedArtifacts"
+      ]
+    },
+    {
+      "file": "review_handlers.go",
+      "decls": [
+        "(*Handler).ReviewQueue"
+      ]
+    },
+    {
+      "file": "project_handlers.go",
+      "decls": [
+        "(*Handler).CreateProject",
+        "(*Handler).GetProject",
+        "(*Handler).ListProjects",
+        "(*Handler).UpdateProject",
+        "parentNotFound",
+        "(*Handler).ListChildProjects",
+        "(*Handler).ListLinkedArtifacts",
+        "(*Handler).DeleteProject"
+      ]
+    },
+    {
+      "file": "project_io_handlers.go",
+      "decls": [
+        "(*Handler).ExportProject",
+        "(*Handler).ImportProject",
+        "isReqIFImport",
+        "(*Handler).GenerateReport"
+      ]
+    },
+    {
+      "file": "template_handlers.go",
+      "decls": [
+        "createTemplateRequest",
+        "TemplateListResponse",
+        "(*Handler).ListTemplates",
+        "(*Handler).CreateTemplate",
+        "createProjectFromTemplateRequest",
+        "(*Handler).CreateProjectFromTemplate",
+        "(*Handler).addProjectCreatorAsOwner"
+      ]
+    },
+    {
+      "file": "baseline_handlers.go",
+      "decls": [
+        "createBaselineRequest",
+        "(*Handler).CreateBaseline",
+        "(*Handler).ListBaselines",
+        "(*Handler).GetBaseline",
+        "(*Handler).DeleteBaseline"
+      ]
+    },
+    {
+      "file": "attachment_handlers.go",
+      "decls": [
+        "(*Handler).UploadAttachment",
+        "(*Handler).GetAttachmentMeta",
+        "(*Handler).versionArtifactForFigure",
+        "(*Handler).logFigureNote",
+        "(*Handler).UploadAttachmentVersion",
+        "(*Handler).RenameAttachment",
+        "(*Handler).ListAttachmentVersions",
+        "(*Handler).RestoreAttachmentVersion",
+        "(*Handler).DownloadAttachment",
+        "(*Handler).DeleteAttachment",
+        "(*Handler).ListProjectAttachments",
+        "(*Handler).ListArtifactAttachments",
+        "nonImageGateMessage",
+        "unsupportedFigureMessage",
+        "(*Handler).mayAttachKind",
+        "isImageMimeType"
+      ]
+    },
+    {
+      "file": "chatter_handlers.go",
+      "decls": [
+        "(*Handler).CreateChatterEntry",
+        "(*Handler).ListChatterEntries",
+        "(*Handler).decorateChatterEntries",
+        "memberDisplayName"
+      ]
+    }
+  ]
+}

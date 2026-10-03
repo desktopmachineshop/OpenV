@@ -2,8 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 )
 
 // errorBody is the JSON error envelope every API error response uses. The
@@ -145,3 +148,15 @@ func (n notFound) or(def notFound) notFound {
 }
 
 func (n notFound) write(w http.ResponseWriter) { writeJSONError(w, n.status, n.message) }
+
+// respondArtifactLookup answers a failed artifact lookup of a write that
+// loads the artifact before its guard: 404 for an id no artifact has, a
+// malformed one among them (artifacts.ErrNotFound), and 500 for anything
+// else, which a client may retry.
+func respondArtifactLookup(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, artifacts.ErrNotFound) {
+		respondError(w, r, http.StatusNotFound, "artifact not found", err)
+		return
+	}
+	respondInternal(w, r, "failed to load artifact", err)
+}

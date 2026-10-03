@@ -12,6 +12,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerEmbeddingRoutes wires a project's embedding backfill and its
+// duplicate candidates.
+func (h *Handler) registerEmbeddingRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/reindex-embeddings", h.ReindexEmbeddings).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/duplicates", h.DuplicateCandidates).Methods("GET")
+}
+
 // ReindexEmbeddings handles POST /api/v1/projects/{id}/reindex-embeddings: an
 // on-demand backfill that (re)computes semantic-search embeddings for every
 // current artifact in the project whose stored embedding is missing or stale

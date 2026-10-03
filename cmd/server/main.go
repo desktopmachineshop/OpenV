@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -178,13 +177,7 @@ func main() {
 
 	// Event bus. The org resolver backfills tenant attribution for events
 	// published by services that only know their project.
-	bus := eventbus.NewBus(eventRepo, func(projectID string) string {
-		var orgID string
-		if err := db.QueryRow(`SELECT COALESCE(org_id::text, '') FROM projects WHERE id = $1::uuid`, projectID).Scan(&orgID); err != nil {
-			return ""
-		}
-		return orgID
-	})
+	bus := eventbus.NewBus(eventRepo, projectOrgResolver(db))
 
 	// Core services.
 	artifactService := artifacts.NewDefaultService(artifactRepo)
@@ -271,49 +264,10 @@ func main() {
 	// records with actual container state.
 	provisioner := hosting.NewProvisioner()
 	if provisioner.Enabled() {
-		if hostedList, err := hostedWorkerService.ListAll(); err != nil {
-			slog.Warn("failed to list hosted workers for reconcile", "error", err)
-		} else {
-			for _, hw := range hostedList {
-				state, err := provisioner.ContainerState(hw.ContainerName)
-				if err != nil {
-					slog.Warn("failed to inspect hosted runner", "container", hw.ContainerName, "error", err)
-					continue
-				}
-				status, detail := hw.Status, hw.Detail
-				switch state {
-				case "missing":
-					status, detail = hostedworkers.StatusError, "container not found"
-				case "running":
-					status, detail = hostedworkers.StatusRunning, ""
-				case "exited", "created", "paused", "dead":
-					status, detail = hostedworkers.StatusStopped, ""
-				}
-				if status != hw.Status || detail != hw.Detail {
-					if _, err := hostedWorkerService.SetStatus(hw.ID, status, detail); err != nil {
-						slog.Warn("failed to reconcile hosted runner", "container", hw.ContainerName, "error", err)
-					}
-				}
-			}
-		}
+		reconcileHostedRunners(provisioner, hostedWorkerService)
 	}
 
-	// bootstrapOrgID resolves the earliest personal org (legacy worker-key
-	// fallback + env-key registration).
-	bootstrapOrgID := func() string {
-		var id string
-		err := db.QueryRow(`
-			SELECT o.id FROM organizations o
-			JOIN org_members m ON m.org_id = o.id
-			JOIN users u ON u.id = m.user_id
-			WHERE o.org_type = 'personal'
-			ORDER BY u.created_at LIMIT 1
-		`).Scan(&id)
-		if err != nil {
-			return ""
-		}
-		return id
-	}
+	bootstrapOrgID := bootstrapOrgID(db)
 	if workerKey != "" {
 		if orgID := bootstrapOrgID(); orgID != "" {
 			if err := workerKeyService.EnsureBootstrapKey(orgID, workerKey, "env-bootstrap"); err != nil {
@@ -350,36 +304,8 @@ func main() {
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
 	// The document downloads carry test evidence and the workspace logo when a
 	// reader asks for them; both come from live state beside the snapshot.
-	downloadService.SetEvidenceSource(func(projectID string) (map[string]*vv.TestResult, []*vv.TestRun, error) {
-		latest, err := vvService.LatestResults(projectID)
-		if err != nil {
-			return nil, nil, err
-		}
-		runs, err := vvService.ListRuns(projectID)
-		if err != nil {
-			return nil, nil, err
-		}
-		return latest, runs, nil
-	})
-	downloadService.SetWorkspaceSource(func(projectID string) (reports.Workspace, error) {
-		project, err := projectService.GetProject(projectID)
-		if err != nil || project == nil || project.OrgID == "" {
-			return reports.Workspace{}, err
-		}
-		org, err := orgService.Get(project.OrgID)
-		if err != nil || org == nil {
-			return reports.Workspace{}, err
-		}
-		ws := reports.Workspace{Name: org.Name}
-		if org.LogoPath != "" {
-			if logo, err := os.ReadFile(org.LogoPath); err == nil {
-				ws.Logo, ws.LogoMime = logo, org.LogoMime
-			} else {
-				slog.Warn("download: workspace logo could not be read", "org_id", org.ID, "error", err)
-			}
-		}
-		return ws, nil
-	})
+	downloadService.SetEvidenceSource(downloadEvidenceSource(vvService))
+	downloadService.SetWorkspaceSource(downloadWorkspaceSource(projectService, orgService))
 	evidenceService := evidence.NewDefaultService(evidenceRepo)
 	workItemService := workitems.NewDefaultService(workItemRepo, bus)
 	guidedService := guided.NewDefaultService(guidedRepo, artifactService, linkService, chatterService, productService, bus)
@@ -603,19 +529,7 @@ func main() {
 	// hit 100% of its monthly budget. Fails open on lookup errors so a budget
 	// hiccup never blocks work.
 	if envBool("OPENV_BUDGET_ENFORCE", false) {
-		runService.SetBudgetGuard(func(orgID string) (bool, string) {
-			org, err := orgService.Get(orgID)
-			if err != nil || org == nil || org.MonthlyBudgetUSD == nil || *org.MonthlyBudgetUSD <= 0 {
-				return false, ""
-			}
-			now := time.Now().UTC()
-			monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-			spend, err := runService.MonthlySpend(orgID, monthStart)
-			if err != nil || spend < *org.MonthlyBudgetUSD {
-				return false, ""
-			}
-			return true, fmt.Sprintf("this workspace has reached its $%.2f monthly budget ($%.2f spent); new runs are blocked until next month or the budget is raised", *org.MonthlyBudgetUSD, spend)
-		})
+		runService.SetBudgetGuard(budgetGuard(orgService, runService))
 		slog.Info("workspace budget enforcement enabled: launches soft-block at 100% of budget")
 	}
 
@@ -626,56 +540,8 @@ func main() {
 
 	// Workspace purge: hard-delete workspaces whose soft-delete grace period
 	// (orgs.DeletionGraceDays) has expired — once at boot, then daily.
-	go func() {
-		purge := func() {
-			if ids, err := orgService.PurgeExpired(time.Now()); err != nil {
-				slog.Error("workspace purge failed", "error", err, "purged", len(ids))
-			} else if len(ids) > 0 {
-				slog.Info("purged expired deleted workspaces", "count", len(ids), "ids", ids)
-			}
-		}
-		purge()
-		ticker := time.NewTicker(24 * time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				purge()
-			}
-		}
-	}()
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if ids, err := runService.FailStale(2 * time.Minute); err != nil {
-					slog.Error("reaper FailStale failed", "error", err)
-				} else if len(ids) > 0 {
-					slog.Warn("reaper failed stale runs", "count", len(ids))
-				}
-				_ = userRepo.DeleteExpiredSessions(time.Now(), sessionPolicy.MaxAge, sessionPolicy.Idle)
-				// Invitations that nobody accepted expire; the rows are of
-				// no further use to anyone.
-				_ = invitationService.PurgeExpired(time.Now())
-				// Transient runners: end lapsed leases (hard expiry, idle
-				// window, or a node that stopped heartbeating) so their
-				// nodes go back to the pool and their credentials die.
-				if runnerSessionService != nil {
-					if ended, err := runnerSessionService.Sweep(time.Now()); err != nil {
-						slog.Error("runner session sweep failed", "error", err)
-					} else if len(ended) > 0 {
-						slog.Info("ended lapsed runner sessions", "count", len(ended))
-					}
-				}
-			}
-		}
-	}()
+	go runPurgeLoop(ctx, orgService)
+	go runReaper(ctx, runService, userRepo, invitationService, runnerSessionService, sessionPolicy)
 
 	// Google OAuth (optional).
 	var googleOAuth *api.GoogleOAuthConfig
