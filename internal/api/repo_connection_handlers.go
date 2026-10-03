@@ -10,6 +10,16 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 )
 
+// registerRepoConnectionRoutes wires a project's repo connections and a
+// member's own local path for one.
+func (h *Handler) registerRepoConnectionRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/repo-connections", h.ListRepoConnections).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/repo-connections", h.CreateRepoConnection).Methods("POST")
+	router.HandleFunc("/api/v1/repo-connections/{id}", h.UpdateRepoConnection).Methods("PUT")
+	router.HandleFunc("/api/v1/repo-connections/{id}", h.DeleteRepoConnection).Methods("DELETE")
+	router.HandleFunc("/api/v1/repo-connections/{id}/my-path", h.SetMyRepoPath).Methods("PUT")
+}
+
 func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {

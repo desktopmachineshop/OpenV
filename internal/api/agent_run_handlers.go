@@ -15,6 +15,32 @@ import (
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
+// registerAgentRunLaunchRoutes wires launching a run, from an agent or as a
+// project's test-case draft, and listing runs. A run's own {id} routes come
+// from registerAgentRunReadRoutes and registerAgentRunControlRoutes, which
+// registerAgentRoutes interleaves with the worker protocol's registrars in
+// the order route_handlers.txt pins.
+func (h *Handler) registerAgentRunLaunchRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agents/{slug}/runs", h.LaunchAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/draft-test-cases", h.DraftTestCases).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs", h.ListAgentRuns).Methods("GET")
+}
+
+// registerAgentRunReadRoutes wires reading a run, its tree and its logs.
+func (h *Handler) registerAgentRunReadRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agent-runs/{id}", h.GetAgentRun).Methods("GET")
+	router.HandleFunc("/api/v1/agent-runs/{id}/tree", h.GetAgentRunTree).Methods("GET")
+	router.HandleFunc("/api/v1/agent-runs/{id}/logs", h.GetAgentRunLogs).Methods("GET")
+}
+
+// registerAgentRunControlRoutes wires following a run's stream, cancelling
+// it (alwaysWritable) and retrying it.
+func (h *Handler) registerAgentRunControlRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agent-runs/{id}/stream", h.StreamAgentRun).Methods("GET")
+	router.HandleFunc("/api/v1/agent-runs/{id}/cancel", h.alwaysWritable(h.CancelAgentRun)).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/retry", h.RetryAgentRun).Methods("POST")
+}
+
 // launchParent is the parent of a run a request launches: the agent run
 // whose token sent it, recorded as a delegation records its parent
 // (ParentRunID), so the launching run's tree shows the run it set going; nil

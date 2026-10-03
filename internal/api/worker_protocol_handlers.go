@@ -19,6 +19,30 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
+// registerWorkerDispatchRoutes wires a worker claiming a run, and a running
+// agent delegating to a child and polling the child's status.
+// registerAgentRoutes calls it before a run's {id} routes, so that
+// GET /api/v1/agent-runs/delegate/{id} goes on shadowing the {id}/tree,
+// {id}/logs and {id}/stream reads (route_overlaps.txt).
+func (h *Handler) registerWorkerDispatchRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agent-runs/claim", h.ClaimAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/delegate", h.DelegateRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/delegate/{id}", h.DelegateStatus).Methods("GET")
+}
+
+// registerWorkerLogRoutes wires a worker appending to a run's logs.
+func (h *Handler) registerWorkerLogRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agent-runs/{id}/logs", h.AppendAgentRunLogs).Methods("POST")
+}
+
+// registerWorkerLifecycleRoutes wires a worker starting, releasing and
+// finishing a run it claimed.
+func (h *Handler) registerWorkerLifecycleRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agent-runs/{id}/start", h.StartAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/release", h.ReleaseAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/finish", h.FinishAgentRun).Methods("POST")
+}
+
 func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return

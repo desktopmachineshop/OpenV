@@ -6,9 +6,18 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
+
+// registerProviderSettingsRoutes wires the provider settings and a worker's
+// provider availability report.
+func (h *Handler) registerProviderSettingsRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/provider-settings", h.ListProviderSettings).Methods("GET")
+	router.HandleFunc("/api/v1/provider-settings", h.UpsertProviderSetting).Methods("PUT")
+	router.HandleFunc("/api/v1/provider-settings/detect", h.RecordProviderDetection).Methods("POST")
+}
 
 func (h *Handler) ListProviderSettings(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {

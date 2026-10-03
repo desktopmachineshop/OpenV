@@ -10,6 +10,19 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
+// registerAgentDefinitionRoutes wires the agent definitions (file-backed):
+// list, create, sync, read, update and delete, and the raw definition file.
+func (h *Handler) registerAgentDefinitionRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/agents", h.ListAgents).Methods("GET")
+	router.HandleFunc("/api/v1/agents", h.CreateAgent).Methods("POST")
+	router.HandleFunc("/api/v1/agents/sync", h.SyncAgents).Methods("POST")
+	router.HandleFunc("/api/v1/agents/{slug}", h.GetAgent).Methods("GET")
+	router.HandleFunc("/api/v1/agents/{slug}", h.UpdateAgent).Methods("PUT")
+	router.HandleFunc("/api/v1/agents/{slug}", h.DeleteAgent).Methods("DELETE")
+	router.HandleFunc("/api/v1/agents/{slug}/raw", h.GetAgentRaw).Methods("GET")
+	router.HandleFunc("/api/v1/agents/{slug}/raw", h.SaveAgentRaw).Methods("PUT")
+}
+
 func (h *Handler) ListAgents(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return

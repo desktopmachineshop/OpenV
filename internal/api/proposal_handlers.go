@@ -13,6 +13,15 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 )
 
+// registerProposalRoutes wires listing agent proposals and reviewing them,
+// one at a time or in bulk.
+func (h *Handler) registerProposalRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/proposals", h.ListProposals).Methods("GET")
+	router.HandleFunc("/api/v1/proposals/bulk", h.BulkReviewProposals).Methods("POST")
+	router.HandleFunc("/api/v1/proposals/{id}/approve", h.ApproveProposal).Methods("POST")
+	router.HandleFunc("/api/v1/proposals/{id}/reject", h.RejectProposal).Methods("POST")
+}
+
 func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return

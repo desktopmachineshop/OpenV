@@ -11,6 +11,16 @@ import (
 	"github.com/openv/requirements-platform/internal/scheduler"
 )
 
+// registerAutomationRoutes wires the automations and running one now.
+func (h *Handler) registerAutomationRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/automations", h.ListAutomations).Methods("GET")
+	router.HandleFunc("/api/v1/automations", h.CreateAutomation).Methods("POST")
+	router.HandleFunc("/api/v1/automations/{id}", h.GetAutomation).Methods("GET")
+	router.HandleFunc("/api/v1/automations/{id}", h.UpdateAutomation).Methods("PUT")
+	router.HandleFunc("/api/v1/automations/{id}", h.DeleteAutomation).Methods("DELETE")
+	router.HandleFunc("/api/v1/automations/{id}/run-now", h.RunAutomationNow).Methods("POST")
+}
+
 func (h *Handler) ListAutomations(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return

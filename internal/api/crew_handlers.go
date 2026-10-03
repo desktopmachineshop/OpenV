@@ -14,6 +14,46 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
+// registerCrewRoutes wires the crews, their templates, nodes, edges and
+// runs on the canonical /crews routes, then the deprecated /teams aliases
+// for the same handlers.
+func (h *Handler) registerCrewRoutes(router *mux.Router) {
+	// Crews (canonical routes).
+	router.HandleFunc("/api/v1/crews", h.ListTeams).Methods("GET")
+	router.HandleFunc("/api/v1/crews", h.CreateTeam).Methods("POST")
+	router.HandleFunc("/api/v1/crews/{id}", h.GetTeam).Methods("GET")
+	router.HandleFunc("/api/v1/crews/{id}", h.UpdateTeam).Methods("PUT")
+	router.HandleFunc("/api/v1/crews/{id}", h.DeleteTeam).Methods("DELETE")
+	router.HandleFunc("/api/v1/crews/{id}/clone", h.CloneTeam).Methods("POST")
+	router.HandleFunc("/api/v1/crews/{id}/export", h.ExportCrew).Methods("GET")
+	router.HandleFunc("/api/v1/crews/import", h.ImportCrew).Methods("POST")
+	router.HandleFunc("/api/v1/crew-templates", h.ListCrewTemplates).Methods("GET")
+	router.HandleFunc("/api/v1/crews/{id}/nodes", h.AddTeamNode).Methods("POST")
+	router.HandleFunc("/api/v1/crews/{id}/runs", h.LaunchTeamRun).Methods("POST")
+	router.HandleFunc("/api/v1/crew-nodes/{id}", h.UpdateTeamNode).Methods("PUT")
+	router.HandleFunc("/api/v1/crew-nodes/{id}", h.RemoveTeamNode).Methods("DELETE")
+	router.HandleFunc("/api/v1/crews/{id}/edges", h.AddTeamEdge).Methods("POST")
+	router.HandleFunc("/api/v1/crew-edges/{id}", h.UpdateTeamEdge).Methods("PUT")
+	router.HandleFunc("/api/v1/crew-edges/{id}", h.RemoveTeamEdge).Methods("DELETE")
+
+	// Teams (deprecated aliases for the crews routes above).
+	router.HandleFunc("/api/v1/teams", h.ListTeams).Methods("GET")                   // deprecated: use /api/v1/crews
+	router.HandleFunc("/api/v1/teams", h.CreateTeam).Methods("POST")                 // deprecated: use /api/v1/crews
+	router.HandleFunc("/api/v1/teams/{id}", h.GetTeam).Methods("GET")                // deprecated: use /api/v1/crews/{id}
+	router.HandleFunc("/api/v1/teams/{id}", h.UpdateTeam).Methods("PUT")             // deprecated: use /api/v1/crews/{id}
+	router.HandleFunc("/api/v1/teams/{id}", h.DeleteTeam).Methods("DELETE")          // deprecated: use /api/v1/crews/{id}
+	router.HandleFunc("/api/v1/teams/{id}/clone", h.CloneTeam).Methods("POST")       // deprecated: use /api/v1/crews/{id}/clone
+	router.HandleFunc("/api/v1/teams/{id}/export", h.ExportCrew).Methods("GET")      // deprecated: use /api/v1/crews/{id}/export
+	router.HandleFunc("/api/v1/teams/import", h.ImportCrew).Methods("POST")          // deprecated: use /api/v1/crews/import
+	router.HandleFunc("/api/v1/teams/{id}/nodes", h.AddTeamNode).Methods("POST")     // deprecated: use /api/v1/crews/{id}/nodes
+	router.HandleFunc("/api/v1/teams/{id}/runs", h.LaunchTeamRun).Methods("POST")    // deprecated: use /api/v1/crews/{id}/runs
+	router.HandleFunc("/api/v1/team-nodes/{id}", h.UpdateTeamNode).Methods("PUT")    // deprecated: use /api/v1/crew-nodes/{id}
+	router.HandleFunc("/api/v1/team-nodes/{id}", h.RemoveTeamNode).Methods("DELETE") // deprecated: use /api/v1/crew-nodes/{id}
+	router.HandleFunc("/api/v1/teams/{id}/edges", h.AddTeamEdge).Methods("POST")     // deprecated: use /api/v1/crews/{id}/edges
+	router.HandleFunc("/api/v1/team-edges/{id}", h.UpdateTeamEdge).Methods("PUT")    // deprecated: use /api/v1/crew-edges/{id}
+	router.HandleFunc("/api/v1/team-edges/{id}", h.RemoveTeamEdge).Methods("DELETE") // deprecated: use /api/v1/crew-edges/{id}
+}
+
 func (h *Handler) ListTeams(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return

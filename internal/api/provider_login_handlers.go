@@ -9,6 +9,19 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
+// registerProviderLoginRoutes wires the provider CLI login broker: the
+// member's side (start, read, submit a code, cancel) and the worker's
+// (claim, progress, the full request).
+func (h *Handler) registerProviderLoginRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/provider-logins", h.StartProviderLogin).Methods("POST")
+	router.HandleFunc("/api/v1/provider-logins/claim", h.ClaimProviderLogin).Methods("POST")
+	router.HandleFunc("/api/v1/provider-logins/{id}", h.GetProviderLogin).Methods("GET")
+	router.HandleFunc("/api/v1/provider-logins/{id}/code", h.SubmitProviderLoginCode).Methods("POST")
+	router.HandleFunc("/api/v1/provider-logins/{id}/cancel", h.CancelProviderLogin).Methods("POST")
+	router.HandleFunc("/api/v1/provider-logins/{id}/progress", h.ProgressProviderLogin).Methods("POST")
+	router.HandleFunc("/api/v1/provider-logins/{id}/full", h.GetProviderLoginFull).Methods("GET")
+}
+
 // StartProviderLogin creates (or resumes) a CLI sign-in request for a worker
 // to execute on a host. Workspace-targeted sign-ins (shared workers) need a
 // workspace admin; user-targeted sign-ins run only on the requester's own
