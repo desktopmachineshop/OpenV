@@ -568,3 +568,39 @@ func TestNotifierDispatchesPush(t *testing.T) {
 		t.Fatalf("push url = %q, want %q", got.URL, want)
 	}
 }
+
+// TestPushBodyCutsAtAWordOrABullet: a body longer than a phone banner shows
+// is cut after the last whole word or line that fits, with an ellipsis,
+// never inside a word and never on a bullet with nothing after it. It was
+// cut at the limit wherever that fell, so a release's notes could end
+// mid-word ("Mai…") or on a bare bullet ("•…") (#379, bug 62).
+func TestPushBodyCutsAtAWordOrABullet(t *testing.T) {
+	long := func(prefix string, n int) string { return prefix + strings.Repeat("x", n-len([]rune(prefix))) }
+	words := strings.Repeat("word ", 39) + "endword more" // 199 runes before " more"
+	for _, tc := range []struct {
+		name, body, want string
+	}{
+		{"short enough", "A short body.", "A short body."},
+		{"exactly the limit", long("", pushBodyLimit), long("", pushBodyLimit)},
+		{"inside a word", strings.Repeat("abcd ", 39) + "abcdefghij", strings.Repeat("abcd ", 38) + "abcd…"},
+		{"at a word's end", words, strings.TrimSpace(strings.Repeat("word ", 39)) + "…"},
+		{"a bare bullet", strings.Repeat("• note\n", 28) + "• " + strings.Repeat("y", 30),
+			strings.TrimSuffix(strings.Repeat("• note\n", 28), "\n") + "…"},
+		{"a full stop before the cut", strings.Repeat("Done. ", 33) + "Again and again", strings.TrimSuffix(strings.TrimSpace(strings.Repeat("Done. ", 33)), ".") + "…"},
+		{"one word longer than the limit", long("", 300), long("", pushBodyLimit-1) + "…"},
+		{"outside ASCII", strings.Repeat("Zürich ", 28) + "Zürichzürich", strings.TrimSpace(strings.Repeat("Zürich ", 28)) + "…"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := pushBody(tc.body)
+			if got != tc.want {
+				t.Fatalf("pushBody =\n%q\nwant\n%q", got, tc.want)
+			}
+			if n := len([]rune(got)); n > pushBodyLimit {
+				t.Fatalf("%d characters, over the %d limit", n, pushBodyLimit)
+			}
+			if got := renderPush(notifications.New("o", "u", notifications.TypeReleasePublished, "T", tc.body, nil)).Body; got != tc.want {
+				t.Fatalf("renderPush body = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

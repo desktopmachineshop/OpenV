@@ -20,7 +20,7 @@ Someone joined the workspace
 Ben Okafor joined this workspace as a member.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -41,7 +41,7 @@ An invitation was sent
 frank@example.test was invited to this workspace as an admin.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -62,7 +62,7 @@ Someone joined the workspace
 Someone joined this workspace as a member.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -83,7 +83,7 @@ Someone joined the workspace
 Someone joined this workspace as a member.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -104,7 +104,7 @@ A workspace role changed
 Ben Okafor is now an admin in this workspace (was a member).
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -125,7 +125,7 @@ Someone was removed from the workspace
 Ben Okafor was removed from this workspace.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -146,7 +146,7 @@ Someone left the workspace
 Ben Okafor left this workspace.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -167,7 +167,7 @@ Someone left the workspace
 Ben Okafor left this workspace.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.

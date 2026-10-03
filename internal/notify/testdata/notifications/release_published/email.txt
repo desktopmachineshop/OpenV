@@ -18,16 +18,16 @@ Content-Type: text/plain; charset=UTF-8
 OpenV version upgraded to 0.16.0
 
 New features
-• **Baselines compare side by side.** Pick two baselines and see what changed between them.
-• **Requirements import keeps enum attributes.**
-• **The bell opens on the tab you left.**
+• Baselines compare side by side. Pick two baselines and see what changed between them.
+• Requirements import keeps enum attributes.
+• The bell opens on the tab you left.
 Maintenance updates
-• **Projects load faster.**
-• **Exports are named after their project.**
+• Projects load faster.
+• Exports are named after their project.
 …and more under What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -46,16 +46,16 @@ Content-Type: text/plain; charset=UTF-8
 OpenV version upgraded to 0.16.0
 
 New features
-• **Baselines compare side by side.** Pick two baselines and see what changed between them.
-• **Requirements import keeps enum attributes.**
-• **The bell opens on the tab you left.**
+• Baselines compare side by side. Pick two baselines and see what changed between them.
+• Requirements import keeps enum attributes.
+• The bell opens on the tab you left.
 Maintenance updates
-• **Projects load faster.**
-• **Exports are named after their project.**
+• Projects load faster.
+• Exports are named after their project.
 …and more under What's new.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -77,7 +77,7 @@ OpenV update 2026-01-15
 • The requirements table remembers its sort.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -99,7 +99,7 @@ OpenV update 2026-01-15
 • The requirements table remembers its sort.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -120,7 +120,7 @@ OpenV version upgraded to 0.16.1
 See What's new for details.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -141,7 +141,7 @@ OpenV version upgraded to 0.16.1
 See What's new for details.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -153,23 +153,23 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Zürich Labs moved to stable release 0.15.0
+Subject: =?utf-8?q?Z=C3=BCrich_Labs_moved_to_stable_release_0.15.0?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
 Zürich Labs moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -181,23 +181,23 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO hal@examp
 -------- message
 From: openv@example.test
 To: hal@example.test
-Subject: Zürich Labs moved to stable release 0.15.0
+Subject: =?utf-8?q?Z=C3=BCrich_Labs_moved_to_stable_release_0.15.0?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
 Zürich Labs moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -209,23 +209,23 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Zürich Labs moved to stable release 0.15.0
+Subject: =?utf-8?q?Z=C3=BCrich_Labs_moved_to_stable_release_0.15.0?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
 Zürich Labs moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -237,23 +237,23 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO hal@examp
 -------- message
 From: openv@example.test
 To: hal@example.test
-Subject: Zürich Labs moved to stable release 0.15.0
+Subject: =?utf-8?q?Z=C3=BCrich_Labs_moved_to_stable_release_0.15.0?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
 Zürich Labs moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -272,16 +272,16 @@ Content-Type: text/plain; charset=UTF-8
 Acme Rockets moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -300,16 +300,16 @@ Content-Type: text/plain; charset=UTF-8
 Acme Rockets moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -328,16 +328,16 @@ Content-Type: text/plain; charset=UTF-8
 Acme Rockets moved to stable release 0.15.0
 
 New features
-• **Baselines compare side by side.**
-• **Requirements import keeps enum attributes.**
+• Baselines compare side by side.
+• Requirements import keeps enum attributes.
 Maintenance updates
-• **Projects load faster.**
+• Projects load faster.
 Bug fixes
-• **The bell counts only unread rows.**
-• **Exports keep line breaks.**
+• The bell counts only unread rows.
+• Exports keep line breaks.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/whats-new
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.

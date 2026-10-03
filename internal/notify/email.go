@@ -12,6 +12,7 @@ package notify
 import (
 	"fmt"
 	"log/slog"
+	"mime"
 	"net"
 	"net/smtp"
 	"os"
@@ -97,16 +98,45 @@ func (m *SMTPMailer) Send(to, subject, body string) error {
 }
 
 // buildMessage renders a minimal RFC 5322 plain-text message with CRLF lines.
+// Every header value it writes from data goes through headerLine or
+// headerText, here and only here, so nothing a caller passes can end a
+// header early and start another (#379, bug 64); the body follows the blank
+// line and cannot add a header.
 func buildMessage(from, to, subject, body string) []byte {
 	var b strings.Builder
-	fmt.Fprintf(&b, "From: %s\r\n", from)
-	fmt.Fprintf(&b, "To: %s\r\n", to)
-	fmt.Fprintf(&b, "Subject: %s\r\n", subject)
+	fmt.Fprintf(&b, "From: %s\r\n", headerLine(from))
+	fmt.Fprintf(&b, "To: %s\r\n", headerLine(to))
+	fmt.Fprintf(&b, "Subject: %s\r\n", headerText(subject))
 	b.WriteString("MIME-Version: 1.0\r\n")
 	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
 	b.WriteString("\r\n")
 	b.WriteString(strings.ReplaceAll(body, "\n", "\r\n"))
 	return []byte(b.String())
+}
+
+// headerLine keeps a header value on its one line. A CR or LF inside it
+// would end the header there and start another from the text after it, so
+// each run of them becomes one space: a workspace named
+// "Acme\r\nBcc: x@example.com" puts "Acme Bcc: x@example.com" in a subject
+// and adds no header. From and To are written through it alone: each is a
+// bare address, the envelope's own, with no display name, and an address
+// cannot be RFC 2047-encoded (RFC 2047, section 5), so one outside ASCII is
+// written as it is, as before. net/smtp refuses an envelope address with a
+// line break before it sends anything.
+func headerLine(v string) string {
+	return strings.Join(strings.FieldsFunc(v, func(r rune) bool { return r == '\r' || r == '\n' }), " ")
+}
+
+// headerText is an unstructured header value, the subject: kept on its line
+// (headerLine) and, when it holds anything but printable ASCII, written as
+// RFC 2047 encoded words (UTF-8, Q encoding), which every mail client shows
+// as written; a workspace named "Zürich Labs" used to reach the subject as
+// raw UTF-8. Long text takes several encoded words, folded one to a line, so
+// a long subject never makes one long line. A printable ASCII value is
+// written as it is.
+func headerText(v string) string {
+	encoded := mime.QEncoding.Encode("utf-8", headerLine(v))
+	return strings.ReplaceAll(encoded, "?= =?", "?=\r\n =?")
 }
 
 // UserDirectory resolves a recipient's address and email opt-out.
@@ -250,11 +280,30 @@ func deepLink(n *notifications.Notification, linkBase string) string {
 	return linkBase + notificationPath(n.EntityRef)
 }
 
+// notificationPath is the one place the email link and the web push url are
+// built: the page the bell opens for the same notification
+// (pathForNotification in frontend/src/components/NotificationBell.tsx), case
+// for case, so all three land in the same place.
 func notificationPath(ref map[string]interface{}) string {
 	kind := refString(ref, "kind")
-	// Workspace budget alerts are not project-scoped — link to the usage tab.
-	if kind == "org_usage" {
+	switch kind {
+	case "org_usage":
+		// Workspace budget alerts are not project-scoped — link to the usage tab.
 		return "/org/settings?tab=usage"
+	case "org_limits":
+		// The cloud runner minutes allowance is raised from the Billing tab,
+		// which is where its alert says to go.
+		return "/org/settings?tab=billing"
+	case "release":
+		// A platform release is not scoped to anything: it opens the notes.
+		return "/whats-new"
+	case "support_window":
+		// A dedicated instance leaving its support window is a workspace matter.
+		return "/org/settings"
+	case "membership":
+		// Membership and privilege changes land on the people list they are
+		// about: the workspace's members tab, or the project's own.
+		return "/org/settings?tab=members"
 	}
 	projectID := refString(ref, "project_id")
 	if projectID == "" {
@@ -270,6 +319,8 @@ func notificationPath(ref map[string]interface{}) string {
 		return fmt.Sprintf("/projects/%s/interviews", projectID)
 	case "artifact":
 		return fmt.Sprintf("/projects/%s/requirements", projectID)
+	case "project_membership":
+		return fmt.Sprintf("/projects/%s/settings?tab=members", projectID)
 	default:
 		return fmt.Sprintf("/projects/%s", projectID)
 	}

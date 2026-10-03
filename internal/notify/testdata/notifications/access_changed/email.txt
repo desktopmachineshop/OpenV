@@ -20,7 +20,7 @@ You joined a workspace
 You are now a member of this workspace with a member role.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -41,7 +41,7 @@ Your workspace access changed
 Your role in this workspace is now an admin.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -62,7 +62,7 @@ You were removed from a workspace
 You no longer have access to this workspace.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -83,7 +83,7 @@ You were added to a project
 You now have editor access to this project.
 
 Open it in OpenV:
-https://openv.example.test/projects/proj-apollo
+https://openv.example.test/projects/proj-apollo/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -104,7 +104,7 @@ Your project access changed
 Your role in this project is now a viewer.
 
 Open it in OpenV:
-https://openv.example.test/projects/proj-apollo
+https://openv.example.test/projects/proj-apollo/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -125,7 +125,7 @@ You were removed from a project
 You no longer have access to this project.
 
 Open it in OpenV:
-https://openv.example.test/projects/proj-apollo
+https://openv.example.test/projects/proj-apollo/settings?tab=members
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.

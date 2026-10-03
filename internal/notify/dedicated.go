@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"time"
 
@@ -140,22 +141,47 @@ func (w *SupportWindowWatcher) Run() {
 		return
 	}
 	closes := cutOn.Add(SupportWindowDays * 24 * time.Hour)
-	left := int(closes.Sub(w.now()).Hours() / 24)
+	remaining := closes.Sub(w.now())
+	left := supportDaysLeft(remaining)
 	for _, days := range warningDays {
-		if left <= days && left >= 0 {
+		if left <= days && left > 0 {
 			w.warn(feed, own.Version, closes, fmt.Sprintf("support-window:%s:%d", feed.Stable, days),
-				fmt.Sprintf("Upgrade OpenV within %d days", left),
+				upgradeWithin(remaining),
 				fmt.Sprintf("This instance runs stable release %s. Stable release %s is available, and support for %s ends on %s. Preview the new release on your staging copy, then schedule the upgrade.",
 					own.Version, feed.Stable, own.Version, closes.Format("2 Jan 2006")))
 			break
 		}
 	}
-	if left < 0 {
+	if left <= 0 {
 		w.warn(feed, own.Version, closes, "support-window:"+feed.Stable+":closed",
 			"OpenV support window has closed",
 			fmt.Sprintf("This instance runs stable release %s, whose support ended on %s. Stable release %s is available; upgrade to keep receiving fixes.",
 				own.Version, closes.Format("2 Jan 2006"), feed.Stable))
 	}
+}
+
+// supportDaysLeft counts the whole days left before the support window
+// closes, rounding up: any time left on a day counts as that day, so the
+// last day reads 1, never 0, and the count reaches 0 when the window has
+// closed.
+func supportDaysLeft(remaining time.Duration) int {
+	return int(math.Ceil(float64(remaining) / float64(24*time.Hour)))
+}
+
+// upgradeWithin is the warning's title for the time left before the window
+// closes: "today" with less than a day left, and otherwise the days left,
+// rounded up, in the singular or the plural ("within 1 day", "within 2
+// days"). It used to be the truncated count with a fixed plural, which read
+// "within 1 days" a day and a half out and "within 0 days" on the last day.
+func upgradeWithin(remaining time.Duration) string {
+	if remaining < 24*time.Hour {
+		return "Upgrade OpenV today"
+	}
+	days := supportDaysLeft(remaining)
+	if days == 1 {
+		return "Upgrade OpenV within 1 day"
+	}
+	return fmt.Sprintf("Upgrade OpenV within %d days", days)
 }
 
 func (w *SupportWindowWatcher) warn(feed *ReleaseFeed, own string, closes time.Time, key, title, body string) {

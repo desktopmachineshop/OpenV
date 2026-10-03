@@ -1,5 +1,5 @@
 {
-  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8. `source` is where each was built at d11dee8 (file:line, for reading and failure messages only); the guard checks that the non-test Go files under that file's directory (subdirectories included, testdata excluded) still contain `goLiteral` exactly as many times as this fixture lists it, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
+  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8, and the five notification links the R7 fix for #379's bugs 58 and 59 added. `source` is where each was built at d11dee8 (those five: where that fix builds them) (file:line, for reading and failure messages only); the guard checks that the non-test Go files under that file's directory (subdirectories included, testdata excluded) still contain `goLiteral` exactly as many times as this fixture lists it, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
   "links": [
     {
       "url": "/login?invite=TOKEN",
@@ -24,6 +24,30 @@
       "what": "notification email and push: workspace budget alert (kind org_usage)",
       "source": "internal/notify/email.go:257",
       "goLiteral": "\"/org/settings?tab=usage\""
+    },
+    {
+      "url": "/org/settings?tab=billing",
+      "what": "notification email and push: cloud runner minutes alert (kind org_limits)",
+      "source": "internal/notify/email.go:296",
+      "goLiteral": "\"/org/settings?tab=billing\""
+    },
+    {
+      "url": "/whats-new",
+      "what": "notification email and push: release published or scheduled (kind release)",
+      "source": "internal/notify/email.go:299",
+      "goLiteral": "\"/whats-new\""
+    },
+    {
+      "url": "/org/settings",
+      "what": "notification email and push: a dedicated instance's support window (kind support_window)",
+      "source": "internal/notify/email.go:302",
+      "goLiteral": "\"/org/settings\""
+    },
+    {
+      "url": "/org/settings?tab=members",
+      "what": "notification email and push: workspace membership change (kind membership)",
+      "source": "internal/notify/email.go:306",
+      "goLiteral": "\"/org/settings?tab=members\""
     },
     {
       "url": "/projects",
@@ -54,6 +78,12 @@
       "what": "notification email and push: artifact",
       "source": "internal/notify/email.go:272",
       "goLiteral": "\"/projects/%s/requirements\""
+    },
+    {
+      "url": "/projects/PROJECT/settings?tab=members",
+      "what": "notification email and push: project membership change (kind project_membership)",
+      "source": "internal/notify/email.go:323",
+      "goLiteral": "\"/projects/%s/settings?tab=members\""
     },
     {
       "url": "/projects/PROJECT",

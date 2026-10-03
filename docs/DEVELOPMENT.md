@@ -504,12 +504,16 @@ A new notification type needs a scenario in `ncScenarios`
 (`notification_content_test.go`): until it has one and its goldens, that
 test and `TestEveryNotificationTypeHasAContentGolden` in
 `internal/domain/notifications` fail. The bell builds its own deep links
-(`pathForNotification` in `NotificationBell.tsx`), which differ from the
-email and push links for releases, support windows and membership changes
-(quirk Q7); `src/components/NotificationBell.paths.test.tsx` feeds the bell
-every notification in the Go goldens and pins where each lands beside the
-Go link in `src/components/__snapshots__/NotificationBell.paths.txt`, so a
-change on either side shows there: regenerate it, after the Go goldens,
+(`pathForNotification` in `NotificationBell.tsx`), and the email and push
+links open the same page (`notificationPath` in `internal/notify/email.go`
+mirrors it case for case; quirk Q7, resolved), so a new entity kind is
+added on both sides, with a row in each side's table
+(`TestEmailAndPushLinkWhereTheBellOpens`, and the bell's "where a row
+opens"). `src/components/NotificationBell.paths.test.tsx` feeds the bell
+every notification in the Go goldens, pins where each lands beside the Go
+link in `src/components/__snapshots__/NotificationBell.paths.txt`, and
+fails when the two differ, so a change on either side shows there:
+regenerate it, after the Go goldens,
 with `cd frontend && npx vitest run src/components/NotificationBell.paths.test.tsx -u`.
 These three test files and the recording harness beside the Go one are
 guard code (`GUARD_CODE` row S10 in `scripts/refactor/refactor_guard.py`):

@@ -7,7 +7,7 @@
 === artifact.status_changed to in_review by its owner, titled with quotes | delivery 1 of 1 | to user-ben
 (stream notify:user-ben)
 event: notification
-data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"review_requested","title":"Artifact ready for review","body":"\"Brake \\\"pedal\\\" force ≤ 50 N\" is waiting in the review queue.","entity_ref":{"artifact_id":"art-9","kind":"artifact","project_id":"proj-apollo"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"review_requested","title":"Artifact ready for review","body":"\"Brake \"pedal\" force ≤ 50 N\" is waiting in the review queue.","entity_ref":{"artifact_id":"art-9","kind":"artifact","project_id":"proj-apollo"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === artifact.status_changed to in_review with no title, by the system | delivery 1 of 2 | to user-ada

@@ -42,9 +42,10 @@ package notify
 // recipient, the next recipient still gets theirs, and the lines each copy
 // logs and the count Announce returns.
 //
-// The bell's own deep links, which differ from the email and push links
-// built here (quirk Q7), are pinned by the frontend's
-// src/components/NotificationBell.paths.test.tsx, which reads these goldens.
+// The bell's own deep links, which are the email and push links built here
+// since the R7 fix for #379's bugs 58 and 59 (quirk Q7), are pinned beside
+// them by the frontend's src/components/NotificationBell.paths.test.tsx,
+// which reads these goldens.
 // internal/domain/notifications's TestEveryNotificationTypeHasAContentGolden
 // fails when a type constant has no golden directory.
 //
@@ -84,7 +85,7 @@ const (
 	ncOrgName = "Acme Rockets"
 	// ncZurich is a stable-channel workspace with an upgrade window in a
 	// named zone, and a name outside ASCII, which the email subject carries
-	// as it is.
+	// RFC 2047-encoded (#379, bug 64).
 	ncZurich     = "org-zurich"
 	ncZurichName = "Zürich Labs"
 	ncProject    = "proj-apollo"

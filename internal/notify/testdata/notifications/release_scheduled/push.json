@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see Wh…\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see…\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Stable release 0.15.0 turns on for Zürich Labs tomorrow\",\"body\":\"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 turns on for Zürich Labs tomorrow\",\"body\":\"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -34,7 +34,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see Wh…\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace on Thu 10 Sep 2026 at 09:00 CEST. Change the upgrade window in workspace settings, or try it early for yourself. It brings 2 new feature(s) and 3 other change(s); see…\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -47,7 +47,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Stable release 0.15.0 turns on for Zürich Labs tomorrow\",\"body\":\"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 turns on for Zürich Labs tomorrow\",\"body\":\"Scheduled for Thu 10 Sep 2026 at 09:00 CEST. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -60,7 +60,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-zurich\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Zürich Labs\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -73,7 +73,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Acme Rockets\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-acme\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Acme Rockets\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-acme\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -86,7 +86,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Acme Rockets\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/projects\",\"tag\":\"release_scheduled:org-acme\"}"
+          "payload": "{\"title\":\"Stable release 0.15.0 is ready for Acme Rockets\",\"body\":\"It turns on for the workspace now. It brings 2 new feature(s) and 3 other change(s); see What's new.\",\"url\":\"/whats-new\",\"tag\":\"release_scheduled:org-acme\"}"
         }
       ],
       "sent with the default allow-list": false,
