@@ -15,6 +15,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerProjectIORoutes wires a project's export, import and report.
+func (h *Handler) registerProjectIORoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/export", h.ExportProject).Methods("GET")
+	router.HandleFunc("/api/v1/projects/import", h.alwaysWritable(h.ImportProject)).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
+}
+
 // ExportProject exports a project in the specified format
 func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]

@@ -6,12 +6,19 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/mentions"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
+
+// registerChatterRoutes wires an artifact's chatter feed.
+func (h *Handler) registerChatterRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/chatter", h.CreateChatterEntry).Methods("POST")
+	router.HandleFunc("/api/v1/chatter", h.ListChatterEntries).Methods("GET")
+}
 
 // CreateChatterEntry creates a new chatter entry
 func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {

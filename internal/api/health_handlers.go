@@ -3,7 +3,14 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
+
+// registerHealthRoutes wires the health check.
+func (h *Handler) registerHealthRoutes(router *mux.Router) {
+	router.HandleFunc("/health", h.Health).Methods("GET")
+}
 
 // Health returns the health status, and the commit this binary was built
 // from where the build told it one. The commit is what lets a deployment be

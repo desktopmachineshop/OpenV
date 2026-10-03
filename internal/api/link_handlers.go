@@ -13,6 +13,17 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
+// registerLinkRoutes wires links: create, list, read, update, confirm and
+// delete.
+func (h *Handler) registerLinkRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/links", h.CreateLink).Methods("POST")
+	router.HandleFunc("/api/v1/links", h.ListLinks).Methods("GET")
+	router.HandleFunc("/api/v1/links/{id}", h.GetLink).Methods("GET")
+	router.HandleFunc("/api/v1/links/{id}", h.UpdateLink).Methods("PUT")
+	router.HandleFunc("/api/v1/links/{id}/confirm", h.ConfirmLink).Methods("PUT")
+	router.HandleFunc("/api/v1/links/{id}", h.DeleteLink).Methods("DELETE")
+}
+
 // sourceArtifactNotFound and targetArtifactNotFound answer a link's endpoint
 // that no row has, or that lies in a project the caller cannot reach at all.
 var (

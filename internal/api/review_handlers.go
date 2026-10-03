@@ -10,6 +10,11 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerReviewRoutes wires a project's review queue.
+func (h *Handler) registerReviewRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
+}
+
 // ReviewQueue handles GET /api/v1/projects/{id}/review-queue: the reviewer's
 // daily driver (issue #183). It returns the two things awaiting a reviewer's
 // attention in one round trip — the live suspect links touching the project

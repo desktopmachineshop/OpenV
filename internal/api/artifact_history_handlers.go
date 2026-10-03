@@ -16,6 +16,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerArtifactHistoryRoutes wires an artifact's versions, the restore
+// of one, and the links a version had.
+func (h *Handler) registerArtifactHistoryRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/artifacts/{id}/versions", h.GetArtifactVersions).Methods("GET")
+	router.HandleFunc("/api/v1/artifacts/{id}/restore", h.RestoreArtifactVersion).Methods("POST")
+	router.HandleFunc("/api/v1/artifacts/{id}/links", h.GetArtifactVersionLinks).Methods("GET")
+}
+
 // GetArtifactVersions retrieves all versions of an artifact. The guard asks
 // the project of the versions themselves, not of the current row, so a
 // deleted artifact's history stays readable to its project's viewers

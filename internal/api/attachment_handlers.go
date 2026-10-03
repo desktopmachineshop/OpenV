@@ -19,6 +19,22 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
+// registerAttachmentRoutes wires attachments (figures): upload, read,
+// rename, download, versions, delete, and the lists per artifact and per
+// project.
+func (h *Handler) registerAttachmentRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/attachments/upload", h.UploadAttachment).Methods("POST")
+	router.HandleFunc("/api/v1/attachments/{id}", h.GetAttachmentMeta).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}", h.RenameAttachment).Methods("PUT")
+	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}/versions", h.UploadAttachmentVersion).Methods("POST")
+	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}/versions/{version}/restore", h.RestoreAttachmentVersion).Methods("POST")
+	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
+	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{projectID}/attachments", h.ListProjectAttachments).Methods("GET")
+}
+
 // UploadAttachment attaches a file to an artifact as a numbered figure.
 //
 // What may be attached is the catalogue in the attachments domain: pictures,

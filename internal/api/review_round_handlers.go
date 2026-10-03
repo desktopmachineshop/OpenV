@@ -18,6 +18,11 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
+// registerReviewRoundRoutes wires the start of a project's review round.
+func (h *Handler) registerReviewRoundRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/review-round", h.StartProjectReview).Methods("POST")
+}
+
 // StartProjectReview handles POST /api/v1/projects/{id}/review-round
 // (REQ-165): one run of the project's review process, instead of walking the
 // tree and submitting each artifact by hand.

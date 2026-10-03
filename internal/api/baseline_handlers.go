@@ -12,6 +12,16 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerBaselineRoutes wires baselines: a project's create and list, and
+// one baseline's read, diff (baseline_diff_handlers.go) and delete.
+func (h *Handler) registerBaselineRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/baselines", h.CreateBaseline).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/baselines", h.ListBaselines).Methods("GET")
+	router.HandleFunc("/api/v1/baselines/{id}", h.GetBaseline).Methods("GET")
+	router.HandleFunc("/api/v1/baselines/{id}/diff", h.DiffBaseline).Methods("GET")
+	router.HandleFunc("/api/v1/baselines/{id}", h.DeleteBaseline).Methods("DELETE")
+}
+
 type createBaselineRequest struct {
 	Name string `json:"name"`
 }

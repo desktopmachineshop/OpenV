@@ -20,6 +20,17 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 )
 
+// registerArtifactRoutes wires an artifact's create, list, read, update,
+// status change and delete.
+func (h *Handler) registerArtifactRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/artifacts", h.CreateArtifact).Methods("POST")
+	router.HandleFunc("/api/v1/artifacts", h.ListArtifacts).Methods("GET")
+	router.HandleFunc("/api/v1/artifacts/{id}", h.GetArtifact).Methods("GET")
+	router.HandleFunc("/api/v1/artifacts/{id}", h.UpdateArtifact).Methods("PUT")
+	router.HandleFunc("/api/v1/artifacts/{id}/status", h.ChangeArtifactStatus).Methods("PUT")
+	router.HandleFunc("/api/v1/artifacts/{id}", h.DeleteArtifact).Methods("DELETE")
+}
+
 // CreateArtifact creates a new artifact
 func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	var req artifacts.CreateArtifactRequest

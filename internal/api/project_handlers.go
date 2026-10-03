@@ -14,6 +14,30 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
+// registerProjectCoreRoutes wires a project's create, list, read, update
+// and delete. It is the first registrar RegisterRoutes calls; the project's
+// other routes come from registrars interleaved with the download, share,
+// admin and billing ones, in the order route_handlers.txt pins.
+func (h *Handler) registerProjectCoreRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects", h.CreateProject).Methods("POST")
+	router.HandleFunc("/api/v1/projects", h.ListProjects).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}", h.GetProject).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}", h.UpdateProject).Methods("PUT")
+	router.HandleFunc("/api/v1/projects/{id}", h.alwaysWritable(h.DeleteProject)).Methods("DELETE")
+}
+
+// registerProjectChildRoutes wires the projects filed under a project
+// (REQ-144).
+func (h *Handler) registerProjectChildRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/children", h.ListChildProjects).Methods("GET")
+}
+
+// registerLinkedArtifactRoutes wires the far ends of the links crossing out
+// of a project (REQ-145).
+func (h *Handler) registerLinkedArtifactRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/linked-artifacts", h.ListLinkedArtifacts).Methods("GET")
+}
+
 // CreateProject creates a new project
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	// A person, in the workspace it acts in, past its plan gate and project

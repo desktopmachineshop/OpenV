@@ -13,6 +13,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/templates"
 )
 
+// registerTemplateRoutes wires project templates and the projects made
+// from them.
+func (h *Handler) registerTemplateRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/templates", h.ListTemplates).Methods("GET")
+	router.HandleFunc("/api/v1/templates", h.CreateTemplate).Methods("POST")
+	router.HandleFunc("/api/v1/templates/{id}/projects", h.CreateProjectFromTemplate).Methods("POST")
+}
+
 type createTemplateRequest struct {
 	ProjectID   string `json:"project_id"`
 	Name        string `json:"name"`
