@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { VerifyEmail } from './VerifyEmail';
 import { useAppStore } from '../state/store';
 
@@ -14,24 +15,25 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const calls: string[] = [];
-vi.mock('../api/client', () => ({
-  authAPI: {
-    me: () => new Promise(() => {}),
-    verifyEmail: (token: string) => {
-      calls.push('verify:' + token);
-      return new Promise(() => {});
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    authAPI: {
+      verifyEmail: (token: string) => {
+        calls.push('verify:' + token);
+        return new Promise(() => {});
+      },
+      resendVerification: () => {
+        calls.push('resend');
+        return Promise.resolve({ data: { sent_to: 'pending@example.com' } });
+      },
+      changeVerificationEmail: (email: string) => {
+        calls.push('change:' + email);
+        return Promise.resolve({ data: { sent_to: email } });
+      },
+      logout: () => Promise.resolve(),
     },
-    resendVerification: () => {
-      calls.push('resend');
-      return Promise.resolve({ data: { sent_to: 'pending@example.com' } });
-    },
-    changeVerificationEmail: (email: string) => {
-      calls.push('change:' + email);
-      return Promise.resolve({ data: { sent_to: email } });
-    },
-    logout: () => Promise.resolve(),
-  },
-}));
+  })
+);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 

@@ -1,12 +1,11 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
 import { CloudRunnerCard } from './CloudRunnerCard';
 import { cloudRunnerAPI } from '../../api/client';
 
 // The card's dependencies, mocked down to what the pool indicator needs.
-vi.mock('../../api/client', () => ({
-  cloudRunnerAPI: { get: vi.fn(), start: vi.fn(), extend: vi.fn(), end: vi.fn() },
-}));
+vi.mock('../../api/client', async (orig) => mockApi(await orig()));
 vi.mock('../ui', () => ({
   ErrorBanner: ({ message }: any) =>
     message ? require('react').createElement('div', { role: 'alert' }, message) : null,

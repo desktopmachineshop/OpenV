@@ -1,14 +1,12 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
 import { AgentEditor, ALLOWED_TOOLS_REQUIRED } from './AgentEditor';
 import { agentsAPI, providerSettingsAPI, AgentDef } from '../../api/client';
 
-// The editor talks to the agents and provider-settings endpoints; the client
-// module builds an axios instance at import time, so it is mocked wholesale.
-vi.mock('../../api/client', () => ({
-  agentsAPI: { create: vi.fn(), update: vi.fn(), raw: vi.fn() },
-  providerSettingsAPI: { list: vi.fn() },
-}));
+// The editor talks to the agents and provider-settings endpoints; every
+// client method is stubbed, and the tests answer the ones the editor calls.
+vi.mock('../../api/client', async (orig) => mockApi(await orig()));
 
 const agents = vi.mocked(agentsAPI);
 const providers = vi.mocked(providerSettingsAPI);
