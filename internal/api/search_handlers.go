@@ -9,10 +9,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
+
+// registerSearchRoutes wires the global artifact search.
+func (h *Handler) registerSearchRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/search", h.GlobalSearch).Methods("GET")
+}
 
 const (
 	defaultSearchLimit = 20
