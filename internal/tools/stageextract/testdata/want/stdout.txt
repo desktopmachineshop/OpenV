@@ -1,0 +1,9 @@
+stageextract: note: stage connect: line 47 stays in main() after the defer at line 46; start a stage there to move it
+signals -> wire_start.go (lines 16-22, 11 lines), returns stop, tick.Stop for main() to defer as stop, stopTick
+settings -> wire_start.go (lines 26-39, 16 lines)
+connect -> wire_start.go (lines 41-45, 9 lines), returns db.Close for main() to defer as closeDB
+services -> wire_services.go (lines 50-67, 22 lines)
+jobs -> wire_jobs.go (lines 69-80, 15 lines)
+stageextract: main() of fixture into 5 stages in 3 files; 15 locals become fields of app (app.go), declared by each stage that uses it: err; 3 cleanups returned
+stageextract: main() spans 19 lines; the largest stage, services, 22
+stageextract: go vet ./fixture passed

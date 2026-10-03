@@ -1,0 +1,4 @@
+# stageextract's fixture and the goldens of what it makes of it (refactor
+# plan step S14c) are compared byte for byte: a checkout with CRLF line
+# endings would fail every comparison, so they stay LF on every platform.
+* text eol=lf
