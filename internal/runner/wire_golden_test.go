@@ -169,6 +169,13 @@ func runWireCase(t *testing.T, routes []string, wc wireCase) wireGoldenCase {
 		key = "<worker-key>"
 	}
 	client := NewClient(srv.URL, wireDenormalise(key))
+	// The cases run in parallel, and httptest.Server.Close closes the idle
+	// connections of http.DefaultTransport, which NewClient's clients use:
+	// another case's Close could break a request this case is about to send
+	// on a reused connection. Each case talks through its own server's
+	// transport instead.
+	client.http.Transport = srv.Client().Transport
+	client.logHTTP.Transport = srv.Client().Transport
 
 	out := wireGoldenCase{Name: wc.name}
 	for _, call := range wc.calls {
