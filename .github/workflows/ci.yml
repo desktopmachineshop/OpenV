@@ -94,13 +94,15 @@ jobs:
       # subtests, skipped (a parent whose subtests all skip still reports PASS).
       # The stored-data freeze's schema and purge goldens (refactor plan S3)
       # run on both legs; here every line marked @requires(vector) must be
-      # absent and every other line as recorded.
+      # absent and every other line as recorded. So does the round trip of
+      # the docs/exports documents through an import and a JSON export (S9),
+      # whose goldens are the same on both.
       - name: No-vector Postgres tests ran
         shell: bash
         run: |
           go test ./internal/persistence/postgres/ -count=1 -v \
-            -run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable|TestSchemaGolden|TestPurgeCatalog)$' | tee no-vector.log
-          for t in TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable TestSchemaGolden TestPurgeCatalog; do
+            -run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable|TestSchemaGolden|TestPurgeCatalog|TestExportDocsRoundTrip)$' | tee no-vector.log
+          for t in TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable TestSchemaGolden TestPurgeCatalog TestExportDocsRoundTrip; do
             { grep -q -- "^--- PASS: $t " no-vector.log && ! grep -Eq -- "--- SKIP: $t( |/)" no-vector.log; } || { echo "::error::$t did not run against postgres:15"; exit 1; }
           done
 
@@ -191,13 +193,14 @@ jobs:
 
       # Fail if the image ever stops providing the extension, rather than
       # passing on four skips, and if the stored-data freeze's schema and
-      # purge goldens (refactor plan S3), recorded with the extension, skip;
-      # a skipped subtest of a listed test counts as a skip.
+      # purge goldens (refactor plan S3), recorded with the extension, or the
+      # docs/exports round trip (S9) skip; a skipped subtest of a listed test
+      # counts as a skip.
       - name: go test (Postgres package, vector extension present)
         shell: bash
         run: |
           go test ./internal/persistence/postgres/ -count=1 -v | tee postgres-tests.log
-          for t in TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog; do
+          for t in TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog TestExportDocsRoundTrip; do
             { grep -q -- "^--- PASS: $t " postgres-tests.log && ! grep -Eq -- "--- SKIP: $t( |/)" postgres-tests.log; } || { echo "::error::$t did not run against pgvector"; exit 1; }
           done
 

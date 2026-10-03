@@ -1,0 +1,3408 @@
+GET /api/v1/projects/<P>/download/docx?fields=priority%2Crisk&headings=0&results=1&sections=<HDG-1>&toc=0&traceability=1&types=requirement%2Ctest-case
+status: 200
+Content-Disposition: attachment; filename="project_report_Formats_fixture_co_<now 20060102_150405>.docx"
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+body: docx
+parts:
+  [Content_Types].xml
+  _rels/.rels
+  docProps/core.xml
+  docProps/app.xml
+  word/_rels/document.xml.rels
+  word/styles.xml
+  word/numbering.xml
+  word/settings.xml
+  word/footer1.xml
+  word/document.xml
+  word/media/image1.png
+  word/media/image2.png
+word/document.xml:
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<w:body>
+<w:p>
+<w:r>
+<w:drawing>
+<wp:inline distT="0" distB="0" distL="0" distR="0">
+<wp:extent cx="1152000" cy="864000"/>
+<wp:docPr id="1" name="image1.png" descr="Workspace logo"/>
+<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<pic:nvPicPr>
+<pic:cNvPr id="1" name="image1.png"/>
+<pic:cNvPicPr/>
+</pic:nvPicPr>
+<pic:blipFill>
+<a:blip r:embed="rId100"/>
+<a:stretch>
+<a:fillRect/>
+</a:stretch>
+</pic:blipFill>
+<pic:spPr>
+<a:xfrm>
+<a:off x="0" y="0"/>
+<a:ext cx="1152000" cy="864000"/>
+</a:xfrm>
+<a:prstGeom prst="rect">
+<a:avLst/>
+</a:prstGeom>
+</pic:spPr>
+</pic:pic>
+</a:graphicData>
+</a:graphic>
+</wp:inline>
+</w:drawing>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Subtle"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="6E6E6E"/>
+</w:rPr>
+<w:t xml:space="preserve">Fixture Works</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Title"/>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Formats &quot;fixture&quot; / Ü &amp; co</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Subtitle"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="505050"/>
+<w:sz w:val="24"/>
+<w:szCs w:val="24"/>
+</w:rPr>
+<w:t xml:space="preserve">Specification</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">The S9 format fixture: </w:t>
+</w:r>
+<w:r>
+<w:t xml:space="preserve"> renderer &amp; its escaping.</w:t>
+</w:r>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="9638" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F3F5F8"/>
+</w:tcPr>
+<w:p>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Live project</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Live project state as of <now 2006-01-02 15:04 UTC>. This is not a baseline: the project may have changed since.</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="5A5A5A"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Workspace</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7438" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="19"/>
+<w:szCs w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Fixture Works</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="5A5A5A"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Generated</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7438" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="19"/>
+<w:szCs w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">
+<now 2006-01-02 15:04 UTC>
+</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="5A5A5A"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Contents</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7438" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="19"/>
+<w:szCs w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">4 artifacts: 2 requirements, 2 test cases</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="5A5A5A"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Includes</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7438" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="19"/>
+<w:szCs w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">fields: Priority, Risk; traceability; figures; V&amp;V status; test results</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+</w:p>
+<w:p>
+<w:r>
+<w:br w:type="page"/>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading1"/>
+</w:pPr>
+<w:bookmarkStart w:id="11" w:name="a_product_definition"/>
+<w:r>
+<w:t xml:space="preserve">Product definition</w:t>
+</w:r>
+<w:bookmarkEnd w:id="11"/>
+</w:p>
+<w:p>
+<w:pPr>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Vision</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Answers before anyone asks.</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Problem statement</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Operators wait &amp; guess.</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Target users</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Operators and engineers</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Success metrics</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="ListParagraph"/>
+<w:numPr>
+<w:ilvl w:val="0"/>
+<w:numId w:val="1"/>
+</w:numPr>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Answer time: 2 s (1.4 s)</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="ListParagraph"/>
+<w:numPr>
+<w:ilvl w:val="0"/>
+<w:numId w:val="1"/>
+</w:numPr>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Uptime</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Constraints</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="ListParagraph"/>
+<w:numPr>
+<w:ilvl w:val="0"/>
+<w:numId w:val="1"/>
+</w:numPr>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Runs offline</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="ListParagraph"/>
+<w:numPr>
+<w:ilvl w:val="0"/>
+<w:numId w:val="1"/>
+</w:numPr>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Fits on one rack</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:br w:type="page"/>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading4"/>
+</w:pPr>
+<w:bookmarkStart w:id="12" w:name="a_5e9a0000_0000_4000_8000_000000000104"/>
+<w:r>
+<w:t xml:space="preserve">REQ-1 Answer in time</w:t>
+</w:r>
+<w:bookmarkEnd w:id="12"/>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Reference</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">REQ-1</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Type</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Requirement</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Version</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">v3</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Description</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">The system shall answer within </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:b/>
+</w:rPr>
+<w:t xml:space="preserve">2 s</w:t>
+</w:r>
+<w:r>
+<w:t xml:space="preserve"> of a request, measured at the </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:i/>
+</w:rPr>
+<w:t xml:space="preserve">client</w:t>
+</w:r>
+<w:r>
+<w:t xml:space="preserve">.</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="ListParagraph"/>
+<w:numPr>
+<w:ilvl w:val="0"/>
+<w:numId w:val="1"/>
+</w:numPr>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Logged with </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>
+</w:rPr>
+<w:t xml:space="preserve">answer_ms</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="ListParagraph"/>
+<w:numPr>
+<w:ilvl w:val="0"/>
+<w:numId w:val="1"/>
+</w:numPr>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Checked against </w:t>
+</w:r>
+<w:hyperlink r:id="rId101">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+</w:rPr>
+<w:t xml:space="preserve">the budget</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4283" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Load</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="5354" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Limit</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4283" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">idle</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="5354" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">1 s</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4283" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">peak</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="5354" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">2 s</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">See REQ-2 and REQ-1-FIG-1; quote &quot;as is&quot;, a </w:t>
+</w:r>
+<w:r>
+<w:t xml:space="preserve">&lt; b &amp; c &gt; d, 5 µs, Ü.</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Code"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>
+</w:rPr>
+<w:t xml:space="preserve">answer(ctx)</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Priority</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">must</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Risk</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">high</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">V&amp;V rollup</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="27AE60"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">■ </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">pass</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:keepNext/>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:drawing>
+<wp:inline distT="0" distB="0" distL="0" distR="0">
+<wp:extent cx="24384" cy="18288"/>
+<wp:docPr id="2" name="image2.png" descr="Figure REQ-1-FIG-1 — Timing plot"/>
+<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<pic:nvPicPr>
+<pic:cNvPr id="2" name="image2.png"/>
+<pic:cNvPicPr/>
+</pic:nvPicPr>
+<pic:blipFill>
+<a:blip r:embed="rId102"/>
+<a:stretch>
+<a:fillRect/>
+</a:stretch>
+</pic:blipFill>
+<pic:spPr>
+<a:xfrm>
+<a:off x="0" y="0"/>
+<a:ext cx="24384" cy="18288"/>
+</a:xfrm>
+<a:prstGeom prst="rect">
+<a:avLst/>
+</a:prstGeom>
+</pic:spPr>
+</pic:pic>
+</a:graphicData>
+</a:graphic>
+</wp:inline>
+</w:drawing>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Caption"/>
+</w:pPr>
+<w:r>
+<w:t xml:space="preserve">Figure REQ-1-FIG-1 — Timing plot</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Traceability</w:t>
+</w:r>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Direction</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Relationship</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Artifact</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Incoming</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">refined by</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">5e9a0000-0000-4000-8000-000000000121</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Incoming</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">verified by</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000107">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">TC-1 Time the answer</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading4"/>
+</w:pPr>
+<w:bookmarkStart w:id="13" w:name="a_5e9a0000_0000_4000_8000_000000000105"/>
+<w:r>
+<w:t xml:space="preserve">REQ-2 Log each answer &amp; error &lt;code&gt;</w:t>
+</w:r>
+<w:bookmarkEnd w:id="13"/>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Reference</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">REQ-2</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Type</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Requirement</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Version</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">v2</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Description</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">The system shall log each answer.</w:t>
+</w:r>
+<w:r>
+<w:br/>
+</w:r>
+<w:r>
+<w:t xml:space="preserve">The log shall survive a restart.</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Priority</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">should</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Risk</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">low</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">V&amp;V rollup</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="969696"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">■ </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">verified manually</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Traceability</w:t>
+</w:r>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Direction</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Relationship</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Artifact</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Incoming</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">verified by</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000108">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">TC-2 Check the log</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading4"/>
+</w:pPr>
+<w:bookmarkStart w:id="14" w:name="a_5e9a0000_0000_4000_8000_000000000107"/>
+<w:r>
+<w:t xml:space="preserve">TC-1 Time the answer</w:t>
+</w:r>
+<w:bookmarkEnd w:id="14"/>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Reference</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">TC-1</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Type</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Test case</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Version</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">v1</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Description</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Measure the answer time under load.</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Latest result</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="27AE60"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">■ </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">pass · 2025-06-02 09:24 · Release check</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Traceability</w:t>
+</w:r>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Direction</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Relationship</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Artifact</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Outgoing</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">verifies</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000104">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">REQ-1 Answer in time</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading4"/>
+</w:pPr>
+<w:bookmarkStart w:id="15" w:name="a_5e9a0000_0000_4000_8000_000000000108"/>
+<w:r>
+<w:t xml:space="preserve">TC-2 Check the log</w:t>
+</w:r>
+<w:bookmarkEnd w:id="15"/>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Reference</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">TC-2</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Type</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Test case</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Version</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">v1</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Description</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Restart, then read the log.</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2400" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="F7F7F7"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Latest result</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="7238" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="E74C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">■ </w:t>
+</w:r>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">fail · 2025-06-02 09:34 · Regression</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+</w:rPr>
+<w:t xml:space="preserve">Traceability</w:t>
+</w:r>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Direction</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Relationship</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Artifact</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1700" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Outgoing</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">verifies</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="4938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000105">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">REQ-2 Log each answer &amp; error &lt;code&gt;</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:r>
+<w:br w:type="page"/>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading1"/>
+</w:pPr>
+<w:bookmarkStart w:id="16" w:name="a_vv_summary"/>
+<w:r>
+<w:t xml:space="preserve">Verification summary</w:t>
+</w:r>
+<w:bookmarkEnd w:id="16"/>
+</w:p>
+<w:p>
+<w:r>
+<w:t xml:space="preserve">Requirements: 2</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="27AE60"/>
+</w:rPr>
+<w:t xml:space="preserve">■ </w:t>
+</w:r>
+<w:r>
+<w:t xml:space="preserve">pass: 1</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="969696"/>
+</w:rPr>
+<w:t xml:space="preserve">■ </w:t>
+</w:r>
+<w:r>
+<w:t xml:space="preserve">verified manually: 1</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading2"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+</w:rPr>
+<w:t xml:space="preserve">Requirement coverage</w:t>
+</w:r>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Ref</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3938" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Requirement</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2000" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Method</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Rollup</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000104">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">REQ-1</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Answer in time</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">test</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="27AE60"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="FFFFFF"/>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">pass</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000105">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">REQ-2</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="3938" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Log each answer &amp; error &lt;code&gt;</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">inspection</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2200" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="969696"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="FFFFFF"/>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">verified manually</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:r>
+<w:rPr>
+<w:i/>
+</w:rPr>
+<w:t xml:space="preserve">No gaps detected.</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:br w:type="page"/>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading1"/>
+</w:pPr>
+<w:bookmarkStart w:id="17" w:name="a_test_results"/>
+<w:r>
+<w:t xml:space="preserve">Test results</w:t>
+</w:r>
+<w:bookmarkEnd w:id="17"/>
+</w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="9638" w:type="dxa"/>
+<w:tblLayout w:type="fixed"/>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>
+</w:tblBorders>
+<w:tblCellMar>
+<w:top w:w="40" w:type="dxa"/>
+<w:left w:w="90" w:type="dxa"/>
+<w:bottom w:w="40" w:type="dxa"/>
+<w:right w:w="90" w:type="dxa"/>
+</w:tblCellMar>
+<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+</w:tblPr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+<w:tblHeader/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Ref</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2038" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Test case</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Result</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2000" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Executed</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2600" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="EBEDF0"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="3C3C3C"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Run</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000107">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">TC-1</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2038" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Time the answer</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="27AE60"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="FFFFFF"/>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">pass</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">2025-06-02 09:24</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2600" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">Release check</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:trPr>
+<w:cantSplit/>
+</w:trPr>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:hyperlink w:anchor="a_5e9a0000_0000_4000_8000_000000000108">
+<w:r>
+<w:rPr>
+<w:rStyle w:val="Hyperlink"/>
+<w:color w:val="145AAA"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">TC-2</w:t>
+</w:r>
+</w:hyperlink>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2038" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Check the log</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="1500" w:type="dxa"/>
+<w:shd w:val="clear" w:color="auto" w:fill="E74C3C"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:jc w:val="center"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+<w:color w:val="FFFFFF"/>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">fail</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2000" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">2025-06-02 09:34</w:t>
+</w:r>
+</w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:tcW w:w="2600" w:type="dxa"/>
+</w:tcPr>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:sz w:val="17"/>
+<w:szCs w:val="17"/>
+</w:rPr>
+<w:t xml:space="preserve">Regression</w:t>
+</w:r>
+</w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Heading2"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+</w:rPr>
+<w:t xml:space="preserve">Test runs</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+</w:rPr>
+<w:t xml:space="preserve">Regression</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="5A5A5A"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Status: aborted    Started: 2025-06-02 09:30</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">After the log change.</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+<w:keepNext/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:b/>
+</w:rPr>
+<w:t xml:space="preserve">Release check</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:pPr>
+<w:pStyle w:val="Compact"/>
+</w:pPr>
+<w:r>
+<w:rPr>
+<w:color w:val="5A5A5A"/>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Status: completed    Started: 2025-06-02 09:20    Completed: 2025-06-02 09:25</w:t>
+</w:r>
+</w:p>
+<w:p>
+<w:r>
+<w:rPr>
+<w:sz w:val="18"/>
+<w:szCs w:val="18"/>
+</w:rPr>
+<w:t xml:space="preserve">Before 1.0.</w:t>
+</w:r>
+</w:p>
+<w:sectPr>
+<w:footerReference w:type="default" r:id="rIdFooter"/>
+<w:pgSz w:w="11906" w:h="16838"/>
+<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>
+</w:sectPr>
+</w:body>
+</w:document>

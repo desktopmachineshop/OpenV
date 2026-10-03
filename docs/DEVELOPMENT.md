@@ -475,6 +475,56 @@ changes them; regenerate with
 Every scenario ends on its own without the network: stdin is empty, so a
 prompt reads end of input, and none gets as far as a request.
 
+The export, report and download formats are frozen too (refactor plan step
+S9). `TestFormatsGolden` in `internal/api` serves one fixture workspace
+(`formats_fixture_test.go`: two projects, a crew, two baselines, every
+link type, figures, evidence) through the real handlers and the real
+export, report and download services, and writes each answer to
+`internal/api/testdata/formats/<name>.txt`: its `Content-Type` and
+`Content-Disposition`, JSON, CSV and ReqIF byte for byte, a workbook's cells
+with their style ids, each PDF's page count and per-page text, and a Word
+document's `document.xml`. The fixture's times are fixed; a time the server
+reads its own clock for (a filename's stamp, `exported_at`, a cover's
+"Generated", the V&V report's date) is checked to fall within the request
+and written as a token naming its layout, such as `<now 20060102_150405>`.
+A renderer change, a new filename or media type, or a new field an export
+writes changes these goldens; a new download or export format, or a new
+route that renders a document, fails the test until it has a case there
+(or, for a route that serves stored bytes, an entry in
+`s9FormatRoutesExempt`), and a golden a removed case leaves behind, here
+or under `proposal_payloads/`, fails its test until it is deleted too.
+`TestReqIFExportAndDownloadTypeAlike` beside it keeps the ReqIF export and
+the ReqIF download one document. `TestProposalPayloadsGolden` pins what a
+proposal-mode agent's write stores in `proposals.payload`, per operation,
+under `internal/api/testdata/proposal_payloads/`: a new field on
+`CreateArtifactRequest`, `UpdateArtifactRequest`, `CreateLinkRequest` or
+`UpsertResultRequest` fails it until its "every field set" case sets the
+field. `TestImportFields` in `internal/domain/exports` lists every field
+reachable from `exports.ProjectExport` in
+`internal/domain/exports/testdata/import_fields.txt`, each `carried` (and
+to what) or `dropped` by the JSON import, measured by importing a document
+with that one field changed: a new field on an artifact, a link, an
+attachment, the product profile, an attribute definition or the export
+itself fails it until the golden is regenerated, so map the field in
+`createProjectFromExport` or `importArtifactsAndLinks` (`export.go`) first
+if an import should carry it. `TestExportDocsRoundTrip` in
+`internal/persistence/postgres` (with `OPENV_TEST_DATABASE_URL`) imports each
+`docs/exports/*.json` into a fresh database through the real repositories,
+exports it again as JSON, and counts per field what came back equal,
+remapped, stamped or dropped, under
+`internal/persistence/postgres/testdata/formats/roundtrip/`: a column a
+repository stops reading or writing changes it. Regenerate these in the
+pull request that changes them (which then needs a release note) with
+`UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^(TestFormatsGolden|TestProposalPayloadsGolden)$'`,
+`UPDATE_GOLDEN=1 go test ./internal/domain/exports -count=1 -run '^TestImportFields$'`
+and
+`UPDATE_GOLDEN=1 OPENV_TEST_DATABASE_URL=<server URL> go test ./internal/persistence/postgres -count=1 -run '^TestExportDocsRoundTrip$'`.
+A document added under `docs/exports/` needs its round-trip golden in the
+same pull request; the documents themselves are frozen. These test files
+are guard code of their own (`GUARD_CODE` row S9 in
+`scripts/refactor/refactor_guard.py`): a refactor pull request may change
+them only in a class C or T commit.
+
 What each notification delivers is frozen too (refactor plan step S10).
 `TestNotificationContent` in `internal/notify` drives every delivery path
 the server wires (the bus notifier's project and membership notifications,

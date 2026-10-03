@@ -1,0 +1,23 @@
+# What a proposal-mode agent run's create_artifact stores in proposals.payload
+# (refactor plan S9, invariant I16), reached by POST /api/v1/artifacts.
+# request: the DTO the handler decoded, as encoding/json writes it.
+# stored payload: the map maybePropose builds from it, after the proposal
+# service lifts a create_artifact's ref into its own column (keys sorted, as
+# encoding/json writes a map; Postgres keeps it as JSONB).
+# applied: the DTO the applier decodes from the stored payload on approval.
+# A refactor never changes this file; for a deliberate change regenerate it
+# with
+#   UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^(TestFormatsGolden|TestProposalPayloadsGolden)$'
+dto: CreateArtifactRequest
+case "every field set":
+  request: {"project_id":"5e9a0000-0000-4000-8000-000000000011","parent_id":"5e9a0000-0000-4000-8000-000000000101","type":"requirement","title":"Proposed","body":"The system shall be proposed.","sort_order":7,"attributes":{"priority":"must","tags":["a","b"],"weight":3},"ref":"tmp-1","copied_from":"5e9a0000-0000-4000-8000-000000000104"}
+  stored payload: {"attributes":{"priority":"must","tags":["a","b"],"weight":3},"body":"The system shall be proposed.","copied_from":"5e9a0000-0000-4000-8000-000000000104","parent_id":"5e9a0000-0000-4000-8000-000000000101","project_id":"5e9a0000-0000-4000-8000-000000000011","sort_order":7,"title":"Proposed","type":"requirement"}
+  stored ref: "tmp-1"
+  stored target_id: null
+  applied: {"project_id":"5e9a0000-0000-4000-8000-000000000011","parent_id":"5e9a0000-0000-4000-8000-000000000101","type":"requirement","title":"Proposed","body":"The system shall be proposed.","sort_order":7,"attributes":{"priority":"must","tags":["a","b"],"weight":3},"copied_from":"5e9a0000-0000-4000-8000-000000000104"}
+case "zero value":
+  request: {"project_id":"","type":"","title":"","body":"","attributes":null}
+  stored payload: {"attributes":null,"body":"","project_id":"","title":"","type":""}
+  stored ref: ""
+  stored target_id: null
+  applied: {"project_id":"","type":"","title":"","body":"","attributes":null}
