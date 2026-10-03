@@ -19,6 +19,14 @@ import (
 // it must. The rules are advisory — they change what the linter reports, never
 // whether a write is allowed.
 
+// registerProjectQualityRuleRoutes wires reading and updating a project's
+// quality rule set, its override of the workspace house style. The
+// workspace's own rule set is registered with the workspace routes.
+func (h *Handler) registerProjectQualityRuleRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.GetProjectQualityRules).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.UpdateProjectQualityRules).Methods("PUT")
+}
+
 // qualityRulesCatalog is the vocabulary the UI needs to render the editor
 // without hard-coding it: the conventions and rules the server understands.
 type qualityRulesCatalog struct {

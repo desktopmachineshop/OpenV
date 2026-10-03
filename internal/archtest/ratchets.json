@@ -328,7 +328,6 @@
   ],
   "file_lines": {
     "internal/api/org_handlers.go": 1552,
-    "internal/api/suite_handlers.go": 2245,
     "internal/domain/exports/reqif.go": 958,
     "internal/domain/reports/docx_report.go": 1193,
     "internal/domain/reports/pdf_report.go": 1463,
