@@ -541,7 +541,8 @@ window closes, and once more when it has.
 - **Hosted runners are unavailable** (`HOSTED_RUNNERS=off`): the API
   provisions runner containers via the host Docker socket, which Railway
   does not expose. Use host-side workers (`make worker`, `agentd`) on your
-  own machine with `RUNNER_API_URL` pointed at the public API domain — or
+  own machine with `OPENV_API_URL` (or `-api`) pointed at the public API
+  domain — or
   the **transient runner pool** in section 4, which needs no Docker daemon
   and gives members a runner without installing anything.
 - **Pool replicas are billed while idle.** Pre-warming is the point (a lease

@@ -122,7 +122,7 @@ scripted rewrite is never resolved in a merge but regenerated on the latest
 On **every** pull request, including every label change:
 
 1. **Goldens.** A golden on the list (`GOLDEN_LIST` in
-   `refactor_guard.py`, 20 entries) that is modified or deleted, a rename
+   `refactor_guard.py`, 21 entries) that is modified or deleted, a rename
    included, needs a `RELEASE_NOTES.md` bullet under `## Unreleased` or the
    maintainer's `behavior-change` label. Adding a golden is fine. An inline
    snapshot (`toMatchInlineSnapshot`, `toThrowErrorMatchingInlineSnapshot`)
