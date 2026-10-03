@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { InterviewChat } from './InterviewChat';
 import { publicInterviewAPI } from '../api/client';
 
@@ -21,14 +22,11 @@ vi.mock('../components/ui', () => ({
   useConfirm: () => () => Promise.resolve(true),
 }));
 
-vi.mock('../api/client', () => ({
-  publicInterviewAPI: {
-    intro: vi.fn(),
-    sendMessage: vi.fn(),
-    finish: vi.fn(),
-    streamUrl: (token: string) => `/public/interviews/${token}/stream`,
-  },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    publicInterviewAPI: { streamUrl: (token: string) => `/public/interviews/${token}/stream` },
+  })
+);
 
 const api = vi.mocked(publicInterviewAPI);
 

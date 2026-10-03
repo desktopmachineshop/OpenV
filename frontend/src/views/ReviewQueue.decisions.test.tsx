@@ -1,19 +1,16 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { mockApi } from '../test/mockApi';
 import { ReviewQueue } from './ReviewQueue';
 import { artifactAPI, attachmentAPI, reviewAPI } from '../api/client';
 import { postNote } from '../components/NoteComposer';
 
-vi.mock('../api/client', () => ({
-  reviewAPI: { get: vi.fn(), startRound: vi.fn() },
-  linkAPI: { confirm: vi.fn() },
-  artifactAPI: { changeStatus: vi.fn() },
-  attachmentAPI: {
-    listByProject: vi.fn(),
-    getDownloadUrl: (id: string, v?: number) => `/dl/${id}/${v ?? ''}`,
-  },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    attachmentAPI: { getDownloadUrl: (id: string, v?: number) => `/dl/${id}/${v ?? ''}` },
+  })
+);
 
 vi.mock('../state/store', () => ({ useAppStore: (sel: any) => sel({ projectId: 'p1' }) }));
 let decisionsOn = true;
