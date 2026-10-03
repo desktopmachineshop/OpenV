@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { Login } from './Login';
 
 // The router is mocked with the two pieces the view uses: Link renders a plain anchor
@@ -17,8 +18,8 @@ vi.mock('react-router-dom', () => {
   };
 });
 
-// The login module builds an axios client at import time, so the API is
-// mocked wholesale. config(), invitation() and me() answer from mutable
+// Every client method is stubbed and the view's auth calls are overridden
+// below: config(), invitation() and me() answer from mutable
 // fixtures so a test can put the view on a closed deployment, hand it an
 // invite link, or sign a particular account in. A null `me` fixture never
 // resolves, which is what "signed out" looks like here.
@@ -62,48 +63,49 @@ const record = (name: keyof Calls, data: any) => (...args: any[]) => {
   return Promise.resolve({ data });
 };
 
-vi.mock('../api/client', () => ({
-  DEFAULT_MIN_PASSWORD_LENGTH: 8,
-  authAPI: {
-    policy: () => Promise.resolve({ data: authFixtures.policy }),
-    config: () =>
-      authFixtures.config
-        ? Promise.resolve({ data: authFixtures.config })
-        : new Promise(() => {}),
-    me: () =>
-      authFixtures.me ? Promise.resolve({ data: authFixtures.me }) : new Promise(() => {}),
-    invitation: () =>
-      authFixtures.invitationPending
-        ? new Promise(() => {})
-        : authFixtures.invitation
-          ? Promise.resolve({ data: authFixtures.invitation })
-          : Promise.reject(new Error('invalid invitation')),
-    acceptInvitation: (...args: any[]) => {
-      authFixtures.calls.acceptInvitation.push(args);
-      return authFixtures.acceptError
-        ? Promise.reject(authFixtures.acceptError)
-        : Promise.resolve({ data: {} });
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    authAPI: {
+      policy: () => Promise.resolve({ data: authFixtures.policy }),
+      config: () =>
+        authFixtures.config
+          ? Promise.resolve({ data: authFixtures.config })
+          : new Promise(() => {}),
+      me: () =>
+        authFixtures.me ? Promise.resolve({ data: authFixtures.me }) : new Promise(() => {}),
+      invitation: () =>
+        authFixtures.invitationPending
+          ? new Promise(() => {})
+          : authFixtures.invitation
+            ? Promise.resolve({ data: authFixtures.invitation })
+            : Promise.reject(new Error('invalid invitation')),
+      acceptInvitation: (...args: any[]) => {
+        authFixtures.calls.acceptInvitation.push(args);
+        return authFixtures.acceptError
+          ? Promise.reject(authFixtures.acceptError)
+          : Promise.resolve({ data: {} });
+      },
+      logout: (...args: any[]) => record('logout', {})(...args),
+      login: (...args: any[]) =>
+        record('login', { id: 'u1', email: 'member@example.com', email_verified: true })(...args),
+      register: (...args: any[]) =>
+        record('register', {
+          id: 'u2',
+          email: 'invited@example.com',
+          email_verified: true,
+          ...(authFixtures.registerOutcome ? { invitation: authFixtures.registerOutcome } : {}),
+        })(...args),
+      oidcLoginUrl: () => '/oidc',
+      googleLoginUrl: () => '/google',
+      requestPasswordReset: (...args: any[]) => {
+        authFixtures.calls.requestPasswordReset.push(args);
+        return authFixtures.resetError
+          ? Promise.reject(authFixtures.resetError)
+          : Promise.resolve({ data: { sent_to: String(args[0]).trim().toLowerCase() } });
+      },
     },
-    logout: (...args: any[]) => record('logout', {})(...args),
-    login: (...args: any[]) =>
-      record('login', { id: 'u1', email: 'member@example.com', email_verified: true })(...args),
-    register: (...args: any[]) =>
-      record('register', {
-        id: 'u2',
-        email: 'invited@example.com',
-        email_verified: true,
-        ...(authFixtures.registerOutcome ? { invitation: authFixtures.registerOutcome } : {}),
-      })(...args),
-    oidcLoginUrl: () => '/oidc',
-    googleLoginUrl: () => '/google',
-    requestPasswordReset: (...args: any[]) => {
-      authFixtures.calls.requestPasswordReset.push(args);
-      return authFixtures.resetError
-        ? Promise.reject(authFixtures.resetError)
-        : Promise.resolve({ data: { sent_to: String(args[0]).trim().toLowerCase() } });
-    },
-  },
-}));
+  })
+);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 

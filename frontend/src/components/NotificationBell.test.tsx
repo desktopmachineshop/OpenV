@@ -1,21 +1,16 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { NotificationBell } from './NotificationBell';
 import { notificationsAPI } from '../api/client';
 
 // The notification panel: three views, the flag that survives a clear, the
 // two bulk actions, and paging through the history.
-vi.mock('../api/client', () => ({
-  notificationsAPI: {
-    list: vi.fn(),
-    markRead: vi.fn(),
-    markAllRead: vi.fn(),
-    clearAll: vi.fn(),
-    deleteCleared: vi.fn(),
-    setFlagged: vi.fn(),
-    streamUrl: () => 'http://localhost/api/v1/notifications/stream',
-  },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    notificationsAPI: { streamUrl: () => 'http://localhost/api/v1/notifications/stream' },
+  })
+);
 
 // vi.mock factories are hoisted above the imports, so what they close over
 // is hoisted with them.
