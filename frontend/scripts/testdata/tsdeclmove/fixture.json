@@ -1,0 +1,15 @@
+{
+  "description": "tsdeclmove's fixture spec: fixture/src/api/client.ts split the way F1 splits the real one.",
+  "source": "src/api/client.ts",
+  "barrelHeader": "// The fixture's barrel: every export of the client, from the modules that\n// hold it now.",
+  "default": { "types": "src/api/types/accounts.ts", "values": "src/api/accounts.ts" },
+  "modules": [
+    { "path": "src/api/http.ts", "header": "// The axios instance and its interceptors, and the helpers every area uses.", "declarations": ["API_URL", "client", "uploadConfig", "save"] },
+    { "path": "src/api/types/items.ts", "header": "// The types api/items.ts sends and receives.", "declarations": ["Progress", "ItemStatus", "Item", "ItemPage", "ItemQuery"] },
+    { "path": "src/api/types/widgets.ts", "header": "// The types api/widgets.ts sends and receives.", "declarations": ["Method", "Widgets"] },
+    { "path": "src/api/types/accounts.ts", "header": "/* The types api/accounts.ts sends and receives. */", "declarations": ["Role", "Account"] },
+    { "path": "src/api/items.ts", "header": "// Items.", "declarations": ["PAGE", "itemAPI"] },
+    { "path": "src/api/widgets.ts", "header": "// Widgets and exports.", "declarations": ["METHODS", "widgetAPI", "exportAPI"] },
+    { "path": "src/api/accounts.ts", "header": "// Accounts.", "declarations": ["accountAPI"] }
+  ]
+}

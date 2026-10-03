@@ -162,9 +162,10 @@ test:
 ## From .github/workflows/ci.yml: the backend job (gofmt over ./cmd
 ## ./internal; go vet and go test over the root, ./cmd/... and ./internal/...;
 ## the refactor tools' Python tests; the Postgres vector assertion) and the
-## frontend job (tsc, lint, vitest, the refactor tools' Node tests, vite
-## build and the bundle-shape check of refactor plan S12b). From
-## .github/workflows/release-notes.yml: the release-notes job.
+## frontend job (tsc, lint, vitest, the refactor tools' Node tests, among
+## them tsdeclmove's F1 run, which repeats those gates on a copy of the tree
+## with F1 generated, vite build and the bundle-shape check of refactor plan
+## S12b). From .github/workflows/release-notes.yml: the release-notes job.
 ## The Postgres-backed Go tests run only when OPENV_TEST_DATABASE_URL points
 ## at a database, as it does in CI; they skip otherwise. CI runs them twice,
 ## on postgres:15 (no vector extension) and on pgvector (backend-pgvector),

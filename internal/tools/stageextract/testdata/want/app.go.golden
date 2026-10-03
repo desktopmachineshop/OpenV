@@ -1,0 +1,27 @@
+package main
+
+import (
+	"bytes"
+	"context"
+)
+
+// app holds the locals of main() that more than one of its stages uses, as
+// fields: main() makes one and calls the stages, its methods in the wire_*.go
+// files, in order.
+type app struct {
+	ctx   context.Context
+	stop  func()
+	tick  *ticker
+	dsn   string
+	port  string
+	limit int
+	db    *store
+	log   *bytes.Buffer
+	subs  []string
+	svc   *service
+	count int
+	names []string
+	label string
+	total int
+	first string
+}

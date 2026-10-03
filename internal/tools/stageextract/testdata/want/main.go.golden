@@ -1,0 +1,28 @@
+// Command fixture is stageextract's fixture (refactor plan step S14c): a
+// main() with the shapes cmd/server's has, split by testdata/fixture.json.
+// It prints what it does, so the split program must print the same.
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	a := &app{}
+	fmt.Println("start")
+	stop, stopTick := a.signals()
+	defer stop()
+	defer stopTick()
+	a.settings()
+	closeDB := a.connect()
+	defer closeDB()
+	a.log = newLog()
+	defer fmt.Println("deferred with an argument:", a.port)
+	a.services()
+	a.jobs()
+
+	// The tail stays in main.
+	fmt.Fprintln(a.log, "served", a.svc.subs, a.names, a.subs)
+	fmt.Print(a.log.String())
+	a.stop()
+}
