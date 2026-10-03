@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { authAPI, metaAPI, orgsAPI } from './api/client';
 import { useAppStore } from './state/store';
 import { pickActiveOrg } from './utils/activeOrg';
+import { readActiveOrg } from './state/activeOrgStorage';
 import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
 import { Login } from './views/Login';
@@ -135,14 +136,8 @@ function App() {
       .list()
       .then((res) => {
         const orgs = res.data.orgs || [];
-        let tabOrg = '';
-        let lastUsed = '';
-        try {
-          tabOrg = sessionStorage.getItem('openv_active_org') || '';
-          lastUsed = localStorage.getItem('openv_active_org') || '';
-        } catch {
-          // storage unavailable: the server's answer decides
-        }
+        // With storage unavailable both are '' and the server's answer decides.
+        const { tabOrg, lastUsed } = readActiveOrg();
         const active = pickActiveOrg(orgs, tabOrg, res.data.active_org || '', lastUsed);
         setOrgs(orgs);
         if (active) setActiveOrgId(active, { clearProjects: false });
