@@ -225,6 +225,23 @@ check a boot in `misconfiguredBoots` (`boot_misconfigured_test.go`), each
 with its golden; `TestBootGoldensAreClaimed` fails on a golden no boot
 writes.
 
+Until refactor step M4 splits it into `wire_<stage>.go` stages,
+`cmd/server`'s `main()` is also split, on a copy of the module, by
+`TestM4OnTheWorkingTree` in `internal/tools/stageextract` (step S14c), as
+M4 will be generated from `internal/tools/stageextract/specs/M4.json`, and
+the copy must build, keep `boot_steps.txt`, pass `internal/archtest` and
+movecheck's proof, and, with `OPENV_TEST_DATABASE_URL` set, the boot
+profiles. A statement added to `main()` needs no edit there: it joins the
+range it sits in, and a range whose first line moved is found again by its
+text. If stageextract then refuses the split for a reason the spec settles
+(a stage that would pass 100 lines, a range whose first line is gone, a
+`defer` inside a range), the test skips and names it (`go test -v` shows
+why); that is for M4 to fix when it regenerates the split, not for your
+pull request. The generator's own goldens, what it makes of its fixture
+under `internal/tools/stageextract/testdata/want/`, change only when the
+generator does; regenerate with
+`UPDATE_GOLDEN=1 go test ./internal/tools/stageextract -count=1 -run '^TestFixture$'`.
+
 The API tour beside it (refactor plan steps S5a–S5e) boots the same binary
 once per area, on a database of its own, with `TZ=UTC` and the recording
 proxy, registers its accounts through the API and drives the area's routes:
