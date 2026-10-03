@@ -1,15 +1,11 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { EvidencePicker } from './EvidencePicker';
 import { evidenceAPI } from '../api/client';
 import { parseConditions, formatConditions, humanBytes } from '../utils/evidence';
 
-vi.mock('../api/client', () => ({
-  evidenceAPI: {
-    cite: vi.fn(),
-    uncite: vi.fn(),
-  },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 vi.mock('./ui', () => ({
   Modal: ({ children }: any) => <div>{children}</div>,

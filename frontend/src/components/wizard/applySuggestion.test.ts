@@ -1,3 +1,4 @@
+import { mockApi } from '../../test/mockApi';
 import { Artifact, artifactAPI } from '../../api/client';
 import { applySuggestionsToProject } from './applySuggestion';
 
@@ -6,10 +7,7 @@ import { applySuggestionsToProject } from './applySuggestion';
 // must renumber only what changed, a placed artifact must land where the
 // card said, and a batch must see its own earlier writes.
 
-vi.mock('../../api/client', () => ({
-  artifactAPI: { create: vi.fn(), update: vi.fn() },
-  productProfileAPI: { get: vi.fn(), update: vi.fn() },
-}));
+vi.mock('../../api/client', async (orig) => mockApi(await orig()));
 
 const api = vi.mocked(artifactAPI);
 
