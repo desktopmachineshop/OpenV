@@ -104,7 +104,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 			})
 		}
 		t.Run("create an artifact with "+key.name, func(t *testing.T) {
-			h, _ := copyHandler()
+			h, _ := copyHandler(t)
 			h.orgService, h.memberService = roles()
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/artifacts",
 				strings.NewReader(`{"project_id":"p1","type":"requirement","title":"New","body":"x"}`))

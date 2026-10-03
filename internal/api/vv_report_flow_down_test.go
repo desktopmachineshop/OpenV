@@ -114,7 +114,7 @@ func flowDownDocsHandler(t *testing.T) (*Handler, *fakeExportService) {
 			"tc-g-tidy": {TestCaseID: "tc-g-tidy", Status: vv.ResultPass},
 		},
 	}}
-	h := vvRoutesHandler(map[string]*projects.Project{
+	h := vvRoutesHandler(t, map[string]*projects.Project{
 		"plane": {ID: "plane", OrgID: "org-1"},
 		"gear":  {ID: "gear", OrgID: "org-1"},
 		"solo":  {ID: "solo", OrgID: "org-1"},
@@ -364,7 +364,7 @@ func TestFlowDownCountsAChildProjectReachedTwice(t *testing.T) {
 			Links:           []*links.Link{link("tc-h1", "verifies", "h1"), link("h1", "refines", "g2")},
 			LinkedArtifacts: []*exports.LinkedArtifact{far(g2)}}),
 	}}
-	h := vvRoutesHandler(map[string]*projects.Project{"P": {ID: "P", OrgID: "org-1"}},
+	h := vvRoutesHandler(t, map[string]*projects.Project{"P": {ID: "P", OrgID: "org-1"}},
 		map[string]map[string]string{"P": {"viewer": members.RoleViewer}}, exportSvc, nil,
 		&fakeVVService{latest: map[string]map[string]*vv.TestResult{
 			"G": {"tc-g1": {TestCaseID: "tc-g1", Status: vv.ResultPass}},

@@ -54,7 +54,7 @@ func (f *renameAttachmentFake) RenameFigure(id, title string, by *string) (int, 
 	return a.Version, nil
 }
 
-func renameHandler(plan string) (*Handler, *renameAttachmentFake, *fakeArtifactService, *fakeChatterService) {
+func renameHandler(t *testing.T, plan string) (*Handler, *renameAttachmentFake, *fakeArtifactService, *fakeChatterService) {
 	att := &renameAttachmentFake{byID: map[string]*attachments.Attachment{
 		"f1": {ID: "f1", ArtifactID: "a1", Filename: "REQ-1-FIG-1.png", OriginalFilename: "Screenshot 2026-09-14 at 09.12.33.png", FigureRef: "REQ-1-FIG-1", FigureNum: 1, Version: 1},
 	}}
@@ -62,14 +62,14 @@ func renameHandler(plan string) (*Handler, *renameAttachmentFake, *fakeArtifactS
 		"a1": {ID: "a1", ProjectID: "p1", Ref: "REQ-1"},
 	}}
 	notes := &fakeChatterService{}
-	h := &Handler{
-		attachmentService: att,
-		artifactService:   art,
-		chatterService:    notes,
-		projectService:    &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}},
-		orgService:        &fakeOrgService{plan: plan},
-		memberService:     &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor", "u2": "viewer"}}},
-	}
+	h := newTestHandler(t, func(h *Handler) {
+		h.attachmentService = att
+		h.artifactService = art
+		h.chatterService = notes
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}}
+		h.orgService = &fakeOrgService{plan: plan}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor", "u2": "viewer"}}}
+	})
 	return h, att, art, notes
 }
 
@@ -83,7 +83,7 @@ func renameRequest(id, userID, body string) *http.Request {
 }
 
 func TestRenameAttachmentRecordsAVersionAndANote(t *testing.T) {
-	h, att, art, notes := renameHandler(orgs.PlanFree)
+	h, att, art, notes := renameHandler(t, orgs.PlanFree)
 	w := httptest.NewRecorder()
 	h.RenameAttachment(w, renameRequest("f1", "u1", `{"title":"  Pump curve at 50 Hz  "}`))
 	if w.Code != http.StatusOK {
@@ -118,7 +118,7 @@ func TestRenameAttachmentRecordsAVersionAndANote(t *testing.T) {
 }
 
 func TestRenameAttachmentUnchangedTitleWritesNothing(t *testing.T) {
-	h, att, art, notes := renameHandler(orgs.PlanFree)
+	h, att, art, notes := renameHandler(t, orgs.PlanFree)
 	att.byID["f1"].Title = "Pump curve"
 	w := httptest.NewRecorder()
 	h.RenameAttachment(w, renameRequest("f1", "u1", `{"title":"Pump curve "}`))
@@ -131,7 +131,7 @@ func TestRenameAttachmentUnchangedTitleWritesNothing(t *testing.T) {
 }
 
 func TestRenameAttachmentClearsToTheUploadedName(t *testing.T) {
-	h, att, _, notes := renameHandler(orgs.PlanFree)
+	h, att, _, notes := renameHandler(t, orgs.PlanFree)
 	att.byID["f1"].Title = "Pump curve"
 	w := httptest.NewRecorder()
 	h.RenameAttachment(w, renameRequest("f1", "u1", `{"title":""}`))
@@ -167,7 +167,7 @@ func TestRenameAttachmentRefusals(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, att, _, _ := renameHandler(tc.plan)
+			h, att, _, _ := renameHandler(t, tc.plan)
 			w := httptest.NewRecorder()
 			h.RenameAttachment(w, renameRequest(tc.id, tc.user, tc.body))
 			if w.Code != tc.status {

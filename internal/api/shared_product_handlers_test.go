@@ -87,13 +87,13 @@ func (f *fakeSharedProductService) Delete(id string) error {
 	return nil
 }
 
-func sharedTestHandler(svc *fakeSharedProductService) *Handler {
-	return &Handler{
-		sharedProductService: svc,
-		orgService: &fakeOrgService{roles: map[string]map[string]string{
+func sharedTestHandler(t *testing.T, svc *fakeSharedProductService) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.sharedProductService = svc
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"member": orgs.RoleMember, "admin": orgs.RoleAdmin},
-		}},
-	}
+		}}
+	})
 }
 
 // inOrg attaches a signed-in user and their active workspace.
@@ -140,7 +140,7 @@ func TestPublishSharedProductRequiresAPerson(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := &fakeSharedProductService{}
-			h := sharedTestHandler(svc)
+			h := sharedTestHandler(t, svc)
 			r := tc.decorate(httptest.NewRequest(http.MethodPost, "/api/v1/shared-products", strings.NewReader(validShareBody)))
 			w := httptest.NewRecorder()
 			h.PublishSharedProduct(w, r)
@@ -160,7 +160,7 @@ func TestPublishSharedProductRequiresAPerson(t *testing.T) {
 // rate limit and the takedown trail cannot be spoofed by the payload.
 func TestPublishSharedProductAttributesToTheCaller(t *testing.T) {
 	svc := &fakeSharedProductService{}
-	h := sharedTestHandler(svc)
+	h := sharedTestHandler(t, svc)
 
 	body := `{"id":"forged","created_by_org":"someone-else","category":"toy","name":"Widget",` +
 		`"description":"A toy that does a thing.","vision":"Widget wins.","problem":"Things.",` +
@@ -183,7 +183,7 @@ func TestPublishSharedProductAttributesToTheCaller(t *testing.T) {
 // TestListSharedProductsHidesAuthors: the pool is cross-tenant, so the payload
 // must carry the joke and nothing about who wrote it or where they work.
 func TestListSharedProductsHidesAuthors(t *testing.T) {
-	h := sharedTestHandler(&fakeSharedProductService{})
+	h := sharedTestHandler(t, &fakeSharedProductService{})
 	r := inOrg(httptest.NewRequest(http.MethodGet, "/api/v1/shared-products", nil), "member")
 	w := httptest.NewRecorder()
 	h.ListSharedProducts(w, r)
@@ -211,7 +211,7 @@ func TestListSharedProductsHidesAuthors(t *testing.T) {
 // shared, so "voted" has to mean "you voted", not "somebody did".
 func TestListSharedProductsSortAndViewer(t *testing.T) {
 	svc := &fakeSharedProductService{}
-	h := sharedTestHandler(svc)
+	h := sharedTestHandler(t, svc)
 
 	r := inOrg(httptest.NewRequest(http.MethodGet, "/api/v1/shared-products?sort=top_week&limit=5", nil), "member")
 	w := httptest.NewRecorder()
@@ -253,7 +253,7 @@ func TestListSharedProductsSortAndViewer(t *testing.T) {
 // is a 400, not a silently reordered list — the client asked a question that
 // was not answered.
 func TestListSharedProductsRejectsUnknownSort(t *testing.T) {
-	h := sharedTestHandler(&fakeSharedProductService{listErr: sharedproducts.ErrBadSort})
+	h := sharedTestHandler(t, &fakeSharedProductService{listErr: sharedproducts.ErrBadSort})
 	r := inOrg(httptest.NewRequest(http.MethodGet, "/api/v1/shared-products?sort=popular", nil), "member")
 	w := httptest.NewRecorder()
 	h.ListSharedProducts(w, r)
@@ -272,7 +272,7 @@ func TestVoteSharedProductNeedsAPerson(t *testing.T) {
 
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
 		svc := &fakeSharedProductService{}
-		h := sharedTestHandler(svc)
+		h := sharedTestHandler(t, svc)
 
 		w := httptest.NewRecorder()
 		anon := withID(httptest.NewRequest(method, "/api/v1/shared-products/p1/vote", nil))
@@ -323,7 +323,7 @@ func TestVoteSharedProductNeedsAPerson(t *testing.T) {
 // gone from every roll list, so voting for it answers as it would for an id
 // that never existed — no signal that something is there.
 func TestVoteHiddenSharedProductIsNotFound(t *testing.T) {
-	h := sharedTestHandler(&fakeSharedProductService{voteErr: sharedproducts.ErrNotFound})
+	h := sharedTestHandler(t, &fakeSharedProductService{voteErr: sharedproducts.ErrNotFound})
 	r := mux.SetURLVars(
 		inOrg(httptest.NewRequest(http.MethodPut, "/api/v1/shared-products/p1/vote", nil), "member"),
 		map[string]string{"id": "p1"},
@@ -352,7 +352,7 @@ func TestSharedProductErrorStatuses(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.err.Error(), func(t *testing.T) {
-			h := sharedTestHandler(&fakeSharedProductService{publishErr: tc.err})
+			h := sharedTestHandler(t, &fakeSharedProductService{publishErr: tc.err})
 			r := inOrg(httptest.NewRequest(http.MethodPost, "/api/v1/shared-products", strings.NewReader(validShareBody)), "member")
 			w := httptest.NewRecorder()
 			h.PublishSharedProduct(w, r)
@@ -372,7 +372,7 @@ func TestDeleteSharedProductIsAdminOnly(t *testing.T) {
 	}
 
 	svc := &fakeSharedProductService{}
-	h := sharedTestHandler(svc)
+	h := sharedTestHandler(t, svc)
 	w := httptest.NewRecorder()
 	h.DeleteSharedProduct(w, newReq("member", false))
 	if w.Code != http.StatusForbidden {
@@ -396,7 +396,7 @@ func TestDeleteSharedProductIsAdminOnly(t *testing.T) {
 // makes "several distinct reporters hide an entry" mean anything.
 func TestReportSharedProductNeedsAPerson(t *testing.T) {
 	svc := &fakeSharedProductService{}
-	h := sharedTestHandler(svc)
+	h := sharedTestHandler(t, svc)
 
 	anon := mux.SetURLVars(httptest.NewRequest(http.MethodPost, "/api/v1/shared-products/p1/report", nil), map[string]string{"id": "p1"})
 	w := httptest.NewRecorder()

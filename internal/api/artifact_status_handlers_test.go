@@ -67,24 +67,24 @@ func TestChangeArtifactStatus(t *testing.T) {
 			artifactID: {ID: artifactID, ProjectID: projectID, Type: "requirement", Title: "Req", Status: status, Version: 1},
 		}}
 		chatterSvc := &fakeChatterService{}
-		h := &Handler{
-			artifactService: artifactSvc,
-			chatterService:  chatterSvc,
-			projectService: &fakeProjectService{byID: map[string]*projects.Project{
+		h := newTestHandler(t, func(h *Handler) {
+			h.artifactService = artifactSvc
+			h.chatterService = chatterSvc
+			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 				projectID: {ID: projectID, OrgID: orgID},
-			}},
-			orgService: &fakeOrgService{roles: map[string]map[string]string{orgID: {}}},
-			memberService: &fakeMemberService{roles: map[string]map[string]string{
+			}}
+			h.orgService = &fakeOrgService{roles: map[string]map[string]string{orgID: {}}}
+			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 				projectID: {
 					"editor": members.RoleEditor,
 					"viewer": members.RoleViewer,
 				},
-			}},
-			agentService: &fakeAgentService{byID: map[string]*agents.Agent{
+			}}
+			h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
 				"agent-direct":   {ID: "agent-direct", WriteMode: agents.WriteModeDirect},
 				"agent-proposal": {ID: "agent-proposal", WriteMode: agents.WriteModeProposal},
-			}},
-		}
+			}}
+		})
 		return h, artifactSvc, chatterSvc
 	}
 

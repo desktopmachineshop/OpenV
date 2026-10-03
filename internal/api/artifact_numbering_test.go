@@ -31,16 +31,16 @@ func (f *numberingArtifactService) ListArtifactsPage(projectID, artifactType, ow
 	return page, len(f.all), nil
 }
 
-func numberingHandler(svc *numberingArtifactService) *Handler {
-	return &Handler{
-		artifactService: svc,
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+func numberingHandler(t *testing.T, svc *numberingArtifactService) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.artifactService = svc
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
-		}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"viewer": members.RoleViewer},
-		}},
-	}
+		}}
+	})
 }
 
 func numberingDoc() []*artifacts.Artifact {
@@ -72,7 +72,7 @@ func listArtifacts(t *testing.T, h *Handler, query string) []map[string]interfac
 // root section that the page does not contain.
 func TestListArtifactsNumbersFromTheWholeDocument(t *testing.T) {
 	svc := &numberingArtifactService{all: numberingDoc()}
-	got := listArtifacts(t, numberingHandler(svc), "&doc_numbers=1")
+	got := listArtifacts(t, numberingHandler(t, svc), "&doc_numbers=1")
 
 	if len(got) != 2 {
 		t.Fatalf("got %d rows, want 2", len(got))
@@ -97,7 +97,7 @@ func TestListArtifactsNumbersFromTheWholeDocument(t *testing.T) {
 // do not.
 func TestListArtifactsSkipsNumberingByDefault(t *testing.T) {
 	svc := &numberingArtifactService{all: numberingDoc()}
-	got := listArtifacts(t, numberingHandler(svc), "")
+	got := listArtifacts(t, numberingHandler(t, svc), "")
 
 	if svc.fullReads != 0 {
 		t.Errorf("full-project reads = %d, want 0 without doc_numbers=1", svc.fullReads)

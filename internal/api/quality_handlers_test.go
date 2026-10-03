@@ -18,16 +18,16 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
-func newQualityHandler() *Handler {
-	return &Handler{
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+func newQualityHandler(t *testing.T) *Handler {
+	return newTestHandler(t, func(h *Handler) {
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
-		}},
-		orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"viewer-a": members.RoleViewer},
-		}},
-		artifactService: &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+		}}
+		h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"req-weak": {
 				ID:        "req-weak",
 				ProjectID: "proj-a",
@@ -42,15 +42,15 @@ func newQualityHandler() *Handler {
 				Title:     "Section",
 				Body:      "Intro",
 			},
-		}},
-		exportService: &fakeExportService{data: []byte(`{
+		}}
+		h.exportService = &fakeExportService{data: []byte(`{
 			"project_id": "proj-a",
 			"artifacts": [
 				{"id":"req-weak","project_id":"proj-a","type":"requirement","title":"Speed","body":"The system should be fast and user-friendly."},
 				{"id":"heading-1","project_id":"proj-a","type":"heading","title":"Section","body":"Intro"}
 			]
-		}`)},
-	}
+		}`)}
+	})
 }
 
 func reqWithViewer(target, projectID string) *http.Request {
@@ -63,7 +63,7 @@ func reqWithViewer(target, projectID string) *http.Request {
 // types and returns the score/finding shape.
 func TestProjectQualityShape(t *testing.T) {
 	w := httptest.NewRecorder()
-	newQualityHandler().GetProjectQuality(w, reqWithViewer("proj-a", "proj-a"))
+	newQualityHandler(t).GetProjectQuality(w, reqWithViewer("proj-a", "proj-a"))
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 	}
@@ -89,7 +89,7 @@ func TestProjectQualityRequiresViewer(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/projects/proj-a/quality", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": "proj-a"})
-	newQualityHandler().GetProjectQuality(w, r) // no user in context
+	newQualityHandler(t).GetProjectQuality(w, r) // no user in context
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401 (body %q)", w.Code, w.Body.String())
 	}
@@ -99,7 +99,7 @@ func TestProjectQualityRequiresViewer(t *testing.T) {
 // score for a requirement.
 func TestArtifactQualityShape(t *testing.T) {
 	w := httptest.NewRecorder()
-	newQualityHandler().GetArtifactQuality(w, reqWithViewer("req-weak", "proj-a"))
+	newQualityHandler(t).GetArtifactQuality(w, reqWithViewer("req-weak", "proj-a"))
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 	}
@@ -116,7 +116,7 @@ func TestArtifactQualityShape(t *testing.T) {
 // 400 rather than returning an empty score.
 func TestArtifactQualityRejectsNonRequirement(t *testing.T) {
 	w := httptest.NewRecorder()
-	newQualityHandler().GetArtifactQuality(w, reqWithViewer("heading-1", "proj-a"))
+	newQualityHandler(t).GetArtifactQuality(w, reqWithViewer("heading-1", "proj-a"))
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400 (body %q)", w.Code, w.Body.String())
 	}
@@ -168,7 +168,7 @@ func unlinkedCitations(findings []quality.Finding) []string {
 // link's ends from the project's own artifacts only. A citation of an
 // artifact it holds no link to is flagged by both.
 func TestTheReportAndTheLintAgreeOnACrossProjectCitation(t *testing.T) {
-	h := newQualityHandler()
+	h := newQualityHandler(t)
 	arts := h.artifactService.(*fakeArtifactService).byID
 	arts["req-cites"] = &artifacts.Artifact{ID: "req-cites", ProjectID: "proj-a", Ref: "REQ-1",
 		Type: artifacts.TypeRequirement, Title: "Archive",

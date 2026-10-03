@@ -21,7 +21,7 @@ import (
 
 // newReportFormatHandler builds a handler whose report service is sourced from a
 // baseline snapshot, so GenerateReport can run without a live export service.
-func newReportFormatHandler() *Handler {
+func newReportFormatHandler(t *testing.T) *Handler {
 	snapshot := `{
 		"project_name": "Widget Spec",
 		"artifacts": [
@@ -37,17 +37,17 @@ func newReportFormatHandler() *Handler {
 			Snapshot:  json.RawMessage(snapshot),
 		},
 	}})
-	return &Handler{
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+	return newTestHandler(t, func(h *Handler) {
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
-		}},
-		orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		}}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"viewer-a": members.RoleViewer},
-		}},
-		baselineService: baselineSvc,
-		reportService:   reports.NewService(nil, baselineSvc),
-	}
+		}}
+		h.baselineService = baselineSvc
+		h.reportService = reports.NewService(nil, baselineSvc)
+	})
 }
 
 func reportRequest(query string) *http.Request {
@@ -61,7 +61,7 @@ func reportRequest(query string) *http.Request {
 // zip carrying word/document.xml.
 func TestGenerateReportDOCXFormat(t *testing.T) {
 	w := httptest.NewRecorder()
-	newReportFormatHandler().GenerateReport(w, reportRequest("&format=docx"))
+	newReportFormatHandler(t).GenerateReport(w, reportRequest("&format=docx"))
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
@@ -99,7 +99,7 @@ func TestGenerateReportDOCXFormat(t *testing.T) {
 // PDF, preserving existing behavior.
 func TestGenerateReportDefaultsToPDF(t *testing.T) {
 	w := httptest.NewRecorder()
-	newReportFormatHandler().GenerateReport(w, reportRequest(""))
+	newReportFormatHandler(t).GenerateReport(w, reportRequest(""))
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
@@ -115,7 +115,7 @@ func TestGenerateReportDefaultsToPDF(t *testing.T) {
 // TestGenerateReportUnsupportedFormat confirms an unknown format is a 400.
 func TestGenerateReportUnsupportedFormat(t *testing.T) {
 	w := httptest.NewRecorder()
-	newReportFormatHandler().GenerateReport(w, reportRequest("&format=xml"))
+	newReportFormatHandler(t).GenerateReport(w, reportRequest("&format=xml"))
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400 (body %q)", w.Code, w.Body.String())

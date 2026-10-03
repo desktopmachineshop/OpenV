@@ -54,17 +54,17 @@ func (f *fakeVVService) ListRuns(projectID string) ([]*vv.TestRun, error) {
 // roles, and the services those routes read, with the real report service
 // over exportSvc and baselineSvc. A nil service is one the test never
 // reaches.
-func vvRoutesHandler(byID map[string]*projects.Project, roles map[string]map[string]string,
+func vvRoutesHandler(t *testing.T, byID map[string]*projects.Project, roles map[string]map[string]string,
 	exportSvc exports.Service, baselineSvc baselines.Service, vvSvc *fakeVVService) *Handler {
-	return &Handler{
-		projectService:  &fakeProjectService{byID: byID},
-		orgService:      &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
-		memberService:   &fakeMemberService{roles: roles},
-		exportService:   exportSvc,
-		baselineService: baselineSvc,
-		vvService:       vvSvc,
-		reportService:   reports.NewService(exportSvc, baselineSvc),
-	}
+	return newTestHandler(t, func(h *Handler) {
+		h.projectService = &fakeProjectService{byID: byID}
+		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.memberService = &fakeMemberService{roles: roles}
+		h.exportService = exportSvc
+		h.baselineService = baselineSvc
+		h.vvService = vvSvc
+		h.reportService = reports.NewService(exportSvc, baselineSvc)
+	})
 }
 
 // TestBaselineLoadsScopedToProject locks in that every endpoint resolving a
@@ -90,7 +90,7 @@ func TestBaselineLoadsScopedToProject(t *testing.T) {
 				Snapshot:  json.RawMessage(`{"project_name":"` + canary + `"}`),
 			},
 		}})
-		return vvRoutesHandler(map[string]*projects.Project{
+		return vvRoutesHandler(t, map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
 			"proj-b": {ID: "proj-b", OrgID: "org-2"},
 		}, map[string]map[string]string{

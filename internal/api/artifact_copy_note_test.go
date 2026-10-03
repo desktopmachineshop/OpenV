@@ -31,18 +31,18 @@ func (f *copyArtifactFake) CreateArtifact(a *artifacts.Artifact) error {
 	return nil
 }
 
-func copyHandler() (*Handler, *fakeChatterService) {
+func copyHandler(t *testing.T) (*Handler, *fakeChatterService) {
 	notes := &fakeChatterService{}
-	h := &Handler{
-		artifactService: &copyArtifactFake{byID: map[string]*artifacts.Artifact{
+	h := newTestHandler(t, func(h *Handler) {
+		h.artifactService = &copyArtifactFake{byID: map[string]*artifacts.Artifact{
 			"src":   {ID: "src", ProjectID: "p1", Ref: "REQ-12", Title: "Pump pressure", Version: 3},
 			"other": {ID: "other", ProjectID: "p2", Ref: "REQ-1", Title: "Secret", Version: 1},
-		}},
-		chatterService: notes,
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}, "p2": {ID: "p2", OrgID: "o2"}}},
-		memberService:  &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor"}}},
-		orgService:     &fakeOrgService{},
-	}
+		}}
+		h.chatterService = notes
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}, "p2": {ID: "p2", OrgID: "o2"}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor"}}}
+		h.orgService = &fakeOrgService{}
+	})
 	return h, notes
 }
 
@@ -65,7 +65,7 @@ func TestCreateArtifactNotesWhereACopyCameFrom(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, notes := copyHandler()
+			h, notes := copyHandler(t)
 			w := httptest.NewRecorder()
 			h.CreateArtifact(w, createReq(tc.body))
 			if w.Code != http.StatusCreated {

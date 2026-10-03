@@ -30,7 +30,9 @@ type fakeVVService struct {
 
 // vvHandler is a handler with only a V&V service, the one these handlers
 // reach before they answer.
-func vvHandler(svc vv.Service) *Handler { return &Handler{vvService: svc} }
+func vvHandler(t *testing.T, svc vv.Service) *Handler {
+	return newTestHandler(t, func(h *Handler) { h.vvService = svc })
+}
 
 func (f *fakeVVService) GetRun(id string) (*vv.TestRun, error) {
 	if f.run == nil {
@@ -57,7 +59,7 @@ func TestUpsertTestResultErrorContract(t *testing.T) {
 
 	upsert := func(t *testing.T, svc *fakeVVService) *httptest.ResponseRecorder {
 		t.Helper()
-		h := vvHandler(svc)
+		h := vvHandler(t, svc)
 		body := `{"test_case_id":"tc-1","status":"pass"}`
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/test-runs/trun-1/results", strings.NewReader(body))
 		// Platform admin passes the role check without further services.
@@ -131,7 +133,7 @@ func TestDeleteTestRunKeepsARunWithResults(t *testing.T) {
 		t.Helper()
 		svc := &fakeVVDelete{deleteErr: err}
 		svc.run = &vv.TestRun{ID: "trun-1", ProjectID: "proj-1", Status: vv.RunStatusCompleted}
-		h := vvHandler(svc)
+		h := vvHandler(t, svc)
 		r := httptest.NewRequest(http.MethodDelete, "/api/v1/test-runs/trun-1", nil)
 		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true}))
 		r = mux.SetURLVars(r, map[string]string{"id": "trun-1"})
@@ -187,8 +189,8 @@ func TestLaunchingAnAgentOnAClosedRunAnswersAsAResultThere(t *testing.T) {
 			run := &vv.TestRun{ID: "trun-1", ProjectID: "proj-1", Status: status}
 			// The result's refusal is the store's, which the service repeats.
 			results := &fakeVVService{run: run, upsertErr: vv.CheckAcceptsResults(status)}
-			result := send(t, "/api/v1/test-runs/trun-1/results", vvHandler(results).UpsertTestResult)
-			launch := send(t, "/api/v1/test-runs/trun-1/agent-run", vvHandler(&fakeVVService{run: run}).LaunchTestRunAgent)
+			result := send(t, "/api/v1/test-runs/trun-1/results", vvHandler(t, results).UpsertTestResult)
+			launch := send(t, "/api/v1/test-runs/trun-1/agent-run", vvHandler(t, &fakeVVService{run: run}).LaunchTestRunAgent)
 
 			want := `{"error":"this test run is ` + status + `; only in-progress runs accept new results"}` + "\n"
 			if result.Code != http.StatusConflict || result.Body.String() != want {

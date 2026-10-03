@@ -477,9 +477,8 @@ type s9Fixture struct {
 // baselines' snapshots through the real export service with their capture
 // time pinned.
 //
-// The handler is vvHandler's literal with every service it needs set: K6's
-// ratchet on Handler literals in tests (handler_literals_in_tests) may only
-// fall until M13's newTestHandler, so this file adds none.
+// The handler is vvHandler's, which newTestHandler builds (K6), with every
+// service it needs set.
 func newS9Fixture(t *testing.T) *s9Fixture {
 	t.Helper()
 	d := newS9Data(t)
@@ -521,7 +520,7 @@ func newS9Fixture(t *testing.T) *s9Fixture {
 			CreatedBy: s9Ptr(s9Admin), CreatedByName: "Ada Admin"}
 	}
 
-	h := vvHandler(vvSvc)
+	h := vvHandler(t, vvSvc)
 	h.projectService = projectSvc
 	h.exportService = exportSvc
 	h.baselineService = baselineSvc

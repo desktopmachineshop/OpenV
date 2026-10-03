@@ -55,7 +55,7 @@ func TestRunTokensCreateNoProject(t *testing.T) {
 	for _, route := range routes {
 		for _, tc := range runs {
 			t.Run(route.name+" by "+tc.name, func(t *testing.T) {
-				h, _ := copyHandler()
+				h, _ := copyHandler(t)
 				store := h.projectService.(*fakeProjectService)
 				w := httptest.NewRecorder()
 				route.create(h, w, request(route.body, func(ctx context.Context) context.Context {
@@ -72,7 +72,7 @@ func TestRunTokensCreateNoProject(t *testing.T) {
 	}
 
 	t.Run("a person creates a project and owns it", func(t *testing.T) {
-		h, _ := copyHandler()
+		h, _ := copyHandler(t)
 		store := h.projectService.(*fakeProjectService)
 		w := httptest.NewRecorder()
 		h.CreateProject(w, request(`{"name":"Mine"}`, func(ctx context.Context) context.Context {
