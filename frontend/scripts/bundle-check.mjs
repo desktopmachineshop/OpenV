@@ -93,9 +93,12 @@ export function readBuild(root, buildDir) {
     throw new BuildError(`${posix(path.relative(root, buildDir)) || buildDir} holds no build: run npm run build first`);
   }
   const entries = [];
-  for (const [, attrs] of fs.readFileSync(html, 'utf8').matchAll(/<script\b([^>]*)>/g)) {
-    const src = /\bsrc="([^"]+)"/.exec(attrs);
-    if (/\btype="module"/.test(attrs) && src) entries.push(path.basename(src[1]));
+  // HTML tag and attribute names are case-insensitive, and a value may be
+  // single-quoted or bare: read them as a browser would.
+  for (const [, attrs] of fs.readFileSync(html, 'utf8').matchAll(/<script\b([^>]*)>/gi)) {
+    const src = /\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s"'>]+))/i.exec(attrs);
+    const isModule = /\btype\s*=\s*(?:"module"|'module'|module(?![^\s>]))/i.test(attrs);
+    if (isModule && src) entries.push(path.basename(src[1] ?? src[2] ?? src[3]));
   }
   if (!entries.length) throw new BuildError('build/index.html loads no module script');
   const chunks = new Map();

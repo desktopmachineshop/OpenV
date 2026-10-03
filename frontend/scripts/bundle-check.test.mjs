@@ -219,6 +219,38 @@ test('a chunk the entry imports statically is the entry; one only import() loads
   assert.deepEqual(shape.lazyPages, { 'src/pages/Page.ts': DYNAMIC_ENTRY });
 });
 
+// index.html is read as a browser reads it: tag and attribute names in any
+// case, values double-quoted, single-quoted or bare. A script that is not a
+// module, or a modulepreload link, is not an entry.
+test('the entry script is found whatever the case and quoting of index.html', (t) => {
+  const app = (html) => makeApp({
+    'package.json': JSON.stringify({ name: 'app', dependencies: { light: '1' } }),
+    'src/main.ts': 'export const main = 1;\n',
+    'build/index.html': html,
+    'build/assets/index-AAAAAAAA.js': 'export const m=1;\n',
+    'build/assets/index-AAAAAAAA.js.map': JSON.stringify({ sources: ['../../node_modules/light/index.js'] }),
+  });
+  for (const html of [
+    '<script type="module" crossorigin src="/assets/index-AAAAAAAA.js"></script>\n',
+    '<SCRIPT TYPE="module" SRC="/assets/index-AAAAAAAA.js"></SCRIPT>\n',
+    "<Script type='module' src='/assets/index-AAAAAAAA.js'></Script>\n",
+    '<script type=module src=/assets/index-AAAAAAAA.js></script>\n',
+  ]) {
+    const dir = app(html);
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    assert.deepEqual(bundleShape(dir).dependencies, { light: 'entry' }, html);
+  }
+  for (const html of [
+    '<script src="/assets/index-AAAAAAAA.js"></script>\n',
+    '<script type="modulex" src="/assets/index-AAAAAAAA.js"></script>\n',
+    '<link rel="modulepreload" href="/assets/index-AAAAAAAA.js">\n',
+  ]) {
+    const dir = app(html);
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    assert.throws(() => bundleShape(dir), /loads no module script/, html);
+  }
+});
+
 test('chunk imports: static, re-exported and side-effect imports, and import() in any quoting', () => {
   const code = [
     'import{a as b}from"./one-AAAAAAAA.js";',
