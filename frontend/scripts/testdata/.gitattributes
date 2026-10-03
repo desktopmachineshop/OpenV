@@ -1,0 +1,3 @@
+# bundle-shape.json is byte-compared by scripts/bundle-check.mjs (refactor plan
+# step S12b): keep LF on every platform.
+* text eol=lf

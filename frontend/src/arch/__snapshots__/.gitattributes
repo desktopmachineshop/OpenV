@@ -1,0 +1,3 @@
+# Byte-compared by the vitest file snapshots beside it (toMatchFileSnapshot):
+# keep LF on every platform.
+* text eol=lf
