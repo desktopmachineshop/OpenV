@@ -1,0 +1,140 @@
+{
+  "description": "Refactor step M8, class A (docs/plans/codebase-refactor.md §6.5, K1 and K3 in §4.3): internal/api's suite_handlers.go splits along its nine // --- section markers into one file per area and keeps only registerSuiteRoutes. Each section's handlers go with their own helpers, in source order: reference parties to reference_party_handlers.go, the product profile to product_profile_handlers.go, V&V to vv_handlers.go (flowDownCoverage, on the helper-home allowlist already for download_handlers.go, goes with it), requirement quality linting to quality_lint_handlers.go, work items to work_item_handlers.go, guided sessions to guided_handlers.go, the guided copilot chat to guided_copilot_handlers.go (with buildGuidedCopilotPrompt and projectChangeRules, which sit after the public interview section but only the copilot's turns use), internal interviews to interview_handlers.go and the public interview token flow to public_interview_handlers.go. projectExport, which the V&V and quality-lint handlers both load a project's live or baseline export through, goes to project_snapshot.go, which is not an area file. One helper more than one of the new files would use goes to its K3 home instead, so that the helper-home allowlist (M5) gains no entry: getGuidedSessionChecked (the guided session and guided copilot handlers) to authz.go, beside requireWorkerRun, as a load-and-authorize check. launchParent and launchRun, on the allowlist already, stay in agent_run_handlers.go. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M8.json",
+  "package": "internal/api",
+  "targets": [
+    {
+      "file": "project_snapshot.go",
+      "decls": [
+        "(*Handler).projectExport"
+      ]
+    },
+    {
+      "file": "reference_party_handlers.go",
+      "decls": [
+        "partiesResponse",
+        "(*Handler).effectiveParties",
+        "(*Handler).GetProjectParties",
+        "(*Handler).UpdateProjectParties"
+      ]
+    },
+    {
+      "file": "product_profile_handlers.go",
+      "decls": [
+        "(*Handler).GetProductProfile",
+        "(*Handler).UpdateProductProfile"
+      ]
+    },
+    {
+      "file": "vv_handlers.go",
+      "decls": [
+        "(*Handler).CreateTestRun",
+        "(*Handler).ListTestRuns",
+        "(*Handler).GetTestRun",
+        "(*Handler).UpdateTestRun",
+        "(*Handler).DeleteTestRun",
+        "(*Handler).UpsertTestResult",
+        "respondResultError",
+        "(*Handler).ListTestResults",
+        "(*Handler).LaunchTestRunAgent",
+        "testRunAgentPrompt",
+        "(*Handler).vvReportData",
+        "(*Handler).GetCoverage",
+        "(*Handler).coverageWithFlowDown",
+        "(*Handler).childCoverage",
+        "(*Handler).flowDownCoverage",
+        "(*Handler).GetMatrix",
+        "(*Handler).GetGaps",
+        "(*Handler).GetImpact",
+        "(*Handler).GetVVReport"
+      ]
+    },
+    {
+      "file": "quality_lint_handlers.go",
+      "decls": [
+        "(*Handler).GetProjectQuality",
+        "(*Handler).GetArtifactQuality",
+        "(*Handler).linkedRefsFor"
+      ]
+    },
+    {
+      "file": "work_item_handlers.go",
+      "decls": [
+        "(*Handler).CreateWorkItem",
+        "(*Handler).noteBelongsToProject",
+        "(*Handler).ListWorkItems",
+        "(*Handler).GetWorkItem",
+        "(*Handler).UpdateWorkItem",
+        "(*Handler).DeleteWorkItem",
+        "(*Handler).MoveWorkItem",
+        "(*Handler).CommentWorkItem"
+      ]
+    },
+    {
+      "file": "authz.go",
+      "decls": [
+        "(*Handler).getGuidedSessionChecked"
+      ]
+    },
+    {
+      "file": "guided_handlers.go",
+      "decls": [
+        "(*Handler).StartGuidedSession",
+        "(*Handler).ListGuidedSessions",
+        "(*Handler).GetGuidedSession",
+        "(*Handler).SaveGuidedStep",
+        "(*Handler).MaterializeGuidedDrafts",
+        "(*Handler).CommitGuidedSession",
+        "(*Handler).publishGuidedApprovals",
+        "(*Handler).AbandonGuidedSession"
+      ]
+    },
+    {
+      "file": "guided_copilot_handlers.go",
+      "decls": [
+        "(*Handler).guidedRunnerOnline",
+        "(*Handler).guidedTurnInFlight",
+        "guidedStepLabels",
+        "(*Handler).ListGuidedChatMessages",
+        "(*Handler).PostGuidedChatMessage",
+        "(*Handler).KickoffGuidedChat",
+        "(*Handler).NudgeGuidedChat",
+        "(*Handler).pendingNudgeStillOwed",
+        "(*Handler).LaunchGuidedNudge",
+        "(*Handler).StreamGuidedChat",
+        "(*Handler).launchGuidedTurn",
+        "buildGuidedCopilotPrompt",
+        "projectChangeRules"
+      ]
+    },
+    {
+      "file": "interview_handlers.go",
+      "decls": [
+        "(*Handler).CreateInterview",
+        "(*Handler).ListInterviews",
+        "(*Handler).getInterviewChecked",
+        "(*Handler).validPersonaForProject",
+        "personaNotFound",
+        "(*Handler).SetInterviewPersona",
+        "(*Handler).CloseInterview",
+        "(*Handler).CreateInterviewInvite",
+        "(*Handler).ListInterviewInvites",
+        "(*Handler).RevokeInterviewInvite",
+        "(*Handler).ListInterviewSessions",
+        "(*Handler).ListProjectInterviewSessions",
+        "(*Handler).GetInterviewTranscript"
+      ]
+    },
+    {
+      "file": "public_interview_handlers.go",
+      "decls": [
+        "respondInviteError",
+        "(*Handler).PublicInterviewIntro",
+        "(*Handler).PublicInterviewMessage",
+        "(*Handler).launchInterviewTurn",
+        "(*Handler).allowInterviewRead",
+        "(*Handler).PublicInterviewStream",
+        "(*Handler).PublicInterviewFinish"
+      ]
+    }
+  ]
+}
