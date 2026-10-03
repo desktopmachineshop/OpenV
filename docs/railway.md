@@ -6,7 +6,7 @@ the Go API (`Dockerfile.api`) and the static React frontend
 (`frontend/Dockerfile.prod`, nginx).
 
 The code is already Railway-aware: the API prefers a `DATABASE_URL`
-connection string when one is set (`cmd/server/main.go`) and listens on the
+connection string when one is set (`cmd/server`) and listens on the
 `PORT` Railway injects; the frontend image serves on container port 8080.
 The frontend carries its build/deploy settings in `frontend/railway.json`;
 the API's live on the service itself (see below). Most of the setup is wiring

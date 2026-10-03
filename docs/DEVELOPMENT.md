@@ -46,7 +46,7 @@ To run a changed API server, rebuild the image and restart the service:
 docker compose build api && docker compose up -d api
 ```
 
-Key environment variables (see `cmd/server/main.go` and
+Key environment variables (see `cmd/server` and
 `docker-compose.yml`): `DATABASE_URL` (or `DB_HOST`/`DB_PORT`/`DB_USER`/
 `DB_PASSWORD`/`DB_NAME`), `PORT`, `UPLOADS_DIR`, `OPENV_DATA_DIR`,
 `AGENTS_DIR`, `WORKER_API_KEY` (legacy bootstrap worker key),
