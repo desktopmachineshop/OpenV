@@ -12,6 +12,11 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerAIMapRoutes wires a project's outline for coding agents.
+func (h *Handler) registerAIMapRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/ai-map", h.ProjectAIMap).Methods("GET")
+}
+
 // ProjectAIMap serves GET /api/v1/projects/{id}/ai-map: the project's
 // token-optimal outline for coding agents (see ai_map.go for the format).
 // With ?baseline_id= the map is rendered from that baseline's snapshot
