@@ -596,6 +596,7 @@
         "docs/architecture.md",
         "docs/areas.json",
         "docs/assessments/**",
+        "docs/env-vars.md",
         "docs/operations.md",
         "docs/plans/codebase-refactor.md",
         "docs/railway.md",
