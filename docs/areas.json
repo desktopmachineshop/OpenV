@@ -576,7 +576,7 @@
     },
     {
       "name": "tooling",
-      "description": "How the repository is built, checked, shipped and run: scripts/, .github/ (CI, the release and refactor workflows, templates and instructions), the Makefile, the Dockerfiles and compose files, the frontend image's Railway config, lint config, the Go module files, the refactor tools and architecture guards (internal/tools, internal/archtest, frontend/scripts, frontend/src/arch), agent configuration (.claude/, .mcp.json), the repository-level docs and this index.",
+      "description": "How the repository is built, checked, shipped and run: scripts/, .github/ (CI, the release and refactor workflows, templates and instructions), the Makefile, the Dockerfiles and compose files, the frontend image's Railway config, lint config, the Go module files, the refactor tools and architecture guards (internal/tools, internal/archtest, frontend/scripts, frontend/src/arch), agent configuration (.claude/, .mcp.json), the repository-level docs with the system diagram (docs/diagrams), and this index.",
       "globs": [
         ".claude/**",
         ".git-blame-ignore-revs",
@@ -596,6 +596,7 @@
         "docs/architecture.md",
         "docs/areas.json",
         "docs/assessments/**",
+        "docs/diagrams/**",
         "docs/operations.md",
         "docs/plans/codebase-refactor.md",
         "docs/railway.md",
