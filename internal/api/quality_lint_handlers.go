@@ -11,6 +11,15 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/quality"
 )
 
+// registerQualityLintRoutes wires requirement quality linting (issue #217),
+// of a whole project and of one artifact. The rule sets it judges against
+// come from registerProjectQualityRuleRoutes, which registerSuiteRoutes
+// calls next.
+func (h *Handler) registerQualityLintRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/quality", h.GetProjectQuality).Methods("GET")
+	router.HandleFunc("/api/v1/artifacts/{id}/quality", h.GetArtifactQuality).Methods("GET")
+}
+
 // GetProjectQuality lints every requirement-type artifact in the project's
 // live export (or a ?baseline_id= snapshot) and returns per-artifact scores and
 // findings. Viewer role, mirroring the V&V coverage endpoint.

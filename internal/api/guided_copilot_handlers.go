@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
+
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/guided"
@@ -15,6 +17,16 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
+
+// registerGuidedCopilotRoutes wires a guided session's copilot chat: its
+// messages, the kickoff and nudge turns, and the stream.
+func (h *Handler) registerGuidedCopilotRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/guided-sessions/{id}/messages", h.ListGuidedChatMessages).Methods("GET")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/messages", h.PostGuidedChatMessage).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/chat/kickoff", h.KickoffGuidedChat).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/chat/nudge", h.NudgeGuidedChat).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/chat/stream", h.StreamGuidedChat).Methods("GET")
+}
 
 // guidedRunnerOnline reports whether any runner is currently polling for the
 // session project's workspace — without one, copilot turns queue unanswered

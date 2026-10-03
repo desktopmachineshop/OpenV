@@ -9,6 +9,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/products"
 )
 
+// registerProductProfileRoutes wires reading and updating a project's
+// product profile.
+func (h *Handler) registerProductProfileRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/profile", h.GetProductProfile).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/profile", h.UpdateProductProfile).Methods("PUT")
+}
+
 func (h *Handler) GetProductProfile(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {

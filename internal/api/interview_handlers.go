@@ -12,6 +12,23 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
 
+// registerInterviewRoutes wires the interviews' internal management: a
+// project's interviews, closing one and its persona, its invites, and the
+// sessions and their transcripts. A participant's token flow comes from
+// registerPublicInterviewRoutes.
+func (h *Handler) registerInterviewRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/interviews", h.CreateInterview).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/interviews", h.ListInterviews).Methods("GET")
+	router.HandleFunc("/api/v1/interviews/{id}/close", h.CloseInterview).Methods("POST")
+	router.HandleFunc("/api/v1/interviews/{id}/persona", h.SetInterviewPersona).Methods("PUT")
+	router.HandleFunc("/api/v1/interviews/{id}/invites", h.CreateInterviewInvite).Methods("POST")
+	router.HandleFunc("/api/v1/interviews/{id}/invites", h.ListInterviewInvites).Methods("GET")
+	router.HandleFunc("/api/v1/interview-invites/{id}/revoke", h.RevokeInterviewInvite).Methods("POST")
+	router.HandleFunc("/api/v1/interviews/{id}/sessions", h.ListInterviewSessions).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/interview-sessions", h.ListProjectInterviewSessions).Methods("GET")
+	router.HandleFunc("/api/v1/interview-sessions/{id}/transcript", h.GetInterviewTranscript).Methods("GET")
+}
+
 // CreateInterview names the interviewer whose run each participant message
 // launches (launchInterviewTurn), so a proposal-mode run is refused it as a
 // launch, as it is the invite (requireNoProposalRunLaunch).

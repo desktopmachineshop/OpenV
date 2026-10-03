@@ -9,6 +9,18 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
+// registerWorkItemRoutes wires a project's work items (the kanban): create,
+// list, read, update, delete, move and comment.
+func (h *Handler) registerWorkItemRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/work-items", h.CreateWorkItem).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/work-items", h.ListWorkItems).Methods("GET")
+	router.HandleFunc("/api/v1/work-items/{id}", h.GetWorkItem).Methods("GET")
+	router.HandleFunc("/api/v1/work-items/{id}", h.UpdateWorkItem).Methods("PUT")
+	router.HandleFunc("/api/v1/work-items/{id}", h.DeleteWorkItem).Methods("DELETE")
+	router.HandleFunc("/api/v1/work-items/{id}/move", h.MoveWorkItem).Methods("POST")
+	router.HandleFunc("/api/v1/work-items/{id}/comments", h.CommentWorkItem).Methods("POST")
+}
+
 func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {

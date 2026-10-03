@@ -17,6 +17,25 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
 
+// registerVVRoutes wires V&V: a project's test runs, their results and the
+// agent run that executes one, then the coverage, matrix, gaps and report,
+// and the change impact.
+func (h *Handler) registerVVRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/test-runs", h.CreateTestRun).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/test-runs", h.ListTestRuns).Methods("GET")
+	router.HandleFunc("/api/v1/test-runs/{id}", h.GetTestRun).Methods("GET")
+	router.HandleFunc("/api/v1/test-runs/{id}", h.UpdateTestRun).Methods("PUT")
+	router.HandleFunc("/api/v1/test-runs/{id}", h.DeleteTestRun).Methods("DELETE")
+	router.HandleFunc("/api/v1/test-runs/{id}/results", h.UpsertTestResult).Methods("POST")
+	router.HandleFunc("/api/v1/test-runs/{id}/results", h.ListTestResults).Methods("GET")
+	router.HandleFunc("/api/v1/test-runs/{id}/agent-run", h.LaunchTestRunAgent).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/vv/coverage", h.GetCoverage).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/vv/matrix", h.GetMatrix).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/vv/gaps", h.GetGaps).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/vv/report", h.GetVVReport).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/impact", h.GetImpact).Methods("GET")
+}
+
 func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {

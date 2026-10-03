@@ -11,6 +11,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/settings"
 )
 
+// registerReferencePartyRoutes wires reading and updating a project's
+// reference parties (REQ-147).
+func (h *Handler) registerReferencePartyRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/projects/{id}/parties", h.GetProjectParties).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/parties", h.UpdateProjectParties).Methods("PUT")
+}
+
 // partiesResponse is the effective list: the workspace's own company first,
 // then what the project stores.
 type partiesResponse struct {

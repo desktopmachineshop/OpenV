@@ -4,12 +4,28 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
+
+// registerGuidedSessionRoutes wires the guided wizard's sessions: start,
+// list and read one, save a step, materialize its drafts, commit and
+// abandon. The copilot chat beside it comes from
+// registerGuidedCopilotRoutes.
+func (h *Handler) registerGuidedSessionRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/guided-sessions", h.StartGuidedSession).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions", h.ListGuidedSessions).Methods("GET")
+	router.HandleFunc("/api/v1/guided-sessions/{id}", h.GetGuidedSession).Methods("GET")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/step", h.SaveGuidedStep).Methods("PUT")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/drafts", h.MaterializeGuidedDrafts).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/commit", h.CommitGuidedSession).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/abandon", h.AbandonGuidedSession).Methods("POST")
+}
 
 func (h *Handler) StartGuidedSession(w http.ResponseWriter, r *http.Request) {
 	var req struct {

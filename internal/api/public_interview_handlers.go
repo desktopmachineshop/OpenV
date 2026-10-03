@@ -13,6 +13,15 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 )
 
+// registerPublicInterviewRoutes wires a participant's interview, which an
+// invite token authenticates: the intro, a message, the stream and finish.
+func (h *Handler) registerPublicInterviewRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/public/interviews/{token}", h.PublicInterviewIntro).Methods("GET")
+	router.HandleFunc("/api/v1/public/interviews/{token}/messages", h.PublicInterviewMessage).Methods("POST")
+	router.HandleFunc("/api/v1/public/interviews/{token}/stream", h.PublicInterviewStream).Methods("GET")
+	router.HandleFunc("/api/v1/public/interviews/{token}/finish", h.PublicInterviewFinish).Methods("POST")
+}
+
 // respondInviteError answers a failed invite-token resolution: the
 // participant-facing verdicts (unknown, revoked, expired, interview closed)
 // pass through as 404s, anything else is an internal failure.
