@@ -1654,7 +1654,7 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 }
 
 // ContentTypeMiddleware is kept as a router-level hook; CORS now lives in
-// the credential-aware wrapper in cmd/server/main.go.
+// the credential-aware wrapper that cmd/server's buildHTTPHandler adds.
 func ContentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "OPTIONS" {

@@ -511,7 +511,8 @@ the Phase 3 consolidations that give quirks their names.
   (`internal/api/authmiddleware.go:177`), so a path no route matches answers
   401, not 404, unless it is public. `CORSMiddleware` answers every
   `OPTIONS` with 200 itself (`internal/api/security_headers.go:58-61`),
-  outside the request log. The chain is built at `cmd/server/main.go:874-920`.
+  outside the request log. The chain is built by `buildHTTPHandler` in
+  `cmd/server/http.go`.
 - **Pinned by, named as:** S4a. Pain point boot-v4.
 - **Pinned today:** S4a's `TestBootSmoke` (`cmd/server/boot_smoke_test.go`):
   the `auth-before-routing` probe (401 on `GET /api/v1/no-such-route`) and
