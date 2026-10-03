@@ -104,7 +104,7 @@ func TestBulkReviewProposalsValidation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := &fakeProposalService{byID: map[string]*proposals.Proposal{}}
-			h := &Handler{proposalService: svc}
+			h := newTestHandler(t, func(h *Handler) { h.proposalService = svc })
 			w := httptest.NewRecorder()
 			h.BulkReviewProposals(w, bulkReq(t, tc.body, tc.user))
 			if w.Code != tc.wantCode {
@@ -137,7 +137,7 @@ func TestBulkReviewProposalsPartialFailure(t *testing.T) {
 			"p-stale": proposals.ErrNotPending,
 		},
 	}
-	h := &Handler{proposalService: svc}
+	h := newTestHandler(t, func(h *Handler) { h.proposalService = svc })
 
 	w := httptest.NewRecorder()
 	body := `{"ids":["p-ok","p-missing","p-boom","p-stale"],"action":"approve","note":"batch"}`
@@ -184,7 +184,7 @@ func TestBulkReviewProposalsAppliesArtifactsBeforeLinks(t *testing.T) {
 	}
 	// The project exists: a platform admin passes the guard of none that
 	// does not.
-	h := proposalTestHandler(svc, map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}, nil)
+	h := proposalTestHandler(t, svc, map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}, nil)
 
 	w := httptest.NewRecorder()
 	// Client lists the link before the artifact on purpose.
@@ -211,7 +211,7 @@ func TestBulkReviewProposalsAuthz(t *testing.T) {
 			"p-viewer": {ID: "p-viewer", ProjectID: "proj-viewed", Status: proposals.StatusPending},
 		},
 	}
-	h := proposalTestHandler(svc,
+	h := proposalTestHandler(t, svc,
 		map[string]*projects.Project{
 			"proj-mine":   {ID: "proj-mine", OrgID: "org-1"},
 			"proj-theirs": {ID: "proj-theirs", OrgID: "org-1"},

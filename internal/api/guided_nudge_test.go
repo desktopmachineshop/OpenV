@@ -61,7 +61,7 @@ type fakeWorkerKeyService struct {
 
 func (f *fakeWorkerKeyService) List(orgID string) ([]*workerkeys.Key, error) { return nil, nil }
 
-func nudgeFixture(runStatus string) (*Handler, *fakeGuidedNudgeService, *fakeRunService) {
+func nudgeFixture(t *testing.T, runStatus string) (*Handler, *fakeGuidedNudgeService, *fakeRunService) {
 	runID := "run-1"
 	session := &guided.Session{ID: "gs-1", ProjectID: "proj-1", Status: guided.StatusInProgress}
 	if runStatus != "" {
@@ -71,18 +71,18 @@ func nudgeFixture(runStatus string) (*Handler, *fakeGuidedNudgeService, *fakeRun
 	runSvc := &fakeRunService{byID: map[string]*agentruns.Run{
 		runID: {ID: runID, OrgID: "org-1", Status: runStatus},
 	}}
-	h := &Handler{
-		guidedService:  guidedSvc,
-		runService:     runSvc,
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+	h := newTestHandler(t, func(h *Handler) {
+		h.guidedService = guidedSvc
+		h.runService = runSvc
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}}
+		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"editor-1": members.RoleEditor},
-		}},
-		workerKeyService: &fakeWorkerKeyService{},
+		}}
+		h.workerKeyService = &fakeWorkerKeyService{}
 		// No copilot agent in this workspace: a launch attempt fails
 		// cleanly, which is enough to tell it apart from parking.
-		agentService: &fakeAgentDefService{bySlug: map[string]*agents.Agent{}},
-	}
+		h.agentService = &fakeAgentDefService{bySlug: map[string]*agents.Agent{}}
+	})
 	return h, guidedSvc, runSvc
 }
 
@@ -111,7 +111,7 @@ func nudgeStatus(t *testing.T, w *httptest.ResponseRecorder) string {
 func TestNudgeParksWhileARunIsInFlight(t *testing.T) {
 	for _, status := range []string{agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning} {
 		t.Run(status, func(t *testing.T) {
-			h, guidedSvc, runSvc := nudgeFixture(status)
+			h, guidedSvc, runSvc := nudgeFixture(t, status)
 
 			w := httptest.NewRecorder()
 			h.NudgeGuidedChat(w, nudgeReq(`{"step":3,"state":{"step_3":"needs"},"event":"saved step 3"}`))
@@ -148,7 +148,7 @@ func TestNudgeLaunchesWhenTheSessionIsFree(t *testing.T) {
 			name = "no run yet"
 		}
 		t.Run(name, func(t *testing.T) {
-			h, guidedSvc, runSvc := nudgeFixture(status)
+			h, guidedSvc, runSvc := nudgeFixture(t, status)
 			// The copilot agent cannot be resolved in this fixture, so the
 			// launch attempt answers "unavailable" — what matters is that the
 			// handler tried to launch instead of parking.
@@ -168,7 +168,7 @@ func TestNudgeLaunchesWhenTheSessionIsFree(t *testing.T) {
 // An empty event still reads as something: the parked nudge is what the
 // copilot is later asked to comment on.
 func TestNudgeParksADefaultEvent(t *testing.T) {
-	h, guidedSvc, _ := nudgeFixture(agentruns.StatusRunning)
+	h, guidedSvc, _ := nudgeFixture(t, agentruns.StatusRunning)
 	w := httptest.NewRecorder()
 	h.NudgeGuidedChat(w, nudgeReq(`{"step":1,"state":{},"event":"   "}`))
 	if got := nudgeStatus(t, w); got != "pending" {
@@ -185,7 +185,7 @@ func TestNudgeParksADefaultEvent(t *testing.T) {
 // some later turn, and then fire against stale wizard state. The handler
 // re-checks after parking and takes the nudge back.
 func TestNudgeParkedAsTheRunFinishesIsTakenBack(t *testing.T) {
-	h, guidedSvc, runSvc := nudgeFixture(agentruns.StatusRunning)
+	h, guidedSvc, runSvc := nudgeFixture(t, agentruns.StatusRunning)
 	// The run finishes exactly between the in-flight read and the park.
 	guidedSvc.onPark = func() {
 		runSvc.byID["run-1"].Status = agentruns.StatusSucceeded
@@ -214,7 +214,7 @@ func TestNudgeParkedAsTheRunFinishesIsTakenBack(t *testing.T) {
 // If the finishing run's hook got there first, the nudge is already taken:
 // that run owes the reply, and the handler must not launch a second turn.
 func TestNudgeTakenByTheFinishingRunStaysPending(t *testing.T) {
-	h, guidedSvc, runSvc := nudgeFixture(agentruns.StatusRunning)
+	h, guidedSvc, runSvc := nudgeFixture(t, agentruns.StatusRunning)
 	guidedSvc.onPark = func() {
 		runSvc.byID["run-1"].Status = agentruns.StatusSucceeded
 		// The finish hook takes the parked nudge before the handler re-checks.

@@ -56,19 +56,19 @@ func TestImportCrewAuthz(t *testing.T) {
 
 	newFixture := func() (*Handler, *fakeCrewWriter) {
 		writer := &fakeCrewWriter{}
-		h := &Handler{
-			teamService:  writer,
-			agentService: fakeAgentDir{},
-			projectService: &fakeProjectService{byID: map[string]*projects.Project{
+		h := newTestHandler(t, func(h *Handler) {
+			h.teamService = writer
+			h.agentService = fakeAgentDir{}
+			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 				project: {ID: project, OrgID: orgID},
-			}},
-			orgService: &fakeOrgService{roles: map[string]map[string]string{
+			}}
+			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"org-admin": orgs.RoleAdmin, "org-member": orgs.RoleMember, "editor": orgs.RoleMember, "viewer": orgs.RoleMember},
-			}},
-			memberService: &fakeMemberService{roles: map[string]map[string]string{
+			}}
+			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
 				project: {"editor": members.RoleEditor, "viewer": members.RoleViewer},
-			}},
-		}
+			}}
+		})
 		return h, writer
 	}
 
@@ -119,7 +119,7 @@ func TestImportCrewAuthz(t *testing.T) {
 // TestListCrewTemplatesShape verifies the catalog endpoint returns the built-in
 // presets with their portable graphs.
 func TestListCrewTemplatesShape(t *testing.T) {
-	h := &Handler{}
+	h := newTestHandler(t)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/crew-templates", nil)
 	ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "u1"})

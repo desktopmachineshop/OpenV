@@ -103,20 +103,20 @@ func aiMapRequest(query string) *http.Request {
 // baseline is not this project's).
 func TestProjectAIMapHandler(t *testing.T) {
 	arts, lks := mapFixture()
-	h := &Handler{
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+	h := newTestHandler(t, func(h *Handler) {
+		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"p1": {ID: "p1", Name: "Demo"},
-		}},
-		artifactService: &aiMapArtifactService{arts: arts},
-		linkService:     &aiMapLinkService{lks: lks},
-		baselineService: &fakeBaselineService{baseline: &baselines.Baseline{
+		}}
+		h.artifactService = &aiMapArtifactService{arts: arts}
+		h.linkService = &aiMapLinkService{lks: lks}
+		h.baselineService = &fakeBaselineService{baseline: &baselines.Baseline{
 			ID:        "b1",
 			ProjectID: "p1",
 			Name:      "v0.2.0",
 			Snapshot:  []byte(`{"artifacts":[{"id":"r1","ref":"REQ-1","type":"requirement","title":"Old auth","sort_order":1,"status":"approved"}],"links":[]}`),
 			CreatedAt: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
-		}},
-	}
+		}}
+	})
 
 	w := httptest.NewRecorder()
 	h.ProjectAIMap(w, aiMapRequest(""))
