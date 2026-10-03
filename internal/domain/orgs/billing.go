@@ -6,6 +6,47 @@ package orgs
 
 import "time"
 
+// BillingStore is the slice of Service for the workspace's plan and its
+// billing: a platform operator's plan move, and the billing sync's writes
+// and lookups, which pass through to the Repository methods of the same
+// names.
+type BillingStore interface {
+	// SetPlan moves a workspace to another plan (REQ-154): a platform
+	// operator's act, since a plan decides limits, the release channel's
+	// default and, for the open-source plan, what is public. ErrInvalidPlan
+	// for a name PlanDefaults does not know. The channel override follows
+	// ChannelOverrideAfterMove, so a move off a nightly-only plan keeps nightly.
+	// ErrBillingActive for a granted plan while a subscription is live.
+	SetPlan(id, plan string) (*Org, error)
+
+	// Billing pass-throughs; see Repository.
+	SetBillingCustomer(orgID, customerRef, currency string) error
+	ApplyBillingState(orgID string, state BillingState) (bool, error)
+	SetBilledSeats(orgID string, seats int) error
+	ClearBillingSubscription(orgID string) error
+	SetGrandfathered(orgID string, on bool) error
+	// GrandfatherBefore keeps every workspace created before cutoff on the
+	// alpha terms; see Repository.GrandfatherBefore.
+	GrandfatherBefore(cutoff time.Time) (int64, error)
+	FindOrgByBillingRef(kind, ref string) (*Org, error)
+	ListBillingOrgs(limit int) ([]*Org, error)
+}
+
+// Alerts is the slice of Service for spend alerts: the monthly budget the
+// budget alert measures against, and the once-per-threshold-per-month claims
+// of the budget and hosted-minutes alerts.
+type Alerts interface {
+	// SetMonthlyBudget sets (or clears, with nil) the workspace's monthly
+	// spend budget. Rejects a negative amount with ErrInvalidBudget.
+	SetMonthlyBudget(id string, budget *float64) (*Org, error)
+	// ClaimBudgetAlert is the atomic dedupe claim used by the budget-alert
+	// subscriber; see Repository.ClaimBudgetAlert.
+	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
+	// ClaimMinutesAlert is the same dedupe claim for the hosted-minutes
+	// allowance (migration 47).
+	ClaimMinutesAlert(orgID, month string, threshold int) (bool, error)
+}
+
 // SetPlan implements Service.
 func (s *DefaultService) SetPlan(id, plan string) (*Org, error) {
 	if !ValidPlan(plan) {

@@ -13,6 +13,40 @@ import (
 	"github.com/google/uuid"
 )
 
+// Workspaces is the slice of Service for the workspace itself: creating,
+// reading, listing and renaming it, its logo, and its deletion
+// (deletion.go).
+type Workspaces interface {
+	CreateOrg(name, orgType string, createdBy string) (*Org, error)
+	// EnsurePersonalOrg returns the user's personal org, creating it if
+	// missing. Idempotent; used at signup and during backfill.
+	EnsurePersonalOrg(userID, displayName string) (*Org, bool, error)
+	Get(id string) (*Org, error)
+	ListForUser(userID string) ([]*Org, error)
+	// ListAll returns every organization id (trusted boot-time callers only).
+	ListAll() ([]string, error)
+	UpdateOrg(id string, name *string) (*Org, error)
+	// SetLogo records the workspace logo's on-disk path and MIME type and
+	// returns the updated org.
+	SetLogo(id, path, mime string) (*Org, error)
+	// ClearLogo forgets the workspace logo (stores empty path and MIME) and
+	// returns the updated org. Removing the file is the caller's job.
+	ClearLogo(id string) (*Org, error)
+
+	// DeleteOrg soft-deletes a company workspace: hidden and locked, restorable
+	// for DeletionGraceDays, then hard-deleted by PurgeExpired. Personal
+	// workspaces are refused with ErrPersonalOrgDelete. Idempotent.
+	DeleteOrg(id string) (*Org, error)
+	// RestoreOrg brings a soft-deleted workspace back within the grace
+	// period and returns it as restored.
+	RestoreOrg(id string) (*Org, error)
+	// ListDeletedForUser returns the caller's soft-deleted workspaces.
+	ListDeletedForUser(userID string) ([]*Org, error)
+	// PurgeExpired hard-deletes workspaces whose grace period has passed,
+	// returning the purged ids.
+	PurgeExpired(now time.Time) ([]string, error)
+}
+
 var slugCleaner = regexp.MustCompile(`[^a-z0-9]+`)
 
 func makeSlug(name, id string) string {

@@ -25,6 +25,20 @@ type Member struct {
 	AvatarURL string    `json:"avatar_url,omitempty"`
 }
 
+// Membership is the slice of Service for who belongs to a workspace, and
+// with which role.
+type Membership interface {
+	AddMember(orgID, userID, role string) error
+	RemoveMember(orgID, userID string) error
+	SetMemberRole(orgID, userID, role string) error
+	ListMembers(orgID string) ([]*Member, error)
+	RoleInOrg(orgID, userID string) (string, error)
+	// RoleInOrgAny is RoleInOrg including deleted workspaces (restore path).
+	RoleInOrgAny(orgID, userID string) (string, error)
+	// IsMember is a convenience wrapper over RoleInOrg.
+	IsMember(orgID, userID string) (bool, error)
+}
+
 func validOrgRole(role string) bool {
 	return role == RoleAdmin || role == RoleMember
 }

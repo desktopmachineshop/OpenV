@@ -162,6 +162,35 @@ func (o *Org) ResolveReleaseChannel() {
 	o.ReleaseChannelLocked = !ChannelChoosable(o.BilledPlan)
 }
 
+// ChannelSettings is the slice of Service for release channels: a
+// workspace's channel, upgrade window and stable release, the workspaces and
+// accounts on a channel, and a member's early switch to the next stable
+// release.
+type ChannelSettings interface {
+	// SetReleaseChannel records the channel a company workspace's admin
+	// chose ("" returns it to the plan's default) and returns the updated
+	// workspace. ErrChannelLocked for a plan that always runs nightly,
+	// ErrInvalidChannel for an unknown name.
+	SetReleaseChannel(id, channel string) (*Org, error)
+	// SetUpgradeWindow records when stable releases turn on for a company
+	// workspace: day of month 1-28 and hour 0-23 in an IANA time zone; day
+	// 0 clears the window so releases turn on at the cut. ErrChannelLocked
+	// for a plan that cannot choose, ErrInvalidWindow for bad values.
+	SetUpgradeWindow(id string, day, hour int, timezone string) (*Org, error)
+	// SetStableRelease records the stable release now turned on for a
+	// workspace (used by the release scheduler).
+	SetStableRelease(id, version string) (*Org, error)
+	// ListOrgsByChannel lists live workspaces on a channel.
+	ListOrgsByChannel(channel string) ([]*Org, error)
+	// ListMemberUserIDsByChannel lists accounts with a workspace on channel.
+	ListMemberUserIDsByChannel(channel string) ([]string, error)
+	// MemberPreview and SetMemberPreview read and write a member's own
+	// early switch to the next stable release in one workspace
+	// (ErrNotMember for an account that is not a member).
+	MemberPreview(orgID, userID string) (bool, error)
+	SetMemberPreview(orgID, userID string, enabled bool) error
+}
+
 // SetReleaseChannel implements Service.
 func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
 	org, err := s.Get(id)
