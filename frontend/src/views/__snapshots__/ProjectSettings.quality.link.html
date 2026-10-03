@@ -1,0 +1,93 @@
+<div style="padding: 24px; max-width: 900px; margin: 0px auto;">
+<h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
+<div class="tab-strip" role="tablist">
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
+<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Quality rules</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+</div>
+<div class="card">
+<h3>Requirement quality rules</h3>
+<p style="font-size: 13px; color: var(--text-muted);">How this project's requirements are worded and judged. Set nothing and the project follows its workspace's house style (Workspace settings → Quality rules); override only what this project needs to do differently. Agents read these rules before they draft, and the quality badge scores against them.</p>
+<div style="display: flex; flex-direction: column; gap: 16px;">
+<div>
+<h4 style="margin: 0px 0px 4px;">Normative convention</h4>
+<p style="font-size: 12px; color: var(--text-muted); margin: 0px 0px 10px;">Which keywords state a binding requirement. The linter judges wording against this, and agents read it before drafting — so a project keeps one vocabulary instead of mixing two.</p>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<label style="display: flex; gap: 10px; align-items: flex-start; border-width: 1px; border-style: solid; border-color: var(--accent); border-image: none; border-radius: 4px; padding: 10px 12px; cursor: pointer; margin-bottom: 0px; font-weight: 400;">
+<input type="radio" name="quality-convention-project" style="width: auto; margin-top: 3px;" checked="">
+<span style="font-size: 13px; color: var(--text);">
+<b>ISO/IEC/IEEE 29148 — "shall"</b>
+<br>
+<span style="font-size: 12px; color: var(--text-muted);">the system shall</span>
+</span>
+</label>
+<label style="display: flex; gap: 10px; align-items: flex-start; border-width: 1px; border-style: solid; border-color: var(--border-soft); border-image: none; border-radius: 4px; padding: 10px 12px; cursor: pointer; margin-bottom: 0px; font-weight: 400;">
+<input type="radio" name="quality-convention-project" style="width: auto; margin-top: 3px;">
+<span style="font-size: 13px; color: var(--text);">
+<b>RFC 2119 — MUST / SHOULD / MAY</b>
+<br>
+<span style="font-size: 12px; color: var(--text-muted);">MUST, SHOULD, MAY</span>
+</span>
+</label>
+</div>
+</div>
+<div>
+<h4 style="margin: 0px 0px 4px;">Rules</h4>
+<p style="font-size: 12px; color: var(--text-muted); margin: 0px 0px 10px;">How loudly each check speaks, or Off to silence it. Findings are advisory: they score a requirement and explain themselves, and never block a save.</p>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0px; border-bottom: 1px solid var(--surface-inset); flex-wrap: wrap;">
+<span style="font-size: 13px; color: var(--text); flex: 1 1 200px; min-width: 0px;">Weak wording<br>
+<span style="font-size: 12px; color: var(--text-muted);">weak or subjective wording</span>
+</span>
+<div style="flex: 0 1 160px; min-width: 140px;">
+<select style="width: 100%;">
+<option value="error">Error</option>
+<option value="warning">Warning</option>
+<option value="info">Info</option>
+<option value="off">Off</option>
+</select>
+<div style="font-size: 12px; color: var(--danger); margin-top: 4px;">Workspace default is Warning</div>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0px; border-bottom: 1px solid var(--surface-inset); flex-wrap: wrap;">
+<span style="font-size: 13px; color: var(--text); flex: 1 1 200px; min-width: 0px;">Passive voice<br>
+<span style="font-size: 12px; color: var(--text-muted);">who acts is unstated</span>
+</span>
+<div style="flex: 0 1 160px; min-width: 140px;">
+<select style="width: 100%;">
+<option value="error">Error</option>
+<option value="warning">Warning</option>
+<option value="info">Info</option>
+<option value="off">Off</option>
+</select>
+</div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0px; border-bottom: 1px solid var(--surface-inset); flex-wrap: wrap;">
+<span style="font-size: 13px; color: var(--text); flex: 1 1 200px; min-width: 0px;">Not testable<br>
+<span style="font-size: 12px; color: var(--text-muted);">no measurable criterion</span>
+</span>
+<div style="flex: 0 1 160px; min-width: 140px;">
+<select style="width: 100%;">
+<option value="error">Error</option>
+<option value="warning">Warning</option>
+<option value="info">Info</option>
+<option value="off">Off</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div style="background: var(--surface-inset); border-radius: 4px; padding: 10px 12px; font-size: 12px; color: var(--text-muted);">
+<b style="color: var(--text);">In effect now:</b> shall; weak wording is an error</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+<button class="compact-action" style="font-size: 13px;" disabled="">Save rules</button>
+<button style="font-size: 13px;" class="secondary compact-action" disabled="">Discard changes</button>
+<button style="font-size: 13px;" class="secondary compact-action" title="Clear this project's overrides so everything follows the workspace">Reset to workspace defaults</button>
+</div>
+</div>
+</div>
+</div>
