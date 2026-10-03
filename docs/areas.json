@@ -325,7 +325,7 @@
     },
     {
       "name": "agent-suite",
-      "description": "The AI agents and what they do: agent definitions, runs and their orchestration, crews and crew templates, automations (scheduled and triggered), proposals, AI providers and their sign-ins, repository connections, the guided wizard with its copilot, stakeholder interviews, the AI map, the seeded default agents, and the core of the MCP server.",
+      "description": "The AI agents and what they do: agent definitions, runs and their orchestration, crews and crew templates, automations (scheduled and triggered), proposals, AI providers and their sign-ins, repository connections, the guided wizard with its copilot, stakeholder interviews, the AI map, the seeded default agents, and the core of the MCP server with its guide (internal/mcp/CLAUDE.md).",
       "globs": [
         "cmd/openv-mcp/**",
         "cmd/server/wire_agents.go",
@@ -365,6 +365,7 @@
         "internal/domain/providers/**",
         "internal/domain/repoconns/**",
         "internal/domain/teams/**",
+        "internal/mcp/*.md",
         "internal/mcp/client*.go",
         "internal/mcp/context_bundle*.go",
         "internal/mcp/schema*.go",
