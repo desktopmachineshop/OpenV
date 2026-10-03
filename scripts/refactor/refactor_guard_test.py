@@ -336,7 +336,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S12b",
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S12b", "S13",
                   "S14a", "S14b", "S14c", "S14d", "S14e", "S14f", "S15a"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
@@ -639,6 +639,30 @@ class DataTest(unittest.TestCase):
                             ("frontend/vite.config.ts", False)):
             with self.subTest(ships=path):
                 self.assertEqual(rg.ships_in_frontend(path), ships)
+
+    def test_s13_row_covers_its_guards_and_goldens(self):
+        # S13's Go vocabulary writer and its vitest parity test are S13's
+        # guard code, the vitest named ahead of S12's src/arch row beside it;
+        # what they pin, contracts/vocab.json and the allowed differences, are
+        # goldens of the cross-language contracts entry S6 opened, so a class
+        # C commit may add them but nothing in a refactor may change them.
+        # S6's contract and S12's helpers stay theirs.
+        files = subprocess.run(["git", "ls-files", "contracts", "internal/vocabparity", "frontend/src/arch"], cwd=REPO,
+                               capture_output=True, text=True, check=True).stdout.split()
+        for path in ("internal/vocabparity/vocab_test.go", "frontend/src/arch/vocabParity.test.ts"):
+            with self.subTest(path=path):
+                self.assertIn(path, files)
+                self.assertEqual(rg.guard_code_step(path), "S13")
+                self.assertTrue(rg.is_test_file(path), path)
+        for path, step in (("frontend/src/arch/sseListeners.test.ts", "S12"), ("frontend/src/arch/repo.ts", "S12"),
+                           ("internal/api/sse_contract_test.go", "S6")):
+            with self.subTest(path=path):
+                self.assertEqual(rg.guard_code_step(path), step)
+        for path in ("contracts/vocab.json", "contracts/vocab-allowed-diffs.json", "contracts/sse-events.json"):
+            with self.subTest(golden=path):
+                self.assertIn(path, files)
+                self.assertEqual(rg.golden_entry(path), ("S6, S13", "cross-language contracts"))
+                self.assertTrue(rg.matches(path, rg.C_ADDED_ONLY), path)
 
     def test_chunk_names_and_differences(self):
         self.assertEqual(rg.chunk_name("ModuleView-BtaBQDBL.css"), "ModuleView.css")
@@ -992,6 +1016,36 @@ class GoldenTest(RepoTest):
     def test_refactor_with_behavior_change_fails(self):
         self.commit("docs", {"docs/guide.md": "# Guide\n\nMore.\n"}, trailers("T"))
         self.assertFailsWith(self.guard("refactor:tooling", "behavior-change"), "(1) golden freeze", "both")
+
+    def test_s13_allowed_differences_are_a_golden_not_an_allowlist(self):
+        # contracts/vocab-allowed-diffs.json only shrinks as drift is fixed,
+        # but fixing one is a behavior change: removing an entry needs a
+        # release note like any golden change, and a refactor pull request
+        # may not make it, unlike an entry of S12's lint allowlists.
+        allowed = ('{\n  "diffs": [\n    { "vocabulary": "plans", "copy": "PLANS", "item": "free", "side": "go" },\n'
+                   '    { "vocabulary": "plans", "copy": "PLANS", "item": "team", "side": "go" }\n  ]\n}\n')
+        self.git("checkout", "-q", "main")
+        self.commit("S13", {"contracts/vocab.json": "{}\n", "contracts/vocab-allowed-diffs.json": allowed})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+        shrunk = {"contracts/vocab-allowed-diffs.json": allowed.replace(
+            '    { "vocabulary": "plans", "copy": "PLANS", "item": "team", "side": "go" }\n', "").replace('"go" },', '"go" }')}
+        self.commit("fix", shrunk, trailers("C"))
+        f = self.assertFailsWith(self.guard(*REFACTOR, "refactor:test"), "(1) golden freeze", "in a refactor pull request")
+        self.assertEqual(f.path, "contracts/vocab-allowed-diffs.json")
+
+    def test_s13_allowed_differences_shrink_with_a_release_note(self):
+        allowed = '{\n  "diffs": [\n    { "vocabulary": "plans", "copy": "PLANS", "item": "team", "side": "go" }\n  ]\n}\n'
+        self.git("checkout", "-q", "main")
+        self.commit("S13", {"contracts/vocab.json": "{}\n", "contracts/vocab-allowed-diffs.json": allowed})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+        self.commit("fix", {"contracts/vocab-allowed-diffs.json": '{\n  "diffs": []\n}\n'})
+        self.assertFailsWith(self.guard("no-release-notes"), "(1) golden freeze", "without a release note")
+        self.git("checkout", "-q", "pr")
+        self.git("branch", "-q", "-D", "merge")
+        self.commit("note", {"RELEASE_NOTES.md": NOTES_WITH_BULLET})
+        self.assertPasses(self.guard())
 
     def test_inline_snapshot_fails_on_any_pull_request(self):
         self.commit("test", {"frontend/src/views/App.test.tsx": "expect(x).toMatchInlineSnapshot(`1`);\n"})

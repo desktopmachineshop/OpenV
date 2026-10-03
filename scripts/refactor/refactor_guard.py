@@ -274,8 +274,18 @@ GUARD_CODE = [
     # test pin the bundle's shape.
     ("S12b", ["frontend/src/**/cssOrder.test.ts", "frontend/src/**/sizeBudget.test.ts",
               "frontend/scripts/bundle-check.mjs", "frontend/scripts/bundle-check.test.mjs"]),
+    # S13's Go vocabulary writer (contracts/vocab.json, from the Go
+    # catalogues) and the vitest that compares every hand-written TypeScript
+    # copy with it, against today's differences in
+    # contracts/vocab-allowed-diffs.json. The vitest sits in src/arch among
+    # S12's guards, so this row comes before S12's to name it. X4a and X4b
+    # name them as their guard ("S13 values unchanged"). Both contracts files
+    # are goldens of the "S6, S13" entry, not a shrink-only carve-out like
+    # S12's lint allowlists: removing an allowed difference means a drift
+    # was fixed, a behavior change, so it needs a release note like any
+    # golden change and a refactor pull request may not make it.
+    ("S13", ["internal/vocabparity/vocab_test.go", "frontend/src/arch/vocabParity.test.ts"]),
     ("S12", ["frontend/src/arch/**", "frontend/eslint.config.js"]),
-    ("S13", []),  # slot: the Go vocabulary writer and the vitest parity test
     ("S14a", ["internal/tools/declhash/**", "frontend/scripts/tsdeclhash.mjs", "frontend/scripts/tsmovecheck.mjs"]),
     # S14d's migration generator, its tests and their fixture and goldens.
     # M10 is what it writes; the S3 freeze and the generator's own self-check
