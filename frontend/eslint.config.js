@@ -73,6 +73,13 @@ const UI_FILES = /^src\/(App|index)(\.tsx?)?$/;
 const UI_PACKAGES = /^(react|react-dom|react-router-dom)(\/|$)/;
 const isUi = (rel) => UI_DIRS.some((d) => under(rel, d)) || UI_FILES.test(rel);
 
+// The entry points of src/api (refactor plan K12, F1): code outside src/api
+// imports the api/client barrel and these three modules only, never an area
+// module, api/types/* or api/http, so a whole-module vi.mock('../api/client')
+// still stubs every call and an endpoint can move between areas freely.
+const API_ENTRY_POINTS = ['src/api/client', 'src/api/errors', 'src/api/baseURL', 'src/api/contentDisposition'];
+const isApiEntryPoint = (rel) => API_ENTRY_POINTS.includes(rel.replace(/\.(tsx?|jsx?)$/, ''));
+
 const importBoundaries = {
   meta: {
     type: 'problem',
@@ -82,6 +89,8 @@ const importBoundaries = {
         "'{{spec}}' resolves outside frontend/. The production image builds from frontend/ alone, so nothing may import from beyond it.",
       apiImportsUi: "src/api may not import '{{spec}}': the API layer sits below the UI and imports none of it.",
       apiImportsCss: "src/api may not import the stylesheet '{{spec}}': the API layer imports no UI.",
+      apiInternals:
+        "Outside src/api, import the API layer from api/client (or api/errors, api/baseURL, api/contentDisposition), not '{{spec}}' (K12).",
       componentImportsView:
         "Components may not import views ('{{spec}}'). Move what both need into a module under src/ that neither owns.",
       importsArch:
@@ -127,6 +136,9 @@ const importBoundaries = {
       }
       if (inApi && isUi(rel)) {
         context.report({ node: source, messageId: 'apiImportsUi', data: { spec } });
+      }
+      if (!inApi && under(rel, 'src/api') && !isApiEntryPoint(rel)) {
+        context.report({ node: source, messageId: 'apiInternals', data: { spec } });
       }
       if (inComponents && under(rel, 'src/views')) {
         const view = rel.replace(/\.(tsx?|jsx?)$/, '');
