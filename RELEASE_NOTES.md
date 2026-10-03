@@ -9,6 +9,35 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **A runner no longer crashes on an answer to its claim that names no
+  run.** When a runner asked for work and the answer named no run, which
+  OpenV itself never sends but a proxy or a mismatched server can, the
+  runner crashed. Every run it was working on stopped reporting with it,
+  and was failed once its heartbeat lapsed. The runner now treats such an
+  answer as no work, logs it, and asks again on its next poll. As before, a
+  run that crashes inside the runner is reported as a worker error and the
+  runner carries on.
+
+- **A failed Codex sign-in shows the CLI's last lines.** When `codex login`
+  failed on your own runner or on a cloud runner, the sign-in card quoted
+  the end of the CLI's output, but the runner could lose the last lines,
+  where the CLI says why it failed, if it exited right after printing them.
+  The card now always ends with the CLI's own last lines.
+
+- **A runner pool node puts `HOME` back after every lease.** A pool node
+  points `HOME` at a directory of the lease's own while it serves a member,
+  so the vendor CLIs keep that member's sign-ins there, and deletes the
+  directory when the lease ends. When a lease could not start because its
+  workspace directory could not be made, the node left `HOME` on the
+  lease's directory, and the directory on disk, until the next lease
+  started. A node started with `HOME` unset or empty kept `HOME` on the
+  deleted directory after every lease. The node now puts `HOME` back
+  exactly as it found it, set, empty or unset, whenever a lease ends or
+  fails to start, and removes the directory a failed lease made. This
+  matters only if you run your own runner pool.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
