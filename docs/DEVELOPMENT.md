@@ -475,6 +475,46 @@ changes them; regenerate with
 Every scenario ends on its own without the network: stdin is empty, so a
 prompt reads end of input, and none gets as far as a request.
 
+What each notification delivers is frozen too (refactor plan step S10).
+`TestNotificationContent` in `internal/notify` drives every delivery path
+the server wires (the bus notifier's project and membership notifications,
+the budget and cloud-runner-minutes monitors, the release announcer, the
+stable scheduler's announcement, reminder and turn-on, and a dedicated
+instance's support-window warnings) through 35 scenarios, with the real
+email and push dispatchers, a pinned clock and fixed ids, and writes four
+goldens per notification type under
+`internal/notify/testdata/notifications/<type>/`: the row handed to the
+store (`row.json`), the `notification` frame on the recipient's SSE stream
+(`sse.txt`), the whole SMTP message (`email.txt`) and the web push payload
+(`push.json`). Each scenario runs with `OPENV_EMAIL_NOTIFICATION_TYPES` and
+`OPENV_PUSH_NOTIFICATION_TYPES` unset and again with each set to the types
+its default leaves out, so every type's email and push are pinned, and so
+is which types are sent by default. A changed title, body or deep link, an
+entity reference, who receives a notification or in what order, the
+default lists, the email's template and footer, or a push field changes
+them: regenerate in the same pull request, which then needs a release note,
+with `UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'`.
+Two things have no golden to regenerate: the same test fails when a row's
+channels go out in another order than the SSE frame, then the email, then
+the push, or one is addressed to someone else; and
+`TestNotificationStoreFailure` beside it pins what each delivery path does
+when the store refuses a row (that recipient is sent nothing, the next one
+still gets theirs, and the lines logged and the count returned are exact).
+A new notification type needs a scenario in `ncScenarios`
+(`notification_content_test.go`): until it has one and its goldens, that
+test and `TestEveryNotificationTypeHasAContentGolden` in
+`internal/domain/notifications` fail. The bell builds its own deep links
+(`pathForNotification` in `NotificationBell.tsx`), which differ from the
+email and push links for releases, support windows and membership changes
+(quirk Q7); `src/components/NotificationBell.paths.test.tsx` feeds the bell
+every notification in the Go goldens and pins where each lands beside the
+Go link in `src/components/__snapshots__/NotificationBell.paths.txt`, so a
+change on either side shows there: regenerate it, after the Go goldens,
+with `cd frontend && npx vitest run src/components/NotificationBell.paths.test.tsx -u`.
+These three test files and the recording harness beside the Go one are
+guard code (`GUARD_CODE` row S10 in `scripts/refactor/refactor_guard.py`):
+a refactor pull request may change them only in a class C or T commit.
+
 The runner (`internal/runner`, refactor plan step S15a) is characterized
 against a stand-in API, with stand-in vendor CLIs (shell scripts, so these
 tests skip on Windows). `TestRunFailureClassesGolden` has the real
