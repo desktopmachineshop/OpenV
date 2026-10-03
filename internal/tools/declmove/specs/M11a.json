@@ -1,0 +1,19 @@
+{
+  "description": "Refactor step M11a, class A (docs/plans/codebase-refactor.md §6.5): internal/mcp's API client, its JSON-RPC stdio server and the helpers the tool table builds on leave tools.go for client.go, stdio.go and schema.go, before splittools (specs/M11a.json there) splits Tools() itself in the class B commit. The helpers are the input schema builders, the argument readers and the response decoders, which sit together between ReadOnlyToolNames and Tools(). The free-floating comment that opens the stdio server in tools.go becomes stdio.go's header; declmove does not move a free-floating comment, so the commit deletes it from tools.go. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M11a.json",
+  "package": "internal/mcp",
+  "targets": [
+    {
+      "file": "client.go",
+      "decls": ["Client", "NewClient", "(*Client).request"]
+    },
+    {
+      "file": "stdio.go",
+      "header": "// --- JSON-RPC 2.0 stdio server ---",
+      "decls": ["rpcRequest", "rpcError", "rpcResponse", "ServeStdio", "serve"]
+    },
+    {
+      "file": "schema.go",
+      "decls": ["schema", "str", "obj", "boolean", "strList", "strArg", "strListArg", "boolArg", "decodeList", "baselineSummary", "toJSON"]
+    }
+  ]
+}
