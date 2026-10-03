@@ -1,0 +1,53 @@
+<div style="padding: 24px; max-width: 900px; margin: 0px auto;">
+<h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
+<div class="tab-strip" role="tablist">
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
+<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Repositories</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+</div>
+<div class="card">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+<h3 style="margin-bottom: 0px;">Repository connections</h3>
+<button class="button-secondary" style="padding: 6px 14px; background: var(--accent);">+ Connect repository</button>
+</div>
+<p style="font-size: 13px; color: var(--text-muted);">Repositories give coding agents somewhere to work. The connection identifies the GitHub repository; each member points it at their own clone below. Credentials come from the host machine's git configuration.</p>
+<div style="border: 1px solid var(--border-soft); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-weight: 600; font-size: 14px; color: var(--text);">main-app</div>
+<div style="font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;">https://github.com/acme/main-app.git · main</div>
+</div>
+<button class="button-secondary" style="padding: 5px 12px; font-size: 12px;">Edit</button>
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Remove</button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+<label style="font-size: 12px; color: var(--text-muted); white-space: nowrap; margin-bottom: 0px;">Your local path</label>
+<input placeholder="where this repo lives on YOUR machine" style="flex: 1 1 0%; padding: 5px 8px; font-size: 12px;" value="/home/dana/main-app">
+<button class="button-secondary" style="padding: 5px 12px; font-size: 12px; width: auto;" disabled="">Save</button>
+</div>
+</div>
+<div style="border: 1px solid var(--border-soft); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;">
+<div style="display: flex; align-items: center; gap: 12px;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-weight: 600; font-size: 14px; color: var(--text);">docs</div>
+<div style="font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;">no repository URL — edit to add one</div>
+</div>
+<button class="button-secondary" style="padding: 5px 12px; font-size: 12px;">Edit</button>
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Remove</button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+<label style="font-size: 12px; color: var(--text-muted); white-space: nowrap; margin-bottom: 0px;">Your local path</label>
+<input placeholder="where this repo lives on YOUR machine" style="flex: 1 1 0%; padding: 5px 8px; font-size: 12px;" value="">
+<button class="button-secondary" style="padding: 5px 12px; font-size: 12px; width: auto;" disabled="">Save</button>
+</div>
+</div>
+<p style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 0px;">Agents run on each member's own machine, so “your local path” tells your runner where this repo lives for <b>you</b>. Without one set, your runs clone the remote URL instead.</p>
+</div>
+<div class="card" style="background: var(--tint-blue); border: 1px solid var(--accent);">
+<p style="font-size: 13px; color: var(--text); margin-bottom: 0px;">AI providers &amp; worker keys moved → <a href="/org/settings" data-discover="true">Workspace settings</a>. They now apply to the whole workspace, not a single project.</p>
+</div>
+</div>

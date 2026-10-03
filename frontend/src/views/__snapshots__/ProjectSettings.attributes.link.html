@@ -1,0 +1,91 @@
+<div style="padding: 24px; max-width: 900px; margin: 0px auto;">
+<h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
+<div class="tab-strip" role="tablist">
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
+<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Attributes</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+</div>
+<div class="card">
+<h3>Custom attributes</h3>
+<p style="font-size: 13px; color: var(--text-muted);">Define extra typed fields for this project's artifacts. They appear as inputs in the artifact editor and are validated on save. Project attributes override a workspace-wide attribute with the same key and type.</p>
+<div style="" class="table-scroll">
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+<thead>
+<tr>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Key</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Label</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Type</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Applies to</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Required</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<code>priority</code>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Priority</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">enum<span style="color: var(--text-muted);"> (low, medium, high)</span>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">requirement</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Yes</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button class="button-secondary" style="padding: 4px 8px; font-size: 12px; color: var(--danger);">Delete</button>
+</td>
+</tr>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<code>cost</code>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Cost</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">number</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">All types</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">No</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button class="button-secondary" style="padding: 4px 8px; font-size: 12px; color: var(--danger);">Delete</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<form style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+<div class="form-group" style="margin-bottom: 0px;">
+<label for="attr-key">Key</label>
+<input id="attr-key" type="text" placeholder="priority" required="" value="">
+</div>
+<div class="form-group" style="margin-bottom: 0px;">
+<label for="attr-label">Label</label>
+<input id="attr-label" type="text" placeholder="Priority" value="">
+</div>
+<div class="form-group" style="margin-bottom: 0px;">
+<label for="attr-type">Type</label>
+<select id="attr-type">
+<option value="text">text</option>
+<option value="number">number</option>
+<option value="date">date</option>
+<option value="enum">enum</option>
+<option value="boolean">boolean</option>
+</select>
+</div>
+<div class="form-group" style="margin-bottom: 0px;">
+<label for="attr-applies">Applies to</label>
+<select id="attr-applies">
+<option value="">All types</option>
+<option value="requirement">Requirement</option>
+<option value="test_case">Test case</option>
+</select>
+</div>
+<div class="form-group" style="margin-bottom: 0px; display: flex; align-items: center; gap: 6px;">
+<input id="attr-required" type="checkbox" style="width: auto;">
+<label for="attr-required" style="margin-bottom: 0px;">Required</label>
+</div>
+<button type="submit" class="button" disabled="">Add attribute</button>
+</form>
+</div>
+</div>
