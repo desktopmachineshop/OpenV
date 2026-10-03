@@ -51,7 +51,7 @@ const FILE_CEILINGS = {
   'views/Login.tsx': 778,
   'views/ModuleView.tsx': 2271,
   'views/OrgSettings.tsx': 665,
-  'views/ProjectSettings.tsx': 1735,
+  'views/ProjectSettings.tsx': 877,
   'views/ReviewQueue.tsx': 1001,
 };
 
@@ -89,7 +89,7 @@ const COMPONENT_CEILINGS = {
   'ProductOverview': 475,
   'ProjectLayout': 523,
   'ProjectList': 1145,
-  'ProjectSettings': 1648,
+  'ProjectSettings': 826,
   'ProviderConnectCard': 387,
   'ReviewQueue': 723,
   'RunDetailPanel': 519,

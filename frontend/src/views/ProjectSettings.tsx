@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   attributeDefinitionAPI,
   membersAPI,
@@ -10,7 +10,6 @@ import {
   repoConnectionsAPI,
   shareLinkAPI,
   ArtifactTypeDef,
-  AttributeDataType,
   AttributeDefinition,
   OrgTeam,
   Project,
@@ -24,9 +23,15 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
-import { QualityRulesEditor } from '../components/QualityRulesEditor';
-import { Avatar } from '../components/Avatar';
 import { useFeature } from '../hooks/useFeature';
+import { AttributeForm, RepoForm, emptyAttributeForm, emptyRepoForm } from './projectSettings/shared';
+import { GeneralTab } from './projectSettings/GeneralTab';
+import { MembersTab } from './projectSettings/MembersTab';
+import { ReposTab } from './projectSettings/ReposTab';
+import { AgentsTab } from './projectSettings/AgentsTab';
+import { AttributesTab } from './projectSettings/AttributesTab';
+import { QualityTab } from './projectSettings/QualityTab';
+import { DangerTab } from './projectSettings/DangerTab';
 
 type Tab = 'general' | 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
 
@@ -39,50 +44,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'quality', label: 'Quality rules' },
   { key: 'danger', label: 'Danger Zone' },
 ];
-
-const ATTRIBUTE_DATA_TYPES: AttributeDataType[] = ['text', 'number', 'date', 'enum', 'boolean'];
-
-interface AttributeForm {
-  key: string;
-  label: string;
-  data_type: AttributeDataType;
-  enum_values: string;
-  applies_to_type: string;
-  required: boolean;
-}
-
-const emptyAttributeForm: AttributeForm = {
-  key: '',
-  label: '',
-  data_type: 'text',
-  enum_values: '',
-  applies_to_type: '',
-  required: false,
-};
-
-const th: React.CSSProperties = {
-  textAlign: 'left',
-  fontSize: 12,
-  color: 'var(--text-muted)',
-  padding: '8px 10px',
-  borderBottom: '1px solid var(--border-soft)',
-};
-
-const td: React.CSSProperties = {
-  padding: '8px 10px',
-  fontSize: 13,
-  color: 'var(--text)',
-  borderBottom: '1px solid var(--surface-inset)',
-};
-
-interface RepoForm {
-  id: string;
-  name: string;
-  remote_url: string;
-  default_branch: string;
-}
-
-const emptyRepoForm: RepoForm = { id: '', name: '', remote_url: '', default_branch: 'main' };
 
 export const ProjectSettings: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -732,854 +693,106 @@ export const ProjectSettings: React.FC = () => {
         </div>
       )}
 
-      {tab === 'general' && !flowDown && !ownersOn && (
-        <div className="card">
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-            Parent projects and reference parties reach stable-channel workspaces at their next
-            stable release. Switch the workspace to nightly, or preview the next release, in
-            workspace settings to use them now.
-          </p>
-        </div>
-      )}
-
-      {tab === 'general' && flowDown && (
-          <div className="card">
-            <h3>Parent project</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              A subsystem or supplier project sits under the system it belongs to. Requirements
-              here can then <em>refine</em> the parent's requirements, and the parent's V&amp;V
-              rolls those refinements up. A supplier works in the child project with editor
-              rights there and viewer rights on the parent.
-            </p>
-            {!project ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading project…</div>
-            ) : (
-              <div className="form-group" style={{ maxWidth: 420 }}>
-                <label htmlFor="parent-project">This project refines</label>
-                <select
-                  id="parent-project"
-                  value={project.parent_project_id || ''}
-                  disabled={savingParent}
-                  onChange={(e) => handleSetParent(e.target.value)}
-                >
-                  <option value="">None (top-level project)</option>
-                  {parentCandidates.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {childProjects.length > 0 && (
-              <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>Child projects</div>
-                <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
-                  {childProjects.map((p) => (
-                    <li key={p.id}>
-                      <Link to={`/projects/${p.id}/settings?tab=general`}>{p.name}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-      )}
-
-      {tab === 'general' && ownersOn && (
-          <div className="card">
-            <h3>Reference parties</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              Who can own an artifact here besides the members: the organisations, teams and
-              suppliers this project works with. The workspace's own company is always first.
-              An artifact's owner is picked from this list and the members, and a download can be
-              narrowed to one owner's share of the project.
-            </p>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
-              <thead>
-                <tr>
-                  <th style={th}>Party</th>
-                  <th style={th}>Note</th>
-                  <th style={th} />
-                </tr>
-              </thead>
-              <tbody>
-                {parties.map((p) => (
-                  <tr key={p.name}>
-                    <td style={td}>
-                      {p.name}
-                      {p.default && (
-                        <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-                          this workspace
-                        </span>
-                      )}
-                    </td>
-                    <td style={td}>{p.note || ''}</td>
-                    <td style={{ ...td, textAlign: 'right' }}>
-                      {!p.default && (
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ width: 'auto', padding: '4px 10px', fontSize: 12 }}
-                          disabled={savingParties}
-                          onClick={() => saveParties(parties.filter((q) => q.name !== p.name))}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <form onSubmit={handleAddParty} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <input
-                placeholder="Party name, e.g. Landing gear supplier"
-                value={partyName}
-                onChange={(e) => setPartyName(e.target.value)}
-                style={{ flex: '1 1 200px' }}
-              />
-              <input
-                placeholder="Note (optional)"
-                value={partyNote}
-                onChange={(e) => setPartyNote(e.target.value)}
-                style={{ flex: '2 1 240px' }}
-              />
-              <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={savingParties || !partyName.trim()}>
-                Add party
-              </button>
-            </form>
-          </div>
+      {tab === 'general' && (
+        <GeneralTab
+          flowDown={flowDown}
+          ownersOn={ownersOn}
+          project={project}
+          parentCandidates={parentCandidates}
+          childProjects={childProjects}
+          savingParent={savingParent}
+          handleSetParent={handleSetParent}
+          parties={parties}
+          savingParties={savingParties}
+          saveParties={saveParties}
+          handleAddParty={handleAddParty}
+          partyName={partyName}
+          setPartyName={setPartyName}
+          partyNote={partyNote}
+          setPartyNote={setPartyNote}
+        />
       )}
 
       {tab === 'members' && (
-        <>
-          <div className="card">
-            <h3>People</h3>
-            {membersLoading ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
-            ) : (
-              <div className="table-scroll">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Member</th>
-                    <th style={th}>Email</th>
-                    <th style={{ ...th, width: 140 }}>Role</th>
-                    <th style={{ ...th, width: 80 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((m) => (
-                    <tr key={m.user_id}>
-                      <td style={td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Avatar src={m.avatar_url} name={m.user_name || m.user_email} />
-                          <span>
-                            {m.user_name || '—'}
-                            {currentUser && m.user_id === currentUser.id && (
-                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> (you)</span>
-                            )}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={td}>{m.user_email || '—'}</td>
-                      <td style={td}>
-                        <select
-                          value={m.role}
-                          onChange={(e) => handleSetRole(m, e.target.value)}
-                          style={{ padding: '5px 8px', fontSize: 13 }}
-                        >
-                          <option value="owner">owner</option>
-                          <option value="editor">editor</option>
-                          <option value="reviewer">reviewer</option>
-                          <option value="viewer">viewer</option>
-                        </select>
-                      </td>
-                      <td style={{ ...td, textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleRemoveMember(m)}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {members.length === 0 && (
-                    <tr>
-                      <td style={{ ...td, color: 'var(--neutral)' }} colSpan={4}>
-                        No members found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              </div>
-            )}
-          </div>
-
-          <div className="card">
-            <h3>Add member</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              The person must already have an OpenV account — invite them to sign up first, then add
-              their email here.
-            </p>
-            <form onSubmit={handleAddMember} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <label style={{ fontSize: 12 }}>Email</label>
-                <input
-                  type="email"
-                  value={addEmail}
-                  onChange={(e) => setAddEmail(e.target.value)}
-                  placeholder="teammate@example.com"
-                />
-              </div>
-              <div style={{ width: 130 }}>
-                <label style={{ fontSize: 12 }}>Role</label>
-                <select value={addRole} onChange={(e) => setAddRole(e.target.value)}>
-                  <option value="owner">owner</option>
-                  <option value="editor">editor</option>
-                  <option value="reviewer">reviewer</option>
-                  <option value="viewer">viewer</option>
-                </select>
-              </div>
-              <button type="submit" className="button" disabled={addingMember || !addEmail.trim()}>
-                {addingMember ? 'Adding…' : 'Add member'}
-              </button>
-            </form>
-          </div>
-
-          <div className="card">
-            <h3>Teams</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              Grant a workspace team access to this project. Manage teams themselves in{' '}
-              <Link to="/org/settings">Workspace settings</Link>.
-            </p>
-            {teamGrantsLoading ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading team access…</div>
-            ) : (
-              <div className="table-scroll">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Team</th>
-                    <th style={{ ...th, width: 140 }}>Role</th>
-                    <th style={{ ...th, width: 80 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamGrants.map((g) => (
-                    <tr key={g.org_team_id}>
-                      <td style={{ ...td, fontWeight: 600 }}>{g.team_name}</td>
-                      <td style={td}>
-                        <select
-                          value={g.role}
-                          onChange={(e) => handleSetTeamRole(g, e.target.value)}
-                          style={{ padding: '5px 8px', fontSize: 13 }}
-                        >
-                          <option value="owner">owner</option>
-                          <option value="editor">editor</option>
-                          <option value="reviewer">reviewer</option>
-                          <option value="viewer">viewer</option>
-                        </select>
-                      </td>
-                      <td style={{ ...td, textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleRevokeTeam(g)}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
-                        >
-                          Revoke
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {teamGrants.length === 0 && (
-                    <tr>
-                      <td style={{ ...td, color: 'var(--neutral)' }} colSpan={3}>
-                        No teams have access to this project yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              </div>
-            )}
-
-            <form
-              onSubmit={handleGrantTeam}
-              style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 14 }}
-            >
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <label style={{ fontSize: 12 }}>Team</label>
-                <select
-                  value={grantTeamId}
-                  onChange={(e) => setGrantTeamId(e.target.value)}
-                  disabled={grantableTeams.length === 0}
-                >
-                  <option value="">
-                    {grantableTeams.length === 0
-                      ? 'No workspace teams left to add'
-                      : '-- Select a team --'}
-                  </option>
-                  {grantableTeams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ width: 130 }}>
-                <label style={{ fontSize: 12 }}>Role</label>
-                <select value={grantRole} onChange={(e) => setGrantRole(e.target.value)}>
-                  <option value="owner">owner</option>
-                  <option value="editor">editor</option>
-                  <option value="reviewer">reviewer</option>
-                  <option value="viewer">viewer</option>
-                </select>
-              </div>
-              <button type="submit" className="button" disabled={granting || !grantTeamId}>
-                {granting ? 'Granting…' : 'Grant access'}
-              </button>
-            </form>
-
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 14, marginBottom: 0 }}>
-              Workspace admins always have owner access. A person's effective role is the highest of
-              their direct grant and any team grants. A reviewer reads everything and adds notes,
-              comments and mentions, but cannot change the text.
-            </p>
-          </div>
-
-          {shareLinksOn && (
-          <div className="card" style={{ marginTop: 16 }}>
-            <h3>Share links</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 0 }}>
-              A <strong>public</strong> link opens the live project, read only, for anyone who holds
-              it, with no account. A <strong>reviewer</strong> link asks the holder to sign in and
-              makes them a reviewer. Links unfurl with a preview when pasted into Slack, Discord,
-              LinkedIn and the like. Revoke a link to close it.
-            </p>
-            {freshLink?.url && (
-              <div
-                style={{
-                  border: '1px solid var(--accent)',
-                  borderRadius: 6,
-                  padding: 12,
-                  marginBottom: 14,
-                  background: 'var(--accent-soft, rgba(44,142,240,0.08))',
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                  Your {freshLink.role} link is ready. Copy it now: it is not shown again.
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <input
-                    readOnly
-                    value={freshLink.url}
-                    onFocus={(e) => e.currentTarget.select()}
-                    style={{ flex: 1, minWidth: 220, fontSize: 12 }}
-                    aria-label="Share link"
-                  />
-                  <button type="button" className="button" onClick={copyFreshLink} style={{ width: 'auto' }}>
-                    {copied ? 'Copied' : 'Copy link'}
-                  </button>
-                </div>
-              </div>
-            )}
-            <form
-              onSubmit={handleCreateShareLink}
-              style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 14 }}
-            >
-              <div style={{ width: 150 }}>
-                <label style={{ fontSize: 12 }}>Access</label>
-                <select value={shareRole} onChange={(e) => setShareRole(e.target.value as ShareLinkRole)}>
-                  <option value="public">public, view only</option>
-                  <option value="reviewer">reviewer</option>
-                </select>
-              </div>
-              <div style={{ flex: 1, minWidth: 160 }}>
-                <label style={{ fontSize: 12 }}>Label</label>
-                <input
-                  value={shareLabel}
-                  onChange={(e) => setShareLabel(e.target.value)}
-                  placeholder="Who this link is for"
-                />
-              </div>
-              <div style={{ width: 160 }}>
-                <label style={{ fontSize: 12 }}>Expires (optional)</label>
-                <input type="date" value={shareExpires} onChange={(e) => setShareExpires(e.target.value)} />
-              </div>
-              <button type="submit" className="button" disabled={sharing} style={{ width: 'auto' }}>
-                {sharing ? 'Creating…' : 'Create link'}
-              </button>
-            </form>
-            {shareLinksLoading ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading share links…</div>
-            ) : shareLinks.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No share links yet.</div>
-            ) : (
-              <div className="table-scroll">
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={th}>Label</th>
-                      <th style={{ ...th, width: 100 }}>Access</th>
-                      <th style={{ ...th, width: 120 }}>Created</th>
-                      <th style={{ ...th, width: 120 }}>Expires</th>
-                      <th style={{ ...th, width: 90 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shareLinks.map((l) => {
-                      const revoked = !!l.revoked_at;
-                      const expired = !!l.expires_at && new Date(l.expires_at) < new Date();
-                      return (
-                        <tr key={l.id} style={{ opacity: revoked || expired ? 0.55 : 1 }}>
-                          <td style={td}>{l.label || '—'}</td>
-                          <td style={td}>{l.role}</td>
-                          <td style={td}>{new Date(l.created_at).toLocaleDateString()}</td>
-                          <td style={td}>
-                            {revoked
-                              ? 'revoked'
-                              : l.expires_at
-                                ? `${expired ? 'expired ' : ''}${new Date(l.expires_at).toLocaleDateString()}`
-                                : 'never'}
-                          </td>
-                          <td style={{ ...td, textAlign: 'right' }}>
-                            {!revoked && (
-                              <button
-                                onClick={() => handleRevokeShareLink(l)}
-                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
-                              >
-                                Revoke
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          )}
-        </>
+        <MembersTab
+          currentUser={currentUser}
+          membersLoading={membersLoading}
+          members={members}
+          handleSetRole={handleSetRole}
+          handleRemoveMember={handleRemoveMember}
+          handleAddMember={handleAddMember}
+          addEmail={addEmail}
+          setAddEmail={setAddEmail}
+          addRole={addRole}
+          setAddRole={setAddRole}
+          addingMember={addingMember}
+          teamGrantsLoading={teamGrantsLoading}
+          teamGrants={teamGrants}
+          handleSetTeamRole={handleSetTeamRole}
+          handleRevokeTeam={handleRevokeTeam}
+          handleGrantTeam={handleGrantTeam}
+          grantableTeams={grantableTeams}
+          grantTeamId={grantTeamId}
+          setGrantTeamId={setGrantTeamId}
+          grantRole={grantRole}
+          setGrantRole={setGrantRole}
+          granting={granting}
+          shareLinksOn={shareLinksOn}
+          shareLinksLoading={shareLinksLoading}
+          shareLinks={shareLinks}
+          handleRevokeShareLink={handleRevokeShareLink}
+          freshLink={freshLink}
+          copied={copied}
+          copyFreshLink={copyFreshLink}
+          handleCreateShareLink={handleCreateShareLink}
+          shareRole={shareRole}
+          setShareRole={setShareRole}
+          shareLabel={shareLabel}
+          setShareLabel={setShareLabel}
+          shareExpires={shareExpires}
+          setShareExpires={setShareExpires}
+          sharing={sharing}
+        />
       )}
 
       {tab === 'repos' && (
-        <>
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h3 style={{ marginBottom: 0 }}>Repository connections</h3>
-              <button
-                className="button-secondary"
-                style={{ padding: '6px 14px', background: 'var(--accent)' }}
-                onClick={() => {
-                  setRepoForm(emptyRepoForm);
-                  setShowRepoForm(!showRepoForm);
-                }}
-              >
-                {showRepoForm ? 'Cancel' : '+ Connect repository'}
-              </button>
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              Repositories give coding agents somewhere to work. The connection identifies the
-              GitHub repository; each member points it at their own clone below. Credentials come
-              from the host machine's git configuration.
-            </p>
-
-            {showRepoForm && (
-              <form onSubmit={handleSaveRepo} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
-                <div className="form-group">
-                  <label>Name *</label>
-                  <input
-                    value={repoForm.name}
-                    onChange={(e) => setRepoForm({ ...repoForm, name: e.target.value })}
-                    placeholder="e.g. main-app"
-                    autoFocus
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Repository URL *</label>
-                  <input
-                    value={repoForm.remote_url}
-                    onChange={(e) => setRepoForm({ ...repoForm, remote_url: e.target.value })}
-                    placeholder="https://github.com/org/repo.git"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Default branch</label>
-                  <input
-                    value={repoForm.default_branch}
-                    onChange={(e) => setRepoForm({ ...repoForm, default_branch: e.target.value })}
-                    placeholder="main"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="button"
-                  disabled={savingRepo || !repoForm.name.trim() || !repoForm.remote_url.trim()}
-                >
-                  {savingRepo ? 'Saving…' : repoForm.id ? 'Update repository' : 'Connect repository'}
-                </button>
-              </form>
-            )}
-
-            {reposLoading ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading repositories…</div>
-            ) : repos.length === 0 ? (
-              <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No repositories connected yet.</div>
-            ) : (
-              repos.map((r) => (
-                <div
-                  key={r.id}
-                  style={{
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: 4,
-                    padding: '10px 12px',
-                    marginBottom: 8,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{r.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {r.remote_url || 'no repository URL — edit to add one'}
-                        {r.default_branch ? ` · ${r.default_branch}` : ''}
-                      </div>
-                    </div>
-                    <button
-                      className="button-secondary"
-                      style={{ padding: '5px 12px', fontSize: 12 }}
-                      onClick={() => {
-                        setRepoForm({
-                          id: r.id,
-                          name: r.name,
-                          remote_url: r.remote_url,
-                          default_branch: r.default_branch || 'main',
-                        });
-                        setShowRepoForm(true);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRepo(r)}
-                      style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                    <label style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginBottom: 0 }}>
-                      Your local path
-                    </label>
-                    <input
-                      value={myPaths[r.id] ?? ''}
-                      onChange={(e) => setMyPaths({ ...myPaths, [r.id]: e.target.value })}
-                      placeholder="where this repo lives on YOUR machine"
-                      style={{ flex: 1, padding: '5px 8px', fontSize: 12 }}
-                    />
-                    <button
-                      className="button-secondary"
-                      style={{ padding: '5px 12px', fontSize: 12, width: 'auto' }}
-                      onClick={() => handleSaveMyPath(r)}
-                      disabled={savingMyPath === r.id || (myPaths[r.id] ?? '') === (r.my_local_path || '')}
-                    >
-                      {savingMyPath === r.id ? 'Saving…' : 'Save'}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-            {!reposLoading && repos.length > 0 && (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, marginBottom: 0 }}>
-                Agents run on each member's own machine, so “your local path” tells your runner
-                where this repo lives for <b>you</b>. Without one set, your runs clone the remote
-                URL instead.
-              </p>
-            )}
-          </div>
-
-          <div className="card" style={{ background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}>
-            <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
-              AI providers &amp; worker keys moved →{' '}
-              <Link to="/org/settings">Workspace settings</Link>. They now apply to the whole
-              workspace, not a single project.
-            </p>
-          </div>
-        </>
+        <ReposTab
+          reposLoading={reposLoading}
+          repos={repos}
+          repoForm={repoForm}
+          setRepoForm={setRepoForm}
+          showRepoForm={showRepoForm}
+          setShowRepoForm={setShowRepoForm}
+          savingRepo={savingRepo}
+          handleSaveRepo={handleSaveRepo}
+          handleDeleteRepo={handleDeleteRepo}
+          myPaths={myPaths}
+          setMyPaths={setMyPaths}
+          savingMyPath={savingMyPath}
+          handleSaveMyPath={handleSaveMyPath}
+        />
       )}
 
       {tab === 'agents' && (
-        <div className="card">
-          <h3>Agent authentication</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            How agent runs in this project authenticate with their AI provider. This only picks the
-            credential and routing — sign-ins themselves live in each member's user settings (the
-            user menu, bottom left).
-          </p>
-          {!project ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading project…</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'flex-start',
-                  border: '1px solid',
-                  borderColor: project.agent_auth !== 'api-key' ? 'var(--accent)' : 'var(--border-soft)',
-                  borderRadius: 4,
-                  padding: '10px 12px',
-                  cursor: 'pointer',
-                  marginBottom: 0,
-                  fontWeight: 400,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="agent-auth"
-                  style={{ width: 'auto', marginTop: 3 }}
-                  checked={project.agent_auth !== 'api-key'}
-                  disabled={savingAuth}
-                  onChange={() => handleSetAgentAuth('user-account')}
-                />
-                <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                  <b>User account</b>
-                  <br />
-                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                    Runs use each member's own CLI sign-in on their machine (set up in user
-                    settings). No sign-in happens here — this just routes runs to the launcher's
-                    local login.
-                  </span>
-                </span>
-              </label>
-              <label
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'flex-start',
-                  border: '1px solid',
-                  borderColor: project.agent_auth === 'api-key' ? 'var(--accent)' : 'var(--border-soft)',
-                  borderRadius: 4,
-                  padding: '10px 12px',
-                  cursor: 'pointer',
-                  marginBottom: 0,
-                  fontWeight: 400,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="agent-auth"
-                  style={{ width: 'auto', marginTop: 3 }}
-                  checked={project.agent_auth === 'api-key'}
-                  disabled={savingAuth}
-                  onChange={() => handleSetAgentAuth('api-key')}
-                />
-                <span style={{ fontSize: 13, color: 'var(--text)' }}>
-                  <b>API key</b>
-                  <br />
-                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                    Overrides members' local sign-ins: runs use the workspace's API key (the
-                    provider's key environment variable, configured in Workspace settings → AI
-                    providers, set on the runner host). For now runs still execute through each
-                    member's OpenV connector.
-                  </span>
-                </span>
-              </label>
-            </div>
-          )}
-        </div>
+        <AgentsTab project={project} savingAuth={savingAuth} handleSetAgentAuth={handleSetAgentAuth} />
       )}
 
       {tab === 'attributes' && (
-        <div className="card">
-          <h3>Custom attributes</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Define extra typed fields for this project's artifacts. They appear as inputs in the
-            artifact editor and are validated on save. Project attributes override a workspace-wide
-            attribute with the same key and type.
-          </p>
-
-          {attrDefsLoading ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
-          ) : attrDefs.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
-              No project attributes defined yet.
-            </div>
-          ) : (
-            <div className="table-scroll">
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
-              <thead>
-                <tr>
-                  <th style={th}>Key</th>
-                  <th style={th}>Label</th>
-                  <th style={th}>Type</th>
-                  <th style={th}>Applies to</th>
-                  <th style={th}>Required</th>
-                  <th style={th}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {attrDefs.map((def) => (
-                  <tr key={def.id}>
-                    <td style={td}>
-                      <code>{def.key}</code>
-                    </td>
-                    <td style={td}>{def.label}</td>
-                    <td style={td}>
-                      {def.data_type}
-                      {def.data_type === 'enum' && def.enum_values.length > 0 && (
-                        <span style={{ color: 'var(--text-muted)' }}> ({def.enum_values.join(', ')})</span>
-                      )}
-                    </td>
-                    <td style={td}>{def.applies_to_type || 'All types'}</td>
-                    <td style={td}>{def.required ? 'Yes' : 'No'}</td>
-                    <td style={{ ...td, textAlign: 'right' }}>
-                      <button
-                        className="button-secondary"
-                        style={{ padding: '4px 8px', fontSize: 12, color: 'var(--danger)' }}
-                        onClick={() => handleDeleteAttribute(def)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
-
-          <form onSubmit={handleAddAttribute} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="attr-key">Key</label>
-              <input
-                id="attr-key"
-                type="text"
-                value={attrForm.key}
-                onChange={(e) => setAttrForm((f) => ({ ...f, key: e.target.value }))}
-                placeholder="priority"
-                required
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="attr-label">Label</label>
-              <input
-                id="attr-label"
-                type="text"
-                value={attrForm.label}
-                onChange={(e) => setAttrForm((f) => ({ ...f, label: e.target.value }))}
-                placeholder="Priority"
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="attr-type">Type</label>
-              <select
-                id="attr-type"
-                value={attrForm.data_type}
-                onChange={(e) => setAttrForm((f) => ({ ...f, data_type: e.target.value as AttributeDataType }))}
-              >
-                {ATTRIBUTE_DATA_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {attrForm.data_type === 'enum' && (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="attr-enum">Options (comma-separated)</label>
-                <input
-                  id="attr-enum"
-                  type="text"
-                  value={attrForm.enum_values}
-                  onChange={(e) => setAttrForm((f) => ({ ...f, enum_values: e.target.value }))}
-                  placeholder="low, medium, high"
-                />
-              </div>
-            )}
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="attr-applies">Applies to</label>
-              <select
-                id="attr-applies"
-                value={attrForm.applies_to_type}
-                onChange={(e) => setAttrForm((f) => ({ ...f, applies_to_type: e.target.value }))}
-              >
-                <option value="">All types</option>
-                {artifactTypes.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input
-                id="attr-required"
-                type="checkbox"
-                checked={attrForm.required}
-                onChange={(e) => setAttrForm((f) => ({ ...f, required: e.target.checked }))}
-                style={{ width: 'auto' }}
-              />
-              <label htmlFor="attr-required" style={{ marginBottom: 0 }}>
-                Required
-              </label>
-            </div>
-            <button type="submit" className="button" disabled={savingAttr || !attrForm.key.trim()}>
-              {savingAttr ? 'Adding…' : 'Add attribute'}
-            </button>
-          </form>
-        </div>
+        <AttributesTab
+          attrDefsLoading={attrDefsLoading}
+          attrDefs={attrDefs}
+          handleDeleteAttribute={handleDeleteAttribute}
+          attrForm={attrForm}
+          setAttrForm={setAttrForm}
+          artifactTypes={artifactTypes}
+          savingAttr={savingAttr}
+          handleAddAttribute={handleAddAttribute}
+        />
       )}
 
-      {tab === 'quality' && (
-        <div className="card">
-          <h3>Requirement quality rules</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            How this project's requirements are worded and judged. Set nothing and the project
-            follows its workspace's house style (Workspace settings → Quality rules); override only
-            what this project needs to do differently. Agents read these rules before they draft,
-            and the quality badge scores against them.
-          </p>
-          {projectId && (
-            <QualityRulesEditor
-              level="project"
-              id={projectId}
-              canEdit={canEditRules}
-              onSaved={() => flash('Quality rules saved')}
-            />
-          )}
-        </div>
-      )}
+      {tab === 'quality' && <QualityTab projectId={projectId} canEditRules={canEditRules} flash={flash} />}
 
-      {tab === 'danger' && (
-        <div className="card" style={{ border: '1px solid var(--danger)' }}>
-          <h3 style={{ color: 'var(--danger)' }}>Danger zone</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Deleting the project permanently removes all artifacts, links, baselines, test runs, work
-            items and interview data. This cannot be undone.
-          </p>
-          <button
-            onClick={handleDeleteProject}
-            disabled={deleting}
-            style={{
-              background: 'var(--danger)',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 14,
-              width: 'auto',
-            }}
-          >
-            {deleting ? 'Deleting…' : 'Delete this project'}
-          </button>
-        </div>
-      )}
+      {tab === 'danger' && <DangerTab deleting={deleting} handleDeleteProject={handleDeleteProject} />}
     </div>
   );
 };
