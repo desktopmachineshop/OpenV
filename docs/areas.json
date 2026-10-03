@@ -531,7 +531,7 @@
     },
     {
       "name": "frontend-shell",
-      "description": "The single-page app around the features: entry and routing (App.tsx), the API client barrel and its axios instance, state, hooks, the UI kit, navigation and project layout, theme and help, the landing page, public site and user manual, the test mock, the build configuration, the nginx image's runtime files and public assets, and the Playwright harness.",
+      "description": "The single-page app around the features: entry and routing (App.tsx), the API client barrel and its axios instance, state, hooks, the UI kit, navigation and project layout, theme and help, the landing page, public site and user manual, the test mock, the guides of frontend/src, frontend/src/api and e2e, the build configuration, the nginx image's runtime files and public assets, and the Playwright harness.",
       "globs": [
         "docs/plans/mobile-support.md",
         "e2e/*",
@@ -551,6 +551,7 @@
         "frontend/public/**",
         "frontend/security-headers.conf",
         "frontend/src/*",
+        "frontend/src/api/*.md",
         "frontend/src/api/baseURL*",
         "frontend/src/api/client*",
         "frontend/src/api/contentDisposition*",
