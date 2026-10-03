@@ -445,7 +445,7 @@
       "area": "tenancy-identity",
       "read_by": "server",
       "default": "`single`, or `self_host` with `OPENV_SELF_HOSTED`",
-      "text": "The plan new workspaces are created on. An unknown plan name is ignored."
+      "text": "The plan new workspaces are created on: `single`, `business_lite`, `business`, `enterprise`, `self_host` or the legacy `free` and `team`. Any other name is ignored and leaves `single`, on a self-hosted deployment too."
     },
     "OPENV_PUSH_ENDPOINT_HOSTS": {
       "area": "events-notifications",
