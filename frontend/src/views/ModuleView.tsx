@@ -2,7 +2,6 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport, LinkedArtifact, Project, projectAPI } from '../api/client';
-import { baselineLabel } from '../utils/baselines';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
 import { DropZone, planMove } from '../utils/artifactDrag';
 import { matchesFieldFilters, matchesSearch } from '../utils/artifactFilter';
@@ -21,12 +20,11 @@ import {
   savePanelMode,
 } from '../components/panelMode';
 import { ArtifactEditor } from '../components/ArtifactEditor';
-import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { DownloadWizard } from '../components/DownloadWizard';
-import { ErrorBanner, Modal, useAlert, useConfirm, usePrompt } from '../components/ui';
+import { useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
@@ -40,6 +38,11 @@ import {
 } from '../utils/artifactSequence';
 import { overlayIsOpen, readingStepFor } from '../hooks/readingKeys';
 import { useHorizontalSwipe } from '../hooks/useSwipe';
+import { Toolbar } from './moduleView/Toolbar';
+import { DocumentHeader } from './moduleView/DocumentHeader';
+import { PhoneActionsSheet } from './moduleView/PhoneActionsSheet';
+import { FilterPanel } from './moduleView/FilterPanel';
+import { TreePane } from './moduleView/TreePane';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
@@ -1247,129 +1250,22 @@ export const ModuleView: React.FC = () => {
   };
 
   const toolbarActions = (
-    <>
-        <select
-          value={activeBaselineId}
-          onChange={(e) => handleBaselineChange(e.target.value)}
-          title="Select baseline"
-          style={{
-            height: '36px',
-            padding: '0 10px',
-            borderRadius: '4px',
-            border: '1px solid var(--neutral-mid)',
-            fontSize: '12px',
-            backgroundColor: 'var(--surface)',
-            cursor: 'pointer',
-            width: 'auto',
-            minWidth: '180px',
-            maxWidth: '100%',
-          }}
-        >
-          <option value="live">Live Project</option>
-          {baselines.map((baseline) => (
-            <option key={baseline.id} value={baseline.id}>
-              {baselineLabel(baseline)}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={() => {
-            // Compare the selected baseline (or the newest one when viewing
-            // live) against the live project by default.
-            const base = activeBaselineId !== 'live' ? activeBaselineId : baselines[0]?.id;
-            if (base) navigate(`/projects/${projectId}/baselines/${base}/compare`);
-          }}
-          disabled={baselines.length === 0}
-          style={{
-            height: '36px',
-            padding: '0 12px',
-            backgroundColor: baselines.length === 0 ? 'var(--neutral-mid)' : 'var(--accent)',
-            color: 'var(--accent-fg)',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: baselines.length === 0 ? 'not-allowed' : 'pointer',
-            fontSize: '12px',
-          }}
-          title="Compare this baseline against another baseline or the live project"
-        >
-          Compare
-        </button>
-        <button
-          onClick={() => handleDeleteBaseline(activeBaselineId)}
-          disabled={activeBaselineId === 'live'}
-          style={{
-            height: '36px',
-            padding: '0 10px',
-            backgroundColor: activeBaselineId === 'live' ? 'var(--neutral-mid)' : 'var(--danger)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: activeBaselineId === 'live' ? 'not-allowed' : 'pointer',
-            fontSize: '12px',
-          }}
-          title="Delete selected baseline"
-        >
-          {stacked ? '🗑 Delete baseline' : '🗑'}
-        </button>
-        <button
-          onClick={handleCaptureBaseline}
-          style={{
-            height: '36px',
-            padding: '0 12px',
-            backgroundColor: 'var(--success-bright)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-          }}
-        >
-          Capture Baseline
-        </button>
-        <button
-          onClick={handleDraftTestCases}
-          disabled={isBaselineView || draftingTests || requirementTargets.length === 0}
-          style={{
-            height: '36px',
-            padding: '0 12px',
-            backgroundColor:
-              isBaselineView || requirementTargets.length === 0 ? 'var(--neutral-mid)' : 'var(--success-bright)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor:
-              isBaselineView || draftingTests || requirementTargets.length === 0 ? 'not-allowed' : 'pointer',
-            fontSize: '12px',
-          }}
-          title={
-            requirementTargets.length === 0
-              ? 'No requirements to draft test cases for'
-              : selectedArtifact && selectedArtifact.type === 'requirement'
-                ? 'Draft test cases for the selected requirement (as proposals)'
-                : `Draft test cases for all ${requirementTargets.length} requirements in view (as proposals)`
-          }
-        >
-          {draftingTests ? 'Drafting…' : '🧪 Draft test cases'}
-        </button>
-        {/* One way out of a project: the wizard asks what shape and how much,
-            and every format reads the same narrowed snapshot. */}
-        <button
-          onClick={() => setDownloadOpen(true)}
-          style={{
-            height: '36px',
-            padding: '0 12px',
-            backgroundColor: 'var(--accent-alt)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-          }}
-          title="Download this project — choose a format, sections and attachments"
-        >
-          ↓ Download
-        </button>
-    </>
+    <Toolbar
+      activeBaselineId={activeBaselineId}
+      handleBaselineChange={handleBaselineChange}
+      baselines={baselines}
+      navigate={navigate}
+      projectId={projectId}
+      handleDeleteBaseline={handleDeleteBaseline}
+      stacked={stacked}
+      handleCaptureBaseline={handleCaptureBaseline}
+      handleDraftTestCases={handleDraftTestCases}
+      isBaselineView={isBaselineView}
+      draftingTests={draftingTests}
+      requirementTargets={requirementTargets}
+      selectedArtifact={selectedArtifact}
+      setDownloadOpen={setDownloadOpen}
+    />
   );
 
   return (
@@ -1380,45 +1276,9 @@ export const ModuleView: React.FC = () => {
     // around the whole app — every panel that needs to scroll scrolls itself.
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* The floating help panel is mounted once in ProjectLayout now. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: stacked ? '8px 12px 6px' : '16px 20px 12px', flexWrap: 'wrap', flexShrink: 0 }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: stacked ? 20 : undefined }}>Requirements</h2>
-        <div style={{ flex: 1 }} />
-        {stacked ? (
-          <button
-            type="button"
-            aria-label="Requirements actions"
-            aria-expanded={toolsOpen}
-            onClick={() => setToolsOpen(true)}
-            title="Baselines, test drafting and download"
-            style={{
-              width: 44,
-              height: 44,
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              background: 'var(--surface)',
-              color: 'var(--text)',
-              fontSize: 22,
-              lineHeight: 1,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            ⋯
-          </button>
-        ) : (
-          toolbarActions
-        )}
-      </div>
+      <DocumentHeader stacked={stacked} toolsOpen={toolsOpen} setToolsOpen={setToolsOpen} toolbarActions={toolbarActions} />
       {stacked && toolsOpen && (
-        <Modal title="Requirements" width={400} onClose={() => setToolsOpen(false)}>
-          <div className="action-sheet" onClick={(e) => {
-            // Any button in the sheet is a one-shot action: close on use.
-            if ((e.target as HTMLElement).closest('button')) setToolsOpen(false);
-          }}>
-            <label style={{ fontSize: 12 }}>Baseline</label>
-            {toolbarActions}
-          </div>
-        </Modal>
+        <PhoneActionsSheet setToolsOpen={setToolsOpen} toolbarActions={toolbarActions} />
       )}
       {stacked && (
         <div
@@ -1460,404 +1320,61 @@ export const ModuleView: React.FC = () => {
           window instead of sitting in a fixed-height box. Stacked, every
           pane keeps its state (tree expansion, editor drafts) by being hidden
           rather than unmounted. */}
-      <div style={stacked
-        ? { flex: 1, minWidth: 0, display: stackedPane === 'tree' ? 'flex' : 'none', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0 }
-        : { width: `${leftColumnDrawn}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
-        <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 15 }} />
-        {!isBaselineView && (
-          <button
-            onClick={() => {
-              setIsCreating(!isCreating);
-              // A manual open (or cancel) always starts from a blank form, and
-              // without the placement a context-menu create had asked for.
-              setPendingCreateContext(null);
-              setPendingCreatePlacement(null);
-              setError('');
-            }}
-            className="button"
-            style={{ width: '100%', marginBottom: stacked ? '10px' : '20px' }}
-          >
-            {isCreating ? 'Cancel' : '+ New Artifact'}
-          </button>
-        )}
-
-        <div style={{ marginBottom: stacked ? '10px' : '20px' }}>
-          {!stacked && (
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text)' }}>
-            Filter and Search:
-          </label>
-          )}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search..."
-                style={{
-                  width: '100%',
-                  padding: '8px 160px 8px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--neutral-mid)',
-                  fontSize: '14px',
-                  backgroundColor: 'var(--surface)',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: '10px',
-                  transform: 'translateY(-50%)',
-                  fontSize: '12px',
-                  color: 'var(--text-muted)',
-                  maxWidth: '140px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  pointerEvents: 'none',
-                }}
-                title={buildFilterSummary()}
-              >
-                {buildFilterSummary()}
-              </div>
-            </div>
-            <button
-              onClick={() => setShowFilterPanel((prev) => !prev)}
-              className="button-secondary"
-              style={{ padding: '6px 10px', fontSize: '14px' }}
-              title="Toggle filters"
-            >
-              ⚙
-            </button>
-          </div>
-          {showFilterPanel && (
-            <div style={{
-              marginTop: '12px',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              padding: '10px',
-              backgroundColor: 'var(--surface-alt)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text)' }}>
-                  <input
-                    type="checkbox"
-                    checked={searchExact}
-                    onChange={(e) => setSearchExact(e.target.checked)}
-                  />
-                  Exact match
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text)' }}>Filter logic</span>
-                  <select
-                    value={filterLogic}
-                    onChange={(e) => setFilterLogic(e.target.value === 'or' ? 'or' : 'and')}
-                    style={{
-                      padding: '6px',
-                      borderRadius: '4px',
-                      border: '1px solid var(--neutral-mid)',
-                      fontSize: '12px',
-                    }}
-                  >
-                    <option value="and">AND</option>
-                    <option value="or">OR</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filterRows.map((row) => {
-                  const isFiniteField = finiteFields.includes(row.field);
-                  const comparatorIsFinite = ['equals', 'not-equals'].includes(row.comparator);
-                  const shouldUseSelect = isFiniteField && comparatorIsFinite;
-                  const fieldValues = shouldUseSelect ? getFieldUniqueValues(row.field) : [];
-
-                  return (
-                    <div key={row.id} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <select
-                        value={row.field}
-                        onChange={(e) => {
-                          const next = filterRows.map((item) =>
-                            item.id === row.id ? { ...item, field: e.target.value } : item
-                          );
-                          setFilterRows(next);
-                        }}
-                        style={{
-                          flex: '0 0 140px',
-                          padding: '6px',
-                          borderRadius: '4px',
-                          border: '1px solid var(--neutral-mid)',
-                          fontSize: '12px',
-                        }}
-                      >
-                        {fieldOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={row.comparator}
-                        onChange={(e) => {
-                          const next = filterRows.map((item) =>
-                            item.id === row.id ? { ...item, comparator: e.target.value } : item
-                          );
-                          setFilterRows(next);
-                        }}
-                        style={{
-                          flex: '0 0 140px',
-                          padding: '6px',
-                          borderRadius: '4px',
-                          border: '1px solid var(--neutral-mid)',
-                          fontSize: '12px',
-                        }}
-                      >
-                        <option value="contains">Contains</option>
-                        <option value="not-contains">Not contains</option>
-                        <option value="equals">Equals</option>
-                        <option value="not-equals">Not equals</option>
-                        <option value="starts-with">Starts with</option>
-                        <option value="ends-with">Ends with</option>
-                        <option value="gt">Greater than</option>
-                        <option value="lt">Less than</option>
-                      </select>
-                      {shouldUseSelect ? (
-                        <select
-                          value={row.value}
-                          onChange={(e) => {
-                            const next = filterRows.map((item) =>
-                              item.id === row.id ? { ...item, value: e.target.value } : item
-                            );
-                            setFilterRows(next);
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '6px',
-                            borderRadius: '4px',
-                            border: '1px solid var(--neutral-mid)',
-                            fontSize: '12px',
-                          }}
-                        >
-                          <option value="">-- Select {row.field} --</option>
-                          {fieldValues.map((val) => (
-                            <option key={val} value={val}>
-                              {val}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={row.value}
-                          onChange={(e) => {
-                            const next = filterRows.map((item) =>
-                              item.id === row.id ? { ...item, value: e.target.value } : item
-                            );
-                            setFilterRows(next);
-                          }}
-                          placeholder="Contains..."
-                          style={{
-                            flex: 1,
-                            padding: '6px',
-                            borderRadius: '4px',
-                            border: '1px solid var(--neutral-mid)',
-                            fontSize: '12px',
-                          }}
-                        />
-                      )}
-                      <button
-                        onClick={() => {
-                          const next = filterRows.filter((item) => item.id !== row.id);
-                          setFilterRows(
-                            next.length > 0
-                              ? next
-                              : [{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]
-                          );
-                        }}
-                        className="button-secondary"
-                        style={{ padding: '5px 8px', fontSize: '12px' }}
-                        title="Remove filter"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  );
-                })}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => {
-                      setFilterRows((prev) => [
-                        ...prev,
-                        { id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' },
-                      ]);
-                    }}
-                    className="button-secondary"
-                    style={{ padding: '6px 10px', fontSize: '12px' }}
-                  >
-                    + Add filter
-                  </button>
-                  <button
-                    onClick={() => {
-                      const name = filterPresetName.trim();
-                      if (!name) return;
-                      const data = JSON.stringify({
-                        searchText,
-                        searchExact,
-                        filterLogic,
-                        filterRows,
-                      });
-                      const next = filterPresets.filter((preset) => preset.name !== name);
-                      next.unshift({ name, data });
-                      setFilterPresetName('');
-                      setSelectedPreset(name);
-                      savePresets(next);
-                    }}
-                    className="button-secondary"
-                    style={{ padding: '6px 10px', fontSize: '12px' }}
-                  >
-                    Save preset
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSearchText('');
-                      setSearchExact(false);
-                      setFilterLogic('and');
-                      setFilterRows([{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]);
-                    }}
-                    className="button-secondary"
-                    style={{ padding: '6px 10px', fontSize: '12px' }}
-                  >
-                    Clear filters
-                  </button>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={filterPresetName}
-                    onChange={(e) => setFilterPresetName(e.target.value)}
-                    placeholder="Preset name"
-                    style={{
-                      flex: '0 0 180px',
-                      padding: '6px',
-                      borderRadius: '4px',
-                      border: '1px solid var(--neutral-mid)',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <select
-                    value={selectedPreset}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSelectedPreset(value);
-                      const preset = filterPresets.find((item) => item.name === value);
-                      if (preset) {
-                        applyPreset(preset.data);
-                      }
-                    }}
-                    style={{
-                      flex: '0 0 220px',
-                      padding: '6px',
-                      borderRadius: '4px',
-                      border: '1px solid var(--neutral-mid)',
-                      fontSize: '12px',
-                    }}
-                  >
-                    <option value="">Saved presets</option>
-                    {filterPresets.map((preset) => (
-                      <option key={preset.name} value={preset.name}>
-                        {preset.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => {
-                      if (!selectedPreset) return;
-                      const next = filterPresets.filter((preset) => preset.name !== selectedPreset);
-                      setSelectedPreset('');
-                      savePresets(next);
-                    }}
-                    className="button-secondary"
-                    style={{ padding: '6px 10px', fontSize: '12px' }}
-                  >
-                    Delete preset
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => {
-                setCollapseAllToken((prev) => prev + 1);
-              }}
-              className="button-secondary"
-              style={{ padding: '6px 10px', fontSize: '12px' }}
-            >
-              Collapse all
-            </button>
-            <button
-              onClick={() => {
-                setExpandAllToken((prev) => prev + 1);
-              }}
-              className="button-secondary"
-              style={{ padding: '6px 10px', fontSize: '12px' }}
-            >
-              Expand all
-            </button>
-          </div>
-        </div>
-
-        {isCreating && !isBaselineView && (
-          <ArtifactEditor
-            artifacts={artifacts}
-            projectId={projectId}
-            initialData={pendingCreateContext ?? undefined}
-            onSave={handleCreateArtifact}
-            onCancel={() => {
-              setIsCreating(false);
-              setPendingCreateContext(null);
-              setPendingCreatePlacement(null);
-              setError('');
-            }}
+      <TreePane
+        stacked={stacked}
+        stackedPane={stackedPane}
+        leftColumnDrawn={leftColumnDrawn}
+        error={error}
+        setError={setError}
+        isBaselineView={isBaselineView}
+        isCreating={isCreating}
+        setIsCreating={setIsCreating}
+        setPendingCreateContext={setPendingCreateContext}
+        setPendingCreatePlacement={setPendingCreatePlacement}
+        searchText={searchText}
+        setSearchText={setSearchText}
+        buildFilterSummary={buildFilterSummary}
+        setShowFilterPanel={setShowFilterPanel}
+        showFilterPanel={showFilterPanel}
+        filterPanel={
+          <FilterPanel
+            searchText={searchText}
+            setSearchText={setSearchText}
+            searchExact={searchExact}
+            setSearchExact={setSearchExact}
+            filterLogic={filterLogic}
+            setFilterLogic={setFilterLogic}
+            filterRows={filterRows}
+            setFilterRows={setFilterRows}
+            finiteFields={finiteFields}
+            getFieldUniqueValues={getFieldUniqueValues}
+            fieldOptions={fieldOptions}
+            filterPresetName={filterPresetName}
+            setFilterPresetName={setFilterPresetName}
+            filterPresets={filterPresets}
+            selectedPreset={selectedPreset}
+            setSelectedPreset={setSelectedPreset}
+            savePresets={savePresets}
+            applyPreset={applyPreset}
           />
-        )}
-
-        {isBaselineView && baselineLoading ? (
-          <div
-            role="status"
-            style={{
-              padding: '24px 16px',
-              textAlign: 'center',
-              color: 'var(--text-muted)',
-              fontSize: 14,
-            }}
-          >
-            Loading baseline…
-            <div style={{ fontSize: 13, marginTop: 4 }}>
-              A baseline holds the whole project, so this can take a moment.
-            </div>
-          </div>
-        ) : (
-          <ArtifactList
-            artifacts={filteredArtifacts}
-            allArtifacts={artifacts}
-            selectedId={selectedArtifactId || undefined}
-            onSelect={handleSelectArtifact}
-            onReorder={handleReorderArtifact}
-            onContextMenuAction={handleArtifactContextMenu}
-            canPaste={!!clipboard}
-            defaultCollapsed
-            collapseAllTrigger={collapseAllToken}
-            expandAllTrigger={expandAllToken}
-            readOnly={isBaselineView}
-            qualityScores={isBaselineView ? undefined : qualityScores}
-            hideHeading={stacked}
-          />
-        )}
-      </div>
+        }
+        setCollapseAllToken={setCollapseAllToken}
+        setExpandAllToken={setExpandAllToken}
+        artifacts={artifacts}
+        projectId={projectId}
+        pendingCreateContext={pendingCreateContext}
+        handleCreateArtifact={handleCreateArtifact}
+        baselineLoading={baselineLoading}
+        filteredArtifacts={filteredArtifacts}
+        selectedArtifactId={selectedArtifactId}
+        handleSelectArtifact={handleSelectArtifact}
+        handleReorderArtifact={handleReorderArtifact}
+        handleArtifactContextMenu={handleArtifactContextMenu}
+        clipboard={clipboard}
+        collapseAllToken={collapseAllToken}
+        expandAllToken={expandAllToken}
+        qualityScores={qualityScores}
+      />
 
       {/* Resize handle for left column */}
       {!stacked && (
