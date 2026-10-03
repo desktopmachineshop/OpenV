@@ -31,8 +31,16 @@
 //     outside function bodies; a side-effect import of a script) moved to
 //     another module, except a module's whole set of them moving in order
 //     to a new module that the old one loads. The tool cannot prove other
-//     such moves and refuses them. CSS cascade order across modules is
-//     S12b's; getters are assumed pure.
+//     such moves and refuses them;
+//   - "effects reordered": loading a module that is on both sides runs the
+//     statements that may have side effects, its own and those of every
+//     module it reaches (each once, its imports first, as ESM evaluates
+//     them), in another order, counting those that run on both sides. This
+//     catches a move that changes which module loads an import first: with
+//     the old module's statements moved to a new one it loads first, an
+//     effectful module only another new module still imports now runs after
+//     them. It is checked when none of the above fails.
+// CSS cascade order across modules is S12b's; getters are assumed pure.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -103,9 +111,11 @@ export function moveCheck(base, head) {
   }
   for (const b of left) failures.push(`removed ${b.module} ${b.name}`);
   // 4. Evaluation order.
-  failures.push(...reorders(pairs), ...effectMoves(base, head, pairs), ...importOrder(base, head));
+  const order = [...reorders(pairs), ...effectMoves(base, head, pairs), ...importOrder(base, head)];
   const baseCycles = new Set(runtimeCycles(base));
-  for (const c of runtimeCycles(head)) if (!baseCycles.has(c)) failures.push(`new import cycle ${c}`);
+  for (const c of runtimeCycles(head)) if (!baseCycles.has(c)) order.push(`new import cycle ${c}`);
+  // What loading a module runs, checked once nothing above explains a change.
+  failures.push(...order, ...(order.length ? [] : effectOrder(base, head, pairs)));
 
   const wiring = (mods) => new Map([...mods.values()].map((m) => [m.path, m.wiring.join('\n')]));
   const bw = wiring(base);
@@ -176,6 +186,64 @@ function effectMoves(base, head, pairs) {
     for (const h of list) out.push(`moved ${h.name}: ${from} -> ${to} changes when it runs (it may have side effects; see tsmovecheck's header)`);
   }
   return out;
+}
+
+/** What loading a module runs, as ESM evaluates it: each module it reaches,
+ * once, its runtime imports first, in order (a module already loading is
+ * not entered again), then its own statements that may have side effects,
+ * each named by its base side so that a moved one still matches. For every
+ * module on both sides, the statements its loading runs on both sides must
+ * run in the same order. The rules above miss one way to break that: a
+ * move that changes which module loads an import first. When client.ts's
+ * axios instance moves to http.ts and only an area module keeps client.ts's
+ * import of a module with side effects (one that sets axios's defaults,
+ * say), those effects used to run before axios.create and now run after it,
+ * though every module kept its own statements and imports in order. A
+ * statement that runs on one side only (the module no longer loads the one
+ * that holds it) is not compared. Only the first difference in a module is
+ * reported, and only for a module none of whose imports is: that one says
+ * it already. */
+function effectOrder(base, head, pairs) {
+  const ids = new Map(); // "side\tmodule\tpos\tname" -> the statement's base key
+  const say = new Map(); // base key -> the statement as a failure names it
+  for (const [b, h] of pairs) {
+    if (!b.effectful && !h.effectful) continue;
+    const id = `${b.module}\t${b.pos}\t${b.name}`;
+    ids.set(`base\t${id}`, id);
+    ids.set(`head\t${h.module}\t${h.pos}\t${h.name}`, id);
+    say.set(id, `${h.name} in ${h.module}`);
+  }
+  const runs = (side, mods, from) => {
+    const out = [];
+    const seen = new Set();
+    const load = (p) => {
+      if (seen.has(p)) return;
+      seen.add(p);
+      const m = mods.get(p);
+      if (!m) return;
+      for (const k of runtimeImports(mods, m)) load(k);
+      for (const d of m.decls) {
+        const id = ids.get(`${side}\t${p}\t${d.pos}\t${d.name}`);
+        if (id) out.push(id);
+      }
+    };
+    load(from);
+    return out;
+  };
+  const differ = new Map(); // module -> its failure
+  for (const p of [...head.keys()].sort()) {
+    if (!base.has(p)) continue;
+    const bs = runs('base', base, p);
+    const hs = runs('head', head, p);
+    const [bIn, hIn] = [new Set(bs), new Set(hs)];
+    const bc = bs.filter((id) => hIn.has(id));
+    const hc = hs.filter((id) => bIn.has(id));
+    const i = hc.findIndex((id, j) => id !== bc[j]);
+    if (i >= 0) differ.set(p, `effects reordered when ${p} loads: ${say.get(hc[i])} now runs before ${say.get(bc[i])}`);
+  }
+  // A module that loads one of these only repeats what that one says.
+  const roots = [...differ.keys()].filter((p) => !runtimeImports(head, head.get(p)).some((k) => differ.has(k)));
+  return (roots.length ? roots : [...differ.keys()]).map((p) => differ.get(p));
 }
 
 /** A module evaluates the modules it imports in import order: the ones it
