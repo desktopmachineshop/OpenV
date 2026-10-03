@@ -1,0 +1,68 @@
+# Round trip of docs/exports/openv-platform-2026-09-22.json (refactor plan S9, invariant I15): imported as
+# POST /api/v1/projects/import imports it (ImportProject) into a fresh
+# database, then exported again as JSON (GET /api/v1/projects/{id}/export).
+# Per field: how many values came back equal, remapped to the new ids, as the
+# new project's id, as a new id, stamped with the round trip's clock, set to
+# one value, changed otherwise, dropped or added. Artifacts are matched by ref, links by
+# their ends and type; links_snapshot is compared by the links it names.
+# A refactor never changes this file; for a deliberate change regenerate it
+# with
+#   UPDATE_GOLDEN=1 OPENV_TEST_DATABASE_URL=<a throwaway server> go test ./internal/persistence/postgres -count=1 -run '^TestExportDocsRoundTrip$'
+document: 422 artifacts and 500 links in, 422 artifacts and 500 links out
+the document's own fields
+  attachments: set to null 1
+  exported_at: the round trip's clock 1
+  product_profile.constraints: equal 1
+  product_profile.created_at: the round trip's clock 1
+  product_profile.problem_statement: equal 1
+  product_profile.project_id: the new project's id 1
+  product_profile.settings: equal 1
+  product_profile.success_metrics: equal 1
+  product_profile.target_users: equal 1
+  product_profile.updated_at: the round trip's clock 1
+  product_profile.vision: equal 1
+  project_description: equal 1
+  project_id: the new project's id 1
+  project_name: equal 1
+  version: equal 1
+artifacts: 422 matched by ref, 0 in unmatched, 0 out unmatched
+  order: the children of 21 of 21 parents (the root among them) in the document's order
+  attributes.approved_on: equal 1
+  attributes.assessed_commit: equal 7
+  attributes.assessed_on: equal 9
+  attributes.deployment: equal 16
+  attributes.execution_method: equal 60
+  attributes.implementation: equal 1
+  attributes.links_snapshot: the same links, renewed 364, added 21
+  attributes.priority: equal 190
+  attributes.severity: equal 16
+  attributes.status: equal 422
+  attributes.status_note: equal 1
+  attributes.verification_method: equal 180
+  attributes.verification_status: equal 47
+  body: equal 422
+  created_at: the round trip's clock 422
+  id: remapped to the new ids 422
+  parent_id: remapped to the new ids 379
+  project_id: the new project's id 422
+  ref: equal 422
+  sort_order: equal 422
+  status: equal 422
+  title: equal 422
+  type: equal 422
+  updated_at: the round trip's clock 422
+  valid_from: the round trip's clock 422
+  valid_to: equal 422
+  version: set to 1 398, equal 24
+links: 500 matched by ends and type, 0 in with an end outside the document, 0 in unmatched, 0 out unmatched
+  attributes: equal 500
+  created_at: the round trip's clock 500
+  from_id: remapped to the new ids 500
+  id: a new id 500
+  suspect: equal 375, set to false 125
+  to_id: remapped to the new ids 500
+  type: equal 500
+  updated_at: the round trip's clock 500
+  valid_from: equal 500
+  valid_to: equal 500
+  version: equal 500

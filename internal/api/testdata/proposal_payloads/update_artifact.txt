@@ -1,0 +1,29 @@
+# What a proposal-mode agent run's update_artifact stores in proposals.payload
+# (refactor plan S9, invariant I16), reached by PUT /api/v1/artifacts/{id}.
+# request: the DTO the handler decoded, as encoding/json writes it.
+# stored payload: the map maybePropose builds from it, after the proposal
+# service lifts a create_artifact's ref into its own column (keys sorted, as
+# encoding/json writes a map; Postgres keeps it as JSONB).
+# applied: the DTO the applier decodes from the stored payload on approval.
+# A refactor never changes this file; for a deliberate change regenerate it
+# with
+#   UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^(TestFormatsGolden|TestProposalPayloadsGolden)$'
+dto: UpdateArtifactRequest
+case "every field set":
+  request: {"parent_id":"5e9a0000-0000-4000-8000-000000000101","type":"requirement","title":"Changed","body":"The system shall change.","sort_order":7,"attributes":{"priority":"should"},"linksSnapshot":[{"id":"5e9a0000-0000-4000-8000-000000000202","type":"verifies"}],"pendingLinkAdds":[{"to_id":"5e9a0000-0000-4000-8000-000000000105","type":"decomposes-to"}],"pendingLinkRemoves":["5e9a0000-0000-4000-8000-000000000201"]}
+  stored payload: {"attributes":{"priority":"should"},"body":"The system shall change.","linksSnapshot":[{"id":"5e9a0000-0000-4000-8000-000000000202","type":"verifies"}],"parent_id":"5e9a0000-0000-4000-8000-000000000101","pendingLinkAdds":[{"to_id":"5e9a0000-0000-4000-8000-000000000105","type":"decomposes-to"}],"pendingLinkRemoves":["5e9a0000-0000-4000-8000-000000000201"],"sort_order":7,"title":"Changed","type":"requirement"}
+  stored ref: ""
+  stored target_id: "5e9a0000-0000-4000-8000-000000000104"
+  applied: {"parent_id":"5e9a0000-0000-4000-8000-000000000101","type":"requirement","title":"Changed","body":"The system shall change.","sort_order":7,"attributes":{"priority":"should"},"linksSnapshot":[{"id":"5e9a0000-0000-4000-8000-000000000202","type":"verifies"}],"pendingLinkAdds":[{"to_id":"5e9a0000-0000-4000-8000-000000000105","type":"decomposes-to"}],"pendingLinkRemoves":["5e9a0000-0000-4000-8000-000000000201"]}
+case "parent_id null: to the root":
+  request: {"parent_id":null,"title":"Changed","attributes":null}
+  stored payload: {"attributes":null,"parent_id":null,"title":"Changed"}
+  stored ref: ""
+  stored target_id: "5e9a0000-0000-4000-8000-000000000104"
+  applied: {"parent_id":null,"title":"Changed","attributes":null}
+case "zero value: every field omitted":
+  request: {"attributes":null}
+  stored payload: {"attributes":null}
+  stored ref: ""
+  stored target_id: "5e9a0000-0000-4000-8000-000000000104"
+  applied: {"attributes":null}

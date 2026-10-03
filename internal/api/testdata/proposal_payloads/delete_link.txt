@@ -1,0 +1,15 @@
+# What a proposal-mode agent run's delete_link stores in proposals.payload
+# (refactor plan S9, invariant I16), reached by DELETE /api/v1/links/{id}.
+# request: the DTO the handler decoded, as encoding/json writes it.
+# stored payload: the map maybePropose builds from it, after the proposal
+# service lifts a create_artifact's ref into its own column (keys sorted, as
+# encoding/json writes a map; Postgres keeps it as JSONB).
+# applied: the DTO the applier decodes from the stored payload on approval.
+# A refactor never changes this file; for a deliberate change regenerate it
+# with
+#   UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^(TestFormatsGolden|TestProposalPayloadsGolden)$'
+dto: none (the handler proposes no body)
+case "no body":
+  stored payload: {}
+  stored ref: ""
+  stored target_id: "5e9a0000-0000-4000-8000-000000000104"

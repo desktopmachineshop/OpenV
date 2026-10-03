@@ -1,0 +1,87 @@
+# Every field reachable from exports.ProjectExport, as encoding/json reaches
+# it, and what the JSON import (POST /api/v1/projects/import, ImportProject:
+# a new project, refs kept) does with it (refactor plan S9, invariant I15).
+# "carried to" names what changing the field changes in what the import
+# writes: the project, its product profile, an artifact or a link, by JSON
+# key. "dropped" means the import writes the same whatever the field holds.
+# Measured, not declared: TestImportFields imports a document with the one
+# field changed and compares the writes, minted ids and stamped times aside.
+# An id is renamed with its references, a relation moved to another artifact,
+# and a map gains the key s9-probe.
+# A new field fails the test until this file is regenerated, so the import
+# mapper cannot drop it unnoticed. A refactor never changes this file; for a
+# deliberate change regenerate it with
+#   UPDATE_GOLDEN=1 go test ./internal/domain/exports -count=1 -run '^TestImportFields$'
+exported_at (ProjectExport.ExportedAt time.Time): dropped
+version (ProjectExport.Version string): dropped
+project_id (ProjectExport.ProjectID string): dropped
+project_name (ProjectExport.ProjectName string): carried to project.name
+project_description (ProjectExport.ProjectDesc string): carried to project.description
+baseline_name (ProjectExport.BaselineName string): dropped
+artifacts[].id (Artifact.ID string): dropped
+artifacts[].project_id (Artifact.ProjectID string): dropped
+artifacts[].parent_id (Artifact.ParentID *string): carried to artifact.parent_id
+artifacts[].type (Artifact.Type string): carried to artifact.type
+artifacts[].ref (Artifact.Ref string): carried to artifact.ref
+artifacts[].doc_number (Artifact.DocNumber string): dropped
+artifacts[].title (Artifact.Title string): carried to artifact.title
+artifacts[].body (Artifact.Body string): carried to artifact.body
+artifacts[].sort_order (Artifact.SortOrder int): carried to artifact.sort_order
+artifacts[].status (Artifact.Status string): dropped
+artifacts[].attributes (Artifact.Attributes map[string]interface {}): carried to artifact.attributes.s9-probe
+artifacts[].version (Artifact.Version int): dropped
+artifacts[].valid_from (Artifact.ValidFrom time.Time): dropped
+artifacts[].valid_to (Artifact.ValidTo *time.Time): dropped
+artifacts[].created_at (Artifact.CreatedAt time.Time): dropped
+artifacts[].updated_at (Artifact.UpdatedAt time.Time): dropped
+links[].id (Link.ID string): dropped
+links[].from_id (Link.FromID string): carried to artifact.attributes.links_snapshot, link.from_id
+links[].to_id (Link.ToID string): carried to artifact.attributes.links_snapshot, link.to_id
+links[].type (Link.Type string): carried to artifact.attributes.links_snapshot, link.type
+links[].suspect (Link.Suspect bool): dropped
+links[].attributes (Link.Attributes map[string]interface {}): dropped
+links[].version (Link.Version int): dropped
+links[].valid_from (Link.ValidFrom time.Time): dropped
+links[].valid_to (Link.ValidTo *time.Time): dropped
+links[].created_at (Link.CreatedAt time.Time): dropped
+links[].updated_at (Link.UpdatedAt time.Time): dropped
+attachments[].id (Attachment.ID string): dropped
+attachments[].artifact_id (Attachment.ArtifactID string): dropped
+attachments[].filename (Attachment.Filename string): dropped
+attachments[].original_filename (Attachment.OriginalFilename string): dropped
+attachments[].title (Attachment.Title string): dropped
+attachments[].mime_type (Attachment.MimeType string): dropped
+attachments[].file_path (Attachment.FilePath string): dropped
+attachments[].file_size (Attachment.FileSize int): dropped
+attachments[].figure_ref (Attachment.FigureRef string): dropped
+attachments[].figure_num (Attachment.FigureNum int): dropped
+attachments[].version (Attachment.Version int): dropped
+attachments[].created_at (Attachment.CreatedAt time.Time): dropped
+product_profile.project_id (ProductProfile.ProjectID string): dropped
+product_profile.vision (ProductProfile.Vision string): carried to profile.vision
+product_profile.problem_statement (ProductProfile.ProblemStatement string): carried to profile.problem_statement
+product_profile.target_users (ProductProfile.TargetUsers string): carried to profile.target_users
+product_profile.constraints (ProductProfile.Constraints []map[string]interface {}): carried to profile.constraints
+product_profile.success_metrics (ProductProfile.SuccessMetrics []map[string]interface {}): carried to profile.success_metrics
+product_profile.settings (ProductProfile.Settings map[string]interface {}): carried to profile.settings.s9-probe
+product_profile.created_at (ProductProfile.CreatedAt time.Time): dropped
+product_profile.updated_at (ProductProfile.UpdatedAt time.Time): dropped
+attribute_definitions[].id (Definition.ID string): dropped
+attribute_definitions[].org_id (Definition.OrgID *string): dropped
+attribute_definitions[].project_id (Definition.ProjectID *string): dropped
+attribute_definitions[].key (Definition.Key string): dropped
+attribute_definitions[].label (Definition.Label string): dropped
+attribute_definitions[].data_type (Definition.DataType string): dropped
+attribute_definitions[].enum_values (Definition.EnumValues []string): dropped
+attribute_definitions[].applies_to_type (Definition.AppliesToType string): dropped
+attribute_definitions[].required (Definition.Required bool): dropped
+attribute_definitions[].sort_order (Definition.SortOrder int): dropped
+attribute_definitions[].created_at (Definition.CreatedAt time.Time): dropped
+linked_artifacts[].id (LinkedArtifact.ID string): dropped
+linked_artifacts[].project_id (LinkedArtifact.ProjectID string): dropped
+linked_artifacts[].project_name (LinkedArtifact.ProjectName string): dropped
+linked_artifacts[].ref (LinkedArtifact.Ref string): dropped
+linked_artifacts[].type (LinkedArtifact.Type string): dropped
+linked_artifacts[].title (LinkedArtifact.Title string): dropped
+linked_artifacts[].status (LinkedArtifact.Status string): dropped
+# 72 fields: 18 carried, 54 dropped

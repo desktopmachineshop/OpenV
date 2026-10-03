@@ -1,0 +1,249 @@
+GET /api/v1/projects/<P>/download/excel?fields=priority%2Crisk&headings=0&results=1&sections=<HDG-1>&toc=0&traceability=1&types=requirement%2Ctest-case
+status: 200
+Content-Disposition: attachment; filename="project_Formats fixture  Ü & co_<now 20060102_150405>.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+body: xlsx
+parts:
+  xl/worksheets/sheet4.xml
+  xl/worksheets/sheet3.xml
+  xl/worksheets/sheet2.xml
+  xl/worksheets/sheet1.xml
+  xl/workbook.xml
+  xl/theme/theme1.xml
+  xl/styles.xml
+  xl/sharedStrings.xml
+  xl/_rels/workbook.xml.rels
+  docProps/core.xml
+  docProps/app.xml
+  _rels/.rels
+  [Content_Types].xml
+sheet "Project" (xl/worksheets/sheet1.xml):
+<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<dimension ref="A1">
+</dimension>
+<sheetViews>
+<sheetView tabSelected="true" workbookViewId="0">
+</sheetView>
+</sheetViews>
+<sheetFormatPr defaultRowHeight="15">
+</sheetFormatPr>
+<cols>
+<col customWidth="true" max="1" min="1" width="13">
+</col>
+<col customWidth="true" max="2" min="2" width="57">
+</col>
+</cols>
+<sheetData>(the cells below)</sheetData>
+</worksheet>
+  A1 s=1 t=s: "Project"
+  B1 s=2 t=s: "Formats \"fixture\" / Ü & co"
+  A2 s=1 t=s: "Description"
+  B2 s=2 t=s: "The S9 format fixture: <every> renderer & its escaping."
+  A3 s=1 t=s: "Exported at"
+  B3 s=2 t=s: "<now RFC 3339>"
+  A4 s=1 t=s: "Artifacts"
+  B4 s=2 t=s: "4"
+  A5 s=1 t=s: "Links"
+  B5 s=2 t=s: "3"
+sheet "Requirements" (xl/worksheets/sheet2.xml):
+<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+<sheetPr filterMode="true">
+</sheetPr>
+<dimension ref="A1">
+</dimension>
+<sheetViews>
+<sheetView workbookViewId="0">
+<pane activePane="bottomLeft" state="frozen" topLeftCell="A2" ySplit="1">
+</pane>
+<selection activeCell="A2" pane="bottomLeft" sqref="A2">
+</selection>
+</sheetView>
+</sheetViews>
+<cols>
+<col customWidth="true" max="2" min="1" width="10">
+</col>
+<col customWidth="true" max="3" min="3" width="38">
+</col>
+<col customWidth="true" max="4" min="4" width="13">
+</col>
+<col customWidth="true" max="5" min="5" width="32">
+</col>
+<col customWidth="true" max="6" min="6" width="60">
+</col>
+<col customWidth="true" max="8" min="7" width="10">
+</col>
+<col customWidth="true" max="9" min="9" width="38">
+</col>
+<col customWidth="true" max="10" min="10" width="10">
+</col>
+<col customWidth="true" max="12" min="11" width="22">
+</col>
+</cols>
+<sheetData>(the cells below)</sheetData>
+<autoFilter ref="$A$1:$L$3">
+</autoFilter>
+</worksheet>
+  A1 s=1 t=s: "ref"
+  B1 s=1 t=s: "section"
+  C1 s=1 t=s: "id"
+  D1 s=1 t=s: "type"
+  E1 s=1 t=s: "title"
+  F1 s=1 t=s: "body"
+  G1 s=1 t=s: "status"
+  H1 s=1 t=s: "version"
+  I1 s=1 t=s: "parent_id"
+  J1 s=1 t=s: "links"
+  K1 s=1 t=s: "created_at"
+  L1 s=1 t=s: "updated_at"
+  A2 s= t=s: "REQ-1"
+  C2 s= t=s: "5e9a0000-0000-4000-8000-000000000104"
+  D2 s= t=s: "requirement"
+  E2 s= t=s: "Answer in time"
+  F2 s=2 t=s: "The system shall answer within **2 s** of a request, measured at the _client_.\n\n- Logged with `answer_ms`\n- Checked against [the budget](https://example.com/budget)\n\n| Load | Limit |\n| --- | --- |\n| idle | 1 s |\n| peak | 2 s |\n\nSee REQ-2 and REQ-1-FIG-1; quote \"as is\", a < b & c > d, 5 µs, Ü.\n\n```\nanswer(ctx)\n```"
+  G2 s= t=s: "approved"
+  H2 s= t=: "3"
+  I2 s= t=s: "5e9a0000-0000-4000-8000-000000000101"
+  K2 s= t=s: "2025-06-02T08:04:00Z"
+  L2 s= t=s: "2025-06-02T08:34:00Z"
+  A3 s= t=s: "REQ-2"
+  C3 s= t=s: "5e9a0000-0000-4000-8000-000000000105"
+  D3 s= t=s: "requirement"
+  E3 s= t=s: "Log each answer & error <code>"
+  F3 s=2 t=s: "The system shall log each answer.\nThe log shall survive a restart."
+  G3 s= t=s: "draft"
+  H3 s= t=: "2"
+  I3 s= t=s: "5e9a0000-0000-4000-8000-000000000101"
+  K3 s= t=s: "2025-06-02T08:05:00Z"
+  L3 s= t=s: "2025-06-02T08:35:00Z"
+sheet "Test Cases" (xl/worksheets/sheet3.xml):
+<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+<sheetPr filterMode="true">
+</sheetPr>
+<dimension ref="A1">
+</dimension>
+<sheetViews>
+<sheetView workbookViewId="0">
+<pane activePane="bottomLeft" state="frozen" topLeftCell="A2" ySplit="1">
+</pane>
+<selection activeCell="A2" pane="bottomLeft" sqref="A2">
+</selection>
+</sheetView>
+</sheetViews>
+<cols>
+<col customWidth="true" max="2" min="1" width="10">
+</col>
+<col customWidth="true" max="3" min="3" width="38">
+</col>
+<col customWidth="true" max="4" min="4" width="11">
+</col>
+<col customWidth="true" max="5" min="5" width="17">
+</col>
+<col customWidth="true" max="6" min="6" width="37">
+</col>
+<col customWidth="true" max="8" min="7" width="10">
+</col>
+<col customWidth="true" max="9" min="9" width="38">
+</col>
+<col customWidth="true" max="10" min="10" width="47">
+</col>
+<col customWidth="true" max="12" min="11" width="22">
+</col>
+</cols>
+<sheetData>(the cells below)</sheetData>
+<autoFilter ref="$A$1:$L$3">
+</autoFilter>
+</worksheet>
+  A1 s=1 t=s: "ref"
+  B1 s=1 t=s: "section"
+  C1 s=1 t=s: "id"
+  D1 s=1 t=s: "type"
+  E1 s=1 t=s: "title"
+  F1 s=1 t=s: "body"
+  G1 s=1 t=s: "status"
+  H1 s=1 t=s: "version"
+  I1 s=1 t=s: "parent_id"
+  J1 s=1 t=s: "links"
+  K1 s=1 t=s: "created_at"
+  L1 s=1 t=s: "updated_at"
+  A2 s= t=s: "TC-1"
+  C2 s= t=s: "5e9a0000-0000-4000-8000-000000000107"
+  D2 s= t=s: "test-case"
+  E2 s= t=s: "Time the answer"
+  F2 s=2 t=s: "Measure the answer time under load."
+  G2 s= t=s: "approved"
+  H2 s= t=: "1"
+  I2 s= t=s: "5e9a0000-0000-4000-8000-000000000101"
+  J2 s= t=s: "verifies:5e9a0000-0000-4000-8000-000000000104"
+  K2 s= t=s: "2025-06-02T08:07:00Z"
+  L2 s= t=s: "2025-06-02T08:37:00Z"
+  A3 s= t=s: "TC-2"
+  C3 s= t=s: "5e9a0000-0000-4000-8000-000000000108"
+  D3 s= t=s: "test-case"
+  E3 s= t=s: "Check the log"
+  F3 s=2 t=s: "Restart, then read the log."
+  G3 s= t=s: "draft"
+  H3 s= t=: "1"
+  I3 s= t=s: "5e9a0000-0000-4000-8000-000000000101"
+  J3 s= t=s: "verifies:5e9a0000-0000-4000-8000-000000000105"
+  K3 s= t=s: "2025-06-02T08:08:00Z"
+  L3 s= t=s: "2025-06-02T08:38:00Z"
+sheet "Links" (xl/worksheets/sheet4.xml):
+<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+<sheetPr filterMode="true">
+</sheetPr>
+<dimension ref="A1">
+</dimension>
+<sheetViews>
+<sheetView workbookViewId="0">
+<pane activePane="bottomLeft" state="frozen" topLeftCell="A2" ySplit="1">
+</pane>
+<selection activeCell="A2" pane="bottomLeft" sqref="A2">
+</selection>
+</sheetView>
+</sheetViews>
+<cols>
+<col customWidth="true" max="1" min="1" width="38">
+</col>
+<col customWidth="true" max="2" min="2" width="17">
+</col>
+<col customWidth="true" max="4" min="3" width="10">
+</col>
+<col customWidth="true" max="5" min="5" width="32">
+</col>
+<col customWidth="true" max="6" min="6" width="10">
+</col>
+</cols>
+<sheetData>(the cells below)</sheetData>
+<autoFilter ref="$A$1:$F$4">
+</autoFilter>
+</worksheet>
+  A1 s=1 t=s: "from_ref"
+  B1 s=1 t=s: "from_title"
+  C1 s=1 t=s: "type"
+  D1 s=1 t=s: "to_ref"
+  E1 s=1 t=s: "to_title"
+  F1 s=1 t=s: "suspect"
+  A2 s= t=s: "5e9a0000-0000-4000-8000-000000000121"
+  C2 s= t=s: "refines"
+  D2 s= t=s: "REQ-1"
+  E2 s= t=s: "Answer in time"
+  F2 s= t=s: "no"
+  A3 s= t=s: "TC-2"
+  B3 s= t=s: "Check the log"
+  C3 s= t=s: "verifies"
+  D3 s= t=s: "REQ-2"
+  E3 s= t=s: "Log each answer & error <code>"
+  F3 s= t=s: "no"
+  A4 s= t=s: "TC-1"
+  B4 s= t=s: "Time the answer"
+  C4 s= t=s: "verifies"
+  D4 s= t=s: "REQ-1"
+  E4 s= t=s: "Answer in time"
+  F4 s= t=s: "no"
+styles:
+  s=1: {"Border":null,"Fill":{"Type":"pattern","Pattern":0,"Color":null,"Shading":0,"Transparency":0},"Font":{"Bold":true,"Italic":false,"Underline":"","Family":"","Size":0,"Strike":false,"Color":"","ColorIndexed":0,"ColorTheme":null,"ColorTint":0,"VertAlign":"","Charset":null},"Alignment":{"Horizontal":"","Indent":0,"JustifyLastLine":false,"ReadingOrder":0,"RelativeIndent":0,"ShrinkToFit":false,"TextRotation":0,"Vertical":"center","WrapText":false},"Protection":null,"NumFmt":0,"DecimalPlaces":null,"CustomNumFmt":null,"NegRed":false}
+  s=2: {"Border":null,"Fill":{"Type":"pattern","Pattern":0,"Color":null,"Shading":0,"Transparency":0},"Font":{"Bold":false,"Italic":false,"Underline":"","Family":"Calibri","Size":11,"Strike":false,"Color":"","ColorIndexed":0,"ColorTheme":1,"ColorTint":0,"VertAlign":"","Charset":null},"Alignment":{"Horizontal":"","Indent":0,"JustifyLastLine":false,"ReadingOrder":0,"RelativeIndent":0,"ShrinkToFit":false,"TextRotation":0,"Vertical":"top","WrapText":true},"Protection":null,"NumFmt":0,"DecimalPlaces":null,"CustomNumFmt":null,"NegRed":false}
