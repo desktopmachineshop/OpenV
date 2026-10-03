@@ -1,0 +1,109 @@
+{
+  "description": "Refactor step M12b, class A (docs/plans/codebase-refactor.md §6.5): internal/domain/orgs's orgs.go and limits.go split by concern. The workspace's own lifecycle (creating one, a personal one on sign-up, reading, listing, renaming, its logo) goes to workspace.go with the slug helpers; memberships, with the role names, the Member type and the role check, to membership.go; the plan move, the billing sync's pass-throughs, the monthly budget with its validation and the budget and hosted-minutes alert claims to billing.go; the release channel, upgrade window, stable release, the channel lists and a member's early switch to the next stable release join the channel rules in channels.go; soft delete, restore, the deleted-workspace list and the purge, with DeletionGraceDays, to deletion.go; and from limits.go the plan names, PlanDefaults, the tier switch and tier values, the alpha terms, the plan list and largest upload it derives, and the default plan with ValidPlan to plans.go. orgs.go keeps the workspace types, the error values, Org, Repository, Service, DefaultService and its constructor; limits.go keeps its overview comment, the limit catalog, the over-plan reading, the deployment layer, ParseLimits, EffectiveLimits and the limit readers. Each new file gets a header naming its concern. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/M12b.json",
+  "package": "internal/domain/orgs",
+  "targets": [
+    {
+      "file": "workspace.go",
+      "header": "// The workspace itself: creating one (a personal one at sign-up), reading\n// and listing, renaming, and its logo.",
+      "decls": [
+        "slugCleaner",
+        "makeSlug",
+        "(*DefaultService).CreateOrg",
+        "(*DefaultService).EnsurePersonalOrg",
+        "(*DefaultService).Get",
+        "(*DefaultService).ListForUser",
+        "(*DefaultService).ListAll",
+        "(*DefaultService).UpdateOrg",
+        "(*DefaultService).SetLogo",
+        "(*DefaultService).ClearLogo"
+      ]
+    },
+    {
+      "file": "membership.go",
+      "header": "// Memberships: who belongs to a workspace, and with which role.",
+      "decls": [
+        "RoleAdmin",
+        "RoleMember",
+        "Member",
+        "validOrgRole",
+        "(*DefaultService).AddMember",
+        "(*DefaultService).RemoveMember",
+        "(*DefaultService).SetMemberRole",
+        "(*DefaultService).ListMembers",
+        "(*DefaultService).RoleInOrg",
+        "(*DefaultService).RoleInOrgAny",
+        "(*DefaultService).IsMember"
+      ]
+    },
+    {
+      "file": "billing.go",
+      "header": "// The workspace's billing: a platform admin's plan move, the billing sync's\n// writes and lookups, the monthly budget, and the budget and hosted-minutes\n// alert claims.",
+      "decls": [
+        "(*DefaultService).SetPlan",
+        "(*DefaultService).SetBillingCustomer",
+        "(*DefaultService).ApplyBillingState",
+        "(*DefaultService).SetBilledSeats",
+        "(*DefaultService).ClearBillingSubscription",
+        "(*DefaultService).SetGrandfathered",
+        "(*DefaultService).GrandfatherBefore",
+        "(*DefaultService).FindOrgByBillingRef",
+        "(*DefaultService).ListBillingOrgs",
+        "ValidateMonthlyBudget",
+        "(*DefaultService).SetMonthlyBudget",
+        "(*DefaultService).ClaimBudgetAlert",
+        "(*DefaultService).ClaimMinutesAlert"
+      ]
+    },
+    {
+      "file": "channels.go",
+      "decls": [
+        "(*DefaultService).SetReleaseChannel",
+        "(*DefaultService).SetUpgradeWindow",
+        "(*DefaultService).SetStableRelease",
+        "(*DefaultService).ListOrgsByChannel",
+        "(*DefaultService).ListMemberUserIDsByChannel",
+        "(*DefaultService).MemberPreview",
+        "(*DefaultService).SetMemberPreview"
+      ]
+    },
+    {
+      "file": "deletion.go",
+      "header": "// Deleting a workspace: the soft delete, the restore within the grace\n// period, and the purge once it has passed.",
+      "decls": [
+        "DeletionGraceDays",
+        "(*DefaultService).DeleteOrg",
+        "(*DefaultService).RestoreOrg",
+        "(*DefaultService).ListDeletedForUser",
+        "(*DefaultService).PurgeExpired"
+      ]
+    },
+    {
+      "file": "plans.go",
+      "header": "// The plans a workspace can be on: their names, the limits each defaults to,\n// the tier values once the tiers are in force, the alpha terms, and the plan\n// new workspaces are created on. How a workspace's limits resolve is in\n// limits.go.",
+      "decls": [
+        "PlanSingle",
+        "PlanBusinessLite",
+        "PlanBusiness",
+        "PlanEnterprise",
+        "PlanSelfHost",
+        "PlanOpenSource",
+        "PlanFree",
+        "PlanTeam",
+        "unlimited",
+        "PlanDefaults",
+        "tiersEnforced",
+        "SetTiersEnforced",
+        "TiersEnforced",
+        "FreeHostedRunnerMinutes",
+        "tiered",
+        "AlphaTerms",
+        "allPlans",
+        "MaxPlanUploadMB",
+        "defaultPlan",
+        "SetDefaultPlan",
+        "DefaultPlan",
+        "ValidPlan"
+      ]
+    }
+  ]
+}

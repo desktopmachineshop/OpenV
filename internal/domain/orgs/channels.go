@@ -161,3 +161,69 @@ func (o *Org) ResolveReleaseChannel() {
 	}
 	o.ReleaseChannelLocked = !ChannelChoosable(o.BilledPlan)
 }
+
+// SetReleaseChannel implements Service.
+func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckReleaseChannel(org.BilledPlan, channel); err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetReleaseChannel(id, channel); err != nil {
+		return nil, err
+	}
+	org.ReleaseChannelOverride = channel
+	org.UpdatedAt = time.Now()
+	org.ResolveReleaseChannel()
+	return org, nil
+}
+
+// SetUpgradeWindow implements Service.
+func (s *DefaultService) SetUpgradeWindow(id string, day, hour int, timezone string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := CheckUpgradeWindow(org.BilledPlan, day, hour, timezone); err != nil {
+		return nil, err
+	}
+	if day == 0 {
+		hour, timezone = 0, ""
+	}
+	if err := s.repo.SetUpgradeWindow(id, day, hour, timezone); err != nil {
+		return nil, err
+	}
+	org.UpgradeDay, org.UpgradeHour, org.UpgradeTimezone = day, hour, timezone
+	org.UpdatedAt = time.Now()
+	return org, nil
+}
+
+// SetStableRelease implements Service.
+func (s *DefaultService) SetStableRelease(id, version string) (*Org, error) {
+	if err := s.repo.SetStableRelease(id, version); err != nil {
+		return nil, err
+	}
+	return s.Get(id)
+}
+
+// ListOrgsByChannel implements Service.
+func (s *DefaultService) ListOrgsByChannel(channel string) ([]*Org, error) {
+	return s.repo.ListOrgsByChannel(channel)
+}
+
+// ListMemberUserIDsByChannel implements Service.
+func (s *DefaultService) ListMemberUserIDsByChannel(channel string) ([]string, error) {
+	return s.repo.ListMemberUserIDsByChannel(channel)
+}
+
+// MemberPreview implements Service.
+func (s *DefaultService) MemberPreview(orgID, userID string) (bool, error) {
+	return s.repo.MemberPreview(orgID, userID)
+}
+
+// SetMemberPreview implements Service.
+func (s *DefaultService) SetMemberPreview(orgID, userID string, enabled bool) error {
+	return s.repo.SetMemberPreview(orgID, userID, enabled)
+}

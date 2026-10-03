@@ -1,0 +1,139 @@
+// The workspace itself: creating one (a personal one at sign-up), reading
+// and listing, renaming, and its logo.
+
+package orgs
+
+import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+var slugCleaner = regexp.MustCompile(`[^a-z0-9]+`)
+
+func makeSlug(name, id string) string {
+	base := strings.Trim(slugCleaner.ReplaceAllString(strings.ToLower(name), "-"), "-")
+	if base == "" {
+		base = "org"
+	}
+	if len(base) > 40 {
+		base = base[:40]
+	}
+	return base + "-" + strings.ReplaceAll(id, "-", "")[:8]
+}
+
+// CreateOrg creates an org and makes the creator its admin.
+func (s *DefaultService) CreateOrg(name, orgType string, createdBy string) (*Org, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("organization name is required")
+	}
+	if orgType != TypePersonal && orgType != TypeCompany {
+		return nil, fmt.Errorf("invalid organization type %q", orgType)
+	}
+	now := time.Now()
+	org := &Org{
+		ID:         uuid.New().String(),
+		Name:       name,
+		OrgType:    orgType,
+		BilledPlan: DefaultPlan(),
+		Limits:     map[string]interface{}{},
+		CreatedBy:  &createdBy,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+	org.Slug = makeSlug(name, org.ID)
+	if err := s.repo.SaveOrg(org); err != nil {
+		return nil, err
+	}
+	if err := s.repo.UpsertMember(org.ID, createdBy, RoleAdmin); err != nil {
+		return nil, err
+	}
+	org.Role = RoleAdmin
+	return org, nil
+}
+
+// EnsurePersonalOrg returns (org, created, error).
+func (s *DefaultService) EnsurePersonalOrg(userID, displayName string) (*Org, bool, error) {
+	existing, err := s.repo.FindPersonalOrgForUser(userID)
+	if err != nil {
+		return nil, false, err
+	}
+	if existing != nil {
+		return existing, false, nil
+	}
+	name := strings.TrimSpace(displayName)
+	if name == "" {
+		name = "Personal"
+	}
+	org, err := s.CreateOrg(name+"'s Space", TypePersonal, userID)
+	if err != nil {
+		return nil, false, err
+	}
+	return org, true, nil
+}
+
+// Get returns an org by id.
+func (s *DefaultService) Get(id string) (*Org, error) {
+	org, err := s.repo.FindOrgByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if org == nil {
+		return nil, ErrNotFound
+	}
+	return org, nil
+}
+
+// ListForUser returns the user's orgs with their role populated.
+func (s *DefaultService) ListForUser(userID string) ([]*Org, error) {
+	return s.repo.ListOrgsForUser(userID)
+}
+
+// ListAll returns every organization id.
+func (s *DefaultService) ListAll() ([]string, error) {
+	return s.repo.ListAllOrgIDs()
+}
+
+// UpdateOrg renames an org.
+func (s *DefaultService) UpdateOrg(id string, name *string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if name != nil && strings.TrimSpace(*name) != "" {
+		org.Name = strings.TrimSpace(*name)
+	}
+	org.UpdatedAt = time.Now()
+	if err := s.repo.UpdateOrg(org); err != nil {
+		return nil, err
+	}
+	return org, nil
+}
+
+// SetLogo records where the workspace logo lives and what image type it is.
+// The write touches only the two logo columns.
+func (s *DefaultService) SetLogo(id, path, mime string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetLogo(id, path, mime); err != nil {
+		return nil, err
+	}
+	org.LogoPath = path
+	org.LogoMime = mime
+	org.HasLogo = path != ""
+	org.UpdatedAt = time.Now()
+	return org, nil
+}
+
+// ClearLogo forgets the workspace logo. The file on disk is the API's to
+// remove; the domain only records that there is no logo any more.
+func (s *DefaultService) ClearLogo(id string) (*Org, error) {
+	return s.SetLogo(id, "", "")
+}
