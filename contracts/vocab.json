@@ -1,0 +1,468 @@
+{
+  "about": "Go vocabularies the frontend copies by hand (refactor plan S13, invariant I24), each read from its Go catalogue: link rules with their text, artifact types and the ones the quality linter scores, artifact statuses with the transitions each allows, feature keys in registry order, domain event types, plans (with the legacy aliases), API error codes, V&V gap labels by JSON key (the two Go tables in internal/domain/reports are asserted equal), agent providers in display order, upload extensions with their kind, the paths the API serves without a session, and the guided wizard's step labels. Written by TestVocabulary (internal/vocabparity/vocab_test.go); frontend/src/arch/vocabParity.test.ts checks every TypeScript copy against it, allowing only the differences in contracts/vocab-allowed-diffs.json. Regenerate only for a deliberate change: UPDATE_GOLDEN=1 go test ./internal/vocabparity -count=1 -run '^TestVocabulary$'",
+  "link_rules": [
+    {
+      "type": "verifies",
+      "label": "verifies",
+      "inverse_label": "verified by",
+      "allowed_from_types": [
+        "test-case"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A test case demonstrates that a requirement is met"
+    },
+    {
+      "type": "satisfies",
+      "label": "satisfies",
+      "inverse_label": "satisfied by",
+      "allowed_from_types": [
+        "design-item"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A design element implements or fulfills a requirement"
+    },
+    {
+      "type": "mitigates",
+      "label": "mitigates",
+      "inverse_label": "mitigated by",
+      "allowed_from_types": [
+        "design-item"
+      ],
+      "allowed_to_types": [
+        "hazard"
+      ],
+      "description": "A design element reduces or eliminates a hazard"
+    },
+    {
+      "type": "decomposes-to",
+      "label": "decomposes to",
+      "inverse_label": "decomposed from",
+      "allowed_from_types": [
+        "requirement"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A high-level requirement is broken down into more specific sub-requirements"
+    },
+    {
+      "type": "refines",
+      "label": "refines",
+      "inverse_label": "refined by",
+      "allowed_from_types": [
+        "requirement"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A requirement in a subsystem or supplier project refines a requirement of its parent project; the parent's verification rolls the refinements up"
+    },
+    {
+      "type": "derives-from",
+      "label": "derives from",
+      "inverse_label": "gives rise to",
+      "allowed_from_types": [
+        "requirement"
+      ],
+      "allowed_to_types": [
+        "user-need"
+      ],
+      "description": "A requirement is derived from a user need"
+    },
+    {
+      "type": "validates",
+      "label": "validates",
+      "inverse_label": "validated by",
+      "allowed_from_types": [
+        "test-case"
+      ],
+      "allowed_to_types": [
+        "user-need"
+      ],
+      "description": "A test case confirms that a user need is met"
+    },
+    {
+      "type": "impacts",
+      "label": "impacts",
+      "inverse_label": "impacted by",
+      "allowed_from_types": [
+        "*"
+      ],
+      "allowed_to_types": [
+        "*"
+      ],
+      "description": "A change to one artifact affects another"
+    },
+    {
+      "type": "relates-to",
+      "label": "relates-to",
+      "inverse_label": "relates-to",
+      "allowed_from_types": [
+        "*"
+      ],
+      "allowed_to_types": [
+        "*"
+      ],
+      "description": "A loose, non-semantic association between artifacts"
+    }
+  ],
+  "artifact_types": [
+    {
+      "value": "heading",
+      "label": "Heading"
+    },
+    {
+      "value": "description",
+      "label": "Description"
+    },
+    {
+      "value": "persona",
+      "label": "Persona"
+    },
+    {
+      "value": "user-need",
+      "label": "User Need"
+    },
+    {
+      "value": "requirement",
+      "label": "Requirement"
+    },
+    {
+      "value": "design-item",
+      "label": "Design Item"
+    },
+    {
+      "value": "test-case",
+      "label": "Test Case"
+    },
+    {
+      "value": "hazard",
+      "label": "Hazard"
+    },
+    {
+      "value": "other",
+      "label": "Other"
+    }
+  ],
+  "quality_linted_types": [
+    "user-need",
+    "requirement"
+  ],
+  "artifact_statuses": [
+    {
+      "value": "draft",
+      "next": [
+        "in_review"
+      ]
+    },
+    {
+      "value": "in_review",
+      "next": [
+        "draft",
+        "approved"
+      ]
+    },
+    {
+      "value": "approved",
+      "next": [
+        "superseded"
+      ]
+    },
+    {
+      "value": "superseded",
+      "next": []
+    }
+  ],
+  "feature_keys": [
+    "flow-down",
+    "artifact-owners",
+    "share-links",
+    "assistant-project-edits",
+    "default-workspace",
+    "figure-titles",
+    "password-reset",
+    "antigravity-cli",
+    "todo-list",
+    "figure-revert",
+    "attachment-formats",
+    "figure-citations",
+    "search-by-ref",
+    "note-tagging",
+    "project-review-round",
+    "review-queue-decisions",
+    "artifact-stepping",
+    "workspace-billing"
+  ],
+  "event_types": [
+    "artifact.created",
+    "artifact.updated",
+    "artifact.deleted",
+    "artifact.status_changed",
+    "artifact.restored",
+    "link.created",
+    "link.updated",
+    "link.deleted",
+    "baseline.captured",
+    "baseline.deleted",
+    "project.review_round_started",
+    "chatter.created",
+    "testrun.recorded",
+    "workitem.created",
+    "workitem.moved",
+    "workitem.updated",
+    "agentrun.finished",
+    "agentrun.successors_skipped",
+    "proposal.created",
+    "org.member_added",
+    "org.member_role_changed",
+    "org.member_removed",
+    "org.invitation_sent",
+    "org.invitation_accepted",
+    "project.member_added",
+    "project.member_role_changed",
+    "project.member_removed"
+  ],
+  "plans": [
+    "single",
+    "business_lite",
+    "business",
+    "enterprise",
+    "self_host",
+    "open_source",
+    "free",
+    "team"
+  ],
+  "error_codes": [
+    "email_unverified",
+    "registration_closed",
+    "invitation_email_mismatch",
+    "weak_password",
+    "password_incorrect",
+    "limit_reached",
+    "plan_read_only",
+    "no_password",
+    "reset_invalid",
+    "reset_email_unavailable",
+    "billing_unavailable",
+    "billing_upstream",
+    "unknown_plan",
+    "already_subscribed",
+    "no_subscription",
+    "granted_plan",
+    "no_customer",
+    "checkout_mismatch"
+  ],
+  "gap_labels": [
+    {
+      "key": "requirements_without_method",
+      "label": "Requirements without a verification method"
+    },
+    {
+      "key": "requirements_without_test_case",
+      "label": "Requirements without a test case"
+    },
+    {
+      "key": "requirements_unverified",
+      "label": "Unverified (demonstration, analysis, inspection)"
+    },
+    {
+      "key": "requirements_failing",
+      "label": "Requirements with failing tests"
+    },
+    {
+      "key": "orphan_test_cases",
+      "label": "Orphan test cases (verify nothing)"
+    },
+    {
+      "key": "needs_without_requirement",
+      "label": "User needs without a derived requirement"
+    },
+    {
+      "key": "hazards_unmitigated",
+      "label": "Unmitigated hazards"
+    }
+  ],
+  "providers": [
+    "claude-code",
+    "codex-cli",
+    "gemini-cli",
+    "antigravity-cli",
+    "anthropic-api",
+    "openai-api",
+    "google-api"
+  ],
+  "upload_extensions": [
+    {
+      "ext": ".3dm",
+      "kind": "model"
+    },
+    {
+      "ext": ".3mf",
+      "kind": "model"
+    },
+    {
+      "ext": ".asm",
+      "kind": "model"
+    },
+    {
+      "ext": ".bmp",
+      "kind": "image"
+    },
+    {
+      "ext": ".catpart",
+      "kind": "model"
+    },
+    {
+      "ext": ".catproduct",
+      "kind": "model"
+    },
+    {
+      "ext": ".dwg",
+      "kind": "model"
+    },
+    {
+      "ext": ".dxf",
+      "kind": "model"
+    },
+    {
+      "ext": ".f3d",
+      "kind": "model"
+    },
+    {
+      "ext": ".gif",
+      "kind": "image"
+    },
+    {
+      "ext": ".glb",
+      "kind": "model"
+    },
+    {
+      "ext": ".gltf",
+      "kind": "model"
+    },
+    {
+      "ext": ".iam",
+      "kind": "model"
+    },
+    {
+      "ext": ".idw",
+      "kind": "model"
+    },
+    {
+      "ext": ".iges",
+      "kind": "model"
+    },
+    {
+      "ext": ".igs",
+      "kind": "model"
+    },
+    {
+      "ext": ".ipt",
+      "kind": "model"
+    },
+    {
+      "ext": ".jpeg",
+      "kind": "image"
+    },
+    {
+      "ext": ".jpg",
+      "kind": "image"
+    },
+    {
+      "ext": ".obj",
+      "kind": "model"
+    },
+    {
+      "ext": ".pdf",
+      "kind": "document"
+    },
+    {
+      "ext": ".ply",
+      "kind": "model"
+    },
+    {
+      "ext": ".png",
+      "kind": "image"
+    },
+    {
+      "ext": ".prt",
+      "kind": "model"
+    },
+    {
+      "ext": ".scad",
+      "kind": "model"
+    },
+    {
+      "ext": ".sldasm",
+      "kind": "model"
+    },
+    {
+      "ext": ".slddrw",
+      "kind": "model"
+    },
+    {
+      "ext": ".sldprt",
+      "kind": "model"
+    },
+    {
+      "ext": ".step",
+      "kind": "model"
+    },
+    {
+      "ext": ".stl",
+      "kind": "model"
+    },
+    {
+      "ext": ".stp",
+      "kind": "model"
+    },
+    {
+      "ext": ".svg",
+      "kind": "image"
+    },
+    {
+      "ext": ".tif",
+      "kind": "image"
+    },
+    {
+      "ext": ".tiff",
+      "kind": "image"
+    },
+    {
+      "ext": ".webp",
+      "kind": "image"
+    },
+    {
+      "ext": ".x_b",
+      "kind": "model"
+    },
+    {
+      "ext": ".x_t",
+      "kind": "model"
+    }
+  ],
+  "open_paths": {
+    "exact": [
+      "/health",
+      "/metrics"
+    ],
+    "prefixes": [
+      "/api/v1/auth/",
+      "/api/v1/public/"
+    ]
+  },
+  "wizard_step_labels": [
+    "Product framing",
+    "Personas",
+    "User needs",
+    "Requirements",
+    "NFRs & constraints",
+    "Hazards",
+    "Verification stubs",
+    "Review & commit"
+  ]
+}
