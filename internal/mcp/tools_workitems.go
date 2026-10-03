@@ -14,6 +14,7 @@ func workItemListTools() []Tool {
 	return []Tool{
 		{
 			Name:        "list_work_items",
+			ReadOnly:    true,
 			Description: "List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id":  str("Project ID"),
@@ -70,6 +71,7 @@ func workItemTools() []Tool {
 	return []Tool{
 		{
 			Name:        "get_work_item",
+			ReadOnly:    true,
 			Description: "Get a kanban work item with its activity.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id": str("Work item ID"),
@@ -81,6 +83,7 @@ func workItemTools() []Tool {
 		},
 		{
 			Name:        "get_work_item_history",
+			ReadOnly:    true,
 			Description: "Get just the activity history of a work item.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id": str("Work item ID"),

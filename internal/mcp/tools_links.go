@@ -64,6 +64,7 @@ func linkTools() []Tool {
 		},
 		{
 			Name:        "list_links_for_artifact",
+			ReadOnly:    true,
 			Description: "List all links touching one artifact.",
 			InputSchema: schema([]string{"artifact_id", "project_id"}, map[string]interface{}{
 				"artifact_id": str("Artifact ID"),
