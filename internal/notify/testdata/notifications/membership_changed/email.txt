@@ -1,0 +1,174 @@
+# Email for notification type membership_changed (notifications.TypeMembershipChanged): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): yes. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== org.member_added: an admin adds a member | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Someone joined the workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Someone joined the workspace
+
+Ben Okafor joined this workspace as a member.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.invitation_sent: an admin invites an address as an admin | delivery 1 of 1 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: An invitation was sent
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+An invitation was sent
+
+frank@example.test was invited to this workspace as an admin.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.invitation_accepted: someone with no display name joins | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Someone joined the workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Someone joined the workspace
+
+Someone joined this workspace as a member.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.invitation_accepted: someone with no display name joins | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Someone joined the workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Someone joined the workspace
+
+Someone joined this workspace as a member.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.member_role_changed: a member is made an admin | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: A workspace role changed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+A workspace role changed
+
+Ben Okafor is now an admin in this workspace (was a member).
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.member_removed by an admin | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Someone was removed from the workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Someone was removed from the workspace
+
+Ben Okafor was removed from this workspace.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.member_removed: a member leaves | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Someone left the workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Someone left the workspace
+
+Ben Okafor left this workspace.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.member_removed: a member leaves | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Someone left the workspace
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Someone left the workspace
+
+Ben Okafor left this workspace.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

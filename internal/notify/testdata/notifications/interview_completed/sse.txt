@@ -1,0 +1,17 @@
+# SSE frames for notification type interview_completed (notifications.TypeInterviewCompleted): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== chatter.created: an interview participant finished | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"interview_completed","title":"Interview session finished","body":"An interview participant completed their session.","entity_ref":{"kind":"interview","project_id":"proj-apollo","session_id":"sess-5"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== chatter.created: an interview participant finished | delivery 2 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"interview_completed","title":"Interview session finished","body":"An interview participant completed their session.","entity_ref":{"kind":"interview","project_id":"proj-apollo","session_id":"sess-5"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

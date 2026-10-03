@@ -1,0 +1,61 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeProposalPending",
+  "deliveries": [
+    {
+      "delivery": "1 of 2",
+      "scenario": "proposal.created by an agent run: the project's editors and owners",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Agent proposal pending review\",\"body\":\"An agent submitted a change that needs your approval.\",\"url\":\"/projects/proj-apollo/agent-runs?run=run-42\",\"tag\":\"proposal_pending:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "proposal.created by an agent run: the project's editors and owners",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Agent proposal pending review\",\"body\":\"An agent submitted a change that needs your approval.\",\"url\":\"/projects/proj-apollo/agent-runs?run=run-42\",\"tag\":\"proposal_pending:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "proposal.created with no run id in its payload",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Agent proposal pending review\",\"body\":\"An agent submitted a change that needs your approval.\",\"url\":\"/projects/proj-apollo/agent-runs\",\"tag\":\"proposal_pending:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "proposal.created with no run id in its payload",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Agent proposal pending review\",\"body\":\"An agent submitted a change that needs your approval.\",\"url\":\"/projects/proj-apollo/agent-runs\",\"tag\":\"proposal_pending:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    }
+  ],
+  "pushed by default": true,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "proposal_pending"
+}

@@ -1,0 +1,87 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeAccessChanged",
+  "deliveries": [
+    {
+      "delivery": "1 of 2",
+      "scenario": "org.member_added: an admin adds a member",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"url\":\"/projects\",\"tag\":\"access_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "org.member_role_changed: a member is made an admin",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"url\":\"/projects\",\"tag\":\"access_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "org.member_removed by an admin",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"You were removed from a workspace\",\"body\":\"You no longer have access to this workspace.\",\"url\":\"/projects\",\"tag\":\"access_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "project.member_added as an editor",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"url\":\"/projects/proj-apollo\",\"tag\":\"access_changed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "project.member_role_changed from editor to viewer",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Your project access changed\",\"body\":\"Your role in this project is now a viewer.\",\"url\":\"/projects/proj-apollo\",\"tag\":\"access_changed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "project.member_removed by an owner",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"You were removed from a project\",\"body\":\"You no longer have access to this project.\",\"url\":\"/projects/proj-apollo\",\"tag\":\"access_changed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    }
+  ],
+  "pushed by default": true,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "access_changed"
+}

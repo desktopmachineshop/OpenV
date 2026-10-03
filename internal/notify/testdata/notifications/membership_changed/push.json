@@ -1,0 +1,113 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeMembershipChanged",
+  "deliveries": [
+    {
+      "delivery": "2 of 2",
+      "scenario": "org.member_added: an admin adds a member",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"Someone joined the workspace\",\"body\":\"Ben Okafor joined this workspace as a member.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-dee"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "org.invitation_sent: an admin invites an address as an admin",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"An invitation was sent\",\"body\":\"frank@example.test was invited to this workspace as an admin.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-dee"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "org.invitation_accepted: someone with no display name joins",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Someone joined the workspace\",\"body\":\"Someone joined this workspace as a member.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "org.invitation_accepted: someone with no display name joins",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"Someone joined the workspace\",\"body\":\"Someone joined this workspace as a member.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-dee"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "org.member_role_changed: a member is made an admin",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"A workspace role changed\",\"body\":\"Ben Okafor is now an admin in this workspace (was a member).\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-dee"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "org.member_removed by an admin",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"Someone was removed from the workspace\",\"body\":\"Ben Okafor was removed from this workspace.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-dee"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "org.member_removed: a member leaves",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Someone left the workspace\",\"body\":\"Ben Okafor left this workspace.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "org.member_removed: a member leaves",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"Someone left the workspace\",\"body\":\"Ben Okafor left this workspace.\",\"url\":\"/projects\",\"tag\":\"membership_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-dee"
+    }
+  ],
+  "pushed by default": true,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "membership_changed"
+}

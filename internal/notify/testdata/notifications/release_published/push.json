@@ -1,0 +1,178 @@
+{
+  "about": "The web push payload each subscribed device is sent, before encryption (refactor plan step S10). The override run sets OPENV_PUSH_NOTIFICATION_TYPES to exactly the types the default allow-list leaves out.",
+  "constant": "TypeReleasePublished",
+  "deliveries": [
+    {
+      "delivery": "1 of 2",
+      "scenario": "a release with more notes than the announcement shows",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.0\",\"body\":\"New features\\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\\n• **Requirements import keeps enum attributes.**\\n• **The bell opens on the tab you left.**\\nMai…\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "a release with more notes than the announcement shows",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.0\",\"body\":\"New features\\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\\n• **Requirements import keeps enum attributes.**\\n• **The bell opens on the tab you left.**\\nMai…\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "a release from before version numbers",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"OpenV update 2026-01-15\",\"body\":\"• Interview links expire after 30 days.\\n• The requirements table remembers its sort.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "a release from before version numbers",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"OpenV update 2026-01-15\",\"body\":\"• Interview links expire after 30 days.\\n• The requirements table remembers its sort.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "a release with no notes",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.1\",\"body\":\"See What's new for details.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "a release with no notes",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.1\",\"body\":\"See What's new for details.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "the workspace's window opens",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "the workspace's window opens",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-hal",
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-hal"
+    },
+    {
+      "delivery": "2 of 3",
+      "scenario": "first run after the window has passed: announced and turned on at once",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-gus",
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-gus"
+    },
+    {
+      "delivery": "3 of 3",
+      "scenario": "first run after the window has passed: announced and turned on at once",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-hal",
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-hal"
+    },
+    {
+      "delivery": "3 of 5",
+      "scenario": "stable cut for a workspace with no upgrade window",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ada",
+          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ada"
+    },
+    {
+      "delivery": "4 of 5",
+      "scenario": "stable cut for a workspace with no upgrade window",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "5 of 5",
+      "scenario": "stable cut for a workspace with no upgrade window",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-dee",
+          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": false,
+      "sent with the override": true,
+      "user": "user-dee"
+    }
+  ],
+  "pushed by default": false,
+  "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",
+  "type": "release_published"
+}

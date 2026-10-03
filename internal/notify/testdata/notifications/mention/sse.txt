@@ -1,0 +1,23 @@
+# SSE frames for notification type mention (notifications.TypeMention): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== chatter.created: a viewer's comment mentions @ben and @ada | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"mention","title":"You were mentioned in a comment","body":"@ben please check @ada's note on the pedal force","entity_ref":{"artifact_id":"art-9","chatter_id":"chat-3","kind":"artifact","project_id":"proj-apollo"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== chatter.created: a viewer's comment mentions @ben and @ada | delivery 2 of 2 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"mention","title":"You were mentioned in a comment","body":"@ben please check @ada's note on the pedal force","entity_ref":{"artifact_id":"art-9","chatter_id":"chat-3","kind":"artifact","project_id":"proj-apollo"},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== chatter.created: a long comment mentions @ben | delivery 1 of 1 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"mention","title":"You were mentioned in a comment","body":"@ben the brake pedal force table needs another pass: the ≤ 50 N limit applies to the emergency brake only, the service brake row still says ≥ 65 N and the deri…","entity_ref":{"artifact_id":"art-9","chatter_id":"chat-4","kind":"artifact","project_id":"proj-apollo"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

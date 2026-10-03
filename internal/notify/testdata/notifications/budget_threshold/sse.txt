@@ -1,0 +1,29 @@
+# SSE frames for notification type budget_threshold (notifications.TypeBudgetThreshold): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Each frame as the hub writes it on the recipient's stream; the row's id and
+# created_at are normalised.
+
+=== agentrun.finished takes the month's spend past 80% of the budget | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"budget_threshold","title":"Workspace nearing budget","body":"This month's agent spend has reached $212.50 of the $250.00 budget (80%).","entity_ref":{"kind":"org_usage","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== agentrun.finished takes the month's spend past 80% of the budget | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"budget_threshold","title":"Workspace nearing budget","body":"This month's agent spend has reached $212.50 of the $250.00 budget (80%).","entity_ref":{"kind":"org_usage","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== agentrun.finished takes the month's spend past the budget | delivery 1 of 2 | to user-ada
+(stream notify:user-ada)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"budget_threshold","title":"Workspace over budget","body":"This month's agent spend has reached $263.46 of the $250.00 budget (100%).","entity_ref":{"kind":"org_usage","month":"2026-10","org_id":"org-acme","threshold":100},"read":false,"flagged":false,"created_at":"<created_at>"}
+
+
+=== agentrun.finished takes the month's spend past the budget | delivery 2 of 2 | to user-dee
+(stream notify:user-dee)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"budget_threshold","title":"Workspace over budget","body":"This month's agent spend has reached $263.46 of the $250.00 budget (100%).","entity_ref":{"kind":"org_usage","month":"2026-10","org_id":"org-acme","threshold":100},"read":false,"flagged":false,"created_at":"<created_at>"}
+

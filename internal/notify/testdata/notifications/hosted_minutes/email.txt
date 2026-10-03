@@ -1,0 +1,90 @@
+# Email for notification type hosted_minutes (notifications.TypeHostedMinutes): refactor plan step S10.
+# Regenerate (a deliberate, release-noted behavior change only):
+#   UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'
+# Emailed by default (OPENV_EMAIL_NOTIFICATION_TYPES unset): yes. The override run sets it to exactly the
+# types the defaults leave out. Each message is the SMTP hand-off of the real mailer;
+# every line ends CRLF on the wire (a bare LF would show as ␊, a bare CR as ␍).
+
+======== a lease takes the month's cloud runner minutes past 80% of the allowance | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Cloud runner minutes nearly used up
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Cloud runner minutes nearly used up
+
+This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a lease takes the month's cloud runner minutes past 80% of the allowance | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Cloud runner minutes nearly used up
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Cloud runner minutes nearly used up
+
+This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a lease uses up the month's cloud runner minutes | delivery 1 of 2 | to user-ada
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@example.test, no auth
+-------- message
+From: openv@example.test
+To: ada@example.test
+Subject: Cloud runner minutes used up
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Cloud runner minutes used up
+
+This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agent Connector are not affected. A workspace admin can raise the allowance from the Billing tab.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== a lease uses up the month's cloud runner minutes | delivery 2 of 2 | to user-dee
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@example.test, no auth
+-------- message
+From: openv@example.test
+To: dee@example.test
+Subject: Cloud runner minutes used up
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Cloud runner minutes used up
+
+This month's leased cloud runner time has reached 600 of the 600 minutes the workspace's plan allows. No more cloud runners can be leased until next month; agents on your own machine through the Agent Connector are not affected. A workspace admin can raise the allowance from the Billing tab.
+
+Open it in OpenV:
+https://openv.example.test/projects
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

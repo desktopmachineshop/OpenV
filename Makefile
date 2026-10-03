@@ -326,8 +326,11 @@ check:
 ## package's sources whether or not internal/api imports it (an event name
 ## sent from internal/orchestration, say), and the frontend type check; then
 ## refactor plan S12b's CSS cascade test, which walks the whole frontend
-## import graph, and a production build (a few seconds with Vite) for its
-## bundle-shape check. `make check` is still the gate before pushing.
+## import graph, S10's table of the notification bell's deep links, which
+## reads the Go notification goldens under internal/notify/testdata (so a
+## Go-side change to a notification's link shows there too), and a
+## production build (a few seconds with Vite) for its bundle-shape check.
+## `make check` is still the gate before pushing.
 check-fast:
 	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
 	if [ -n "$$unformatted" ]; then \
@@ -358,5 +361,5 @@ check-fast:
 	go test ./internal/archtest
 	go test -short -run '^(TestSSE|TestEventPayload)' ./internal/api
 	cd frontend && npx tsc --noEmit
-	cd frontend && npx vitest run src/arch/cssOrder.test.ts
+	cd frontend && npx vitest run src/arch/cssOrder.test.ts src/components/NotificationBell.paths.test.tsx
 	cd frontend && npm run build --silent -- --logLevel warn && node scripts/bundle-check.mjs

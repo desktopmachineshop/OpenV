@@ -145,7 +145,13 @@ GOLDEN_LIST = [
     ("S8", "CLI surfaces", ["cmd/*/testdata/cli/**"]),
     ("S9", "export, import and report formats",
      ["**/testdata/formats/**", "**/import_fields.txt", "**/testdata/proposal_payloads/**"]),
-    ("S10", "notification content", ["internal/notify/testdata/notifications/**"]),
+    # Each notification type's stored row, SSE frame, email and web push
+    # (OpenV REQ-78, REQ-109, REQ-122; invariant I18), and the bell's deep
+    # link for each beside the email and push link (quirk Q7), a vitest
+    # file snapshot this entry claims ahead of S12's. X6's "S10 goldens
+    # unchanged" is these files staying byte-identical.
+    ("S10", "notification content",
+     ["internal/notify/testdata/notifications/**", "frontend/src/components/__snapshots__/NotificationBell.paths.txt"]),
     ("S12, S12b, S16", "frontend file snapshots", ["frontend/src/**/__snapshots__/**"]),
     ("S12b", "bundle shape", ["frontend/scripts/testdata/bundle-shape.json"]),
 ]
@@ -192,9 +198,10 @@ PROTECTED_PATHS = [
 # fills its slot in a class T commit when it lands. S14a, S14b, S14c, S14d,
 # S14e and S14f are not in the plan's list: they are the tools that prove
 # class A, this guard, M4's, M10's and M11a's class B and F1's move, so a
-# commit of another class may not edit them either. Nor is S9, whose tests
-# are P1's guard and X14b's characterization, or S15a, whose tests are
-# M15a's guard and M15b's characterization.
+# commit of another class may not edit them either. Nor are S9, whose tests
+# are P1's guard and X14b's characterization, S10, whose tests are X6's
+# characterization, and S15a, whose tests are M15a's guard and M15b's
+# characterization.
 # Since the job runs the base's copy of this script, a pull request that also
 # drops rows here is still judged by the rows it started from.
 GUARD_CODE = [
@@ -300,6 +307,16 @@ GUARD_CODE = [
     # F1 may still edit its spec (frontend/scripts/specs/*.json) in a class T
     # commit, and its testdata/ is frozen data like every other.
     ("S14f", ["frontend/scripts/tsdeclmove*.mjs"]),
+    # S10's notification content: the Go test that drives every delivery
+    # path and writes the per-type goldens, its recording harness, the
+    # completeness test beside the type constants, and the vitest that pins
+    # the bell's deep links against those goldens. X6 (class E) names them
+    # in Refactor-Characterization trailers; listing them here also keeps a
+    # commit of another class, such as a later move in internal/notify, from
+    # relaxing them.
+    ("S10", ["internal/notify/notification_content_test.go", "internal/notify/notification_content_harness_test.go",
+             "internal/domain/notifications/content_golden_test.go",
+             "frontend/src/components/NotificationBell.paths.test.tsx"]),
     # S15a's characterization of internal/runner: the tests that write its
     # run failure goldens and pin slot accounting, sign-in to claim and pool
     # leases, and the stand-in API and CLIs they share. M15a (class B) names
