@@ -17,6 +17,15 @@ name: Refactor guard
 #       refactor pull request fails if the file could be tightened; any other
 #       pull request gets a warning.
 #
+# On a refactor pull request that touches a file under frontend/src that
+# ships (not a test, src/arch, src/test, testdata, a snapshot or a .d.ts), or
+# a Vite or PostCSS config beside frontend/package.json (one the pull request
+# adds included), step (2) also builds frontend/ at the base and at the head
+# and requires byte-identical build/assets/*.css for every chunk, lazy ones
+# included, and, when a class T commit changes that TypeScript,
+# build/assets/*.js as well (S12b's build identity; .map files are left out).
+# The builds need frontend/node_modules, which this job installs only then.
+#
 # Like release-notes.yml, it lives in its own workflow so that a label change
 # re-runs it, reads the labels from the API when it runs rather than from
 # the triggering event, and takes the pull request's change against the
@@ -80,16 +89,31 @@ jobs:
             ts=true
           fi
           echo "ts=$ts" >> "$GITHUB_OUTPUT"
+          # S12b's build identity builds the base and the head when a refactor
+          # touches a shipped file under frontend/src, or a Vite or PostCSS
+          # config beside frontend/package.json: what the guard's
+          # feeds_frontend_build() keeps, so it never leaves out one the guard
+          # would build for.
+          shipped=""
+          configs=""
+          if [ "$refactor" = true ]; then
+            shipped=$(git diff --no-renames --name-only HEAD^1 HEAD -- frontend/src \
+              | grep -Ev '\.(test|spec)\.tsx?$|\.test\.mjs$|_test\.(go|py)$|^frontend/src/(arch|test)/|/testdata/|/__snapshots__/|\.d\.ts$' || true)
+            configs=$(git diff --no-renames --name-only HEAD^1 HEAD -- frontend \
+              | grep -E '^frontend/(vite\.config\.|postcss\.config\.|\.postcssrc)[^/]*$' || true)
+          fi
+          if [ -n "$shipped$configs" ]; then build=true; else build=false; fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
-        if: steps.labels.outputs.ts == 'true'
+        if: steps.labels.outputs.ts == 'true' || steps.labels.outputs.build == 'true'
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Frontend dependencies for the TypeScript move proofs
-        if: steps.labels.outputs.ts == 'true'
+      - name: Frontend dependencies for the TypeScript move proofs and the build identity
+        if: steps.labels.outputs.ts == 'true' || steps.labels.outputs.build == 'true'
         working-directory: frontend
         run: npm ci
 

@@ -1,0 +1,46 @@
+# The CSS cascade (invariant I20): the stylesheets the bundler emits, in order.
+# Regenerate: npx vitest run src/arch -u
+#
+# Eager: what src/index.tsx loads through static imports, depth first, each
+# module once, so a stylesheet sits where it is first reached; a later rule
+# wins a tie in specificity. Lazy: for each import() target, the stylesheets
+# its chunk adds beyond the eager ones, in the same order. Paths are relative
+# to frontend/src; a bare name is a package stylesheet. Last, the
+# stylesheets under src that no module the app loads imports: the bundle
+# leaves them out, and a change that starts loading one shows here.
+
+## Eager stylesheets (4), in cascade order
+  1  theme.css
+  2  index.css
+  3  components/HelpSidebar.css
+  4  components/ProjectList.css
+
+## Lazy modules (19), by path, and the stylesheets each adds, in cascade order
+  site/Customers.tsx  (none)
+  site/Demos.tsx  (none)
+  site/Faq.tsx  (none)
+  site/HowItWorks.tsx  (none)
+  site/OpenSourceProjects.tsx  (none)
+  site/WhitePapers.tsx  (none)
+  views/ActivityLog.tsx  (none)
+  views/BaselineCompare.tsx  (none)
+  views/CrewBuilder.tsx  (none)
+  views/ImpactView.tsx  (none)
+  views/Landing.tsx  (none)
+  views/ManualView.tsx  (none)
+  views/ModuleView.tsx
+    components/ImageGallery.css
+    components/ImageLightbox.css
+  views/PlatformAdmin.tsx  (none)
+  views/ReviewQueue.tsx  (none)
+  views/SharedProjectView.tsx  (none)
+  views/TestRunView.tsx
+    ag-grid-community/styles/ag-grid.css
+    ag-grid-community/styles/ag-theme-quartz.css
+  views/TraceabilityMatrix.tsx
+    ag-grid-community/styles/ag-grid.css
+    ag-grid-community/styles/ag-theme-quartz.css
+  views/WhatsNew.tsx  (none)
+
+## Stylesheets under src that no reachable module loads (1)
+  components/ImageUploadInput.css

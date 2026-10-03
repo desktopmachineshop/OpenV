@@ -104,7 +104,7 @@ Signed-off-by: Your Name <you@example.com>
 | A pure move | Go and `frontend/src` TypeScript sources, a lowered `ratchets.json`, the `declmove` spec | `go run ./internal/tools/declhash -base <parent> -head <commit> <package dirs>` reports every declaration identical; for TypeScript, `tsdeclhash --no-module` and `tsmovecheck` pass |
 | B extract in place, D package move | anything but guard code | no golden changed; D may add the `import_edges` and `client_domain_deps` entries of the package it creates (edges into it, and out of it only to what its importers already imported) |
 | C test only | test files (`*_test.go`, `*.test.ts(x)`, `*.spec.ts(x)`, `*.test.mjs`, `*_test.py`, `e2e/tests/**`), `frontend/src/arch/**`, `frontend/src/test/**`, and **new** files under `testdata/`, `__snapshots__/` or `contracts/` | nothing else changed |
-| T tooling | CI workflows, the `Makefile`, Dockerfile build commands, lint config, PR and issue templates, docs (`*.md`, `docs/**`), `.git-blame-ignore-revs`, and files under `internal/tools/`, `internal/archtest/`, `internal/contract/`, `scripts/`, `frontend/scripts/` and `frontend/src/generated/` | nothing else changed; any other `frontend/src` file fails until S12b's base-vs-head build proves the output identical |
+| T tooling | CI workflows, the `Makefile`, Dockerfile build commands, lint config, PR and issue templates, docs (`*.md`, `docs/**`), `.git-blame-ignore-revs`, and files under `internal/tools/`, `internal/archtest/`, `internal/contract/`, `scripts/`, `frontend/scripts/` and `frontend/src/generated/`; also TypeScript under `frontend/src` that ships and that the production build erases (type-only code, such as X5's assertions; a test, `src/arch/**`, `src/test/**` or test data there is class C) | nothing else changed; for TypeScript under `frontend/src`, S12b's build identity (below) requires byte-identical `build/assets/*.js` and `*.css` from the base and the head, which proves what the production build emits, so code it drops (a branch only the dev server takes) is the reviewer's to read; any other `frontend/src` file (a stylesheet, say) fails |
 | R scripted rewrite | what the script writes | a `Refactor-Script: <path> [args…]` trailer names a script that is already in the commit's parent (commit it, and any tool it drives, in an earlier class T commit); the job runs it in a scratch worktree of the parent and requires the result to equal the commit byte for byte |
 | E semantic extraction | anything | one or more `Refactor-Characterization: <test file>` trailers name tests that are on the base and unchanged by the pull request; two reviewers, one of them the maintainer |
 
@@ -143,7 +143,10 @@ On a **refactor** pull request, also:
    `docker-entrypoint.d/**`, `nginx.conf`, `security-headers.conf`,
    `openv-nginx/**`, `Dockerfile.prod`, `railway.json`, `vite.config.ts`).
    Guard code (`GUARD_CODE`: the Phase 0 guard tests, `internal/archtest/**`,
-   `frontend/src/arch/**`, the boundary rules in `frontend/eslint.config.js`,
+   `frontend/src/arch/**` with S12b's `cssOrder.test.ts` and
+   `sizeBudget.test.ts`, S12b's
+   `frontend/scripts/bundle-check.mjs` and its test, the boundary rules in
+   `frontend/eslint.config.js`,
    the move proofs, M4's generator and proof `internal/tools/stageextract`
    and `internal/tools/movecheck` (S14c), the migration generator that
    writes M10 (`internal/tools/liftmigrations/**`, S14d), M11a's split proof
@@ -158,9 +161,38 @@ On a **refactor** pull request, also:
    raised or added fails (apart from class D's new-package entries, and the
    key of a new rule added by a class T commit that also changes the archtest
    rules), and so does an entry added to S12's lint allowlists
-   (`COMPONENTS_IMPORTING_VIEWS`, `EVENT_SOURCE_SITES`) or a raised
-   `CEILING` in `frontend/src/arch/errorChains.test.ts`. Lowering or removing
-   any of those is allowed in any class and is not a guard-code edit.
+   (`COMPONENTS_IMPORTING_VIEWS`, `EVENT_SOURCE_SITES`), a raised
+   `CEILING` in `frontend/src/arch/errorChains.test.ts`, or a raised budget
+   or an entry raised or added among S12b's K14 size budgets in
+   `frontend/src/arch/sizeBudget.test.ts` (`FILE_BUDGET`,
+   `COMPONENT_BUDGET`, `OVER_1000`, `FILE_CEILINGS`, `COMPONENT_CEILINGS`).
+   Lowering or removing any of those is allowed in any class and is not a
+   guard-code edit. The allowlists and ceiling maps hold only entries of one
+   form, a quoted key and a decimal integer (a list of quoted paths in
+   `COMPONENTS_IMPORTING_VIEWS`), and `//` comments, which is all the guard
+   reads: an unquoted or computed key, a spread, arithmetic or a hex number
+   there fails in any class.
+   **Build identity (S12b).** When the pull request changes a file under
+   `frontend/src` that ships (not a test, `src/arch/**`, `src/test/**`,
+   `testdata/`, a snapshot or a `.d.ts`), or adds or changes a Vite or
+   PostCSS config beside `frontend/package.json` (`vite.config.*`,
+   `postcss.config.*`, `.postcssrc*`), the job exports `frontend/` at the
+   base and at the head, links in its `npm ci` install, runs `npm run build`
+   for each, and requires every chunk's `build/assets/*.css` byte-identical,
+   lazy chunks included, so a reordered stylesheet import anywhere (in
+   `ModuleView`'s graph, say) fails, naming the chunk and the first bytes
+   that differ. When a class T commit changes that TypeScript, every
+   chunk's `build/assets/*.js` must be identical as well; the check is the
+   pull request's, base against head, so such a commit shares its pull
+   request only with commits that leave the build as it is. `.map` files are
+   left out (they embed the sources), and a build that fails or writes no
+   `build/assets` fails the check. A chunk that differs only in the hashed
+   file names of the chunks it loads is listed after the change that
+   renamed them. A file the other build emits with the same bytes under
+   another chunk's name is no difference (the bundler names a chunk several
+   modules share after one of them, so an extraction can rename it), and
+   the job notes it; a file that pairs with none of the other build's is
+   named as emitted by one side only.
    Something the pull request itself adds (a golden and the guard test that
    writes it, say) is not frozen until it merges, so a later commit of the
    same pull request may still refine it. A file of the base that one commit
@@ -192,9 +224,9 @@ The job judges a pull request with the **base's** copy of
 `refactor_guard.py` (its *Script self-test* step tests the pull request's
 own copy), so a pull request's edits to the lists and rules take effect only
 once it merges: a pull request that drops a guard-code or protected-path
-entry is still judged by that entry. A step that needs a new exception, such
-as S12b's class T rule for TypeScript the build erases, lands it in an
-earlier pull request. `X2B_CALL_SHAPE_CHANGES` is the one list the job reads
+entry is still judged by that entry. A step that needs a new exception lands
+it in an earlier pull request, as S12b landed the class T rule for
+TypeScript the build erases before X5 uses it. `X2B_CALL_SHAPE_CHANGES` is the one list the job reads
 from the pull request, since X2b fills it in its own. `make check` does the
 same with the merge base's copy.
 
@@ -245,7 +277,9 @@ prints:
   `TestEnvParse` writes its sections of (a failure prints the command for
   its own package); and `UPDATE_GOLDEN=1 go test -count=1 -run '^TestCLI$' ./cmd/agentd ./cmd/openv-connector ./cmd/openv-mcp ./cmd/openv-vapid`
   for the command lines under `cmd/<command>/testdata/cli/`
-- frontend snapshots (S12): `cd frontend && npx vitest run src/arch -u`
+- frontend snapshots (S12, and S12b's CSS cascade,
+  `frontend/src/arch/__snapshots__/cssOrder.txt`): `cd frontend && npx vitest run src/arch -u`
+- bundle shape (S12b, `frontend/scripts/testdata/bundle-shape.json`): `cd frontend && npm run build && UPDATE_BUNDLE_SHAPE=1 node scripts/bundle-check.mjs`
 
 The refactor tools' own goldens are not on the golden list: they change
 with the tool, not with the product. `liftmigrations` (S14d) pins what it
@@ -261,8 +295,9 @@ regenerate with
 Each goes in a pull request without the refactor labels, since a refactor
 pull request may add files under `testdata/` but not change them.
 
-For `UPDATE_GOLDEN` only the value `1` regenerates; any other value
-compares (`UPDATE_ROUTES` regenerates with any non-empty value).
+For `UPDATE_GOLDEN` and `UPDATE_BUNDLE_SHAPE` only the value `1`
+regenerates; any other value compares (`UPDATE_ROUTES` regenerates with any
+non-empty value).
 `UPDATE_RATCHETS=1 go test ./internal/archtest` only ever tightens
 `ratchets.json`, so any pull request may run it.
 

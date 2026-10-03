@@ -1,0 +1,40 @@
+{
+  "about": "The production bundle's shape (refactor plan S12b, invariant I20), written and checked by scripts/bundle-check.mjs after npm run build: where each dependency in package.json lands (entry: the entry chunk or a chunk it imports statically, loaded on every page; lazy: only chunks loaded through import()), and whether each module the app loads through import() is still a dynamic entry. A golden: change it only in a pull request that means to change the bundle.",
+  "regenerate": "cd frontend && npm run build && UPDATE_BUNDLE_SHAPE=1 node scripts/bundle-check.mjs",
+  "dependencies": {
+    "ag-grid-community": "lazy",
+    "ag-grid-react": "lazy",
+    "ajv": "not in the build",
+    "axios": "entry",
+    "cytoscape": "lazy",
+    "cytoscape-react": "not in the build",
+    "react": "entry",
+    "react-dom": "entry",
+    "react-markdown": "entry",
+    "react-router-dom": "entry",
+    "remark-gfm": "entry",
+    "typescript": "not in the build",
+    "zustand": "entry"
+  },
+  "lazyPages": {
+    "src/site/Customers.tsx": "dynamic entry",
+    "src/site/Demos.tsx": "dynamic entry",
+    "src/site/Faq.tsx": "dynamic entry",
+    "src/site/HowItWorks.tsx": "dynamic entry",
+    "src/site/OpenSourceProjects.tsx": "dynamic entry",
+    "src/site/WhitePapers.tsx": "dynamic entry",
+    "src/views/ActivityLog.tsx": "dynamic entry",
+    "src/views/BaselineCompare.tsx": "dynamic entry",
+    "src/views/CrewBuilder.tsx": "dynamic entry",
+    "src/views/ImpactView.tsx": "dynamic entry",
+    "src/views/Landing.tsx": "dynamic entry",
+    "src/views/ManualView.tsx": "dynamic entry",
+    "src/views/ModuleView.tsx": "dynamic entry",
+    "src/views/PlatformAdmin.tsx": "dynamic entry",
+    "src/views/ReviewQueue.tsx": "dynamic entry",
+    "src/views/SharedProjectView.tsx": "dynamic entry",
+    "src/views/TestRunView.tsx": "dynamic entry",
+    "src/views/TraceabilityMatrix.tsx": "dynamic entry",
+    "src/views/WhatsNew.tsx": "dynamic entry"
+  }
+}

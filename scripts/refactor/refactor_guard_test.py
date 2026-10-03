@@ -4,15 +4,19 @@ Run: python3 -m unittest scripts/refactor/refactor_guard_test.py
 
 Each test builds a throwaway repository shaped like a pull request: a base
 branch, a pull request branch, and the merge commit GitHub checks out
-(HEAD^1 the base, HEAD^2 the branch). The class A hashers are stubbed, so no
-Go or Node toolchain runs here; the job itself runs the real ones.
+(HEAD^1 the base, HEAD^2 the branch). The class A hashers and S12b's frontend
+build are stubbed, so no Go or Node toolchain runs here (BuilderTest drives
+the real builder with a stand-in npm); the job itself runs the real ones.
 """
 
+import base64
+import hashlib
 import io
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -62,6 +66,22 @@ const CEILING = 53;
 it(`stays at or below ${CEILING}`, () => {});
 """
 
+SIZE_BUDGET = """// ratchet
+const FILE_BUDGET = 600;
+const OVER_1000 = 5;
+
+const FILE_CEILINGS = {
+  'api/client.ts': 3036,
+  'views/Login.tsx': 778,
+};
+
+const COMPONENT_CEILINGS = {
+  'Login': 733,
+};
+
+it(`files stay within ${FILE_BUDGET}`, () => {});
+"""
+
 GUARD_PY = """X2B_CALL_SHAPE_CHANGES = [
 ]
 
@@ -97,6 +117,74 @@ class StubHashers:
         return self.ts_ok, "tsmovecheck: a pure move\n" if self.ts_ok else "tsmovecheck: not a pure move\n"
 
 
+def content_hash(data):
+    """Eight characters of the alphabet Vite's chunk hashes use."""
+    return base64.urlsafe_b64encode(hashlib.sha256(data).digest()).decode()[:8]
+
+
+TYPE_ONLY_LINE = re.compile(r"^(export (type|interface) |import type )")
+
+
+class StubBuilder:
+    """Stands in for S12b's frontend build: "builds" a revision from its
+    frontend/src tree, as Vite would in miniature. Stylesheets under
+    frontend/src/views/lazy/ make a lazy chunk, the rest the entry's; each
+    chunk's CSS is its stylesheets in path order (an import's order, here),
+    and its JS the TypeScript with the lines TypeScript erases left out; the
+    lazy chunk's JS imports the entry's by its hashed name. Files are named
+    <chunk>-<content hash>.<ext>, with a .map beside the JS that embeds the
+    sources, as Vite's do. A frontend/postcss.config.js is its PostCSS: each
+    `remove <selector>` line drops the stylesheet lines that start with it.
+    rename={label: {chunk: name}} names a chunk otherwise in that build, as
+    the bundler names a shared chunk after one of the modules in it."""
+
+    def __init__(self, fail=None, empty=None, rename=None):
+        self.fail, self.empty, self.calls, self.cleaned = fail, empty, [], 0
+        self.rename = rename or {}
+        self.tmp = []
+
+    def build(self, git, rev, label):
+        self.calls.append(label)
+        if self.fail == label:
+            return None, "npm ERR! the build failed\n"
+        d = tempfile.mkdtemp(prefix="stub-build-")
+        self.tmp.append(d)
+        assets = os.path.join(d, "build", "assets")
+        os.makedirs(assets)
+        if self.empty == label:
+            return assets, "built nothing\n"
+        files = git.out("ls-tree", "-r", "--name-only", rev, "--", "frontend/src").split("\n")
+        postcss = (git.show(rev, "frontend/postcss.config.js") or b"").decode()
+        removed = tuple(m.encode() for m in re.findall(r"^remove (\S+)$", postcss, re.M))
+        chunks = {}
+        for f in sorted(x for x in files if x):
+            chunk = "Lazy" if f.startswith("frontend/src/views/lazy/") else "index"
+            data = git.show(rev, f)
+            if f.endswith(".css"):
+                if removed:
+                    data = b"".join(l for l in data.splitlines(True) if not l.startswith(removed))
+                chunks.setdefault((chunk, ".css"), []).append(data)
+            elif re.search(r"\.tsx?$", f) and not re.search(r"\.test\.tsx?$", f) and "/arch/" not in f:
+                kept = [l for l in data.decode().split("\n") if not TYPE_ONLY_LINE.match(l)]
+                chunks.setdefault((chunk, ".js"), []).append("\n".join(kept).encode())
+                chunks.setdefault((chunk, ".js.map"), []).append(data)  # embeds the sources
+        entry_js = "index-" + content_hash(b"".join(chunks.get(("index", ".js"), []))) + ".js"
+        if ("Lazy", ".js") in chunks:
+            chunks[("Lazy", ".js")].insert(0, f'import"./{entry_js}";'.encode())
+        for (chunk, ext), parts in chunks.items():
+            data = b"".join(parts)
+            stem = (self.rename.get(label, {}).get(chunk, chunk) + "-" +
+                    content_hash(b"".join(chunks.get((chunk, ".js"), [])) if ext == ".js.map" else data))
+            with open(os.path.join(assets, stem + ext), "wb") as f:
+                f.write(data)
+        return assets, f"built {label}\n"
+
+    def cleanup(self):
+        self.cleaned += 1
+        for d in self.tmp:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 @unittest.skipUnless(shutil.which("git"), "git is not installed")
 class RepoTest(unittest.TestCase):
     """A throwaway repository with a base branch `main` and a pull request
@@ -119,8 +207,13 @@ class RepoTest(unittest.TestCase):
             "internal/tools/declhash/main.go": "package main\n",
             "frontend/eslint.config.js": ESLINT,
             "frontend/src/views/App.tsx": "export const App = 1;\n",
+            "frontend/src/index.css": ".button { color: red; }\n",
+            "frontend/src/views/ProjectList.css": ".button { color: blue; }\n",
+            "frontend/src/views/lazy/Graph.css": ".graph { color: green; }\n",
+            "frontend/src/views/lazy/Graph.tsx": "export const Graph = 2;\n",
             "frontend/src/arch/routeTree.test.ts": "test('x', () => {});\n",
             "frontend/src/arch/errorChains.test.ts": ERROR_CHAINS,
+            "frontend/src/arch/sizeBudget.test.ts": SIZE_BUDGET,
             "frontend/src/arch/testdata/fixture.json": "{}\n",
             "internal/domain/exports/testdata/in.json": "{}\n",
             "scripts/refactor/refactor_guard.py": GUARD_PY,
@@ -169,9 +262,10 @@ class RepoTest(unittest.TestCase):
         self.git("merge", "-q", "--no-ff", "--no-edit", "pr")
         return self.git("rev-parse", "HEAD^1"), head, self.git("rev-parse", "HEAD")
 
-    def guard(self, *labels, hashers=None):
+    def guard(self, *labels, hashers=None, builder=None):
         base, head, merge = self.merged()
-        g = rg.Guard(rg.Git(self.dir), base, head, merge, list(labels), hashers or StubHashers())
+        self.builder = builder or StubBuilder()
+        g = rg.Guard(rg.Git(self.dir), base, head, merge, list(labels), hashers or StubHashers(), self.builder)
         g.run()
         return g
 
@@ -223,12 +317,13 @@ class DataTest(unittest.TestCase):
         # renaming a golden or its directory cannot drop it from the list
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
-        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16", "S15a"}
+        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S12, S12b, S16", "S12b",
+                  "S15a"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 18)
+        self.assertEqual(len(entries), 19)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
@@ -237,8 +332,8 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S14a", "S14b", "S14c", "S14d",
-                  "S14e", "S14f", "S15a"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S8", "S12", "S12b", "S14a", "S14b",
+                  "S14c", "S14d", "S14e", "S14f", "S15a"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:
@@ -404,6 +499,94 @@ class DataTest(unittest.TestCase):
                 self.assertIsNone(rg.guard_code_step(path))
         self.assertTrue(rg.matches("internal/tools/splittools/testdata/d11dee8/tools.go", [p for _, p in rg.FROZEN_DATA]))
 
+    def test_s12b_row_covers_its_guards_and_goldens(self):
+        # S12b's cascade test sits in src/arch among S12's guards, so its row
+        # comes before S12's and names it; bundle-check and its test are its
+        # own; the cascade snapshot and the bundle shape are goldens. The
+        # build identity's notion of a shipped frontend file leaves out what
+        # never reaches the build.
+        files = subprocess.run(["git", "ls-files", "frontend/src/arch", "frontend/scripts"], cwd=REPO,
+                               capture_output=True, text=True, check=True).stdout.split()
+        for path in ("frontend/src/arch/cssOrder.test.ts", "frontend/src/arch/sizeBudget.test.ts",
+                     "frontend/scripts/bundle-check.mjs", "frontend/scripts/bundle-check.test.mjs"):
+            with self.subTest(path=path):
+                self.assertIn(path, files)
+                self.assertEqual(rg.guard_code_step(path), "S12b")
+        self.assertEqual(rg.guard_code_step("frontend/src/arch/routeTree.test.ts"), "S12")
+        for path, step in (("frontend/src/arch/__snapshots__/cssOrder.txt", "S12, S12b, S16"),
+                           ("frontend/scripts/testdata/bundle-shape.json", "S12b")):
+            with self.subTest(golden=path):
+                self.assertIn(path, files)
+                self.assertEqual(rg.golden_entry(path)[0], step)
+        for path, ships in (("frontend/src/App.tsx", True), ("frontend/src/index.css", True),
+                            ("frontend/src/generated/contract.ts", True), ("frontend/src/App.test.tsx", False),
+                            ("frontend/src/arch/repo.ts", False), ("frontend/src/test/mockApi.ts", False),
+                            ("frontend/src/arch/__snapshots__/cssOrder.txt", False), ("frontend/src/vite-env.d.ts", False),
+                            ("frontend/src/x/testdata/a.json", False), ("frontend/scripts/bundle-check.mjs", False),
+                            ("frontend/vite.config.ts", False)):
+            with self.subTest(ships=path):
+                self.assertEqual(rg.ships_in_frontend(path), ships)
+
+    def test_chunk_names_and_differences(self):
+        self.assertEqual(rg.chunk_name("ModuleView-BtaBQDBL.css"), "ModuleView.css")
+        self.assertEqual(rg.chunk_name("ActivityLog-DhOwu-2u.js"), "ActivityLog.js")
+        self.assertEqual(rg.chunk_name("ag-theme-quartz-_KkkAD1f.js"), "ag-theme-quartz.js")
+        self.assertEqual(rg.chunk_name("plain.css"), "plain.css")
+        d = rg.first_difference(b".a{}\n.b{}", b".a{}\n.c{}")
+        self.assertIn("first difference at byte 6 (line 2)", d)
+        self.assertIn("base: '.a{}\\n.b{}'", d)
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        base, head = os.path.join(tmp, "base"), os.path.join(tmp, "head")
+        for d_, files in ((base, {"index-AAAAAAAA.css": b"x", "Graph-BBBBBBBB.css": b"g", "a-CCCCCCCC.js": b"1",
+                                  "a-CCCCCCCC.js.map": b"m", "Gone-DDDDDDDD.css": b"z", "Same-EEEEEEEE.css": b"s",
+                                  "ag-theme-quartz-Bq7q_68f.css": b"q", "Twice-JJJJJJJJ.css": b"t"}),
+                          (head, {"index-AAAAAAAA.css": b"x", "Graph-FFFFFFFF.css": b"G", "a-CCCCCCCC.js": b"2",
+                                  "a-CCCCCCCC.js.map": b"M", "New-GGGGGGGG.css": b"n", "Same-EEEEEEEE.css": b"s",
+                                  "agGridTheme-Bq7q_68f.css": b"q", "Copy-KKKKKKKK.css": b"t",
+                                  "Other-JJJJJJJJ.css": b"t"})):
+            os.makedirs(d_)
+            for name, data in files.items():
+                with open(os.path.join(d_, name), "wb") as f:
+                    f.write(data)
+        css = rg.compare_assets(base, head, (".css",))
+        self.assertEqual([c for c, _, _ in css], ["Copy.css", "Gone.css", "Graph.css", "New.css", "Twice.css",
+                                                  "ag-theme-quartz.css"])
+        detail = {c: (d, k) for c, d, k in css}
+        self.assertEqual(detail["Graph.css"], ("Graph-BBBBBBBB.css -> Graph-FFFFFFFF.css: 1 -> 1 bytes, chunk file names "
+                                               "aside first difference at byte 0 (line 1):\n"
+                                               "        base: 'g'\n        head: 'G'", "content"))
+        self.assertEqual(detail["Gone.css"], ("Gone-DDDDDDDD.css is emitted only by the base: no file of the head's "
+                                              "pairs with it by name, chunk or bytes", "only"))
+        self.assertEqual(detail["New.css"], ("New-GGGGGGGG.css is emitted only by the head: no file of the base's "
+                                             "pairs with it by name, chunk or bytes", "only"))
+        # The bundler names a chunk several modules share after one of them:
+        # a refactor that changes which renames it with every byte kept. That
+        # pairs by bytes, the same content hash first, and is no difference;
+        # a second head file with those bytes is still one only the head emits.
+        self.assertEqual(detail["ag-theme-quartz.css"], ("ag-theme-quartz-Bq7q_68f.css -> agGridTheme-Bq7q_68f.css: the "
+                                                         "same bytes under another chunk's name", "renamed"))
+        self.assertEqual(detail["Twice.css"], ("Twice-JJJJJJJJ.css -> Other-JJJJJJJJ.css: the same bytes under another "
+                                               "chunk's name", "renamed"))
+        self.assertEqual(detail["Copy.css"], ("Copy-KKKKKKKK.css is emitted only by the head: no file of the base's "
+                                              "pairs with it by name, chunk or bytes", "only"))
+        both = rg.compare_assets(base, head, (".css", ".js"))
+        self.assertIn(("a.js", "a-CCCCCCCC.js differs: 1 -> 1 bytes, chunk file names aside first difference at "
+                                "byte 0 (line 1):\n        base: '1'\n        head: '2'", "content"), both)
+        self.assertNotIn("a.js.map", [c for c, _, _ in both], ".map files embed the sources and are left out")
+        # A chunk whose only change is the hashed name of a chunk it loads
+        # echoes a change made elsewhere; one with a change of its own is
+        # reported by the first byte that differs once those names are set aside.
+        for d_, entry, lazy in ((base, b'import{a}from"./Graph-BBBBBBBB.js";x()', b'import"./index-AAAAAAAA.css";1'),
+                                (head, b'import{a}from"./Graph-FFFFFFFF.js";x()', b'import"./index-AAAAAAAA.css";2')):
+            for name, data in (("index-HHHHHHHH.js", entry), ("Lazy-IIIIIIII.js", lazy)):
+                with open(os.path.join(d_, name), "wb") as f:
+                    f.write(data)
+        kinds = {c: k for c, _, k in rg.compare_assets(base, head, (".js",))}
+        self.assertEqual(kinds, {"a.js": "content", "index.js": "references", "Lazy.js": "content"})
+        self.assertEqual(rg.without_hashes(b'm.f=["assets/ModuleView-DTh24cR5.js","assets/ag-theme-quartz-Bq7q_68f.css"]'),
+                         b'm.f=["assets/ModuleView.js","assets/ag-theme-quartz.css"]')
+
     def test_s14c_row_covers_stageextract_and_movecheck(self):
         # stageextract's and movecheck's sources and tests are guard code of
         # S14c's row: stageextract generates M4 and movecheck -flatten -base
@@ -483,6 +666,7 @@ class DataTest(unittest.TestCase):
             with self.subTest(allowlist=name):
                 span = rg.find_block(text, name)
                 self.assertIsNotNone(span, f"{rg.LINT_ALLOWLIST_FILE} has no {name} literal")
+                self.assertIsNone(rg.read_literal(text, name, kind)[1], f"{name} holds an entry the guard cannot read")
                 entries = rg.parse_allowlist(text, name, kind)
                 keyed = [i for i in range(span[0], span[1] + 1) if entry.match(lines[i])]
                 self.assertEqual(len(entries), len(keyed), f"an entry of {name} does not parse: {entries}")
@@ -506,6 +690,26 @@ class DataTest(unittest.TestCase):
                     grown = "\n".join(lines[:i] + [lines[i].replace(f": {n}", f": {n + 1}", 1)] + lines[i + 1:])
                     self.assertEqual(rg.allowlist_growth(text, grown),
                                      [(name, f"raises '{key}' from {n} to {n + 1}")])
+
+    def test_read_literal_reads_one_form(self):
+        def read(body, kind="count"):
+            return rg.read_literal("const X = {" + body + "};\nconst Y = 1;\n", "X", kind)
+
+        self.assertEqual(read(""), ({}, None))
+        self.assertEqual(read(" 'a': 1, \"b\": 20 "), ({"a": 1, "b": 20}, None))
+        self.assertEqual(read("\n  // note\n\n  'a': 1, // was 2\n  'b': 0\n"), ({"a": 1, "b": 0}, None))
+        self.assertEqual(read("\n  'a': ['x', \"y\"],\n  'b': [],\n  'c': [\n    'z',\n  ],\n", "list"),
+                         ({"a": ["x", "y"], "b": [], "c": ["z"]}, None))
+        for stray in ("a: 1,", "['a']: 1,", "...B,", "'a': 1 + 1,", "'a': 0x10,", "'a': 010,", "'a': 1_000,",
+                      "'a': 1e3,", "'a': B,", "'a': 1 /* x */,", "'a\\u0062': 1,", "'a': 1 'b': 2,"):
+            with self.subTest(stray=stray):
+                self.assertEqual(read(f"\n  'k': 3,\n  {stray}\n  'm': 4,\n"), ({"k": 3, "m": 4}, stray))
+        for stray in ("'a': ['x', ...B],", "'a': ['x'].concat(['y']),", "'a': B,", "'a': ['x' + 'y'],"):
+            with self.subTest(stray=stray):
+                self.assertEqual(read(f"\n  {stray}\n", "list"), ({}, stray))
+        self.assertEqual(rg.read_literal("const X = {\n  'a': 1,\n} as const;\n\nfunction f() {\n}\n", "X",
+                                         "count"), ({"a": 1}, "} as const;"))
+        self.assertEqual(rg.read_literal("const Y = 1;\n", "X", "count"), ({}, None))
 
     def test_own_x2b_block_is_found(self):
         with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
@@ -579,6 +783,59 @@ class WorkflowTest(unittest.TestCase):
             with self.subTest(line=line.strip()):
                 self.assertTrue(line + "\n" in wf, f"refactor-guard.yml no longer has the line: {line.strip()}")
         self.assertFalse("pull_request_target" in wf, "the job must not run with the base's write token")
+
+    def test_the_job_installs_the_frontend_for_the_build_identity(self):
+        # The build identity needs frontend/node_modules: the job installs
+        # them when the pull request is a refactor touching a shipped file
+        # under frontend/src or a Vite or PostCSS config beside package.json,
+        # the same files feeds_frontend_build() names.
+        wf = self.read(".github/workflows/refactor-guard.yml")
+        for line in [
+            "            shipped=$(git diff --no-renames --name-only HEAD^1 HEAD -- frontend/src \\",
+            "              | grep -Ev '\\.(test|spec)\\.tsx?$|\\.test\\.mjs$|_test\\.(go|py)$|^frontend/src/(arch|test)/|/testdata/|/__snapshots__/|\\.d\\.ts$' || true)",
+            "            configs=$(git diff --no-renames --name-only HEAD^1 HEAD -- frontend \\",
+            "              | grep -E '^frontend/(vite\\.config\\.|postcss\\.config\\.|\\.postcssrc)[^/]*$' || true)",
+            "          if [ -n \"$shipped$configs\" ]; then build=true; else build=false; fi",
+            "          echo \"build=$build\" >> \"$GITHUB_OUTPUT\"",
+            "        if: steps.labels.outputs.ts == 'true' || steps.labels.outputs.build == 'true'",
+        ]:
+            with self.subTest(line=line.strip()):
+                self.assertTrue(line + "\n" in wf, f"refactor-guard.yml no longer has the line: {line.strip()}")
+        # The shell's filters keep exactly the files the guard builds for:
+        # the first drops what does not ship from git's list of frontend/src,
+        # the second keeps the configs from its list of frontend/.
+        shipped = re.compile(re.search(r"grep -Ev '([^']+)'", wf).group(1))
+        configs = re.compile(re.search(r"grep -E '([^']+)'", wf).group(1))
+        for path in ("frontend/src/App.tsx", "frontend/src/index.css", "frontend/src/generated/contract.ts",
+                     "frontend/src/a/b.spec.mjs", "frontend/src/App.test.tsx", "frontend/src/a.spec.ts",
+                     "frontend/src/arch/repo.ts", "frontend/src/test/mockApi.ts", "frontend/src/x/testdata/a.json",
+                     "frontend/src/arch/__snapshots__/a.txt", "frontend/src/vite-env.d.ts", "frontend/src/x.test.mjs",
+                     "frontend/src/architecture.ts", "frontend/src/tests/x.ts", "frontend/src/postcss.config.js",
+                     "frontend/postcss.config.js", "frontend/postcss.config.mts", "frontend/.postcssrc",
+                     "frontend/.postcssrc.json", "frontend/vite.config.js", "frontend/vite.config.ts",
+                     "frontend/vite.config.test.mjs", "frontend/tsconfig.json", "frontend/.env.production",
+                     "frontend/eslint.config.js", "frontend/scripts/postcss.config.js", "frontend/a/vite.config.js",
+                     "frontend/package.json", "postcss.config.js", "docs/.postcssrc"):
+            with self.subTest(filter=path):
+                kept = ((path.startswith("frontend/src/") and not shipped.search(path)) or
+                        (path.startswith("frontend/") and bool(configs.search(path))))
+                self.assertEqual(kept, rg.feeds_frontend_build(path))
+                if path.startswith("frontend/src/"):
+                    self.assertEqual(not shipped.search(path), rg.ships_in_frontend(path))
+        for path, feeds in (("frontend/postcss.config.js", True), ("frontend/.postcssrc.yml", True),
+                            ("frontend/vite.config.mjs", True), ("frontend/tsconfig.json", False),
+                            ("frontend/.env", False), ("frontend/src/App.test.tsx", False)):
+            with self.subTest(feeds=path):
+                self.assertEqual(rg.feeds_frontend_build(path), feeds)
+
+    def test_bundle_check_runs_after_the_build(self):
+        # S12b's bundle-check reads what `npm run build` wrote, in CI's
+        # frontend job and in make check.
+        ci = self.read(".github/workflows/ci.yml")
+        self.assertRegex(ci, r"run: npm run build\n\n(?:      #[^\n]*\n)*      - name: Bundle shape \(S12b\)\n"
+                             r"        run: node scripts/bundle-check\.mjs\n")
+        self.assertIn("\tcd frontend && npm run build\n\tcd frontend && node scripts/bundle-check.mjs\n",
+                      self.read("Makefile"))
 
     def test_the_tests_run_where_classify_commits_test_runs(self):
         for path in (".github/workflows/ci.yml", "Makefile"):
@@ -716,12 +973,64 @@ class ClassTest(RepoTest):
                                 "internal/tools/declhash/main.go": "package main\n\n"}, trailers("T"))
         self.assertPasses(self.guard("refactor", "refactor:tooling"))
 
-    def test_class_t_rejects_frontend_src_until_s12b(self):
-        self.commit("types", {"frontend/src/api/wireCompat.ts": "export type X = 1;\n",
+    def test_class_t_type_only_typescript_passes_the_build_identity(self):
+        # X5's type-only assertions: TypeScript under frontend/src that the
+        # build erases, proved by identical JS and CSS from base and head.
+        self.commit("types", {"frontend/src/api/wireCompat.ts": "export type X = 1;\nexport interface Y { a: X }\n",
+                              "frontend/src/views/App.tsx": "import type { X } from '../api/wireCompat';\n"
+                                                            "export const App = 1;\n"}, trailers("T"))
+        g = self.guard("refactor", "refactor:tooling", "no-release-notes")
+        self.assertPasses(g)
+        self.assertEqual(self.builder.calls, ["base", "head"])
+        self.assertEqual(self.builder.cleaned, 1)
+        self.assertTrue(any("same 4 *.css and *.js file(s)" in n for n in g.notes), g.notes)
+
+    def test_class_t_typescript_that_changes_the_build_fails(self):
+        self.commit("types", {"frontend/src/api/wireCompat.ts": "export type X = 1;\nexport const k = 2;\n",
                               "internal/api/handlers.go": "package api\n\nfunc B() {}\n"}, trailers("T"))
         g = self.guard("refactor", "refactor:tooling")
-        self.assertIn("S12b", self.assertFailsWith(g, "class T", "wireCompat").render())
+        f = self.assertFailsWith(g, "S12b build identity", "index.js")
+        self.assertIn("type-only (class T) change must leave the emitted JavaScript and CSS byte-identical", f.fix)
+        self.assertEqual(f.path, "frontend/build/assets/index.js")
         self.assertFailsWith(g, "class T", "handlers.go")
+        self.assertFalse(any("index.css" in x.render() for x in g.failures), "the CSS did not change")
+        # The lazy chunk loads the entry by its hashed name: an echo, not a change of its own.
+        echo = self.assertFailsWith(g, "S12b build identity", "differ only in the hashed file names")
+        self.assertIn("Lazy.js", echo.message)
+        self.assertEqual(echo.fix, "fix the difference above; these follow from it")
+        self.assertFalse(any(x.path == "frontend/build/assets/Lazy.js" for x in g.failures))
+
+    def test_class_t_leaves_frontend_tests_and_test_helpers_to_class_c(self):
+        # The build identity proves what the production build erases; it never
+        # builds a test, src/arch or src/test, so their edits are class C's,
+        # whose reviewer reads the assertions. A declaration file is erased
+        # whole, so class T may change it.
+        for path in ("frontend/src/views/App.test.tsx", "frontend/src/arch/repo.ts", "frontend/src/test/mockApi.ts",
+                     "frontend/src/x/testdata/fixture.ts"):
+            with self.subTest(path=path):
+                self.setUp()
+                self.commit("types", {path: "export type X = 1;\n"}, trailers("T"))
+                g = self.guard("refactor", "refactor:tooling")
+                f = self.assertFailsWith(g, "class T", path)
+                self.assertIn("this file is a test or test-only code, which is class C", f.message)
+                self.assertEqual(self.builder.calls, [])
+        self.setUp()
+        self.commit("types", {"frontend/src/vite-env.d.ts": "declare const X: 1;\n"}, trailers("T"))
+        self.assertPasses(self.guard("refactor", "refactor:tooling"))
+        self.assertEqual(self.builder.calls, [])
+
+    def test_class_t_rejects_other_frontend_src_files(self):
+        self.commit("style", {"frontend/src/index.css": ".button { color: red }\n"}, trailers("T"))
+        g = self.guard("refactor", "refactor:tooling")
+        self.assertIn("not TypeScript", self.assertFailsWith(g, "class T", "frontend/src/index.css").render())
+
+    def test_class_t_type_only_mixed_with_a_build_change_fails(self):
+        # The identity is the pull request's, base against head: a commit that
+        # changes the JavaScript sinks a type-only commit beside it.
+        self.commit("types", {"frontend/src/api/wireCompat.ts": "export type X = 1;\n"}, trailers("T"))
+        self.commit("extract", {"frontend/src/views/App.tsx": "export const App = 1 + 0;\n"}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        self.assertIn("pull request of its own", self.assertFailsWith(g, "S12b build identity", "index.js").fix)
 
     def test_class_a_runs_the_hashers(self):
         self.commit("move", {"internal/api/handlers.go": "package api\n", "internal/api/moved.go":
@@ -834,6 +1143,151 @@ class ClassTest(RepoTest):
         self.assertPasses(self.guard("no-release-notes"))
 
 
+class BuildIdentityTest(RepoTest):
+    def test_a_refactor_that_keeps_the_css_passes_and_js_may_change(self):
+        # A class B extraction changes the JavaScript; only the CSS is held.
+        self.commit("extract", {"frontend/src/views/App.tsx": "const one = () => 1;\nexport const App = one();\n"},
+                    trailers("B"))
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertTrue(any("same 2 *.css file(s)" in n for n in g.notes), g.notes)
+
+    def test_a_reordered_stylesheet_fails_in_the_entry(self):
+        # ProjectList.css after index.css is the cascade I20 pins; a refactor
+        # that moves it ahead (here: renamed so it sorts first) changes the
+        # entry's CSS bytes.
+        self.commit("move", {"frontend/src/views/ProjectList.css": None,
+                             "frontend/src/a/ProjectList.css": ".button { color: blue; }\n"}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        f = self.assertFailsWith(g, "S12b build identity", "index.css")
+        self.assertIn("first difference at byte", f.message)
+        self.assertIn("keep every stylesheet import in its module and in its order", f.fix)
+
+    def test_a_reordered_stylesheet_fails_in_a_lazy_chunk(self):
+        self.commit("lazy", {"frontend/src/views/lazy/Aa.css": ".aa { color: black; }\n"}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        f = self.assertFailsWith(g, "S12b build identity", "Lazy.css")
+        self.assertIn("Lazy-", f.message)
+        self.assertFalse(any("index.css" in x.render() for x in g.failures), "the entry's CSS did not change")
+
+    def test_a_shared_chunk_renamed_with_the_same_css_passes(self):
+        # The bundler names a chunk several modules share after one of them,
+        # so an extraction can rename it with every byte of its CSS kept.
+        self.commit("extract", {"frontend/src/views/App.tsx": "const one = () => 1;\nexport const App = one();\n"},
+                    trailers("B"))
+        g = self.guard(*REFACTOR, builder=StubBuilder(rename={"head": {"Lazy": "Shared"}}))
+        self.assertPasses(g)
+        self.assertTrue(any("same 2 *.css file(s) (.map files left out, and chunk names aside)" in n for n in g.notes),
+                        g.notes)
+        self.assertTrue(any(re.search(r"1 file\(s\) keep every byte under another chunk's name \(the bundler names "
+                                      r"a shared chunk after one of its modules\): Lazy-\S+\.css -> Shared-\S+\.css$", n)
+                            for n in g.notes), g.notes)
+
+    def test_a_renamed_chunk_whose_css_changed_is_named_on_each_side(self):
+        self.commit("lazy", {"frontend/src/views/lazy/Aa.css": ".aa { color: black; }\n"}, trailers("B"))
+        g = self.guard(*REFACTOR, builder=StubBuilder(rename={"head": {"Lazy": "Shared"}}))
+        f = self.assertFailsWith(g, "S12b build identity", "build/assets/Lazy.css: Lazy-")
+        self.assertIn("is emitted only by the base: no file of the head's pairs with it", f.message)
+        self.assertIn("keep every stylesheet import in its module and in its order", f.fix)
+        self.assertFailsWith(g, "S12b build identity", "build/assets/Shared.css: Shared-")
+        self.assertFalse(any("not byte-identical" in x.message for x in g.failures), "nothing paired, so nothing differs")
+
+    def test_an_added_postcss_config_that_drops_a_rule_fails(self):
+        # The build reads more than frontend/src: a PostCSS config the pull
+        # request adds (the protected-path rule judges only files the base
+        # has) rewrites every stylesheet, I20's .button override among them.
+        self.commit("config", {"frontend/postcss.config.js": "remove .button\n"}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.builder.calls, ["base", "head"])
+        f = self.assertFailsWith(g, "S12b build identity", "build/assets/index.css")
+        self.assertIn("first difference at byte 0", f.message)
+        self.assertFalse(any(x.rule == "(2) protected path" for x in g.failures), "an added file is not modified")
+
+    def test_only_a_refactor_touching_shipped_frontend_files_builds(self):
+        for labels, files, builds in (
+                (("no-release-notes",), {"frontend/src/index.css": ".x{}\n"}, False),  # not a refactor
+                (REFACTOR, {"frontend/src/views/App.test.tsx": "test('a', () => {});\n"}, False),
+                (REFACTOR, {"frontend/src/arch/extra.ts": "export const e = 1;\n"}, False),
+                (REFACTOR, {"docs/guide.md": "# Guide\n\nmore\n"}, False),
+                (REFACTOR, {"frontend/tsconfig.json": "{}\n"}, False),
+                (REFACTOR, {"frontend/.postcssrc.json": "{}\n"}, True),
+                (REFACTOR, {"frontend/vite.config.js": "export default {};\n"}, True),
+                (REFACTOR, {"frontend/src/views/App.tsx": "export const App = 3;\n"}, True)):
+            with self.subTest(labels=labels, files=list(files)):
+                self.setUp()
+                self.commit("change", files, trailers("C" if "test" in next(iter(files)) or "arch" in
+                                                      next(iter(files)) else "B"))
+                self.guard(*labels)
+                self.assertEqual(self.builder.calls, ["base", "head"] if builds else [])
+
+    def test_a_build_that_fails_or_writes_nothing_fails(self):
+        self.commit("extract", {"frontend/src/views/App.tsx": "export const App = 4;\n"}, trailers("B"))
+        g = self.guard(*REFACTOR, builder=StubBuilder(fail="head"))
+        self.assertIn("npm ERR!", self.assertFailsWith(g, "S12b build identity", "cannot build the head").message)
+        self.assertEqual(self.builder.cleaned, 1)
+        for side in ("base", "head"):
+            with self.subTest(empty=side):
+                g = rg.Guard(g.git, g.base, g.head, g.merge, list(REFACTOR), StubHashers(), StubBuilder(empty=side))
+                g.run()
+                self.assertFailsWith(g, "S12b build identity", f"the {side}'s build wrote no build/assets")
+
+
+@unittest.skipUnless(shutil.which("git") and shutil.which("sh"), "git or sh is not installed")
+class BuilderTest(RepoTest):
+    """The real FrontendBuilder: git archive, the node_modules link and
+    `npm run build`, with a stand-in npm on PATH that "builds" by
+    concatenating the exported tree's stylesheets in path order."""
+
+    NPM = """#!/bin/sh
+[ "$1 $2" = "run build" ] || { echo "unexpected: npm $*" >&2; exit 64; }
+[ -L node_modules ] && [ -d node_modules ] || { echo "node_modules is not linked" >&2; exit 65; }
+[ -f src/views/App.tsx ] || { echo "not the exported frontend/" >&2; exit 66; }
+mkdir -p build/assets
+cat $(find src -name '*.css' | LC_ALL=C sort) > build/assets/index-AAAAAAAA.css
+echo "built $(pwd)"
+"""
+
+    def setUp(self):
+        super().setUp()
+        self.bin = tempfile.mkdtemp(prefix="fake-npm-")
+        self.addCleanup(shutil.rmtree, self.bin, True)
+        npm = os.path.join(self.bin, "npm")
+        with open(npm, "w") as f:
+            f.write(self.NPM)
+        os.chmod(npm, os.stat(npm).st_mode | stat.S_IEXEC)
+        path = os.environ["PATH"]
+        os.environ["PATH"] = self.bin + os.pathsep + path
+        self.addCleanup(os.environ.__setitem__, "PATH", path)
+
+    def real_guard(self, *labels):
+        base, head, merge = self.merged()
+        self.builder = rg.FrontendBuilder()
+        g = rg.Guard(rg.Git(self.dir), base, head, merge, list(labels), StubHashers(), self.builder)
+        g.run()
+        return g
+
+    def test_needs_node_modules(self):
+        self.commit("extract", {"frontend/src/views/App.tsx": "export const App = 5;\n"}, trailers("B"))
+        g = self.real_guard(*REFACTOR)
+        self.assertIn("run `npm ci` in frontend/", self.assertFailsWith(g, "S12b build identity").message)
+
+    def test_builds_base_and_head_and_cleans_up(self):
+        os.makedirs(os.path.join(self.dir, "frontend", "node_modules", "vite"))  # untracked, as after npm ci
+        self.commit("extract", {"frontend/src/views/App.tsx": "export const App = 6;\n"}, trailers("B"))
+        g = self.real_guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertTrue(any("same 1 *.css file(s)" in n for n in g.notes), g.notes)
+        self.assertEqual(self.builder.dirs, [])
+        # A stylesheet moved so that it sorts, and so loads, earlier.
+        self.git("checkout", "-q", "pr")
+        self.git("branch", "-D", "merge")
+        self.commit("move", {"frontend/src/views/ProjectList.css": None,
+                             "frontend/src/a/ProjectList.css": ".button { color: blue; }\n"}, trailers("B"))
+        g = self.real_guard(*REFACTOR)
+        f = self.assertFailsWith(g, "S12b build identity", "index.css")
+        self.assertIn("index-AAAAAAAA.css differs", f.message)
+
+
 class RatchetTest(RepoTest):
     def ratchets(self, change):
         r = json.loads(json.dumps(RATCHETS))
@@ -931,6 +1385,55 @@ class AllowlistTest(RepoTest):
         self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/views/X' to 'src/components/ProjectLayout.tsx'")
         self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/components/New.tsx'")
 
+    # The allowlists are carved out of guard code in every class, so the
+    # guard reads every line there, as for the size ceilings: a quoted file
+    # with a decimal count, or with a list of quoted targets.
+
+    def allowlists_in_class_b(self, old, new):
+        text = ESLINT.replace(old, new)
+        self.assertNotEqual(text, ESLINT)
+        self.commit("allow", {"frontend/eslint.config.js": text}, trailers("B"))
+        return self.guard(*REFACTOR)
+
+    def assertOnlyForm(self, g, name, form, stray):
+        f = self.assertFailsWith(g, "(2) lint allowlist", f"{name} may hold only {form} entries")
+        self.assertIn(f"`{stray}`", f.message)
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_an_arithmetic_count_fails_in_class_b(self):
+        g = self.allowlists_in_class_b("'src/views/InterviewChat.tsx': 1", "'src/views/InterviewChat.tsx': 1 + 1")
+        self.assertOnlyForm(g, "EVENT_SOURCE_SITES", "quoted-key: integer", "'src/views/InterviewChat.tsx': 1 + 1,")
+
+    def test_a_computed_key_fails_in_class_b(self):
+        g = self.allowlists_in_class_b("  'src/views/InterviewChat.tsx': 1,\n",
+                                       "  'src/views/InterviewChat.tsx': 1,\n  [EVENT_SOURCE_HOOK + 'x']: 2,\n")
+        self.assertOnlyForm(g, "EVENT_SOURCE_SITES", "quoted-key: integer", "[EVENT_SOURCE_HOOK + 'x']: 2,")
+
+    def test_a_spread_target_list_fails_in_class_b(self):
+        g = self.allowlists_in_class_b("['src/views/TodoList'],\n};", "['src/views/TodoList', ...VIEWS],\n};")
+        self.assertOnlyForm(g, "COMPONENTS_IMPORTING_VIEWS", "quoted-key: [quoted strings]",
+                            "'src/components/ProjectLayout.tsx': ['src/views/TodoList', ...VIEWS],")
+
+    def test_an_entry_after_a_lone_cr_adds_an_allowance_in_class_b(self):
+        g = self.allowlists_in_class_b("  'src/views/InterviewChat.tsx': 1,\n",
+                                       "  'src/views/InterviewChat.tsx': 1, // Q21\r  'src/views/Login.tsx': 1,\n")
+        self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/views/Login.tsx'")
+        self.assertFailsWith(g, "(2) guard code", "eslint.config.js")
+
+    def test_a_target_after_a_hidden_line_end_adds_an_import_in_class_b(self):
+        g = self.allowlists_in_class_b("  'src/components/ProjectLayout.tsx': ['src/views/TodoList'],\n",
+                                       "  'src/components/ProjectLayout.tsx': ['src/views/TodoList'], // F2\u2029"
+                                       "  'src/components/New.tsx': ['src/views/Y'],\n")
+        self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/components/New.tsx'")
+        self.assertFailsWith(g, "(2) guard code", "eslint.config.js")
+
+    def test_a_target_list_over_several_lines_is_read(self):
+        g = self.allowlists_in_class_b("'src/components/ProjectLayout.tsx': ['src/views/TodoList'],",
+                                       "'src/components/ProjectLayout.tsx': [\n    'src/views/TodoList',\n"
+                                       "    'src/views/X',\n  ],")
+        self.assertFailsWith(g, "(2) lint allowlist", "adds 'src/views/X' to 'src/components/ProjectLayout.tsx'")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
     def test_allowlists_created_by_the_pull_request(self):
         self.git("checkout", "-q", "main")
         self.commit("no allowlists yet", {"frontend/eslint.config.js": "export default [];\n"})
@@ -953,6 +1456,15 @@ class AllowlistTest(RepoTest):
         self.commit("X2b list", {"scripts/refactor/refactor_guard.py": filled},
                     trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
         self.assertPasses(self.guard("refactor"))
+
+    def test_python_after_a_lone_cr_beside_the_x2b_block_fails_in_class_e(self):
+        # Python, too, ends a line at a lone CR: OTHER = 2 is code, not part
+        # of the comment on the X2b list's closer.
+        self.commit("X2b list", {"scripts/refactor/refactor_guard.py":
+                                 GUARD_PY.replace("X2B_CALL_SHAPE_CHANGES = [\n]",
+                                                  "X2B_CALL_SHAPE_CHANGES = [\n]  # X2b fills this\rOTHER = 2")},
+                    trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
 
     def test_x2b_block_edit_in_class_b_fails(self):
         filled = GUARD_PY.replace("X2B_CALL_SHAPE_CHANGES = [\n]",
@@ -980,6 +1492,168 @@ class CeilingTest(RepoTest):
     def test_the_real_ceiling_is_found(self):
         with open(os.path.join(REPO, "frontend/src/arch/errorChains.test.ts")) as f:
             self.assertIsNotNone(rg.find_constant(f.read(), "CEILING"))
+
+    # S12b's K14 size budgets: numeric constants, and maps whose entries
+    # are ceilings that only fall (R6).
+
+    SIZES = "frontend/src/arch/sizeBudget.test.ts"
+
+    def test_lowering_or_removing_a_size_ceiling_is_not_a_guard_code_edit(self):
+        self.commit("F8", {self.SIZES: SIZE_BUDGET.replace("'views/Login.tsx': 778", "'views/Login.tsx': 700")
+                           .replace("  'Login': 733,\n", "").replace("OVER_1000 = 5", "OVER_1000 = 4")},
+                    trailers("B"))
+        self.assertPasses(self.guard(*REFACTOR))
+
+    def test_raising_or_adding_a_size_ceiling_fails_in_any_class(self):
+        self.commit("raise", {self.SIZES: SIZE_BUDGET.replace("'views/Login.tsx': 778", "'views/Login.tsx': 800")
+                              .replace("'Login': 733,", "'Login': 733,\n  'Wizard': 400,")
+                              .replace("FILE_BUDGET = 600", "FILE_BUDGET = 700")}, trailers("C"))
+        g = self.guard("refactor", "refactor:test")
+        self.assertFailsWith(g, "(2) guard ceiling", "raises 'views/Login.tsx' in FILE_CEILINGS from 778 to 800")
+        self.assertFailsWith(g, "(2) guard ceiling", "adds 'Wizard' to COMPONENT_CEILINGS")
+        self.assertFailsWith(g, "(2) guard ceiling", "raises FILE_BUDGET from 600 to 700")
+        self.assertEqual(len(g.failures), 3, [f.render() for f in g.failures])
+
+    # The ceiling maps are carved out of guard code in every class, so the
+    # guard reads every line there: anything but 'key': <decimal integer>,
+    # comments aside, fails in any class, since a key or value the guard
+    # cannot read would hide a ceiling raised or added.
+
+    def size_ceilings_in_class_b(self, old, new):
+        text = SIZE_BUDGET.replace(old, new)
+        self.assertNotEqual(text, SIZE_BUDGET)
+        self.commit("grandfather", {self.SIZES: text}, trailers("B"))
+        return self.guard(*REFACTOR)
+
+    def assertOnlyForm(self, g, name, stray):
+        f = self.assertFailsWith(g, "(2) guard ceiling", f"{name} may hold only quoted-key: integer entries")
+        self.assertIn(f"`{stray}`", f.message)
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_an_unquoted_size_ceiling_key_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'Login': 733,\n", "  Login: 900,\n")
+        self.assertOnlyForm(g, "COMPONENT_CEILINGS", "Login: 900,")
+
+    def test_an_arithmetic_size_ceiling_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("'views/Login.tsx': 778", "'views/Login.tsx': 778 + 400")
+        self.assertOnlyForm(g, "FILE_CEILINGS", "'views/Login.tsx': 778 + 400,")
+
+    def test_a_hex_size_ceiling_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("'views/Login.tsx': 778", "'views/Login.tsx': 0xfff")
+        self.assertOnlyForm(g, "FILE_CEILINGS", "'views/Login.tsx': 0xfff,")
+
+    def test_a_spread_into_a_size_ceiling_map_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'Login': 733,\n", "  'Login': 733,\n  ...{ Wizard: 900 },\n")
+        self.assertOnlyForm(g, "COMPONENT_CEILINGS", "...{ Wizard: 900 },")
+
+    def test_a_size_ceiling_map_closed_otherwise_fails_in_class_b(self):
+        # find_block then runs on to the next line holding only a brace, so
+        # the carve-out would cover the code in between.
+        g = self.size_ceilings_in_class_b("  'Login': 733,\n};",
+                                          "  'Login': 733,\n} as const;\n\nfunction f() {\n  return 1;\n}")
+        f = self.assertFailsWith(g, "(2) guard ceiling",
+                                 "COMPONENT_CEILINGS may hold only quoted-key: integer entries")
+        self.assertIn("`} as const;`", f.message)
+
+    # A lone CR ends a line in JavaScript (and Python), and U+2028 and U+2029
+    # end one in JavaScript: hidden in a // comment, one turns the rest of the
+    # physical line into code. The guard reads such a line end as the line
+    # end it is (HIDDEN_EOL), and never carves out a span holding one.
+
+    def test_an_entry_after_a_hidden_line_end_raises_a_ceiling_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n",
+                                          "  'views/Login.tsx': 778, // F8 trims this next\u2028"
+                                          "  'views/Login.tsx': 5000,\n")
+        self.assertFailsWith(g, "(2) guard ceiling", "raises 'views/Login.tsx' in FILE_CEILINGS from 778 to 5000")
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_an_entry_after_a_lone_cr_adds_a_ceiling_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'Login': 733,\n", "  'Login': 733, // see F8\r  'Wizard': 900,\n")
+        self.assertFailsWith(g, "(2) guard ceiling", "adds 'Wizard' to COMPONENT_CEILINGS")
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_code_after_a_hidden_line_end_on_a_closer_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n};",
+                                          "  'views/Login.tsx': 778,\n}; // end\u2029console.log('ran');")
+        f = self.assertFailsWith(g, "(2) guard ceiling", "FILE_CEILINGS may hold only quoted-key: integer entries")
+        self.assertIn("`console.log('ran');`", f.message)
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_code_after_a_hidden_line_end_on_a_constant_fails_in_class_b(self):
+        g = self.size_ceilings_in_class_b("const OVER_1000 = 5;", "const OVER_1000 = 5; // §10\u2028globalThis.ran = 1;")
+        self.assertFailsWith(g, "(2) guard code", self.SIZES)
+
+    def test_code_after_a_hidden_line_end_on_the_error_chains_ceiling_fails_in_class_b(self):
+        self.commit("skip", {"frontend/src/arch/errorChains.test.ts":
+                             ERROR_CHAINS.replace("const CEILING = 53;", "const CEILING = 53; //\u2028it.skip = it;")},
+                    trailers("B"))
+        self.assertFailsWith(self.guard(*REFACTOR), "(2) guard code", "errorChains.test.ts")
+
+    def test_a_crlf_line_end_in_a_size_ceiling_map_passes(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n", "  'views/Login.tsx': 700, // F8\r\n")
+        self.assertPasses(g)
+
+    def test_a_map_failed_for_its_form_is_not_also_read_for_growth(self):
+        # FILE_CEILINGS closed with `} as const;` runs on into
+        # COMPONENT_CEILINGS; its one failure is the form, not 'adds' lines
+        # for the next map's entries.
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n};", "  'views/Login.tsx': 778,\n} as const;")
+        ceilings = [f for f in g.failures if f.rule == "(2) guard ceiling"]
+        self.assertEqual(len(ceilings), 1, [f.render() for f in g.failures])
+        self.assertIn("FILE_CEILINGS may hold only quoted-key: integer entries", ceilings[0].message)
+
+    def test_a_quoted_size_ceiling_raised_in_class_b_fails(self):
+        g = self.size_ceilings_in_class_b("'Login': 733", "'Login': 900")
+        self.assertFailsWith(g, "(2) guard ceiling", "raises 'Login' in COMPONENT_CEILINGS from 733 to 900")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_comments_and_blank_lines_in_a_size_ceiling_map_pass(self):
+        g = self.size_ceilings_in_class_b("  'views/Login.tsx': 778,\n",
+                                          "\n  // F8 split the form out.\n  \"views/Login.tsx\": 700, // was 778\n")
+        self.assertPasses(g)
+
+    def test_a_size_ceiling_map_left_unreadable_is_failed_once(self):
+        # The commit that made it unreadable fails; a later one that leaves
+        # the literal as its parent has it is not failed again.
+        self.commit("grandfather", {self.SIZES: SIZE_BUDGET.replace("'Login': 733", "Login: 900")}, trailers("B"))
+        self.commit("later", {self.SIZES: SIZE_BUDGET.replace("'Login': 733", "Login: 900")
+                              .replace("'views/Login.tsx': 778", "'views/Login.tsx': 700")}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        f = self.assertFailsWith(g, "(2) guard ceiling", "COMPONENT_CEILINGS may hold only")
+        self.assertEqual(f.commit[1], "grandfather")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_a_size_ceiling_removed_then_re_added_higher_fails(self):
+        entry = "  'views/Login.tsx': 778,\n"
+        self.commit("drop", {self.SIZES: SIZE_BUDGET.replace(entry, "")}, trailers("B"))
+        self.commit("back", {self.SIZES: SIZE_BUDGET.replace("778", "790")}, trailers("C"))
+        f = self.assertFailsWith(self.guard(*REFACTOR, "refactor:test"), "(2) guard ceiling",
+                                 "raises 'views/Login.tsx' in FILE_CEILINGS from 778 to 790")
+        self.assertEqual(f.commit[1], "back")
+
+    def test_other_edits_to_the_size_budgets_are_guard_code(self):
+        self.commit("edit", {self.SIZES: SIZE_BUDGET.replace("// ratchet", "// r")}, trailers("B"))
+        self.assertFailsWith(self.guard(*REFACTOR), "(2) guard code", "sizeBudget.test.ts")
+
+    def test_the_real_size_budgets_are_found(self):
+        with open(os.path.join(REPO, self.SIZES)) as f:
+            text = f.read()
+        for name in rg.GUARD_CODE_CEILINGS[self.SIZES]:
+            with self.subTest(name=name):
+                self.assertTrue(rg.find_constant(text, name) or rg.find_block(text, name), name)
+        self.assertEqual(rg.find_constant(text, "FILE_BUDGET")[1], 600)
+        self.assertEqual(rg.find_constant(text, "COMPONENT_BUDGET")[1], 300)
+        self.assertEqual(rg.find_constant(text, "OVER_1000")[1], 5)
+        for name in ("FILE_CEILINGS", "COMPONENT_CEILINGS"):
+            with self.subTest(name=name):
+                self.assertIsNone(rg.read_literal(text, name, "count")[1], f"{name} holds an entry the guard cannot read")
+        files = rg.parse_allowlist(text, "FILE_CEILINGS", "count")
+        self.assertEqual(len(files), 17)
+        self.assertEqual(files["api/client.ts"], 2886 + 150)  # R6: its size plus 10%, at most 150
+        self.assertEqual(files["views/Login.tsx"], 708 + 70)
+        components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
+        self.assertEqual(len(components), 41)
+        self.assertEqual(components["ModuleView"], 2164 + 150)
 
 
 class ReAddTest(RepoTest):
