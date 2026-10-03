@@ -31,29 +31,6 @@ func (h *Handler) registerRunnerSessionRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/runner-pool", h.GetRunnerPool).Methods("GET")
 }
 
-// requirePoolNode gates the pool endpoints on the deployment's pool key.
-func requirePoolNode(w http.ResponseWriter, r *http.Request) bool {
-	if !IsPoolNode(r) {
-		writeJSONError(w, http.StatusForbidden, "runner pool credentials required")
-		return false
-	}
-	return true
-}
-
-// runnerSessionsEnabled reports whether this deployment runs transient
-// runners at all (the service is only wired when a pool key is configured).
-func (h *Handler) runnerSessionsEnabled() bool {
-	return h.runnerSessionService != nil
-}
-
-func (h *Handler) requireRunnerSessions(w http.ResponseWriter) bool {
-	if !h.runnerSessionsEnabled() {
-		writeJSONError(w, http.StatusBadRequest, "transient runners are not enabled on this deployment")
-		return false
-	}
-	return true
-}
-
 // --- Pool node endpoints ---
 
 // RegisterPoolNode records a pre-warmed worker process as available.

@@ -102,17 +102,6 @@ func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(prefs)
 }
 
-// requireHumanUser answers the current user or writes a 401. Notifications
-// are strictly per-person, so run tokens and worker keys never pass.
-func (h *Handler) requireHumanUser(w http.ResponseWriter, r *http.Request) (userID string, ok bool) {
-	user := CurrentUser(r)
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return "", false
-	}
-	return user.ID, true
-}
-
 // ListNotifications answers the caller's notifications, newest first.
 // Query: unread=true limits to unread rows; limit caps the page size.
 // The unread count always rides along so the bell badge needs one request.

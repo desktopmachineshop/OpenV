@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"mime"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/events"
@@ -12,40 +14,8 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/domain/users"
 )
-
-// notFound is the answer to an id no row has: its status and message. The
-// guards give exactly this answer to a caller with no access at all, so that
-// a refusal tells nothing of whether the id exists (I3, OpenV REQ-17): a
-// project no row has and one the caller cannot reach both answer the project
-// guard's 404 "project not found", and a workspace likewise "workspace not
-// found". A guard that stands for a resource the handler looked up by its
-// own id answers that resource's own not-found (missing), the answer the
-// lookup gives an id no row has. A caller who reaches the project or
-// workspace but lacks the role a write needs still gets 403: the resource
-// exists for it. The zero notFound stands for the guard's own answer.
-type notFound struct {
-	status  int
-	message string
-}
-
-var (
-	unknownProject   = notFound{http.StatusNotFound, "project not found"}
-	unknownWorkspace = notFound{http.StatusNotFound, "workspace not found"}
-)
-
-// missing is a resource's not-found answer: 404 with its message.
-func missing(message string) notFound { return notFound{http.StatusNotFound, message} }
-
-// or is n, or def when n is the zero notFound.
-func (n notFound) or(def notFound) notFound {
-	if n == (notFound{}) {
-		return def
-	}
-	return n
-}
-
-func (n notFound) write(w http.ResponseWriter) { writeJSONError(w, n.status, n.message) }
 
 // requireProjectRole enforces project access. Returns true when the request
 // may proceed; otherwise it has already written a 401/403/404 response.
@@ -696,4 +666,113 @@ func (h *Handler) pendingArtifactRef(runID, ref string) *proposals.Proposal {
 		}
 	}
 	return nil
+}
+
+func requireUser(w http.ResponseWriter, r *http.Request) bool {
+	if CurrentUser(r) == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return false
+	}
+	return true
+}
+
+func requireWorker(w http.ResponseWriter, r *http.Request) bool {
+	if !IsWorker(r) {
+		writeJSONError(w, http.StatusForbidden, "worker credentials required")
+		return false
+	}
+	return true
+}
+
+// requireWorkerRun resolves the {id} run for a worker lifecycle call and
+// verifies the worker credential may act on it: the run must belong to the
+// worker's org, and a personal runner key may only touch runs its user could
+// have claimed (their own, or an ownerless one its user could see — mirrors
+// Claim). Cross-org and unknown run IDs, and runs the key could not claim,
+// all answer 404 so a worker cannot probe whether a run exists. Returns nil
+// after writing the response when access is denied.
+func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
+	run, err := h.runService.Get(mux.Vars(r)["id"])
+	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
+		writeJSONError(w, http.StatusNotFound, "agent run not found")
+		return nil
+	}
+	if holder := WorkerUser(r); holder != "" {
+		sees := run.LaunchedBy != nil && *run.LaunchedBy == holder
+		if run.LaunchedBy == nil {
+			if sees, err = h.holderSeesRun(holder, run); err != nil {
+				respondInternal(w, r, "failed to resolve run access", err)
+				return nil
+			}
+		}
+		if !sees {
+			writeJSONError(w, http.StatusNotFound, "agent run not found")
+			return nil
+		}
+	}
+	return run
+}
+
+// requireHumanUser answers the current user or writes a 401. Notifications
+// are strictly per-person, so run tokens and worker keys never pass.
+func (h *Handler) requireHumanUser(w http.ResponseWriter, r *http.Request) (userID string, ok bool) {
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return "", false
+	}
+	return user.ID, true
+}
+
+// requirePlatformAdmin writes 401/403 and answers nil unless the caller is
+// a signed-in platform admin.
+func (h *Handler) requirePlatformAdmin(w http.ResponseWriter, r *http.Request) *users.User {
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return nil
+	}
+	if !user.IsAdmin {
+		writeJSONError(w, http.StatusForbidden, "platform admins only")
+		return nil
+	}
+	return user
+}
+
+// requireJSONBody refuses a cookie-authenticated POST that did not declare a
+// JSON body. A cross-site HTML form can post text/plain without a CORS
+// preflight; requiring application/json forces the preflight, which the
+// CORS middleware answers only for the configured frontend origin. That is
+// what keeps a hostile page from redirecting a walled account's
+// verification mail through the victim's own browser.
+func requireJSONBody(w http.ResponseWriter, r *http.Request) bool {
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		writeJSONError(w, http.StatusUnsupportedMediaType, "expected a JSON body (Content-Type: application/json)")
+		return false
+	}
+	return true
+}
+
+// requirePoolNode gates the pool endpoints on the deployment's pool key.
+func requirePoolNode(w http.ResponseWriter, r *http.Request) bool {
+	if !IsPoolNode(r) {
+		writeJSONError(w, http.StatusForbidden, "runner pool credentials required")
+		return false
+	}
+	return true
+}
+
+// runnerSessionsEnabled reports whether this deployment runs transient
+// runners at all (the service is only wired when a pool key is configured).
+func (h *Handler) runnerSessionsEnabled() bool {
+	return h.runnerSessionService != nil
+}
+
+func (h *Handler) requireRunnerSessions(w http.ResponseWriter) bool {
+	if !h.runnerSessionsEnabled() {
+		writeJSONError(w, http.StatusBadRequest, "transient runners are not enabled on this deployment")
+		return false
+	}
+	return true
 }

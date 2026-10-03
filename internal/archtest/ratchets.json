@@ -388,8 +388,8 @@
     "handle_func_outside_registrars": 53,
     "handler_literals_in_tests": 137,
     "invalid_request_body_literals": 106,
-    "raw_json_encodes": 249,
-    "require_outside_authz": 10
+    "raw_json_encodes": 248,
+    "require_outside_authz": 2
   },
   "env_reads": {
     "internal/api": 10,
@@ -400,5 +400,33 @@
     "internal/mcp": 1,
     "internal/notify": 8,
     "internal/runner": 10
-  }
+  },
+  "helper_homes": [
+    "internal/api:Handler.acceptInvitationsForProviderVerifiedEmail",
+    "internal/api:Handler.acceptResolvedInvitation",
+    "internal/api:Handler.addOrInviteToOrg",
+    "internal/api:Handler.featureEnabled",
+    "internal/api:Handler.flowDownCoverage",
+    "internal/api:Handler.launchRun",
+    "internal/api:Handler.listOrg",
+    "internal/api:Handler.memberFeatureEnabled",
+    "internal/api:Handler.orgForProject",
+    "internal/api:Handler.orgIDForProject",
+    "internal/api:Handler.projectFeatureEnabled",
+    "internal/api:Handler.provisionPersonalWorkspace",
+    "internal/api:Handler.qualityRuleSetFor",
+    "internal/api:Handler.seatsChanged",
+    "internal/api:Handler.sendVerificationAsync",
+    "internal/api:Handler.sessionUser",
+    "internal/api:Handler.throttleSSO",
+    "internal/api:Handler.touchRunnerSession",
+    "internal/api:Handler.verifiedByInvitation",
+    "internal/api:Handler.writeInvitationError",
+    "internal/api:OIDCConfig.displayName",
+    "internal/api:accountKey",
+    "internal/api:launchParent",
+    "internal/api:maxEvidenceBytes",
+    "internal/api:uploadIsRasterImage",
+    "internal/api:writeAddOrInviteOutcome"
+  ]
 }

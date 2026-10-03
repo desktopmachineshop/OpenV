@@ -133,22 +133,6 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/events", h.ListDomainEvents).Methods("GET")
 }
 
-func requireUser(w http.ResponseWriter, r *http.Request) bool {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return false
-	}
-	return true
-}
-
-func requireWorker(w http.ResponseWriter, r *http.Request) bool {
-	if !IsWorker(r) {
-		writeJSONError(w, http.StatusForbidden, "worker credentials required")
-		return false
-	}
-	return true
-}
-
 // --- Agent definitions ---
 
 func (h *Handler) ListAgents(w http.ResponseWriter, r *http.Request) {
@@ -781,35 +765,6 @@ func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[st
 	}
 	auth["api_key_env"] = keyEnv
 	return auth
-}
-
-// requireWorkerRun resolves the {id} run for a worker lifecycle call and
-// verifies the worker credential may act on it: the run must belong to the
-// worker's org, and a personal runner key may only touch runs its user could
-// have claimed (their own, or an ownerless one its user could see — mirrors
-// Claim). Cross-org and unknown run IDs, and runs the key could not claim,
-// all answer 404 so a worker cannot probe whether a run exists. Returns nil
-// after writing the response when access is denied.
-func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
-	run, err := h.runService.Get(mux.Vars(r)["id"])
-	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
-		writeJSONError(w, http.StatusNotFound, "agent run not found")
-		return nil
-	}
-	if holder := WorkerUser(r); holder != "" {
-		sees := run.LaunchedBy != nil && *run.LaunchedBy == holder
-		if run.LaunchedBy == nil {
-			if sees, err = h.holderSeesRun(holder, run); err != nil {
-				respondInternal(w, r, "failed to resolve run access", err)
-				return nil
-			}
-		}
-		if !sees {
-			writeJSONError(w, http.StatusNotFound, "agent run not found")
-			return nil
-		}
-	}
-	return run
 }
 
 func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
