@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
 import { OrgMembersTab } from './OrgMembersTab';
 import { orgsAPI } from '../../api/client';
 
@@ -8,12 +9,7 @@ import { orgsAPI } from '../../api/client';
 // role change for them with ErrNotMember, whose words ("you are not a member
 // of this organization") address the caller, so the tab must not show them
 // to an admin who is still a member; it re-reads the list and says who left.
-vi.mock('../../api/client', () => ({
-  orgsAPI: {
-    members: { list: vi.fn(), add: vi.fn(), setRole: vi.fn(), remove: vi.fn() },
-    invitations: { list: vi.fn(), revoke: vi.fn() },
-  },
-}));
+vi.mock('../../api/client', async (orig) => mockApi(await orig()));
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
 

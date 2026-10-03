@@ -13,124 +13,124 @@
       "name": "signals",
       "file": "wire_config.go",
       "doc": "// signals installs the logger and makes the root context, canceled on\n// SIGINT or SIGTERM so that the background loops and the HTTP server shut\n// down gracefully; it returns the context's stop for main() to defer.",
-      "lines": "121-125",
+      "lines": "70-74",
       "starts": "initLogging()"
     },
     {
       "name": "config",
       "file": "wire_config.go",
       "doc": "// config reads the database, port and directory settings and the\n// workspace limits, and creates the uploads directory.",
-      "lines": "128-178",
+      "lines": "77-127",
       "starts": "// Database connection: Railway-style DATABASE_URL or individual vars."
     },
     {
       "name": "connect",
       "file": "wire_storage.go",
       "doc": "// connect opens the database and returns its Close for main() to defer.",
-      "lines": "180-184",
+      "lines": "129-133",
       "starts": "// Connect and migrate."
     },
     {
       "name": "storage",
       "file": "wire_storage.go",
       "doc": "// storage migrates the database and builds the repositories and the event\n// bus.",
-      "lines": "186-237",
+      "lines": "135-180",
       "starts": "// Schema migration plus the idempotent org backfill, serialized across"
     },
     {
       "name": "core",
       "file": "wire_core.go",
       "doc": "// core builds the artifact, link, embedding, project, export, report,\n// download and template services.",
-      "lines": "239-269",
+      "lines": "182-212",
       "starts": "// Core services."
     },
     {
       "name": "workspace",
       "file": "wire_workspace.go",
       "doc": "// workspace builds the user, member and workspace services, turns the plan\n// tiers on where configured, and builds invitations, worker keys, hosted\n// workers and the transient runners.",
-      "lines": "271-317",
+      "lines": "214-260",
       "starts": "// Suite services."
     },
     {
       "name": "runners",
       "file": "wire_workspace.go",
       "doc": "// runners reconciles the hosted runners with their containers and registers\n// the legacy worker key.",
-      "lines": "319-373",
+      "lines": "262-277",
       "starts": "// Hosted runner provisioner (Docker). Disabled when HOSTED_RUNNERS=off"
     },
     {
       "name": "projects",
       "file": "wire_projects.go",
       "doc": "// projects builds the product, settings, attribute, shared-product, V&V,\n// evidence, work-item, guided, interview and share-link services, and gives\n// the downloads their evidence and workspace sources.",
-      "lines": "374-437",
+      "lines": "278-313",
       "starts": "productService := products.NewDefaultService(productProfileRepo)"
     },
     {
       "name": "agents",
       "file": "wire_agents.go",
       "doc": "// agents builds the agent engine: the agent and run services with their\n// routing and retry policies, automations, repositories, providers, crews and\n// proposals, and seeds each workspace's default agents and crew.",
-      "lines": "439-515",
+      "lines": "315-391",
       "starts": "// Agent engine services."
     },
     {
       "name": "realtime",
       "file": "wire_realtime.go",
       "doc": "// realtime builds the metrics collector, the SSE hub and the orchestration\n// hooks, and subscribes them.",
-      "lines": "517-529",
+      "lines": "393-405",
       "starts": "// Prometheus metrics. The collector subscribes to run lifecycle events so"
     },
     {
       "name": "notify",
       "file": "wire_notify.go",
       "doc": "// notify builds the mail and web-push side channels and the session and\n// registration policies, and starts the notifier, the budget monitor and the\n// hosted-minutes alerts.",
-      "lines": "531-607",
+      "lines": "407-483",
       "starts": "// Optional email side channel for high-signal notifications (issue #187)."
     },
     {
       "name": "release",
       "file": "wire_notify.go",
       "doc": "// release reads the running release and, when there is one, announces it\n// and starts the stable-channel scheduler and the support-window watcher.",
-      "lines": "609-649",
+      "lines": "485-525",
       "starts": "// The running release: RELEASE_NOTES.md as built into this binary. Its"
     },
     {
       "name": "jobs",
       "file": "wire_jobs.go",
       "doc": "// jobs sets the budget guard where enforced, starts the trigger matcher and\n// the scheduler, and starts the workspace purge and the reaper.",
-      "lines": "651-728",
+      "lines": "527-544",
       "starts": "// Optional over-budget soft-block (default OFF — warn-only). When"
     },
     {
       "name": "sso",
       "file": "wire_sso.go",
       "doc": "// sso reads the optional Google OAuth and OIDC single sign-on settings.",
-      "lines": "730-762",
+      "lines": "546-578",
       "starts": "// Google OAuth (optional)."
     },
     {
       "name": "billing",
       "file": "wire_http.go",
       "doc": "// billing reads the billing settings and, when billing is on, starts the\n// billing service.",
-      "lines": "764-794",
+      "lines": "580-610",
       "starts": "// Handler."
     },
     {
       "name": "handlers",
       "file": "wire_http.go",
       "doc": "// handlers builds the API handler and closes the construction cycles with\n// the proposal appliers and the guided nudges.",
-      "lines": "796-871",
+      "lines": "612-687",
       "starts": "handler := api.NewHandler(api.HandlerDeps{"
     },
     {
       "name": "server",
       "file": "wire_http.go",
       "doc": "// server builds the router, the middleware chain and the HTTP server.",
-      "lines": "873-940",
-      "starts": "// Router + middleware."
+      "lines": "689-695",
+      "starts": "// Router + middleware: the chain is buildHTTPHandler's (http.go)."
     }
   ],
   "main": {
-    "line": 942,
+    "line": 697,
     "starts": "errCh := make(chan error, 1)"
   }
 }

@@ -1,11 +1,10 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { ReleaseUpdateBanner, RELEASE_POLL_MS } from './ReleaseUpdateBanner';
 import { releaseAPI } from '../api/client';
 
-vi.mock('../api/client', () => ({
-  releaseAPI: { current: vi.fn() },
-}));
+vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>

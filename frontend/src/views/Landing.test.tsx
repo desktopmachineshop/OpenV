@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../test/mockApi';
 import { Landing } from './Landing';
 import {
   ALPHA_NOTE,
@@ -18,9 +19,11 @@ import {
 const catalogue = vi.hoisted(() => ({
   value: { billing_enabled: false, currencies: [] as string[], plans: [] as any[] } as any,
 }));
-vi.mock('../api/client', () => ({
-  billingAPI: { publicPlans: () => Promise.resolve({ data: catalogue.value }) },
-}));
+vi.mock('../api/client', async (orig) =>
+  mockApi(await orig(), {
+    billingAPI: { publicPlans: () => Promise.resolve({ data: catalogue.value }) },
+  })
+);
 
 // The router is mocked with the two pieces the view uses: Link renders a plain anchor
 // and the hooks return inert values.
