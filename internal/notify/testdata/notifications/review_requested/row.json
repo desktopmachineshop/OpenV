@@ -5,7 +5,7 @@
     {
       "delivery": "1 of 1",
       "row": {
-        "Body": "\"Brake \\\"pedal\\\" force ≤ 50 N\" is waiting in the review queue.",
+        "Body": "\"Brake \"pedal\" force ≤ 50 N\" is waiting in the review queue.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {

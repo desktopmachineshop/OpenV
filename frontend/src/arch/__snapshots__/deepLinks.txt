@@ -1,16 +1,21 @@
 # Backend-built deep links resolved with matchRoutes against App.tsx (invariant I19).
 # Fixture: src/arch/testdata/backendDeepLinks.json. Regenerate: npx vitest run src/arch -u
-# 20 links; 1 served by nginx from the API, not the app.
+# 25 links; 1 served by nginx from the API, not the app.
 
 /login?invite=TOKEN                                                       -> /login
 /verify-email?token=TOKEN                                                 -> /verify-email
 /reset-password?token=TOKEN                                               -> /reset-password
 /org/settings?tab=usage                                                   -> /org/settings
+/org/settings?tab=billing                                                 -> /org/settings
+/whats-new                                                                -> /whats-new
+/org/settings                                                             -> /org/settings
+/org/settings?tab=members                                                 -> /org/settings
 /projects                                                                 -> /projects
 /projects/PROJECT/agent-runs?run=RUN                                      -> /projects/:projectId > /projects/:projectId/agent-runs
 /projects/PROJECT/agent-runs                                              -> /projects/:projectId > /projects/:projectId/agent-runs
 /projects/PROJECT/interviews                                              -> /projects/:projectId > /projects/:projectId/interviews
 /projects/PROJECT/requirements                                            -> /projects/:projectId > /projects/:projectId/requirements
+/projects/PROJECT/settings?tab=members                                    -> /projects/:projectId > /projects/:projectId/settings
 /projects/PROJECT                                                         -> /projects/:projectId > /projects/:projectId (index)
 /share/TOKEN                                                              -> /share/:token
 /s/TOKEN                                                                  -> /s/:token

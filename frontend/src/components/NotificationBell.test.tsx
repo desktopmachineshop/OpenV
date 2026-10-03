@@ -17,8 +17,11 @@ vi.mock('../api/client', () => ({
   },
 }));
 
+// vi.mock factories are hoisted above the imports, so what they close over
+// is hoisted with them.
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
   useSearchParams: () => [new URLSearchParams(), () => {}],
 }));
 
@@ -260,5 +263,47 @@ describe('paging the history', () => {
     expect(container.textContent).toContain('Notification n-7');
     // No cursor came back, so there is nothing left to load.
     expect(button('Load older')).toBeFalsy();
+  });
+});
+
+describe('where a row opens', () => {
+  // The same table as TestEmailAndPushLinkWhereTheBellOpens
+  // (internal/notify/email_test.go): the email link and the web push url go
+  // where the bell does. The cloud runner minutes alert, which points at the
+  // Billing tab, opened the projects list (#379, bug 59).
+  const cases: [string, Record<string, unknown> | undefined, string][] = [
+    ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-7', project_id: 'p1', run_id: 'r1' }, '/projects/p1/agent-runs?run=r1'],
+    ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-8', project_id: 'p1', run_id: '' }, '/projects/p1/agent-runs'],
+    ['run_failed', { kind: 'run', project_id: 'p1', run_id: 'r1' }, '/projects/p1/agent-runs?run=r1'],
+    ['interview_completed', { kind: 'interview', project_id: 'p1', session_id: 's1' }, '/projects/p1/interviews'],
+    ['mention', { kind: 'artifact', project_id: 'p1', artifact_id: 'a1', chatter_id: 'c1' }, '/projects/p1/requirements'],
+    ['review_requested', { kind: 'artifact', project_id: 'p1', artifact_id: 'a1' }, '/projects/p1/requirements'],
+    ['budget_threshold', { kind: 'org_usage', org_id: 'o1', threshold: 80 }, '/org/settings?tab=usage'],
+    ['hosted_minutes', { kind: 'org_limits', org_id: 'o1', threshold: 100, month: '2026-10' }, '/org/settings?tab=billing'],
+    ['access_changed', { kind: 'membership', org_id: 'o1', user_id: 'u1' }, '/org/settings?tab=members'],
+    ['access_changed', { kind: 'project_membership', org_id: 'o1', user_id: 'u1', project_id: 'p1' }, '/projects/p1/settings?tab=members'],
+    ['membership_changed', { kind: 'membership', org_id: 'o1', user_id: 'u1' }, '/org/settings?tab=members'],
+    ['release_published', { kind: 'release', version: '0.16.0' }, '/whats-new'],
+    ['release_published', { kind: 'release', version: '0.15.0', org_id: 'o1' }, '/whats-new'],
+    ['release_scheduled', { kind: 'release', version: '0.15.0', org_id: 'o1' }, '/whats-new'],
+    ['release_support_window', { kind: 'support_window', running: '0.14.0', available: '0.15.0', closes: '2026-11-30' }, '/org/settings'],
+    ['run_failed', { kind: 'run' }, '/projects'],
+    ['access_changed', { kind: 'project_membership', org_id: 'o1', user_id: 'u1' }, '/projects'],
+    ['some_future_type', { kind: 'something_new', project_id: 'p1' }, '/projects/p1'],
+    ['some_future_type', undefined, '/projects'],
+  ];
+
+  it.each(cases)('%s %j opens %s', async (type, ref, want) => {
+    const row = notification('n-link', { type, title: `A ${type} row`, entity_ref: ref });
+    api.list.mockResolvedValue({ data: { notifications: [row], unread_count: 1 } } as any);
+    await render();
+    await openPanel();
+    const title = Array.from(container.querySelectorAll('div')).find(
+      (el) => el.children.length === 0 && el.textContent === row.title
+    );
+    expect(title).toBeTruthy();
+    await click(title as HTMLElement);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith(want);
   });
 });

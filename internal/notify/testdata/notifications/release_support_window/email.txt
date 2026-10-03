@@ -11,16 +11,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@examp
 -------- message
 From: openv@example.test
 To: ada@example.test
-Subject: Upgrade OpenV within 24 days
+Subject: Upgrade OpenV within 25 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 24 days
+Upgrade OpenV within 25 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -32,16 +32,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@examp
 -------- message
 From: openv@example.test
 To: dee@example.test
-Subject: Upgrade OpenV within 24 days
+Subject: Upgrade OpenV within 25 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 24 days
+Upgrade OpenV within 25 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -53,16 +53,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Upgrade OpenV within 24 days
+Subject: Upgrade OpenV within 25 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 24 days
+Upgrade OpenV within 25 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -74,16 +74,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@examp
 -------- message
 From: openv@example.test
 To: ada@example.test
-Subject: Upgrade OpenV within 6 days
+Subject: Upgrade OpenV within 7 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 6 days
+Upgrade OpenV within 7 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -95,16 +95,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@examp
 -------- message
 From: openv@example.test
 To: dee@example.test
-Subject: Upgrade OpenV within 6 days
+Subject: Upgrade OpenV within 7 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 6 days
+Upgrade OpenV within 7 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -116,16 +116,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Upgrade OpenV within 6 days
+Subject: Upgrade OpenV within 7 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 6 days
+Upgrade OpenV within 7 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -137,16 +137,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@examp
 -------- message
 From: openv@example.test
 To: ada@example.test
-Subject: Upgrade OpenV within 1 days
+Subject: Upgrade OpenV within 2 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 1 days
+Upgrade OpenV within 2 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -158,16 +158,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@examp
 -------- message
 From: openv@example.test
 To: dee@example.test
-Subject: Upgrade OpenV within 1 days
+Subject: Upgrade OpenV within 2 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 1 days
+Upgrade OpenV within 2 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -179,16 +179,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Upgrade OpenV within 1 days
+Subject: Upgrade OpenV within 2 days
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 1 days
+Upgrade OpenV within 2 days
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -200,16 +200,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@examp
 -------- message
 From: openv@example.test
 To: ada@example.test
-Subject: Upgrade OpenV within 0 days
+Subject: Upgrade OpenV today
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 0 days
+Upgrade OpenV today
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -221,16 +221,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@examp
 -------- message
 From: openv@example.test
 To: dee@example.test
-Subject: Upgrade OpenV within 0 days
+Subject: Upgrade OpenV today
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 0 days
+Upgrade OpenV today
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -242,16 +242,16 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO gus@examp
 -------- message
 From: openv@example.test
 To: gus@example.test
-Subject: Upgrade OpenV within 0 days
+Subject: Upgrade OpenV today
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Upgrade OpenV within 0 days
+Upgrade OpenV today
 
 This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -272,7 +272,7 @@ OpenV support window has closed
 This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -293,7 +293,7 @@ OpenV support window has closed
 This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
@@ -314,7 +314,7 @@ OpenV support window has closed
 This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.
 
 Open it in OpenV:
-https://openv.example.test/projects
+https://openv.example.test/org/settings
 
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.

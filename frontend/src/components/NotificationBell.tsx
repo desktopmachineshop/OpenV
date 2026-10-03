@@ -30,9 +30,10 @@ const timeAgo = (iso: string): string => {
 // back to the project overview (or the projects list without a project).
 const pathForNotification = (n: AppNotification): string => {
   const ref = n.entity_ref || {};
-  // Workspace budget alerts are not project-scoped — deep-link to the
-  // workspace usage tab where the budget lives.
+  // Workspace alerts are not project-scoped: the budget's opens the usage
+  // tab, and the cloud runner minutes' the Billing tab its text points at.
   if (ref.kind === 'org_usage') return '/org/settings?tab=usage';
+  if (ref.kind === 'org_limits') return '/org/settings?tab=billing';
   // A platform release is not scoped to anything: it opens the notes.
   if (ref.kind === 'release') return '/whats-new';
   // A dedicated instance leaving its support window is a workspace matter.
@@ -47,7 +48,6 @@ const pathForNotification = (n: AppNotification): string => {
   if (!projectId) return '/projects';
   switch (ref.kind) {
     case 'run':
-      return `/projects/${projectId}/agent-runs${ref.run_id ? `?run=${ref.run_id}` : ''}`;
     case 'proposal':
       // Proposals are reviewed from the runs view (run detail panel).
       return `/projects/${projectId}/agent-runs${ref.run_id ? `?run=${ref.run_id}` : ''}`;

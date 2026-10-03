@@ -554,16 +554,46 @@ A new notification type needs a scenario in `ncScenarios`
 (`notification_content_test.go`): until it has one and its goldens, that
 test and `TestEveryNotificationTypeHasAContentGolden` in
 `internal/domain/notifications` fail. The bell builds its own deep links
-(`pathForNotification` in `NotificationBell.tsx`), which differ from the
-email and push links for releases, support windows and membership changes
-(quirk Q7); `src/components/NotificationBell.paths.test.tsx` feeds the bell
-every notification in the Go goldens and pins where each lands beside the
-Go link in `src/components/__snapshots__/NotificationBell.paths.txt`, so a
-change on either side shows there: regenerate it, after the Go goldens,
+(`pathForNotification` in `NotificationBell.tsx`), and the email and push
+links open the same page (`notificationPath` in `internal/notify/email.go`
+mirrors it case for case; quirk Q7, resolved), so a new entity kind is
+added on both sides, with a row in each side's table
+(`TestEmailAndPushLinkWhereTheBellOpens`, and the bell's "where a row
+opens"). `src/components/NotificationBell.paths.test.tsx` feeds the bell
+every notification in the Go goldens, pins where each lands beside the Go
+link in `src/components/__snapshots__/NotificationBell.paths.txt`, and
+fails when the two differ, so a change on either side shows there:
+regenerate it, after the Go goldens,
 with `cd frontend && npx vitest run src/components/NotificationBell.paths.test.tsx -u`.
 These three test files and the recording harness beside the Go one are
 guard code (`GUARD_CODE` row S10 in `scripts/refactor/refactor_guard.py`):
 a refactor pull request may change them only in a class C or T commit.
+
+The vocabularies the frontend copies by hand from Go are pinned as well
+(refactor plan step S13): link rules with their text, artifact types and the
+ones the quality linter scores, artifact statuses and their transitions,
+feature keys, domain event types, plans, API error codes, V&V gap labels,
+agent providers, upload extensions, the API paths open without a session and
+the guided wizard's step labels. `TestVocabulary` in `internal/vocabparity`
+reads each from its Go catalogue into `contracts/vocab.json`, and
+`frontend/src/arch/vocabParity.test.ts` compares every TypeScript copy with
+it, from a declared list, map, union, `switch` or `<select>` to every
+`useFeature` key, error-code check and 401-interceptor exemption. A
+difference that `contracts/vocab-allowed-diffs.json` does not list fails, and
+so does a listed one that no longer occurs, so that list only shrinks. It
+holds today's drift: the `refines` link rule's description, the event types
+the activity log's and the automations page's filters leave out (quirk Q6),
+the types the shared project view does not label, the two registered
+features nothing gates, and the legacy plan aliases the admin's plan picker
+leaves out. A pull request that changes a Go vocabulary regenerates
+`vocab.json` with
+`UPDATE_GOLDEN=1 go test ./internal/vocabparity -count=1 -run '^TestVocabulary$'`,
+and one that fixes a drift or means to add one regenerates the allowed list
+with `cd frontend && UPDATE_GOLDEN=1 npx vitest run src/arch/vocabParity.test.ts`;
+either needs a release note. A new hand copy of one of these vocabularies
+joins `COPIES` in the vitest. Both test files are guard code (`GUARD_CODE`
+row S13 in `scripts/refactor/refactor_guard.py`): a refactor pull request
+may change them only in a class C or T commit.
 
 The runner (`internal/runner`, refactor plan step S15a) is characterized
 against a stand-in API, with stand-in vendor CLIs (shell scripts, so these

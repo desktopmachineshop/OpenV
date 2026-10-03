@@ -87,3 +87,44 @@ func TestSupportWindowQuietWhenCurrent(t *testing.T) {
 		t.Fatalf("warned an instance with no stable")
 	}
 }
+
+// TestSupportWindowWarningCountsTheDaysLeft: the warning's title counts the
+// days left before the window closes rounding up, in the singular or the
+// plural, and says "today" on the last day. It read "Upgrade OpenV within 1
+// days" a day and a half out, and "within 0 days" on the last day (#379,
+// bug 61). Once the window has closed, the next run sends the closed
+// warning; the truncated count kept sending "within 0 days" for the first
+// day after the close.
+func TestSupportWindowWarningCountsTheDaysLeft(t *testing.T) {
+	// 0.4.0 designated on 2026-10-01: the window closes at the start of
+	// 2026-12-30 (UTC).
+	closes := time.Date(2026, 12, 30, 0, 0, 0, 0, time.UTC)
+	feed := `{"version":"0.5.0","stable":"0.4.0","stable_since":"2026-10-01"}`
+	day := 24 * time.Hour
+	cases := []struct {
+		left time.Duration
+		want string
+	}{
+		{day / 2, "Upgrade OpenV today"},
+		{time.Minute, "Upgrade OpenV today"},
+		{day, "Upgrade OpenV within 1 day"},
+		{day + day/2, "Upgrade OpenV within 2 days"},
+		{2 * day, "Upgrade OpenV within 2 days"},
+		{6*day + day/2, "Upgrade OpenV within 7 days"},
+		{24*day + day/2, "Upgrade OpenV within 25 days"},
+		{-time.Hour, "OpenV support window has closed"},
+	}
+	for _, tc := range cases {
+		w, store, _ := watcherFixture(t, feed, &release.Stable{Version: "0.3.0", Since: "2026-09-01"})
+		now := closes.Add(-tc.left)
+		w.now = func() time.Time { return now }
+		w.Run()
+		if len(store.rows) != 1 || store.rows[0].Title != tc.want {
+			titles := []string{}
+			for _, r := range store.rows {
+				titles = append(titles, r.Title)
+			}
+			t.Errorf("%v before the close: titles %q, want [%q]", tc.left, titles, tc.want)
+		}
+	}
+}

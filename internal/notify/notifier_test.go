@@ -3,6 +3,7 @@ package notify
 import (
 	"errors"
 	"sort"
+	"strings"
 	"testing"
 
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
@@ -252,6 +253,40 @@ func TestArtifactInReviewNotifiesEditors(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestReviewRequestedQuotesTheTitleAsWritten: the review notification
+// quotes the artifact's title exactly as written, in the bell (the stored
+// row), the email and the push. It was formatted with %q, so a title with
+// quotes or a backslash reached all three with Go's escapes in it, as
+// "Brake \"pedal\" force" (#379, bug 60).
+func TestReviewRequestedQuotesTheTitleAsWritten(t *testing.T) {
+	const title = `Brake "pedal" force \ ≤ 50 N — Zürich`
+	const want = `"Brake "pedal" force \ ≤ 50 N — Zürich" is waiting in the review queue.`
+	store := &fakeStore{}
+	n := NewNotifier(store, &fakeMembers{list: []*members.Member{
+		member("u-editor", members.RoleEditor, "Ed Editor", "ed@example.com"),
+	}}, nil)
+	n.Handle(domainevents.Event{
+		EventType: domainevents.ArtifactStatusChanged,
+		ProjectID: "p-1",
+		EntityID:  "art-7",
+		Actor:     "user:u-owner",
+		Payload:   map[string]interface{}{"from": "draft", "to": "in_review", "title": title},
+	})
+	if len(store.created) != 1 {
+		t.Fatalf("stored %d rows, want 1", len(store.created))
+	}
+	row := store.created[0]
+	if row.Body != want {
+		t.Errorf("bell body %q, want %q", row.Body, want)
+	}
+	if _, body := renderEmail(row, "https://app.example.com"); !strings.Contains(body, "\n\n"+want+"\n\n") {
+		t.Errorf("email body does not carry %q as its own paragraph:\n%s", want, body)
+	}
+	if got := renderPush(row).Body; got != want {
+		t.Errorf("push body %q, want %q", got, want)
+	}
 }
 
 // TestMentionsNotifyMatchedMembers locks in mention matching: first name,

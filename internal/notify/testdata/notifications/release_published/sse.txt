@@ -7,13 +7,13 @@
 === a release with more notes than the announcement shows | delivery 1 of 2 | to user-ada
 (stream notify:user-ada)
 event: notification
-data: {"id":"<id>","user_id":"user-ada","type":"release_published","title":"OpenV version upgraded to 0.16.0","body":"New features\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\n• **Requirements import keeps enum attributes.**\n• **The bell opens on the tab you left.**\nMaintenance updates\n• **Projects load faster.**\n• **Exports are named after their project.**\n…and more under What's new.","entity_ref":{"kind":"release","version":"0.16.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","user_id":"user-ada","type":"release_published","title":"OpenV version upgraded to 0.16.0","body":"New features\n• Baselines compare side by side. Pick two baselines and see what changed between them.\n• Requirements import keeps enum attributes.\n• The bell opens on the tab you left.\nMaintenance updates\n• Projects load faster.\n• Exports are named after their project.\n…and more under What's new.","entity_ref":{"kind":"release","version":"0.16.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === a release with more notes than the announcement shows | delivery 2 of 2 | to user-ben
 (stream notify:user-ben)
 event: notification
-data: {"id":"<id>","user_id":"user-ben","type":"release_published","title":"OpenV version upgraded to 0.16.0","body":"New features\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\n• **Requirements import keeps enum attributes.**\n• **The bell opens on the tab you left.**\nMaintenance updates\n• **Projects load faster.**\n• **Exports are named after their project.**\n…and more under What's new.","entity_ref":{"kind":"release","version":"0.16.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","user_id":"user-ben","type":"release_published","title":"OpenV version upgraded to 0.16.0","body":"New features\n• Baselines compare side by side. Pick two baselines and see what changed between them.\n• Requirements import keeps enum attributes.\n• The bell opens on the tab you left.\nMaintenance updates\n• Projects load faster.\n• Exports are named after their project.\n…and more under What's new.","entity_ref":{"kind":"release","version":"0.16.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === a release from before version numbers | delivery 1 of 2 | to user-ada
@@ -43,41 +43,41 @@ data: {"id":"<id>","user_id":"user-ben","type":"release_published","title":"Open
 === the workspace's window opens | delivery 1 of 2 | to user-gus
 (stream notify:user-gus)
 event: notification
-data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === the workspace's window opens | delivery 2 of 2 | to user-hal
 (stream notify:user-hal)
 event: notification
-data: {"id":"<id>","org_id":"org-zurich","user_id":"user-hal","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-hal","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === first run after the window has passed: announced and turned on at once | delivery 2 of 3 | to user-gus
 (stream notify:user-gus)
 event: notification
-data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-gus","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === first run after the window has passed: announced and turned on at once | delivery 3 of 3 | to user-hal
 (stream notify:user-hal)
 event: notification
-data: {"id":"<id>","org_id":"org-zurich","user_id":"user-hal","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-zurich","user_id":"user-hal","type":"release_published","title":"Zürich Labs moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-zurich","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === stable cut for a workspace with no upgrade window | delivery 3 of 5 | to user-ada
 (stream notify:user-ada)
 event: notification
-data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_published","title":"Acme Rockets moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"release_published","title":"Acme Rockets moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === stable cut for a workspace with no upgrade window | delivery 4 of 5 | to user-ben
 (stream notify:user-ben)
 event: notification
-data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"release_published","title":"Acme Rockets moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"release_published","title":"Acme Rockets moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === stable cut for a workspace with no upgrade window | delivery 5 of 5 | to user-dee
 (stream notify:user-dee)
 event: notification
-data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_published","title":"Acme Rockets moved to stable release 0.15.0","body":"New features\n• **Baselines compare side by side.**\n• **Requirements import keeps enum attributes.**\nMaintenance updates\n• **Projects load faster.**\nBug fixes\n• **The bell counts only unread rows.**\n• **Exports keep line breaks.**","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"release_published","title":"Acme Rockets moved to stable release 0.15.0","body":"New features\n• Baselines compare side by side.\n• Requirements import keeps enum attributes.\nMaintenance updates\n• Projects load faster.\nBug fixes\n• The bell counts only unread rows.\n• Exports keep line breaks.","entity_ref":{"kind":"release","org_id":"org-acme","version":"0.15.0"},"read":false,"flagged":false,"created_at":"<created_at>"}
 

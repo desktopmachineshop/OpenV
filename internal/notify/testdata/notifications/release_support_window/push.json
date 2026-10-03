@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Upgrade OpenV within 24 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 25 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Upgrade OpenV within 24 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 25 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -34,7 +34,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Upgrade OpenV within 24 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 25 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -47,7 +47,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Upgrade OpenV within 6 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 7 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -60,7 +60,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Upgrade OpenV within 6 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 7 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -73,7 +73,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Upgrade OpenV within 6 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 7 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -86,7 +86,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Upgrade OpenV within 1 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 2 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -99,7 +99,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Upgrade OpenV within 1 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 2 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -112,7 +112,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Upgrade OpenV within 1 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV within 2 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -125,7 +125,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Upgrade OpenV within 0 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV today\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -138,7 +138,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Upgrade OpenV within 0 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV today\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -151,7 +151,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Upgrade OpenV within 0 days\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"Upgrade OpenV today\",\"body\":\"This instance runs stable release 0.14.0. Stable release 0.15.0 is available, and support for 0.14.0 ends on 30 Nov 2026. Preview the new release on your staging copy, then schedule the upgrade.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -164,7 +164,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"OpenV support window has closed\",\"body\":\"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"OpenV support window has closed\",\"body\":\"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -177,7 +177,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"OpenV support window has closed\",\"body\":\"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"OpenV support window has closed\",\"body\":\"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -190,7 +190,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"OpenV support window has closed\",\"body\":\"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.\",\"url\":\"/projects\",\"tag\":\"release_support_window\"}"
+          "payload": "{\"title\":\"OpenV support window has closed\",\"body\":\"This instance runs stable release 0.14.0, whose support ended on 30 Nov 2026. Stable release 0.15.0 is available; upgrade to keep receiving fixes.\",\"url\":\"/org/settings\",\"tag\":\"release_support_window\"}"
         }
       ],
       "sent with the default allow-list": false,

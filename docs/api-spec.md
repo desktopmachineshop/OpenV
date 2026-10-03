@@ -665,6 +665,7 @@ pushes new items live.
 | `interview_completed` | An interview participant finishes | Project editors and owners |
 | `mention` | An `@name` in a comment | The mentioned project members |
 | `budget_threshold` | Month-to-date spend crosses 80% or 100% | Workspace admins |
+| `hosted_minutes` | The month's leased cloud runner minutes reach 80% or 100% of the plan's allowance | Workspace admins |
 | `access_changed` | Your own workspace or project access changes | The affected member |
 | `membership_changed` | Somebody joins, leaves, is invited, or changes role | Workspace admins |
 | `release_published` | A server first boots on a new release (the top section of `RELEASE_NOTES.md`); `entity_ref.kind` is `release`, the title reads *OpenV version upgraded to 0.2.0* and the body carries the release's first bullets under their group headings. Or a stable release turns on for a workspace at its upgrade window, with the notes since the previous stable | Nightly: every account with a nightly-channel workspace, once per release (`release_announcements` claim). Stable: the workspace's members, once per workspace and release (`release_schedule` claim) |
@@ -688,6 +689,34 @@ departures that matter.
 Both email by default (with everything else in `DefaultEmailTypes`, overridable
 with `OPENV_EMAIL_NOTIFICATION_TYPES`), because an access change is exactly the
 thing somebody needs to know while they are not looking at the app.
+
+#### Where a notification leads, and what it says
+
+The bell, the email's link and the web push's `url` open the same page for
+a notification, chosen by its `entity_ref.kind`:
+
+| `entity_ref.kind` | Opens |
+|---|---|
+| `run`, `proposal` | `/projects/<project_id>/agent-runs?run=<run_id>` (no `?run=` without a run id) |
+| `interview` | `/projects/<project_id>/interviews` |
+| `artifact` | `/projects/<project_id>/requirements` |
+| `project_membership` | `/projects/<project_id>/settings?tab=members` |
+| `membership` | `/org/settings?tab=members` |
+| `org_usage` | `/org/settings?tab=usage` |
+| `org_limits` | `/org/settings?tab=billing` |
+| `release` | `/whats-new` |
+| `support_window` | `/org/settings` |
+| anything else | `/projects/<project_id>`, or `/projects` without a project |
+
+The email's link is that path after `FRONTEND_URL`; the push's `url` is the
+path alone. Bodies are plain text: a release's notes arrive with their
+Markdown rendered as text, a review request quotes the artifact's title
+exactly as written, and a support-window warning counts the days left
+rounding up ("Upgrade OpenV within 2 days", "within 1 day", and "today"
+with less than a day left). A push body longer than 200 characters is cut
+after the last whole word or line that fits, with an ellipsis. An email's
+subject outside ASCII is sent as RFC 2047 encoded words, and a line break
+in any header value from data is sent as a space.
 
 ### Web push subscriptions
 

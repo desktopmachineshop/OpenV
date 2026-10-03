@@ -130,7 +130,10 @@ func (n *Notifier) Handle(e domainevents.Event) {
 		title := payloadString(e, "title")
 		body := "An artifact is waiting in the review queue."
 		if title != "" {
-			body = fmt.Sprintf("%q is waiting in the review queue.", title)
+			// Quoted as written: %q would escape the title's own quotes and
+			// backslashes for Go, which a member then reads in the bell, the
+			// email and the push.
+			body = `"` + title + `" is waiting in the review queue.`
 		}
 		n.fanOutToEditors(e, notifications.TypeReviewRequested,
 			"Artifact ready for review",

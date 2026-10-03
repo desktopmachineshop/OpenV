@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"OpenV version upgraded to 0.16.0\",\"body\":\"New features\\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\\n• **Requirements import keeps enum attributes.**\\n• **The bell opens on the tab you left.**\\nMai…\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.0\",\"body\":\"New features\\n• Baselines compare side by side. Pick two baselines and see what changed between them.\\n• Requirements import keeps enum attributes.\\n• The bell opens on the tab you left.\\nMaintenance…\",\"url\":\"/whats-new\",\"tag\":\"release_published\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"OpenV version upgraded to 0.16.0\",\"body\":\"New features\\n• **Baselines compare side by side.** Pick two baselines and see what changed between them.\\n• **Requirements import keeps enum attributes.**\\n• **The bell opens on the tab you left.**\\nMai…\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.0\",\"body\":\"New features\\n• Baselines compare side by side. Pick two baselines and see what changed between them.\\n• Requirements import keeps enum attributes.\\n• The bell opens on the tab you left.\\nMaintenance…\",\"url\":\"/whats-new\",\"tag\":\"release_published\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -34,7 +34,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"OpenV update 2026-01-15\",\"body\":\"• Interview links expire after 30 days.\\n• The requirements table remembers its sort.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+          "payload": "{\"title\":\"OpenV update 2026-01-15\",\"body\":\"• Interview links expire after 30 days.\\n• The requirements table remembers its sort.\",\"url\":\"/whats-new\",\"tag\":\"release_published\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -47,7 +47,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"OpenV update 2026-01-15\",\"body\":\"• Interview links expire after 30 days.\\n• The requirements table remembers its sort.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+          "payload": "{\"title\":\"OpenV update 2026-01-15\",\"body\":\"• Interview links expire after 30 days.\\n• The requirements table remembers its sort.\",\"url\":\"/whats-new\",\"tag\":\"release_published\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -60,7 +60,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"OpenV version upgraded to 0.16.1\",\"body\":\"See What's new for details.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.1\",\"body\":\"See What's new for details.\",\"url\":\"/whats-new\",\"tag\":\"release_published\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -73,7 +73,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"OpenV version upgraded to 0.16.1\",\"body\":\"See What's new for details.\",\"url\":\"/projects\",\"tag\":\"release_published\"}"
+          "payload": "{\"title\":\"OpenV version upgraded to 0.16.1\",\"body\":\"See What's new for details.\",\"url\":\"/whats-new\",\"tag\":\"release_published\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -86,7 +86,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -99,7 +99,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-hal",
-          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -112,7 +112,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-gus",
-          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -125,7 +125,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-hal",
-          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-zurich\"}"
+          "payload": "{\"title\":\"Zürich Labs moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-zurich\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -138,7 +138,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-acme\"}"
+          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-acme\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -151,7 +151,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-acme\"}"
+          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-acme\"}"
         }
       ],
       "sent with the default allow-list": false,
@@ -164,7 +164,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• **Baselines compare side by side.**\\n• **Requirements import keeps enum attributes.**\\nMaintenance updates\\n• **Projects load faster.**\\nBug fixes\\n• **The bell counts only unread rows.**\\n•…\",\"url\":\"/projects\",\"tag\":\"release_published:org-acme\"}"
+          "payload": "{\"title\":\"Acme Rockets moved to stable release 0.15.0\",\"body\":\"New features\\n• Baselines compare side by side.\\n• Requirements import keeps enum attributes.\\nMaintenance updates\\n• Projects load faster.\\nBug fixes\\n• The bell counts only unread rows.\\n• Exports keep…\",\"url\":\"/whats-new\",\"tag\":\"release_published:org-acme\"}"
         }
       ],
       "sent with the default allow-list": false,
