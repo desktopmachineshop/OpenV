@@ -13,6 +13,7 @@ func qualityTools() []Tool {
 	return []Tool{
 		{
 			Name:        "get_quality_rules",
+			ReadOnly:    true,
 			Description: "The requirement quality rules this project is judged against: its normative convention (\"shall\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
@@ -37,6 +38,7 @@ func qualityTools() []Tool {
 		},
 		{
 			Name:        "get_quality_findings",
+			ReadOnly:    true,
 			Description: "Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.",
 			InputSchema: schema([]string{"artifact_id"}, map[string]interface{}{
 				"artifact_id": str("Artifact ID or stable ref (pass project_id to resolve a ref)"),

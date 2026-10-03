@@ -16,6 +16,15 @@ type Tool struct {
 	Description string
 	InputSchema map[string]interface{}
 	Handler     func(c *Client, args map[string]interface{}) (string, error)
+	// ReadOnly marks a tool that only reads: its handler issues GETs and
+	// changes nothing. The read-only tools are the list an agent that must not
+	// write is granted (see the seeded interviewer in internal/seeds).
+	//
+	// A tool that leaves it false is treated as a writer, so a tool added later
+	// grants nothing until someone deliberately marks it where it is defined.
+	// tools/list serves only the name, description and input schema, so the
+	// flag never reaches the wire.
+	ReadOnly bool
 }
 
 // ServerTools is Claude Code's server-wide allowlist spelling: naming the MCP
@@ -93,35 +102,17 @@ func EnvFilteredTools(tools []Tool) []Tool {
 	return FilterTools(tools, strings.Split(raw, ","))
 }
 
-// readOnlyTools names every tool in Tools() that only reads: its handler
-// issues GETs and changes nothing. It is the list an agent that must not write
-// is granted (see the seeded interviewer in internal/seeds).
-//
-// A tool absent from this set is treated as a writer, so a tool added later
-// grants nothing until someone deliberately lists it here. TestReadOnlyTools
-// checks every name still exists in Tools().
-var readOnlyTools = map[string]bool{
-	"list_projects":           true,
-	"list_artifacts":          true,
-	"get_artifact":            true,
-	"get_project_map":         true,
-	"get_context":             true,
-	"get_project_tree":        true,
-	"search_artifacts":        true,
-	"list_links_for_artifact": true,
-	"list_baselines":          true,
-	"get_baseline":            true,
-	"get_quality_rules":       true,
-	"get_quality_findings":    true,
-	"get_vv_coverage":         true,
-	"get_vv_gaps":             true,
-	"list_work_items":         true,
-	"get_work_item":           true,
-	"get_work_item_history":   true,
+// ReadOnly reports whether a tool only reads project data: whether Tools()
+// holds a tool of that name, bare or prefixed, marked ReadOnly.
+func ReadOnly(name string) bool {
+	name = strings.TrimPrefix(name, ToolPrefix)
+	for _, t := range Tools() {
+		if t.Name == name {
+			return t.ReadOnly
+		}
+	}
+	return false
 }
-
-// ReadOnly reports whether a tool only reads project data.
-func ReadOnly(name string) bool { return readOnlyTools[strings.TrimPrefix(name, ToolPrefix)] }
 
 // ReadOnlyToolNames returns the allowlist entries — prefixed as a vendor CLI
 // wants them — for every read-only OpenV tool, in the table's own order so the
@@ -129,7 +120,7 @@ func ReadOnly(name string) bool { return readOnlyTools[strings.TrimPrefix(name, 
 func ReadOnlyToolNames() []string {
 	var out []string
 	for _, t := range Tools() {
-		if readOnlyTools[t.Name] {
+		if t.ReadOnly {
 			out = append(out, ToolPrefix+t.Name)
 		}
 	}
