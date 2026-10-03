@@ -175,6 +175,7 @@
         "frontend/src/views/ReviewQueue*",
         "frontend/src/views/TodoList*",
         "frontend/src/views/projectSettings/**",
+        "frontend/src/views/moduleView/**",
         "frontend/src/views/review*",
         "internal/api/artifact_*.go",
         "internal/api/attribute_*.go",
