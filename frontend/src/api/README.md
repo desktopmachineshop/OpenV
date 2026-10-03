@@ -72,7 +72,7 @@ and its types module share a name.
 **Add an area module.** `<area>.ts` and `types/<area>.ts`, one
 `export * from` and one `export type * from` line in `client.ts`, after the
 existing ones, and a glob for the area in `docs/areas.json`.
-Scaffold: `node frontend/scripts/scaffold.mjs api-module <area>` (N3)
+Scaffold: `node frontend/scripts/scaffold.mjs api-module <area>`
 
 **Mock the client in a test.** Call `mockApi`
 (`frontend/src/test/mockApi.ts`) in the factory of

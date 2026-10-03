@@ -78,7 +78,7 @@ and, until M14 embeds it, to `api.Handler` and its copy in `NewHandler`
 (`internal/api/handlers.go`); then one line in the `api.HandlerDeps`
 literal of stage `handlers`. A new API area also needs its registrar; see
 `internal/api/README.md`.
-Scaffold: `go run ./internal/tools/scaffold api-area <name>` (N3)
+Scaffold: `go run ./internal/tools/scaffold api-area <name>`
 
 **Add an env var.** Read it with a getter from `config.go` in the stage that
 uses it, under the condition it applies to. Then regenerate S8's inventory:

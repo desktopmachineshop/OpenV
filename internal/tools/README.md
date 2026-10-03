@@ -627,6 +627,62 @@ and `frontend/src/arch/areas.test.ts` check that every tracked file
 other than a test file (the index's `test_files`) matches exactly one
 area, that no file matches two, and that every glob matches a tracked file.
 
+## scaffold
+
+```
+go run ./internal/tools/scaffold [-n] api-area <name>
+go run ./internal/tools/scaffold [-n] migration <name>
+go run ./internal/tools/scaffold [-n] [-area <area>] mcp-tool <name>
+```
+
+Writes the first files of a change the area READMEs' recipes describe, in
+the shape the code beside them has (step N3), and appends the one
+registration each needs. `api-area` writes `internal/api/<name>_handlers.go`
+with its registrar, `register<Name>Routes`, and one stub handler for
+`GET /api/v1/projects/{id}/<name>` (a `requireProjectRole` guard,
+`respondInternal`, `respondJSON`), and appends the registrar's call to
+`RegisterRoutes`. `migration` writes `migration_<NNNN>_<name>.go` at the
+next free version, declaring `m<NNNN><Name>(tx *sql.Tx) error` with a TODO
+body, and appends its registry line to `migrations.go`. `mcp-tool` appends
+a `Tool` to the constructor of `internal/mcp/tools_<area>.go` that comes
+last in `Tools()`; without `-area`, to the constructor last in `Tools()`,
+so no tool moves; an `-area` with no file yet gets one, its constructor
+appended to `Tools()`. Every registration is appended, never inserted,
+because the order is behaviour (I2, I11, I16), and the tool says where it
+went. A name is lower-case words joined by `-` or `_`, either spelling:
+snake case for file, migration and tool names (`widget_reports`), kebab
+case for the URL segment (`widget-reports`), each word capitalised for a
+Go identifier (`WidgetReports`), with no initialism table (`ai-map` gives
+`AiMap`). It refuses to overwrite a file or to reuse a name the package
+declares, a route, a migration's name or a tool's, and `-n` prints what it
+would write. After writing it prints what is left by hand: a
+`docs/areas.json` glob if `areas which` finds no area for a new file, the
+golden regenerate commands the area README names, and a release note, since
+a new route, migration or tool is a behaviour change. Its tests copy the
+package each kind reads into a temporary directory, scaffold there, check
+that each edit is one block appended to its list, and compile the result
+with `go vet -overlay` over this module, so the tree is never written; the
+migration test also runs M10's layout tests on the scaffolded copy. A
+refactor never runs it.
+
+## frontend/scripts/scaffold.mjs
+
+```
+node frontend/scripts/scaffold.mjs [-n] [--root <frontend dir>] api-module <area>
+```
+
+The frontend half of `scaffold`, with the same names and refusals:
+`api-module` writes `src/api/<area>.ts`, an `<area>API` object whose stub
+calls `client` from `http.ts` on the route `scaffold api-area` registers
+for the same name, and `src/api/types/<area>.ts`, and appends one
+`export type * from` and one `export * from` line to `client.ts` after the
+existing ones (`frontend/src/api/README.md`). The module is named in lower
+camel case (`work-items` gives `workItems.ts` and `workItemsAPI`). A name
+another module of `src/api` exports is refused, since the barrel would
+export it twice. Step X17 adds `page`. Its test scaffolds into a copy of
+`src/` and type-checks `client.ts` and everything it reaches with the
+repo's TypeScript.
+
 ## make check and make check-fast
 
 `make check` runs CI's pull-request gates locally, in CI's order: the

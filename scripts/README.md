@@ -15,7 +15,7 @@ Everything here is the tooling area of `docs/areas.json`, through
 | Area | Globs | Guide |
 |---|---|---|
 | tooling | `scripts/**`, `.github/**`, `Makefile` | this file |
-| tooling | `internal/tools/**` | `internal/tools/README.md`: the refactor proofs and generators, and `areas` |
+| tooling | `internal/tools/**` | `internal/tools/README.md`: the refactor proofs and generators, `areas` and `scaffold` |
 | tooling | `internal/archtest/**` | `internal/archtest/README.md`: the S1 architecture rules and `ratchets.json` |
 | tooling | `frontend/scripts/**`, `frontend/src/arch/**`, `frontend/eslint.config.js` | `frontend/src/README.md` |
 | tooling | `docs/areas.json`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `docs/DEVELOPMENT.md` | the root `CLAUDE.md` ("Where things live") |

@@ -72,7 +72,7 @@ throwaway server. Without it they skip, and the layout tests still run.
    extensions (`pgvector/pgvector:pg15`, CI's pgvector leg):
    `OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'`.
    The freeze appends and refuses to rewrite a shipped migration.
-Scaffold: `go run ./internal/tools/scaffold migration <name>` (N3)
+Scaffold: `go run ./internal/tools/scaffold migration <name>`
 
 **Add a field to an entity.** The migration above, then every SELECT,
 INSERT and Scan of the repository that reads the table (there is no shared

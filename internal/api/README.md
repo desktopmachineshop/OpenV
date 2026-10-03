@@ -90,7 +90,7 @@ templates serves a path), a glob in
 `docs/areas.json` if no area claims the name, then the steps above. A new
 service: one `HandlerDeps` field, plus the `Handler` field and its copy in
 `NewHandler` until M14, plus one line in `cmd/server/wire_http.go` (K5).
-Scaffold: `go run ./internal/tools/scaffold api-area <name>` (N3)
+Scaffold: `go run ./internal/tools/scaffold api-area <name>`
 
 **Publish a new domain event.** Add the type in `internal/domain/events`
 (see `internal/domain/README.md`), publish it with `h.publish` or
