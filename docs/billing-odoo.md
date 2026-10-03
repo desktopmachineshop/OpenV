@@ -172,8 +172,8 @@ self-serve buyers do not take.
 **Pull only.** OpenV reads Odoo; Odoo never calls OpenV.
 
 A reconcile job in the API service — the same shape as the workspace purge
-job in `cmd/server/main.go`, a goroutine with a ticker — reads every
-subscription order out of Odoo in one `search_read` (domain:
+job (`runPurgeLoop` in `cmd/server/jobs.go`), a goroutine with a ticker —
+reads every subscription order out of Odoo in one `search_read` (domain:
 `client_order_ref` starts with `openv:`, plus `is_subscription`) and writes
 the resulting tier, status and seats onto the matching workspaces. Run it
 every few minutes, and on boot.

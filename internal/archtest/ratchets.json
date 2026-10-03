@@ -327,7 +327,6 @@
     "internal/domain/links"
   ],
   "file_lines": {
-    "cmd/server/main.go": 980,
     "internal/api/agent_handlers.go": 2414,
     "internal/api/handlers.go": 3519,
     "internal/api/org_handlers.go": 1552,
@@ -338,7 +337,7 @@
     "internal/domain/reports/report.go": 1104
   },
   "func_lines": {
-    "cmd/server:main": 867,
+    "cmd/server:main": 721,
     "internal/api:Handler.CreateLink": 115,
     "internal/api:Handler.OIDCCallback": 115,
     "internal/api:Handler.UpdateArtifact": 168,
