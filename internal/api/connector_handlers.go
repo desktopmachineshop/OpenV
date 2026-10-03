@@ -97,7 +97,17 @@ func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 	if osName == "" {
 		osName = "windows"
 	}
-	if osName != "windows" && osName != "linux" && osName != "darwin" {
+	// Each allowed os names its files by constant, so no part of the query
+	// reaches a path.
+	var single, serveAs, zipName string
+	switch osName {
+	case "windows":
+		single, serveAs, zipName = "openv-connector-windows.exe", "openv-connector.exe", "openv-connector-windows.zip"
+	case "linux":
+		single, serveAs, zipName = "openv-connector-linux", "openv-connector", "openv-connector-linux.zip"
+	case "darwin":
+		single, serveAs, zipName = "openv-connector-darwin", "openv-connector", "openv-connector-darwin.zip"
+	default:
 		writeJSONError(w, http.StatusBadRequest, "unknown os")
 		return
 	}
@@ -106,12 +116,6 @@ func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	single := "openv-connector-" + osName
-	serveAs := "openv-connector"
-	if osName == "windows" {
-		single += ".exe"
-		serveAs += ".exe"
-	}
 	if path := filepath.Join(h.connectorDistDir, single); fileExists(path) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", "attachment; filename="+serveAs)
@@ -119,7 +123,6 @@ func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	zipName := "openv-connector-" + osName + ".zip"
 	if path := filepath.Join(h.connectorDistDir, zipName); fileExists(path) {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", "attachment; filename="+zipName)
