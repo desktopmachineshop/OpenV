@@ -1,0 +1,256 @@
+<div style="padding: 24px; max-width: 900px; margin: 0px auto;">
+<h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
+<div class="tab-strip" role="tablist">
+<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
+<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Access</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
+<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+</div>
+<div class="card">
+<h3>People</h3>
+<div class="table-scroll">
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Member</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Email</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 140px;">Role</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 80px;">
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<div style="display: flex; align-items: center; gap: 8px;">
+<div aria-hidden="true" style="width: 28px; height: 28px; min-width: 28px; min-height: 28px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; background: var(--accent); color: var(--accent-fg); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; line-height: 1;">D</div>
+<span>Dana Reyes<span style="color: var(--text-muted); font-size: 12px;"> (you)</span>
+</span>
+</div>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">dana@example.com</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<select style="padding: 5px 8px; font-size: 13px;">
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Remove</button>
+</td>
+</tr>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<div style="display: flex; align-items: center; gap: 8px;">
+<img src="https://example.com/sam.png" alt="" style="width: 28px; height: 28px; min-width: 28px; min-height: 28px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; object-fit: cover; display: block;">
+<span>Sam Lee</span>
+</div>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">sam@example.com</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<select style="padding: 5px 8px; font-size: 13px;">
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Remove</button>
+</td>
+</tr>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<div style="display: flex; align-items: center; gap: 8px;">
+<div aria-hidden="true" style="width: 28px; height: 28px; min-width: 28px; min-height: 28px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; background: var(--accent); color: var(--accent-fg); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; line-height: 1;">K</div>
+<span>—</span>
+</div>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">kim@example.com</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<select style="padding: 5px 8px; font-size: 13px;">
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Remove</button>
+</td>
+</tr>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<div style="display: flex; align-items: center; gap: 8px;">
+<div aria-hidden="true" style="width: 28px; height: 28px; min-width: 28px; min-height: 28px; border-radius: 50%; flex-shrink: 0; box-sizing: border-box; background: var(--accent); color: var(--accent-fg); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; line-height: 1;">O</div>
+<span>Ola Berg</span>
+</div>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">—</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<select style="padding: 5px 8px; font-size: 13px;">
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Remove</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="card">
+<h3>Add member</h3>
+<p style="font-size: 13px; color: var(--text-muted);">The person must already have an OpenV account — invite them to sign up first, then add their email here.</p>
+<form style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+<div style="flex: 1 1 0%; min-width: 220px;">
+<label style="font-size: 12px;">Email</label>
+<input type="email" placeholder="teammate@example.com" value="">
+</div>
+<div style="width: 130px;">
+<label style="font-size: 12px;">Role</label>
+<select>
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</div>
+<button type="submit" class="button" disabled="">Add member</button>
+</form>
+</div>
+<div class="card">
+<h3>Teams</h3>
+<p style="font-size: 13px; color: var(--text-muted);">Grant a workspace team access to this project. Manage teams themselves in <a href="/org/settings" data-discover="true">Workspace settings</a>.</p>
+<div class="table-scroll">
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Team</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 140px;">Role</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 80px;">
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); font-weight: 600;">Firmware</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">
+<select style="padding: 5px 8px; font-size: 13px;">
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 12px; width: auto; padding: 2px;">Revoke</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<form style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px;">
+<div style="flex: 1 1 0%; min-width: 220px;">
+<label style="font-size: 12px;">Team</label>
+<select>
+<option value="">-- Select a team --</option>
+<option value="t2">Test lab</option>
+</select>
+</div>
+<div style="width: 130px;">
+<label style="font-size: 12px;">Role</label>
+<select>
+<option value="owner">owner</option>
+<option value="editor">editor</option>
+<option value="reviewer">reviewer</option>
+<option value="viewer">viewer</option>
+</select>
+</div>
+<button type="submit" class="button" disabled="">Grant access</button>
+</form>
+<p style="font-size: 12px; color: var(--text-muted); margin-top: 14px; margin-bottom: 0px;">Workspace admins always have owner access. A person's effective role is the highest of their direct grant and any team grants. A reviewer reads everything and adds notes, comments and mentions, but cannot change the text.</p>
+</div>
+<div class="card" style="margin-top: 16px;">
+<h3>Share links</h3>
+<p style="font-size: 13px; color: var(--text-muted); margin-top: 0px;">A <strong>public</strong> link opens the live project, read only, for anyone who holds it, with no account. A <strong>reviewer</strong> link asks the holder to sign in and makes them a reviewer. Links unfurl with a preview when pasted into Slack, Discord, LinkedIn and the like. Revoke a link to close it.</p>
+<form style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px;">
+<div style="width: 150px;">
+<label style="font-size: 12px;">Access</label>
+<select>
+<option value="public">public, view only</option>
+<option value="reviewer">reviewer</option>
+</select>
+</div>
+<div style="flex: 1 1 0%; min-width: 160px;">
+<label style="font-size: 12px;">Label</label>
+<input placeholder="Who this link is for" value="">
+</div>
+<div style="width: 160px;">
+<label style="font-size: 12px;">Expires (optional)</label>
+<input type="date" value="">
+</div>
+<button type="submit" class="button" style="width: auto;">Create link</button>
+</form>
+<div class="table-scroll">
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft);">Label</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 100px;">Access</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 120px;">Created</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 120px;">Expires</th>
+<th style="text-align: left; font-size: 12px; color: var(--text-muted); padding: 8px 10px; border-bottom: 1px solid var(--border-soft); width: 90px;">
+</th>
+</tr>
+</thead>
+<tbody>
+<tr style="opacity: 1;">
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Investors</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">public</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">2026-03-01</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">never</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Revoke</button>
+</td>
+</tr>
+<tr style="opacity: 1;">
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Supplier review</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">reviewer</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">2026-04-01</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">2026-09-30</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Revoke</button>
+</td>
+</tr>
+<tr style="opacity: 0.55;">
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">—</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">public</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">2026-01-10</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">expired 2026-02-01</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+<button style="background: none; border: medium; color: var(--danger); cursor: pointer; font-size: 13px; width: auto; padding: 6px 8px; min-height: 36px;">Revoke</button>
+</td>
+</tr>
+<tr style="opacity: 0.55;">
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Old</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">reviewer</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">2026-01-05</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">revoked</td>
+<td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
