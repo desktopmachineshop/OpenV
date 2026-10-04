@@ -157,9 +157,11 @@ func (rep *AgentRunRepository) List(filter agentruns.ListFilter) ([]*agentruns.R
 		  AND ($4 = '' OR r.parent_run_id = $4::uuid)
 		  AND ($5 = '' OR r.work_item_id = $5::uuid)
 		  AND ($7 = '' OR r.launched_by = $7::uuid)
+		  AND (NOT $9::boolean OR r.project_id IS NULL)
 		ORDER BY r.created_at DESC
 		LIMIT $8
-	`, filter.AgentID, filter.ProjectID, filter.Status, filter.ParentID, filter.WorkItemID, filter.OrgID, filter.LaunchedBy, limit)
+	`, filter.AgentID, filter.ProjectID, filter.Status, filter.ParentID, filter.WorkItemID, filter.OrgID, filter.LaunchedBy, limit,
+		filter.NoProject)
 	if malformedID(err) {
 		return nil, nil
 	}

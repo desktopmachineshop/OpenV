@@ -228,6 +228,25 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	projectID := q.Get("project_id")
+	// project=none keeps the runs with no project, for the workspace Runs
+	// page. It narrows the workspace-wide listing and takes its scoping
+	// below, which is requireRunAccess's for such a run: its launcher and
+	// the workspace's admins. Beside project_id it would name two sets, and
+	// any other value is refused rather than ignored, so a mistyped filter
+	// never lists every run.
+	noProject := false
+	switch q.Get("project") {
+	case "":
+	case "none":
+		if projectID != "" {
+			writeJSONError(w, http.StatusBadRequest, "project=none cannot be combined with project_id")
+			return
+		}
+		noProject = true
+	default:
+		writeJSONError(w, http.StatusBadRequest, `project must be "none"`)
+		return
+	}
 	if projectID != "" && !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
@@ -244,6 +263,7 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 		ProjectID: projectID,
 		Status:    q.Get("status"),
 		ParentID:  q.Get("parent_id"),
+		NoProject: noProject,
 		Limit:     limit,
 	}
 	if projectID == "" && !h.isOrgAdmin(r, activeOrg) {

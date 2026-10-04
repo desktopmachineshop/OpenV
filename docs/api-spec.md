@@ -1225,7 +1225,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/agent-runs` | List runs (project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own) | user |
+| GET | `/api/v1/agent-runs` | List runs, newest first (project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own). `project=none` keeps the workspace-wide listing's runs that have no project (a whole-workspace automation's, one launched outside any project, one its project's delete left behind), for the workspace Runs page: an org admin gets them all, a member the ones they launched, as `GET /agent-runs/{id}` lets each read them. `400` for any other `project` value, or `project=none` beside `project_id` | user |
 | POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run (a personal key: its owner's, and the ownerless ones its owner could see), never one whose cancel was requested. `204` when there is none, and when the run claimed was asked to stop before its token was issued (a project's delete, say): it is handed back, which ends it cancelled | worker |
 | POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |

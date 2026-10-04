@@ -349,7 +349,13 @@ type ListFilter struct {
 	ParentID   string
 	WorkItemID string
 	LaunchedBy string
-	Limit      int
+	// NoProject keeps only the runs with no project: a whole-workspace
+	// automation's, one launched outside any project, and those a
+	// project's delete left behind (the workspace Runs page). It only
+	// narrows: who may see them is LaunchedBy's to say, as for any other
+	// workspace-wide listing.
+	NoProject bool
+	Limit     int
 }
 
 // Repository defines persistence for runs and their logs.
