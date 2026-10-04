@@ -128,6 +128,7 @@ OPENV_STRIPE_API_VERSION	internal/billing:ConfigFromEnv(getenv)	-
 OPENV_STRIPE_PRICES	internal/billing:ConfigFromEnv(getenv)	-
 OPENV_TRUSTED_PROXY_HOPS	os.Getenv	-
 OPENV_TRUST_PROXY	os.Getenv	-
+OPENV_UPLOAD_SWEEP	cmd/server:envSwitch(key)	true
 OPENV_VAPID_PRIVATE_KEY	internal/notify:envSecret(key)	-
 OPENV_VAPID_PUBLIC_KEY	os.Getenv	-
 OPENV_VAPID_SUBJECT	os.Getenv	-

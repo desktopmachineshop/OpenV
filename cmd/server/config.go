@@ -26,6 +26,12 @@ func envBool(key string, fallback bool) bool {
 	return envparse.Bool(key, os.Getenv(key), fallback)
 }
 
+// envSwitch reads a switch: on or off in any case, or a boolean as envBool
+// reads one.
+func envSwitch(key string, fallback bool) bool {
+	return envparse.Switch(key, os.Getenv(key), fallback)
+}
+
 // envSecret reads a credential exactly as set (#379, question 24): never
 // trimmed, since a key, token, password or private key cut short of its
 // spaces is another one, with one warning naming the variable, never the

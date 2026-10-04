@@ -317,6 +317,35 @@ unset	default
 "key\n"	"key\n"
 " key"	" key"
 
+[cmd/server:envSwitch(key)]
+unset	default
+""	default
+"   "	default
+"TRUE"	true
+"true"	true
+"1"	true
+"0"	false
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+"off"	false
+" OFF "	false
+"on"	true
+"On"	true
+
 [internal/api:newRateLimiterFromEnv(burstVar)]
 unset	default
 ""	default

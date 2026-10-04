@@ -110,7 +110,7 @@ func (f *sweepFixture) evidence(path string) {
 // sweep runs the sweep as a boot does.
 func (f *sweepFixture) sweep() {
 	f.t.Helper()
-	sweepUnreferencedUploads(f.db, f.dir, f.began)
+	sweepUnreferencedUploads(f.db, f.dir, f.began, true)
 }
 
 // recorded answers the outcome boot_tasks records for the sweep, and

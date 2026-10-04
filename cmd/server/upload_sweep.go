@@ -19,7 +19,9 @@ import (
 // in the uploads directory. Once per database, the first boot after the
 // migrations removes them, and fails safe: when it cannot tell for certain
 // that a file is one of this database's and that no row names it, it keeps
-// the file. Its rules, each of which keeps a file:
+// the file. OPENV_UPLOAD_SWEEP=off skips it and records nothing, so it runs
+// at the first boot without the setting (question 55). Its rules, each of
+// which keeps a file:
 //
 //  1. Only a regular file directly in the uploads directory is considered:
 //     never a directory or anything in one (the workspace logos and profile
@@ -56,6 +58,10 @@ import (
 // uploadSweepTask names the sweep in boot_tasks.
 const uploadSweepTask = "sweep_unreferenced_uploads"
 
+// uploadSweepSetting turns the sweep off (question 55): a deployment whose
+// uploads directory another deployment shares must not sweep it.
+const uploadSweepSetting = "OPENV_UPLOAD_SWEEP"
+
 // uploadSweepMargin is how long before the boot a stored file must have
 // last changed for the sweep to consider it (rule 3).
 const uploadSweepMargin = time.Hour
@@ -88,9 +94,14 @@ func storedUploadKey(name string) (string, bool) {
 }
 
 // sweepUnreferencedUploads runs the sweep of dir, the uploads directory,
-// once per database: began is when the boot began. A failure is logged,
-// and the next boot runs the sweep again.
-func sweepUnreferencedUploads(db *sql.DB, dir string, began time.Time) {
+// once per database, unless on is false (OPENV_UPLOAD_SWEEP=off): then it
+// says so and records nothing. began is when the boot began. A failure is
+// logged, and the next boot runs the sweep again.
+func sweepUnreferencedUploads(db *sql.DB, dir string, began time.Time, on bool) {
+	if !on {
+		slog.Info("upload sweep: off (" + uploadSweepSetting + "=off); nothing swept or recorded")
+		return
+	}
 	if _, err := postgres.RunBootTaskOnce(db, uploadSweepTask, func() (string, error) {
 		return sweepUploads(dir, began.Add(-uploadSweepMargin), func() ([]string, error) {
 			return postgres.StoredFileReferences(db)

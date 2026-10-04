@@ -63,6 +63,7 @@ type app struct {
 	dsn                  string
 	port                 string
 	uploadsDir           string
+	uploadSweep          bool
 	agentsDir            string
 	workerKey            string
 	selfHosted           bool

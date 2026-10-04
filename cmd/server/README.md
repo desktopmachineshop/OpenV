@@ -26,10 +26,10 @@ Test files (`*_test.go`) need no area.
 | `main.go` | `main()`: the stage calls in boot order, the deferred cleanups two stages return, then listen and graceful shutdown |
 | `app.go` | the `app` struct: every value a stage builds for a later stage |
 | `wire_*.go` | the stages, methods on `*app` that `main()` calls in this order: `signals`, `config` (`wire_config.go`); `connect`, `storage` (`wire_storage.go`); `core`; `workspace`, `runners` (`wire_workspace.go`); `projects`; `agents`; `realtime`; `notify`, `release` (`wire_notify.go`); `jobs`; `sso`; `billing`, `handlers`, `server` (`wire_http.go`) |
-| `config.go` | the env getters `envOr`, `envInt`, `envBool` and `envSecret`, over `internal/envparse` |
+| `config.go` | the env getters `envOr`, `envInt`, `envBool`, `envSwitch` and `envSecret`, over `internal/envparse` |
 | `http.go` | the one `mux.NewRouter()`, `/metrics`, the middleware chain (`buildHTTPHandler`) and `newServer` |
 | `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`, `reconcileHostedRunners`; `removeStoredFiles`, which removes the files a committed purge took |
-| `upload_sweep.go` | `sweepUnreferencedUploads`, which stage `storage` runs once per database after the migrations: the stored files no row names, by the fail-safe rules at the top of the file |
+| `upload_sweep.go` | `sweepUnreferencedUploads`, which stage `storage` runs once per database after the migrations unless `OPENV_UPLOAD_SWEEP=off`: the stored files no row names, by the fail-safe rules at the top of the file |
 | `lookups.go` | closures over the database and services that stages hand to services |
 | `logging.go` | `initLogging` and `fatal` |
 | `boot_*_test.go`, `harness*_test.go` | the S4 boot harness: the real binary booted per env profile |

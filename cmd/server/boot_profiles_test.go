@@ -159,11 +159,14 @@ var s4bProfiles = s4b([]bootProfile{
 		env: map[string]string{"OPENV_PLAN_DEFAULT": "open_source"}},
 	{name: "malformed_settings", about: "settings that break the rule, each kept at its default with one warning",
 		env: malformedSettings},
+	{name: "upload_sweep_off", about: "the boot's sweep of the stored files no row names turned off, for an uploads directory another deployment shares",
+		env: map[string]string{"OPENV_UPLOAD_SWEEP": "off"}},
 })
 
 // malformedSettings break internal/envparse's rule, one of each kind the
 // server reads at boot: a boolean (SECURE_COOKIES, read twice, and
-// OPENV_BUDGET_ENFORCE), a count (OPENV_SHARED_PRODUCT_DAILY_LIMIT, the body
+// OPENV_BUDGET_ENFORCE), a switch (OPENV_UPLOAD_SWEEP, which takes on or off
+// but not no), a count (OPENV_SHARED_PRODUCT_DAILY_LIMIT, the body
 // cap, a run's attempts, 0 among them) and a rate (a refill of Inf, which
 // used to switch sign-in throttling off); and the settings a request reads,
 // the proxy trust (its hop count and its boolean) and the upload and
@@ -181,6 +184,7 @@ var malformedSettings = map[string]string{
 	"OPENV_TRUST_PROXY":                "on",
 	"OPENV_MAX_UPLOAD_MB":              "25 MB",
 	"OPENV_MAX_EVIDENCE_MB":            "-1",
+	"OPENV_UPLOAD_SWEEP":               "no",
 }
 
 // s4b gives each profile the recording proxy and S4b's probes.

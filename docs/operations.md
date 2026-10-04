@@ -92,7 +92,9 @@ only spaces counts as unset. A count, such as a burst, a size in MB or
 `AGENT_WORKSPACE_RETENTION`, is a positive Go duration (`90m`, `24h`); a
 rate, a `…_REFILL_PER_HOUR`, is a positive, finite number; and an on/off
 setting, such as `SECURE_COOKIES`, `OPENV_SELF_HOSTED` or `OPENV_HOSTED`, is
-`true` or `false` in any case, or `1` or `0`. A value that breaks the rule
+`true` or `false` in any case, or `1` or `0`; `OPENV_UPLOAD_SWEEP`, a switch
+documented as `=off`, also takes `on` or `off` in any case. A value that
+breaks the rule
 keeps the setting's default, and the log says so once, as the API or the
 runner starts, naming the variable but not the value. That holds too for a
 setting read again later: the proxy trust and the upload and evidence caps,
@@ -691,7 +693,10 @@ Notes:
   (`upload sweep: done`, with `removed`, `bytes`, `failed`, `kept_recent`);
   a file it cannot remove is logged and kept, and the boot never fails
   because of it. The sweep assumes `UPLOADS_DIR` belongs to this one
-  database: do not point two deployments at the same directory. The record
+  database: **set `OPENV_UPLOAD_SWEEP=off` on any deployment that shares
+  its uploads directory with another.** With it off the boot logs `upload
+  sweep: off (OPENV_UPLOAD_SWEEP=off); nothing swept or recorded` and
+  records nothing, so the first boot without the setting sweeps. The record
   is the `sweep_unreferenced_uploads` row of `boot_tasks`, with what the
   sweep did; deleting that row runs the sweep again at the next boot.
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it

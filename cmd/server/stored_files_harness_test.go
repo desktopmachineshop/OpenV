@@ -23,13 +23,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// TestStoredFilesLeaveWithTheirRows runs the real server, three boots on a
+// TestStoredFilesLeaveWithTheirRows runs the real server, four boots on a
 // database of its own (OPENV_TEST_DATABASE_URL; skipped when unset) and one
 // uploads directory, and watches the files there:
 //
 //   - deleting a figure removes the file of every version of it (#379 bug
 //     145: the earlier versions' stayed);
-//   - at the next boot, as on the first boot after this update on a
+//   - at the next boot, with OPENV_UPLOAD_SWEEP=off, nothing is swept or
+//     recorded (question 55);
+//   - at the boot after, as on the first boot after this update on a
 //     database from before it, the sweep removes the stored files no row
 //     names and keeps the rest (question 48); and the purge, at start,
 //     removes the files of the workspace it purges, its figures with every
@@ -160,13 +162,17 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 		}
 		return name
 	}
-	reboot := func() {
+	reboot := func(env map[string]string) {
 		t.Helper()
 		if _, _, err := s.terminate(15 * time.Second); err != nil {
 			t.Fatalf("stop the server: %v\n%s", err, s.output())
 		}
 		session = nil
-		next, err := startServer(t, bin, db, map[string]string{"UPLOADS_DIR": uploads})
+		extra := map[string]string{"UPLOADS_DIR": uploads}
+		for k, v := range env {
+			extra[k] = v
+		}
+		next, err := startServer(t, bin, db, extra)
 		if err != nil {
 			t.Fatalf("boot again: %v\n%s", err, next.output())
 		}
@@ -228,26 +234,43 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 	orphans := []string{plant(uuid.New().String() + "_deleted project.png"), plant("evidence-" + uuid.New().String())}
 	notOurs := plant("operator notes.txt")
 	exec(`DELETE FROM boot_tasks`)
+
+	// Question 55: with the sweep off, the boot sweeps and records nothing.
+	before := stored()
+	reboot(map[string]string{"OPENV_UPLOAD_SWEEP": "off"})
+	if got := stored(); strings.Join(got, "\n") != strings.Join(before, "\n") {
+		t.Errorf("stored after a boot with the sweep off: %q, want everything as it was: %q", got, before)
+	}
+	if !strings.Contains(string(s.stderr.Bytes()), `msg="upload sweep: off (OPENV_UPLOAD_SWEEP=off); nothing swept or recorded"`) {
+		t.Errorf("the boot log does not say the sweep is off:\n%s", s.stderr.Bytes())
+	}
+	var records int
+	if err := conn.QueryRow(`SELECT COUNT(*) FROM boot_tasks`).Scan(&records); err != nil || records != 0 {
+		t.Errorf("boot_tasks after a boot with the sweep off: %d rows, %v; want none", records, err)
+	}
+
 	// Bug 143: the workspace was deleted 31 days ago.
 	exec(`UPDATE organizations SET deleted_at = NOW() - INTERVAL '31 days' WHERE id = $1`, workspaces.ActiveOrg)
-
-	reboot()
+	reboot(nil)
+	want := []string{notOurs}
 	deadline := time.Now().Add(15 * time.Second)
-	for got := stored(); len(got) > 1 && time.Now().Before(deadline); got = stored() {
+	for got := stored(); len(got) > len(want) && time.Now().Before(deadline); got = stored() {
 		time.Sleep(100 * time.Millisecond) // the purge runs in a goroutine at start
 	}
-	if got := stored(); len(got) != 1 || got[0] != notOurs {
-		t.Errorf("stored after the boot: %q, want only %q (the sweep took %q, the purge %q)\n%s", got, notOurs, orphans, workspaceFiles, s.output())
+	if got := stored(); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("stored after the boot: %q, want only %q (the sweep took %q, the purge %q)\n%s", got, want, orphans, workspaceFiles, s.output())
 	}
 	log := string(s.stderr.Bytes())
 	for _, name := range orphans {
-		if !strings.Contains(log, `msg="upload sweep: removed a stored file no row names" path=`+filepath.Join(uploads, name)) &&
-			!strings.Contains(log, `msg="upload sweep: removed a stored file no row names" path="`+filepath.Join(uploads, name)+`"`) {
+		path := filepath.Join(uploads, filepath.FromSlash(name))
+		if !strings.Contains(log, " path="+path+" ") && !strings.Contains(log, ` path="`+path+`"`) {
 			t.Errorf("the boot log does not name %s as removed by the sweep:\n%s", name, log)
 		}
 	}
-	if !strings.Contains(log, `msg="upload sweep: done"`) || !strings.Contains(log, " removed=2 bytes=22 ") {
-		t.Errorf("the boot log does not count the two files the sweep removed:\n%s", log)
+	for _, line := range []string{`msg="upload sweep: done"`, " removed=2 bytes=22 "} {
+		if !strings.Contains(log, line) {
+			t.Errorf("the boot log does not hold %s:\n%s", line, log)
+		}
 	}
 	if !strings.Contains(log, `msg="purged expired deleted workspaces" count=1`) || !strings.Contains(log, "files_removed=4") {
 		t.Errorf("the boot log does not count the four files the purge removed:\n%s", log)
@@ -255,9 +278,9 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 
 	// The sweep ran once: a file no row names, left after it, stays.
 	later := plant(uuid.New().String() + "_after the sweep.png")
-	reboot()
+	reboot(nil)
 	if got := stored(); len(got) != 2 || !strings.Contains(strings.Join(got, "\n"), later) {
-		t.Errorf("stored after the next boot: %q, want %q kept beside %q", got, later, notOurs)
+		t.Errorf("stored after the next boot: %q, want %q kept beside %q", got, later, want)
 	}
 	if strings.Contains(string(s.stderr.Bytes()), "upload sweep") {
 		t.Errorf("the boot after the sweep's swept again:\n%s", s.stderr.Bytes())

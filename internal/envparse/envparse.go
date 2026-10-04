@@ -6,7 +6,8 @@
 //   - a count is a whole number above 0;
 //   - a duration is positive;
 //   - a rate is a positive, finite number;
-//   - a boolean is true or false in any case, or 1 or 0.
+//   - a boolean is true or false in any case, or 1 or 0;
+//   - a switch is on or off in any case, or what a boolean is.
 //
 // A value that breaks the rule reads as the setting's default, and the log
 // carries one warning that names the variable, never its value: a secret
@@ -39,6 +40,7 @@ const (
 	wantDuration = "a positive duration, such as 90m or 24h"
 	wantRate     = "a positive, finite number"
 	wantBool     = "true or false (any case), or 1 or 0"
+	wantSwitch   = "on or off, or true or false (any case), or 1 or 0"
 	wantNumber   = "a whole number"
 )
 
@@ -130,16 +132,47 @@ func Rate(name, raw string, def float64) float64 {
 // Bool reads true or false in any case, or 1 or 0, or def.
 func Bool(name, raw string, def bool) bool {
 	v := strings.TrimSpace(raw)
-	switch {
-	case v == "":
+	if v == "" {
 		return def
-	case v == "1" || strings.EqualFold(v, "true"):
-		return true
-	case v == "0" || strings.EqualFold(v, "false"):
-		return false
+	}
+	if b, ok := boolean(v); ok {
+		return b
 	}
 	warn(name, raw, wantBool)
 	return def
+}
+
+// Switch reads a setting that turns something on or off: on or off in any
+// case, or what Bool reads, or def. It is for a setting documented as
+// NAME=off (OPENV_UPLOAD_SWEEP), where reading off as a malformed boolean
+// would keep on what the operator turned off.
+func Switch(name, raw string, def bool) bool {
+	v := strings.TrimSpace(raw)
+	switch {
+	case v == "":
+		return def
+	case strings.EqualFold(v, "on"):
+		return true
+	case strings.EqualFold(v, "off"):
+		return false
+	}
+	if b, ok := boolean(v); ok {
+		return b
+	}
+	warn(name, raw, wantSwitch)
+	return def
+}
+
+// boolean reads a trimmed, set value as true or false in any case, or 1 or
+// 0.
+func boolean(v string) (value, ok bool) {
+	switch {
+	case v == "1" || strings.EqualFold(v, "true"):
+		return true, true
+	case v == "0" || strings.EqualFold(v, "false"):
+		return false, true
+	}
+	return false, false
 }
 
 // warned holds the variable and value pairs already warned about, so that a

@@ -12,46 +12,25 @@
 # by <...>; the Date header dropped; a no-vector server's warning taken out;
 # the recording proxy's address shown as <recording proxy port>.
 
-== profile malformed_settings: settings that break the rule, each kept at its default with one warning
+== profile upload_sweep_off: the boot's sweep of the stored files no row names turned off, for an uploads directory another deployment shares
 HTTPS_PROXY=http://127.0.0.1:<recording proxy port>
 HTTP_PROXY=http://127.0.0.1:<recording proxy port>
-OPENV_AUTH_IP_REFILL_PER_HOUR=Inf
-OPENV_BUDGET_ENFORCE=on
-OPENV_MAX_BODY_MB=32MB
-OPENV_MAX_EVIDENCE_MB=-1
-OPENV_MAX_UPLOAD_MB=25 MB
-OPENV_RUN_MAX_ATTEMPTS=0
-OPENV_SHARED_PRODUCT_DAILY_LIMIT=20 a day
-OPENV_TRUSTED_PROXY_HOPS=two
-OPENV_TRUST_PROXY=on
-OPENV_UPLOAD_SWEEP=no
-SECURE_COOKIES=yes
+OPENV_UPLOAD_SWEEP=off
 
 == boot log, in order
 level=INFO msg="using DATABASE_URL (Railway.app mode)"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_UPLOAD_SWEEP want="on or off, or true or false (any case), or 1 or 0"
 level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
-level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
+level=INFO msg="upload sweep: off (OPENV_UPLOAD_SWEEP=off); nothing swept or recorded"
 level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
 level=INFO msg="transient runners disabled (set RUNNER_POOL_KEY to enable)"
 level=INFO msg="Hosted runners disabled (HOSTED_RUNNERS=off)"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_SHARED_PRODUCT_DAILY_LIMIT want="a whole number above 0"
 level=INFO msg="shared product pool seeded" added=15 of=15
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_RUN_MAX_ATTEMPTS want="a whole number above 0"
 level=INFO msg="email: OPENV_SMTP_HOST unset; email notifications disabled (in-app + SSE delivery unaffected)"
 level=INFO msg="email verification: disabled (no OPENV_SMTP_HOST; accounts are verified at sign-up)"
 level=INFO msg="session lifetime" max_age=720h0m0s idle=168h0m0s
 level=INFO msg="registration: open (set OPENV_REGISTRATION=closed to require an invitation)"
 level=INFO msg="push: OPENV_VAPID_PUBLIC_KEY unset; web push disabled (in-app + SSE delivery unaffected)"
 level=INFO msg=release version=<version>
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_BUDGET_ENFORCE want="true or false (any case), or 1 or 0"
-level=WARN msg="ignoring a malformed setting; its default applies" var=SECURE_COOKIES want="true or false (any case), or 1 or 0"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_AUTH_IP_REFILL_PER_HOUR want="a positive, finite number"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_TRUSTED_PROXY_HOPS want="a whole number above 0"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_TRUST_PROXY want="true or false (any case), or 1 or 0"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_MAX_UPLOAD_MB want="a whole number above 0"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_MAX_EVIDENCE_MB want="a whole number above 0"
-level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_MAX_BODY_MB want="a whole number above 0"
 level=INFO msg="starting server" port=<port>
 
 == boot log lines from goroutines, sorted
