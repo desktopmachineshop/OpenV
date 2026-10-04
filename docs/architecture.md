@@ -553,7 +553,8 @@ Agent work is expressed as rows in `agent_runs` (status, priority, prompt,
 heartbeat). The server never executes model calls itself. A host-side worker
 (`cmd/agentd`) polls the queue over HTTP, launches the operator's vendor CLI
 (claude/codex/gemini) for each run, and heartbeats progress back; a reaper
-fails runs whose heartbeat goes stale. This keeps subscriptions and credentials
+ends runs whose heartbeat goes stale (failed, or cancelled when their cancel
+was requested). This keeps subscriptions and credentials
 on the operator's machine.
 
 ### MCP tool surface

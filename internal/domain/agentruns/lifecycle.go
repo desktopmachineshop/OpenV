@@ -342,7 +342,11 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	// The terminal write is conditional so a concurrent finisher (the stale
 	// reaper, a duplicate worker report) can never overwrite an
 	// already-terminal status; it also revokes the run token, so a finished
-	// run's credential stops authenticating.
+	// run's credential stops authenticating. It keeps a cancel requested
+	// since the read above and sets run.CancelRequested to the stored flag,
+	// so the auto-retry below never relaunches a run someone asked to stop
+	// as it finished (#379 bug 166: the flag read above was written back
+	// over that cancel, and the retry ran).
 	applied, err := s.repo.UpdateTerminal(run)
 	if err != nil {
 		return nil, err
@@ -451,10 +455,14 @@ func (s *DefaultService) maybeAutoRetry(run *Run) {
 }
 
 // RequestCancel flags a run for cancellation (immediate if still queued).
-// Both paths are conditional state transitions in the repository, so a
-// concurrent worker claim is never overwritten: a queued run cancels only
-// while still queued, otherwise the cancel-requested flag is set only while
-// the run is live (claimed/running).
+// The repository writes the cancel the run's status asks for when the write
+// lands, not when this read it: a queued run is cancelled at once, a
+// claimed or running run has its cancel requested, for its worker to stop
+// it. So a concurrent worker claim is never overwritten, and a concurrent
+// release never drops the cancel (#379 bug 165: a run read as claimed that
+// its worker handed back meanwhile went back to the queue, its cancel
+// matched nothing, and the next claim started it again). A finished run,
+// or one awaiting approval, is answered as it is.
 func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	run, err := s.Get(id)
 	if err != nil {
@@ -463,23 +471,7 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	if terminalStatuses[run.Status] || run.Status == StatusAwaitingApproval {
 		return run, nil
 	}
-	if run.Status == StatusQueued {
-		cancelled, err := s.repo.CancelQueued(id)
-		if err != nil {
-			return nil, err
-		}
-		if cancelled {
-			run, err = s.Get(id)
-			if err != nil {
-				return nil, err
-			}
-			s.notifyStatus(run)
-			return run, nil
-		}
-		// Lost the race to a worker claim (or a finish): fall through to the
-		// cooperative flag path against the run's current state.
-	}
-	flagged, err := s.repo.SetCancelRequested(id)
+	written, err := s.repo.RequestCancel(id)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +479,7 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	if err != nil {
 		return nil, err
 	}
-	if flagged {
+	if written {
 		s.notifyStatus(run)
 	}
 	return run, nil
@@ -514,7 +506,13 @@ func (s *DefaultService) Heartbeat(id string) error {
 	return err
 }
 
-// FailStale fails runs whose worker went silent.
+// FailStale fails runs whose worker went silent. A run whose cancel was
+// requested ends cancelled instead, as its worker reporting it cancelled
+// would have ended it (#379 bug 167: it was failed as "worker lost", and
+// the notifier told its launcher that the run they had cancelled failed).
+// Each is announced and published as stored, so a cancelled one goes out as
+// a cancelled RunFinished, which the notifier does not report and the
+// auto-retry does not relaunch.
 func (s *DefaultService) FailStale(maxSilence time.Duration) ([]string, error) {
 	ids, err := s.repo.FailStale(time.Now().UTC().Add(-maxSilence))
 	if err != nil {
