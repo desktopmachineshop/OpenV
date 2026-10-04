@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -36,7 +35,8 @@ func (r *ProjectRepository) Create(project *projects.Project) error {
 	return nil
 }
 
-// GetByID retrieves a project by ID
+// GetByID retrieves a project by ID: projects.ErrNotFound for an id no
+// project has, a malformed one included (#379 bug 88).
 func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects WHERE id = $1`
 	row := r.db.QueryRow(query, id)
@@ -45,7 +45,7 @@ func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 	err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
 	if err != nil {
 		if noRow(err) {
-			return nil, fmt.Errorf("project not found")
+			return nil, projects.ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to retrieve project: %w", err)
 	}
@@ -82,11 +82,15 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 // ListByOrg retrieves the projects in one org. It fails closed: an empty
 // orgID becomes org_id = NULL, which matches no rows, so a caller without a
 // resolved active workspace gets an empty list instead of every tenant's
-// projects. Mirrors EventRepository.List's org predicate.
+// projects. Mirrors EventRepository.List's org predicate. A malformed orgID
+// is a workspace no row has, which lists [] (#379 bug 88).
 func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error) {
 	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at
 		FROM projects WHERE org_id = NULLIF($1, '')::uuid ORDER BY created_at DESC`
 	rows, err := r.db.Query(query, orgID)
+	if malformedID(err) {
+		return make([]*projects.Project, 0), nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
 	}
@@ -110,10 +114,14 @@ func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error)
 }
 
 // ListChildren returns the projects filed under one parent, oldest first so
-// a settings page lists them in the order they were attached.
+// a settings page lists them in the order they were attached. A malformed id
+// is a parent no row has, which lists [] (#379 bug 88).
 func (r *ProjectRepository) ListChildren(id string) ([]*projects.Project, error) {
 	query := cols + ` FROM projects WHERE parent_project_id = NULLIF($1, '')::uuid ORDER BY created_at ASC`
 	rows, err := r.db.Query(query, id)
+	if malformedID(err) {
+		return make([]*projects.Project, 0), nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query child projects: %w", err)
 	}
@@ -130,8 +138,13 @@ func (r *ProjectRepository) ListChildren(id string) ([]*projects.Project, error)
 	return projectList, rows.Err()
 }
 
-// Update updates an existing project
+// Update updates an existing project: projects.ErrNotFound for an id no
+// project has, a malformed one included (#379 bug 88: Postgres's refusal of
+// a malformed id was handed back).
 func (r *ProjectRepository) Update(project *projects.Project) error {
+	if !isUUID(project.ID) {
+		return projects.ErrNotFound
+	}
 	query := `
 		UPDATE projects
 		SET name = $1, description = $2, agent_auth = $3, parent_project_id = NULLIF($4, '')::uuid, updated_at = $5
@@ -148,7 +161,7 @@ func (r *ProjectRepository) Update(project *projects.Project) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("project not found")
+		return projects.ErrNotFound
 	}
 
 	return nil
@@ -169,7 +182,8 @@ func (r *ProjectRepository) Update(project *projects.Project) error {
 // id, which no foreign key can reference (an artifact's key is its id and
 // version), so they are deleted here, before the project. Locking the
 // project row first makes a concurrent write that references the project
-// wait for the delete and then fail on the foreign key.
+// wait for the delete and then fail on the foreign key. An id no project
+// has, a malformed one included, is projects.ErrNotFound (#379 bug 88).
 func (r *ProjectRepository) Delete(id string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -179,8 +193,8 @@ func (r *ProjectRepository) Delete(id string) error {
 
 	var locked string
 	if err := tx.QueryRow(`SELECT id FROM projects WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("project not found")
+		if noRow(err) {
+			return projects.ErrNotFound
 		}
 		return fmt.Errorf("failed to delete project: %w", err)
 	}

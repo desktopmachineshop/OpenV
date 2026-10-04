@@ -59,6 +59,11 @@ type UpdateProjectRequest struct {
 	ParentProjectID *string `json:"parent_project_id"`
 }
 
+// ErrNotFound is the answer for a project no row has, and for an id that is
+// no project id at all: a malformed id is answered as an unknown one (#379
+// bug 88), and the API answers 404 "project not found" for either.
+var ErrNotFound = errors.New("project not found")
+
 // Errors a parent assignment can fail with; the API answers 400 for each.
 var (
 	ErrParentNotFound     = errors.New("parent project not found")

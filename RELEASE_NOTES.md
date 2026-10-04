@@ -243,6 +243,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   installed, what was left behind by projects deleted earlier is removed
   the same way.
 
+- **Changing or deleting a project deleted a moment before says the project
+  was not found.** Saving a project's settings, or deleting it, just as
+  someone else deleted it answered "failed to update project" or "failed to
+  delete project", as if the server had failed. It now answers "project not
+  found", as opening a deleted project does.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

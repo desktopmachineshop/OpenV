@@ -217,7 +217,8 @@ func (r *TeamRepository) UpdateNode(n *teams.Node) error {
 	return err
 }
 
-// FindNodeByID retrieves a node, returning (nil, nil) when absent.
+// FindNodeByID retrieves a node, or teams.ErrNodeNotFound for an id no node
+// has, a malformed one included (#379 bug 88: it answered nil, nil).
 func (r *TeamRepository) FindNodeByID(id string) (*teams.Node, error) {
 	row := r.db.QueryRow(`
 		SELECT `+teamNodeColumns+`
@@ -227,7 +228,7 @@ func (r *TeamRepository) FindNodeByID(id string) (*teams.Node, error) {
 	`, id)
 	n, err := scanTeamNode(row.Scan)
 	if noRow(err) {
-		return nil, nil
+		return nil, teams.ErrNodeNotFound
 	}
 	if err != nil {
 		return nil, err

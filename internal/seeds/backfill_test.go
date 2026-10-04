@@ -43,7 +43,10 @@ func (f *registryAgentService) List(orgID string) ([]*agents.Agent, error) {
 }
 
 func (f *registryAgentService) GetBySlug(orgID, slug string) (*agents.Agent, error) {
-	return f.bySlug[slug], nil
+	if a, ok := f.bySlug[slug]; ok {
+		return a, nil
+	}
+	return nil, agents.ErrNotFound // as agents.Service answers (#379 bug 88)
 }
 
 func (f *registryAgentService) SaveDefinition(orgID string, def *agents.Definition) (*agents.Agent, error) {

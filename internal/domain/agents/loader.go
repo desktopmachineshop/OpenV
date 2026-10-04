@@ -390,6 +390,9 @@ func (s *FileService) SyncAllFromDisk() error {
 
 func (s *FileService) syncOne(orgID string, def *Definition, path, content string) (*Agent, error) {
 	existing, err := s.repo.FindBySlug(orgID, def.Slug)
+	if errors.Is(err, ErrNotFound) {
+		existing, err = nil, nil // a new slug: created below
+	}
 	if err != nil {
 		return nil, err
 	}

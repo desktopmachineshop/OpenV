@@ -764,8 +764,13 @@ type fakeAgentService struct {
 	byID map[string]*agents.Agent
 }
 
+// Get and GetBySlug answer as agents.Service does over the Postgres
+// repository: agents.ErrNotFound for an agent no row has (#379 bug 88).
 func (f *fakeAgentService) Get(id string) (*agents.Agent, error) {
-	return f.byID[id], nil
+	if a, ok := f.byID[id]; ok {
+		return a, nil
+	}
+	return nil, agents.ErrNotFound
 }
 
 func (f *fakeAgentService) GetBySlug(orgID, slug string) (*agents.Agent, error) {
@@ -774,7 +779,7 @@ func (f *fakeAgentService) GetBySlug(orgID, slug string) (*agents.Agent, error) 
 			return a, nil
 		}
 	}
-	return nil, nil
+	return nil, agents.ErrNotFound
 }
 
 // TestClaimHandshakeFailureReleasesRun locks in that when the claim handshake
