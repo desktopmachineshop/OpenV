@@ -131,6 +131,7 @@ func payloadDrives() []payloadDrive {
 		httpDrive("POST /api/v1/artifacts/{id}/restore", "/api/v1/artifacts/art-req/restore", `{"version":1}`),
 		httpDrive("DELETE /api/v1/artifacts/{id}", "/api/v1/artifacts/art-gone", ""),
 		httpDrive("POST /api/v1/links", "/api/v1/links", `{"from_id":"art-tc","to_id":"art-req","type":"verifies"}`),
+		httpDrive("PUT /api/v1/links/{id}", "/api/v1/links/link-1", `{"type":"derives-from","attributes":{"note":"retyped"}}`),
 		httpDrive("DELETE /api/v1/links/{id}", "/api/v1/links/link-1", ""),
 		httpDrive("POST /api/v1/projects/{id}/baselines", "/api/v1/projects/proj-1/baselines", `{"name":"Release 1"}`),
 		httpDrive("DELETE /api/v1/baselines/{id}", "/api/v1/baselines/bl-old", ""),

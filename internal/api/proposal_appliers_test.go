@@ -89,6 +89,17 @@ func (f *applierLinkService) GetLink(id string) (*links.Link, error) {
 	return nil, errors.New("link not found")
 }
 
+// UpdateLink replaces the type and attributes as the real service does.
+func (f *applierLinkService) UpdateLink(id string, req links.UpdateLinkRequest) (*links.Link, error) {
+	l, ok := f.byID[id]
+	if !ok {
+		return nil, errors.New("link not found")
+	}
+	updated := *l
+	updated.Type, updated.Attributes, updated.Version = req.Type, req.Attributes, l.Version+1
+	return &updated, nil
+}
+
 func (f *applierLinkService) DeleteLink(id string) error {
 	f.deleted = append(f.deleted, id)
 	return nil

@@ -388,6 +388,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   its limit. Automations now record every time in UTC, and a schedule is
   read in UTC on every server, as it always was on OpenV's hosted service.
 
+- **An automation triggered on a link's update fires.** A triggered
+  automation could be set to run on `link.updated`, but changing a link's
+  type or attributes never set it off, because OpenV recorded no event for
+  it. Changing a link through the API now records a `link.updated` event,
+  as creating and deleting one already did, naming the link's two
+  artifacts and the type it has now: it starts the automations waiting for
+  it, and the change shows in the project's activity log.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
