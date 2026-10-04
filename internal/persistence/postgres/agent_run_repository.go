@@ -435,12 +435,12 @@ func (rep *AgentRunRepository) UpdateWorkItemID(runID, workItemID string) error 
 
 // UpdateTokenHash rotates a run's token hash, but only while a worker holds
 // the run (claimed or running) and its cancel has not been requested;
-// reports whether it was applied. A cancel requested, a finish, a release
-// and a project's delete each revoke the token, and this keeps them
-// revoked: the claim handshake's reissue, unconditional before, wrote a
-// working token over a delete that revoked it a moment after the claim
-// (#379 bug 151). Run against a delete under way, it waits for the run's
-// row and then finds the cancel.
+// reports whether it was applied. A finish, a release and a project's
+// delete revoke the token, and a run asked to stop gets no new one, so a
+// revoked token stays revoked: the claim handshake's reissue,
+// unconditional before, wrote a working token over a delete that revoked
+// it a moment after the claim (#379 bug 151). Run against a delete under
+// way, it waits for the run's row and then finds the cancel.
 func (rep *AgentRunRepository) UpdateTokenHash(runID, hash string) (bool, error) {
 	res, err := rep.db.Exec(`
 		UPDATE agent_runs SET run_token_hash = $2
