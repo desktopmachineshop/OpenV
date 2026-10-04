@@ -127,7 +127,7 @@ func (n *Notifier) Handle(e domainevents.Event) {
 		if payloadString(e, "to") != artifacts.StatusInReview {
 			return
 		}
-		title := payloadString(e, "title")
+		title := memberText(payloadString(e, "title"))
 		body := "An artifact is waiting in the review queue."
 		if title != "" {
 			// Quoted as written: %q would escape the title's own quotes and

@@ -1,4 +1,13 @@
 import {
+  asTitle,
+  notesPanelHazardText,
+  notesPanelNeedText,
+  notesPanelNfrText,
+  notesPanelPersonaText,
+  notesPanelRequirementText,
+  text,
+} from './artifactTemplates';
+import {
   SUBSECTION_SPECS,
   canonicalHazardCategory,
   canonicalNfrCategory,
@@ -99,12 +108,6 @@ export type SuggestionPlan =
   | { outcome: 'move'; move: ArtifactMove }
   | { outcome: 'refused'; reason: string };
 
-/** Artifact titles are a line, not a paragraph. */
-const asTitle = (text: string, limit = 120): string =>
-  text.length > limit ? `${text.slice(0, limit - 3)}…` : text;
-
-const text = (value: unknown): string => String(value ?? '').trim();
-
 /** A reference as the assistant wrote it, normalised the way refs are minted. */
 const ref = (value: unknown): string => text(value).toUpperCase();
 
@@ -138,8 +141,7 @@ export const planSuggestion = (s: CopilotSuggestionLike): SuggestionPlan => {
         outcome: 'artifact',
         draft: {
           type: 'persona',
-          title: asTitle(name),
-          body: `**Role:** ${text(s.role)}\n\n**Goals:**\n${text(s.goals)}\n\n**Pain points:**\n${text(s.pains)}`,
+          ...notesPanelPersonaText(name, s),
           attributes: {},
           sectionKey: 'personas',
         },
@@ -149,16 +151,11 @@ export const planSuggestion = (s: CopilotSuggestionLike): SuggestionPlan => {
     case 'need': {
       const capability = text(s.capability);
       if (!capability) return { outcome: 'refused', reason: 'The need suggestion has no capability.' };
-      // The same "As … I need … so that …" sentence the wizard writes, so a
-      // need added from the chat reads like every other one.
-      const who = text(s.persona) || 'a user';
-      const sentence = `As ${who}, I need ${capability} so that ${text(s.outcome) || '…'}`;
       return {
         outcome: 'artifact',
         draft: {
           type: 'user-need',
-          title: asTitle(sentence),
-          body: sentence,
+          ...notesPanelNeedText(capability, s),
           attributes: {},
           sectionKey: 'needs',
         },
@@ -173,8 +170,7 @@ export const planSuggestion = (s: CopilotSuggestionLike): SuggestionPlan => {
         outcome: 'artifact',
         draft: {
           type: 'requirement',
-          title: asTitle(statement),
-          body: `${statement}${fit ? `\n\n**Fit criterion:** ${fit}` : ''}`,
+          ...notesPanelRequirementText(statement, fit),
           attributes: { verification_method: text(s.verification_method) || 'test' },
           sectionKey: 'requirements',
         },
@@ -190,8 +186,7 @@ export const planSuggestion = (s: CopilotSuggestionLike): SuggestionPlan => {
         outcome: 'artifact',
         draft: {
           type: 'requirement',
-          title: asTitle(statement, 100),
-          body: `${statement}${fit ? `\n\n**Fit criterion:** ${fit}` : ''}`,
+          ...notesPanelNfrText(statement, fit),
           attributes: { verification_method: text(s.verification_method) || 'test', category },
           sectionKey: subSectionKey('nfrs', category),
         },
@@ -207,8 +202,7 @@ export const planSuggestion = (s: CopilotSuggestionLike): SuggestionPlan => {
         outcome: 'artifact',
         draft: {
           type: 'hazard',
-          title: asTitle(hazard),
-          body: `**Category:** ${category}\n\n**Potential harm:** ${text(s.harm)}\n\n**Severity:** ${severity}`,
+          ...notesPanelHazardText(hazard, category, severity, s),
           attributes: { severity, category },
           sectionKey: subSectionKey('hazards', category),
         },
