@@ -401,9 +401,11 @@ LINT_ALLOWLISTS = {"COMPONENTS_IMPORTING_VIEWS": "list", "EVENT_SOURCE_SITES": "
 
 # The S1 ratchets. Numbers may only fall and lists and maps only shrink, in
 # a commit of any class, except: a class D commit's import_edges and
-# client_domain_deps entries for the package it creates (§4.2), and a new
+# client_domain_deps entries for the package it creates (§4.2), a new
 # top-level key added by a class T commit that also changes the archtest
-# rules (RATCHET_RULE_CODE), such as M5's K3 allowlist.
+# rules (RATCHET_RULE_CODE), such as M5's K3 allowlist, and a func_lines
+# ceiling carried, at no higher value, to the same method on a new receiver
+# (ceiling_carried).
 RATCHETS_FILE = "internal/archtest/ratchets.json"
 RATCHET_RULE_CODE = "internal/archtest/*.go"
 
@@ -1062,6 +1064,33 @@ def allowlist_growth_keyed(old_text, new_text):
 
 def is_number(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def ceiling_carried(key, old, new):
+    """Whether the K14 ceiling func_lines[key] is one the old ratchets held
+    for the same method under another receiver in the same package, which
+    new no longer holds, at the same or a higher value. func_lines keys a
+    method by its receiver (package:Receiver.Method), so a method that moves
+    to a new receiver, as M15b's sign-in methods move from Worker to
+    loginBroker, would otherwise read as a new over-long function. Exactly
+    one old key may match and no other new key may claim it, so a ceiling
+    is carried, never copied (maintainer decision, #379 question 32)."""
+    old_lines = old.get("func_lines") if isinstance(old, dict) else None
+    new_lines = new.get("func_lines") if isinstance(new, dict) else None
+    if not isinstance(old_lines, dict) or not isinstance(new_lines, dict) or not is_number(new_lines.get(key)):
+        return False
+
+    def method(k):
+        pkg, sep, name = k.partition(":")
+        return (pkg, name.rpartition(".")[2]) if sep and "." in name else None
+
+    want = method(key)
+    if want is None:
+        return False
+    gone = [k for k in old_lines if k not in new_lines and method(k) == want]
+    claims = [k for k in new_lines if k not in old_lines and method(k) == want]
+    return (len(gone) == 1 and claims == [key] and is_number(old_lines[gone[0]])
+            and new_lines[key] <= old_lines[gone[0]])
 
 
 def ratchet_growth(old, new, prefix=()):
@@ -1723,6 +1752,8 @@ class Guard:
 
     def ratchet_exception(self, c, parent, old, new, growth):
         kp, kind, _ = growth
+        if kind == "added" and len(kp) == 2 and kp[0] == "func_lines" and ceiling_carried(kp[1], old, new):
+            return True  # the same method on its new receiver, at no higher ceiling (M15b)
         if kind == "added" and len(kp) == 1 and c.klass == "T" and any(
                 matches(p, [RATCHET_RULE_CODE]) for _, p in c.changes):
             return True  # a new rule's key, added with the rule (M5)

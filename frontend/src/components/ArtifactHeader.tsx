@@ -51,6 +51,12 @@ interface ArtifactHeaderProps {
    * workspace that has not received the controls yet.
    */
   nav?: ArtifactStepperProps;
+  /**
+   * The artifact as a baseline captured it. Its id is the live artifact's,
+   * so every action here (Edit, Delete, a status change, History with its
+   * Restore) would act on the live one; read-only shows none of them.
+   */
+  readOnly?: boolean;
 }
 
 export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
@@ -62,6 +68,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   previewVersion,
   onStatusChange,
   nav,
+  readOnly = false,
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
@@ -269,7 +276,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
               </span>
             )}
           </div>
-          {!localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
+          {!readOnly && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
               {NEXT_STATUSES[status].map((next) => (
                 <button
@@ -300,66 +307,68 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexDirection: isPhone ? 'row' : 'column', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => onEdit(displayArtifact)}
-            disabled={localPreviewVersion !== null}
-            style={{
-              backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--accent)',
-              color: 'var(--accent-fg)',
-              border: 'none',
-              padding: '6px 12px',
-              minHeight: 36,
-              flex: isPhone ? '1 1 auto' : undefined,
-              borderRadius: '3px',
-              cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
-              fontSize: '12px',
-              opacity: localPreviewVersion ? 0.6 : 1,
-            }}
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => onDelete(displayArtifact.id)}
-            disabled={localPreviewVersion !== null}
-            style={{
-              backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--danger)',
-              color: 'white',
-              border: 'none',
-              padding: '6px 12px',
-              minHeight: 36,
-              flex: isPhone ? '1 1 auto' : undefined,
-              borderRadius: '3px',
-              cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
-              fontSize: '12px',
-              opacity: localPreviewVersion ? 0.6 : 1,
-            }}
-          >
-            Delete
-          </button>
-          {displayArtifact.version > 1 && (
+        {!readOnly && (
+          <div style={{ display: 'flex', gap: '8px', flexDirection: isPhone ? 'row' : 'column', flexWrap: 'wrap' }}>
             <button
-              onClick={() => setShowVersions(!showVersions)}
+              onClick={() => onEdit(displayArtifact)}
+              disabled={localPreviewVersion !== null}
               style={{
-                backgroundColor: 'var(--success)',
+                backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--accent)',
+                color: 'var(--accent-fg)',
+                border: 'none',
+                padding: '6px 12px',
+                minHeight: 36,
+                flex: isPhone ? '1 1 auto' : undefined,
+                borderRadius: '3px',
+                cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
+                fontSize: '12px',
+                opacity: localPreviewVersion ? 0.6 : 1,
+              }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(displayArtifact.id)}
+              disabled={localPreviewVersion !== null}
+              style={{
+                backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--danger)',
                 color: 'white',
                 border: 'none',
                 padding: '6px 12px',
                 minHeight: 36,
                 flex: isPhone ? '1 1 auto' : undefined,
                 borderRadius: '3px',
-                cursor: 'pointer',
+                cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
                 fontSize: '12px',
+                opacity: localPreviewVersion ? 0.6 : 1,
               }}
             >
-              History
+              Delete
             </button>
-          )}
-        </div>
+            {displayArtifact.version > 1 && (
+              <button
+                onClick={() => setShowVersions(!showVersions)}
+                style={{
+                  backgroundColor: 'var(--success)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  minHeight: 36,
+                  flex: isPhone ? '1 1 auto' : undefined,
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                History
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Version History */}
-      {showVersions && artifact.version > 1 && (
+      {!readOnly && showVersions && artifact.version > 1 && (
         <div
           style={{
             marginTop: '16px',

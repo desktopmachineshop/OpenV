@@ -59,18 +59,46 @@ const overrideHint: React.CSSProperties = {
   marginTop: 4,
 };
 
+// What the editor holds between mounts: the rules as loaded and the unsaved
+// draft, for the level and id in `key`. A parent that unmounts the editor
+// while it is out of view (a settings tab) keeps this and hands it back, so
+// an unsaved change survives and the rules are not loaded again.
+export interface QualityRulesHeld {
+  key: string;
+  rules: QualityRules | null;
+  draft: QualityRuleSet;
+}
+
+export const emptyQualityRulesHeld: QualityRulesHeld = { key: '', rules: null, draft: {} };
+
+const noDraft: QualityRuleSet = {};
+
 interface Props {
   level: 'workspace' | 'project';
   // orgId at workspace level, projectId at project level.
   id: string;
   canEdit: boolean;
   onSaved?: (summary: string) => void;
+  // Optional: kept by the parent instead of the editor itself.
+  held?: QualityRulesHeld;
+  setHeld?: React.Dispatch<React.SetStateAction<QualityRulesHeld>>;
 }
 
-export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSaved }) => {
-  const [rules, setRules] = useState<QualityRules | null>(null);
-  const [draft, setDraft] = useState<QualityRuleSet>({});
-  const [loading, setLoading] = useState(true);
+export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSaved, held, setHeld }) => {
+  const [ownHeld, setOwnHeld] = useState<QualityRulesHeld>(emptyQualityRulesHeld);
+  const state = held ?? ownHeld;
+  const setState = setHeld ?? setOwnHeld;
+  const key = `${level}:${id}`;
+  // What is held belongs to this level and id, and was loaded.
+  const current = state.key === key && state.rules !== null;
+  const rules = current ? state.rules : null;
+  const draft = current ? state.draft : noDraft;
+  const setDraft = useCallback(
+    (next: React.SetStateAction<QualityRuleSet>) =>
+      setState((prev) => ({ ...prev, draft: typeof next === 'function' ? next(prev.draft) : next })),
+    [setState]
+  );
+  const [loading, setLoading] = useState(!current);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -82,19 +110,24 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
         level === 'workspace'
           ? await qualityRulesAPI.forWorkspace(id)
           : await qualityRulesAPI.forProject(id);
-      setRules(res.data);
       const own = level === 'workspace' ? res.data.workspace : res.data.project;
-      setDraft(own ? { convention: own.convention, severities: { ...(own.severities || {}) } } : {});
+      setState({
+        key: `${level}:${id}`,
+        rules: res.data,
+        draft: own ? { convention: own.convention, severities: { ...(own.severities || {}) } } : {},
+      });
     } catch (err) {
       setError(apiErrorMessage(err, 'Failed to load quality rules'));
     } finally {
       setLoading(false);
     }
-  }, [id, level]);
+  }, [id, level, setState]);
 
+  // Loaded once per level and id: a remount with the rules already held
+  // shows them, and the unsaved draft, as they were.
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!current) void load();
+  }, [load, current]);
 
   // What this level inherits when it sets nothing: the workspace's rules at
   // project level, the platform defaults at workspace level.
@@ -160,9 +193,12 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
         level === 'workspace'
           ? await qualityRulesAPI.setForWorkspace(id, payload)
           : await qualityRulesAPI.setForProject(id, payload);
-      setRules(res.data);
       const own = level === 'workspace' ? res.data.workspace : res.data.project;
-      setDraft(own ? { convention: own.convention, severities: { ...(own.severities || {}) } } : {});
+      setState({
+        key,
+        rules: res.data,
+        draft: own ? { convention: own.convention, severities: { ...(own.severities || {}) } } : {},
+      });
       onSaved?.(res.data.summary);
     } catch (err) {
       setError(apiErrorMessage(err, 'Failed to save quality rules'));

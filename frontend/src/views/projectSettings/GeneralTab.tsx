@@ -130,7 +130,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
                     {!p.default && (
                       <button
                         type="button"
-                        className="btn-secondary"
+                        className="button-secondary"
                         style={{ width: 'auto', padding: '4px 10px', fontSize: 12 }}
                         disabled={savingParties}
                         onClick={() => saveParties(parties.filter((q) => q.name !== p.name))}
@@ -156,7 +156,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
               onChange={(e) => setPartyNote(e.target.value)}
               style={{ flex: '2 1 240px' }}
             />
-            <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={savingParties || !partyName.trim()}>
+            <button type="submit" className="button" style={{ width: 'auto' }} disabled={savingParties || !partyName.trim()}>
               Add party
             </button>
           </form>
