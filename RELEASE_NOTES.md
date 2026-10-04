@@ -33,6 +33,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   stalled was handed out again for hours instead of starting afresh. They
   now record every time in UTC, as on OpenV's hosted service.
 
+- **Workspaces, teams, product profiles, templates, figures, the activity
+  feed and push devices keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, a workspace's and a people team's creation and update times, a
+  product profile's, a template's, each version of a figure, each entry of
+  the activity feed and when a device was registered for push
+  notifications were recorded shifted by the zone's offset, and showed
+  hours off: two hours east of UTC, a workspace created at 09:00 UTC showed
+  as created at 11:00. They now record every time in UTC, as on OpenV's
+  hosted service.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

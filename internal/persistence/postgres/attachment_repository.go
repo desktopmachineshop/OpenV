@@ -343,7 +343,7 @@ func (r *AttachmentRepository) AddVersion(attachmentID string, v *attachments.Ve
 	}
 
 	if v.CreatedAt.IsZero() {
-		v.CreatedAt = time.Now()
+		v.CreatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 	v.ID = uuid.New().String()
 	v.AttachmentID = attachmentID
@@ -370,7 +370,8 @@ func (r *AttachmentRepository) Rename(attachmentID, title string, by *string) (i
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	v := &attachments.Version{AttachmentID: attachmentID, Title: title, CreatedBy: by, CreatedAt: time.Now()}
+	// created_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162).
+	v := &attachments.Version{AttachmentID: attachmentID, Title: title, CreatedBy: by, CreatedAt: time.Now().UTC()}
 	if err := tx.QueryRow(`
 		UPDATE attachments
 		SET version = version + 1,
@@ -564,7 +565,7 @@ func (r *AttachmentRepository) Restore(attachmentID string, version int, by *str
 		FilePath:         source.FilePath,
 		FileSize:         source.FileSize,
 		CreatedBy:        by,
-		CreatedAt:        time.Now(),
+		CreatedAt:        time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 		RestoredFrom:     &version,
 	}
 	if err := insertVersion(tx, restored); err != nil {

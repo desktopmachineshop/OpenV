@@ -54,7 +54,7 @@ func DefaultTemplates() ([]*Template, error) {
 			Description: "Starter structure showing personas, user needs, derived requirements, and validating test cases.",
 			Snapshot:    json.RawMessage(guidedSnapshot),
 			IsDefault:   true,
-			CreatedAt:   time.Now(),
+			CreatedAt:   time.Now().UTC(), // SeedDefaults stores it in a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 		},
 	}, nil
 }

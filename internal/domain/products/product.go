@@ -72,7 +72,7 @@ func (s *DefaultService) GetProfile(projectID string) (*ProductProfile, error) {
 		return profile, nil
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	profile = &ProductProfile{
 		ProjectID:      projectID,
 		Constraints:    []map[string]interface{}{},
@@ -102,7 +102,7 @@ func (s *DefaultService) UpdateProfile(projectID string, req UpdateProfileReques
 	profile.Constraints = req.Constraints
 	profile.SuccessMetrics = req.SuccessMetrics
 	profile.Settings = req.Settings
-	profile.UpdatedAt = time.Now()
+	profile.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	normalizeProfile(profile)
 
 	if err := s.repo.Upsert(profile); err != nil {
