@@ -146,6 +146,50 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   minutes are nearly used up no longer ends "(80%)" either; it gives the
   minutes used against the plan's allowance.
 
+- **A PDF's table of contents names the right pages, with no blank page
+  after it.** A PDF download or report with a table of contents had an
+  empty page after the contents, and every entry named the page before the
+  one its section starts on. The blank page is gone, and each entry names
+  the page its section is on.
+
+- **A requirement refined from another project is named in the PDF and
+  Word traceability tables.** When a requirement of another project refined
+  one of yours, a PDF or Word download listed it in the traceability table
+  by a long internal id. It is now named by its project, reference and
+  title, as in "Landing gear / REQ-12 Brake within 2 m".
+
+- **A project's description keeps its angle brackets on the PDF and Word
+  covers.** Text in angle brackets in a project's description, such as
+  `<pump>`, disappeared from the cover of a PDF or Word download, because
+  the description was read as Markdown. The cover now shows the
+  description as you typed it, as the app does, with its paragraphs and
+  line breaks.
+
+- **Links say when they were made.** A link's `valid_from` read
+  0001-01-01T00:00:00Z in a project's JSON export, in the links an artifact
+  shows and in the record of links each artifact version keeps for its
+  history. It now reads the time the link was made. Baselines and artifact
+  versions captured from now on keep the right time; earlier ones keep what
+  they were captured with.
+
+- **A ReqIF document says when each requirement last changed.** Every
+  `LAST-CHANGE` in a ReqIF export or download was the time of the export,
+  so a tool such as DOORS or Polarion that merges ReqIF by it took every
+  requirement and link as changed each time. Each requirement, its place in
+  the outline and each link now carry the time it last changed; the type
+  definitions, which OpenV keeps no such time for, still carry the
+  export's.
+
+- **Importing a project keeps review status, suspect links and a
+  baseline's attributes.** Importing an OpenV JSON export could lose an
+  artifact's review status, brought every suspect link back as confirmed,
+  dropped what was stored on each link, and dropped the attribute
+  definitions a baseline's JSON download carries. The import now keeps each
+  artifact's status and each link's suspect flag and attributes, and gives
+  the new project the baseline's attribute definitions as its own, unless
+  your workspace already defines the same attribute; it never changes your
+  workspace's definitions. Imported artifacts still start at version 1.
+
 - **A crew no longer points at a node that is gone or belongs to another
   crew.** Deleting a crew's entry node, or the agent it placed, left the
   crew pointing at a node that no longer existed, and launching the crew

@@ -63,6 +63,9 @@ type pdfRenderer struct {
 	tocPages int
 	// tocKnown is the page map from the measuring pass.
 	tocKnown map[string]int
+	// contentsPages is the page number each contents entry printed, by the
+	// entry's key.
+	contentsPages map[string]int
 	// rightInset narrows the content width while blocks are laid out
 	// inside a table cell, so they stop short of the cell's right border.
 	rightInset float64
@@ -76,6 +79,13 @@ type tocEntry struct {
 }
 
 func buildReportPDF(data *exports.ProjectExport, opts RenderOptions) ([]byte, error) {
+	_, out, err := renderReportPDF(data, opts)
+	return out, err
+}
+
+// renderReportPDF is buildReportPDF, answering the renderer of the pass
+// that wrote the document too, whose page maps a test reads.
+func renderReportPDF(data *exports.ProjectExport, opts RenderOptions) (*pdfRenderer, []byte, error) {
 	m := buildReportModel(data, opts)
 	entries := m.tocEntries()
 
@@ -86,30 +96,42 @@ func buildReportPDF(data *exports.ProjectExport, opts RenderOptions) ([]byte, er
 	first := newPDFRenderer(m)
 	out, err := first.render(entries)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !opts.Content.TOC || len(entries) == 0 {
-		return out, nil
+		return first, out, nil
 	}
 	second := newPDFRenderer(m)
 	second.tocKnown = first.headingPages
 	second.tocPages = tocPageCount(len(entries))
-	return second.render(entries)
+	out, err = second.render(entries)
+	if err != nil {
+		return nil, nil, err
+	}
+	return second, out, nil
 }
 
 // tocPageCount is how many pages a contents list of n entries takes: a title
-// line, then one line per entry.
+// line, then tocPerPage entries a page.
 func tocPageCount(n int) int {
+	pages := int(math.Ceil(float64(n) / float64(tocPerPage())))
+	if pages < 1 {
+		pages = 1
+	}
+	return pages
+}
+
+// tocPerPage is how many entries one contents page holds. The first page
+// has room for this many below its title and every later page for more, so
+// contents breaks its pages by this count and fills exactly the pages
+// tocPageCount plans.
+func tocPerPage() int {
 	usable := 297.0 - pdfMarginT - pdfMarginB - 14
 	perPage := int(usable / pdfTOCLine)
 	if perPage < 1 {
 		perPage = 1
 	}
-	pages := int(math.Ceil(float64(n) / float64(perPage)))
-	if pages < 1 {
-		pages = 1
-	}
-	return pages
+	return perPage
 }
 
 func newPDFRenderer(m *reportModel) *pdfRenderer {
@@ -125,7 +147,7 @@ func newPDFRenderer(m *reportModel) *pdfRenderer {
 	pdf.SetCellMargin(0)
 	pdf.AliasNbPages("{nb}")
 
-	r := &pdfRenderer{m: m, pdf: pdf, linkIDs: map[string]int{}, headingPages: map[string]int{}}
+	r := &pdfRenderer{m: m, pdf: pdf, linkIDs: map[string]int{}, headingPages: map[string]int{}, contentsPages: map[string]int{}}
 	return r
 }
 
@@ -241,7 +263,7 @@ func (r *pdfRenderer) cover() {
 	pdf.SetTextColor(0, 0, 0)
 	pdf.Ln(4)
 	if strings.TrimSpace(m.data.ProjectDesc) != "" {
-		r.blocks(doc.Parse(m.data.ProjectDesc), pdfMarginL)
+		r.blocks(plainBlocks(m.data.ProjectDesc), pdfMarginL)
 		pdf.Ln(3)
 	}
 
@@ -314,11 +336,13 @@ func (r *pdfRenderer) contents(entries []tocEntry) {
 	pdf.CellFormat(0, 10, "Contents", "", 1, "L", false, 0, "")
 	pdf.Ln(2)
 	width := r.contentWidth()
-	for _, e := range entries {
-		if pdf.GetY()+pdfTOCLine > 297-pdfMarginB {
+	perPage := tocPerPage()
+	for i, e := range entries {
+		if i > 0 && i%perPage == 0 {
 			pdf.AddPage()
 		}
 		page := r.tocKnown[e.key] + r.tocPages
+		r.contentsPages[e.key] = page
 		indent := float64(e.level) * 6
 		style := ""
 		if e.level == 0 {
@@ -344,13 +368,10 @@ func (r *pdfRenderer) contents(entries []tocEntry) {
 		pdf.SetXY(pdfMarginL+width-numW, y)
 		pdf.CellFormat(numW, pdfTOCLine, num, "", 1, "R", false, r.linkIDs[e.key], "")
 	}
-	// Pad to the planned length so the body starts where pass one put it.
-	for pdf.PageNo() < 1+r.tocPages+1 {
-		pdf.AddPage()
-	}
-	// The cover is page 1 and the contents start on page 2; the loop above
-	// leaves the cursor on the last contents page, so the body's AddPage
-	// begins the page after it.
+	// The cover is page 1 and the contents fill pages 2 to 1+tocPages, the
+	// length every number above was shifted by; the cursor is on the last of
+	// them, so the body's AddPage begins the page after it, and each section
+	// lands exactly tocPages after where pass one put it.
 }
 
 // --- Artifacts ---------------------------------------------------------------

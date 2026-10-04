@@ -57,10 +57,10 @@ links: 211 matched by ends and type, 0 in with an end outside the document, 0 in
   created_at: the round trip's clock 211
   from_id: remapped to the new ids 211
   id: a new id 211
-  suspect: equal 173, set to false 38
+  suspect: equal 211
   to_id: remapped to the new ids 211
   type: equal 211
   updated_at: the round trip's clock 211
-  valid_from: equal 211
+  valid_from: the round trip's clock 211
   valid_to: equal 211
   version: equal 211

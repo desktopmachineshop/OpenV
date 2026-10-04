@@ -111,7 +111,7 @@ func (r *docxRenderer) cover() {
 	r.para(docxRunText(m.data.ProjectName, docxRun{}), "Title", "")
 	r.para(docxRunText("Specification", docxRun{Color: "505050", Size: 24}), "Subtitle", "")
 	if strings.TrimSpace(m.data.ProjectDesc) != "" {
-		r.blocks(doc.Parse(m.data.ProjectDesc), 0)
+		r.blocks(plainBlocks(m.data.ProjectDesc), 0)
 	}
 
 	kind := "Live project"

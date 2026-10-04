@@ -956,7 +956,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"from_id\":\"<draft_req>\",\"to_id\":\"<phantom>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<uuid:2>\",\"from_id\":\"<draft_req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"}]"
+        "[{\"id\":\"<uuid:1>\",\"from_id\":\"<draft_req>\",\"to_id\":\"<phantom>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<uuid:2>\",\"from_id\":\"<draft_req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -968,7 +968,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 25>",
           "valid_to": null,
           "created_at": "<time@step 25>",
           "updated_at": "<time@step 25>"
@@ -981,7 +981,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 25>",
           "valid_to": null,
           "created_at": "<time@step 25>",
           "updated_at": "<time@step 25>"

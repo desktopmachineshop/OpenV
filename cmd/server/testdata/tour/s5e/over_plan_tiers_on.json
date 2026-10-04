@@ -4620,22 +4620,19 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour Over P"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour Over Plan Tour Over P Specification Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Over Plan Generated <datetime> UTC Contents 1 artifact: 1 requirement Includes all fields; traceability; figures; V&V status Tour Over P · Live <datetime> UTC Page 1 of 5"
+            "text": "Tour Over Plan Tour Over P Specification Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Over Plan Generated <datetime> UTC Contents 1 artifact: 1 requirement Includes all fields; traceability; figures; V&V status Tour Over P · Live <datetime> UTC Page 1 of 4"
           },
           {
-            "text": "Contents Verification summary 4 Tour Over P · Live <datetime> UTC Page 2 of 5"
+            "text": "Contents Verification summary 4 Tour Over P · Live <datetime> UTC Page 2 of 4"
           },
           {
-            "text": "Tour Over P · Live <datetime> UTC Page 3 of 5"
+            "text": "REQ-1 Answer in time Reference REQ-1 Type Requirement Version v1 The system shall answer within 2 s. Description Status draft V&V rollup method missing Tour Over P · Live <datetime> UTC Page 3 of 4"
           },
           {
-            "text": "REQ-1 Answer in time Reference REQ-1 Type Requirement Version v1 The system shall answer within 2 s. Description Status draft V&V rollup method missing Tour Over P · Live <datetime> UTC Page 4 of 5"
-          },
-          {
-            "text": "Verification summary Requirements: 1 method missing: 1 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing Gaps Requirements without a verification method (1) • REQ-1 Answer in time Tour Over P · Live <datetime> UTC Page 5 of 5"
+            "text": "Verification summary Requirements: 1 method missing: 1 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing Gaps Requirements without a verification method (1) • REQ-1 Answer in time Tour Over P · Live <datetime> UTC Page 4 of 4"
           }
         ],
         "images": 0,
