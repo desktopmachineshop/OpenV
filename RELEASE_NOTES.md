@@ -45,6 +45,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   east of UTC, a workspace created at 09:00 UTC showed as created at 11:00.
   They now record every time in UTC, as on OpenV's hosted service.
 
+- **Project share links, and the daily limit on adding invented products
+  to the shared collection, keep time on a server whose clock is not set
+  to UTC.** On an OpenV server running in another time zone, as a
+  self-hosted one can, a project share link recorded when it was made and
+  when it was revoked shifted by the zone's offset. The limit on how many
+  invented products a workspace adds to the shared collection each day
+  counted the last 29 hours west of UTC and the last 22 hours east of it.
+  They now keep time in UTC, as on OpenV's hosted service.
+
 - **Used and expired email verification and password reset links are
   cleaned up.** OpenV kept every email verification link and password
   reset link it had sent, once used or expired, for good. The server now

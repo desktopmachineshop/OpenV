@@ -36,6 +36,7 @@ type fakeRepo struct {
 	voters    map[string]bool
 	weekVotes map[string]int
 	lastOpts  ListOptions
+	since     time.Time // the rate-limit window's start, as last asked
 }
 
 func newFakeRepo() *fakeRepo {
@@ -59,8 +60,11 @@ func (f *fakeRepo) Create(p *Product) error {
 	f.products = append(f.products, p)
 	return nil
 }
-func (f *fakeRepo) CountByOrgSince(string, time.Time) (int, error) { return f.orgCount, nil }
-func (f *fakeRepo) CountVisible() (int, error)                     { return f.visible, nil }
+func (f *fakeRepo) CountByOrgSince(_ string, since time.Time) (int, error) {
+	f.since = since
+	return f.orgCount, nil
+}
+func (f *fakeRepo) CountVisible() (int, error) { return f.visible, nil }
 func (f *fakeRepo) AddReport(id, userID string) (int, error) {
 	key := id + "/" + userID
 	if !f.reporters[key] {
@@ -390,5 +394,26 @@ func TestVoteOnHiddenProductIsNotFound(t *testing.T) {
 	}
 	if _, err := svc.Unvote("p1", "u1"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unvote on a hidden entry = %v, want ErrNotFound", err)
+	}
+}
+
+// TestThePublishWindowStartsInUTC: the daily cap counts the publications
+// stored in the last 24 hours, and created_at holds the UTC wall clock, so
+// the window's start is handed in UTC whatever the server's zone (#379 bug
+// 171): west of UTC a local start made the day 29 hours long.
+func TestThePublishWindowStartsInUTC(t *testing.T) {
+	for _, offset := range []int{2, -5} {
+		zone := time.FixedZone("server", offset*3600)
+		now := time.Date(2026, 10, 4, 11, 30, 0, 0, zone)
+		repo := newFakeRepo()
+		svc := NewDefaultService(repo, 0, 0)
+		svc.now = func() time.Time { return now }
+		if _, err := svc.Publish(valid(), "org-1", "user-1"); err != nil {
+			t.Fatalf("UTC%+d: Publish: %v", offset, err)
+		}
+		want := now.UTC().Add(-24 * time.Hour)
+		if repo.since.Location() != time.UTC || !repo.since.Equal(want) {
+			t.Errorf("UTC%+d: the window starts at %v, want %v", offset, repo.since, want)
+		}
 	}
 }
