@@ -11,19 +11,7 @@ import {
 import { useAppStore } from '../state/store';
 import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
-
-const EVENT_TYPES = [
-  'artifact.created',
-  'artifact.updated',
-  'artifact.deleted',
-  'link.created',
-  'link.deleted',
-  'baseline.captured',
-  'testrun.recorded',
-  'workitem.moved',
-  'workitem.created',
-  'agentrun.finished',
-];
+import { EVENT_TYPES } from './AutomationsPageEvents';
 
 const CRON_PRESETS: { label: string; value: string }[] = [
   { label: 'Hourly', value: '0 * * * *' },

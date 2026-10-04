@@ -721,8 +721,8 @@ const COPIES: Copy[] = [
     id: 'AutomationsPage EVENT_TYPES',
     vocabulary: 'event_types',
     kind: 'mirror',
-    where: 'views/AutomationsPage.tsx EVENT_TYPES',
-    read: () => listOf('views/AutomationsPage.tsx', 'EVENT_TYPES'),
+    where: 'views/AutomationsPageEvents.ts EVENT_TYPES',
+    read: () => listOf('views/AutomationsPageEvents.ts', 'EVENT_TYPES'),
   },
   {
     id: 'PLAN_LABELS',
