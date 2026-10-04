@@ -79,12 +79,12 @@ func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	agent, err := h.AgentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
-	if err != nil {
-		respondInternal(w, r, "failed to load agent", err)
+	if errors.Is(err, agents.ErrNotFound) || err == nil && agent == nil {
+		writeJSONError(w, http.StatusNotFound, "agent not found")
 		return
 	}
-	if agent == nil {
-		writeJSONError(w, http.StatusNotFound, "agent not found")
+	if err != nil {
+		respondInternal(w, r, "failed to load agent", err)
 		return
 	}
 	json.NewEncoder(w).Encode(agent)

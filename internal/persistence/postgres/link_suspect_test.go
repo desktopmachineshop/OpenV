@@ -142,8 +142,10 @@ func TestUpdateArtifactTemporalIntervals(t *testing.T) {
 	repo := NewArtifactRepository(db)
 	svc := artifacts.NewDefaultService(repo)
 
+	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 	created := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
-		ProjectID: uuid.New().String(),
+		ProjectID: projectID,
 		Type:      "requirement",
 		Title:     "Temporal",
 		Body:      "v1",

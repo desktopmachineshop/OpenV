@@ -1,6 +1,7 @@
 package seeds
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"slices"
@@ -436,6 +437,9 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 	roles := map[string]teamRole{} // slug -> role on the default team
 	for _, seed := range defaultAgents() {
 		existing, err := agentService.GetBySlug(orgID, seed.def.Slug)
+		if errors.Is(err, agents.ErrNotFound) {
+			existing, err = nil, nil // not seeded yet: created below
+		}
 		if err != nil {
 			return err
 		}

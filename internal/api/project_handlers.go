@@ -185,6 +185,10 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	project, err := h.ProjectService.UpdateProject(id, req)
 	if err != nil {
 		switch {
+		case errors.Is(err, projects.ErrNotFound):
+			// Gone since the guard read it: as for an id no row has (#379
+			// bug 88; it answered 500).
+			unknownProject.write(w)
 		case errors.Is(err, projects.ErrParentNotFound), errors.Is(err, projects.ErrParentOtherOrg),
 			errors.Is(err, projects.ErrParentIsSelf), errors.Is(err, projects.ErrParentIsDescendant):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -245,7 +249,8 @@ func (h *Handler) ListLinkedArtifacts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(linked)
 }
 
-// DeleteProject deletes a project
+// DeleteProject deletes a project and everything that belongs to it alone
+// (#379 bug 86).
 func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -254,6 +259,12 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.ProjectService.DeleteProject(id)
+	if errors.Is(err, projects.ErrNotFound) {
+		// Gone since the guard read it: as for an id no row has (#379 bug
+		// 88; it answered 500).
+		unknownProject.write(w)
+		return
+	}
 	if err != nil {
 		respondInternal(w, r, "failed to delete project", err)
 		return

@@ -228,6 +228,9 @@ func (d *Definition) validate(requireTools bool) error {
 type Repository interface {
 	Save(a *Agent) error
 	Update(a *Agent) error
+	// FindByID and FindBySlug answer ErrNotFound for an agent no row has
+	// (#379 bug 88). A caller also treats a nil agent with no error as not
+	// found, as a stand-in repository may answer.
 	FindByID(id string) (*Agent, error)
 	FindBySlug(orgID, slug string) (*Agent, error)
 	List(orgID string) ([]*Agent, error)
@@ -239,6 +242,7 @@ type Repository interface {
 // the file store then sync into the registry.
 type Service interface {
 	List(orgID string) ([]*Agent, error)
+	// Get and GetBySlug answer ErrNotFound for an agent no row has.
 	Get(id string) (*Agent, error)
 	GetBySlug(orgID, slug string) (*Agent, error)
 	// SaveDefinition writes/overwrites the agent's markdown file and syncs

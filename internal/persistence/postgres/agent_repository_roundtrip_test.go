@@ -38,9 +38,10 @@ func rtAgentNames(list []*agents.Agent) []string {
 // refusal; and an agent with no workspace is agents.ErrWorkspaceRequired,
 // with nothing stored (#379 bug 89: it was stored with a NULL workspace, so
 // no List or FindBySlug found it, and two such agents could share a slug).
-// An agent no row has, and a malformed id, read as no agent and no error
-// (not agents.ErrNotFound), by id or by slug, and an empty workspace finds
-// none, not even an agent a database from before workspaces left with none.
+// An agent no row has, and a malformed id, are agents.ErrNotFound, by id or
+// by slug (#379 bug 88: they read as no agent and no error), and an empty
+// workspace finds none, not even an agent a database from before workspaces
+// left with none.
 // Delete takes the crew nodes that place the agent.
 func TestAgentRepositoryRoundTrip(t *testing.T) {
 	db := rtDB(t)
@@ -143,7 +144,7 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 				CreatedAt: rtAt(3), UpdatedAt: rtAt(3)}); err != agents.ErrWorkspaceRequired {
 				t.Errorf("Save of an agent with no workspace: %v, want agents.ErrWorkspaceRequired", err)
 			}
-			if found, err := repo.FindByID(id); found != nil || err != nil {
+			if found, err := repo.FindByID(id); found != nil || err != agents.ErrNotFound {
 				t.Errorf("an agent with no workspace was stored: %v, %v", found, err)
 			}
 		}
@@ -153,8 +154,8 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		for _, id := range append([]string{uuid.New().String()}, malformedIDs...) {
-			if found, err := repo.FindByID(id); found != nil || err != nil {
-				t.Errorf("FindByID(%q) = %v, %v; want nil, nil", id, found, err)
+			if found, err := repo.FindByID(id); found != nil || err != agents.ErrNotFound {
+				t.Errorf("FindByID(%q) = %v, %v; want nil, agents.ErrNotFound", id, found, err)
 			}
 		}
 	})
@@ -177,8 +178,8 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 			{malformed, saved.Slug},
 			{"\xff", saved.Slug},
 		} {
-			if found, err := repo.FindBySlug(c.org, c.slug); found != nil || err != nil {
-				t.Errorf("FindBySlug(%q, %q) = %v, %v; want nil, nil", c.org, c.slug, found, err)
+			if found, err := repo.FindBySlug(c.org, c.slug); found != nil || err != agents.ErrNotFound {
+				t.Errorf("FindBySlug(%q, %q) = %v, %v; want nil, agents.ErrNotFound", c.org, c.slug, found, err)
 			}
 		}
 	})
@@ -196,10 +197,10 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 		if err := repo.Delete(saved.ID); err != nil {
 			t.Fatalf("Delete: %v", err)
 		}
-		if found, err := repo.FindByID(saved.ID); found != nil || err != nil {
-			t.Errorf("FindByID after Delete: %v, %v; want nil, nil", found, err)
+		if found, err := repo.FindByID(saved.ID); found != nil || err != agents.ErrNotFound {
+			t.Errorf("FindByID after Delete: %v, %v; want nil, agents.ErrNotFound", found, err)
 		}
-		if found, err := crews.FindNodeByID(node.ID); found != nil || err != nil {
+		if found, err := crews.FindNodeByID(node.ID); found != nil || err != teams.ErrNodeNotFound {
 			t.Errorf("a crew node placing a deleted agent: %v, %v; want it gone with the agent", found, err)
 		}
 		if err := repo.Delete(saved.ID); err != nil {

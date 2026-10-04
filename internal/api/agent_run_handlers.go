@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
@@ -186,12 +187,12 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 	}
 
 	agent, err := h.AgentService.GetBySlug(orgID, seeds.TestCaseAuthorSlug)
-	if err != nil {
-		respondInternal(w, r, "failed to load the test-case author agent", err)
+	if errors.Is(err, agents.ErrNotFound) || err == nil && agent == nil {
+		writeJSONError(w, http.StatusNotFound, "the test-case author agent is not available in this workspace; sync agents from disk to seed it")
 		return
 	}
-	if agent == nil {
-		writeJSONError(w, http.StatusNotFound, "the test-case author agent is not available in this workspace; sync agents from disk to seed it")
+	if err != nil {
+		respondInternal(w, r, "failed to load the test-case author agent", err)
 		return
 	}
 
