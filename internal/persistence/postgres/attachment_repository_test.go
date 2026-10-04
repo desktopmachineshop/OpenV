@@ -28,8 +28,9 @@ func TestFindByArtifactIDsBatched(t *testing.T) {
 	base := time.Now().Truncate(time.Millisecond)
 
 	// a1: two attachments, inserted oldest-then-newest so ordering is
-	// observable; a2: one. Saved through Save, so none carries a figure
-	// number and all of them sort by age.
+	// observable; a2: one. Inserted as rows with no figure number, as an
+	// image stored before figures were numbered is, so all of them sort by
+	// age.
 	mk := func(artifactID, filename string, created time.Time) *attachments.Attachment {
 		att := attachments.NewAttachment(attachments.CreateAttachmentRequest{
 			ArtifactID: artifactID,
@@ -47,9 +48,9 @@ func TestFindByArtifactIDsBatched(t *testing.T) {
 		mk(a2, "a2.png", base),
 	}
 	for _, att := range seed {
-		if err := repo.Save(att); err != nil {
-			t.Fatalf("save %s: %v", att.Filename, err)
-		}
+		rtSeed(t, db, `INSERT INTO attachments (id, artifact_id, filename, original_filename, title, mime_type, file_path, file_size, version, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9)`,
+			att.ID, att.ArtifactID, att.Filename, att.OriginalFilename, att.Title, att.MimeType, att.FilePath, att.FileSize, att.CreatedAt)
 	}
 
 	got, err := repo.FindByArtifactIDs([]string{a1, a2, a3})

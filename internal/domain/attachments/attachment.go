@@ -209,7 +209,6 @@ func NewAttachment(req CreateAttachmentRequest) *Attachment {
 
 // Repository defines persistence operations for attachments
 type Repository interface {
-	Save(attachment *Attachment) error
 	FindByID(id string) (*Attachment, error)
 	FindByArtifactID(artifactID string) ([]*Attachment, error)
 	// FindByArtifactIDs fetches the attachments for many artifacts in a single
@@ -248,7 +247,6 @@ type Repository interface {
 
 // Service defines the attachment domain logic
 type Service interface {
-	CreateAttachment(attachment *Attachment) error
 	GetAttachment(id string) (*Attachment, error)
 	GetAttachmentsByArtifact(artifactID string) ([]*Attachment, error)
 	// GetAttachmentsByArtifacts returns the attachments for many artifacts in a
@@ -288,11 +286,6 @@ type DefaultService struct {
 // NewDefaultService creates a new attachment service
 func NewDefaultService(repository Repository) Service {
 	return &DefaultService{repository: repository}
-}
-
-// CreateAttachment saves a new attachment
-func (s *DefaultService) CreateAttachment(attachment *Attachment) error {
-	return s.repository.Save(attachment)
 }
 
 // GetAttachment retrieves an attachment by ID
