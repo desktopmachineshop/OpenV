@@ -203,6 +203,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   expired link's row now has no Revoke button either; it still shows
   "expired" and the date.
 
+- **The guided wizard leaves stray spaces out of what it writes.** A
+  persona name typed with a space at its end gave every need written for
+  that persona a sentence like "As Pat the Planner , I need …", with a
+  space before the comma, even though the persona's own title left the
+  space out. A space typed at either end of a persona's role, goals or
+  pain points, or of a hazard's potential harm, likewise went into the
+  artifact as typed. The wizard now trims each of these, in the artifacts
+  it writes and in the need sentences it shows while you work, as the
+  V&V Assistant's cards already did.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
