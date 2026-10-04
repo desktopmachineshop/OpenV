@@ -475,6 +475,30 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   delete project", as if the server had failed. It now answers "project not
   found", as opening a deleted project does.
 
+- **Purging a deleted workspace leaves nothing of it behind.** When a
+  deleted workspace's 30 days ran out and it was purged, OpenV kept the
+  counter it numbers each artifact's figures by, for every artifact that
+  had a figure, and, for a link between one of the workspace's artifacts
+  and an artifact in another workspace, the record of which version of the
+  other artifact the link was made against. Neither was shown anywhere, but
+  both stayed on the server. They now go with the workspace when it is
+  purged.
+
+- **Deleting a project removes the files uploaded to it.** Deleting a
+  project took everything in it out of the workspace, but the files
+  uploaded to it, its figures with every earlier version and its evidence
+  files, stayed stored on the server. They are now removed as the project
+  is deleted. A file the server cannot remove is noted in its log, and the
+  project is deleted all the same. Files of projects deleted before this
+  update stay where they are.
+
+- **Deleting a project stops its agent runs.** An agent run waiting in a
+  deleted project's queue still started, with no project to work in, and
+  one already running carried on to the end. Deleting a project now
+  cancels its waiting runs and asks its running ones to stop, as **Cancel**
+  does, and a run's access to OpenV ends at once. The runs stay in the
+  workspace's usage, as before.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

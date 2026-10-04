@@ -40,6 +40,17 @@ func rtWantProjectNotFound(t *testing.T, what string, err error) {
 	}
 }
 
+// rtDelete is Delete's error, failing the test unless it answered what it
+// removed with no error, or an error with nothing.
+func rtDelete(t *testing.T, repo projects.Repository, id string) error {
+	t.Helper()
+	removed, err := repo.Delete(id)
+	if (err == nil) != (removed != nil) {
+		t.Errorf("Delete(%q) = %+v, %v; want what it removed and no error, or an error and nothing", id, removed, err)
+	}
+	return err
+}
+
 // rtWantWrapped fails unless err starts with the repository's prefix and
 // wraps Postgres's refusal of a malformed id.
 func rtWantWrapped(t *testing.T, what string, err error, prefix string) {
@@ -177,7 +188,7 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 		rtSeed(t, db, `INSERT INTO agent_teams (id, org_id, project_id, name) VALUES ($1, $2, $3, 'Goes with it')`,
 			uuid.New().String(), orgID, parent.ID)
 
-		if err := repo.Delete(parent.ID); err != nil {
+		if err := rtDelete(t, repo, parent.ID); err != nil {
 			t.Fatalf("Delete: %v", err)
 		}
 		got, err := repo.GetByID(parent.ID)
@@ -197,9 +208,9 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 				t.Errorf("a deleted project's rows in %s: %d (%v), want %d", c.table, n, err, c.want)
 			}
 		}
-		rtWantProjectNotFound(t, "Delete of a project no row has", repo.Delete(parent.ID))
+		rtWantProjectNotFound(t, "Delete of a project no row has", rtDelete(t, repo, parent.ID))
 		for _, id := range malformedIDs {
-			rtWantProjectNotFound(t, fmt.Sprintf("Delete of the malformed id %q", id), repo.Delete(id))
+			rtWantProjectNotFound(t, fmt.Sprintf("Delete of the malformed id %q", id), rtDelete(t, repo, id))
 		}
 	})
 }
@@ -366,7 +377,7 @@ func TestProjectRepositoryHandsBackAFailure(t *testing.T) {
 	project := &projects.Project{ID: id, Name: "x", AgentAuth: projects.AgentAuthUserAccount}
 	rtWantClosed(t, "Create", repo.Create(project), "failed to create project: ")
 	rtWantClosed(t, "Update", repo.Update(project), "failed to update project: ")
-	rtWantClosed(t, "Delete", repo.Delete(id), "failed to delete project: ")
+	rtWantClosed(t, "Delete", rtDelete(t, repo, id), "failed to delete project: ")
 	found, err := repo.GetByID(id)
 	if found != nil {
 		t.Errorf("GetByID on a failing database read %v", found)

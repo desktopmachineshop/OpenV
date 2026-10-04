@@ -12,8 +12,11 @@ type Repository interface {
 	// resolve an active workspace cannot leak cross-tenant projects.
 	ListByOrg(orgID string) ([]*Project, error)
 	Update(project *Project) error
-	// Delete deletes the project and everything that belongs to it alone.
-	Delete(id string) error
+	// Delete deletes the project and everything that belongs to it alone,
+	// in one transaction, cancelling its live agent runs in it, and answers
+	// the stored files and the cancelled runs the caller finishes with once
+	// it has committed (Removed); never nil without an error.
+	Delete(id string) (*Removed, error)
 	// ListChildren returns the projects whose parent_project_id is id.
 	ListChildren(id string) ([]*Project, error)
 }

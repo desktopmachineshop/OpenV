@@ -84,6 +84,9 @@ func (r *ChatterRepository) FindByArtifactID(artifactID string) ([]*chatter.Chat
 	`
 
 	rows, err := r.db.Query(query, artifactID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

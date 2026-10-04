@@ -66,6 +66,9 @@ func (r *OrgRepository) ListMembers(orgID string) ([]*orgs.Member, error) {
 		WHERE m.org_id = $1
 		ORDER BY u.name, u.email
 	`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

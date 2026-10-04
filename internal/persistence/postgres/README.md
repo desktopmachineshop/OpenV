@@ -51,8 +51,9 @@ throwaway server. Without it they skip, and the layout tests still run.
   in `migrations.go`; no `init()` anywhere.
 - **I13.** `DATABASE_URL` wins; otherwise `sslmode=disable` with each
   `DB_*` value quoted, so a password arrives exactly as set.
-- **Q17.** The purge misses some tables; that list may only shrink. A new
-  table with an `org_id`, `project_id` or `artifact_id` column goes when its
+- **Q17.** The purge reaches every table with an `org_id`, `project_id` or
+  `artifact_id` column since #379's bug 138 closed its last gap; the gap
+  allowlist is empty and may only shrink. A new such table goes when its
   workspace is purged, through `PurgeOrg`'s list or a `NOT NULL` foreign key
   with `ON DELETE CASCADE`.
 - **Q2 and S15b.** Each repository keeps its not-found answer, its `nil` or

@@ -119,6 +119,9 @@ func (r *InterviewRepository) ListInterviewsByProject(projectID string) ([]*inte
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +229,9 @@ func (r *InterviewRepository) ListInvitesByInterview(interviewID string) ([]*int
 	`
 
 	rows, err := r.db.Query(query, interviewID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -379,6 +385,9 @@ func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*in
 	`
 
 	rows, err := r.db.Query(query, interviewID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -409,6 +418,9 @@ func (r *InterviewRepository) ListSessionsByProject(projectID string, limit int)
 	`
 
 	rows, err := r.db.Query(query, projectID, limit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -455,6 +467,9 @@ func (r *InterviewRepository) ListMessagesBySession(sessionID string) ([]*interv
 	`
 
 	rows, err := r.db.Query(query, sessionID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -92,6 +92,9 @@ func (r *ProviderSettingRepository) List(orgID string) ([]*providers.ProviderSet
 		WHERE org_id = NULLIF($1, '')::uuid
 		ORDER BY provider
 	`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

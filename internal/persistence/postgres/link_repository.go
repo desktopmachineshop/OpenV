@@ -101,6 +101,9 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 	`
 
 	rows, err := r.db.Query(query, fromID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +155,9 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 	`
 
 	rows, err := r.db.Query(query, toID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +216,9 @@ func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +280,9 @@ func (r *LinkRepository) FindSuspectByProject(projectID string) ([]*links.Suspec
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return []*links.SuspectLink{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -375,6 +387,9 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 	`
 
 	rows, err := r.db.Query(query, fromID, version)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -435,6 +450,9 @@ func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*link
 	`
 
 	rows, err := r.db.Query(query, toID, version)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

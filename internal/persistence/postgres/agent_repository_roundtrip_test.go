@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -276,11 +277,10 @@ func TestAgentRepositoryList(t *testing.T) {
 	rtWantNil(t, "List with no workspace", list, err)
 	list, err = repo.List(uuid.New().String())
 	rtWantNil(t, "List of a workspace with no agent", list, err)
-	list, err = repo.List(malformed)
-	if list != nil {
-		t.Errorf("List of a malformed workspace listed %v", list)
+	for _, id := range malformedIDs {
+		list, err = repo.List(id)
+		rtWantNil(t, fmt.Sprintf("List of the malformed workspace %q", id), list, err)
 	}
-	rtWantRefused(t, "List of a malformed workspace", err)
 }
 
 // What an agent's tools and config read back as when the JSON stored is not

@@ -233,6 +233,9 @@ func (r *GuidedRepository) ListChatMessages(sessionID string) ([]*guided.ChatMes
 		WHERE session_id = $1
 		ORDER BY created_at
 	`, sessionID)
+	if malformedID(err) {
+		return []*guided.ChatMessage{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -260,6 +263,9 @@ func (r *GuidedRepository) ListByProject(projectID string) ([]*guided.Session, e
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

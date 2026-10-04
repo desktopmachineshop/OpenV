@@ -18,7 +18,7 @@ agents scope org_id deleted
 artifact_embeddings scope artifact_id deleted  @requires(vector)
 artifact_ref_counters scope project_id deleted
 artifacts scope project_id deleted
-attachment_figure_counters scope artifact_id GAP
+attachment_figure_counters scope artifact_id deleted
 attachment_versions scope - cascade from attachments
 attachments scope artifact_id deleted
 attribute_definitions scope org_id,project_id deleted

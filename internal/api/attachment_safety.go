@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -164,6 +165,22 @@ func storeUpload(w http.ResponseWriter, r *http.Request, src io.Reader, path str
 		return nil, 0, false
 	}
 	return head, size, true
+}
+
+// removeStoredFiles unlinks stored uploads whose rows a committed delete took
+// with it, such as a deleted project's figures and evidence files. A file
+// already gone is no failure, and any other failure is logged, not returned,
+// as removeEvidenceFiles does for a bundle's: the record is already correct,
+// and telling the caller the delete failed would be false.
+func removeStoredFiles(paths []string) {
+	for _, path := range paths {
+		if path == "" {
+			continue
+		}
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			slog.Warn("api: failed to remove a deleted record's stored file", "error", err)
+		}
+	}
 }
 
 // uploadReadRefused answers the one read error that is the uploader's doing
