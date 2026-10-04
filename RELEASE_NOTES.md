@@ -443,6 +443,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   a cloud runner's time left, showed hours off. They now record every time
   in UTC, as on OpenV's hosted service.
 
+- **Every project can add figures to its artifacts.** A figure takes its
+  reference from its artifact, as REQ-1-FIG-1 does from REQ-1, and each
+  project numbers its own artifacts from REQ-1, but a figure reference
+  could be used only once on the whole server. Once any project, in any
+  workspace, had a REQ-1-FIG-1, adding the first figure to another
+  project's REQ-1 failed with "Failed to save attachment metadata", and so
+  on for every reference already taken elsewhere. A figure reference now
+  needs to be unique only within its project, as the artifact reference it
+  is built on is. Figures already added keep their references.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
