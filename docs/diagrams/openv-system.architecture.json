@@ -1,0 +1,340 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "OpenV System Architecture",
+    "output": "openv-system.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "Workspace members",
+      "sublabel": "browser",
+      "pos": [
+        40,
+        120
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "invitees",
+      "type": "external",
+      "label": "Interviewees",
+      "sublabel": "token-only links",
+      "pos": [
+        40,
+        260
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "Frontend",
+      "sublabel": "React + TS (nginx)",
+      "pos": [
+        260,
+        120
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API server",
+      "sublabel": "Go \u00b7 cmd/server :8080",
+      "pos": [
+        480,
+        200
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "Domain services",
+      "sublabel": "artifacts \u00b7 links \u00b7 V&V",
+      "pos": [
+        720,
+        100
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "bus",
+      "type": "messagebus",
+      "label": "Event bus",
+      "sublabel": "domain_events \u2192 SSE",
+      "pos": [
+        720,
+        230
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "automations",
+      "type": "backend",
+      "label": "Automations",
+      "sublabel": "cron \u00b7 triggers \u00b7 reaper",
+      "pos": [
+        720,
+        360
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "incl. agent_runs queue",
+      "pos": [
+        960,
+        100
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "uploads",
+      "type": "database",
+      "label": "Uploads dir",
+      "sublabel": "attachments",
+      "pos": [
+        960,
+        260
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "agentd",
+      "type": "backend",
+      "label": "agentd worker",
+      "sublabel": "cmd/agentd (host)",
+      "pos": [
+        480,
+        480
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "tag": "worker key"
+    },
+    {
+      "id": "cli",
+      "type": "external",
+      "label": "Vendor CLI",
+      "sublabel": "claude \u00b7 codex \u00b7 gemini",
+      "pos": [
+        260,
+        480
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "mcp",
+      "type": "backend",
+      "label": "openv-mcp",
+      "sublabel": "typed MCP tools",
+      "pos": [
+        40,
+        480
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "stripe",
+      "type": "external",
+      "label": "Stripe",
+      "sublabel": "external \u00b7 billing",
+      "pos": [
+        960,
+        390
+      ],
+      "size": [
+        150,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Railway: openv.app / api.openv.app",
+      "wraps": [
+        "frontend",
+        "api",
+        "domain",
+        "bus",
+        "automations",
+        "db",
+        "uploads"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Operator host (credentials stay here)",
+      "wraps": [
+        "agentd",
+        "cli",
+        "mcp"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "users-ui",
+      "from": "users",
+      "to": "frontend",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ui-api",
+      "from": "frontend",
+      "to": "api",
+      "label": "REST + SSE"
+    },
+    {
+      "id": "invite-api",
+      "from": "invitees",
+      "to": "api",
+      "label": "public interview API",
+      "variant": "dashed"
+    },
+    {
+      "id": "api-domain",
+      "from": "api",
+      "to": "domain",
+      "label": "org-scoped calls"
+    },
+    {
+      "id": "domain-db",
+      "from": "domain",
+      "to": "db",
+      "label": "SQL"
+    },
+    {
+      "id": "domain-bus",
+      "from": "domain",
+      "to": "bus",
+      "label": "emit"
+    },
+    {
+      "id": "bus-auto",
+      "from": "bus",
+      "to": "automations",
+      "label": "trigger match"
+    },
+    {
+      "id": "auto-db",
+      "from": "automations",
+      "to": "db",
+      "label": "enqueue runs",
+      "variant": "dashed"
+    },
+    {
+      "id": "domain-uploads",
+      "from": "domain",
+      "to": "uploads",
+      "label": "files"
+    },
+    {
+      "id": "agentd-poll",
+      "from": "agentd",
+      "to": "api",
+      "label": "poll + heartbeat",
+      "variant": "security"
+    },
+    {
+      "id": "agentd-cli",
+      "from": "agentd",
+      "to": "cli",
+      "label": "launch run"
+    },
+    {
+      "id": "cli-mcp",
+      "from": "cli",
+      "to": "mcp",
+      "label": "MCP stdio"
+    },
+    {
+      "id": "mcp-api",
+      "from": "mcp",
+      "to": "api",
+      "label": "tool calls \u2192 proposals",
+      "variant": "security"
+    },
+    {
+      "id": "api-stripe",
+      "from": "api",
+      "to": "stripe",
+      "label": "checkout \u00b7 webhooks",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Platform",
+      "items": [
+        "Railway deploys the release branch",
+        "Single Go API; React SPA",
+        "Postgres with numbered migration ledger"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Agent suite",
+      "items": [
+        "agent_runs rows are the queue",
+        "Server never calls model providers",
+        "Writes land as proposals for review"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Security",
+      "items": [
+        "API: auth middleware, org/project RBAC, rate limiting",
+        "Session cookie + X-Org-ID, optional Google OIDC",
+        "Hashed, revocable worker / runner keys",
+        "Rate-limited public interview endpoints"
+      ]
+    }
+  ]
+}

@@ -24,6 +24,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
+import { QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { AttributeForm, RepoForm, emptyAttributeForm, emptyRepoForm } from './projectSettings/shared';
 import { GeneralTab } from './projectSettings/GeneralTab';
 import { MembersTab } from './projectSettings/MembersTab';
@@ -34,6 +35,12 @@ import { QualityTab } from './projectSettings/QualityTab';
 import { DangerTab } from './projectSettings/DangerTab';
 
 type Tab = 'general' | 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
+
+// The WAI-ARIA tabs pattern: each tab names the one panel, which is labelled
+// by the open tab. No other tab strip in the app moves on arrow keys, so
+// these keep the browser's Tab order.
+const tabId = (key: Tab) => `project-settings-tab-${key}`;
+const PANEL_ID = 'project-settings-panel';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
@@ -133,6 +140,10 @@ export const ProjectSettings: React.FC = () => {
   const [attrForm, setAttrForm] = useState<AttributeForm>(emptyAttributeForm);
   const [savingAttr, setSavingAttr] = useState(false);
   const [artifactTypes, setArtifactTypes] = useState<ArtifactTypeDef[]>([]);
+
+  // Quality rules: the editor's rules and unsaved draft, loaded on the
+  // tab's first visit.
+  const [qualityRules, setQualityRules] = useState<QualityRulesHeld>(emptyQualityRulesHeld);
 
   // Danger
   const [deleting, setDeleting] = useState(false);
@@ -363,7 +374,6 @@ export const ProjectSettings: React.FC = () => {
     loadMembers();
     loadRepos();
     loadTeamAccess();
-    loadShareLinks();
     loadOrgTeams();
     loadProject();
     loadAttrDefs();
@@ -371,7 +381,13 @@ export const ProjectSettings: React.FC = () => {
       .artifactTypes()
       .then((res) => setArtifactTypes(res.data || []))
       .catch(() => setArtifactTypes([]));
-  }, [loadMembers, loadRepos, loadTeamAccess, loadShareLinks, loadOrgTeams, loadProject, loadAttrDefs]);
+  }, [loadMembers, loadRepos, loadTeamAccess, loadOrgTeams, loadProject, loadAttrDefs]);
+
+  // Share links only exist behind their feature key, so nothing is asked for
+  // while it is off; the gates can arrive after the page, so this follows it.
+  useEffect(() => {
+    if (shareLinksOn) loadShareLinks();
+  }, [shareLinksOn, loadShareLinks]);
 
   // -------------------------------------------------------------------------
   // Members handlers
@@ -657,6 +673,10 @@ export const ProjectSettings: React.FC = () => {
         {TABS.map((t) => (
           <button
             key={t.key}
+            role="tab"
+            id={tabId(t.key)}
+            aria-selected={tab === t.key}
+            aria-controls={PANEL_ID}
             onClick={() => setTab(t.key)}
             style={{
               background: 'none',
@@ -693,106 +713,116 @@ export const ProjectSettings: React.FC = () => {
         </div>
       )}
 
-      {tab === 'general' && (
-        <GeneralTab
-          flowDown={flowDown}
-          ownersOn={ownersOn}
-          project={project}
-          parentCandidates={parentCandidates}
-          childProjects={childProjects}
-          savingParent={savingParent}
-          handleSetParent={handleSetParent}
-          parties={parties}
-          savingParties={savingParties}
-          saveParties={saveParties}
-          handleAddParty={handleAddParty}
-          partyName={partyName}
-          setPartyName={setPartyName}
-          partyNote={partyNote}
-          setPartyNote={setPartyNote}
-        />
-      )}
+      <div role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)}>
+        {tab === 'general' && (
+          <GeneralTab
+            flowDown={flowDown}
+            ownersOn={ownersOn}
+            project={project}
+            parentCandidates={parentCandidates}
+            childProjects={childProjects}
+            savingParent={savingParent}
+            handleSetParent={handleSetParent}
+            parties={parties}
+            savingParties={savingParties}
+            saveParties={saveParties}
+            handleAddParty={handleAddParty}
+            partyName={partyName}
+            setPartyName={setPartyName}
+            partyNote={partyNote}
+            setPartyNote={setPartyNote}
+          />
+        )}
 
-      {tab === 'members' && (
-        <MembersTab
-          currentUser={currentUser}
-          membersLoading={membersLoading}
-          members={members}
-          handleSetRole={handleSetRole}
-          handleRemoveMember={handleRemoveMember}
-          handleAddMember={handleAddMember}
-          addEmail={addEmail}
-          setAddEmail={setAddEmail}
-          addRole={addRole}
-          setAddRole={setAddRole}
-          addingMember={addingMember}
-          teamGrantsLoading={teamGrantsLoading}
-          teamGrants={teamGrants}
-          handleSetTeamRole={handleSetTeamRole}
-          handleRevokeTeam={handleRevokeTeam}
-          handleGrantTeam={handleGrantTeam}
-          grantableTeams={grantableTeams}
-          grantTeamId={grantTeamId}
-          setGrantTeamId={setGrantTeamId}
-          grantRole={grantRole}
-          setGrantRole={setGrantRole}
-          granting={granting}
-          shareLinksOn={shareLinksOn}
-          shareLinksLoading={shareLinksLoading}
-          shareLinks={shareLinks}
-          handleRevokeShareLink={handleRevokeShareLink}
-          freshLink={freshLink}
-          copied={copied}
-          copyFreshLink={copyFreshLink}
-          handleCreateShareLink={handleCreateShareLink}
-          shareRole={shareRole}
-          setShareRole={setShareRole}
-          shareLabel={shareLabel}
-          setShareLabel={setShareLabel}
-          shareExpires={shareExpires}
-          setShareExpires={setShareExpires}
-          sharing={sharing}
-        />
-      )}
+        {tab === 'members' && (
+          <MembersTab
+            currentUser={currentUser}
+            membersLoading={membersLoading}
+            members={members}
+            handleSetRole={handleSetRole}
+            handleRemoveMember={handleRemoveMember}
+            handleAddMember={handleAddMember}
+            addEmail={addEmail}
+            setAddEmail={setAddEmail}
+            addRole={addRole}
+            setAddRole={setAddRole}
+            addingMember={addingMember}
+            teamGrantsLoading={teamGrantsLoading}
+            teamGrants={teamGrants}
+            handleSetTeamRole={handleSetTeamRole}
+            handleRevokeTeam={handleRevokeTeam}
+            handleGrantTeam={handleGrantTeam}
+            grantableTeams={grantableTeams}
+            grantTeamId={grantTeamId}
+            setGrantTeamId={setGrantTeamId}
+            grantRole={grantRole}
+            setGrantRole={setGrantRole}
+            granting={granting}
+            shareLinksOn={shareLinksOn}
+            shareLinksLoading={shareLinksLoading}
+            shareLinks={shareLinks}
+            handleRevokeShareLink={handleRevokeShareLink}
+            freshLink={freshLink}
+            copied={copied}
+            copyFreshLink={copyFreshLink}
+            handleCreateShareLink={handleCreateShareLink}
+            shareRole={shareRole}
+            setShareRole={setShareRole}
+            shareLabel={shareLabel}
+            setShareLabel={setShareLabel}
+            shareExpires={shareExpires}
+            setShareExpires={setShareExpires}
+            sharing={sharing}
+          />
+        )}
 
-      {tab === 'repos' && (
-        <ReposTab
-          reposLoading={reposLoading}
-          repos={repos}
-          repoForm={repoForm}
-          setRepoForm={setRepoForm}
-          showRepoForm={showRepoForm}
-          setShowRepoForm={setShowRepoForm}
-          savingRepo={savingRepo}
-          handleSaveRepo={handleSaveRepo}
-          handleDeleteRepo={handleDeleteRepo}
-          myPaths={myPaths}
-          setMyPaths={setMyPaths}
-          savingMyPath={savingMyPath}
-          handleSaveMyPath={handleSaveMyPath}
-        />
-      )}
+        {tab === 'repos' && (
+          <ReposTab
+            reposLoading={reposLoading}
+            repos={repos}
+            repoForm={repoForm}
+            setRepoForm={setRepoForm}
+            showRepoForm={showRepoForm}
+            setShowRepoForm={setShowRepoForm}
+            savingRepo={savingRepo}
+            handleSaveRepo={handleSaveRepo}
+            handleDeleteRepo={handleDeleteRepo}
+            myPaths={myPaths}
+            setMyPaths={setMyPaths}
+            savingMyPath={savingMyPath}
+            handleSaveMyPath={handleSaveMyPath}
+          />
+        )}
 
-      {tab === 'agents' && (
-        <AgentsTab project={project} savingAuth={savingAuth} handleSetAgentAuth={handleSetAgentAuth} />
-      )}
+        {tab === 'agents' && (
+          <AgentsTab project={project} savingAuth={savingAuth} handleSetAgentAuth={handleSetAgentAuth} />
+        )}
 
-      {tab === 'attributes' && (
-        <AttributesTab
-          attrDefsLoading={attrDefsLoading}
-          attrDefs={attrDefs}
-          handleDeleteAttribute={handleDeleteAttribute}
-          attrForm={attrForm}
-          setAttrForm={setAttrForm}
-          artifactTypes={artifactTypes}
-          savingAttr={savingAttr}
-          handleAddAttribute={handleAddAttribute}
-        />
-      )}
+        {tab === 'attributes' && (
+          <AttributesTab
+            attrDefsLoading={attrDefsLoading}
+            attrDefs={attrDefs}
+            handleDeleteAttribute={handleDeleteAttribute}
+            attrForm={attrForm}
+            setAttrForm={setAttrForm}
+            artifactTypes={artifactTypes}
+            savingAttr={savingAttr}
+            handleAddAttribute={handleAddAttribute}
+          />
+        )}
 
-      {tab === 'quality' && <QualityTab projectId={projectId} canEditRules={canEditRules} flash={flash} />}
+        {tab === 'quality' && (
+          <QualityTab
+            projectId={projectId}
+            canEditRules={canEditRules}
+            flash={flash}
+            qualityRules={qualityRules}
+            setQualityRules={setQualityRules}
+          />
+        )}
 
-      {tab === 'danger' && <DangerTab deleting={deleting} handleDeleteProject={handleDeleteProject} />}
+        {tab === 'danger' && <DangerTab deleting={deleting} handleDeleteProject={handleDeleteProject} />}
+      </div>
     </div>
   );
 };

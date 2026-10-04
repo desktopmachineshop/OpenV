@@ -231,6 +231,10 @@ lines, from its `func` line to its closing brace. The 34 over it at
 853 lines, could reach 938, until M4 cut it to about 50); 30 remain. The
 key names no file, so a function keeps its
 ceiling when it moves within its package; a renamed function is a new one.
+A method that moves to another receiver in its package keeps its ceiling
+under the new key: the Refactor guard accepts the new key when the old one
+goes in the same commit and the value does not rise, as M15b's sign-in
+methods moved from `Worker` to `loginBroker`.
 
 **Why.** K14, as for files.
 

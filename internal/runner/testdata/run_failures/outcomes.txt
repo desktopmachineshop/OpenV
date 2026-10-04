@@ -55,13 +55,10 @@ POST /api/v1/agent-runs/workspace-prep-fails/finish {"status":"failed","final_te
 class: workspace (not retried)
 
 ## repo-connections-unreadable
-given: a claude-code agent with repository access whose project's connections answer 403; the run goes on without a repository
-adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-repo-connections-unreadable
-adapter called with spec: workdir=<workspaces>/repo-connections-unreadable prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=true repo_access=true max_turns=50 timeout=600
+given: a claude-code agent with repository access whose project's connections answer 403
 GET /api/v1/projects/p-repo-connections-unreadable/repo-connections (as rt-repo-connections-unreadable)
-POST /api/v1/agent-runs/repo-connections-unreadable/start
-POST /api/v1/agent-runs/repo-connections-unreadable/finish {"status":"succeeded","exit_code":0,"final_text":"Done.","error":"","tokens_in":0,"tokens_out":0}
-class: none
+POST /api/v1/agent-runs/repo-connections-unreadable/finish {"status":"failed","final_text":"","error":"could not read the project's repository connections: api returned 403: {\"error\":\"forbidden\",\"code\":\"forbidden\"}","error_class":"workspace","tokens_in":0,"tokens_out":0}
+class: workspace (not retried)
 
 ## start-transition-refused
 given: the API answers the start transition 409
@@ -132,8 +129,8 @@ given: the run ends with exit code 2 and no error
 adapter called with env: OPENV_API_URL=https://openv.example OPENV_RUN_TOKEN=rt-succeeded-nonzero-exit
 adapter called with spec: workdir=<workspaces>/succeeded-nonzero-exit prompt="Summarise the open risks." system_prompt="Be precise." answer_rule=true model="model-x" effort="high" mcp=/opt/openv/bin/openv-mcp mcp_env=env allowed_tools=["mcp__openv__*","Read"] untrusted=false repo_access=false max_turns=50 timeout=600
 POST /api/v1/agent-runs/succeeded-nonzero-exit/start
-POST /api/v1/agent-runs/succeeded-nonzero-exit/finish {"status":"succeeded","exit_code":2,"final_text":"","error":"","tokens_in":0,"tokens_out":0}
-class: none
+POST /api/v1/agent-runs/succeeded-nonzero-exit/finish {"status":"failed","exit_code":2,"final_text":"","error":"the agent CLI exited with code 2","error_class":"agent_error","tokens_in":0,"tokens_out":0}
+class: agent_error (not retried)
 
 ## agent-fails
 given: the CLI fails with text naming no auth or provider signal
