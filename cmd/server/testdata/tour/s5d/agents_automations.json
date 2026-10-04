@@ -1477,7 +1477,7 @@
     },
     {
       "n": 37,
-      "title": "the crew D: tour-doomed's node is gone (ON DELETE CASCADE), nodes and edges null (Q14), and entry_node_id still names the node, which has no foreign key",
+      "title": "the crew D: tour-doomed's node is gone (ON DELETE CASCADE), nodes and edges null (Q14), and entry_node_id with it (ON DELETE SET NULL)",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/crews/{id}",
@@ -1492,7 +1492,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"team\":{\"id\":\"<crew.d>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew\",\"description\":\"\",\"entry_node_id\":\"<crew.d.node>\",\"is_default\":false,\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"},\"nodes\":null,\"edges\":null}"
+        "{\"team\":{\"id\":\"<crew.d>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew\",\"description\":\"\",\"is_default\":false,\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"},\"nodes\":null,\"edges\":null}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1501,7 +1501,6 @@
           "org_id": "<w>",
           "name": "Tour Doomed Crew",
           "description": "",
-          "entry_node_id": "<crew.d.node>",
           "is_default": false,
           "created_at": "<time@before step 32>",
           "updated_at": "<time@before step 32>"

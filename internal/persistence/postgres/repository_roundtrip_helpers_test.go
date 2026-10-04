@@ -213,3 +213,35 @@ func rtWantUnencodable(t *testing.T, what string, err error) {
 		t.Errorf("%s of a value JSON cannot hold: %v, want the encoder's refusal", what, err)
 	}
 }
+
+// rtCollations are the collations a list ordered by name is checked under,
+// so that its order is shown not to depend on the database's (#379 bug 94):
+// the database's default, "C", which sorts every capital before any small
+// letter, and ICU's en-US, which sorts by letter first and puts a small
+// letter before its capital, where the server has it.
+func rtCollations(t *testing.T, db *sql.DB) []string {
+	t.Helper()
+	collations := []string{"default", "C"}
+	var icu bool
+	if err := db.QueryRow(`SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = 'en-US-x-icu')`).Scan(&icu); err != nil {
+		t.Fatal(err)
+	}
+	if icu {
+		collations = append(collations, "en-US-x-icu")
+	} else {
+		t.Logf("this server has no en-US-x-icu collation; checking the default and C alone")
+	}
+	return collations
+}
+
+// rtSetCollation gives a text column the collation, keeping its type, as a
+// database created with that collation would have it.
+func rtSetCollation(t *testing.T, db *sql.DB, table, column, collation string) {
+	t.Helper()
+	var typ string
+	if err := db.QueryRow(`SELECT format_type(atttypid, atttypmod) FROM pg_attribute WHERE attrelid = $1::regclass AND attname = $2`,
+		table, column).Scan(&typ); err != nil {
+		t.Fatalf("the type of %s.%s: %v", table, column, err)
+	}
+	rtSeed(t, db, `ALTER TABLE `+table+` ALTER COLUMN `+column+` TYPE `+typ+` COLLATE "`+collation+`"`)
+}

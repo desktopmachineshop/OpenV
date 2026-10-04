@@ -1,8 +1,13 @@
 package postgres
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
+	"log/slog"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +26,47 @@ func rtItemSansTimes(item *workitems.WorkItem) workitems.WorkItem {
 	c := *item
 	c.CreatedAt, c.UpdatedAt, c.DueDate = time.Time{}, time.Time{}, nil
 	return c
+}
+
+// rtCaptureLog sends slog's default logger to a buffer until the test ends.
+// slog.SetDefault also points the log package at it, and setting the old
+// default back does not undo that, so both are restored.
+func rtCaptureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	buf := new(bytes.Buffer)
+	prev, prevOut, prevFlags := slog.Default(), log.Writer(), log.Flags()
+	slog.SetDefault(slog.New(slog.NewTextHandler(buf, nil)))
+	t.Cleanup(func() {
+		slog.SetDefault(prev)
+		log.SetOutput(prevOut)
+		log.SetFlags(prevFlags)
+	})
+	return buf
+}
+
+// rtWantLogged fails unless the log holds, for each id, as many lines naming
+// it as want says, and no line that names none of them.
+func rtWantLogged(t *testing.T, what string, buf *bytes.Buffer, want map[string]int) {
+	t.Helper()
+	got := map[string]int{}
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		named := false
+		for id := range want {
+			if strings.Contains(line, id) {
+				got[id]++
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%s logged %q, which names no item", what, line)
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("%s logged the items %v times, want %v", what, got, want)
+	}
 }
 
 func rtItemTitles(list []*workitems.WorkItem) []string {
@@ -164,10 +210,12 @@ func TestWorkItemRepositoryRoundTrip(t *testing.T) {
 // ListByProject breaks a tie on column and sort order by created_at, and
 // items that tie on all three come in no set order; a project with none, or
 // no row, lists nil, and a malformed project id is Postgres's refusal.
-// ListBySourceChatterIDs has no ORDER BY at all: it lists every project's
-// items raised from the notes, in no set order; no notes is nil with no
-// query, no match is nil, and one malformed note id among good ones refuses
-// the whole list. MaxSortOrder is a column's highest sort order, -1 for an
+// ListBySourceChatterIDs lists every project's items raised from the notes
+// oldest first, by created_at and then id, so even items stamped the same
+// instant come in one order (#379 bug 92: it had no ORDER BY, and the notes
+// panel, which shows the last item it reads for a note, showed whichever
+// came last); no notes is nil with no query, no match is nil, and one
+// malformed note id among good ones refuses the whole list. MaxSortOrder is a column's highest sort order, -1 for an
 // empty column or one the board does not have, and 0 with Postgres's
 // refusal for a malformed project id.
 func TestWorkItemRepositoryLists(t *testing.T) {
@@ -195,6 +243,19 @@ func TestWorkItemRepositoryLists(t *testing.T) {
 			t.Fatalf("Save %q: %v", c.title, err)
 		}
 	}
+	// Two items raised from one note at one instant, the one whose id sorts
+	// last saved first, so that the order rows are stored in is not the ids'.
+	tieIDs := []string{uuid.New().String(), uuid.New().String()}
+	if tieIDs[0] < tieIDs[1] {
+		tieIDs[0], tieIDs[1] = tieIDs[1], tieIDs[0]
+	}
+	for i, id := range tieIDs {
+		if err := repo.Save(&workitems.WorkItem{ID: id, ProjectID: other, Title: []string{"note tie, id last", "note tie, id first"}[i],
+			Column: workitems.ColumnTodo, SortOrder: i, AssigneeType: workitems.AssigneeUser, SourceChatterID: &noteB,
+			CreatedAt: rtAt(3), UpdatedAt: rtAt(3)}); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	t.Run("by project", func(t *testing.T) {
 		items, err := repo.ListByProject(project)
@@ -219,7 +280,8 @@ func TestWorkItemRepositoryLists(t *testing.T) {
 			t.Fatalf("ListBySourceChatterIDs: %v", err)
 		}
 		rtWantOrder(t, "the items raised from two notes", rtItemTitles(items),
-			[]string{"backlog 0, later", "backlog 0, sooner", "todo -2", "another project's"})
+			[]string{"another project's"}, []string{"todo -2"}, []string{"backlog 0, sooner"},
+			[]string{"note tie, id first"}, []string{"note tie, id last"}, []string{"backlog 0, later"})
 
 		list, err := repo.ListBySourceChatterIDs(nil)
 		rtWantNil(t, "the items of no notes", list, err)
@@ -338,10 +400,14 @@ func TestWorkItemRepositoryActivity(t *testing.T) {
 }
 
 // What a work item's artifacts and an activity entry's payload read back as
-// when the JSON stored is not what the repository writes: JSON null reads as
-// a nil list or map (null in the API), and JSON of another shape fails the
-// read with the decoder's error, a single item's and the whole list's alike,
-// where the team and agent repositories fall back to an empty value.
+// when the JSON stored is not what the repository writes. Artifacts that are
+// JSON null or JSON of another shape read as an empty list, as the agent
+// repository's tools do, and the read logs the item once, so one such item
+// no longer fails its own read and the whole board's list with the
+// decoder's error (#379 bug 92), nor answers null where the API promises a
+// list. A payload stored as JSON null still reads as a nil map (null in the
+// API), and one of another shape still fails the item's activity feed with
+// the decoder's error.
 func TestWorkItemRepositoryReadsJSONOfAnotherShape(t *testing.T) {
 	db := rtDB(t)
 	repo := NewWorkItemRepository(db)
@@ -355,6 +421,7 @@ func TestWorkItemRepositoryReadsJSONOfAnotherShape(t *testing.T) {
 		return item
 	}
 	nullItem, objectItem := newItem("null artifacts"), newItem("object artifacts")
+	newItem("no artifacts")
 	nullEntry := &workitems.Activity{ID: uuid.New().String(), WorkItemID: nullItem.ID, Kind: workitems.KindComment,
 		Actor: "system", CreatedAt: rtAt(0)}
 	arrayEntry := &workitems.Activity{ID: uuid.New().String(), WorkItemID: objectItem.ID, Kind: workitems.KindComment,
@@ -369,16 +436,26 @@ func TestWorkItemRepositoryReadsJSONOfAnotherShape(t *testing.T) {
 	rtSeed(t, db, `UPDATE work_item_activity SET payload = 'null' WHERE id = $1`, nullEntry.ID)
 	rtSeed(t, db, `UPDATE work_item_activity SET payload = '[1]' WHERE id = $1`, arrayEntry.ID)
 
-	if got, err := repo.FindByID(nullItem.ID); err != nil || got == nil || got.ArtifactIDs != nil {
-		t.Errorf("artifacts stored as JSON null: %v, %v; want a nil list", got, err)
+	logged := rtCaptureLog(t)
+	for _, item := range []*workitems.WorkItem{nullItem, objectItem} {
+		got, err := repo.FindByID(item.ID)
+		if err != nil || got == nil || got.ArtifactIDs == nil || len(got.ArtifactIDs) != 0 {
+			t.Errorf("FindByID of %q: %v, %v; want the item, its artifacts an empty list", item.Title, got, err)
+		}
 	}
+	rtWantLogged(t, "reading the two items", logged, map[string]int{nullItem.ID: 1, objectItem.ID: 1})
+	logged.Reset()
+	list, err := repo.ListByProject(projectID)
+	if err != nil || len(list) != 3 {
+		t.Errorf("a project with items whose artifacts are JSON null and an object: %d items, %v; want all three", len(list), err)
+	}
+	for _, item := range list {
+		if item.ArtifactIDs == nil || len(item.ArtifactIDs) != 0 {
+			t.Errorf("listed item %q's artifacts: %#v, want an empty list", item.Title, item.ArtifactIDs)
+		}
+	}
+	rtWantLogged(t, "listing the project", logged, map[string]int{nullItem.ID: 1, objectItem.ID: 1})
 	var typeErr *json.UnmarshalTypeError
-	if got, err := repo.FindByID(objectItem.ID); got != nil || !errors.As(err, &typeErr) {
-		t.Errorf("artifacts stored as an object: %v, %v; want the decoder's type error", got, err)
-	}
-	if list, err := repo.ListByProject(projectID); list != nil || !errors.As(err, &typeErr) {
-		t.Errorf("a project with an item whose artifacts are an object: %v, %v; want no list and the decoder's type error", list, err)
-	}
 	if list, err := repo.ListActivity(nullItem.ID); err != nil || len(list) != 1 || list[0].Payload != nil {
 		t.Errorf("a payload stored as JSON null: %v, %v; want a nil map", list, err)
 	}

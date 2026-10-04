@@ -190,6 +190,45 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   your workspace already defines the same attribute; it never changes your
   workspace's definitions. Imported artifacts still start at version 1.
 
+- **A crew no longer points at a node that is gone or belongs to another
+  crew.** Deleting a crew's entry node, or the agent it placed, left the
+  crew pointing at a node that no longer existed, and launching the crew
+  failed with "entry node not found in team". The crew is now left with no
+  entry node, as a new crew has, and a launch says "team has no entry
+  node" until you pick one with *Set as entry node*; nothing else about
+  the crew changes. A connection can only join two nodes of its own crew.
+  When this update is installed, a crew whose entry node was gone or in
+  another crew has its entry node cleared, and any connection that joined
+  another crew's nodes, which could stop you adding connections to its
+  crew, is removed.
+
+- **One damaged card no longer stops the board from loading.** A to-do
+  whose stored list of linked artifacts was not in the form OpenV writes
+  made the project's whole board and to-do list fail to load, and the card
+  itself fail to open. Such a card now loads as one with no linked
+  artifacts, and the server log names it so an operator can repair it.
+
+- **A note with more than one to-do shows the newest.** In the notes
+  beside an artifact, a note from which several to-dos had been raised
+  showed one of them, and which one could change from one visit to the
+  next. It now always shows the most recently raised.
+
+- **Agents, project members and team access list in the same
+  alphabetical order on every server.** Depending on how the server's
+  database was set up, the agents page, a project's members and the teams
+  with access to a project could list every name that starts with a
+  capital before any that starts with a small letter, so "Bravo" came
+  before "alpha", and two agents or teams with one name could swap places
+  between visits. These lists are now alphabetical without regard to case
+  everywhere, a name in capitals before the same name in small letters,
+  and entries with the same name always come in the same order.
+
+- **Adding a member to a project deleted a moment before says the project
+  was not found.** Adding someone to a project, or changing a member's
+  role, just as the project was deleted answered "failed to add member" or
+  "failed to update member role", as if the server had failed. It now
+  answers "project not found", as opening a deleted project does.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

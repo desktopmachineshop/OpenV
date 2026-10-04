@@ -73,13 +73,17 @@ func NewProject(req CreateProjectRequest) *Project {
 	if auth == "" {
 		auth = AgentAuthUserAccount
 	}
+	// In UTC: the columns are TIMESTAMPs, which keep the wall clock sent and
+	// are read as UTC, so a server's local zone would move the time (#379
+	// bug 93).
+	now := time.Now().UTC()
 	return &Project{
 		ID:          uuid.New().String(),
 		Name:        req.Name,
 		Description: req.Description,
 		AgentAuth:   auth,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 }
 
@@ -165,7 +169,7 @@ func (s *DefaultService) UpdateProject(id string, req UpdateProjectRequest) (*Pr
 		}
 		project.ParentProjectID = *req.ParentProjectID
 	}
-	project.UpdatedAt = time.Now()
+	project.UpdatedAt = time.Now().UTC()
 
 	err = s.repository.Update(project)
 	if err != nil {

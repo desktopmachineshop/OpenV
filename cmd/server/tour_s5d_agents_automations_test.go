@@ -40,8 +40,9 @@ import (
 //   - the delete and what it cascades (ON DELETE CASCADE on agent_runs,
 //     automations and agent_team_nodes): the agent's queued run and its
 //     automation are gone (404), its crew node is gone from the crew's
-//     graph, whose entry_node_id still names it (no foreign key), so an
-//     automation of that crew answers "team has no entry node"; the run's
+//     graph, and with it the crew's entry_node_id (ON DELETE SET NULL,
+//     migration 0052), so an automation of that crew answers "team has no
+//     entry node"; the run's
 //     tracking card stays on P's board; a slug no agent has answers 404,
 //     the read's "agent not found";
 //   - the sync, in X once the area deleted X's seeds: X's agents are null
@@ -324,7 +325,7 @@ func agentsAutomationsDelete(tr *tour) {
 	tr.step("tour-doomed's automation: 404, deleted with the agent (ON DELETE CASCADE)", o,
 		"GET /api/v1/automations/{id}", at("id", "{{doomed.auto}}"))
 	tr.step("the crew D: tour-doomed's node is gone (ON DELETE CASCADE), nodes and edges null (Q14), and "+
-		"entry_node_id still names the node, which has no foreign key", o, "GET /api/v1/crews/{id}",
+		"entry_node_id with it (ON DELETE SET NULL)", o, "GET /api/v1/crews/{id}",
 		at("id", "{{crew.d}}"))
 	tr.step("run D's automation now: 400, the entry node is gone", o, "POST /api/v1/automations/{id}/run-now",
 		at("id", "{{crew.d.auto}}"))

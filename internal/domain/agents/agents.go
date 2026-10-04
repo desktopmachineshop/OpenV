@@ -90,6 +90,12 @@ var ErrNotFound = errors.New("agent not found")
 // authority, so a lost check-then-create race still surfaces as this error.
 var ErrSlugExists = errors.New("an agent with this slug already exists")
 
+// ErrWorkspaceRequired is returned for an agent with no workspace. Every
+// agent belongs to one: List and FindBySlug match an agent by its workspace,
+// so one saved without would be listed nowhere, and the unique index on
+// (org_id, slug) holds no slug unique among agents with none (#379 bug 89).
+var ErrWorkspaceRequired = errors.New("organization id is required")
+
 // slugPattern matches the slug convention used by seeded agents
 // (e.g. "requirements-copilot"): lowercase letters, digits and hyphens,
 // starting with a letter or digit. Slugs become file names on disk, so
