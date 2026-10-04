@@ -451,10 +451,14 @@ func (s *DefaultService) maybeAutoRetry(run *Run) {
 }
 
 // RequestCancel flags a run for cancellation (immediate if still queued).
-// Both paths are conditional state transitions in the repository, so a
-// concurrent worker claim is never overwritten: a queued run cancels only
-// while still queued, otherwise the cancel-requested flag is set only while
-// the run is live (claimed/running).
+// The repository writes the cancel the run's status asks for when the write
+// lands, not when this read it: a queued run is cancelled at once, a
+// claimed or running run has its cancel requested, for its worker to stop
+// it. So a concurrent worker claim is never overwritten, and a concurrent
+// release never drops the cancel (#379 bug 165: a run read as claimed that
+// its worker handed back meanwhile went back to the queue, its cancel
+// matched nothing, and the next claim started it again). A finished run,
+// or one awaiting approval, is answered as it is.
 func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	run, err := s.Get(id)
 	if err != nil {
@@ -463,23 +467,7 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	if terminalStatuses[run.Status] || run.Status == StatusAwaitingApproval {
 		return run, nil
 	}
-	if run.Status == StatusQueued {
-		cancelled, err := s.repo.CancelQueued(id)
-		if err != nil {
-			return nil, err
-		}
-		if cancelled {
-			run, err = s.Get(id)
-			if err != nil {
-				return nil, err
-			}
-			s.notifyStatus(run)
-			return run, nil
-		}
-		// Lost the race to a worker claim (or a finish): fall through to the
-		// cooperative flag path against the run's current state.
-	}
-	flagged, err := s.repo.SetCancelRequested(id)
+	written, err := s.repo.RequestCancel(id)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +475,7 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	if err != nil {
 		return nil, err
 	}
-	if flagged {
+	if written {
 		s.notifyStatus(run)
 	}
 	return run, nil

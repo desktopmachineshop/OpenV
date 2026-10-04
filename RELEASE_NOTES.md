@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Cancel always stops a run.** Cancelling a run at the moment its runner
+  handed it back to the queue, as a runner shutting down does, could be
+  lost: the run went back to waiting, and the next runner started it again.
+  The run is now cancelled.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

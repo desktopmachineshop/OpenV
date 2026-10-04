@@ -1243,7 +1243,7 @@ returned with the run, cleared whenever the run stops being live — at finish
 (`final_text` takes over), when the stale-run reaper fails it, and when a
 worker releases it back to the queue — and broadcast as `partial` on the run's
 own stream and as `assistant_partial` on any session the run belongs to.
-| POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
+| POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation → the run. A queued run is cancelled at once; a claimed or running run is asked to stop (`cancel_requested`), and its worker stops it and reports it cancelled. The run's status when the cancel is written decides, not when it was read: a run its worker hands back to the queue meanwhile is cancelled. A finished run, or one awaiting approval, is answered as it is | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/retry` | Re-enqueue a failed, cancelled or timed-out run as a new one (`retried_from_run_id`); `409` otherwise. Refused `403` for a proposal-mode agent run, `401` for any other run token | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |

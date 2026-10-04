@@ -27,7 +27,7 @@ type fakeRunRepo struct {
 
 	// Interleaving hooks: run just before the conditional check, so tests can
 	// simulate a concurrent actor winning the race.
-	onCancelQueued   func()
+	onRequestCancel  func()
 	onUpdateTerminal func()
 	onMarkRunning    func()
 }
@@ -50,28 +50,29 @@ func (f *fakeRunRepo) Save(r *Run) error {
 	return nil
 }
 
-func (f *fakeRunRepo) CancelQueued(id string) (bool, error) {
-	if f.onCancelQueued != nil {
-		f.onCancelQueued()
+// RequestCancel mirrors the SQL: the cancel is the one the STORED status
+// asks for when it is written, a queued run cancelled and a claimed or
+// running one flagged; any other run is left as it is.
+func (f *fakeRunRepo) RequestCancel(id string) (bool, error) {
+	if f.onRequestCancel != nil {
+		f.onRequestCancel()
 	}
 	r, ok := f.runs[id]
-	if !ok || r.Status != StatusQueued {
+	if !ok {
 		return false, nil
 	}
-	now := time.Now()
-	r.Status = StatusCancelled
-	r.CancelRequested = true
-	r.FinishedAt = &now
-	r.RunTokenHash = ""
-	return true, nil
-}
-
-func (f *fakeRunRepo) SetCancelRequested(id string) (bool, error) {
-	r, ok := f.runs[id]
-	if !ok || (r.Status != StatusClaimed && r.Status != StatusRunning) {
+	switch r.Status {
+	case StatusQueued:
+		now := time.Now()
+		r.Status = StatusCancelled
+		r.CancelRequested = true
+		r.FinishedAt = &now
+		r.RunTokenHash = ""
+	case StatusClaimed, StatusRunning:
+		r.CancelRequested = true
+	default:
 		return false, nil
 	}
-	r.CancelRequested = true
 	return true, nil
 }
 
@@ -614,7 +615,7 @@ func TestRequestCancelLosesRaceToClaim(t *testing.T) {
 	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusQueued})
 	// A worker claims the run between the service's read and its conditional
 	// cancel: the claim must survive, and the cancel becomes cooperative.
-	repo.onCancelQueued = func() {
+	repo.onRequestCancel = func() {
 		now := time.Now()
 		repo.runs["r1"].Status = StatusClaimed
 		repo.runs["r1"].WorkerID = "w-1"

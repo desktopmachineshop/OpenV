@@ -323,70 +323,55 @@ func TestUpdateTokenHashRotation(t *testing.T) {
 	}
 }
 
-func TestCancelQueuedOnlyWhileQueued(t *testing.T) {
-	f := newClaimFixture(t)
-	id := f.queueRun(t, runSpec{})
-	f.setRunState(t, id, agentruns.StatusQueued, "tok")
-
-	ok, err := f.repo.CancelQueued(id)
-	if err != nil || !ok {
-		t.Fatalf("CancelQueued = %v, %v, want applied", ok, err)
-	}
-	run := f.mustFind(t, id)
-	if run.Status != agentruns.StatusCancelled || !run.CancelRequested || run.FinishedAt == nil {
-		t.Errorf("cancelled run = %s cancel %v finished %v", run.Status, run.CancelRequested, run.FinishedAt)
-	}
-	if hash := f.tokenHash(t, id); hash != "" {
-		t.Errorf("token hash = %q, want revoked on cancel", hash)
-	}
-
-	// Idempotence: already cancelled -> not applied.
-	ok, err = f.repo.CancelQueued(id)
-	if err != nil || ok {
-		t.Errorf("second CancelQueued = %v, %v, want false", ok, err)
-	}
-
-	// A claimed run must not be cancellable through the queued path.
-	claimed := f.queueRun(t, runSpec{})
-	f.setRunState(t, claimed, agentruns.StatusClaimed, "tok2")
-	ok, err = f.repo.CancelQueued(claimed)
-	if err != nil || ok {
-		t.Fatalf("CancelQueued(claimed) = %v, %v, want false", ok, err)
-	}
-	if got := f.status(t, claimed); got != agentruns.StatusClaimed {
-		t.Errorf("claimed run = %s, want untouched", got)
-	}
-	if hash := f.tokenHash(t, claimed); hash != "tok2" {
-		t.Errorf("claimed run token = %q, want kept", hash)
-	}
-}
-
-func TestSetCancelRequestedOnlyForActiveRuns(t *testing.T) {
+// TestRequestCancelWritesWhatTheRunsStatusAsks: a queued run is cancelled,
+// finished, its token revoked; a claimed or running run is asked to stop,
+// its status and token kept for its worker to report it cancelled; a
+// finished run, or one awaiting approval, is left as it is.
+func TestRequestCancelWritesWhatTheRunsStatusAsks(t *testing.T) {
 	f := newClaimFixture(t)
 	cases := []struct {
-		status string
-		want   bool
+		status, want string
+		written      bool
+		token        string
 	}{
-		{agentruns.StatusClaimed, true},
-		{agentruns.StatusRunning, true},
-		{agentruns.StatusQueued, false},
-		{agentruns.StatusSucceeded, false},
-		{agentruns.StatusFailed, false},
+		{agentruns.StatusQueued, agentruns.StatusCancelled, true, ""},
+		{agentruns.StatusClaimed, agentruns.StatusClaimed, true, "tok"},
+		{agentruns.StatusRunning, agentruns.StatusRunning, true, "tok"},
+		{agentruns.StatusSucceeded, agentruns.StatusSucceeded, false, "tok"},
+		{agentruns.StatusFailed, agentruns.StatusFailed, false, "tok"},
+		{agentruns.StatusCancelled, agentruns.StatusCancelled, false, "tok"},
+		{agentruns.StatusTimedOut, agentruns.StatusTimedOut, false, "tok"},
+		{agentruns.StatusAwaitingApproval, agentruns.StatusAwaitingApproval, false, "tok"},
 	}
 	for _, tc := range cases {
 		id := f.queueRun(t, runSpec{})
 		f.setRunState(t, id, tc.status, "tok")
-		ok, err := f.repo.SetCancelRequested(id)
+		ok, err := f.repo.RequestCancel(id)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.status, err)
 		}
-		if ok != tc.want {
-			t.Errorf("SetCancelRequested(%s) = %v, want %v", tc.status, ok, tc.want)
+		if ok != tc.written {
+			t.Errorf("RequestCancel(%s) = %v, want %v", tc.status, ok, tc.written)
 		}
 		run := f.mustFind(t, id)
-		if run.CancelRequested != tc.want {
-			t.Errorf("%s: cancel_requested = %v, want %v", tc.status, run.CancelRequested, tc.want)
+		if run.Status != tc.want || run.CancelRequested != tc.written {
+			t.Errorf("%s: %s, cancel_requested = %v; want %s, %v", tc.status, run.Status, run.CancelRequested, tc.want, tc.written)
 		}
+		if hash := f.tokenHash(t, id); hash != tc.token {
+			t.Errorf("%s: token hash = %q, want %q", tc.status, hash, tc.token)
+		}
+		if finished := run.FinishedAt != nil; finished != (tc.status == agentruns.StatusQueued) {
+			t.Errorf("%s: finished at %v, want it set only on the queued run it cancelled", tc.status, run.FinishedAt)
+		}
+		// A second request writes the flag again on a live run, and nothing
+		// on the run the first one cancelled.
+		again, err := f.repo.RequestCancel(id)
+		if err != nil || again != (tc.written && tc.status != agentruns.StatusQueued) {
+			t.Errorf("%s: a second RequestCancel = %v, %v", tc.status, again, err)
+		}
+	}
+	if ok, err := f.repo.RequestCancel(uuid.New().String()); err != nil || ok {
+		t.Errorf("RequestCancel(no such run) = %v, %v, want false and no error", ok, err)
 	}
 }
 

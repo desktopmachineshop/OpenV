@@ -378,13 +378,13 @@ type Repository interface {
 	// whose cancel was requested ends cancelled instead. Reports whether the
 	// release was applied.
 	ReleaseClaim(runID, workerID string) (bool, error)
-	// CancelQueued conditionally cancels a run only while it is still queued
-	// (and revokes its token), so a concurrent worker claim is never stomped;
-	// reports whether the cancel was applied.
-	CancelQueued(id string) (bool, error)
-	// SetCancelRequested flags a claimed/running run for cooperative
-	// cancellation; reports whether the flag was applied.
-	SetCancelRequested(id string) (bool, error)
+	// RequestCancel cancels a run as its status when the write lands asks,
+	// whatever a concurrent claim or release made of it since the caller
+	// read it: a queued run is cancelled at once and its token revoked; a
+	// claimed or running run has its cancel requested, for its worker to
+	// stop it. A run in any other status is left as it is. Reports whether
+	// it wrote.
+	RequestCancel(id string) (bool, error)
 	// UpdateTerminal writes a run's terminal result fields and revokes its run
 	// token, but only while a worker still holds the run (claimed or
 	// running); reports whether the transition was applied.
