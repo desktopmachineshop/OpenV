@@ -34,9 +34,10 @@ interface AppState {
   // it and answers false while it is null, so a gated UI never flashes on.
   features: OrgFeatures | null;
   setFeatures: (features: OrgFeatures | null) => void;
-  // Whether the last gate load failed, which leaves features null as a load
-  // still on its way does: a page that waits for the gates takes a failure
-  // as its feature off (#379 bug 174). setFeatures clears it.
+  // Whether the gate load failed with no timed retry left (#379 bug 179),
+  // which leaves features null as a load still on its way does: a page that
+  // waits for the gates takes a failure as its feature off (#379 bug 174).
+  // setFeatures clears it.
   featuresFailed: boolean;
   setFeaturesFailed: () => void;
   projectId: string;

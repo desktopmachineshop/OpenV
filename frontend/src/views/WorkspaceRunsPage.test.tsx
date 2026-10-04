@@ -13,7 +13,8 @@ import { agentRunsAPI, type AgentRun, type Org, type OrgFeatures } from '../api/
 // to the projects list, where /org/runs led before. A workspace switch
 // empties the list until the new workspace's answer and closes the old
 // workspace's run, but not the run of a link the page follows to its
-// workspace (#379 bug 177).
+// workspace (#379 bug 177), and hides the old workspace's error (#379 bug
+// 180).
 
 const ok = (data: unknown) => Promise.resolve({ data });
 
@@ -122,6 +123,7 @@ const mount = async (at: string, features: OrgFeatures | null, role = 'member') 
 
 const rows = () => Array.from(container.querySelectorAll('tbody tr')).map((tr) => tr.querySelector('td')?.textContent);
 const detail = () => container.querySelector('[aria-label="Run detail"]');
+const error = () => container.querySelector('[role="alert"] span')?.textContent ?? null;
 
 const click = async (el: Element) => {
   await act(async () => {
@@ -282,6 +284,37 @@ describe('the workspace Runs page on a switch (#379 bug 177)', () => {
     expect(where()).toBe('/org/runs');
     expect(useAppStore.getState().activeOrgId).toBe('o2');
     expect(rows()).toEqual(['🤖 Auditor']);
+  });
+
+  it("hides the old workspace's error on a switch (#379 bug 180)", async () => {
+    list.mockImplementationOnce(() => Promise.reject(new Error('o1 is down')) as any);
+    await mount('/org/runs', gates(true));
+    expect(error()).toBe('o1 is down');
+
+    const answer = later();
+    await switchTo('o2');
+    expect(error()).toBeNull();
+    await answer([elsewhere]);
+    await flush();
+    expect(rows()).toEqual(['🤖 Auditor']);
+    expect(error()).toBeNull();
+  });
+
+  it('keeps the error while another status filter loads, until its answer', async () => {
+    list.mockImplementationOnce(() => Promise.reject(new Error('o1 is down')) as any);
+    await mount('/org/runs', gates(true));
+    const answer = later();
+    const select = container.querySelector('select') as HTMLSelectElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setter.call(select, 'failed');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await flush();
+    expect(error()).toBe('o1 is down');
+    await answer([]);
+    await flush();
+    expect(error()).toBeNull();
   });
 
   it('keeps the list and the run open while another status filter loads', async () => {

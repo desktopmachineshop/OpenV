@@ -12,6 +12,10 @@ import type { OrgFeatures } from './api/client';
 // browser comes back online after a failed try. A try that succeeds sets the
 // gates, which clears featuresFailed. A workspace switch cancels the old
 // workspace's tries, so its answer never lands (#379 bug 176).
+//
+// The load counts as failed (featuresFailed), which a page that waits for
+// the gates takes as its feature off, only once no timed retry is left
+// (#379 bug 179).
 
 const ok = (data: unknown) => Promise.resolve({ data });
 
@@ -149,7 +153,6 @@ describe('a gate load that fails', () => {
     await boot();
     expect(tried()).toEqual(['acme']);
     await fail(0);
-    expect(state()).toEqual({ features: null, featuresFailed: true });
 
     await wait(1999);
     expect(loads).toHaveLength(1);
@@ -177,8 +180,8 @@ describe('a gate load that fails', () => {
     await fail(0);
     await wait(2000);
     expect(loads).toHaveLength(2);
-    // Still failed while the try is on its way.
-    expect(state()).toEqual({ features: null, featuresFailed: true });
+    // Gates still closed while the try is on its way.
+    expect(state()).toEqual({ features: null, featuresFailed: false });
     await succeed(1);
     expect(state()).toEqual({ features: ['acme-feature'], featuresFailed: false });
 
@@ -248,7 +251,7 @@ describe('a gate load that fails', () => {
 
     // Bigco's load fails: only bigco is tried again, on its own timer.
     await fail(2);
-    expect(state()).toEqual({ features: null, featuresFailed: true });
+    expect(state()).toEqual({ features: null, featuresFailed: false });
     await wait(2000);
     expect(tried()).toEqual(['acme', 'acme', 'bigco', 'bigco']);
     await succeed(3);
@@ -285,5 +288,80 @@ describe('a gate load that fails', () => {
     await wait(60 * 1000);
     expect(tried()).toEqual(['acme', 'bigco']);
     expect(state()).toEqual({ features: ['bigco-feature'], featuresFailed: false });
+  });
+});
+
+describe('a gate load that fails, for a page that waits for the gates (#379 bug 179)', () => {
+  const failTimed = async () => {
+    for (const [n, delay] of [
+      [0, 2000],
+      [1, 5000],
+      [2, 15000],
+    ]) {
+      await fail(n);
+      // A timed retry is still to come: the page keeps waiting.
+      expect(state()).toEqual({ features: null, featuresFailed: false });
+      await wait(delay);
+    }
+    expect(loads).toHaveLength(4);
+    await fail(3);
+  };
+
+  it('counts as failed only once no timed retry is left', async () => {
+    await boot();
+    await failTimed();
+    expect(state()).toEqual({ features: null, featuresFailed: true });
+
+    // A try on focus after that is on its way: still failed, and its answer
+    // sets the gates as before.
+    await fire('focus');
+    expect(loads).toHaveLength(5);
+    expect(state()).toEqual({ features: null, featuresFailed: true });
+    await succeed(4);
+    expect(state()).toEqual({ features: ['acme-feature'], featuresFailed: false });
+  });
+
+  it('does not count a try on focus that fails while timed retries are left', async () => {
+    await boot();
+    await fail(0);
+    await fire('focus');
+    expect(loads).toHaveLength(2);
+    await fail(1);
+    expect(state()).toEqual({ features: null, featuresFailed: false });
+  });
+
+  it('counts a try on focus that takes the place of the last timed retry, and fails', async () => {
+    await boot();
+    await fail(0);
+    await wait(2000);
+    await fail(1);
+    await wait(5000);
+    await fail(2);
+    // The 15 s wait, the last, is replaced by the try on focus.
+    await fire('focus');
+    expect(loads).toHaveLength(4);
+    expect(state()).toEqual({ features: null, featuresFailed: false });
+    await fail(3);
+    expect(state()).toEqual({ features: null, featuresFailed: true });
+    await wait(60 * 1000);
+    expect(loads).toHaveLength(4);
+  });
+
+  it('starts fresh on a workspace switch', async () => {
+    await boot();
+    await failTimed();
+    expect(state()).toEqual({ features: null, featuresFailed: true });
+
+    await act(async () => {
+      useAppStore.getState().setActiveOrgId('bigco');
+    });
+    await settle();
+    expect(tried()).toEqual(['acme', 'acme', 'acme', 'acme', 'bigco']);
+    expect(state()).toEqual({ features: null, featuresFailed: false });
+    // Bigco has its own timed retries.
+    await fail(4);
+    expect(state()).toEqual({ features: null, featuresFailed: false });
+    await wait(2000);
+    expect(tried()).toEqual(['acme', 'acme', 'acme', 'acme', 'bigco', 'bigco']);
   });
 });

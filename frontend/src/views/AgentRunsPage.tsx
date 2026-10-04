@@ -36,12 +36,21 @@ export const AgentRunsPage: React.FC = () => {
   // workspace's project, is no switch here.
   const [listed, setListed] = useState<{ projectId: string; runs: AgentRun[] } | null>(null);
   const runs = listed?.projectId === projectId ? listed.runs : null;
-  const [workerStatus, setWorkerStatus] = useState<WorkerStatus | null>(null);
+  // The runner status and the workspace it was read for: the banners show
+  // it while that workspace is the active one, so a workspace switch, as
+  // ProjectLayout makes to follow a link into another workspace's project,
+  // hides the old workspace's until the new one's arrives (#379 bug 181).
+  const [readStatus, setReadStatus] = useState<{ orgId: string; status: WorkerStatus } | null>(null);
+  const workerStatus = readStatus?.orgId === activeOrgId ? readStatus.status : null;
   const [statusFilter, setStatusFilter] = useState('all');
   const [pendingCount, setPendingCount] = useState(0);
   const [showProposals, setShowProposals] = useState(true);
   const [showConnect, setShowConnect] = useState(false);
-  const [error, setError] = useState('');
+  // The last error and the project it was raised for: it shows while that
+  // project is on screen, so a switch of project hides the old project's
+  // error (#379 bug 180).
+  const [raised, setRaised] = useState<{ projectId: string; message: string } | null>(null);
+  const error = raised?.projectId === projectId ? raised.message : '';
 
   const selectedRunId = searchParams.get('run');
   useCloseRunOnSwitch(projectId);
@@ -67,20 +76,22 @@ export const AgentRunsPage: React.FC = () => {
         .then((res) => {
           if (!runsCurrent()) return;
           setListed({ projectId, runs: res.data || [] });
-          setError('');
+          setRaised(null);
         })
         .catch((err: any) => {
-          if (runsCurrent()) setError(err.response?.data?.error || err.message || 'Failed to load runs');
+          if (!runsCurrent()) return;
+          setRaised({ projectId, message: err.response?.data?.error || err.message || 'Failed to load runs' });
         });
       if (activeOrgId) {
         const statusCurrent = statusGuard.next();
         workerStatusAPI
           .get(activeOrgId)
           .then((res) => {
-            if (statusCurrent()) setWorkerStatus(res.data);
+            if (statusCurrent()) setReadStatus({ orgId: activeOrgId, status: res.data });
           })
           .catch(() => {
-            // Banner data is best-effort; keep the last known status on error.
+            // Banner data is best-effort; keep the workspace's last known
+            // status on error.
           });
       }
     };
@@ -140,7 +151,7 @@ export const AgentRunsPage: React.FC = () => {
         <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
+      <ErrorBanner message={error} onDismiss={() => setRaised(null)} style={{ marginBottom: 8 }} />
 
       {workerStatus &&
         workerStatus.queue.queued > 0 &&
@@ -184,9 +195,13 @@ export const AgentRunsPage: React.FC = () => {
         <RunnerConnectPrompt
           orgId={activeOrgId}
           onClose={() => setShowConnect(false)}
-          reason={`${workerStatus?.queue.queued || 0} queued run${
-            (workerStatus?.queue.queued || 0) === 1 ? ' is' : 's are'
-          } waiting for a runner.`}
+          // Until the workspace's runner status arrives, as after a switch
+          // that hides the old one's (#379 bug 181), the prompt gives its own.
+          reason={
+            workerStatus
+              ? `${workerStatus.queue.queued} queued run${workerStatus.queue.queued === 1 ? ' is' : 's are'} waiting for a runner.`
+              : undefined
+          }
         />
       )}
 
