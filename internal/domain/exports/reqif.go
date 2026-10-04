@@ -319,6 +319,11 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 	if ts.IsZero() {
 		ts = time.Now()
 	}
+	// lastChange, the export's time, is the header's CREATION-TIME and the
+	// LAST-CHANGE of what OpenV records no change time for: the datatypes,
+	// the spec types and the specification. A SPEC-OBJECT, its
+	// SPEC-HIERARCHY entry and a SPEC-RELATION carry the last change of the
+	// artifact or link itself (reqifLastChange).
 	lastChange := ts.UTC().Format(time.RFC3339)
 
 	// 1. Enum datatypes, one per enum attribute definition (dedup by key,
@@ -578,7 +583,7 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 		}
 		specObjects = append(specObjects, xSpecObject{
 			Identifier:   a.ID,
-			LastChange:   lastChange,
+			LastChange:   reqifLastChange(a.UpdatedAt, lastChange),
 			StringValues: stringVals,
 			XHTMLValues:  xhtmlVals,
 			EnumValues:   enumVals,
@@ -598,7 +603,7 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 		}
 		specRelations = append(specRelations, xSpecRelation{
 			Identifier: l.ID,
-			LastChange: lastChange,
+			LastChange: reqifLastChange(l.UpdatedAt, lastChange),
 			TypeRef:    "SRT-" + reqifSanitizeID(l.Type),
 			SourceRef:  l.FromID,
 			TargetRef:  l.ToID,
@@ -674,6 +679,16 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// reqifLastChange is an object's LAST-CHANGE: the time it last changed, or
+// fallback, the export's time, when it records none (a snapshot older than
+// the field).
+func reqifLastChange(changed time.Time, fallback string) string {
+	if changed.IsZero() {
+		return fallback
+	}
+	return changed.UTC().Format(time.RFC3339)
+}
+
 // buildHierarchy turns the artifact parent_id relation into a SPEC-HIERARCHY
 // forest. Roots are artifacts with no parent (or a parent outside the export).
 // Children are ordered by SortOrder then original order, and a visited guard
@@ -716,7 +731,7 @@ func buildHierarchy(artifactList []*artifacts.Artifact, objectExists map[string]
 			visited[n.a.ID] = true
 			sh := xSpecHierarchy{
 				Identifier: "SH-" + n.a.ID,
-				LastChange: lastChange,
+				LastChange: reqifLastChange(n.a.UpdatedAt, lastChange),
 				ObjectRef:  n.a.ID,
 			}
 			if kids := childrenOf[n.a.ID]; len(kids) > 0 {
