@@ -314,9 +314,9 @@ func TestProjectInfoRepositoryFindByID(t *testing.T) {
 }
 
 // The description column takes NULL, which no write of the repository
-// stores, and every read of the table fails on such a row: GetByID and the
-// export side's lookup, and every list it falls in, each with the scan's
-// error, wrapped or not.
+// stores, and every read of the table reads such a row's description as ""
+// (#379 bug 87; it used to fail the read with the scan's error): GetByID and
+// the export side's lookup, and every list it falls in.
 func TestProjectRepositoryReadsANullDescription(t *testing.T) {
 	db := rtDB(t)
 	repo := NewProjectRepository(db)
@@ -328,24 +328,32 @@ func TestProjectRepositoryReadsANullDescription(t *testing.T) {
 	rtSeed(t, db, `INSERT INTO projects (id, org_id, name, parent_project_id) VALUES ($1, $2, 'Null description', $3)`,
 		nullID, orgID, parentID)
 
-	const scanNull = `converting NULL to string is unsupported`
 	got, err := repo.GetByID(nullID)
-	if got != nil || err == nil || !strings.HasPrefix(err.Error(), "failed to retrieve project: ") || !strings.Contains(err.Error(), scanNull) {
-		t.Errorf("GetByID of a NULL description: %v, %v; want the scan's error, wrapped as failed to retrieve project", got, err)
+	if err != nil || got == nil || got.Name != "Null description" || got.Description != "" {
+		t.Errorf("GetByID of a NULL description: %+v, %v; want the project, its description \"\"", got, err)
 	}
-	for name, list := range map[string]func() ([]*projects.Project, error){
-		"GetAll":       repo.GetAll,
-		"ListByOrg":    func() ([]*projects.Project, error) { return repo.ListByOrg(orgID) },
-		"ListChildren": func() ([]*projects.Project, error) { return repo.ListChildren(parentID) },
+	for name, c := range map[string]struct {
+		list func() ([]*projects.Project, error)
+		n    int
+	}{
+		"GetAll":       {repo.GetAll, 2},
+		"ListByOrg":    {func() ([]*projects.Project, error) { return repo.ListByOrg(orgID) }, 2},
+		"ListChildren": {func() ([]*projects.Project, error) { return repo.ListChildren(parentID) }, 1},
 	} {
-		got, err := list()
-		if got != nil || err == nil || !strings.HasPrefix(err.Error(), "failed to scan project: ") || !strings.Contains(err.Error(), scanNull) {
-			t.Errorf("%s over a NULL description: %v, %v; want the scan's error, wrapped as failed to scan project", name, got, err)
+		list, err := c.list()
+		if err != nil || len(list) != c.n {
+			t.Errorf("%s over a NULL description: %d projects, %v; want %d", name, len(list), err, c.n)
+			continue
+		}
+		for _, p := range list {
+			if p.ID == nullID && p.Description != "" {
+				t.Errorf("%s read a NULL description as %q, want \"\"", name, p.Description)
+			}
 		}
 	}
 	info, err := NewProjectInfoRepository(db).FindByID(nullID)
-	if info != nil || err == nil || strings.HasPrefix(err.Error(), "failed") || !strings.Contains(err.Error(), scanNull) {
-		t.Errorf("the export lookup of a NULL description: %+v, %v; want the scan's error as it came", info, err)
+	if err != nil || info == nil || info.Name != "Null description" || info.Description != "" {
+		t.Errorf("the export lookup of a NULL description: %+v, %v; want the project, its description \"\"", info, err)
 	}
 }
 
