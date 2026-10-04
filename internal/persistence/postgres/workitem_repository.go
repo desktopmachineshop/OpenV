@@ -3,6 +3,8 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"log/slog"
 
 	"github.com/lib/pq"
 
@@ -119,15 +121,29 @@ func scanWorkItem(scan func(dest ...interface{}) error) (*workitems.WorkItem, er
 		return nil, err
 	}
 	item.DueDate = inUTC(item.DueDate)
-
-	item.ArtifactIDs = []string{}
-	if len(artifactIDsJSON) > 0 {
-		if err := json.Unmarshal(artifactIDsJSON, &item.ArtifactIDs); err != nil {
-			return nil, err
-		}
-	}
+	item.ArtifactIDs = scanArtifactIDs(item.ID, artifactIDsJSON)
 
 	return item, nil
+}
+
+// scanArtifactIDs reads a work item's artifact_ids, which Save and Update
+// always write as a JSON list of strings. A value of any other shape, JSON
+// null among them, reads as no artifacts and is logged, once for each read
+// of the item, as the agent repository reads its tools: one malformed item
+// used to fail its own read and every list of its project, the whole board
+// (#379 bug 92).
+func scanArtifactIDs(itemID string, data []byte) []string {
+	var ids []string
+	err := json.Unmarshal(data, &ids)
+	if err == nil && ids != nil {
+		return ids
+	}
+	if err == nil {
+		err = errors.New("not a list")
+	}
+	slog.Warn("work item: artifact_ids is not a list of artifact ids; reading it as none",
+		"work_item_id", itemID, "error", err)
+	return []string{}
 }
 
 // FindByID retrieves a work item by ID
@@ -180,8 +196,11 @@ func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkI
 }
 
 // ListBySourceChatterIDs retrieves the work items raised from the given
-// notes. One query for a whole notes panel: the alternative is a lookup per
-// note, which is what makes a comment feed slow once it is long.
+// notes, oldest first by created_at, as the board and the activity feed
+// break their ties, and then by id, so a note with several items lists
+// them in one order every time (#379 bug 92: no ORDER BY). One query for a
+// whole notes panel: the alternative is a lookup per note, which is what
+// makes a comment feed slow once it is long.
 func (r *WorkItemRepository) ListBySourceChatterIDs(chatterIDs []string) ([]*workitems.WorkItem, error) {
 	if len(chatterIDs) == 0 {
 		return nil, nil
@@ -191,6 +210,7 @@ func (r *WorkItemRepository) ListBySourceChatterIDs(chatterIDs []string) ([]*wor
 		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
 		FROM work_items
 		WHERE source_chatter_id = ANY($1)
+		ORDER BY created_at ASC, id ASC
 	`
 
 	rows, err := r.db.Query(query, pq.Array(chatterIDs))

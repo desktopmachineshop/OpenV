@@ -242,6 +242,89 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   holds, "Version 2", and no longer loads the live artifact's history to
   count it. Live, the header reads as before.
 
+- **A PDF's table of contents names the right pages, with no blank page
+  after it.** A PDF download or report with a table of contents had an
+  empty page after the contents, and every entry named the page before the
+  one its section starts on. The blank page is gone, and each entry names
+  the page its section is on.
+
+- **A requirement refined from another project is named in the PDF and
+  Word traceability tables.** When a requirement of another project refined
+  one of yours, a PDF or Word download listed it in the traceability table
+  by a long internal id. It is now named by its project, reference and
+  title, as in "Landing gear / REQ-12 Brake within 2 m".
+
+- **A project's description keeps its angle brackets on the PDF and Word
+  covers.** Text in angle brackets in a project's description, such as
+  `<pump>`, disappeared from the cover of a PDF or Word download, because
+  the description was read as Markdown. The cover now shows the
+  description as you typed it, as the app does, with its paragraphs and
+  line breaks.
+
+- **Links say when they were made.** A link's `valid_from` read
+  0001-01-01T00:00:00Z in a project's JSON export, in the links an artifact
+  shows and in the record of links each artifact version keeps for its
+  history. It now reads the time the link was made. Baselines and artifact
+  versions captured from now on keep the right time; earlier ones keep what
+  they were captured with.
+
+- **A ReqIF document says when each requirement last changed.** Every
+  `LAST-CHANGE` in a ReqIF export or download was the time of the export,
+  so a tool such as DOORS or Polarion that merges ReqIF by it took every
+  requirement and link as changed each time. Each requirement, its place in
+  the outline and each link now carry the time it last changed; the type
+  definitions, which OpenV keeps no such time for, still carry the
+  export's.
+
+- **Importing a project keeps review status, suspect links and a
+  baseline's attributes.** Importing an OpenV JSON export could lose an
+  artifact's review status, brought every suspect link back as confirmed,
+  dropped what was stored on each link, and dropped the attribute
+  definitions a baseline's JSON download carries. The import now keeps each
+  artifact's status and each link's suspect flag and attributes, and gives
+  the new project the baseline's attribute definitions as its own, unless
+  your workspace already defines the same attribute; it never changes your
+  workspace's definitions. Imported artifacts still start at version 1.
+
+- **A crew no longer points at a node that is gone or belongs to another
+  crew.** Deleting a crew's entry node, or the agent it placed, left the
+  crew pointing at a node that no longer existed, and launching the crew
+  failed with "entry node not found in team". The crew is now left with no
+  entry node, as a new crew has, and a launch says "team has no entry
+  node" until you pick one with *Set as entry node*; nothing else about
+  the crew changes. A connection can only join two nodes of its own crew.
+  When this update is installed, a crew whose entry node was gone or in
+  another crew has its entry node cleared, and any connection that joined
+  another crew's nodes, which could stop you adding connections to its
+  crew, is removed.
+
+- **One damaged card no longer stops the board from loading.** A to-do
+  whose stored list of linked artifacts was not in the form OpenV writes
+  made the project's whole board and to-do list fail to load, and the card
+  itself fail to open. Such a card now loads as one with no linked
+  artifacts, and the server log names it so an operator can repair it.
+
+- **A note with more than one to-do shows the newest.** In the notes
+  beside an artifact, a note from which several to-dos had been raised
+  showed one of them, and which one could change from one visit to the
+  next. It now always shows the most recently raised.
+
+- **Agents, project members and team access list in the same
+  alphabetical order on every server.** Depending on how the server's
+  database was set up, the agents page, a project's members and the teams
+  with access to a project could list every name that starts with a
+  capital before any that starts with a small letter, so "Bravo" came
+  before "alpha", and two agents or teams with one name could swap places
+  between visits. These lists are now alphabetical without regard to case
+  everywhere, a name in capitals before the same name in small letters,
+  and entries with the same name always come in the same order.
+
+- **Adding a member to a project deleted a moment before says the project
+  was not found.** Adding someone to a project, or changing a member's
+  role, just as the project was deleted answered "failed to add member" or
+  "failed to update member role", as if the server had failed. It now
+  answers "project not found", as opening a deleted project does.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

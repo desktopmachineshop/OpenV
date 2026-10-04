@@ -326,3 +326,76 @@ func TestAReqIFFileLeavesOutAValueOutsideItsAttributesList(t *testing.T) {
 		t.Error("with no definitions, the value should be written as text")
 	}
 }
+
+// TestReqIFLastChangeIsTheObjectsOwn: each SPEC-OBJECT, its SPEC-HIERARCHY
+// entry and each SPEC-RELATION carry the last change of the artifact or link
+// they stand for, not the export's time, so a tool that merges ReqIF by
+// LAST-CHANGE sees only what changed (#379 bug 70). The header's
+// CREATION-TIME stays the export's time, and an artifact with no recorded
+// change falls back to it.
+func TestReqIFLastChangeIsTheObjectsOwn(t *testing.T) {
+	data := reqifFixture()
+	changed := map[string]time.Time{
+		"a1": time.Date(2026, 3, 1, 9, 15, 0, 0, time.UTC),
+		"a2": time.Date(2026, 4, 2, 10, 30, 0, 0, time.FixedZone("CEST", 2*60*60)),
+		// a3 has none: a snapshot that predates the field.
+		"l1": time.Date(2026, 5, 3, 11, 45, 0, 0, time.UTC),
+	}
+	for _, a := range data.Artifacts {
+		a.UpdatedAt = changed[a.ID]
+	}
+	for _, l := range data.Links {
+		l.UpdatedAt = changed[l.ID]
+	}
+	exported := data.ExportedAt.UTC().Format(time.RFC3339)
+	want := func(id string) string {
+		if ts, ok := changed[id]; ok {
+			return ts.UTC().Format(time.RFC3339)
+		}
+		return exported
+	}
+
+	raw, err := buildReqIF(data)
+	if err != nil {
+		t.Fatalf("buildReqIF: %v", err)
+	}
+	var doc xReqIF
+	if err := xml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	content := doc.CoreContent.ReqIFContent
+	if got := doc.Header.ReqIFHeader.CreationTime; got != exported {
+		t.Errorf("CREATION-TIME = %s, want the export's time %s", got, exported)
+	}
+	for _, so := range content.SpecObjects.SpecObjects {
+		if so.LastChange != want(so.Identifier) {
+			t.Errorf("SPEC-OBJECT %s LAST-CHANGE = %s, want %s", so.Identifier, so.LastChange, want(so.Identifier))
+		}
+	}
+	for _, sr := range content.SpecRelations.SpecRelations {
+		if sr.LastChange != want(sr.Identifier) {
+			t.Errorf("SPEC-RELATION %s LAST-CHANGE = %s, want %s", sr.Identifier, sr.LastChange, want(sr.Identifier))
+		}
+	}
+	var walk func(items []xSpecHierarchy)
+	seen := 0
+	walk = func(items []xSpecHierarchy) {
+		for _, sh := range items {
+			seen++
+			if sh.LastChange != want(sh.ObjectRef) {
+				t.Errorf("SPEC-HIERARCHY %s LAST-CHANGE = %s, want its object's %s", sh.Identifier, sh.LastChange, want(sh.ObjectRef))
+			}
+			if sh.Children != nil {
+				walk(sh.Children.Items)
+			}
+		}
+	}
+	for _, spec := range content.Specifications.Specifications {
+		if spec.Children != nil {
+			walk(spec.Children.Items)
+		}
+	}
+	if seen != len(data.Artifacts) {
+		t.Errorf("walked %d SPEC-HIERARCHY entries, want one per artifact (%d)", seen, len(data.Artifacts))
+	}
+}

@@ -66,15 +66,22 @@ func agentJSONFields(a *agents.Agent) ([]byte, []byte, error) {
 // Save inserts an agent registry row. A unique-index violation on
 // (org_id, slug) — the loser of a concurrent create race — is reported as
 // agents.ErrSlugExists so callers can answer with a conflict instead of a
-// raw database error.
+// raw database error. An agent with no workspace is
+// agents.ErrWorkspaceRequired: stored with a NULL org_id it was listed
+// nowhere, and the unique index, whose NULLs are distinct, let two such
+// agents share a slug (#379 bug 89). The service refuses one before it
+// writes a file; this keeps the registry from holding one at all.
 func (r *AgentRepository) Save(a *agents.Agent) error {
+	if a.OrgID == "" {
+		return agents.ErrWorkspaceRequired
+	}
 	toolsJSON, configJSON, err := agentJSONFields(a)
 	if err != nil {
 		return err
 	}
 	_, err = r.db.Exec(`
 		INSERT INTO agents (id, org_id, slug, name, description, provider, model, effort, allowed_tools, write_mode, repo_access, max_turns, timeout_seconds, config, locked, system_prompt, file_path, content_hash, synced_at, created_at, updated_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 	`, a.ID, a.OrgID, a.Slug, a.Name, a.Description, a.Provider, a.Model, a.Effort, toolsJSON, a.WriteMode, a.RepoAccess, a.MaxTurns, a.TimeoutSeconds, configJSON, a.Locked, a.SystemPrompt, a.FilePath, a.ContentHash, a.SyncedAt, a.CreatedAt, a.UpdatedAt)
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "idx_agents_org_slug" {
@@ -114,9 +121,13 @@ func (r *AgentRepository) FindBySlug(orgID, slug string) (*agents.Agent, error) 
 	return a, err
 }
 
-// List returns an org's agents ordered by name.
+// List returns an org's agents ordered by name, case-insensitively and
+// alike under any database collation: the name in small letters compared
+// byte by byte (COLLATE "C"), then the name itself so compared, then the
+// id, so agents of one name list in one order too (#379 bug 94).
 func (r *AgentRepository) List(orgID string) ([]*agents.Agent, error) {
-	rows, err := r.db.Query(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid ORDER BY name`, orgID)
+	rows, err := r.db.Query(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid
+		ORDER BY lower(name) COLLATE "C", name COLLATE "C", id`, orgID)
 	if err != nil {
 		return nil, err
 	}

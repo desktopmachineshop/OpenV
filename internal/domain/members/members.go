@@ -31,6 +31,11 @@ var ErrForbidden = errors.New("you do not have access to this project")
 // 404, as any lookup of an account no row has.
 var ErrUnknownUser = errors.New("user not found")
 
+// ErrUnknownProject flags a membership write for a project no row has, or
+// for an id that is not one: the project's not-found, which API handlers
+// answer 404 "project not found", as the project guard answers such an id.
+var ErrUnknownProject = errors.New("project not found")
+
 // ErrInvalidRole flags an unknown role name in a membership write. API
 // handlers use it to tell user-facing validation failures (400) apart from
 // repository failures (500), so wrap it with %w when adding new validations.
@@ -119,7 +124,7 @@ func (s *DefaultService) AddMember(projectID, userID, role string) error {
 	if !ValidRole(role) {
 		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
-	return s.repo.Upsert(&Member{ProjectID: projectID, UserID: userID, Role: role, CreatedAt: time.Now()})
+	return s.repo.Upsert(&Member{ProjectID: projectID, UserID: userID, Role: role, CreatedAt: time.Now().UTC()})
 }
 
 // RemoveMember removes a membership.
@@ -174,7 +179,7 @@ func (s *DefaultService) GrantTeam(projectID, orgTeamID, role string) error {
 	if !ValidRole(role) {
 		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
-	return s.repo.UpsertTeamGrant(&TeamGrant{ProjectID: projectID, OrgTeamID: orgTeamID, Role: role, CreatedAt: time.Now()})
+	return s.repo.UpsertTeamGrant(&TeamGrant{ProjectID: projectID, OrgTeamID: orgTeamID, Role: role, CreatedAt: time.Now().UTC()})
 }
 
 // RevokeTeam removes a team's project grant.

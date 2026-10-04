@@ -67,8 +67,8 @@ import (
 //     decode; the member workspace-wide (403) and pinned to P (?project_id,
 //     201);
 //   - launch, POST /crews/{id}/runs: a crew with no entry node, a crew whose
-//     entry node was removed (no foreign key keeps entry_node_id from
-//     dangling), the member without a project (403), a body that does not
+//     entry node was removed (the foreign key clears entry_node_id, so it
+//     has none), the member without a project (403), a body that does not
 //     decode, no prompt, then 201 in P as W's admin (a run with team_id and
 //     team_node_id, at the entry node's agent, and the tracking card's
 //     workitem.created), a worker key of W in P (201 with no launched_by: the
@@ -392,8 +392,8 @@ func crewsTeamsTour(tr *tour) {
 	tr.step("launch the P crew, which has no entry node: 400", m, launch, id("pcrew"),
 		jsonBody(`{"prompt":"Plan P."}`))
 	tr.setup("remove the imported crew's entry node", o, removeNode, id("imported.lead"))
-	tr.step("the imported crew keeps its entry_node_id, dangling: no foreign key", o, get, id("imported"))
-	tr.step("launch it: 400, the entry node is not among its nodes", o, launch, id("imported"),
+	tr.step("the imported crew has no entry_node_id: the foreign key cleared it with the node", o, get, id("imported"))
+	tr.step("launch it: 400, it has no entry node", o, launch, id("imported"),
 		jsonBody(`{"prompt":"Plan W."}`))
 	tr.step("the member launches the workspace-wide crew with no project: 403", m, launch, id("crew"),
 		jsonBody(`{"prompt":"Plan W."}`))

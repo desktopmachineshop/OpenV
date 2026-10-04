@@ -52,10 +52,10 @@ links: 139 matched by ends and type, 0 in with an end outside the document, 0 in
   created_at: the round trip's clock 139
   from_id: remapped to the new ids 139
   id: a new id 139
-  suspect: equal 110, set to false 29
+  suspect: equal 139
   to_id: remapped to the new ids 139
   type: equal 139
   updated_at: the round trip's clock 139
-  valid_from: equal 139
+  valid_from: the round trip's clock 139
   valid_to: equal 139
   version: equal 139

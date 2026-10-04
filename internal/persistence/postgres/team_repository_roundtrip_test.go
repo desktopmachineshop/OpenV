@@ -52,22 +52,25 @@ func rtSeedAgent(t *testing.T, db *sql.DB, id, orgID, slug string) {
 
 // A crew reads back every field as saved: its times as TIMESTAMP columns
 // keep them (the wall clock, to the microsecond, in lib/pq's zone at offset
-// 0), an empty workspace as NULL that reads back "", and no project or entry
-// node as NULL that reads back nil. UpdateTeam rewrites name, description,
-// project, entry node, the default flag and updated_at, never the workspace
-// or created_at, and an id no row has is no error. A crew no row has, and a
-// malformed id, read as no crew and no error, never a sentinel. An id a crew
-// has, a malformed workspace id, and an empty project or entry node id
-// (which, unlike an empty workspace, does not become NULL) are Postgres's
-// refusal; so is a malformed id in UpdateTeam, MarkDefault and DeleteTeam,
-// while deleting a crew no row has is no error.
+// 0), and no project or entry node as NULL that reads back nil. UpdateTeam
+// rewrites name, description, project, entry node, the default flag and
+// updated_at, never the workspace or created_at, and an id no row has is no
+// error. A crew no row has, and a malformed id, read as no crew and no
+// error, never a sentinel. An id a crew has, a malformed workspace id, and
+// an empty workspace, project or entry node id are Postgres's refusal (#379
+// bug 91: an empty workspace became NULL, where an empty project or entry
+// node never did); so is a malformed id in UpdateTeam, MarkDefault and
+// DeleteTeam, while deleting a crew no row has is no error. An entry node no
+// row has is the foreign key's refusal, in SaveTeam and UpdateTeam alike
+// (bug 91: it was stored).
 func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
-	orgID, projectID, entryID := uuid.New().String(), uuid.New().String(), uuid.New().String()
+	orgID, projectID, agentID := uuid.New().String(), uuid.New().String(), uuid.New().String()
+	rtSeedAgent(t, db, agentID, orgID, "lead")
 
 	saved := &teams.Team{ID: uuid.New().String(), OrgID: orgID, Name: "Requirements crew",
-		Description: "Drafts, reviews and traces", ProjectID: &projectID, EntryNodeID: &entryID,
+		Description: "Drafts, reviews and traces", ProjectID: &projectID,
 		CreatedAt: rtAt(0), UpdatedAt: rtAt(1).In(rtCEST)}
 	if err := repo.SaveTeam(saved); err != nil {
 		t.Fatalf("SaveTeam: %v", err)
@@ -83,24 +86,27 @@ func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 	}
 	rtWantSame(t, "a crew", rtTeamSansTimes(got), rtTeamSansTimes(saved))
 
-	bare := &teams.Team{ID: uuid.New().String(), Name: "Bare", CreatedAt: rtAt(2), UpdatedAt: rtAt(2)}
+	bare := &teams.Team{ID: uuid.New().String(), OrgID: orgID, Name: "Bare", CreatedAt: rtAt(2), UpdatedAt: rtAt(2)}
 	if err := repo.SaveTeam(bare); err != nil {
-		t.Fatalf("SaveTeam with no workspace: %v", err)
+		t.Fatalf("SaveTeam with no project: %v", err)
 	}
-	var orgNull, projectNull, entryNull bool
-	if err := db.QueryRow(`SELECT org_id IS NULL, project_id IS NULL, entry_node_id IS NULL FROM agent_teams WHERE id = $1`,
-		bare.ID).Scan(&orgNull, &projectNull, &entryNull); err != nil || !orgNull || !projectNull || !entryNull {
-		t.Errorf("a crew with no workspace, project or entry node stored NULLs %v %v %v (%v), want all three NULL",
-			orgNull, projectNull, entryNull, err)
+	var projectNull, entryNull bool
+	if err := db.QueryRow(`SELECT project_id IS NULL, entry_node_id IS NULL FROM agent_teams WHERE id = $1`,
+		bare.ID).Scan(&projectNull, &entryNull); err != nil || !projectNull || !entryNull {
+		t.Errorf("a crew with no project or entry node stored NULLs %v %v (%v), want both NULL", projectNull, entryNull, err)
 	}
 	if got, err := repo.FindTeamByID(bare.ID); err != nil || got == nil {
 		t.Errorf("FindTeamByID(bare): %v, %v", got, err)
 	} else {
-		rtWantSame(t, "a crew with no workspace, project or entry node", rtTeamSansTimes(got), rtTeamSansTimes(bare))
+		rtWantSame(t, "a crew with no project or entry node", rtTeamSansTimes(got), rtTeamSansTimes(bare))
 	}
 
 	t.Run("update", func(t *testing.T) {
-		newEntry := uuid.New().String()
+		lead := &teams.Node{ID: uuid.New().String(), TeamID: saved.ID, AgentID: agentID, Label: "Lead", CreatedAt: rtAt(3)}
+		if err := repo.SaveNode(lead); err != nil {
+			t.Fatal(err)
+		}
+		newEntry := lead.ID
 		changed := *got
 		changed.OrgID = uuid.New().String() // not a column UpdateTeam writes
 		changed.Name, changed.Description = "Renamed crew", ""
@@ -127,16 +133,34 @@ func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 			t.Errorf("UpdateTeam of a crew no row has wrote one: %v, %v", found, err)
 		}
 		rtWantRefused(t, "UpdateTeam of a malformed id", repo.UpdateTeam(&teams.Team{ID: malformed, Name: "x"}))
+
+		gone := uuid.New().String()
+		changed.EntryNodeID = &gone
+		rtWantPQ(t, "UpdateTeam to an entry node no row has", repo.UpdateTeam(&changed), "23503", "agent_teams_entry_node_id_fkey")
+		if after, err := repo.FindTeamByID(saved.ID); err != nil || after == nil || after.EntryNodeID == nil || *after.EntryNodeID != newEntry {
+			t.Errorf("a crew after a refused entry node: %v, %v; want its entry node kept", after, err)
+		}
 	})
 
 	t.Run("refused saves", func(t *testing.T) {
-		rtWantPQ(t, "SaveTeam of an id a crew has", repo.SaveTeam(&teams.Team{ID: saved.ID, Name: "Again"}), "23505", "agent_teams_pkey")
-		// The workspace goes through NULLIF, the project and entry node do
-		// not: an empty one is text Postgres refuses as a uuid.
+		rtWantPQ(t, "SaveTeam of an id a crew has", repo.SaveTeam(&teams.Team{ID: saved.ID, OrgID: orgID, Name: "Again"}),
+			"23505", "agent_teams_pkey")
+		// An empty workspace, project or entry node id is text Postgres
+		// refuses as a uuid: none becomes NULL.
 		empty := ""
-		rtWantRefused(t, "SaveTeam with an empty project id", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), Name: "x", ProjectID: &empty}))
-		rtWantRefused(t, "SaveTeam with an empty entry node id", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), Name: "x", EntryNodeID: &empty}))
+		rtWantRefused(t, "SaveTeam with no workspace", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), Name: "x"}))
+		rtWantRefused(t, "SaveTeam with an empty project id", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
+			Name: "x", ProjectID: &empty}))
+		rtWantRefused(t, "SaveTeam with an empty entry node id", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
+			Name: "x", EntryNodeID: &empty}))
 		rtWantRefused(t, "SaveTeam with a malformed workspace id", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), Name: "x", OrgID: malformed}))
+		gone := uuid.New().String()
+		rtWantPQ(t, "SaveTeam with an entry node no row has", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
+			Name: "x", EntryNodeID: &gone}), "23503", "agent_teams_entry_node_id_fkey")
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM agent_teams`).Scan(&n); err != nil || n != 2 {
+			t.Errorf("crews after the refused saves: %d (%v), want the two saved", n, err)
+		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -168,7 +192,8 @@ func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 // default of the workspace as they were. FindDefaultTeam answers the oldest
 // default crew of the workspace by created_at, and no crew and no error for
 // a workspace with none, an empty workspace id (even beside a default crew
-// with no workspace) and a malformed one.
+// with no workspace, a row from before workspaces that SaveTeam no longer
+// writes) and a malformed one.
 func TestTeamRepositoryDefaultTeam(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
@@ -189,7 +214,8 @@ func TestTeamRepositoryDefaultTeam(t *testing.T) {
 	earlier := save("earlier", orgID, 1, false)
 	save("plain", orgID, 0, false)
 	save("another workspace's default", otherOrg, -10, true)
-	save("no workspace's default", "", -20, true)
+	rtSeed(t, db, `INSERT INTO agent_teams (id, name, is_default, created_at, updated_at) VALUES ($1, 'no workspace''s default', TRUE, $2, $2)`,
+		uuid.New().String(), rtAt(-20))
 
 	if found, err := repo.FindDefaultTeam(orgID); found != nil || err != nil {
 		t.Errorf("FindDefaultTeam with no default yet: %v, %v; want nil, nil", found, err)
@@ -232,8 +258,9 @@ func TestTeamRepositoryDefaultTeam(t *testing.T) {
 // project, every crew of the workspace; with a project no row has, or a
 // malformed one, the workspace-wide crews. Crews stamped the same instant
 // tie, in no set order. An empty workspace id matches nothing, not even a
-// crew with no workspace, and a list that matches nothing is nil; a
-// malformed workspace id is Postgres's refusal.
+// crew with no workspace (a row from before workspaces, which SaveTeam no
+// longer writes), and a list that matches nothing is nil; a malformed
+// workspace id is Postgres's refusal.
 func TestTeamRepositoryListTeams(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
@@ -252,13 +279,14 @@ func TestTeamRepositoryListTeams(t *testing.T) {
 		{"tie, the project's", orgID, &project, 5},
 		{"tie, workspace-wide", orgID, nil, 5},
 		{"another workspace's", otherOrg, nil, 0},
-		{"no workspace's", "", nil, 0},
 	} {
 		if err := repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: c.org, Name: c.name, ProjectID: c.project,
 			CreatedAt: rtAt(c.at), UpdatedAt: rtAt(c.at)}); err != nil {
 			t.Fatalf("SaveTeam %q: %v", c.name, err)
 		}
 	}
+	rtSeed(t, db, `INSERT INTO agent_teams (id, name, created_at, updated_at) VALUES ($1, 'no workspace''s', $2, $2)`,
+		uuid.New().String(), rtAt(0))
 
 	all, err := repo.ListTeams(orgID, "")
 	if err != nil {
@@ -306,8 +334,9 @@ func TestTeamRepositoryListTeams(t *testing.T) {
 // a node no row has, or a malformed id, reads as no node and no error (not
 // teams.ErrNodeNotFound). An agent node with no agent, or naming an agent or
 // crew no row has, is Postgres's refusal, as is a malformed id in any write.
-// Deleting a node takes the edges that touch it and leaves a crew's
-// entry_node_id naming it.
+// Deleting a node takes the edges that touch it and clears the entry node
+// of the crew it was the entry node of, leaving the rest of the crew as it
+// was (#379 bug 91: entry_node_id went on naming the node).
 func TestTeamRepositoryNodeRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
@@ -458,8 +487,10 @@ func TestTeamRepositoryNodeRoundTrip(t *testing.T) {
 		if found, err := repo.FindEdgeByID(edge.ID); found != nil || err != nil {
 			t.Errorf("an edge from a deleted node: %v, %v; want it gone with the node", found, err)
 		}
-		if after, err := repo.FindTeamByID(crew.ID); err != nil || after == nil || after.EntryNodeID == nil || *after.EntryNodeID != entry {
-			t.Errorf("the crew whose entry node was deleted: %v, %v; want its entry_node_id still naming the node", after, err)
+		if after, err := repo.FindTeamByID(crew.ID); err != nil || after == nil || after.EntryNodeID != nil {
+			t.Errorf("the crew whose entry node was deleted: %v, %v; want no entry node", after, err)
+		} else {
+			rtWantTimestamp(t, "updated_at of the crew whose entry node was deleted", after.UpdatedAt, rtAt(9))
 		}
 		if err := repo.DeleteNode(agentNode.ID); err != nil {
 			t.Errorf("DeleteNode of a node no row has: %v, want no error", err)
@@ -474,9 +505,9 @@ func TestTeamRepositoryNodeRoundTrip(t *testing.T) {
 // no set order), a crew with none lists nil, and an edge no row has, or a
 // malformed id, reads as no edge and no error. An edge the crew has (same
 // nodes and type), a node no row has and a malformed id are Postgres's
-// refusal. Nothing checks that an edge's nodes are its crew's: an edge
-// between another crew's nodes is stored and listed, and goes when that
-// crew does. Deleting a crew takes its nodes and edges.
+// refusal, and a node of another crew is the refusal a node no row has is
+// (#379 bug 91: an edge between another crew's nodes was stored and
+// listed). Deleting a crew takes its nodes and edges.
 func TestTeamRepositoryEdgeRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
@@ -554,12 +585,18 @@ func TestTeamRepositoryEdgeRoundTrip(t *testing.T) {
 			FromNodeID: uuid.New().String(), ToNodeID: writer, EdgeType: teams.EdgeReviews}), "23503", "agent_team_edges_from_node_id_fkey")
 		rtWantRefused(t, "SaveEdge from a malformed node id", repo.SaveEdge(&teams.Edge{ID: uuid.New().String(), TeamID: crew.ID,
 			FromNodeID: malformed, ToNodeID: writer, EdgeType: teams.EdgeReviews}))
+		rtWantPQ(t, "SaveEdge from another crew's node", repo.SaveEdge(&teams.Edge{ID: uuid.New().String(), TeamID: crew.ID,
+			FromNodeID: otherA, ToNodeID: writer, EdgeType: teams.EdgeReviews}), "23503", "agent_team_edges_from_node_id_fkey")
+		rtWantPQ(t, "SaveEdge to another crew's node", repo.SaveEdge(&teams.Edge{ID: uuid.New().String(), TeamID: crew.ID,
+			FromNodeID: lead, ToNodeID: otherB, EdgeType: teams.EdgeReviews}), "23503", "agent_team_edges_to_node_id_fkey")
+		rtWantPQ(t, "SaveEdge between another crew's nodes", repo.SaveEdge(&teams.Edge{ID: uuid.New().String(), TeamID: crew.ID,
+			FromNodeID: otherA, ToNodeID: otherB, EdgeType: teams.EdgeDelegates}), "23503", "")
 	})
 
-	stray := &teams.Edge{ID: uuid.New().String(), TeamID: crew.ID, FromNodeID: otherA, ToNodeID: otherB,
+	otherEdge := &teams.Edge{ID: uuid.New().String(), TeamID: other.ID, FromNodeID: otherA, ToNodeID: otherB,
 		EdgeType: teams.EdgeDelegates, CreatedAt: rtAt(2)}
-	if err := repo.SaveEdge(stray); err != nil {
-		t.Fatalf("SaveEdge between another crew's nodes: %v, want it stored", err)
+	if err := repo.SaveEdge(otherEdge); err != nil {
+		t.Fatalf("SaveEdge between the other crew's own nodes: %v", err)
 	}
 
 	t.Run("list", func(t *testing.T) {
@@ -571,10 +608,14 @@ func TestTeamRepositoryEdgeRoundTrip(t *testing.T) {
 		for _, e := range edges {
 			ids = append(ids, e.ID)
 		}
-		rtWantOrder(t, "a crew's edges", ids, []string{reviews.ID, stray.ID}, []string{delegates.ID})
+		rtWantOrder(t, "a crew's edges", ids, []string{reviews.ID}, []string{delegates.ID})
 
-		list, err := repo.ListEdgesByTeam(other.ID)
-		rtWantNil(t, "the edges of a crew with none of its own", list, err)
+		empty := &teams.Team{ID: uuid.New().String(), OrgID: orgID, Name: "Empty", CreatedAt: rtAt(0), UpdatedAt: rtAt(0)}
+		if err := repo.SaveTeam(empty); err != nil {
+			t.Fatal(err)
+		}
+		list, err := repo.ListEdgesByTeam(empty.ID)
+		rtWantNil(t, "the edges of a crew with none", list, err)
 		list, err = repo.ListEdgesByTeam(uuid.New().String())
 		rtWantNil(t, "the edges of a crew no row has", list, err)
 		list, err = repo.ListEdgesByTeam(malformed)
@@ -607,8 +648,8 @@ func TestTeamRepositoryEdgeRoundTrip(t *testing.T) {
 		if err := repo.DeleteTeam(other.ID); err != nil {
 			t.Fatal(err)
 		}
-		if found, err := repo.FindEdgeByID(stray.ID); found != nil || err != nil {
-			t.Errorf("an edge between a deleted crew's nodes: %v, %v; want it gone with them", found, err)
+		if found, err := repo.FindEdgeByID(otherEdge.ID); found != nil || err != nil {
+			t.Errorf("an edge of a deleted crew: %v, %v; want it gone with it", found, err)
 		}
 		if err := repo.DeleteTeam(crew.ID); err != nil {
 			t.Fatal(err)

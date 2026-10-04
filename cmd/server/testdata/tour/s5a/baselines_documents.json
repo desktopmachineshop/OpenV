@@ -216,7 +216,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"name\":\"B1 \\u003cv1\\u003e\",\"snapshot\":{\"exported_at\":\"<time@step 6>\",\"version\":\"1.0\",\"project_id\":\"<p>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 baselines\",\"project_description\":\"The project the tour's baselines and documents read.\",\"artifacts\":[{\"id\":\"<scope>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the specification covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer \\u003cfast\\u003e within **2 s**.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1},{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<records>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep records\",\"body\":\"The system shall keep a record of each answer.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Grace\",\"priority\":\"should\",\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<old>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Old rule\",\"body\":\"The system shall do the old thing.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"priority\":\"could\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<timing>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"links\":[{\"id\":\"<decomposes>\",\"from_id\":\"<answer>\",\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<verifies_answer>\",\"from_id\":\"<timing>\",\"to_id\":\"<answer>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":[{\"id\":\"<figure>\",\"artifact_id\":\"<answer>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"timing.png\",\"title\":\"Answer timing\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_timing.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"image\"},{\"id\":\"<datasheet>\",\"artifact_id\":\"<records>\",\"filename\":\"REQ-2-FIG-1.pdf\",\"original_filename\":\"records.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:2>_records.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-2-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"document\"}],\"product_profile\":{\"project_id\":\"<p>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 6>\"}},\"created_at\":\"<time@step 6>\",\"created_by\":\"<owner>\"}"
+        "{\"id\":\"<b1>\",\"project_id\":\"<p>\",\"name\":\"B1 \\u003cv1\\u003e\",\"snapshot\":{\"exported_at\":\"<time@step 6>\",\"version\":\"1.0\",\"project_id\":\"<p>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 baselines\",\"project_description\":\"The project the tour's baselines and documents read.\",\"artifacts\":[{\"id\":\"<scope>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the specification covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer \\u003cfast\\u003e within **2 s**.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1},{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<records>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep records\",\"body\":\"The system shall keep a record of each answer.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Grace\",\"priority\":\"should\",\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<old>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Old rule\",\"body\":\"The system shall do the old thing.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"priority\":\"could\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<timing>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"links\":[{\"id\":\"<decomposes>\",\"from_id\":\"<answer>\",\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<verifies_answer>\",\"from_id\":\"<timing>\",\"to_id\":\"<answer>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":[{\"id\":\"<figure>\",\"artifact_id\":\"<answer>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"timing.png\",\"title\":\"Answer timing\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_timing.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"image\"},{\"id\":\"<datasheet>\",\"artifact_id\":\"<records>\",\"filename\":\"REQ-2-FIG-1.pdf\",\"original_filename\":\"records.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:2>_records.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-2-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"document\"}],\"product_profile\":{\"project_id\":\"<p>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 6>\"}},\"created_at\":\"<time@step 6>\",\"created_by\":\"<owner>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -269,7 +269,7 @@
                     "to_id": "<answer>",
                     "type": "verifies",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   },
@@ -282,7 +282,7 @@
                     "to_id": "<records>",
                     "type": "decomposes-to",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -318,7 +318,7 @@
                     "to_id": "<records>",
                     "type": "decomposes-to",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -374,7 +374,7 @@
                     "to_id": "<answer>",
                     "type": "verifies",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -398,7 +398,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "created_at": "<time@before step 1>",
               "updated_at": "<time@before step 1>"
@@ -411,7 +411,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "created_at": "<time@before step 1>",
               "updated_at": "<time@before step 1>"
@@ -496,7 +496,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"name\":\"Baseline <datetime>\",\"snapshot\":{\"exported_at\":\"<time@step 7>\",\"version\":\"1.0\",\"project_id\":\"<p>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 baselines\",\"project_description\":\"The project the tour's baselines and documents read.\",\"artifacts\":[{\"id\":\"<scope>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the specification covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer \\u003cfast\\u003e within **2 s**.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1},{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<records>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep records\",\"body\":\"The system shall keep a record of each answer.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Grace\",\"priority\":\"should\",\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<old>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Old rule\",\"body\":\"The system shall do the old thing.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"priority\":\"could\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<timing>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"links\":[{\"id\":\"<decomposes>\",\"from_id\":\"<answer>\",\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<verifies_answer>\",\"from_id\":\"<timing>\",\"to_id\":\"<answer>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":[{\"id\":\"<figure>\",\"artifact_id\":\"<answer>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"timing.png\",\"title\":\"Answer timing\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_timing.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"image\"},{\"id\":\"<datasheet>\",\"artifact_id\":\"<records>\",\"filename\":\"REQ-2-FIG-1.pdf\",\"original_filename\":\"records.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:2>_records.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-2-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"document\"}],\"product_profile\":{\"project_id\":\"<p>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 6>\"}},\"created_at\":\"<time@step 7>\",\"created_by\":\"<owner>\"}"
+        "{\"id\":\"<b2>\",\"project_id\":\"<p>\",\"name\":\"Baseline <datetime>\",\"snapshot\":{\"exported_at\":\"<time@step 7>\",\"version\":\"1.0\",\"project_id\":\"<p>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 baselines\",\"project_description\":\"The project the tour's baselines and documents read.\",\"artifacts\":[{\"id\":\"<scope>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the specification covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer \\u003cfast\\u003e within **2 s**.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1},{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<records>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep records\",\"body\":\"The system shall keep a record of each answer.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<answer>\",\"id\":\"<decomposes>\",\"suspect\":false,\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Grace\",\"priority\":\"should\",\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<old>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Old rule\",\"body\":\"The system shall do the old thing.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"priority\":\"could\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<timing>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"links\":[{\"id\":\"<decomposes>\",\"from_id\":\"<answer>\",\"to_id\":\"<records>\",\"type\":\"decomposes-to\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<verifies_answer>\",\"from_id\":\"<timing>\",\"to_id\":\"<answer>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":[{\"id\":\"<figure>\",\"artifact_id\":\"<answer>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"timing.png\",\"title\":\"Answer timing\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_timing.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"image\"},{\"id\":\"<datasheet>\",\"artifact_id\":\"<records>\",\"filename\":\"REQ-2-FIG-1.pdf\",\"original_filename\":\"records.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:2>_records.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-2-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"document\"}],\"product_profile\":{\"project_id\":\"<p>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 6>\"}},\"created_at\":\"<time@step 7>\",\"created_by\":\"<owner>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -549,7 +549,7 @@
                     "to_id": "<answer>",
                     "type": "verifies",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   },
@@ -562,7 +562,7 @@
                     "to_id": "<records>",
                     "type": "decomposes-to",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -598,7 +598,7 @@
                     "to_id": "<records>",
                     "type": "decomposes-to",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -654,7 +654,7 @@
                     "to_id": "<answer>",
                     "type": "verifies",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -678,7 +678,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "created_at": "<time@before step 1>",
               "updated_at": "<time@before step 1>"
@@ -691,7 +691,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "created_at": "<time@before step 1>",
               "updated_at": "<time@before step 1>"
@@ -840,7 +840,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"links\": [{\"id\": \"<decomposes>\", \"type\": \"decomposes-to\", \"to_id\": \"<records>\", \"from_id\": \"<answer>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"0001-01-01T00:00:00Z\"}, {\"id\": \"<verifies_answer>\", \"type\": \"verifies\", \"to_id\": \"<answer>\", \"from_id\": \"<timing>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"0001-01-01T00:00:00Z\"}], \"version\": \"1.0\", \"artifacts\": [{\"id\": \"<scope>\", \"ref\": \"HDG-1\", \"body\": \"What the specification covers.\", \"type\": \"heading\", \"title\": \"Scope\", \"status\": \"draft\", \"version\": 1, \"valid_to\": null, \"attributes\": {\"status\": \"draft\"}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 1, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<answer>\", \"ref\": \"REQ-1\", \"body\": \"The system shall answer <fast> within **2 s**.\", \"type\": \"requirement\", \"title\": \"Answer in time\", \"status\": \"draft\", \"version\": 4, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"owner\": \"Ada\", \"status\": \"draft\", \"priority\": \"must\", \"links_snapshot\": [{\"id\": \"<verifies_answer>\", \"type\": \"verifies\", \"to_id\": \"<answer>\", \"from_id\": \"<timing>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"0001-01-01T00:00:00Z\"}, {\"id\": \"<decomposes>\", \"type\": \"decomposes-to\", \"to_id\": \"<records>\", \"from_id\": \"<answer>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"0001-01-01T00:00:00Z\"}]}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 1, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<records>\", \"ref\": \"REQ-2\", \"body\": \"The system shall keep a record of each answer.\", \"type\": \"requirement\", \"title\": \"Keep records\", \"status\": \"draft\", \"version\": 3, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"owner\": \"Grace\", \"status\": \"draft\", \"priority\": \"should\", \"links_snapshot\": [{\"id\": \"<decomposes>\", \"type\": \"decomposes-to\", \"to_id\": \"<records>\", \"from_id\": \"<answer>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"0001-01-01T00:00:00Z\"}]}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 2, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<old>\", \"ref\": \"REQ-3\", \"body\": \"The system shall do the old thing.\", \"type\": \"requirement\", \"title\": \"Old rule\", \"status\": \"draft\", \"version\": 1, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"status\": \"draft\", \"priority\": \"could\"}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 3, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<timing>\", \"ref\": \"TC-1\", \"body\": \"Measure the answer time.\", \"type\": \"test-case\", \"title\": \"Time the answer\", \"status\": \"draft\", \"version\": 2, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"owner\": \"Ada\", \"status\": \"draft\", \"links_snapshot\": [{\"id\": \"<verifies_answer>\", \"type\": \"verifies\", \"to_id\": \"<answer>\", \"from_id\": \"<timing>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"0001-01-01T00:00:00Z\"}]}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 4, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}], \"project_id\": \"<p>\", \"attachments\": [{\"id\": \"<figure>\", \"kind\": \"image\", \"title\": \"Answer timing\", \"version\": 1, \"filename\": \"REQ-1-FIG-1.png\", \"file_path\": \"<tmp>/uploads/<uuid:1>_timing.png\", \"file_size\": 75, \"mime_type\": \"image/png\", \"created_at\": \"<time@before step 1>\", \"figure_num\": 1, \"figure_ref\": \"REQ-1-FIG-1\", \"artifact_id\": \"<answer>\", \"original_filename\": \"timing.png\"}, {\"id\": \"<datasheet>\", \"kind\": \"document\", \"title\": \"\", \"version\": 1, \"filename\": \"REQ-2-FIG-1.pdf\", \"file_path\": \"<tmp>/uploads/<uuid:2>_records.pdf\", \"file_size\": 15, \"mime_type\": \"application/pdf\", \"created_at\": \"<time@before step 1>\", \"figure_num\": 1, \"figure_ref\": \"REQ-2-FIG-1\", \"artifact_id\": \"<records>\", \"original_filename\": \"records.pdf\"}], \"exported_at\": \"<time@step 6>\", \"project_name\": \"Tour <spec> & baselines\", \"product_profile\": {\"vision\": \"\", \"settings\": {}, \"created_at\": \"<time@step 6>\", \"project_id\": \"<p>\", \"updated_at\": \"<time@step 6>\", \"constraints\": [], \"target_users\": \"\", \"success_metrics\": [], \"problem_statement\": \"\"}, \"project_description\": \"The project the tour's baselines and documents read.\"}"
+        "{\"links\": [{\"id\": \"<decomposes>\", \"type\": \"decomposes-to\", \"to_id\": \"<records>\", \"from_id\": \"<answer>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<verifies_answer>\", \"type\": \"verifies\", \"to_id\": \"<answer>\", \"from_id\": \"<timing>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}], \"version\": \"1.0\", \"artifacts\": [{\"id\": \"<scope>\", \"ref\": \"HDG-1\", \"body\": \"What the specification covers.\", \"type\": \"heading\", \"title\": \"Scope\", \"status\": \"draft\", \"version\": 1, \"valid_to\": null, \"attributes\": {\"status\": \"draft\"}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 1, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<answer>\", \"ref\": \"REQ-1\", \"body\": \"The system shall answer <fast> within **2 s**.\", \"type\": \"requirement\", \"title\": \"Answer in time\", \"status\": \"draft\", \"version\": 4, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"owner\": \"Ada\", \"status\": \"draft\", \"priority\": \"must\", \"links_snapshot\": [{\"id\": \"<verifies_answer>\", \"type\": \"verifies\", \"to_id\": \"<answer>\", \"from_id\": \"<timing>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<decomposes>\", \"type\": \"decomposes-to\", \"to_id\": \"<records>\", \"from_id\": \"<answer>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}]}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 1, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<records>\", \"ref\": \"REQ-2\", \"body\": \"The system shall keep a record of each answer.\", \"type\": \"requirement\", \"title\": \"Keep records\", \"status\": \"draft\", \"version\": 3, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"owner\": \"Grace\", \"status\": \"draft\", \"priority\": \"should\", \"links_snapshot\": [{\"id\": \"<decomposes>\", \"type\": \"decomposes-to\", \"to_id\": \"<records>\", \"from_id\": \"<answer>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}]}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 2, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<old>\", \"ref\": \"REQ-3\", \"body\": \"The system shall do the old thing.\", \"type\": \"requirement\", \"title\": \"Old rule\", \"status\": \"draft\", \"version\": 1, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"status\": \"draft\", \"priority\": \"could\"}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 3, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}, {\"id\": \"<timing>\", \"ref\": \"TC-1\", \"body\": \"Measure the answer time.\", \"type\": \"test-case\", \"title\": \"Time the answer\", \"status\": \"draft\", \"version\": 2, \"valid_to\": null, \"parent_id\": \"<scope>\", \"attributes\": {\"owner\": \"Ada\", \"status\": \"draft\", \"links_snapshot\": [{\"id\": \"<verifies_answer>\", \"type\": \"verifies\", \"to_id\": \"<answer>\", \"from_id\": \"<timing>\", \"suspect\": false, \"version\": 1, \"valid_to\": null, \"attributes\": null, \"created_at\": \"<time@before step 1>\", \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}]}, \"created_at\": \"<time@before step 1>\", \"project_id\": \"<p>\", \"sort_order\": 4, \"updated_at\": \"<time@before step 1>\", \"valid_from\": \"<time@before step 1>\"}], \"project_id\": \"<p>\", \"attachments\": [{\"id\": \"<figure>\", \"kind\": \"image\", \"title\": \"Answer timing\", \"version\": 1, \"filename\": \"REQ-1-FIG-1.png\", \"file_path\": \"<tmp>/uploads/<uuid:1>_timing.png\", \"file_size\": 75, \"mime_type\": \"image/png\", \"created_at\": \"<time@before step 1>\", \"figure_num\": 1, \"figure_ref\": \"REQ-1-FIG-1\", \"artifact_id\": \"<answer>\", \"original_filename\": \"timing.png\"}, {\"id\": \"<datasheet>\", \"kind\": \"document\", \"title\": \"\", \"version\": 1, \"filename\": \"REQ-2-FIG-1.pdf\", \"file_path\": \"<tmp>/uploads/<uuid:2>_records.pdf\", \"file_size\": 15, \"mime_type\": \"application/pdf\", \"created_at\": \"<time@before step 1>\", \"figure_num\": 1, \"figure_ref\": \"REQ-2-FIG-1\", \"artifact_id\": \"<records>\", \"original_filename\": \"records.pdf\"}], \"exported_at\": \"<time@step 6>\", \"project_name\": \"Tour <spec> & baselines\", \"product_profile\": {\"vision\": \"\", \"settings\": {}, \"created_at\": \"<time@step 6>\", \"project_id\": \"<p>\", \"updated_at\": \"<time@step 6>\", \"constraints\": [], \"target_users\": \"\", \"success_metrics\": [], \"problem_statement\": \"\"}, \"project_description\": \"The project the tour's baselines and documents read.\"}"
       ],
       "trailing_newline": false,
       "parsed": {
@@ -856,7 +856,7 @@
             "attributes": null,
             "created_at": "<time@before step 1>",
             "updated_at": "<time@before step 1>",
-            "valid_from": "0001-01-01T00:00:00Z"
+            "valid_from": "<time@before step 1>"
           },
           {
             "id": "<verifies_answer>",
@@ -869,7 +869,7 @@
             "attributes": null,
             "created_at": "<time@before step 1>",
             "updated_at": "<time@before step 1>",
-            "valid_from": "0001-01-01T00:00:00Z"
+            "valid_from": "<time@before step 1>"
           }
         ],
         "version": "1.0",
@@ -918,7 +918,7 @@
                   "attributes": null,
                   "created_at": "<time@before step 1>",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z"
+                  "valid_from": "<time@before step 1>"
                 },
                 {
                   "id": "<decomposes>",
@@ -931,7 +931,7 @@
                   "attributes": null,
                   "created_at": "<time@before step 1>",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z"
+                  "valid_from": "<time@before step 1>"
                 }
               ]
             },
@@ -967,7 +967,7 @@
                   "attributes": null,
                   "created_at": "<time@before step 1>",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z"
+                  "valid_from": "<time@before step 1>"
                 }
               ]
             },
@@ -1022,7 +1022,7 @@
                   "attributes": null,
                   "created_at": "<time@before step 1>",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z"
+                  "valid_from": "<time@before step 1>"
                 }
               ]
             },
@@ -1417,7 +1417,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<b3>\",\"project_id\":\"<p>\",\"name\":\"B3 after changes\",\"snapshot\":{\"exported_at\":\"<time@step 19>\",\"version\":\"1.0\",\"project_id\":\"<p>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 baselines\",\"project_description\":\"The project the tour's baselines and documents read.\",\"artifacts\":[{\"id\":\"<scope>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the specification covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer \\u003cfast\\u003e within **2 s**.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<records>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep audit records\",\"body\":\"The system shall keep an audit record of each answer.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[],\"owner\":\"Grace\",\"priority\":\"should\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<timing>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 18>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_new>\",\"suspect\":false,\"to_id\":\"<new>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 18>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1},{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<new>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"New rule\",\"body\":\"The system shall do the new thing.\",\"sort_order\":5,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 18>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_new>\",\"suspect\":false,\"to_id\":\"<new>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 18>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"owner\":\"Grace\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 18>\",\"updated_at\":\"<time@before step 18>\"}],\"links\":[{\"id\":\"<verifies_new>\",\"from_id\":\"<timing>\",\"to_id\":\"<new>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 18>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<verifies_answer>\",\"from_id\":\"<timing>\",\"to_id\":\"<answer>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":[{\"id\":\"<figure>\",\"artifact_id\":\"<answer>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"timing.png\",\"title\":\"Answer timing\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_timing.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"image\"},{\"id\":\"<datasheet>\",\"artifact_id\":\"<records>\",\"filename\":\"REQ-2-FIG-1.pdf\",\"original_filename\":\"records.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:2>_records.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-2-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"document\"}],\"product_profile\":{\"project_id\":\"<p>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 6>\"}},\"created_at\":\"<time@step 19>\",\"created_by\":\"<editor>\"}"
+        "{\"id\":\"<b3>\",\"project_id\":\"<p>\",\"name\":\"B3 after changes\",\"snapshot\":{\"exported_at\":\"<time@step 19>\",\"version\":\"1.0\",\"project_id\":\"<p>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 baselines\",\"project_description\":\"The project the tour's baselines and documents read.\",\"artifacts\":[{\"id\":\"<scope>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the specification covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer \\u003cfast\\u003e within **2 s**.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<records>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep audit records\",\"body\":\"The system shall keep an audit record of each answer.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[],\"owner\":\"Grace\",\"priority\":\"should\",\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<timing>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 18>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_new>\",\"suspect\":false,\"to_id\":\"<new>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 18>\",\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"version\":1},{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_answer>\",\"suspect\":false,\"to_id\":\"<answer>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Ada\",\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<new>\",\"project_id\":\"<p>\",\"parent_id\":\"<scope>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"New rule\",\"body\":\"The system shall do the new thing.\",\"sort_order\":5,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 18>\",\"from_id\":\"<timing>\",\"id\":\"<verifies_new>\",\"suspect\":false,\"to_id\":\"<new>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 18>\",\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"version\":1}],\"owner\":\"Grace\",\"priority\":\"must\",\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 18>\",\"updated_at\":\"<time@before step 18>\"}],\"links\":[{\"id\":\"<verifies_new>\",\"from_id\":\"<timing>\",\"to_id\":\"<new>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@before step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 18>\",\"updated_at\":\"<time@before step 18>\"},{\"id\":\"<verifies_answer>\",\"from_id\":\"<timing>\",\"to_id\":\"<answer>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":[{\"id\":\"<figure>\",\"artifact_id\":\"<answer>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"timing.png\",\"title\":\"Answer timing\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_timing.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"image\"},{\"id\":\"<datasheet>\",\"artifact_id\":\"<records>\",\"filename\":\"REQ-2-FIG-1.pdf\",\"original_filename\":\"records.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:2>_records.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-2-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@before step 1>\",\"kind\":\"document\"}],\"product_profile\":{\"project_id\":\"<p>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 6>\"}},\"created_at\":\"<time@step 19>\",\"created_by\":\"<editor>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1470,7 +1470,7 @@
                     "to_id": "<answer>",
                     "type": "verifies",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -1528,7 +1528,7 @@
                     "to_id": "<new>",
                     "type": "verifies",
                     "updated_at": "<time@before step 18>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 18>",
                     "valid_to": null,
                     "version": 1
                   },
@@ -1541,7 +1541,7 @@
                     "to_id": "<answer>",
                     "type": "verifies",
                     "updated_at": "<time@before step 1>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 1>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -1576,7 +1576,7 @@
                     "to_id": "<new>",
                     "type": "verifies",
                     "updated_at": "<time@before step 18>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@before step 18>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -1601,7 +1601,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 18>",
               "valid_to": null,
               "created_at": "<time@before step 18>",
               "updated_at": "<time@before step 18>"
@@ -1614,7 +1614,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "created_at": "<time@before step 1>",
               "updated_at": "<time@before step 1>"
@@ -2006,22 +2006,19 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
+            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 4"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 4"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace TC-1 Time the answer Reference TC-1 Type Test case Tour <spec> & baselines · Live <datetime> UTC Page 3 of 4"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace TC-1 Time the answer Reference TC-1 Type Test case Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
-          },
-          {
-            "text": "Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
+            "text": "Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 4"
           }
         ],
         "images": 1,
@@ -4988,22 +4985,19 @@
           "Subject: Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 5"
+            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 4"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 5"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 4"
           },
           {
-            "text": "Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 5"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Priority should Status draft Owner Grace Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 4"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Priority should Status draft Owner Grace Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 5"
-          },
-          {
-            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description Priority could Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 5 of 5"
+            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description Priority could Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 4"
           }
         ],
         "images": 1,
@@ -5146,25 +5140,22 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 6,
+        "pages": 5,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 6"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
           },
           {
-            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 6"
+            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 6"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 4 of 6"
+            "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
           },
           {
-            "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 6"
-          },
-          {
-            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 6 of 6"
+            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
           }
         ],
         "images": 1,
@@ -8811,19 +8802,16 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 4,
+        "pages": 3,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Requirements review Contents 4 artifacts: 1 heading, 3 requirements Includes fields: Priority, Status, Verification method; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 4"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Requirements review Contents 4 artifacts: 1 heading, 3 requirements Includes fields: Priority, Status, Verification method; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 3"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 4"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 3"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 4"
-          },
-          {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Figure REQ-1-FIG-1 — Answer timing REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Tour <spec> & baselines · Live <datetime> UTC Page 4 of 4"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Figure REQ-1-FIG-1 — Answer timing REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Tour <spec> & baselines · Live <datetime> UTC Page 3 of 3"
           }
         ],
         "images": 1,
@@ -8865,22 +8853,19 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Test planning Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Priority, Status, Verification method, Execution method; traceability Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Test planning Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Priority, Status, Verification method, Execution method; traceability Tour <spec> & baselines · Live <datetime> UTC Page 1 of 4"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 4"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Tour <spec> & baselines · Live <datetime> UTC Page 3 of 4"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
-          },
-          {
-            "text": "Version v2 The system shall do the new thing. Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
+            "text": "Version v2 The system shall do the new thing. Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 4"
           }
         ],
         "images": 0,
@@ -8922,28 +8907,25 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 7,
+        "pages": 6,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Verification & Validation Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; V&V status; test results Tour <spec> & baselines · Live <datetime> UTC Page 1 of 7"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Verification & Validation Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; V&V status; test results Tour <spec> & baselines · Live <datetime> UTC Page 1 of 6"
           },
           {
-            "text": "Contents 1 Scope 3 Verification summary 5 Test results 6 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 7"
+            "text": "Contents 1 Scope 3 Verification summary 5 Test results 6 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 6"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 7"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Latest result not run Traceability Direction Relationship Artifact Tour <spec> & baselines · Live <datetime> UTC Page 3 of 6"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Latest result not run Traceability Direction Relationship Artifact Tour <spec> & baselines · Live <datetime> UTC Page 4 of 7"
+            "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 6"
           },
           {
-            "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 7"
+            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 5 of 6"
           },
           {
-            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 6 of 7"
-          },
-          {
-            "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer not run Test runs No test runs recorded. Tour <spec> & baselines · Live <datetime> UTC Page 7 of 7"
+            "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer not run Test runs No test runs recorded. Tour <spec> & baselines · Live <datetime> UTC Page 6 of 6"
           }
         ],
         "images": 0,
@@ -12517,25 +12499,22 @@
           "Subject: Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 6,
+        "pages": 5,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Owner; traceability; figures; V&V status Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 6"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Owner; traceability; figures; V&V status Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 5"
           },
           {
-            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 6"
+            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 5"
           },
           {
-            "text": "Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 6"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 5"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 6"
+            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 5"
           },
           {
-            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 5 of 6"
-          },
-          {
-            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep records - method missing REQ-3 Old rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep records • REQ-3 Old rule Tour <spec> & baselines · Baseline B1 <v1> Page 6 of 6"
+            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep records - method missing REQ-3 Old rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep records • REQ-3 Old rule Tour <spec> & baselines · Baseline B1 <v1> Page 5 of 5"
           }
         ],
         "images": 1,
@@ -16149,25 +16128,22 @@
                   "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
                   "Title: Tour <spec> & baselines"
                 ],
-                "pages": 6,
+                "pages": 5,
                 "page_text": [
                   {
-                    "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 6"
+                    "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
                   },
                   {
-                    "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 6"
+                    "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
                   },
                   {
-                    "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 6"
+                    "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
                   },
                   {
-                    "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 4 of 6"
+                    "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
                   },
                   {
-                    "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 6"
-                  },
-                  {
-                    "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 6 of 6"
+                    "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
                   }
                 ],
                 "images": 1,

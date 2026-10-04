@@ -106,4 +106,5 @@ var migrations = []Migration{
 	{Version: 49, Name: "test_results_history", Run: m0049TestResultsHistory},
 	{Version: 50, Name: "timestamptz_client_times", Run: m0050TimestamptzClientTimes},
 	{Version: 51, Name: "timestamptz_share_link_expiry", Run: m0051TimestamptzShareLinkExpiry},
+	{Version: 52, Name: "crew_node_references", Run: m0052CrewNodeReferences},
 }

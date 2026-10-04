@@ -60,11 +60,15 @@ const teamColumns = `
 	id, COALESCE(org_id::text, ''), name, description, COALESCE(project_id::text, ''), COALESCE(entry_node_id::text, ''),
 	is_default, created_at, updated_at`
 
-// SaveTeam inserts a new team.
+// SaveTeam inserts a new team. An empty workspace id is refused as an
+// empty project or entry node id is, as text Postgres does not read as a
+// uuid, where it used to be stored as NULL, a crew no workspace lists
+// (#379 bug 91). An entry node must be a node row (the foreign key of
+// migration 0052); the service sets it once the crew has nodes.
 func (r *TeamRepository) SaveTeam(t *teams.Team) error {
 	_, err := r.db.Exec(`
 		INSERT INTO agent_teams (id, org_id, name, description, project_id, entry_node_id, is_default, created_at, updated_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`, t.ID, t.OrgID, t.Name, t.Description, t.ProjectID, t.EntryNodeID, t.IsDefault, t.CreatedAt, t.UpdatedAt)
 	return err
 }
@@ -256,7 +260,8 @@ func (r *TeamRepository) ListNodesByTeam(teamID string) ([]*teams.Node, error) {
 	return result, rows.Err()
 }
 
-// DeleteNode removes a node; its edges cascade.
+// DeleteNode removes a node; its edges cascade, and a crew whose entry node
+// it was is left with none (ON DELETE SET NULL, migration 0052).
 func (r *TeamRepository) DeleteNode(id string) error {
 	_, err := r.db.Exec(`DELETE FROM agent_team_nodes WHERE id = $1`, id)
 	return err
@@ -275,7 +280,9 @@ func scanTeamEdge(scan func(dest ...interface{}) error) (*teams.Edge, error) {
 	return e, nil
 }
 
-// SaveEdge inserts a new team edge.
+// SaveEdge inserts a new team edge. Each node must be a node of the edge's
+// own crew: one of another crew is refused by the foreign key on
+// (team_id, node), as one no row has is (migration 0052).
 func (r *TeamRepository) SaveEdge(e *teams.Edge) error {
 	config, err := marshalJSONMap(e.Config)
 	if err != nil {

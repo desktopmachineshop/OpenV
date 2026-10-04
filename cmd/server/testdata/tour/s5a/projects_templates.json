@@ -1049,7 +1049,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<tour_template>\",\"org_id\":\"<owner.workspace>\",\"name\":\"Tour \\u003ctemplate\\u003e\",\"description\":\"Saved by the tour\",\"snapshot\":{\"exported_at\":\"<time@step 31>\",\"version\":\"1.0\",\"project_id\":\"<tour_project>\",\"project_name\":\"Tour \\u003ccore\\u003e \\u0026 \\\"quotes\\\", renamed\",\"project_description\":\"Holds the tour's requirements: \\u003cb\\u003ebold\\u003c/b\\u003e \\u0026 more\",\"artifacts\":[{\"id\":\"<tour_heading>\",\"project_id\":\"<tour_project>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the tour covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 26>\",\"valid_to\":null,\"created_at\":\"<time@before step 26>\",\"updated_at\":\"<time@before step 26>\"},{\"id\":\"<tour_requirement>\",\"project_id\":\"<tour_project>\",\"parent_id\":\"<tour_heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@step 27>\",\"from_id\":\"<tour_test_case>\",\"id\":\"<tour_link>\",\"suspect\":false,\"to_id\":\"<tour_requirement>\",\"type\":\"verifies\",\"updated_at\":\"<time@step 27>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"created_at\":\"<time@step 26>\",\"updated_at\":\"<time@step 27>\"},{\"id\":\"<tour_test_case>\",\"project_id\":\"<tour_project>\",\"parent_id\":\"<tour_heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@step 27>\",\"from_id\":\"<tour_test_case>\",\"id\":\"<tour_link>\",\"suspect\":false,\"to_id\":\"<tour_requirement>\",\"type\":\"verifies\",\"updated_at\":\"<time@step 27>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"created_at\":\"<time@before step 27>\",\"updated_at\":\"<time@step 27>\"}],\"links\":[{\"id\":\"<tour_link>\",\"from_id\":\"<tour_test_case>\",\"to_id\":\"<tour_requirement>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 27>\",\"updated_at\":\"<time@step 27>\"}],\"attachments\":null,\"product_profile\":{\"project_id\":\"<tour_project>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 31>\"}},\"is_default\":false,\"created_at\":\"<time@step 31>\"}"
+        "{\"id\":\"<tour_template>\",\"org_id\":\"<owner.workspace>\",\"name\":\"Tour \\u003ctemplate\\u003e\",\"description\":\"Saved by the tour\",\"snapshot\":{\"exported_at\":\"<time@step 31>\",\"version\":\"1.0\",\"project_id\":\"<tour_project>\",\"project_name\":\"Tour \\u003ccore\\u003e \\u0026 \\\"quotes\\\", renamed\",\"project_description\":\"Holds the tour's requirements: \\u003cb\\u003ebold\\u003c/b\\u003e \\u0026 more\",\"artifacts\":[{\"id\":\"<tour_heading>\",\"project_id\":\"<tour_project>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the tour covers.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 26>\",\"valid_to\":null,\"created_at\":\"<time@before step 26>\",\"updated_at\":\"<time@before step 26>\"},{\"id\":\"<tour_requirement>\",\"project_id\":\"<tour_project>\",\"parent_id\":\"<tour_heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@step 27>\",\"from_id\":\"<tour_test_case>\",\"id\":\"<tour_link>\",\"suspect\":false,\"to_id\":\"<tour_requirement>\",\"type\":\"verifies\",\"updated_at\":\"<time@step 27>\",\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"created_at\":\"<time@step 26>\",\"updated_at\":\"<time@step 27>\"},{\"id\":\"<tour_test_case>\",\"project_id\":\"<tour_project>\",\"parent_id\":\"<tour_heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@step 27>\",\"from_id\":\"<tour_test_case>\",\"id\":\"<tour_link>\",\"suspect\":false,\"to_id\":\"<tour_requirement>\",\"type\":\"verifies\",\"updated_at\":\"<time@step 27>\",\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"created_at\":\"<time@before step 27>\",\"updated_at\":\"<time@step 27>\"}],\"links\":[{\"id\":\"<tour_link>\",\"from_id\":\"<tour_test_case>\",\"to_id\":\"<tour_requirement>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 27>\",\"valid_to\":null,\"created_at\":\"<time@step 27>\",\"updated_at\":\"<time@step 27>\"}],\"attachments\":null,\"product_profile\":{\"project_id\":\"<tour_project>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 31>\"}},\"is_default\":false,\"created_at\":\"<time@step 31>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1103,7 +1103,7 @@
                     "to_id": "<tour_requirement>",
                     "type": "verifies",
                     "updated_at": "<time@step 27>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@step 27>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -1137,7 +1137,7 @@
                     "to_id": "<tour_requirement>",
                     "type": "verifies",
                     "updated_at": "<time@step 27>",
-                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_from": "<time@step 27>",
                     "valid_to": null,
                     "version": 1
                   }
@@ -1160,7 +1160,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 27>",
               "valid_to": null,
               "created_at": "<time@step 27>",
               "updated_at": "<time@step 27>"

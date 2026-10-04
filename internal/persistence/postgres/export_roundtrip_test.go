@@ -30,11 +30,11 @@ import (
 // the comparison found is written to testdata/formats/roundtrip/<file>.txt:
 // for each field, how many values came back equal, remapped to the new ids,
 // set to the new project's id, stamped with the round trip's clock, set to
-// one value (the import's version 1, a link no longer suspect) or changed
-// otherwise. So the golden states what a round trip keeps and what the
-// importer drops (attachments, which carry no file; link flags and
-// attributes; versions and times), and a field that a repository or the
-// import mapper stops carrying, or starts carrying, changes it.
+// one value (the import's version 1) or changed otherwise. So the golden
+// states what a round trip keeps and what the importer drops (attachments,
+// which carry no file; versions, which start at one (REQ-71), and times),
+// and a field that a repository or the import mapper stops carrying, or
+// starts carrying, changes it.
 //
 // Artifact order is compared within each parent only: the export orders a
 // project by parent_id first, and the import mints random parent ids, so

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
@@ -248,5 +249,134 @@ func TestImportRejectsGarbage(t *testing.T) {
 	}
 	if _, err := svc.ImportArtifactsIntoProject("", roundTripPayload(t), false); err == nil || !strings.Contains(err.Error(), "project id is required") {
 		t.Errorf("empty project id error = %v", err)
+	}
+}
+
+// memAttributeRepo is the attribute definitions store: the target
+// workspace's own (org) and what an import creates (created).
+type memAttributeRepo struct {
+	attributes.Repository
+	org     []*attributes.Definition
+	created []*attributes.Definition
+}
+
+func (m *memAttributeRepo) Create(d *attributes.Definition) error {
+	m.created = append(m.created, d)
+	return nil
+}
+
+func (m *memAttributeRepo) ListByOrg(string) ([]*attributes.Definition, error) { return m.org, nil }
+
+func (m *memAttributeRepo) ListByProject(projectID string) ([]*attributes.Definition, error) {
+	var out []*attributes.Definition
+	for _, d := range m.created {
+		if d.ProjectID != nil && *d.ProjectID == projectID {
+			out = append(out, d)
+		}
+	}
+	return out, nil
+}
+
+// TestImportKeepsWhatTheDocumentRecords: the JSON import keeps each
+// artifact's status column, each link's suspect flag and attributes, and the
+// attribute definitions a baseline kept (#379 bug 71). The column wins over
+// the attributes' legacy "status" mirror, which still seeds it for a
+// document exported before the column existed. A definition becomes the new
+// project's own, unless the workspace already has the same one in effect;
+// the import never changes the workspace's definitions.
+func TestImportKeepsWhatTheDocumentRecords(t *testing.T) {
+	svc, repo, linkSvc, projSvc := newImportFixture()
+	org := "org-1"
+	attrRepo := &memAttributeRepo{org: []*attributes.Definition{
+		{ID: "org-risk", OrgID: &org, Key: "risk", Label: "Risk", DataType: attributes.DataTypeEnum,
+			EnumValues: []string{"low", "high"}, AppliesToType: artifacts.TypeRequirement},
+		{ID: "org-owner", OrgID: &org, Key: "owner", Label: "Owner", DataType: attributes.DataTypeText},
+	}}
+	svc.SetAttributeService(attributes.NewDefaultService(attrRepo, artifacts.ValidType))
+
+	source := "org-source"
+	payload := &ProjectExport{
+		ProjectName: "Baseline copy",
+		Artifacts: []*artifacts.Artifact{
+			{ID: "old-req", Type: "requirement", Title: "Approved, mirror stale", Status: artifacts.StatusApproved,
+				Attributes: map[string]interface{}{"status": "draft"}},
+			{ID: "old-tc", Type: "test-case", Title: "In review, no attributes", Status: artifacts.StatusInReview},
+			{ID: "old-legacy", Type: "requirement", Title: "Before the column",
+				Attributes: map[string]interface{}{"status": "approved"}},
+		},
+		Links: []*links.Link{
+			{ID: "old-l1", FromID: "old-tc", ToID: "old-req", Type: "verifies", Suspect: true,
+				Attributes: map[string]interface{}{"note": "re-run after the change"}},
+			{ID: "old-l2", FromID: "old-legacy", ToID: "old-req", Type: "relates-to"},
+		},
+		AttributeDefs: []*attributes.Definition{
+			// The workspace has the same one in effect: left to it.
+			{ID: "d1", OrgID: &source, Key: "risk", Label: "Risk", DataType: attributes.DataTypeEnum,
+				EnumValues: []string{"low", "high"}, AppliesToType: artifacts.TypeRequirement, SortOrder: 1},
+			// The workspace's differs: the project gets the document's.
+			{ID: "d2", OrgID: &source, Key: "owner", Label: "Responsible engineer", DataType: attributes.DataTypeText, Required: true},
+			// The workspace has none: the project gets it.
+			{ID: "d3", ProjectID: strPtr("old-project"), Key: "weight", Label: "Weight", DataType: attributes.DataTypeNumber, SortOrder: 3},
+		},
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectID, err := svc.ImportProject(raw, org)
+	if err != nil {
+		t.Fatalf("ImportProject: %v", err)
+	}
+	if len(projSvc.created) != 1 {
+		t.Fatalf("created %d projects, want 1", len(projSvc.created))
+	}
+
+	for title, want := range map[string]string{
+		"Approved, mirror stale":   artifacts.StatusApproved,
+		"In review, no attributes": artifacts.StatusInReview,
+		"Before the column":        artifacts.StatusApproved,
+	} {
+		a := repo.byTitle(t, title)
+		if a.Status != want || a.Attributes["status"] != want {
+			t.Errorf("%q imported with status %q (mirror %v), want %q", title, a.Status, a.Attributes["status"], want)
+		}
+	}
+
+	if len(linkSvc.created) != 2 {
+		t.Fatalf("created %d links, want 2", len(linkSvc.created))
+	}
+	verifies, relates := linkSvc.created[0], linkSvc.created[1]
+	if !verifies.Suspect || verifies.Attributes["note"] != "re-run after the change" {
+		t.Errorf("the suspect link came back suspect=%v with attributes %v, want suspect with its note",
+			verifies.Suspect, verifies.Attributes)
+	}
+	if relates.Suspect || relates.Attributes != nil {
+		t.Errorf("the trusted link came back suspect=%v with attributes %v, want trusted with none",
+			relates.Suspect, relates.Attributes)
+	}
+
+	var got []string
+	for _, d := range attrRepo.created {
+		if d.OrgID != nil || d.ProjectID == nil || *d.ProjectID != projectID {
+			t.Errorf("definition %q created for org %v, project %v; want the new project's own", d.Key, d.OrgID, d.ProjectID)
+		}
+		got = append(got, d.Key+"/"+d.Label+"/"+d.DataType)
+		if d.Key == "owner" && !d.Required {
+			t.Error("the owner definition lost its requirement")
+		}
+	}
+	if want := "owner/Responsible engineer/text,weight/Weight/number"; strings.Join(got, ",") != want {
+		t.Errorf("definitions created = %v, want %s", got, want)
+	}
+
+	// Imported as drafts, an artifact is a draft whatever its column says.
+	svc2, repo2, _, _ := newImportFixture()
+	if _, err := svc2.ImportArtifactsIntoProject("proj-1", raw, true); err != nil {
+		t.Fatalf("ImportArtifactsIntoProject: %v", err)
+	}
+	for _, a := range repo2.saved {
+		if a.Status != artifacts.StatusDraft {
+			t.Errorf("%q imported as a draft with status %q", a.Title, a.Status)
+		}
 	}
 }
