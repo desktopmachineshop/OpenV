@@ -153,6 +153,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   reads in full, as the server says it: "…; the parent's verification
   rolls the refinements up".
 
+- **A shared project names every artifact type.** On a project opened
+  from a share link or the open-source page, a description or an "other"
+  artifact was badged with its raw type name, "description" or "other",
+  where every other artifact read as a word, such as "Requirement". They
+  now read "Description" and "Other". The page also stops carrying a label
+  for a "non-functional" type that no artifact can have.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
