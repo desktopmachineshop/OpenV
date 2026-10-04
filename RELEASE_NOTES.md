@@ -48,6 +48,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   signed out by their next click. They now record every time in UTC, as on
   OpenV's hosted service.
 
+- **Workspace invitations, deleted workspaces and hosted runners keep time
+  on a server whose clock is not set to UTC.** On an OpenV server running
+  in another time zone, as a self-hosted one can, they recorded their times
+  shifted by the zone's offset. Inviting an address again, unchanged,
+  within an hour of its last invitation email sent another email every time
+  west of UTC, and east of UTC sent none for hours longer. A deleted
+  workspace's deletion time, and so the date it can be restored until, and
+  a hosted runner's times showed hours off. They now record every time in
+  UTC, as on OpenV's hosted service. A workspace deleted before this update
+  on such a server is purged up to that offset early (west of UTC) or late
+  (east of UTC).
+
 ## 0.16.0 — 2026-10-04
 
 ### New features
