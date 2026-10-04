@@ -220,6 +220,29 @@ describe('the workspace-runs gate', () => {
     expect(list).not.toHaveBeenCalled();
   });
 
+  it('takes gates that fail to load as the feature off (#379 bug 174)', async () => {
+    await mount('/org/runs?run=run-new', null);
+    expect(container.textContent).toContain('Loading…');
+    await act(async () => {
+      useAppStore.getState().setFeaturesFailed();
+    });
+    await flush();
+    expect(where()).toBe('/projects');
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it('waits again for a gate load that starts after one failed, as a workspace switch starts it', async () => {
+    await mount('/org/runs', null);
+    await act(async () => {
+      useAppStore.getState().setFeaturesFailed();
+      // App clears the gates as it sets the next load going.
+      useAppStore.getState().setFeatures(null);
+    });
+    await flush();
+    expect(where()).toBe('/org/runs');
+    expect(container.textContent).toContain('Loading…');
+  });
+
   it('waits for the gates before listing anything', async () => {
     await mount('/org/runs?run=run-new', null);
     expect(where()).toBe('/org/runs?run=run-new');
