@@ -73,7 +73,11 @@ const WorkspaceRuns: React.FC = () => {
   const [listed, setListed] = useState<{ orgId: string; runs: AgentRun[] } | null>(null);
   const runs = listed?.orgId === activeOrgId ? listed.runs : null;
   const [statusFilter, setStatusFilter] = useState('all');
-  const [error, setError] = useState('');
+  // The last error and the workspace it was raised for: it shows while that
+  // workspace is the active one, so a switch hides the old workspace's error
+  // (#379 bug 180).
+  const [raised, setRaised] = useState<{ orgId: string; message: string } | null>(null);
+  const error = raised?.orgId === activeOrgId ? raised.message : '';
   const selectedRunId = searchParams.get('run');
   const followRun = useCloseRunOnSwitch(activeOrgId);
   const { isPhone, isCompact } = useViewport();
@@ -92,10 +96,10 @@ const WorkspaceRuns: React.FC = () => {
         .then((res) => {
           if (!current()) return;
           setListed({ orgId: activeOrgId, runs: res.data || [] });
-          setError('');
+          setRaised(null);
         })
         .catch((err) => {
-          if (current()) setError(apiErrorMessage(err, 'Failed to load runs'));
+          if (current()) setRaised({ orgId: activeOrgId, message: apiErrorMessage(err, 'Failed to load runs') });
         });
     };
     load();
@@ -154,7 +158,7 @@ const WorkspaceRuns: React.FC = () => {
           : 'You see the ones you launched; workspace admins see everyone’s.'}
       </p>
 
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
+      <ErrorBanner message={error} onDismiss={() => setRaised(null)} style={{ marginBottom: 8 }} />
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>

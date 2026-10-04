@@ -41,7 +41,11 @@ export const AgentRunsPage: React.FC = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [showProposals, setShowProposals] = useState(true);
   const [showConnect, setShowConnect] = useState(false);
-  const [error, setError] = useState('');
+  // The last error and the project it was raised for: it shows while that
+  // project is on screen, so a switch of project hides the old project's
+  // error (#379 bug 180).
+  const [raised, setRaised] = useState<{ projectId: string; message: string } | null>(null);
+  const error = raised?.projectId === projectId ? raised.message : '';
 
   const selectedRunId = searchParams.get('run');
   useCloseRunOnSwitch(projectId);
@@ -67,10 +71,11 @@ export const AgentRunsPage: React.FC = () => {
         .then((res) => {
           if (!runsCurrent()) return;
           setListed({ projectId, runs: res.data || [] });
-          setError('');
+          setRaised(null);
         })
         .catch((err: any) => {
-          if (runsCurrent()) setError(err.response?.data?.error || err.message || 'Failed to load runs');
+          if (!runsCurrent()) return;
+          setRaised({ projectId, message: err.response?.data?.error || err.message || 'Failed to load runs' });
         });
       if (activeOrgId) {
         const statusCurrent = statusGuard.next();
@@ -140,7 +145,7 @@ export const AgentRunsPage: React.FC = () => {
         <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
       </div>
 
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
+      <ErrorBanner message={error} onDismiss={() => setRaised(null)} style={{ marginBottom: 8 }} />
 
       {workerStatus &&
         workerStatus.queue.queued > 0 &&

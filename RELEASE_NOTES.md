@@ -27,6 +27,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A project's Runs page no longer shows the error of the project you
+  left.** When a project's Runs page could not load its runs and you went
+  on to another project's, the first project's error stayed above the
+  second project's list until the second project's runs arrived. The error
+  now goes as you switch, and each project's page shows only its own.
+
 - **A project's Runs page no longer shows another project's runs while it
   loads.** When you went from one project's Runs page to another's, from
   a notification for example, the first project's runs stayed on the list
