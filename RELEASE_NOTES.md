@@ -197,6 +197,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   more in between. A click now loads the artifact once, live or in a
   baseline.
 
+- **An expired share link no longer offers Revoke.** In project settings,
+  a share link past its expiry date already opens nothing, yet its row
+  still had a Revoke button, while a revoked link's row had none. An
+  expired link's row now has no Revoke button either; it still shows
+  "expired" and the date.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

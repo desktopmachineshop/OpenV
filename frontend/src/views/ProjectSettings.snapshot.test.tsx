@@ -142,7 +142,7 @@ const ORG_TEAMS = [
 ];
 
 // The clock is frozen at 2026-06-01: one link open, one expiring later, one
-// expired (still offered for revoking) and one revoked.
+// expired and one revoked (neither of those two offered for revoking).
 const SHARE_LINKS = [
   { id: 'sl-1', project_id: 'p1', role: 'public', label: 'Investors', created_at: '2026-03-01T09:00:00Z' },
   {

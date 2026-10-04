@@ -389,7 +389,8 @@ const ShareLinksCard: React.FC<ShareLinksCardProps> = ({
                         : 'never'}
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>
-                    {!revoked && (
+                    {/* An expired link opens nothing already, as a revoked one does. */}
+                    {!revoked && !expired && (
                       <button
                         onClick={() => handleRevokeShareLink(l)}
                         style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
