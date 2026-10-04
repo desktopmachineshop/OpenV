@@ -23,6 +23,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   result. They now record every time in UTC, as on OpenV's hosted service.
   Times recorded before this update keep their offset.
 
+- **Guided sessions, interviews, agent proposals, AI provider sign-ins and
+  repository connections keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, they recorded their times shifted by the zone's offset, and
+  showed them hours off. West of UTC, a CLI sign-in to an AI provider read
+  as hours old the moment it started, so starting it again abandoned the
+  sign-in in progress and began another; east of UTC, a sign-in that had
+  stalled was handed out again for hours instead of starting afresh. They
+  now record every time in UTC, as on OpenV's hosted service.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

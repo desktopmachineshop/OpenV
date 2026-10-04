@@ -99,7 +99,7 @@ func (s *DefaultService) Create(req CreateRequest) (*RepoConnection, error) {
 		branch = "main"
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	c := &RepoConnection{
 		ID:                 uuid.New().String(),
 		ProjectID:          req.ProjectID,
@@ -197,7 +197,7 @@ func (s *DefaultService) Update(id string, req UpdateRequest) (*RepoConnection, 
 	}
 	c.CredentialStrategy = "host"
 
-	c.UpdatedAt = time.Now()
+	c.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	if err := s.repo.Update(c); err != nil {
 		return nil, err
 	}
