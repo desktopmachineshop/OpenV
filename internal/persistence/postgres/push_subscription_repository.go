@@ -71,6 +71,9 @@ func (r *PushSubscriptionRepository) ListForUser(userID string) ([]*pushsubs.Sub
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`, userID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

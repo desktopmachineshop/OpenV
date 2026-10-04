@@ -31,6 +31,9 @@ func (r *OrgRepository) ListDeletedOrgsForUser(userID string) ([]*orgs.Org, erro
 		WHERE m.user_id = $1 AND o.deleted_at IS NOT NULL
 		ORDER BY o.deleted_at DESC
 	`, userID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +76,10 @@ func (r *OrgRepository) ListExpiredDeletedOrgIDs(before time.Time) ([]string, er
 // the dependents that don't cascade are deleted explicitly, children before
 // the artifacts/projects they hang off. Attachment rows go with their
 // artifacts; the files on disk are not touched here (same as artifact
-// deletion elsewhere in the app).
+// deletion elsewhere in the app). The rows keyed by an artifact id, which no
+// foreign key can reference, go with the workspace's artifacts, and a link's
+// version records with the link (#379 bug 138: the figure counters, and a
+// link's record at an end in another workspace, were left behind).
 func (r *OrgRepository) PurgeOrg(id string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -111,8 +117,9 @@ const orgArtifacts = `SELECT DISTINCT id FROM artifacts WHERE project_id IN (` +
 // last. TestPurgeCatalog (migration_freeze_purge_test.go) pins the order.
 var purgeOrgStatements = []string{
 	`DELETE FROM chatter WHERE artifact_id IN (` + orgArtifacts + `)`,
-	`DELETE FROM attachments WHERE artifact_id IN (` + orgArtifacts + `)`,
-	`DELETE FROM link_artifacts WHERE artifact_id IN (` + orgArtifacts + `)`,
+	`DELETE FROM attachments WHERE artifact_id IN (` + orgArtifacts + `)`, // versions cascade
+	`DELETE FROM attachment_figure_counters WHERE artifact_id IN (` + orgArtifacts + `)`,
+	`DELETE FROM link_artifacts WHERE artifact_id IN (` + orgArtifacts + `) OR link_id IN (SELECT id FROM links WHERE from_id IN (` + orgArtifacts + `) OR to_id IN (` + orgArtifacts + `))`,
 	`DELETE FROM links WHERE from_id IN (` + orgArtifacts + `) OR to_id IN (` + orgArtifacts + `)`,
 	`DELETE FROM test_runs WHERE project_id IN (` + orgProjects + `)`,  // test_results cascade
 	`DELETE FROM work_items WHERE project_id IN (` + orgProjects + `)`, // activity cascades

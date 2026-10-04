@@ -132,7 +132,11 @@ func TestOrgRestoreAnswersTheRestoredWorkspace(t *testing.T) {
 
 // TestOrgPurge locks in the hard-delete sweep: purging removes the org row
 // and its non-cascading dependents (projects, artifacts, links, chatter,
-// test runs), while another workspace's data survives untouched.
+// test runs, figure counters), while another workspace's data survives
+// untouched. A link between the two workspaces' artifacts goes with the
+// purged one, and so do its version records at both ends (#379 bug 138:
+// the figure counters, and the version record at the kept end, were left
+// behind with no artifact or link to belong to).
 func TestOrgPurge(t *testing.T) {
 	db := testDB(t)
 	initTestSchema(t, db)
@@ -165,14 +169,27 @@ func TestOrgPurge(t *testing.T) {
 		mustExec(`INSERT INTO projects (id, org_id, name) VALUES ($1, $2, 'P')`, projectID, orgID)
 		mustExec(`INSERT INTO artifacts (id, project_id, type, title) VALUES ($1, $2, 'requirement', 'R1')`, artifactID, projectID)
 		mustExec(`INSERT INTO artifacts (id, project_id, type, title) VALUES ($1, $2, 'test-case', 'T1')`, otherArtifact, projectID)
-		mustExec(`INSERT INTO links (id, from_id, to_id, type) VALUES ($1, $2, $3, 'verifies')`, uuid.New().String(), otherArtifact, artifactID)
+		link := uuid.New().String()
+		mustExec(`INSERT INTO links (id, from_id, to_id, type) VALUES ($1, $2, $3, 'verifies')`, link, otherArtifact, artifactID)
+		mustExec(`INSERT INTO link_artifacts (link_id, artifact_id, artifact_version) VALUES ($1, $2, 1), ($1, $3, 1)`,
+			link, otherArtifact, artifactID)
 		mustExec(`INSERT INTO chatter (id, artifact_id, message) VALUES ($1, $2, 'note')`, uuid.New().String(), artifactID)
+		mustExec(`INSERT INTO attachment_figure_counters (artifact_id, next_num) VALUES ($1, 2)`, artifactID)
 		mustExec(`INSERT INTO test_runs (id, project_id, name) VALUES ($1, $2, 'run')`, uuid.New().String(), projectID)
 		mustExec(`INSERT INTO baselines (id, project_id, name, snapshot) VALUES ($1, $2, 'b1', '{}')`, uuid.New().String(), projectID)
 		return projectID, artifactID
 	}
-	seedProject(doomed.ID)
+	_, doomedArtifact := seedProject(doomed.ID)
 	keptProject, keptArtifact := seedProject(kept.ID)
+	crossing := uuid.New().String()
+	for _, q := range []string{
+		`INSERT INTO links (id, from_id, to_id, type) VALUES ($1, $2, $3, 'refines')`,
+		`INSERT INTO link_artifacts (link_id, artifact_id, artifact_version) VALUES ($1, $2, 1), ($1, $3, 1)`,
+	} {
+		if _, err := db.Exec(q, crossing, keptArtifact, doomedArtifact); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
 
 	if _, err := svc.DeleteOrg(doomed.ID); err != nil {
 		t.Fatal(err)
@@ -212,6 +229,15 @@ func TestOrgPurge(t *testing.T) {
 	if n := count(`SELECT COUNT(*) FROM chatter c WHERE NOT EXISTS (SELECT 1 FROM artifacts a WHERE a.id = c.artifact_id)`); n != 0 {
 		t.Errorf("%d orphaned chatter rows after purge", n)
 	}
+	if n := count(`SELECT COUNT(*) FROM attachment_figure_counters c WHERE NOT EXISTS (SELECT 1 FROM artifacts a WHERE a.id = c.artifact_id)`); n != 0 {
+		t.Errorf("%d orphaned figure counters after purge", n)
+	}
+	if n := count(`SELECT COUNT(*) FROM link_artifacts la WHERE NOT EXISTS (SELECT 1 FROM links l WHERE l.id = la.link_id)`); n != 0 {
+		t.Errorf("%d version records of a purged link left after purge", n)
+	}
+	if n := count(`SELECT COUNT(*) FROM links WHERE id = $1`, crossing); n != 0 {
+		t.Errorf("the link from the kept workspace to the purged one survived purge")
+	}
 
 	// The other workspace is intact.
 	if n := count(`SELECT COUNT(*) FROM projects WHERE id = $1`, keptProject); n != 1 {
@@ -219,6 +245,13 @@ func TestOrgPurge(t *testing.T) {
 	}
 	if n := count(`SELECT COUNT(*) FROM artifacts WHERE id = $1`, keptArtifact); n != 1 {
 		t.Errorf("kept artifact lost")
+	}
+	if n := count(`SELECT COUNT(*) FROM attachment_figure_counters WHERE artifact_id = $1`, keptArtifact); n != 1 {
+		t.Errorf("kept figure counter lost")
+	}
+	if n := count(`SELECT COUNT(*) FROM link_artifacts la JOIN links l ON l.id = la.link_id
+		JOIN artifacts a ON a.id = l.to_id WHERE a.project_id = $1`, keptProject); n != 2 {
+		t.Errorf("kept link's version records: %d, want 2", n)
 	}
 	if role, _ := svc.RoleInOrg(kept.ID, userID); role != orgs.RoleAdmin {
 		t.Errorf("kept org membership lost")

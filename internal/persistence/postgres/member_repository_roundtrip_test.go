@@ -219,11 +219,10 @@ func TestMemberRepositoryListByProject(t *testing.T) {
 	rtWantNil(t, "the members of a project with none", list, err)
 	list, err = repo.ListByProject(uuid.New().String())
 	rtWantNil(t, "the members of a project no row has", list, err)
-	list, err = repo.ListByProject(malformed)
-	if list != nil {
-		t.Errorf("ListByProject of a malformed id listed %v", list)
+	for _, id := range malformedIDs {
+		list, err = repo.ListByProject(id)
+		rtWantNil(t, fmt.Sprintf("ListByProject of the malformed id %q", id), list, err)
 	}
-	rtWantRefused(t, "ListByProject of a malformed id", err)
 }
 
 // An account's projects are those it is a member of, directly or through a
@@ -275,11 +274,10 @@ func TestMemberRepositoryAccess(t *testing.T) {
 	rtWantNil(t, "the projects of an account with none", ids, err)
 	ids, err = repo.ListProjectIDsForUser(uuid.New().String())
 	rtWantNil(t, "the projects of an account no row has", ids, err)
-	ids, err = repo.ListProjectIDsForUser(malformed)
-	if ids != nil {
-		t.Errorf("ListProjectIDsForUser of a malformed id listed %v", ids)
+	for _, id := range malformedIDs {
+		ids, err = repo.ListProjectIDsForUser(id)
+		rtWantNil(t, fmt.Sprintf("ListProjectIDsForUser of the malformed id %q", id), ids, err)
 	}
-	rtWantRefused(t, "ListProjectIDsForUser of a malformed id", err)
 
 	roles, err := repo.RolesFor(p1, user)
 	if err != nil {
@@ -413,11 +411,10 @@ func TestMemberRepositoryTeamGrants(t *testing.T) {
 		rtWantNil(t, "the grants of a project with none", list, err)
 		list, err = repo.ListTeamGrants(uuid.New().String())
 		rtWantNil(t, "the grants of a project no row has", list, err)
-		list, err = repo.ListTeamGrants(malformed)
-		if list != nil {
-			t.Errorf("ListTeamGrants of a malformed id listed %v", list)
+		for _, id := range malformedIDs {
+			list, err = repo.ListTeamGrants(id)
+			rtWantNil(t, fmt.Sprintf("ListTeamGrants of the malformed id %q", id), list, err)
 		}
-		rtWantRefused(t, "ListTeamGrants of a malformed id", err)
 	})
 }
 

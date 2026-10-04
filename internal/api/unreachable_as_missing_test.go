@@ -101,7 +101,7 @@ func (m mapProjects) Update(p *projects.Project) error { m[p.ID] = p; return nil
 func (mapProjects) Create(*projects.Project) error                   { return nil }
 func (mapProjects) GetAll() ([]*projects.Project, error)             { return nil, nil }
 func (mapProjects) ListByOrg(string) ([]*projects.Project, error)    { return nil, nil }
-func (mapProjects) Delete(string) error                              { return nil }
+func (mapProjects) Delete(string) (*projects.Removed, error)         { return &projects.Removed{}, nil }
 func (mapProjects) ListChildren(string) ([]*projects.Project, error) { return nil, nil }
 
 // mapOrgTeams is a people-team store that answers GetTeam from a map.

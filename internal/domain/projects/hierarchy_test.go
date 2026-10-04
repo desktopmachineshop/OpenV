@@ -17,7 +17,7 @@ func (m *memRepo) GetByID(id string) (*Project, error) {
 func (m *memRepo) GetAll() ([]*Project, error)          { return nil, nil }
 func (m *memRepo) ListByOrg(string) ([]*Project, error) { return nil, nil }
 func (m *memRepo) Update(p *Project) error              { m.byID[p.ID] = p; return nil }
-func (m *memRepo) Delete(id string) error               { delete(m.byID, id); return nil }
+func (m *memRepo) Delete(id string) (*Removed, error)   { delete(m.byID, id); return &Removed{}, nil }
 func (m *memRepo) ListChildren(id string) ([]*Project, error) {
 	var out []*Project
 	for _, p := range m.byID {

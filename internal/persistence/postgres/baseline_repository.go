@@ -47,6 +47,9 @@ func (r *BaselineRepository) ListByProjectID(projectID string) ([]*baselines.Bas
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

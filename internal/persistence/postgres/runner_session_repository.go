@@ -275,6 +275,9 @@ func (r *RunnerSessionRepository) ListLiveSessions(orgID string) ([]*runnersessi
 		WHERE s.org_id = $1 AND s.status IN ('starting', 'active')
 		ORDER BY s.started_at
 	`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

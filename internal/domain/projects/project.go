@@ -64,6 +64,19 @@ type UpdateProjectRequest struct {
 // bug 88), and the API answers 404 "project not found" for either.
 var ErrNotFound = errors.New("project not found")
 
+// Removed is what deleting a project took with it that the delete's
+// transaction cannot finish itself (#379 bugs 136 and 137): the stored files
+// of its figures, every version of each, and of its evidence bundles, which
+// the caller removes from the upload store once the delete has committed;
+// and its agent runs that were queued, claimed or running, which the delete
+// cancelled as a cancel does (a queued run cancelled, a claimed or running
+// one asked to stop) and whose run tokens it revoked, and which the caller
+// announces to the runs' subscribers as a cancel announces its run.
+type Removed struct {
+	Files         []string
+	CancelledRuns []string
+}
+
 // Errors a parent assignment can fail with; the API answers 400 for each.
 var (
 	ErrParentNotFound     = errors.New("parent project not found")
@@ -101,7 +114,9 @@ type Service interface {
 	// It fails closed: an empty orgID yields no projects.
 	ListProjectsByOrg(orgID string) ([]*Project, error)
 	UpdateProject(id string, req UpdateProjectRequest) (*Project, error)
-	DeleteProject(id string) error
+	// DeleteProject deletes a project and everything that belongs to it
+	// alone, and answers what the caller finishes after it (Removed).
+	DeleteProject(id string) (*Removed, error)
 	// ListChildren returns the projects whose parent is id, oldest first.
 	ListChildren(id string) ([]*Project, error)
 	// Ancestors returns the parent chain of id, nearest first. A cycle in
@@ -184,8 +199,8 @@ func (s *DefaultService) UpdateProject(id string, req UpdateProjectRequest) (*Pr
 	return project, nil
 }
 
-// DeleteProject deletes a project
-func (s *DefaultService) DeleteProject(id string) error {
+// DeleteProject deletes a project and everything that belongs to it alone.
+func (s *DefaultService) DeleteProject(id string) (*Removed, error) {
 	return s.repository.Delete(id)
 }
 

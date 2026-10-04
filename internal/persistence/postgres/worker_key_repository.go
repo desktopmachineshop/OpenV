@@ -63,6 +63,9 @@ func (r *WorkerKeyRepository) List(orgID string) ([]*workerkeys.Key, error) {
 		FROM worker_keys k LEFT JOIN users u ON u.id = k.user_id
 		WHERE k.org_id = $1 ORDER BY k.created_at DESC
 	`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

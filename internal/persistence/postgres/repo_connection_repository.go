@@ -77,6 +77,9 @@ func (r *RepoConnectionRepository) ListByProject(projectID string) ([]*repoconns
 		WHERE project_id = $1
 		ORDER BY created_at
 	`, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +135,9 @@ func (r *RepoConnectionRepository) UserPaths(userID, projectID string) (map[stri
 		JOIN repo_connections c ON c.id = p.repo_connection_id
 		WHERE p.user_id = $1 AND c.project_id = $2
 	`, userID, projectID)
+	if malformedID(err) {
+		return map[string]string{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

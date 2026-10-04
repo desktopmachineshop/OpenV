@@ -112,6 +112,9 @@ func (r *TeamRepository) ListTeams(orgID, projectID string) ([]*teams.Team, erro
 		  AND ($2 = '' OR project_id IS NULL OR project_id = NULLIF($2, '')::uuid)
 		ORDER BY created_at
 	`, orgID, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -245,6 +248,9 @@ func (r *TeamRepository) ListNodesByTeam(teamID string) ([]*teams.Node, error) {
 		WHERE n.team_id = $1
 		ORDER BY n.created_at
 	`, teamID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +340,9 @@ func (r *TeamRepository) ListEdgesByTeam(teamID string) ([]*teams.Edge, error) {
 		WHERE team_id = $1
 		ORDER BY created_at
 	`, teamID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
