@@ -31,7 +31,7 @@ import (
 // the requests it then sent (the exact bytes of its finish or release body)
 // and the class that reached the API, with whether the platform retries it.
 // testdata/run_failures/classes.txt records the taxonomy behind them:
-// every finish site's class and every substring of a CLI's failure text that
+// every finish site's class and every signal in a CLI's failure text that
 // decides one. Refactor step M15a splits Worker.execute into preflight,
 // runEnv, buildRunSpec, finishRequestFor and failRun with "messages and
 // error classes unchanged": both files staying byte-identical is that proof.
@@ -116,9 +116,9 @@ func failureScenarios() []failureScenario {
 		// The workspace and the start transition.
 		{id: "workspace-prep-fails", given: "a file stands where the run's workspace directory goes",
 			agent: claude, prepFile: true},
-		{id: "repo-connections-unreadable", given: "a claude-code agent with repository access whose project's connections answer 403; the run goes on without a repository",
+		{id: "repo-connections-unreadable", given: "a claude-code agent with repository access whose project's connections answer 403",
 			agent: agentJSON("claude-code", "Field Agent", "field-agent", fieldTools, true), project: "p-repo-connections-unreadable",
-			repoStatus: http.StatusForbidden, start: ok},
+			repoStatus: http.StatusForbidden},
 		{id: "start-transition-refused", given: "the API answers the start transition 409",
 			agent: claude, startStatus: http.StatusConflict, startBody: `{"error":"run is not claimed by this worker","code":"conflict"}`},
 		// The project's API-key auth.
@@ -444,9 +444,9 @@ func (l *startLog) has(id string) bool {
 }
 
 // TestRunFailureTaxonomyGolden pins the taxonomy behind the outcomes: the
-// class each finish site maps to, and each substring of a CLI's failure
-// text that makes a failed run auth or provider_unavailable (anything else
-// is agent_error), with the precedence between them.
+// class each finish site maps to, and each word or status code in a CLI's
+// failure text that makes a failed run auth or provider_unavailable
+// (anything else is agent_error), with the precedence between them.
 func TestRunFailureTaxonomyGolden(t *testing.T) {
 	sites := []struct {
 		name string
@@ -462,6 +462,7 @@ func TestRunFailureTaxonomyGolden(t *testing.T) {
 		{"siteAdapterStart", siteAdapterStart, fmt.Errorf("wrapped: %w", agentPolicyError("refused"))},
 		{"siteAgentResult", siteAgentResult, nil},
 		{"siteAgentResult", siteAgentResult, errorString("exit status 1")},
+		{"siteAgentExit", siteAgentExit, nil},
 		{"siteTimeout", siteTimeout, context.DeadlineExceeded},
 		{"sitePanic", sitePanic, nil},
 		{"siteAgentPolicy", siteAgentPolicy, nil},
@@ -495,16 +496,28 @@ func TestRunFailureTaxonomyGolden(t *testing.T) {
 	}
 
 	// The signal lists sorted: their order inside a list decides nothing.
+	// Each signal is classified in a CLI's failure text, a status code as the
+	// whole text (anywhere else it needs an HTTP word beside it).
 	b.WriteString("\n## auth signals, checked first (authSignals)\n")
 	for _, s := range sortedSignals(authSignals) {
-		b.WriteString(fmt.Sprintf("%q -> %s\n", s, classifyAgentError(errorString("exit status 1: "+s))))
+		b.WriteString(fmt.Sprintf("%q -> %s\n", s, classifyAgentError(errorString(signalProbe(s)))))
 	}
 	b.WriteString("\n## provider signals, checked second (providerSignals)\n")
 	for _, s := range sortedSignals(providerSignals) {
-		b.WriteString(fmt.Sprintf("%q -> %s\n", s, classifyAgentError(errorString("exit status 1: "+s))))
+		b.WriteString(fmt.Sprintf("%q -> %s\n", s, classifyAgentError(errorString(signalProbe(s)))))
+	}
+	// Each after "exit status 1: " and before "; check your API key", a
+	// status code after "HTTP".
+	b.WriteString("\n## rate-limit and overload signals, outranking a mention of an API key (throttleSignals)\n")
+	for _, s := range sortedSignals(throttleSignals) {
+		probe := s
+		if isStatusCode(s) {
+			probe = "HTTP " + s
+		}
+		b.WriteString(fmt.Sprintf("%q -> %s\n", s, classifyAgentError(errorString("exit status 1: "+probe+"; check your API key"))))
 	}
 
-	b.WriteString("\n## failure texts (classifyAgentError: lower-cased, then a substring match)\n")
+	b.WriteString("\n## failure texts (classifyAgentError: lower-cased, then a whole-word match)\n")
 	for _, text := range []string{
 		"",
 		"exit status 1",
@@ -538,13 +551,22 @@ func TestRunFailureTaxonomyGolden(t *testing.T) {
 }
 
 const taxonomyHeader = `# The run failure taxonomy (refactor plan step S15a; OpenV REQ-84): the class
-# each runner finish site reports, the substrings of a CLI's failure text that
+# each runner finish site reports, the signals in a CLI's failure text that
 # decide a failed run's class, and which classes the platform retries. Written
 # by TestRunFailureTaxonomyGolden in internal/runner; the outcomes these
 # produce are in outcomes.txt beside it. A refactor leaves this file
 # byte-identical; a deliberate change regenerates it with
 #   UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run TestRunFailureTaxonomyGolden
 `
+
+// signalProbe is the failure text a signal is classified in: a status code
+// as the whole text, any other signal after "exit status 1: ".
+func signalProbe(signal string) string {
+	if isStatusCode(signal) {
+		return signal
+	}
+	return "exit status 1: " + signal
+}
 
 func sortedSignals(signals []string) []string {
 	out := append([]string(nil), signals...)
