@@ -189,6 +189,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   to the workspace already on one: every other workspace's picker lists
   the current plans as before.
 
+- **Picking an artifact in the requirements tree loads it once.** A click
+  on a row in the requirements workspace selected the artifact, briefly
+  went back to the one selected before, and then selected the new one
+  again, so the artifact's document, links, quality score and figures
+  were requested twice for one click, with the previous artifact's once
+  more in between. A click now loads the artifact once, live or in a
+  baseline.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

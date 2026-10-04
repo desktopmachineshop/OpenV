@@ -24,6 +24,8 @@ import { useAppStore } from '../state/store';
 //             same deep link leaves the Tree pane showing.
 //   baseline  desktop, with a baseline picked in the toolbar's baseline
 //             select (the one way in), then a tree row clicked.
+//   live      desktop, deep-linked, then another tree row clicked: the
+//             API calls the click makes, with no file snapshot.
 //
 // Each mode writes container.innerHTML, one tag per line so a diff reads, to
 // __snapshots__/ModuleView.<mode>.html, and asserts the ordered API calls the
@@ -502,15 +504,31 @@ describe('ModuleView characterization (S16a)', () => {
       ...LOAD,
       ...PARENT_AND_LINKED,
       'baselineAPI.get("bl-2")',
-      // A row click loads the document twice: the store takes the selection
-      // at once, the ?artifact= sync effect sees the URL still without it and
-      // clears it, and the URL update then sets it again, so the document
-      // mounts, unmounts and mounts. The live tree does the same.
-      ...BASELINE_DOCUMENT,
+      // A row click loads the document once: the click writes ?artifact=
+      // and the selection follows the URL (#379, bug 102; it loaded twice,
+      // the selection set, cleared by the sync effect and set again).
       ...BASELINE_DOCUMENT,
     ]);
     expect(location).toBe('/projects/p1/requirements?artifact=req-1');
     expect(controls()).toEqual(['select:bl-2']);
     await snapshot('baseline');
+  });
+
+  // The live tree, the same way (#379, bug 102): one click, one load of the
+  // document and its figures. It used to load req-4, then req-1 again, then
+  // req-4. No file snapshot; the desktop mode has one.
+  it('live: a tree row click loads the document once', async () => {
+    setViewport(1100, false);
+    await mount('/projects/p1/requirements?artifact=req-1');
+    recorder.calls = [];
+    await click(byText('code', 'REQ-4'));
+
+    expect(recorder.calls).toEqual([
+      'artifactAPI.getVersions("req-4")',
+      'qualityAPI.artifact("req-4")',
+      'linkAPI.listForArtifact("req-4")',
+      'attachmentAPI.listByArtifact("req-4")',
+    ]);
+    expect(location).toBe('/projects/p1/requirements?artifact=req-4');
   });
 });
