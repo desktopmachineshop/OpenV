@@ -22,6 +22,7 @@ func TestWorkItemsListInTheBoardsFlowOrder(t *testing.T) {
 	repo := NewWorkItemRepository(db)
 
 	project, other := uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, project, other)
 	start := time.Date(2026, 1, 15, 9, 0, 0, 0, time.UTC)
 	// Saved out of order: the list's order is the query's, not the insert's.
 	for i, c := range []struct {

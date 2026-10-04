@@ -182,17 +182,22 @@ func (r *memRepo) Update(a *Agent) error {
 	return nil
 }
 
+// FindByID and FindBySlug answer as the Postgres repository does:
+// ErrNotFound for an agent no row has (#379 bug 88).
 func (r *memRepo) FindByID(id string) (*Agent, error) {
 	for _, a := range r.rows {
 		if a.ID == id {
 			return a, nil
 		}
 	}
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 func (r *memRepo) FindBySlug(orgID, slug string) (*Agent, error) {
-	return r.rows[r.key(orgID, slug)], nil
+	if a, ok := r.rows[r.key(orgID, slug)]; ok {
+		return a, nil
+	}
+	return nil, ErrNotFound
 }
 
 func (r *memRepo) List(orgID string) ([]*Agent, error) {

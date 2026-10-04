@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -31,13 +30,13 @@ func rtProjectNames(list []*projects.Project) []string {
 	return names
 }
 
-// rtWantProjectError fails unless err is an error of the repository's own
-// with exactly this text: no sentinel, and nothing errors.Is can tell apart
-// from any other error.
-func rtWantProjectError(t *testing.T, what string, err error, text string) {
+// rtWantProjectNotFound fails unless err is projects.ErrNotFound, which
+// reads "project not found" (#379 bug 88: it was an error of that text that
+// errors.Is could tell apart from no other).
+func rtWantProjectNotFound(t *testing.T, what string, err error) {
 	t.Helper()
-	if err == nil || err.Error() != text || errors.Unwrap(err) != nil {
-		t.Errorf("%s: %v, want an unwrapped error reading %q", what, err, text)
+	if !errors.Is(err, projects.ErrNotFound) || err.Error() != "project not found" {
+		t.Errorf("%s: %v, want projects.ErrNotFound", what, err)
 	}
 }
 
@@ -55,12 +54,14 @@ func rtWantWrapped(t *testing.T, what string, err error, prefix string) {
 // keep them (the wall clock, to the microsecond, in lib/pq's zone at offset
 // 0), and an empty workspace or parent as NULL that reads back "". Update
 // rewrites name, description, agent auth, parent and updated_at, never the
-// workspace or created_at. A project no row has is an error reading "project
-// not found" from GetByID, Update and Delete alike; a malformed id is that
-// error from GetByID, but Postgres's refusal, wrapped, from Update and Delete,
-// as are an id a project has, a parent no row has and a malformed workspace.
-// Delete takes the project's memberships and team grants and detaches its
-// children, and leaves its work items and crews, which have no foreign key.
+// workspace or created_at. A project no row has, and a malformed id, are
+// projects.ErrNotFound from GetByID, Update and Delete alike (#379 bug 88: it
+// was an error of that text with no sentinel, and a malformed id in Update
+// or Delete was Postgres's refusal); an id a project has, a parent no row has
+// and a malformed workspace are Postgres's refusal, wrapped.
+// Delete takes the project's memberships and team grants, its work items
+// and crews (#379 bug 86: they had no foreign key and were left behind; see
+// project_delete_test.go for all it takes), and detaches its children.
 func TestProjectRepositoryRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewProjectRepository(db)
@@ -119,11 +120,12 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 			t.Errorf("a project put back under its parent: %v, %v", after, err)
 		}
 
-		rtWantProjectError(t, "Update of a project no row has",
-			repo.Update(&projects.Project{ID: uuid.New().String(), Name: "Ghost", AgentAuth: projects.AgentAuthUserAccount}),
-			"project not found")
-		rtWantWrapped(t, "Update of a malformed id",
-			repo.Update(&projects.Project{ID: malformed, Name: "x", AgentAuth: projects.AgentAuthUserAccount}), "failed to update project: ")
+		rtWantProjectNotFound(t, "Update of a project no row has",
+			repo.Update(&projects.Project{ID: uuid.New().String(), Name: "Ghost", AgentAuth: projects.AgentAuthUserAccount}))
+		for _, id := range malformedIDs {
+			rtWantProjectNotFound(t, fmt.Sprintf("Update of the malformed id %q", id),
+				repo.Update(&projects.Project{ID: id, Name: "x", AgentAuth: projects.AgentAuthUserAccount}))
+		}
 		bad := changed
 		bad.ParentProjectID = uuid.New().String()
 		err = repo.Update(&bad)
@@ -160,10 +162,7 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 			if got != nil {
 				t.Errorf("GetByID(%q) read %v", id, got)
 			}
-			rtWantProjectError(t, fmt.Sprintf("GetByID(%q)", id), err, "project not found")
-			if errors.Is(err, sql.ErrNoRows) || errors.Is(err, projects.ErrParentNotFound) {
-				t.Errorf("GetByID(%q): %v is a sentinel, want none", id, err)
-			}
+			rtWantProjectNotFound(t, fmt.Sprintf("GetByID(%q)", id), err)
 		}
 	})
 
@@ -174,30 +173,34 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 		rtSeed(t, db, `INSERT INTO org_teams (id, org_id, name) VALUES ($1, $2, 'Reviewers')`, peopleTeam, orgID)
 		rtSeed(t, db, `INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'owner')`, parent.ID, userID)
 		rtSeed(t, db, `INSERT INTO project_team_access (project_id, org_team_id, role) VALUES ($1, $2, 'viewer')`, parent.ID, peopleTeam)
-		rtSeed(t, db, `INSERT INTO work_items (id, project_id, title) VALUES ($1, $2, 'Left behind')`, uuid.New().String(), parent.ID)
-		rtSeed(t, db, `INSERT INTO agent_teams (id, org_id, project_id, name) VALUES ($1, $2, $3, 'Left behind')`,
+		rtSeed(t, db, `INSERT INTO work_items (id, project_id, title) VALUES ($1, $2, 'Goes with it')`, uuid.New().String(), parent.ID)
+		rtSeed(t, db, `INSERT INTO agent_teams (id, org_id, project_id, name) VALUES ($1, $2, $3, 'Goes with it')`,
 			uuid.New().String(), orgID, parent.ID)
 
 		if err := repo.Delete(parent.ID); err != nil {
 			t.Fatalf("Delete: %v", err)
 		}
-		if got, err := repo.GetByID(parent.ID); got != nil || err == nil {
-			t.Errorf("GetByID after Delete: %v, %v; want project not found", got, err)
+		got, err := repo.GetByID(parent.ID)
+		if got != nil {
+			t.Errorf("GetByID after Delete read %v", got)
 		}
+		rtWantProjectNotFound(t, "GetByID after Delete", err)
 		if after, err := repo.GetByID(child.ID); err != nil || after.ParentProjectID != "" {
 			t.Errorf("a deleted project's child: %v, %v; want it detached, parent \"\"", after, err)
 		}
 		for _, c := range []struct {
 			table string
 			want  int
-		}{{"project_members", 0}, {"project_team_access", 0}, {"work_items", 1}, {"agent_teams", 1}} {
+		}{{"project_members", 0}, {"project_team_access", 0}, {"work_items", 0}, {"agent_teams", 0}} {
 			var n int
 			if err := db.QueryRow(`SELECT COUNT(*) FROM `+c.table+` WHERE project_id = $1`, parent.ID).Scan(&n); err != nil || n != c.want {
 				t.Errorf("a deleted project's rows in %s: %d (%v), want %d", c.table, n, err, c.want)
 			}
 		}
-		rtWantProjectError(t, "Delete of a project no row has", repo.Delete(parent.ID), "project not found")
-		rtWantWrapped(t, "Delete of a malformed id", repo.Delete(malformed), "failed to delete project: ")
+		rtWantProjectNotFound(t, "Delete of a project no row has", repo.Delete(parent.ID))
+		for _, id := range malformedIDs {
+			rtWantProjectNotFound(t, fmt.Sprintf("Delete of the malformed id %q", id), repo.Delete(id))
+		}
 	})
 }
 
@@ -207,8 +210,8 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 // first, by created_at alone. Each answers [] when nothing matches,
 // ListByOrg for an empty workspace id too (it fails closed, never listing
 // the projects with no workspace) and ListChildren for an empty parent id
-// (never the top-level projects). A malformed id is Postgres's refusal,
-// wrapped.
+// (never the top-level projects). A malformed id is a workspace or parent no
+// row has, and lists [] (#379 bug 88: it was Postgres's refusal, wrapped).
 func TestProjectRepositoryLists(t *testing.T) {
 	db := rtDB(t)
 	repo := NewProjectRepository(db)
@@ -262,11 +265,10 @@ func TestProjectRepositoryLists(t *testing.T) {
 	rtWantEmpty(t, "ListByOrg with no workspace", list, err)
 	list, err = repo.ListByOrg(uuid.New().String())
 	rtWantEmpty(t, "ListByOrg of a workspace with no project", list, err)
-	list, err = repo.ListByOrg(malformed)
-	if list != nil {
-		t.Errorf("ListByOrg of a malformed id listed %v", list)
+	for _, id := range malformedIDs {
+		list, err = repo.ListByOrg(id)
+		rtWantEmpty(t, fmt.Sprintf("ListByOrg(%q)", id), list, err)
 	}
-	rtWantWrapped(t, "ListByOrg of a malformed id", err, "failed to query projects: ")
 
 	children, err := repo.ListChildren(parentID)
 	if err != nil {
@@ -278,16 +280,16 @@ func TestProjectRepositoryLists(t *testing.T) {
 		list, err = repo.ListChildren(id)
 		rtWantEmpty(t, fmt.Sprintf("ListChildren(%q)", id), list, err)
 	}
-	list, err = repo.ListChildren(malformed)
-	if list != nil {
-		t.Errorf("ListChildren of a malformed id listed %v", list)
+	for _, id := range malformedIDs {
+		list, err = repo.ListChildren(id)
+		rtWantEmpty(t, fmt.Sprintf("ListChildren(%q)", id), list, err)
 	}
-	rtWantWrapped(t, "ListChildren of a malformed id", err, "failed to query child projects: ")
 }
 
 // The export side's lookup reads a project's id, name and description, and
-// a project no row has, or a malformed id, is an error reading "project not
-// found", a new value each time, so no caller can compare it to a sentinel.
+// a project no row has, or a malformed id, is projects.ErrNotFound (#379 bug
+// 88: it was an error reading "project not found", a new value each time,
+// so no caller could compare it to a sentinel).
 func TestProjectInfoRepositoryFindByID(t *testing.T) {
 	db := rtDB(t)
 	repo := NewProjectInfoRepository(db)
@@ -300,16 +302,12 @@ func TestProjectInfoRepositoryFindByID(t *testing.T) {
 	if err != nil || got == nil || got.ID != project.ID || got.Name != "Platform" || got.Description != "The system" {
 		t.Errorf("FindByID: %+v, %v; want the project's id, name and description", got, err)
 	}
-	_, first := repo.FindByID(uuid.New().String())
 	for _, id := range append([]string{uuid.New().String()}, malformedIDs...) {
 		got, err := repo.FindByID(id)
 		if got != nil {
 			t.Errorf("FindByID(%q) read %+v", id, got)
 		}
-		rtWantProjectError(t, fmt.Sprintf("FindByID(%q)", id), err, "project not found")
-		if err == first {
-			t.Errorf("FindByID(%q) answered the same error value twice, want a new one each time", id)
-		}
+		rtWantProjectNotFound(t, fmt.Sprintf("FindByID(%q)", id), err)
 	}
 }
 

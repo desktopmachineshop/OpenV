@@ -55,7 +55,10 @@ func (r *memRepo) FindDefaultTeam(orgID string) (*teams.Team, error) {
 func (r *memRepo) SaveNode(n *teams.Node) error   { r.nodes[n.ID] = n; return nil }
 func (r *memRepo) UpdateNode(n *teams.Node) error { r.nodes[n.ID] = n; return nil }
 func (r *memRepo) FindNodeByID(id string) (*teams.Node, error) {
-	return r.nodes[id], nil
+	if n, ok := r.nodes[id]; ok {
+		return n, nil
+	}
+	return nil, teams.ErrNodeNotFound // as the Postgres repository answers (#379 bug 88)
 }
 func (r *memRepo) ListNodesByTeam(teamID string) ([]*teams.Node, error) {
 	var out []*teams.Node
@@ -107,12 +110,19 @@ func (d *fakeDir) add(orgID, id, slug, name string) *agents.Agent {
 	return a
 }
 
-func (d *fakeDir) Get(id string) (*agents.Agent, error) { return d.byID[id], nil }
-func (d *fakeDir) GetBySlug(orgID, slug string) (*agents.Agent, error) {
-	if m := d.bySlug[orgID]; m != nil {
-		return m[slug], nil
+// Get and GetBySlug answer as agents.Service does over the Postgres
+// repository: agents.ErrNotFound for an agent no row has (#379 bug 88).
+func (d *fakeDir) Get(id string) (*agents.Agent, error) {
+	if a, ok := d.byID[id]; ok {
+		return a, nil
 	}
-	return nil, nil
+	return nil, agents.ErrNotFound
+}
+func (d *fakeDir) GetBySlug(orgID, slug string) (*agents.Agent, error) {
+	if a, ok := d.bySlug[orgID][slug]; ok {
+		return a, nil
+	}
+	return nil, agents.ErrNotFound
 }
 
 // buildSourceCrew creates a crew in orgA with a chief delegating to a developer

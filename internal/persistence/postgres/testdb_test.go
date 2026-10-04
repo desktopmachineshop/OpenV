@@ -78,3 +78,15 @@ func initTestSchema(t *testing.T, db *sql.DB) {
 		t.Fatalf("Migrate: %v", err)
 	}
 }
+
+// seedProjects inserts a project row, with no workspace, for each id that
+// has none: since migration 0053 every artifact, work item, crew, test run,
+// interview, proposal and the like names a project that exists (#379 bug 86).
+func seedProjects(t *testing.T, db *sql.DB, ids ...string) {
+	t.Helper()
+	for _, id := range ids {
+		if _, err := db.Exec(`INSERT INTO projects (id, name) VALUES ($1, 'Project') ON CONFLICT (id) DO NOTHING`, id); err != nil {
+			t.Fatalf("seed project %s: %v", id, err)
+		}
+	}
+}
