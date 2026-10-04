@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
@@ -169,39 +170,63 @@ func (r *ProjectRepository) Update(project *projects.Project) error {
 
 // Delete deletes a project and everything that belongs to it alone, in one
 // transaction (#379 bug 86): every version of its artifacts, with their
-// embeddings, chatter, attachments (the rows; the stored files stay where
-// they are), figure counters and links in either direction, a link to or
-// from another project's artifact included, with the links' version
-// records; then the project row, whose foreign keys take its reference
-// counters, work items, crews, test runs, interviews, guided sessions,
-// attribute definitions, automations, agent proposals, baselines, evidence
-// bundles, product profile, repository connections, share links,
-// memberships and team grants with it (migration 0053). Its agent runs stay,
-// for the workspace's usage, with no project, and its child projects stay,
-// detached to the top level. The artifacts' rows are keyed by the artifact
-// id, which no foreign key can reference (an artifact's key is its id and
-// version), so they are deleted here, before the project. Locking the
-// project row first makes a concurrent write that references the project
-// wait for the delete and then fail on the foreign key. An id no project
-// has, a malformed one included, is projects.ErrNotFound (#379 bug 88).
-func (r *ProjectRepository) Delete(id string) error {
+// embeddings, chatter, attachments with every version, figure counters and
+// links in either direction, a link to or from another project's artifact
+// included, with the links' version records; then the project row, whose
+// foreign keys take its reference counters, work items, crews, test runs,
+// interviews, guided sessions, attribute definitions, automations, agent
+// proposals, baselines, evidence bundles with their files, product profile,
+// repository connections, share links, memberships and team grants with it
+// (migration 0053). Its agent runs stay, for the workspace's usage, with no
+// project, and its child projects stay, detached to the top level. The
+// artifacts' rows are keyed by the artifact id, which no foreign key can
+// reference (an artifact's key is its id and version), so they are deleted
+// here, before the project. Locking the project row first makes a
+// concurrent write that references the project wait for the delete and
+// then fail on the foreign key. An id no project has, a malformed one
+// included, is projects.ErrNotFound (#379 bug 88).
+//
+// It answers what the transaction cannot finish (projects.Removed): the
+// stored files of the figures and evidence files whose rows it deleted, for
+// the caller to remove once it has committed (#379 bug 136: they stayed on
+// disk), and the project's live agent runs, which it cancels (#379 bug 137:
+// they went on with no project), for the caller to announce.
+func (r *ProjectRepository) Delete(id string) (*projects.Removed, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to delete project: %w", err)
+		return nil, fmt.Errorf("failed to delete project: %w", err)
 	}
 	defer tx.Rollback()
 
 	var locked string
 	if err := tx.QueryRow(`SELECT id FROM projects WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
 		if noRow(err) {
-			return projects.ErrNotFound
+			return nil, projects.ErrNotFound
 		}
-		return fmt.Errorf("failed to delete project: %w", err)
+		return nil, fmt.Errorf("failed to delete project: %w", err)
+	}
+	// The runs are cancelled here, in the delete's transaction and before
+	// the project's row goes. They are found by their project, which the
+	// delete clears (agent_runs' foreign key sets it NULL), so after the
+	// commit they could no longer be told from a workspace's other runs, and
+	// a queued one could be claimed before a cancel reached it; cancelled
+	// before the transaction, a run launched between the cancel and the
+	// delete would go on uncancelled. Here there is no between: the project's
+	// row is held from the first statement, so a launch into the project
+	// waits for the delete and then fails its foreign key, and a claim skips
+	// the runs the cancel holds and, once it commits, finds them cancelled.
+	runs, err := cancelProjectRuns(tx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete project: %w", err)
+	}
+	files, err := deleteProjectFiles(tx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete project: %w", err)
 	}
 	// artifact_embeddings exists only where the vector migration ran.
 	var embeddings sql.NullString
 	if err := tx.QueryRow(`SELECT to_regclass('artifact_embeddings')::text`).Scan(&embeddings); err != nil {
-		return fmt.Errorf("failed to delete project: %w", err)
+		return nil, fmt.Errorf("failed to delete project: %w", err)
 	}
 	stmts := deleteProjectStatements
 	if embeddings.Valid {
@@ -209,26 +234,71 @@ func (r *ProjectRepository) Delete(id string) error {
 	}
 	for _, stmt := range stmts {
 		if _, err := tx.Exec(stmt, id); err != nil {
-			return fmt.Errorf("failed to delete project: %w", err)
+			return nil, fmt.Errorf("failed to delete project: %w", err)
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to delete project: %w", err)
+		return nil, fmt.Errorf("failed to delete project: %w", err)
 	}
-	return nil
+	return &projects.Removed{Files: files, CancelledRuns: runs}, nil
+}
+
+// deleteProjectFiles deletes the rows that hold a project's stored files and
+// answers the files' paths, each once, sorted: every version of each of its
+// artifacts' figures, the figures themselves, and its evidence bundles'
+// files. The paths come from the statements that delete the rows, so a file
+// is answered exactly when its row went. A version a figure gains meanwhile
+// waits on the figure's row and is answered as the figure's current file;
+// the evidence bundles are locked first, so a file being added to one is
+// either in before the files are read or refused, its bundle gone, once the
+// delete commits.
+func deleteProjectFiles(tx *sql.Tx, id string) ([]string, error) {
+	if _, err := tx.Exec(`SELECT id FROM evidence_bundles WHERE project_id = $1 FOR UPDATE`, id); err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	var files []string
+	for _, stmt := range []string{
+		`DELETE FROM attachment_versions WHERE attachment_id IN (SELECT id FROM attachments WHERE artifact_id IN (` + projectArtifacts + `)) RETURNING file_path`,
+		`DELETE FROM attachments WHERE artifact_id IN (` + projectArtifacts + `) RETURNING file_path`,
+		`DELETE FROM evidence_files WHERE bundle_id IN (SELECT id FROM evidence_bundles WHERE project_id = $1) RETURNING file_path`,
+	} {
+		rows, err := tx.Query(stmt, id)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var path string
+			if err := rows.Scan(&path); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			if path != "" && !seen[path] {
+				seen[path] = true
+				files = append(files, path)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		rows.Close()
+	}
+	sort.Strings(files)
+	return files, nil
 }
 
 // projectArtifacts selects the ids of a project's artifacts, the project id
 // being $1, for deleteProjectStatements.
 const projectArtifacts = `SELECT DISTINCT id FROM artifacts WHERE project_id = $1`
 
-// deleteProjectStatements is Delete's list, sent in this order after the
-// artifact_embeddings statement, each with the project id as $1: the rows
-// keyed by the project's artifacts, then the project, which the foreign keys
-// of migration 0053 and earlier carry to the rest.
+// deleteProjectStatements is Delete's list, sent in this order after
+// deleteProjectFiles and the artifact_embeddings statement, each with the
+// project id as $1: the rows keyed by the project's artifacts, then the
+// project, which the foreign keys of migration 0053 and earlier carry to the
+// rest.
 var deleteProjectStatements = []string{
 	`DELETE FROM chatter WHERE artifact_id IN (` + projectArtifacts + `)`,
-	`DELETE FROM attachments WHERE artifact_id IN (` + projectArtifacts + `)`, // versions cascade
 	`DELETE FROM attachment_figure_counters WHERE artifact_id IN (` + projectArtifacts + `)`,
 	`DELETE FROM link_artifacts WHERE artifact_id IN (` + projectArtifacts + `)
 		OR link_id IN (SELECT id FROM links WHERE from_id IN (` + projectArtifacts + `) OR to_id IN (` + projectArtifacts + `))`,

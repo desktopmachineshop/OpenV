@@ -323,11 +323,10 @@ func TestTeamRepositoryListTeams(t *testing.T) {
 	rtWantNil(t, "ListTeams with no workspace", list, err)
 	list, err = repo.ListTeams(uuid.New().String(), "")
 	rtWantNil(t, "ListTeams of a workspace with no crew", list, err)
-	list, err = repo.ListTeams(malformed, "")
-	if list != nil {
-		t.Errorf("ListTeams of a malformed workspace listed %v", list)
+	for _, id := range malformedIDs {
+		list, err = repo.ListTeams(id, "")
+		rtWantNil(t, fmt.Sprintf("ListTeams of the malformed workspace %q", id), list, err)
 	}
-	rtWantRefused(t, "ListTeams of a malformed workspace", err)
 }
 
 // A node reads back as saved: an empty node type is stored as "agent", a
@@ -457,11 +456,10 @@ func TestTeamRepositoryNodeRoundTrip(t *testing.T) {
 		rtWantNil(t, "the nodes of a crew with none", list, err)
 		list, err = repo.ListNodesByTeam(uuid.New().String())
 		rtWantNil(t, "the nodes of a crew no row has", list, err)
-		list, err = repo.ListNodesByTeam(malformed)
-		if list != nil {
-			t.Errorf("ListNodesByTeam of a malformed id listed %v", list)
+		for _, id := range malformedIDs {
+			list, err = repo.ListNodesByTeam(id)
+			rtWantNil(t, fmt.Sprintf("ListNodesByTeam of the malformed id %q", id), list, err)
 		}
-		rtWantRefused(t, "ListNodesByTeam of a malformed id", err)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -624,11 +622,10 @@ func TestTeamRepositoryEdgeRoundTrip(t *testing.T) {
 		rtWantNil(t, "the edges of a crew with none", list, err)
 		list, err = repo.ListEdgesByTeam(uuid.New().String())
 		rtWantNil(t, "the edges of a crew no row has", list, err)
-		list, err = repo.ListEdgesByTeam(malformed)
-		if list != nil {
-			t.Errorf("ListEdgesByTeam of a malformed id listed %v", list)
+		for _, id := range malformedIDs {
+			list, err = repo.ListEdgesByTeam(id)
+			rtWantNil(t, fmt.Sprintf("ListEdgesByTeam of the malformed id %q", id), list, err)
 		}
-		rtWantRefused(t, "ListEdgesByTeam of a malformed id", err)
 	})
 
 	t.Run("not found", func(t *testing.T) {

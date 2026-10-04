@@ -541,17 +541,23 @@ the Phase 3 consolidations that give quirks their names.
   every `artifactAPI.create` the wizard sends, and `suggestionDrafts.test.ts`
   for the notes panel's drafts.
 
-## Q17. The purge list has gaps not covered by cascade
+## Q17. The purge list had gaps not covered by cascade (resolved)
 
-- **Where:** `PurgeOrg` (`internal/persistence/postgres/org_repository_purge.go`)
-  deletes a hand-maintained list of tables; `attachment_figure_counters`,
-  keyed by `artifact_id` with no foreign key, keeps its rows.
-- **Pinned by, named as:** S3 purge-catalog allowlist, `purgeGapAllowlist`.
-  Pain point persistence-4.
+- **Resolved:** fixed under R7 by the release-noted bug-fix pull request
+  for #379's bug 138, so it is no longer a quirk to preserve. `PurgeOrg`
+  (`internal/persistence/postgres/org_repository_purge.go`) now deletes
+  `attachment_figure_counters` with the workspace's artifacts, and a link's
+  version records in `link_artifacts` with the link, the record at an end
+  in another workspace included; `purgeGapAllowlist` is empty.
+- **Where it was:** `PurgeOrg` deletes a hand-maintained list of tables;
+  `attachment_figure_counters`, keyed by `artifact_id` with no foreign key,
+  kept its rows. Pain point persistence-4.
 - **Pinned today:** S3: `TestPurgeCatalog`
   (`internal/persistence/postgres/migration_freeze_purge_test.go`) and
-  `testdata/purge/catalog.txt`. The allowlist may only shrink, and closing a
-  gap is a release-noted change of its own.
+  `testdata/purge/catalog.txt`, where every scoped table is deleted or
+  reached by cascade; the allowlist is empty and may only shrink, so a new
+  gap fails. `TestOrgPurge` (`org_delete_test.go`) purges a workspace
+  holding figure counters and a link into another workspace.
 
 ## Q18. Rate-limit buckets are shared across endpoints
 

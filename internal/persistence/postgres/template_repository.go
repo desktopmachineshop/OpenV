@@ -47,6 +47,9 @@ func (r *TemplateRepository) List(orgID string) ([]*templates.Template, error) {
 	`
 
 	rows, err := r.db.Query(query, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

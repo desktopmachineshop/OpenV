@@ -183,6 +183,9 @@ func (rep *AgentRunRepository) ListChildren(parentRunID string) ([]*agentruns.Ru
 		WHERE r.parent_run_id = $1 ORDER BY r.created_at
 		LIMIT $2
 	`, parentRunID, listChildrenLimit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -287,11 +290,21 @@ func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error
 	return n > 0, err
 }
 
+// cancelQueuedRun is what cancelling a queued run writes: the run is
+// cancelled at once and its token revoked. CancelQueued and a project's
+// delete (cancelProjectRuns) write it alike.
+const cancelQueuedRun = `status = 'cancelled', cancel_requested = TRUE, finished_at = NOW(), run_token_hash = ''`
+
+// requestLiveRunCancel is what asking a claimed or running run to stop
+// writes: the flag its worker reads on its next log push or heartbeat, after
+// which it stops the agent and reports the run cancelled.
+const requestLiveRunCancel = `cancel_requested = TRUE`
+
 // CancelQueued conditionally cancels a run only while it is still queued,
 // revoking its token; reports whether it was applied.
 func (rep *AgentRunRepository) CancelQueued(id string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'cancelled', cancel_requested = TRUE, finished_at = NOW(), run_token_hash = ''
+		UPDATE agent_runs SET `+cancelQueuedRun+`
 		WHERE id = $1 AND status = 'queued'
 	`, id)
 	if err != nil {
@@ -305,7 +318,7 @@ func (rep *AgentRunRepository) CancelQueued(id string) (bool, error) {
 // cancellation; reports whether the flag was applied.
 func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET cancel_requested = TRUE
+		UPDATE agent_runs SET `+requestLiveRunCancel+`
 		WHERE id = $1 AND status IN ('claimed', 'running')
 	`, id)
 	if err != nil {
@@ -313,6 +326,51 @@ func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
 	}
 	n, err := res.RowsAffected()
 	return n > 0, err
+}
+
+// cancelProjectRuns cancels a project's live runs inside the transaction that
+// deletes the project (#379 bug 137: they went on with no project, their
+// token reaching nothing), as RequestCancel cancels one: a queued run is
+// cancelled, with its token revoked, as CancelQueued writes it; a claimed or
+// running run is asked to stop, as SetCancelRequested writes it, and its
+// token is revoked at once besides, since the project it acted in is gone.
+// The worker reports to the server with its own key, not the run's token,
+// so it still reads the flag and reports the run cancelled. It answers the
+// ids of the runs it cancelled or asked to stop, for the caller to announce
+// once the transaction has committed.
+//
+// The queued runs go first. A claim takes a queued run with FOR UPDATE SKIP
+// LOCKED, so it skips the runs the first statement holds, and after the
+// commit finds them cancelled; a claim that took one of them before that
+// statement reached it made it claimed, which the second statement, reading
+// afresh, then asks to stop. The other order would let a run queued when
+// the live runs were read be claimed before the queued ones were, and escape
+// both.
+func cancelProjectRuns(tx *sql.Tx, projectID string) ([]string, error) {
+	var ids []string
+	for _, stmt := range []string{
+		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'queued' RETURNING id`,
+		`UPDATE agent_runs SET ` + requestLiveRunCancel + `, run_token_hash = '' WHERE project_id = $1 AND status IN ('claimed', 'running') RETURNING id`,
+	} {
+		rows, err := tx.Query(stmt, projectID)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			ids = append(ids, id)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		rows.Close()
+	}
+	return ids, nil
 }
 
 // UpdateTerminal writes a run's terminal result fields and revokes its run
@@ -477,6 +535,9 @@ func (rep *AgentRunRepository) ListLogs(runID string, afterSeq int) ([]agentruns
 		FROM agent_run_logs WHERE run_id = $1 AND seq > $2 ORDER BY seq
 		LIMIT $3
 	`, runID, afterSeq, listLogsPageLimit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

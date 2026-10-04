@@ -70,6 +70,9 @@ func (r *NotificationRepository) List(userID string, q notifications.ListQuery) 
 	query += fmt.Sprintf(` ORDER BY created_at DESC, id DESC LIMIT $%d`, len(args))
 
 	rows, err := r.db.Query(query, args...)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

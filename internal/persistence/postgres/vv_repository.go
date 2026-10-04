@@ -121,6 +121,9 @@ func (r *VVRepository) ListRunsByProject(projectID string) ([]*vv.TestRun, error
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -371,6 +374,9 @@ func (r *VVRepository) ListResultHistoryByRun(runID string) ([]*vv.TestResult, e
 
 func (r *VVRepository) listResults(query string, args ...interface{}) ([]*vv.TestResult, error) {
 	rows, err := r.db.Query(query, args...)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -401,6 +407,9 @@ func (r *VVRepository) LatestResultPerCase(projectID string) (map[string]*vv.Tes
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return map[string]*vv.TestResult{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -121,7 +121,7 @@ func (r *EmbeddingRepository) GetByArtifact(artifactID string) (*embeddings.Embe
 // "undefined table" error, which is mapped to embeddings.ErrVectorUnavailable
 // so the caller degrades to the trigram/ILIKE path rather than failing.
 func (r *EmbeddingRepository) NearestByEmbedding(projectIDs []string, query []float32, limit int) ([]embeddings.NearestHit, error) {
-	if len(projectIDs) == 0 || len(query) == 0 {
+	if projectIDs = uuidsOnly(projectIDs); len(projectIDs) == 0 || len(query) == 0 {
 		return []embeddings.NearestHit{}, nil
 	}
 	if limit <= 0 {
@@ -203,6 +203,9 @@ func (r *EmbeddingRepository) DuplicateCandidates(projectID string, maxDistance 
 		ORDER BY n.distance
 		LIMIT $3
 	`, projectID, maxDistance, 2*limit)
+	if malformedID(err) {
+		return []embeddings.DuplicatePair{}, nil
+	}
 	if err != nil {
 		if isUndefinedTable(err) {
 			return nil, embeddings.ErrVectorUnavailable

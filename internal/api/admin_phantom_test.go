@@ -49,12 +49,12 @@ type phantomProjectService struct {
 	deleted []string
 }
 
-func (f *phantomProjectService) DeleteProject(id string) error {
+func (f *phantomProjectService) DeleteProject(id string) (*projects.Removed, error) {
 	if _, ok := f.byID[id]; !ok {
-		return errors.New("project not found")
+		return nil, errors.New("project not found")
 	}
 	f.deleted = append(f.deleted, id)
-	return nil
+	return &projects.Removed{}, nil
 }
 
 // phantomMemberService records the membership writes a handler makes.

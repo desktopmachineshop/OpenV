@@ -116,6 +116,9 @@ func (r *EvidenceRepository) ListByProject(projectID string) ([]*evidence.Bundle
 		GROUP BY b.id
 		ORDER BY COALESCE(b.captured_at, b.created_at AT TIME ZONE 'UTC') DESC, b.id DESC
 	`, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -230,6 +233,9 @@ func (r *EvidenceRepository) FindFileByID(id string) (*evidence.File, error) {
 // ListFiles returns a bundle's files in upload order.
 func (r *EvidenceRepository) ListFiles(bundleID string) ([]*evidence.File, error) {
 	rows, err := r.db.Query(`SELECT `+fileColumns+` FROM evidence_files WHERE bundle_id = $1 ORDER BY created_at, id`, bundleID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -324,6 +330,9 @@ func scanCitations(rows *sql.Rows) ([]*evidence.Citation, error) {
 // having its own page.
 func (r *EvidenceRepository) ListCitationsForBundle(bundleID string) ([]*evidence.Citation, error) {
 	rows, err := r.db.Query(citationSelect+` WHERE c.bundle_id = $1 ORDER BY c.created_at, c.id`, bundleID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -333,6 +342,9 @@ func (r *EvidenceRepository) ListCitationsForBundle(bundleID string) ([]*evidenc
 // ListCitationsForResult returns the bundles one result cites.
 func (r *EvidenceRepository) ListCitationsForResult(testResultID string) ([]*evidence.Citation, error) {
 	rows, err := r.db.Query(citationSelect+` WHERE c.test_result_id = $1 ORDER BY c.created_at, c.id`, testResultID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -344,6 +356,9 @@ func (r *EvidenceRepository) ListCitationsForResult(testResultID string) ([]*evi
 // per row.
 func (r *EvidenceRepository) ListCitationsForRun(runID string) (map[string][]*evidence.Citation, error) {
 	rows, err := r.db.Query(citationSelect+` WHERE r.run_id = $1 ORDER BY c.created_at, c.id`, runID)
+	if malformedID(err) {
+		return map[string][]*evidence.Citation{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

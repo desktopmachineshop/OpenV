@@ -128,6 +128,9 @@ func (r *InvitationRepository) ListPending(orgID string, now time.Time) ([]*invi
 		WHERE i.org_id = $1 AND i.accepted_at IS NULL AND i.expires_at > $2
 		ORDER BY i.created_at DESC
 	`, orgID, now)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

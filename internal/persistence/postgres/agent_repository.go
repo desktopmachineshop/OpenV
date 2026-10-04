@@ -131,6 +131,9 @@ func (r *AgentRepository) FindBySlug(orgID, slug string) (*agents.Agent, error) 
 func (r *AgentRepository) List(orgID string) ([]*agents.Agent, error) {
 	rows, err := r.db.Query(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid
 		ORDER BY lower(name) COLLATE "C", name COLLATE "C", id`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

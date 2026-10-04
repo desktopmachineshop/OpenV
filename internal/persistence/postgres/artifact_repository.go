@@ -191,6 +191,9 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 	defer cancel()
 
 	rows, err := r.db.QueryContext(ctx, query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -212,6 +215,9 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 	defer cancel()
 
 	rows, err := r.db.QueryContext(ctx, query, projectID, artifactType)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +239,9 @@ func (r *ArtifactRepository) FindByProjectAndStatus(projectID string, status str
 	`
 
 	rows, err := r.db.Query(query, projectID, status)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -260,6 +269,9 @@ func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType st
 	defer cancel()
 
 	rows, err := r.db.QueryContext(ctx, query, projectID, artifactType, owner, limit, offset)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +443,7 @@ func (r *ArtifactRepository) NextSortOrder(projectID string, parentID *string) (
 // ranks first, then title matches, then body-only matches; ties break on most
 // recently updated. ProjectName is left empty — the API layer resolves it.
 func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, error) {
-	if len(projectIDs) == 0 {
+	if projectIDs = uuidsOnly(projectIDs); len(projectIDs) == 0 {
 		return []*artifacts.SearchHit{}, nil
 	}
 
