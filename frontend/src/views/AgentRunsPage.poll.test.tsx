@@ -21,7 +21,11 @@ import type { AgentRun, WorkerStatus } from '../api/client';
 //
 // An error belongs to the project it was raised for: a switch of project
 // hides the old project's (#379 bug 180), while another status filter or a
-// workspace switch that keeps the project keeps it until an answer.
+// workspace switch that keeps the project keeps it until an answer. The
+// runner status belongs to the workspace it was read for: a workspace switch
+// hides the old workspace's "no runner is online" warning until the new
+// one's status arrives, and a read that fails keeps the workspace's last
+// known status (#379 bug 181).
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -367,5 +371,50 @@ describe("a project's Runs page's error (#379 bug 180)", () => {
     expect(error()).toBe('p1 is down');
     await answer(lists[2], []);
     expect(error()).toBeNull();
+  });
+});
+
+describe("a project's Runs page's runner warning (#379 bug 181)", () => {
+  const switchWorkspace = async () => {
+    // ProjectLayout following a link into another workspace's project.
+    await act(async () => {
+      useAppStore.setState({ activeOrgId: 'o2' });
+    });
+    await settle();
+    expect(statuses.map((s) => s.orgId)).toEqual(['o1', 'o2']);
+  };
+
+  it("hides the old workspace's warning on a workspace switch until the new workspace's status", async () => {
+    await mount();
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+    await answer(statuses[0], status(3));
+    expect(banner()).toBe(true);
+
+    await switchWorkspace();
+    expect(banner()).toBe(false);
+    expect(rows()).toEqual(['🤖 Alpha']);
+    await answer(statuses[1], status(2));
+    expect(banner()).toBe(true);
+    expect(container.textContent).toContain('2 runs queued but');
+  });
+
+  it("does not bring the old workspace's warning back when the new workspace's status fails", async () => {
+    await mount();
+    await answer(statuses[0], status(3));
+    await switchWorkspace();
+    await refuse(statuses[1], 'Network Error');
+    expect(banner()).toBe(false);
+  });
+
+  it('keeps the last known warning when a later read in the same workspace fails', async () => {
+    await mount();
+    await answer(statuses[0], status(3));
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    await settle();
+    expect(statuses.map((s) => s.orgId)).toEqual(['o1', 'o1']);
+    await refuse(statuses[1], 'Network Error');
+    expect(banner()).toBe(true);
   });
 });

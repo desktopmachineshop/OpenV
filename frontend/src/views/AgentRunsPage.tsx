@@ -36,7 +36,12 @@ export const AgentRunsPage: React.FC = () => {
   // workspace's project, is no switch here.
   const [listed, setListed] = useState<{ projectId: string; runs: AgentRun[] } | null>(null);
   const runs = listed?.projectId === projectId ? listed.runs : null;
-  const [workerStatus, setWorkerStatus] = useState<WorkerStatus | null>(null);
+  // The runner status and the workspace it was read for: the banners show
+  // it while that workspace is the active one, so a workspace switch, as
+  // ProjectLayout makes to follow a link into another workspace's project,
+  // hides the old workspace's until the new one's arrives (#379 bug 181).
+  const [readStatus, setReadStatus] = useState<{ orgId: string; status: WorkerStatus } | null>(null);
+  const workerStatus = readStatus?.orgId === activeOrgId ? readStatus.status : null;
   const [statusFilter, setStatusFilter] = useState('all');
   const [pendingCount, setPendingCount] = useState(0);
   const [showProposals, setShowProposals] = useState(true);
@@ -82,10 +87,11 @@ export const AgentRunsPage: React.FC = () => {
         workerStatusAPI
           .get(activeOrgId)
           .then((res) => {
-            if (statusCurrent()) setWorkerStatus(res.data);
+            if (statusCurrent()) setReadStatus({ orgId: activeOrgId, status: res.data });
           })
           .catch(() => {
-            // Banner data is best-effort; keep the last known status on error.
+            // Banner data is best-effort; keep the workspace's last known
+            // status on error.
           });
       }
     };

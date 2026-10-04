@@ -27,6 +27,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A project's Runs page no longer warns about another workspace's
+  runners.** When a link took you to a project in your other workspace,
+  from a notification for example, its Runs page kept the warning of the
+  workspace you came from, that runs were queued but no runner was online,
+  until it had checked the runners of the new one. It now shows only the
+  warning of the workspace you are in.
+
 - **A project's Runs page no longer shows the error of the project you
   left.** When a project's Runs page could not load its runs and you went
   on to another project's, the first project's error stayed above the
