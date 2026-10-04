@@ -221,6 +221,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   is now set aside from the first click until it finishes, and a second
   click does nothing.
 
+- **Workspace settings keep your quality-rule changes too.** An unsaved
+  change on the Quality rules tab of workspace settings was lost when you
+  switched to another tab, and the rules loaded again on every visit. The
+  change is now still there when you come back, and the rules load once,
+  as in project settings.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
