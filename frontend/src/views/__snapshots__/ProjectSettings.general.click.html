@@ -1,14 +1,15 @@
 <div style="padding: 24px; max-width: 900px; margin: 0px auto;">
 <h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
 <div class="tab-strip" role="tablist">
-<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">General</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+<button role="tab" id="project-settings-tab-general" aria-selected="true" aria-controls="project-settings-panel" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">General</button>
+<button role="tab" id="project-settings-tab-members" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
+<button role="tab" id="project-settings-tab-repos" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
+<button role="tab" id="project-settings-tab-agents" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
+<button role="tab" id="project-settings-tab-attributes" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
+<button role="tab" id="project-settings-tab-quality" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
+<button role="tab" id="project-settings-tab-danger" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
 </div>
+<div role="tabpanel" id="project-settings-panel" aria-labelledby="project-settings-tab-general">
 <div class="card">
 <h3>Parent project</h3>
 <p style="font-size: 13px; color: var(--text-muted);">A subsystem or supplier project sits under the system it belongs to. Requirements here can then <em>refine</em> the parent's requirements, and the parent's V&amp;V rolls those refinements up. A supplier works in the child project with editor rights there and viewer rights on the parent.</p>
@@ -54,7 +55,7 @@
 <td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Landing gear supplier</td>
 <td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset);">Tier 2</td>
 <td style="padding: 8px 10px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--surface-inset); text-align: right;">
-<button type="button" class="btn-secondary" style="width: auto; padding: 4px 10px; font-size: 12px;">Remove</button>
+<button type="button" class="button-secondary" style="width: auto; padding: 4px 10px; font-size: 12px;">Remove</button>
 </td>
 </tr>
 </tbody>
@@ -62,7 +63,8 @@
 <form style="display: flex; gap: 8px; flex-wrap: wrap;">
 <input placeholder="Party name, e.g. Landing gear supplier" style="flex: 1 1 200px;" value="">
 <input placeholder="Note (optional)" style="flex: 2 1 240px;" value="">
-<button type="submit" class="btn-primary" style="width: auto;" disabled="">Add party</button>
+<button type="submit" class="button" style="width: auto;" disabled="">Add party</button>
 </form>
+</div>
 </div>
 </div>

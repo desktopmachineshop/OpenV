@@ -126,7 +126,7 @@ func (s *StableScheduler) announceCut(org *orgs.Org, stable *release.Stable, tur
 	if err != nil || !won {
 		return
 	}
-	title := fmt.Sprintf("Stable release %s is ready for %s", stable.Version, org.Name)
+	title := fmt.Sprintf("Stable release %s is ready for %s", stable.Version, memberText(org.Name))
 	var body string
 	if isImmediate(org) || !turnOn.After(now) {
 		body = "It turns on for the workspace now. " + previewLine(stable)
@@ -142,7 +142,7 @@ func (s *StableScheduler) remind(org *orgs.Org, stable *release.Stable, turnOn, 
 	if err != nil || !won {
 		return
 	}
-	title := fmt.Sprintf("Stable release %s turns on for %s tomorrow", stable.Version, org.Name)
+	title := fmt.Sprintf("Stable release %s turns on for %s tomorrow", stable.Version, memberText(org.Name))
 	body := fmt.Sprintf("Scheduled for %s. %s", formatWhen(turnOn, org.UpgradeTimezone), previewLine(stable))
 	s.notifyAdmins(org, notifications.TypeReleaseScheduled, title, body, stable.Version)
 }
@@ -162,7 +162,7 @@ func (s *StableScheduler) turnOn(org *orgs.Org, stable *release.Stable, now time
 		return
 	}
 	_, body := ReleaseMessage(stable.Release())
-	title := fmt.Sprintf("%s moved to stable release %s", org.Name, stable.Version)
+	title := fmt.Sprintf("%s moved to stable release %s", memberText(org.Name), stable.Version)
 	ref := map[string]interface{}{"kind": "release", "version": stable.Version, "org_id": org.ID}
 	count := 0
 	for _, m := range members {

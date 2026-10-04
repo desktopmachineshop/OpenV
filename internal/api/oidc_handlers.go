@@ -110,7 +110,7 @@ func (h *Handler) registerOIDCRoutes(router *mux.Router) {
 // a fresh state (CSRF) and nonce (ID-token replay binding), each stored in a
 // short-lived HttpOnly cookie for validation on the callback.
 func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
-	if !h.oidc.Enabled() {
+	if !h.OIDC.Enabled() {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
 		return
 	}
@@ -119,7 +119,7 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	if err := h.oidc.ensure(ctx); err != nil {
+	if err := h.OIDC.ensure(ctx); err != nil {
 		respondError(w, r, http.StatusBadGateway, "sso provider discovery failed", err)
 		return
 	}
@@ -137,14 +137,14 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	h.setOIDCFlowCookie(w, oidcStateCookie, state)
 	h.setOIDCFlowCookie(w, oidcNonceCookie, nonce)
 
-	http.Redirect(w, r, h.oidc.oauth.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
+	http.Redirect(w, r, h.OIDC.oauth.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
 }
 
 // OIDCCallback completes the code flow: it validates state, exchanges the code,
 // verifies the ID token (signature/issuer/audience/nonce), finds-or-creates the
 // user by verified email, and issues the session cookie exactly like Google.
 func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
-	if !h.oidc.Enabled() {
+	if !h.OIDC.Enabled() {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
 		return
 	}
@@ -153,7 +153,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	if err := h.oidc.ensure(ctx); err != nil {
+	if err := h.OIDC.ensure(ctx); err != nil {
 		respondError(w, r, http.StatusBadGateway, "sso provider discovery failed", err)
 		return
 	}
@@ -178,7 +178,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauthToken, err := h.oidc.oauth.Exchange(ctx, code)
+	oauthToken, err := h.OIDC.oauth.Exchange(ctx, code)
 	if err != nil {
 		respondError(w, r, http.StatusBadGateway, "sso token exchange failed", err)
 		return
@@ -188,7 +188,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadGateway, "sso response is missing an id_token")
 		return
 	}
-	idToken, err := h.oidc.verifier.Verify(ctx, rawIDToken)
+	idToken, err := h.OIDC.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		respondError(w, r, http.StatusBadGateway, "sso id_token verification failed", err)
 		return
@@ -222,7 +222,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, token, err := h.userService.LoginWithSSO(users.ProviderOIDC, claims.Email, claims.Name, claims.Picture)
+	user, token, err := h.UserService.LoginWithSSO(users.ProviderOIDC, claims.Email, claims.Name, claims.Picture)
 	if err != nil {
 		// A cross-provider collision (an account with this email that signed up
 		// via a different method) is a client-visible 409, not a 500.
@@ -242,7 +242,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	h.acceptInvitationsForProviderVerifiedEmail(user.ID, user.Email)
 	h.setSessionCookie(w, token)
 
-	dest := h.oidc.FrontendURL
+	dest := h.OIDC.FrontendURL
 	if dest == "" {
 		dest = "/"
 	}

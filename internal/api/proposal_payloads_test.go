@@ -213,8 +213,8 @@ func s9Propose(t *testing.T, op string, target *string, dto interface{}) *propos
 	t.Helper()
 	repo := &s9ProposalRepo{}
 	h := vvHandler(t, nil) // K6: reuse vvHandler (see newS9Fixture)
-	h.agentService = s9ProposalAgents{}
-	h.proposalService = proposals.NewDefaultService(repo, proposals.Appliers{})
+	withAgentService(s9ProposalAgents{})(h)
+	withProposalService(proposals.NewDefaultService(repo, proposals.Appliers{}))(h)
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 	r = r.WithContext(context.WithValue(r.Context(), ctxRun,
 		&agentruns.Run{ID: s9ID(951), AgentID: s9ID(952), ProjectID: s9Ptr(s9P)}))

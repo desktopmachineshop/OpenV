@@ -73,11 +73,10 @@ Test files (`*_test.go`) need no area.
 3. Check the stages still flatten:
    `go run ./internal/tools/movecheck -flatten main ./cmd/server`.
 
-**Give the API a new dependency** (K5). Add the field to `api.HandlerDeps`,
-and, until M14 embeds it, to `api.Handler` and its copy in `NewHandler`
-(`internal/api/handlers.go`); then one line in the `api.HandlerDeps`
-literal of stage `handlers`. A new API area also needs its registrar; see
-`internal/api/README.md`.
+**Give the API a new dependency** (K5). Add the field to `api.HandlerDeps`
+(`internal/api/handlers.go`), which `api.Handler` embeds, then one line in
+the `api.HandlerDeps` literal of stage `handlers`. A new API area also
+needs its registrar; see `internal/api/README.md`.
 Scaffold: `go run ./internal/tools/scaffold api-area <name>`
 
 **Add an env var.** Read it with a getter from `config.go` in the stage that

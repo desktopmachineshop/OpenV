@@ -211,7 +211,7 @@ func payloadDrives() []payloadDrive {
 			project, team := payloadProject, "team-1"
 			run := &agentruns.Run{ID: "run-live", OrgID: payloadOrg, AgentID: "agent-1", ProjectID: &project, TeamID: &team}
 			refusal := fmt.Errorf("%w: this workspace has reached its $1.00 monthly budget ($5.00 spent)", agentruns.ErrBudgetExceeded)
-			if err := fx.h.runService.SuccessorsSkipped(run, []agentruns.Successor{{NodeID: "node-2", Label: "Checker"}}, refusal); err != nil {
+			if err := runServiceOf(fx.h).SuccessorsSkipped(run, []agentruns.Successor{{NodeID: "node-2", Label: "Checker"}}, refusal); err != nil {
 				t.Fatalf("SuccessorsSkipped: %v", err)
 			}
 		}),

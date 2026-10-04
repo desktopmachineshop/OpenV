@@ -226,6 +226,10 @@ lines, from its `func` line to its closing brace. The 34 over it at
 `package:Receiver.Method`, with the same headroom: `cmd/server:main`, 853
 lines, may reach 938. The key names no file, so a function keeps its
 ceiling when it moves within its package; a renamed function is a new one.
+A method that moves to another receiver in its package keeps its ceiling
+under the new key: the Refactor guard accepts the new key when the old one
+goes in the same commit and the value does not rise, as M15b's sign-in
+methods moved from `Worker` to `loginBroker`.
 
 **Why.** K14, as for files.
 
@@ -407,6 +411,43 @@ otherwise keep it in the one area file that uses it.
 
 **Regenerate.** Remove an entry once its helper has moved or is used by one
 file; `UPDATE_RATCHETS=1` does it.
+
+## K5 raw HandlerDeps reads
+
+**Enforces.** In `internal/api`, production and test files alike, only
+`handlers.go` names the raw `HandlerDeps` settings that `NewHandler` derives
+private values from: `FrontendURL`, `SecureCookies` and `CrossSiteCookies`
+(`rawDeps` in `handler_deps_test.go`). Since M14 `Handler` embeds
+`HandlerDeps`, so `h.FrontendURL` compiles; anywhere else a selector naming
+one fails, a write as much as a read: `h.FrontendURL`, `fx.h.SecureCookies`,
+`h.HandlerDeps.CrossSiteCookies`. There is none today. The rule reads syntax
+only, so it cannot tell a `Handler` from another type: a selector of a
+dependency the handler holds (`h.GoogleOAuth.FrontendURL`,
+`h.OIDC.FrontendURL`: one whose operand is a selector naming a field of
+`Handler` or `HandlerDeps` other than the embedded `HandlerDeps`) reads that
+dependency's own field and passes, and any other look-alike, such as a
+local `cfg.FrontendURL`, fails; rename the look-alike or read it through
+the handler's field if that ever bites. A `HandlerDeps{...}` composite
+literal key is not a selector, so a test still sets the settings there. The
+rule also fails if `HandlerDeps` no longer declares one of the three, so a
+rename cannot switch it off unseen. `TestRawHandlerDeps` proves it on a
+fixture.
+
+**Why.** K5: a dependency is declared once, as a `HandlerDeps` field, and
+the values `NewHandler` derives stay private. Read raw, the frontend URL
+keeps a trailing slash that the share links, previews and billing return
+URL built from `h.frontendURL` do not have, and the cookie flags miss
+`CrossSiteCookies` forcing `Secure` on with `SameSite=None` (the S4 cookie
+profiles), so a handler that read them would behave differently from its
+neighbours.
+
+**Fix.** Read the derived value: `h.frontendURL` for `FrontendURL`,
+`h.secureCookies` for `SecureCookies`, and `h.cookieSameSite` with
+`h.secureCookies` for `CrossSiteCookies`; or the cookie helpers in
+`cookies.go`. A new derived value is computed in `NewHandler`, in
+`handlers.go`. There is no allowlist.
+
+**Regenerate.** Nothing to regenerate.
 
 ## Direct env reads
 

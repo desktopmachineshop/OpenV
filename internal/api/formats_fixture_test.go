@@ -521,13 +521,13 @@ func newS9Fixture(t *testing.T) *s9Fixture {
 	}
 
 	h := vvHandler(t, vvSvc)
-	h.projectService = projectSvc
-	h.exportService = exportSvc
-	h.baselineService = baselineSvc
-	h.reportService = reportSvc
-	h.downloadService = downloadSvc
-	h.teamService = &s9Teams{d: d}
-	h.agentService = &s9Agents{d: d}
+	withProjectService(projectSvc)(h)
+	withExportService(exportSvc)(h)
+	withBaselineService(baselineSvc)(h)
+	withReportService(reportSvc)(h)
+	withDownloadService(downloadSvc)(h)
+	withTeamService(&s9Teams{d: d})(h)
+	withAgentService(&s9Agents{d: d})(h)
 	router := mux.NewRouter()
 	h.RegisterRoutes(router)
 	return &s9Fixture{d: d, h: h, router: router, export: exportSvc}

@@ -41,7 +41,7 @@ func (h *Handler) ReindexEmbeddings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.embeddingService == nil || !h.embeddingService.Enabled() {
+	if h.EmbeddingService == nil || !h.EmbeddingService.Enabled() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -52,7 +52,7 @@ func (h *Handler) ReindexEmbeddings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		n, err := h.embeddingService.ReindexProject(projectID)
+		n, err := h.EmbeddingService.ReindexProject(projectID)
 		if err != nil {
 			slog.Warn("api: reindex-embeddings failed", "project_id", projectID, "error", err)
 			return
@@ -108,7 +108,7 @@ func (h *Handler) DuplicateCandidates(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	if h.embeddingService == nil || !h.embeddingService.Enabled() {
+	if h.EmbeddingService == nil || !h.EmbeddingService.Enabled() {
 		json.NewEncoder(w).Encode(duplicatesResponse{
 			Enabled: false,
 			Note:    "semantic-search embeddings are not configured; duplicate detection is unavailable",
@@ -117,7 +117,7 @@ func (h *Handler) DuplicateCandidates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := h.embeddingService.DuplicatePairs(projectID, embeddings.MaxDuplicatePairs)
+	found, err := h.EmbeddingService.DuplicatePairs(projectID, embeddings.MaxDuplicatePairs)
 	if err != nil {
 		if errors.Is(err, embeddings.ErrDisabled) || errors.Is(err, embeddings.ErrVectorUnavailable) {
 			json.NewEncoder(w).Encode(duplicatesResponse{

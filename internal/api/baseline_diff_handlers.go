@@ -19,7 +19,7 @@ import (
 func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 	baselineID := mux.Vars(r)["id"]
 
-	baseline, err := h.baselineService.GetBaseline(baselineID)
+	baseline, err := h.BaselineService.GetBaseline(baselineID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
@@ -47,7 +47,7 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 	var target exports.ProjectExport
 	targetRef := baselines.SnapshotRef{ID: "live", Name: "Live Project"}
 	if against == "live" {
-		raw, _, err := h.exportService.ExportProject(baseline.ProjectID, exports.FormatJSON)
+		raw, _, err := h.ExportService.ExportProject(baseline.ProjectID, exports.FormatJSON)
 		if err != nil {
 			respondInternal(w, r, "failed to export project", err)
 			return
@@ -59,7 +59,7 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// A baseline from another project (or another org's project) is
 		// indistinguishable from a missing one: 404 either way.
-		other, err := h.baselineService.GetProjectBaseline(baseline.ProjectID, against)
+		other, err := h.BaselineService.GetProjectBaseline(baseline.ProjectID, against)
 		if err != nil {
 			respondError(w, r, http.StatusNotFound, "comparison baseline not found", err)
 			return

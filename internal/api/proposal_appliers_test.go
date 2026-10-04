@@ -99,13 +99,13 @@ func (f *applierLinkService) GetLinksTo(string) ([]*links.Link, error)   { retur
 
 func newApplierHandler(t *testing.T, bus *recordingBus, artSvc *applierArtifactService, linkSvc *applierLinkService) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.artifactService = artSvc
-		h.linkService = linkSvc
-		h.chatterService = &fakeChatterService{}
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ArtifactService = artSvc
+		h.LinkService = linkSvc
+		h.ChatterService = &fakeChatterService{}
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
 		}}
-		h.bus = bus
+		h.Bus = bus
 	})
 }
 

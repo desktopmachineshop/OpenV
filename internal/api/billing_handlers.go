@@ -82,7 +82,7 @@ func (h *Handler) billingAdmin(w http.ResponseWriter, r *http.Request) (*orgs.Or
 		writeRateLimited(w, "too many billing requests for this workspace; try again shortly", retryAfter)
 		return nil, orgID
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		h.writeBillingError(w, r, err)
 		return nil, orgID
@@ -114,7 +114,7 @@ func (h *Handler) CheckoutOrgBilling(w http.ResponseWriter, r *http.Request) {
 	}
 	user := CurrentUser(r)
 	buyer := billing.Buyer{ID: user.ID, Email: user.Email, Name: user.Name, TrialUsed: user.BillingTrialUsedAt != nil}
-	url, err := h.billing.Checkout(r.Context(), org, buyer, req.Plan, req.Interval, req.Currency)
+	url, err := h.BillingService.Checkout(r.Context(), org, buyer, req.Plan, req.Interval, req.Currency)
 	if err != nil {
 		h.writeBillingError(w, r, err)
 		return
@@ -137,7 +137,7 @@ func (h *Handler) ChangeOrgBillingPlan(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.billing.ChangePlan(r.Context(), org, req.Plan, req.Interval)
+	updated, err := h.BillingService.ChangePlan(r.Context(), org, req.Plan, req.Interval)
 	if err != nil {
 		h.writeBillingError(w, r, err)
 		return
@@ -151,7 +151,7 @@ func (h *Handler) OpenOrgBillingPortal(w http.ResponseWriter, r *http.Request) {
 	if org == nil {
 		return
 	}
-	url, err := h.billing.PortalURL(r.Context(), org)
+	url, err := h.BillingService.PortalURL(r.Context(), org)
 	if err != nil {
 		h.writeBillingError(w, r, err)
 		return
@@ -168,8 +168,8 @@ func (h *Handler) OpenOrgBillingPortal(w http.ResponseWriter, r *http.Request) {
 // of, the billing provider. Accepting an invitation is not a change — the
 // invitation was already a seat — so acceptance does not call this.
 func (h *Handler) seatsChanged(orgID string) {
-	if h.billing != nil {
-		h.billing.SeatsChanged(orgID)
+	if h.BillingService != nil {
+		h.BillingService.SeatsChanged(orgID)
 	}
 }
 
@@ -197,14 +197,14 @@ func (h *Handler) orgBilling(org *orgs.Org) orgBillingResponse {
 		Granted:      orgs.GrantedPlan(org.BilledPlan),
 		Billing:      b,
 		SelfHosted:   orgs.SelfHosted(),
-		Plans:        h.billing.PublicPlans(),
+		Plans:        h.BillingService.PublicPlans(),
 	}
 }
 
 // billingAvailable answers 404 billing_unavailable when no provider is
 // configured, and reports whether the handler may go on.
 func (h *Handler) billingAvailable(w http.ResponseWriter) bool {
-	if !h.billing.Enabled() {
+	if !h.BillingService.Enabled() {
 		writeJSONErrorCode(w, http.StatusNotFound, "billing is not available on this deployment", ErrCodeBillingUnavailable)
 		return false
 	}
@@ -216,7 +216,7 @@ func (h *Handler) billingAvailable(w http.ResponseWriter) bool {
 // memory. With no provider it says so and lists nothing.
 func (h *Handler) GetPublicPlans(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	respondJSON(w, http.StatusOK, h.billing.PublicPlans())
+	respondJSON(w, http.StatusOK, h.BillingService.PublicPlans())
 }
 
 // GetOrgBilling is the workspace's billing state, for admins: the plan it
@@ -230,7 +230,7 @@ func (h *Handler) GetOrgBilling(w http.ResponseWriter, r *http.Request) {
 	if !h.billingAvailable(w) {
 		return
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		if errors.Is(err, orgs.ErrNotFound) {
 			writeJSONError(w, http.StatusNotFound, "workspace not found")
@@ -276,9 +276,9 @@ func (h *Handler) RefreshOrgBilling(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	if req.SessionID != "" {
-		org, err = h.billing.BindCheckoutSession(r.Context(), orgID, req.SessionID)
+		org, err = h.BillingService.BindCheckoutSession(r.Context(), orgID, req.SessionID)
 	} else {
-		org, err = h.billing.RefreshOrg(r.Context(), orgID)
+		org, err = h.BillingService.RefreshOrg(r.Context(), orgID)
 	}
 	if err != nil {
 		h.writeBillingError(w, r, err)

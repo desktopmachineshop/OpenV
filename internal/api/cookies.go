@@ -10,7 +10,7 @@ func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
 	// so a browser stops presenting a cookie the server would refuse anyway
 	// (REQ-99). Idle expiry is not expressible in a cookie and stays a
 	// server-side check.
-	maxAge := h.sessionPolicy.Normalized().MaxAge
+	maxAge := h.SessionPolicy.Normalized().MaxAge
 	http.SetCookie(w, &http.Cookie{
 		Name:        SessionCookieName,
 		Value:       token,

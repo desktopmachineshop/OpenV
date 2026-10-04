@@ -56,7 +56,7 @@ type sharedProductRequest struct {
 // its vote counts and the caller's own vote — false for a caller with no
 // session user, such as a runner key, which cannot vote either.
 func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
-	if h.sharedProductService == nil {
+	if h.SharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
@@ -70,7 +70,7 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 	if user := CurrentUser(r); user != nil {
 		viewerID = user.ID
 	}
-	products, err := h.sharedProductService.List(sharedproducts.ListOptions{
+	products, err := h.SharedProductService.List(sharedproducts.ListOptions{
 		Limit:    limit,
 		Sort:     sharedproducts.Sort(r.URL.Query().Get("sort")),
 		ViewerID: viewerID,
@@ -91,7 +91,7 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 // an account, which is what makes the daily cap and takedown mean anything.
 // The service sanitizes and rate-limits from there.
 func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
-	if h.sharedProductService == nil {
+	if h.SharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
@@ -111,7 +111,7 @@ func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product, err := h.sharedProductService.Publish(sharedproducts.Product{
+	product, err := h.SharedProductService.Publish(sharedproducts.Product{
 		Category:    req.Category,
 		Name:        req.Name,
 		Description: req.Description,
@@ -132,7 +132,7 @@ func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
 // report; enough distinct reporters hide it from everyone pending admin
 // review (one account reporting repeatedly changes nothing).
 func (h *Handler) ReportSharedProduct(w http.ResponseWriter, r *http.Request) {
-	if h.sharedProductService == nil {
+	if h.SharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
@@ -141,7 +141,7 @@ func (h *Handler) ReportSharedProduct(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "only a signed-in person can report a shared product")
 		return
 	}
-	if err := h.sharedProductService.Report(mux.Vars(r)["id"], user.ID); err != nil {
+	if err := h.SharedProductService.Report(mux.Vars(r)["id"], user.ID); err != nil {
 		writeSharedProductError(w, r, err)
 		return
 	}
@@ -167,7 +167,7 @@ func (h *Handler) UnvoteSharedProduct(w http.ResponseWriter, r *http.Request) {
 // changeSharedProductVote is the shared body of the two vote endpoints: the
 // person gate, the call, and the counts both answer with.
 func (h *Handler) changeSharedProductVote(w http.ResponseWriter, r *http.Request, vote bool) {
-	if h.sharedProductService == nil {
+	if h.SharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
@@ -181,9 +181,9 @@ func (h *Handler) changeSharedProductVote(w http.ResponseWriter, r *http.Request
 	var counts sharedproducts.VoteCounts
 	var err error
 	if vote {
-		counts, err = h.sharedProductService.Vote(id, user.ID)
+		counts, err = h.SharedProductService.Vote(id, user.ID)
 	} else {
-		counts, err = h.sharedProductService.Unvote(id, user.ID)
+		counts, err = h.SharedProductService.Unvote(id, user.ID)
 	}
 	if err != nil {
 		writeSharedProductError(w, r, err)
@@ -196,7 +196,7 @@ func (h *Handler) changeSharedProductVote(w http.ResponseWriter, r *http.Request
 // DeleteSharedProduct removes an entry outright. Platform admins only: this
 // is the takedown path for anything the report threshold has not caught.
 func (h *Handler) DeleteSharedProduct(w http.ResponseWriter, r *http.Request) {
-	if h.sharedProductService == nil {
+	if h.SharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
@@ -205,7 +205,7 @@ func (h *Handler) DeleteSharedProduct(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "platform admin required")
 		return
 	}
-	if err := h.sharedProductService.Delete(mux.Vars(r)["id"]); err != nil {
+	if err := h.SharedProductService.Delete(mux.Vars(r)["id"]); err != nil {
 		writeSharedProductError(w, r, err)
 		return
 	}

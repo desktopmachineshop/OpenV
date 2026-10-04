@@ -21,9 +21,10 @@
 // vi.mocked(projectAPI.get).mockResolvedValue(...).
 //
 // Everything else the client exports (constants, helpers, the axios
-// instance) stays real unless an override names it. An override naming an
-// export or a method the client lacks throws, so a stale override fails
-// loudly.
+// instance) stays real unless an override names it. The overrides are typed
+// against the client, so tsc refuses an override naming an export or a
+// method the client lacks, or taking other arguments than the real method;
+// at run time such a name throws as well, for a test the type checker skips.
 
 import { vi, type Mock } from 'vitest';
 import type * as Client from '../api/client';
@@ -92,8 +93,13 @@ function stubMethods(path: string, real: Record<string, unknown>, given: unknown
  * Returns the client module `actual` with every method of every `*API`
  * object stubbed: `overrides` supplies implementations, every other method
  * records its call and returns a promise that never settles.
+ *
+ * `M` is the client module unless a caller names another. Neither argument
+ * nor the return type infers it: inside `vi.mock`, whose factory may return
+ * anything, inferring from the return type made `M` `{}` and left the
+ * overrides unchecked (#379, bug 111).
  */
-export function mockApi<M = typeof Client>(actual: unknown, overrides: ApiOverrides<NoInfer<M>> = {}): M {
+export function mockApi<M = typeof Client>(actual: unknown, overrides: ApiOverrides<NoInfer<M>> = {}): NoInfer<M> {
   const real = actual as Record<string, unknown>;
   const given = overrides as Record<string, unknown>;
   for (const key of Object.keys(given)) {

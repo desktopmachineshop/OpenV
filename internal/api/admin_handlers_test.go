@@ -78,8 +78,8 @@ func newAdminHandler(t *testing.T) (*Handler, *adminUserFake) {
 		"other": {ID: "other", Name: "Other", Email: "other@example.com", IsAdmin: true},
 	}}
 	h := newTestHandler(t, func(h *Handler) {
-		h.orgService = &adminOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"org-1", "org-2"}}
-		h.userService = uf
+		h.OrgService = &adminOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"org-1", "org-2"}}
+		h.UserService = uf
 	})
 	return h, uf
 }

@@ -47,7 +47,7 @@ func (h *Handler) RegisterPoolNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	node, err := h.runnerSessionService.RegisterNode(req.Pool, req.Name, req.Providers)
+	node, err := h.RunnerSessionService.RegisterNode(req.Pool, req.Name, req.Providers)
 	if err != nil {
 		respondError(w, r, http.StatusBadRequest, "failed to register pool node", err)
 		return
@@ -63,7 +63,7 @@ func (h *Handler) PoolNodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	if !requirePoolNode(w, r) || !h.requireRunnerSessions(w) {
 		return
 	}
-	node, assignment, err := h.runnerSessionService.Heartbeat(mux.Vars(r)["id"])
+	node, assignment, err := h.RunnerSessionService.Heartbeat(mux.Vars(r)["id"])
 	if err != nil {
 		if errors.Is(err, runnersessions.ErrNodeNotFound) {
 			// The row is gone (a reset database, a purged pool): tell the
@@ -75,8 +75,8 @@ func (h *Handler) PoolNodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to record pool heartbeat", err)
 		return
 	}
-	if assignment != nil && assignment.UserName == "" && h.userService != nil {
-		if user, err := h.userService.GetByID(assignment.UserID); err == nil && user != nil {
+	if assignment != nil && assignment.UserName == "" && h.UserService != nil {
+		if user, err := h.UserService.GetByID(assignment.UserID); err == nil && user != nil {
 			assignment.UserName = user.Name
 		}
 	}
@@ -99,7 +99,7 @@ func (h *Handler) ReleasePoolNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if err := h.runnerSessionService.ReleaseNode(mux.Vars(r)["id"], req.SessionID); err != nil {
+	if err := h.RunnerSessionService.ReleaseNode(mux.Vars(r)["id"], req.SessionID); err != nil {
 		// A node the pool has no row for: the heartbeat's answer. The
 		// runner does not retry a 404 as it does a 5xx; it registers
 		// again when its heartbeat gets the same answer.
@@ -131,7 +131,7 @@ func (h *Handler) runnerSessionPayload(session *runnersessions.Session) map[stri
 	// exact free count is not theirs to act on, and publishing the
 	// deployment's capacity to every account is not something this endpoint
 	// should do. The admin pool endpoint still reports the real counts.
-	if counts, err := h.runnerSessionService.Counts(runnersessions.DefaultPool); err == nil {
+	if counts, err := h.RunnerSessionService.Counts(runnersessions.DefaultPool); err == nil {
 		payload["pool_load"] = counts.Load()
 	}
 	return payload
@@ -141,7 +141,7 @@ func (h *Handler) runnerSessionPayload(session *runnersessions.Session) map[stri
 // limits, falling back to the package defaults.
 func (h *Handler) sessionLimits(orgID string) (sessionMinutes, idleMinutes int) {
 	sessionMinutes, idleMinutes = runnersessions.DefaultSessionMinutes, runnersessions.DefaultIdleMinutes
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil || org == nil {
 		return
 	}
@@ -166,7 +166,7 @@ func (h *Handler) GetRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := CurrentUser(r)
-	session, err := h.runnerSessionService.Get(orgID, user.ID)
+	session, err := h.RunnerSessionService.Get(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load runner session", err)
 		return
@@ -192,7 +192,7 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 		h.writeLimitError(w, err)
 		return
 	}
-	session, created, err := h.runnerSessionService.Start(orgID, user.ID, sessionMinutes, idleMinutes)
+	session, created, err := h.RunnerSessionService.Start(orgID, user.ID, sessionMinutes, idleMinutes)
 	if err != nil {
 		if errors.Is(err, runnersessions.ErrNoNodes) {
 			// Not an error the member did anything wrong: every runner in
@@ -204,7 +204,7 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to start a runner session", err)
 		return
 	}
-	h.minutesAlerts.Check(orgID)
+	h.MinutesAlerts.Check(orgID)
 	if created {
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -218,7 +218,7 @@ func (h *Handler) ExtendRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := CurrentUser(r)
-	session, err := h.runnerSessionService.Get(orgID, user.ID)
+	session, err := h.RunnerSessionService.Get(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load runner session", err)
 		return
@@ -233,12 +233,12 @@ func (h *Handler) ExtendRunnerSession(w http.ResponseWriter, r *http.Request) {
 		h.writeLimitError(w, err)
 		return
 	}
-	extended, err := h.runnerSessionService.Extend(session.ID, sessionMinutes)
+	extended, err := h.RunnerSessionService.Extend(session.ID, sessionMinutes)
 	if err != nil {
 		respondError(w, r, http.StatusBadRequest, "failed to extend the runner session", err)
 		return
 	}
-	h.minutesAlerts.Check(orgID)
+	h.MinutesAlerts.Check(orgID)
 	json.NewEncoder(w).Encode(h.runnerSessionPayload(extended))
 }
 
@@ -251,7 +251,7 @@ func (h *Handler) EndRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := CurrentUser(r)
-	session, err := h.runnerSessionService.Get(orgID, user.ID)
+	session, err := h.RunnerSessionService.Get(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load runner session", err)
 		return
@@ -260,7 +260,7 @@ func (h *Handler) EndRunnerSession(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(h.runnerSessionPayload(nil))
 		return
 	}
-	if _, err := h.runnerSessionService.End(session.ID, runnersessions.EndReasonUser); err != nil {
+	if _, err := h.RunnerSessionService.End(session.ID, runnersessions.EndReasonUser); err != nil {
 		respondInternal(w, r, "failed to end the runner session", err)
 		return
 	}
@@ -278,12 +278,12 @@ func (h *Handler) GetRunnerPool(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{"enabled": false})
 		return
 	}
-	counts, err := h.runnerSessionService.Counts(runnersessions.DefaultPool)
+	counts, err := h.RunnerSessionService.Counts(runnersessions.DefaultPool)
 	if err != nil {
 		respondInternal(w, r, "failed to read the runner pool", err)
 		return
 	}
-	sessions, err := h.runnerSessionService.ListLive(orgID)
+	sessions, err := h.RunnerSessionService.ListLive(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to list runner sessions", err)
 		return
@@ -299,10 +299,10 @@ func (h *Handler) GetRunnerPool(w http.ResponseWriter, r *http.Request) {
 // so the idle clock measures actual use rather than the poll loop. A no-op
 // for every other credential.
 func (h *Handler) touchRunnerSession(r *http.Request) {
-	if h.runnerSessionService == nil {
+	if h.RunnerSessionService == nil {
 		return
 	}
 	if session := WorkerSession(r); session != "" {
-		_ = h.runnerSessionService.Touch(session)
+		_ = h.RunnerSessionService.Touch(session)
 	}
 }

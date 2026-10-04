@@ -91,7 +91,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 				svc := &fakeProposalService{byID: map[string]*proposals.Proposal{"pr-1": {ID: "pr-1", RunID: "run-1",
 					ProjectID: project, Op: proposals.OpCreateArtifact, Status: proposals.StatusPending}}}
 				h := proposalTestHandler(t, svc, map[string]*projects.Project{project: {ID: project, OrgID: org}}, nil)
-				h.orgService, h.memberService = roles()
+				h.OrgService, h.MemberService = roles()
 				r := httptest.NewRequest(http.MethodPost, "/api/v1/proposals/pr-1/"+action, strings.NewReader(`{}`))
 				r = mux.SetURLVars(keyCtx(r, key.holder), map[string]string{"id": "pr-1"})
 				w := httptest.NewRecorder()
@@ -105,7 +105,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 		}
 		t.Run("create an artifact with "+key.name, func(t *testing.T) {
 			h, _ := copyHandler(t)
-			h.orgService, h.memberService = roles()
+			h.OrgService, h.MemberService = roles()
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/artifacts",
 				strings.NewReader(`{"project_id":"p1","type":"requirement","title":"New","body":"x"}`))
 			w := httptest.NewRecorder()
@@ -114,7 +114,7 @@ func TestPersonalRunnerKeyActsWithItsHoldersRole(t *testing.T) {
 			if key.roleless {
 				refusal = `404 {"error":"project not found"}`
 			}
-			check(t, w, key.wantPass, http.StatusCreated, len(h.artifactService.(*copyArtifactFake).created), refusal)
+			check(t, w, key.wantPass, http.StatusCreated, len(h.ArtifactService.(*copyArtifactFake).created), refusal)
 		})
 	}
 }
@@ -155,10 +155,10 @@ func personalKeyReadsHandler(t *testing.T) (*Handler, *fakeRepoConnService) {
 		"p1": {ID: "p1", OrgID: "o1", Name: "Pump"},
 		"p2": {ID: "p2", OrgID: "o1", Name: "Valve"},
 	}, map[string]map[string]string{"p1": {"val": members.RoleViewer}})
-	h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+	h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 		"o1": {"val": orgs.RoleMember, "mo": orgs.RoleMember, "ada": orgs.RoleAdmin}}}
 	conns := &fakeRepoConnService{paths: map[string]string{"val": "/home/val/firmware", "ada": "/home/ada/firmware"}}
-	h.repoConnService = conns
+	h.RepoConnService = conns
 	return h, conns
 }
 

@@ -47,7 +47,7 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 	if !h.assigneeCrewChecked(w, r, projectID, req.AssigneeType, req.AssigneeID) {
 		return
 	}
-	item, err := h.workItemService.Create(req, CurrentUserID(r), Actor(r))
+	item, err := h.WorkItemService.Create(req, CurrentUserID(r), Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -60,10 +60,10 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 // an artifact in the given project. A lookup failure answers no: refusing a
 // link OpenV cannot vouch for is the safe direction.
 func (h *Handler) noteBelongsToProject(chatterID, projectID string) bool {
-	if h.chatterService == nil {
+	if h.ChatterService == nil {
 		return false
 	}
-	entry, err := h.chatterService.GetEntry(chatterID)
+	entry, err := h.ChatterService.GetEntry(chatterID)
 	if err != nil || entry == nil {
 		return false
 	}
@@ -75,7 +75,7 @@ func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	items, err := h.workItemService.ListByProject(projectID)
+	items, err := h.WorkItemService.ListByProject(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list work items", err)
 		return
@@ -84,7 +84,7 @@ func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetWorkItem(w http.ResponseWriter, r *http.Request) {
-	item, activity, err := h.workItemService.GetWithActivity(mux.Vars(r)["id"])
+	item, activity, err := h.WorkItemService.GetWithActivity(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
@@ -100,7 +100,7 @@ func (h *Handler) GetWorkItem(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	item, err := h.workItemService.Get(id)
+	item, err := h.WorkItemService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
@@ -124,7 +124,7 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 	if !unchanged && !h.assigneeCrewChecked(w, r, item.ProjectID, assigneeType, req.AssigneeID) {
 		return
 	}
-	updated, err := h.workItemService.Update(id, req, Actor(r))
+	updated, err := h.WorkItemService.Update(id, req, Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -134,7 +134,7 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	item, err := h.workItemService.Get(id)
+	item, err := h.WorkItemService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
@@ -142,7 +142,7 @@ func (h *Handler) DeleteWorkItem(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleEditor, missing("work item not found")) {
 		return
 	}
-	if err := h.workItemService.Delete(id); err != nil {
+	if err := h.WorkItemService.Delete(id); err != nil {
 		respondInternal(w, r, "failed to delete work item", err)
 		return
 	}
@@ -151,7 +151,7 @@ func (h *Handler) DeleteWorkItem(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	item, err := h.workItemService.Get(id)
+	item, err := h.WorkItemService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
@@ -164,7 +164,7 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	moved, err := h.workItemService.Move(id, req, Actor(r))
+	moved, err := h.WorkItemService.Move(id, req, Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -174,7 +174,7 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	item, err := h.workItemService.Get(id)
+	item, err := h.WorkItemService.Get(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
@@ -189,7 +189,7 @@ func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	activity, err := h.workItemService.AddComment(id, req.Content, Actor(r))
+	activity, err := h.WorkItemService.AddComment(id, req.Content, Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

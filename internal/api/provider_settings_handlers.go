@@ -23,7 +23,7 @@ func (h *Handler) ListProviderSettings(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	list, err := h.providerService.List(ActiveOrg(r))
+	list, err := h.ProviderService.List(ActiveOrg(r))
 	if err != nil {
 		respondInternal(w, r, "failed to list provider settings", err)
 		return
@@ -41,7 +41,7 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	setting.OrgID = ActiveOrg(r)
-	if err := h.providerService.Upsert(&setting); err != nil {
+	if err := h.ProviderService.Upsert(&setting); err != nil {
 		if errors.Is(err, providers.ErrInvalidSetting) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		} else {
@@ -73,7 +73,7 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 	sort.Strings(names)
 	var refused error
 	for _, provider := range names {
-		err := h.providerService.RecordDetection(WorkerOrg(r), provider, req[provider])
+		err := h.ProviderService.RecordDetection(WorkerOrg(r), provider, req[provider])
 		switch {
 		case err == nil:
 		case errors.Is(err, providers.ErrInvalidSetting):

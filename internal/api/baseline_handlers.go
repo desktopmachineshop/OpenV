@@ -47,7 +47,7 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 
 	// The snapshot is the JSON export with the project's attribute
 	// definitions beside it (REQ-5): attachment metadata, not their files.
-	data, err := h.exportService.Snapshot(projectID)
+	data, err := h.ExportService.Snapshot(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to export project", err)
 		return
@@ -56,7 +56,7 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 	// CurrentUserID is nil when the caller is an automation holding a
 	// workspace key rather than a person, which the column records as an
 	// unattributed capture instead of blaming somebody.
-	baseline, err := h.baselineService.CreateBaseline(projectID, name, data, CurrentUserID(r))
+	baseline, err := h.BaselineService.CreateBaseline(projectID, name, data, CurrentUserID(r))
 	if err != nil {
 		respondInternal(w, r, "failed to create baseline", err)
 		return
@@ -79,7 +79,7 @@ func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baselines, err := h.baselineService.ListBaselines(projectID)
+	baselines, err := h.BaselineService.ListBaselines(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list baselines", err)
 		return
@@ -93,7 +93,7 @@ func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 	baselineID := mux.Vars(r)["id"]
 
-	baseline, err := h.baselineService.GetBaseline(baselineID)
+	baseline, err := h.BaselineService.GetBaseline(baselineID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
@@ -113,7 +113,7 @@ func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 	baselineID := mux.Vars(r)["id"]
 
-	baseline, err := h.baselineService.GetBaseline(baselineID)
+	baseline, err := h.BaselineService.GetBaseline(baselineID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
@@ -122,7 +122,7 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.baselineService.DeleteBaseline(baselineID); err != nil {
+	if err := h.BaselineService.DeleteBaseline(baselineID); err != nil {
 		respondInternal(w, r, "failed to delete baseline", err)
 		return
 	}

@@ -21,7 +21,7 @@ func (h *Handler) GetProductProfile(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	profile, err := h.productService.GetProfile(projectID)
+	profile, err := h.ProductService.GetProfile(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load product profile", err)
 		return
@@ -39,7 +39,7 @@ func (h *Handler) UpdateProductProfile(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	profile, err := h.productService.UpdateProfile(projectID, req)
+	profile, err := h.ProductService.UpdateProfile(projectID, req)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

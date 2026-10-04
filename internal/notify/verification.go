@@ -54,7 +54,7 @@ func VerificationLink(linkBase, token string) string {
 // RenderVerificationEmail returns the plain-text subject and body.
 func RenderVerificationEmail(name, link string, ttl time.Duration) (subject, body string) {
 	greeting := "Hi,"
-	if n := strings.TrimSpace(name); n != "" {
+	if n := strings.TrimSpace(memberText(name)); n != "" {
 		greeting = "Hi " + n + ","
 	}
 	hours := int(ttl.Hours())
@@ -78,7 +78,7 @@ func PasswordResetLink(linkBase, token string) string {
 // owner, only what to do if it did not.
 func RenderPasswordResetEmail(name, link string, ttl time.Duration) (subject, body string) {
 	greeting := "Hi,"
-	if n := strings.TrimSpace(name); n != "" {
+	if n := strings.TrimSpace(memberText(name)); n != "" {
 		greeting = "Hi " + n + ","
 	}
 	var b strings.Builder

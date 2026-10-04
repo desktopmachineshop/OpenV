@@ -38,7 +38,7 @@ func (h *Handler) registerPasswordResetRoutes(router *mux.Router) {
 
 // passwordResetEmailAvailable says whether the deployment can email a link.
 func (h *Handler) passwordResetEmailAvailable() bool {
-	return h.mailer != nil && h.mailer.Enabled()
+	return h.Mailer != nil && h.Mailer.Enabled()
 }
 
 // RequestPasswordReset mails a reset link to an address that has a password
@@ -84,7 +84,7 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 // after the answer has gone out. Every failure is logged, none is reported:
 // there is nobody to report it to who should learn from it.
 func (h *Handler) sendPasswordResetFor(email string) {
-	user, err := h.userService.FindByEmail(email)
+	user, err := h.UserService.FindByEmail(email)
 	if err != nil {
 		slog.Error("password reset: lookup failed", "error", err)
 		return
@@ -92,19 +92,19 @@ func (h *Handler) sendPasswordResetFor(email string) {
 	if user == nil {
 		return
 	}
-	token, _, err := h.userService.IssuePasswordReset(user.ID, users.ResetDeliveryEmail, nil)
+	token, _, err := h.UserService.IssuePasswordReset(user.ID, users.ResetDeliveryEmail, nil)
 	if err != nil {
 		if !errors.Is(err, users.ErrNoPassword) {
 			slog.Error("password reset: could not issue a link", "user_id", user.ID, "error", err)
 		}
 		return
 	}
-	link := notify.PasswordResetLink(h.emailLinkBase, token)
+	link := notify.PasswordResetLink(h.EmailLinkBase, token)
 	// The mail states the validity an emailed link is issued with, as the
 	// verification and invitation mails state theirs: the time left until
 	// the expiry just minted is a moment under it, and reads as 59 minutes.
 	subject, body := notify.RenderPasswordResetEmail(user.Name, link, users.PasswordResetTTL)
-	if err := h.mailer.Send(user.Email, subject, body); err != nil {
+	if err := h.Mailer.Send(user.Email, subject, body); err != nil {
 		slog.Error("password reset: could not send the link", "user_id", user.ID, "error", err)
 	}
 }
@@ -125,7 +125,7 @@ func (h *Handler) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
 		writeRateLimited(w, "Too many attempts from this address; try again later.", retryAfter)
 		return
 	}
-	_, err := h.userService.ResetPassword(req.Token, req.NewPassword)
+	_, err := h.UserService.ResetPassword(req.Token, req.NewPassword)
 	switch {
 	case errors.Is(err, users.ErrWeakPassword):
 		writeJSONErrorCode(w, http.StatusBadRequest, err.Error(), ErrCodeWeakPassword)
@@ -150,7 +150,7 @@ func (h *Handler) AdminIssuePasswordReset(w http.ResponseWriter, r *http.Request
 		return
 	}
 	id := mux.Vars(r)["id"]
-	token, expires, err := h.userService.IssuePasswordReset(id, users.ResetDeliveryAdmin, &caller.ID)
+	token, expires, err := h.UserService.IssuePasswordReset(id, users.ResetDeliveryAdmin, &caller.ID)
 	switch {
 	case errors.Is(err, users.ErrUserNotFound):
 		writeJSONError(w, http.StatusNotFound, err.Error())
@@ -165,7 +165,7 @@ func (h *Handler) AdminIssuePasswordReset(w http.ResponseWriter, r *http.Request
 	slog.Info("password reset: link minted by a platform admin", "admin_id", caller.ID, "user_id", id, "expires_at", expires.UTC().Format(time.RFC3339))
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"link":       notify.PasswordResetLink(h.emailLinkBase, token),
+		"link":       notify.PasswordResetLink(h.EmailLinkBase, token),
 		"expires_at": expires.UTC().Format(time.RFC3339),
 	})
 }

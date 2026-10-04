@@ -88,8 +88,8 @@ A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 in `RegisterRoutes` (its position decides which of two overlapping
 templates serves a path), a glob in
 `docs/areas.json` if no area claims the name, then the steps above. A new
-service: one `HandlerDeps` field, plus the `Handler` field and its copy in
-`NewHandler` until M14, plus one line in `cmd/server/wire_http.go` (K5).
+service: one `HandlerDeps` field, which `Handler` embeds, plus one line in
+`cmd/server/wire_http.go` (K5).
 Scaffold: `go run ./internal/tools/scaffold api-area <name>`
 
 **Publish a new domain event.** Add the type in `internal/domain/events`

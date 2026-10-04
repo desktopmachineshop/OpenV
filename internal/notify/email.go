@@ -17,6 +17,7 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -102,6 +103,13 @@ func (m *SMTPMailer) Send(to, subject, body string) error {
 // headerText, here and only here, so nothing a caller passes can end a
 // header early and start another (#379, bug 64); the body follows the blank
 // line and cannot add a header.
+//
+// Every line break in the body, LF, CR or CRLF, goes out as one CRLF, the
+// only line end SMTP has (RFC 5321, section 2.3.8). The body used to turn
+// only LF into CRLF, so a CR in the text went out bare: a server that takes
+// a bare CR for a line end would read "\r.\r" as the lone dot that ends the
+// message, and what followed as commands of its own. A body written with
+// LF, as every template here is, goes out exactly as before.
 func buildMessage(from, to, subject, body string) []byte {
 	var b strings.Builder
 	fmt.Fprintf(&b, "From: %s\r\n", headerLine(from))
@@ -110,8 +118,28 @@ func buildMessage(from, to, subject, body string) []byte {
 	b.WriteString("MIME-Version: 1.0\r\n")
 	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
 	b.WriteString("\r\n")
-	b.WriteString(strings.ReplaceAll(body, "\n", "\r\n"))
+	b.WriteString(crlfLines.Replace(body))
 	return []byte(b.String())
+}
+
+// crlfLines writes each line break, CRLF, a bare CR or a bare LF, as CRLF.
+// A replacer compares in argument order, so CRLF is taken whole before its
+// CR could be.
+var crlfLines = strings.NewReplacer("\r\n", "\r\n", "\r", "\r\n", "\n", "\r\n")
+
+// memberText keeps text a member wrote (a display name, an address, a
+// workspace's or an artifact's name) on the line of the sentence it is put
+// into. Each run of control characters in it (CR, LF, tab, NUL, escape and
+// the rest of Unicode's Cc, and the line and paragraph separators U+2028 and
+// U+2029) becomes one space, and a run at either end is dropped, so a name
+// cannot open a line or a paragraph of its own in a notification, an email
+// or a phone alert, and pass what follows off as OpenV's: a display name
+// "Ben\n\nYour account is locked" is read as "Ben Your account is locked
+// joined this workspace". Text without them is returned as it is.
+func memberText(v string) string {
+	return strings.Join(strings.FieldsFunc(v, func(r rune) bool {
+		return unicode.IsControl(r) || r == '\u2028' || r == '\u2029'
+	}), " ")
 }
 
 // headerLine keeps a header value on its one line. A CR or LF inside it

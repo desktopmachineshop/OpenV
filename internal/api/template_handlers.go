@@ -41,7 +41,7 @@ type TemplateListResponse struct {
 // ListTemplates returns available templates (both database and file-based).
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	// Get database templates (the workspace's own plus global built-ins).
-	dbTemplates, err := h.templateService.ListTemplates(ActiveOrg(r))
+	dbTemplates, err := h.TemplateService.ListTemplates(ActiveOrg(r))
 	if err != nil {
 		respondInternal(w, r, "failed to list templates", err)
 		return
@@ -122,7 +122,7 @@ func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := h.templateService.CreateTemplateFromProject(req.ProjectID, req.Name, req.Description, ActiveOrg(r))
+	created, err := h.TemplateService.CreateTemplateFromProject(req.ProjectID, req.Name, req.Description, ActiveOrg(r))
 	if err != nil {
 		respondInternal(w, r, "failed to create template", err)
 		return
@@ -180,7 +180,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 	if snapshot == nil || err != nil {
 		// Fall back to database template
-		projectID, dbErr := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description, orgID)
+		projectID, dbErr := h.TemplateService.CreateProjectFromTemplate(templateID, req.Name, req.Description, orgID)
 		if errors.Is(dbErr, templates.ErrNotFound) {
 			writeJSONError(w, http.StatusNotFound, "template not found")
 			return
@@ -192,7 +192,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 		h.addProjectCreatorAsOwner(r, projectID)
 
-		project, err := h.projectService.GetProject(projectID)
+		project, err := h.ProjectService.GetProject(projectID)
 		if err != nil {
 			respondInternal(w, r, "failed to load project", err)
 			return
@@ -205,7 +205,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Use file-based template
-	projectID, err := h.exportService.ImportProjectWithOverrides(snapshot, req.Name, req.Description, orgID)
+	projectID, err := h.ExportService.ImportProjectWithOverrides(snapshot, req.Name, req.Description, orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to create project from template", err)
 		return
@@ -213,7 +213,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 	h.addProjectCreatorAsOwner(r, projectID)
 
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load project", err)
 		return
@@ -227,8 +227,8 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 // addProjectCreatorAsOwner grants the requesting user owner membership on a
 // freshly created project (mirrors CreateProject).
 func (h *Handler) addProjectCreatorAsOwner(r *http.Request, projectID string) {
-	if user := CurrentUser(r); user != nil && h.memberService != nil {
-		if err := h.memberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
+	if user := CurrentUser(r); user != nil && h.MemberService != nil {
+		if err := h.MemberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
 			slog.Warn("api: failed to add creator as project owner", "project_id", projectID, "error", err)
 		}
 	}

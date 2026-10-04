@@ -312,15 +312,15 @@ func newRegistrationHandler(t *testing.T, policy string) (*Handler, *fakeLoginSe
 	svc := &fakeLoginService{}
 	invites := newFakeInviteService()
 	return newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.invitationService = invites
-		h.registration = policy
+		h.UserService = svc
+		h.InvitationService = invites
+		h.Registration = policy
 		h.registerIPLimiter = newRateLimiter(100, 1)
 		h.authIPLimiter = newRateLimiter(100, 1)
 		h.authAccountLimiter = newRateLimiter(100, 1)
 		h.invitePreviewLimiter = newRateLimiter(100, 1)
 		h.inviteLimiter = newRateLimiter(100, 1)
-		h.emailLinkBase = "https://app.example.com"
+		h.EmailLinkBase = "https://app.example.com"
 	}), svc, invites
 }
 
@@ -330,22 +330,22 @@ func newRegistrationHandler(t *testing.T, policy string) (*Handler, *fakeLoginSe
 // fixture in event_payload_drives_test.go), so a rename of those fields
 // edits this file only.
 func setTestServices(h *Handler, d HandlerDeps) {
-	h.bus = d.Bus
-	h.artifactService = d.ArtifactService
-	h.linkService = d.LinkService
-	h.projectService = d.ProjectService
-	h.chatterService = d.ChatterService
-	h.exportService = d.ExportService
-	h.baselineService = d.BaselineService
-	h.memberService = d.MemberService
-	h.orgService = d.OrgService
-	h.agentService = d.AgentService
-	h.proposalService = d.ProposalService
-	h.interviewService = d.InterviewService
-	h.workItemService = d.WorkItemService
-	h.vvService = d.VVService
-	h.runService = d.RunService
-	h.guidedService = d.GuidedService
+	h.Bus = d.Bus
+	h.ArtifactService = d.ArtifactService
+	h.LinkService = d.LinkService
+	h.ProjectService = d.ProjectService
+	h.ChatterService = d.ChatterService
+	h.ExportService = d.ExportService
+	h.BaselineService = d.BaselineService
+	h.MemberService = d.MemberService
+	h.OrgService = d.OrgService
+	h.AgentService = d.AgentService
+	h.ProposalService = d.ProposalService
+	h.InterviewService = d.InterviewService
+	h.WorkItemService = d.WorkItemService
+	h.VVService = d.VVService
+	h.RunService = d.RunService
+	h.GuidedService = d.GuidedService
 }
 
 func TestRegistrationOpenByDefault(t *testing.T) {
@@ -519,7 +519,7 @@ func TestEveryInvitationAcceptancePublishesTheJoinAsTheJoiner(t *testing.T) {
 	handler := func() (*Handler, *fakeLoginService, *fakeInviteService, *recordingBus) {
 		h, svc, invites := newRegistrationHandler(t, RegistrationClosed)
 		bus := &recordingBus{}
-		h.bus = bus
+		h.Bus = bus
 		return h, svc, invites, bus
 	}
 
@@ -579,7 +579,7 @@ func TestEveryInvitationAcceptancePublishesTheJoinAsTheJoiner(t *testing.T) {
 // is the person who was invited.
 func TestVerifyingTheEmailGrantsNoMembership(t *testing.T) {
 	h, svc, invites := newRegistrationHandler(t, "")
-	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	h.EmailVerification = users.EmailVerificationPolicy{Required: true}
 	svc.confirmed = &users.User{ID: "u-2", Email: "invited@example.com", EmailVerified: true}
 	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
 	invites.invite("org-2", "invited@example.com", orgs.RoleAdmin)
@@ -618,7 +618,7 @@ func TestProviderVerifiedSignInJoinsAndSurvivesAFailure(t *testing.T) {
 // than falling open.
 func TestRegistrationClosedWithoutInvitationsRefuses(t *testing.T) {
 	h, _, _ := newRegistrationHandler(t, RegistrationClosed)
-	h.invitationService = nil
+	h.InvitationService = nil
 	rec := httptest.NewRecorder()
 	h.Register(rec, registerReq("someone@example.com"))
 	if rec.Code != http.StatusForbidden {
@@ -964,7 +964,7 @@ func TestPreviewInvitationDoesNotSpendTheSignInBudget(t *testing.T) {
 // AddOrgMember no longer dead-ends on an address with no account: it invites.
 func TestAddOrgMemberInvitesAnAddressWithNoAccount(t *testing.T) {
 	h, _, invites := newRegistrationHandler(t, "")
-	h.userService = &fakeLoginService{}
+	h.UserService = &fakeLoginService{}
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
 
 	rec := httptest.NewRecorder()
@@ -984,7 +984,7 @@ func TestAddOrgMemberInvitesAnAddressWithNoAccount(t *testing.T) {
 func TestInvitationMailNamesTheWorkspaceAndInviter(t *testing.T) {
 	h, _, _ := newRegistrationHandler(t, "")
 	mailer := newTestMailer()
-	h.mailer = mailer
+	h.Mailer = mailer
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
 
 	rec := httptest.NewRecorder()
@@ -1021,7 +1021,7 @@ func TestInvitationMailNamesTheWorkspaceAndInviter(t *testing.T) {
 func TestInvitingAPersonalWorkspaceIsRefused(t *testing.T) {
 	h, _, invites := newRegistrationHandler(t, "")
 	invites.createErr = orgs.ErrPersonalOrgMembers
-	h.orgService = &fakeMemberOrgs{roles: map[string]string{}, personal: true}
+	h.OrgService = &fakeMemberOrgs{roles: map[string]string{}, personal: true}
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
 
 	for name, call := range map[string]func(http.ResponseWriter, *http.Request){
@@ -1048,7 +1048,7 @@ func TestInvitingAnAddressThatAlreadyHasAnAccount(t *testing.T) {
 	member := &users.User{ID: "u-9", Email: "known@example.com", Name: "Known"}
 	svc.accounts = map[string]*users.User{"known@example.com": member}
 	orgSvc := &fakeMemberOrgs{roles: map[string]string{}}
-	h.orgService = orgSvc
+	h.OrgService = orgSvc
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
 
 	// POST /orgs/{id}/invitations on an address that has an account adds the
@@ -1118,7 +1118,7 @@ func TestBothEntryPointsAgreeOnTheStatusPair(t *testing.T) {
 		// An address with an account: 201 and the membership.
 		h, svc, invites := newRegistrationHandler(t, "")
 		svc.accounts = map[string]*users.User{"known@example.com": {ID: "u-9", Email: "known@example.com", Name: "Known"}}
-		h.orgService = &fakeMemberOrgs{roles: map[string]string{}}
+		h.OrgService = &fakeMemberOrgs{roles: map[string]string{}}
 		rec := httptest.NewRecorder()
 		pick(h)(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/"+name,
 			`{"email":"known@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
@@ -1251,7 +1251,7 @@ func TestInvitationCreationIsThrottledPerInvitingAccount(t *testing.T) {
 func TestReInvitingWithinTheHourDoesNotMailAgain(t *testing.T) {
 	h, _, invites := newRegistrationHandler(t, "")
 	mailer := newTestMailer()
-	h.mailer = mailer
+	h.Mailer = mailer
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
 	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
 	pending.CreatedAt = time.Now().Add(-5 * time.Minute)
@@ -1343,7 +1343,7 @@ func TestReInvitingWithoutAMailerAlwaysMintsALink(t *testing.T) {
 func TestReInvitingAfterTheWindowMailsAgain(t *testing.T) {
 	h, _, invites := newRegistrationHandler(t, "")
 	mailer := newTestMailer()
-	h.mailer = mailer
+	h.Mailer = mailer
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
 	pending := invites.invite("org-1", "stale@example.com", orgs.RoleMember)
 	pending.CreatedAt = time.Now().Add(-2 * time.Hour)
@@ -1524,9 +1524,9 @@ func TestRegisterReportsAnInvitationRevokedMidFlight(t *testing.T) {
 // therefore not wall its invitee behind a SECOND mail.
 func TestRegisteringWithAnInviteTokenVerifiesTheAddress(t *testing.T) {
 	h, svc, invites := newRegistrationHandler(t, RegistrationClosed)
-	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	h.EmailVerification = users.EmailVerificationPolicy{Required: true}
 	mailer := newTestMailer()
-	h.mailer = mailer
+	h.Mailer = mailer
 	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
 
 	code, outcome, body := registerOutcome(t, h, "invited@example.com", "tok-invited@example.com")
@@ -1551,9 +1551,9 @@ func TestRegisteringWithAnInviteTokenVerifiesTheAddress(t *testing.T) {
 // applies and the verification mail still goes out.
 func TestRegisteringWithoutAnInviteTokenStaysUnverified(t *testing.T) {
 	h, svc, _ := newRegistrationHandler(t, "")
-	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	h.EmailVerification = users.EmailVerificationPolicy{Required: true}
 	mailer := newTestMailer()
-	h.mailer = mailer
+	h.Mailer = mailer
 
 	rec := httptest.NewRecorder()
 	h.Register(rec, registerReq("plain@example.com"))
@@ -1574,7 +1574,7 @@ func TestRegisteringWithoutAnInviteTokenStaysUnverified(t *testing.T) {
 // account exists, and the wall's Resend still works.
 func TestAFailedVerificationStampStillRegisters(t *testing.T) {
 	h, svc, invites := newRegistrationHandler(t, RegistrationClosed)
-	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	h.EmailVerification = users.EmailVerificationPolicy{Required: true}
 	svc.verifyErr = errors.New("database went away")
 	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
 
@@ -1605,9 +1605,9 @@ func TestAddingAnUnverifiedAccountInvitesInsteadOfGrantingMembership(t *testing.
 
 	// Unverified, and the deployment sends verification mail: invited.
 	h, svc, invites := newRegistrationHandler(t, "")
-	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	h.EmailVerification = users.EmailVerificationPolicy{Required: true}
 	orgSvc := &fakeMemberOrgs{roles: map[string]string{}}
-	h.orgService = orgSvc
+	h.OrgService = orgSvc
 	svc.accounts = map[string]*users.User{
 		"unverified@example.com": {ID: "u-un", Email: "unverified@example.com", Name: "Un"},
 		"verified@example.com":   {ID: "u-ok", Email: "verified@example.com", Name: "Ok", EmailVerified: true},
@@ -1644,7 +1644,7 @@ func TestAddingAnUnverifiedAccountInvitesInsteadOfGrantingMembership(t *testing.
 	// proof to wait for and the old behaviour stands: the account joins.
 	open, openSvc, openInvites := newRegistrationHandler(t, "")
 	openOrgs := &fakeMemberOrgs{roles: map[string]string{}}
-	open.orgService = openOrgs
+	open.OrgService = openOrgs
 	openSvc.accounts = map[string]*users.User{
 		"unverified@example.com": {ID: "u-un", Email: "unverified@example.com"},
 	}
@@ -1662,7 +1662,7 @@ func TestAddingAnUnverifiedAccountInvitesInsteadOfGrantingMembership(t *testing.
 // an invitation is not immediately walled behind a second mail.
 func TestAcceptingAnInvitationVerifiesTheAddress(t *testing.T) {
 	h, svc, invites := newRegistrationHandler(t, "")
-	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	h.EmailVerification = users.EmailVerificationPolicy{Required: true}
 	invites.invite("org-1", "member@example.com", orgs.RoleMember)
 	svc.sessions = map[string]*users.User{
 		"session-token": {ID: "u1", Email: "member@example.com"},
@@ -1714,7 +1714,7 @@ func TestAcceptingAnInvitationVerifiesTheAddress(t *testing.T) {
 func TestReInvitingResendsWhenTheFirstMailNeverLanded(t *testing.T) {
 	h, _, invites := newRegistrationHandler(t, "")
 	mailer := newTestMailer()
-	h.mailer = mailer
+	h.Mailer = mailer
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
 	// Pending, minutes old, and never delivered — the shape a failed send
 	// leaves behind.
@@ -1766,7 +1766,7 @@ func TestAFailedInvitationSendLeavesTheRowUnstamped(t *testing.T) {
 	h, _, invites := newRegistrationHandler(t, "")
 	mailer := newTestMailer()
 	mailer.err = errors.New("smtp down")
-	h.mailer = mailer
+	h.Mailer = mailer
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
 	invites.markedEmailed = make(chan string, 1)
 
