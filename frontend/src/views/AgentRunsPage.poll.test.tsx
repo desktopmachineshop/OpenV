@@ -68,7 +68,12 @@ vi.mock('../api/client', async (orig) =>
 
 // Beside the runs, and not what this test is about.
 vi.mock('../components/agents/ProposalReviewPanel', () => ({ ProposalReviewPanel: () => null }));
-vi.mock('../components/RunnerConnectPrompt', () => ({ RunnerConnectPrompt: () => null }));
+// The Agent Connector shows the reason it is given, or that it has none.
+vi.mock('../components/RunnerConnectPrompt', () => ({
+  RunnerConnectPrompt: ({ reason }: { reason?: string }) => (
+    <aside aria-label="Agent Connector">{reason ?? 'no reason given'}</aside>
+  ),
+}));
 vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
 // The detail panel is RunDetailPanel's own; here it shows which run is open.
 vi.mock('../components/agents/RunDetailPanel', async (orig) => ({
@@ -147,6 +152,7 @@ const rows = () => Array.from(container.querySelectorAll('tbody tr')).map((tr) =
 const banner = () => container.textContent?.includes('queued but') ?? false;
 const detail = () => container.querySelector('[aria-label="Run detail"]')?.textContent ?? null;
 const error = () => container.querySelector('[role="alert"] span')?.textContent ?? null;
+const connector = () => container.querySelector('[aria-label="Agent Connector"]')?.textContent ?? null;
 const where = () => container.querySelector('[data-testid="where"]')?.textContent;
 const go = async (to: string) => {
   await act(async () => {
@@ -404,6 +410,17 @@ describe("a project's Runs page's runner warning (#379 bug 181)", () => {
     await switchWorkspace();
     await refuse(statuses[1], 'Network Error');
     expect(banner()).toBe(false);
+  });
+
+  it("does not count the old workspace's queued runs in the Agent Connector's reason", async () => {
+    await mount();
+    await answer(statuses[0], status(3));
+    expect(connector()).toBe('3 queued runs are waiting for a runner.');
+
+    await switchWorkspace();
+    expect(connector()).toBe('no reason given');
+    await answer(statuses[1], status(1));
+    expect(connector()).toBe('1 queued run is waiting for a runner.');
   });
 
   it('keeps the last known warning when a later read in the same workspace fails', async () => {

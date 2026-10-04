@@ -195,9 +195,13 @@ export const AgentRunsPage: React.FC = () => {
         <RunnerConnectPrompt
           orgId={activeOrgId}
           onClose={() => setShowConnect(false)}
-          reason={`${workerStatus?.queue.queued || 0} queued run${
-            (workerStatus?.queue.queued || 0) === 1 ? ' is' : 's are'
-          } waiting for a runner.`}
+          // Until the workspace's runner status arrives, as after a switch
+          // that hides the old one's (#379 bug 181), the prompt gives its own.
+          reason={
+            workerStatus
+              ? `${workerStatus.queue.queued} queued run${workerStatus.queue.queued === 1 ? ' is' : 's are'} waiting for a runner.`
+              : undefined
+          }
         />
       )}
 
