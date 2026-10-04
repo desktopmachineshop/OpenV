@@ -11,6 +11,34 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A failed agent run is retried only when retrying can help.** When an
+  agent's CLI fails, OpenV reads its error text to tell a sign-in problem
+  (not retried) and a provider outage or rate limit (retried) from the
+  agent's own error (not retried), and numbers and words that only looked
+  like those could fool it. A run whose CLI said it "wrote 403 lines" was
+  failed as a sign-in problem, and one that "processed 1500 files" or
+  mentioned "the network tool" was retried as a provider outage, failing
+  the same way again. A status code now counts only where it is one, as in
+  "HTTP 403" or "Error: 429", and a word only as a whole word, so these
+  read as the agent's own error. A rate limit or overload that mentions an
+  API key, such as "rate limit exceeded; check your API key", is now
+  retried as the rate limit it is, rather than failed as a sign-in problem.
+
+- **A run that cannot read its project's repositories fails instead of
+  running without them.** When an agent with repository access ran and its
+  runner could not read the project's repository connections, because the
+  request was refused or the server failed, the run went ahead in an empty
+  workspace and could finish as succeeded without ever seeing the code. It
+  now fails before the agent starts, saying "could not read the project's
+  repository connections" and why, and it is not retried.
+
+- **A run whose agent CLI exits with an error code fails.** A run whose
+  agent CLI exited with a non-zero code, without the runner reporting an
+  error with it, showed as succeeded with the exit code beside it. It now
+  fails, saying "the agent CLI exited with code" and the code, and is not
+  retried. The answer and token counts the run produced are kept, as for
+  any failed run.
+
 - **A runner no longer crashes on an answer to its claim that names no
   run.** When a runner asked for work and the answer named no run, which
   OpenV itself never sends but a proxy or a mismatched server can, the
