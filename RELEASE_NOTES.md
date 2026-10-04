@@ -27,6 +27,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Each failed run keeps its own web push notification.** When two of
+  your agent runs failed, the second one's web push replaced the first
+  one's on your phone or computer, so you saw only one: for two runs of
+  one project, and for any two runs that belong to no project, in any of
+  your workspaces. Each run's failure now stays on screen beside the
+  others'.
+
 - **A run you cannot open is not found, whoever you are.** A run that
   belongs to no project opens only for the member who launched it and for
   the workspace's admins. Any other member of the workspace who followed a

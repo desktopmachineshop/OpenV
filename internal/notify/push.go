@@ -385,8 +385,9 @@ type PushPayload struct {
 	// their absolute links.
 	URL string `json:"url"`
 	// Tag coalesces banners: a new notification with a tag already on screen
-	// replaces it instead of stacking. Scoped per type and project so a
-	// second failed run in another project still gets its own banner.
+	// replaces it instead of stacking. Scoped per type and project, and a
+	// run's per run, so a second failed run still gets its own banner
+	// (pushTag).
 	Tag string `json:"tag"`
 }
 
@@ -437,8 +438,15 @@ func pushBody(s string) string {
 }
 
 // pushTag scopes coalescing to one type within one project (or workspace, for
-// the budget alerts that are not project-scoped).
+// the budget alerts that are not project-scoped), and a run's notification
+// to its run: one run's replace each other, but two runs' never do, in one
+// project or in none (#379 bug 173).
 func pushTag(n *notifications.Notification) string {
+	if refString(n.EntityRef, "kind") == "run" {
+		if run := refString(n.EntityRef, "run_id"); run != "" {
+			return n.Type + ":" + run
+		}
+	}
 	if scope := refString(n.EntityRef, "project_id"); scope != "" {
 		return n.Type + ":" + scope
 	}
