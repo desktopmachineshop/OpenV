@@ -1543,7 +1543,19 @@
         "updated_at": "<time@step 39>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "link.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<l_verifies>",
+          "payload": {
+            "from_id": "string \"<tc>\"",
+            "link_type": "string \"verifies\"",
+            "to_id": "string \"<req>\""
+          }
+        }
+      ]
     },
     {
       "n": 40,
@@ -1587,7 +1599,19 @@
         "updated_at": "<time@step 40>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "link.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<l_derives>",
+          "payload": {
+            "from_id": "string \"<req>\"",
+            "link_type": "string \"verifies\"",
+            "to_id": "string \"<need>\""
+          }
+        }
+      ]
     },
     {
       "n": 41,
@@ -1626,7 +1650,19 @@
         "updated_at": "<time@step 41>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "link.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<l_derives>",
+          "payload": {
+            "from_id": "string \"<req>\"",
+            "link_type": "string \"derives-from\"",
+            "to_id": "string \"<need>\""
+          }
+        }
+      ]
     },
     {
       "n": 42,

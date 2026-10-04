@@ -11,6 +11,70 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Deleting a figure removes every version of its file.** Deleting a
+  figure removed only the file of its current version, and the files of
+  its earlier versions stayed stored on the server. The file also went
+  before the figure did, so a delete that failed left a figure whose image
+  could no longer be opened. The figure is now deleted first, and then the
+  file of every version of it is removed. A delete that fails removes
+  nothing, and a file the server cannot remove is noted in its log while
+  the figure is deleted all the same.
+
+- **Purging a deleted workspace removes its files.** When a deleted
+  workspace's 30 days ran out and it was purged, every file uploaded to it
+  stayed stored on the server: its figures with every earlier version, its
+  evidence files and its logo. They are now removed with the workspace. A
+  file the server cannot remove is noted in its log, and the workspace is
+  purged all the same.
+
+- **A figure added as its project is deleted no longer stays behind.** A
+  figure whose upload finished while its project was being deleted, or
+  just after, was stored all the same, with no project to show it in, and
+  its file stayed on the server. The upload now waits for the delete and
+  then answers "project not found", as for any deleted project, and its
+  file is removed. A figure that was stored first is deleted with the
+  project.
+
+- **Files left behind by earlier deletes are cleared once.** The figure
+  and evidence files of projects deleted, workspaces purged and figure
+  versions deleted before this update stayed stored on the server, though
+  nothing in OpenV could reach them any more. The first time the server
+  starts after this update, it removes them, once. It removes only files it
+  can be sure are its own uploads that nothing refers to, last changed more
+  than an hour before it started; when it cannot be sure, for example
+  because the files it knows of are not in the uploads folder, it removes
+  nothing. If you run OpenV yourself, each file removed is noted in the
+  server's log, under "upload sweep", with a summary at the end. Some
+  records earlier purges left, which numbered the figures of artifacts
+  that no longer exist, are removed too.
+
+- **A figure no longer has an unused place for a test result.** The
+  stored record of every figure had room to name a test result, for test
+  evidence, that OpenV never filled in: test evidence has its own bundles,
+  which a result cites. It is removed when this update is installed. If
+  you run OpenV yourself and filled it in outside OpenV, the server does
+  not start after the update, and its log says how many figures name a
+  test result and how to clear them.
+
+## 0.16.0 — 2026-10-04
+
+### New features
+
+- **Make an automation for the whole workspace.** On a project's
+  Automations page, a workspace admin now chooses what a new automation
+  covers: this project, as before, or the whole workspace. A
+  whole-workspace automation runs on events in every project of the
+  workspace, in the project of the event that set it off, and on workspace
+  membership and invitation events, which no project's automation sees.
+  Every project's Automations page lists the whole workspace's automations,
+  marked *Whole workspace*, beside its own; workspace admins edit, run and
+  delete them there, and move an automation between its project and the
+  whole workspace, while other members see them without changing them. A
+  whole-workspace automation runs an agent, or one of the workspace's own
+  crews such as its default crew, not a crew made in one project.
+
+### Bug fixes
+
 - **A failed agent run is retried only when retrying can help.** When an
   agent's CLI fails, OpenV reads its error text to tell a sign-in problem
   (not retried) and a provider outage or rate limit (retried) from the
@@ -385,7 +449,41 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   events through the API now also opens with its own event shown, not
   another. Workspace membership and invitation events concern the whole
   workspace, so they fire only an automation that covers the whole
-  workspace, not one made on a project's Automations page.
+  workspace, not one that covers a single project: see *Make an automation
+  for the whole workspace* above.
+
+- **Automations keep time on a server whose clock is not set to UTC.** On
+  an OpenV server running in another time zone, as a self-hosted one can,
+  automations recorded their times shifted by the zone's offset: the
+  Automations table showed the next and last runs hours off, a scheduled
+  automation ran hours before or after the next run it showed, and a
+  triggered automation's cooldown and runs-per-hour limit counted from the
+  wrong moment, so it could be held back for hours after a run or run past
+  its limit. Automations now record every time in UTC, and a schedule is
+  read in UTC on every server, as it always was on OpenV's hosted service.
+
+- **An automation triggered on a link's update fires.** A triggered
+  automation could be set to run on `link.updated`, but changing a link's
+  type or attributes never set it off, because OpenV recorded no event for
+  it. Changing a link through the API now records a `link.updated` event,
+  as creating and deleting one already did, naming the link's two
+  artifacts and the type it has now: it starts the automations waiting for
+  it, and the change shows in the project's activity log.
+
+- **An automation runs only agents and crews of its own workspace.**
+  Through the API, an automation could be saved naming another
+  workspace's agent or crew, a crew made in another project, or another
+  workspace's project, and its runs then used them. Saving one now answers
+  "agent not found", "crew not found", "the crew is pinned to another
+  project" or "project does not belong to this workspace"; an automation
+  for the whole workspace also refuses a crew made in one project, since it
+  runs in every project. An automation already saved is checked again only
+  when its agent, crew or scope is changed.
+
+- **Switching an automation between an agent and a crew saves.** Editing
+  an automation to run a crew instead of an agent, or an agent instead of a
+  crew, failed with "exactly one of agent_id or team_id must be set". It
+  now saves with the new target.
 
 - **A mistyped `OPENV_PLAN_DEFAULT` is warned about at boot.** For
   operators: when `OPENV_PLAN_DEFAULT` named no plan, new workspaces were
@@ -433,17 +531,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   and an artifact in another workspace, the record of which version of the
   other artifact the link was made against. Neither was shown anywhere, but
   both stayed on the server. They now go with the workspace when it is
-  purged, and the figure counters earlier purges left are removed when this
-  update is installed.
+  purged.
 
 - **Deleting a project removes the files uploaded to it.** Deleting a
   project took everything in it out of the workspace, but the files
   uploaded to it, its figures with every earlier version and its evidence
   files, stayed stored on the server. They are now removed as the project
   is deleted. A file the server cannot remove is noted in its log, and the
-  project is deleted all the same. The files that projects deleted before
-  this update left behind are removed once, when the server first starts
-  after it.
+  project is deleted all the same. Files of projects deleted before this
+  update stay where they are.
 
 - **Deleting a project stops its agent runs.** An agent run waiting in a
   deleted project's queue still started, with no project to work in, and
@@ -451,49 +547,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   cancels its waiting runs and asks its running ones to stop, as **Cancel**
   does, and a run's access to OpenV ends at once. The runs stay in the
   workspace's usage, as before.
-
-- **Deleting a figure removes every version of its file.** Deleting a
-  figure removed only the file of its current version, and the files of
-  its earlier versions stayed stored on the server. The file also went
-  before the figure did, so a delete that failed left a figure whose image
-  could no longer be opened. The figure is now deleted first, and then the
-  file of every version of it is removed. A delete that fails removes
-  nothing, and a file the server cannot remove is noted in its log while
-  the figure is deleted all the same.
-
-- **Purging a deleted workspace removes its files.** When a deleted
-  workspace's 30 days ran out and it was purged, every file uploaded to it
-  stayed stored on the server: its figures with every earlier version, its
-  evidence files and its logo. They are now removed with the workspace. A
-  file the server cannot remove is noted in its log, and the workspace is
-  purged all the same.
-
-- **A figure added as its project is deleted no longer stays behind.** A
-  figure whose upload finished while its project was being deleted, or
-  just after, was stored all the same, with no project to show it in, and
-  its file stayed on the server. The upload now waits for the delete and
-  then answers "project not found", as for any deleted project, and its
-  file is removed. A figure that was stored first is deleted with the
-  project.
-
-- **Files left behind by earlier deletes are cleared once.** The figure
-  and evidence files of projects deleted, workspaces purged and figure
-  versions deleted before this update stayed stored on the server, though
-  nothing in OpenV could reach them any more. The first time the server
-  starts after this update, it removes them, once. It removes only files it
-  can be sure are its own uploads that nothing refers to, last changed more
-  than an hour before it started; when it cannot be sure, for example
-  because the files it knows of are not in the uploads folder, it removes
-  nothing. If you run OpenV yourself, each file removed is noted in the
-  server's log, under "upload sweep", with a summary at the end.
-
-- **A figure no longer has an unused place for a test result.** The
-  stored record of every figure had room to name a test result, for test
-  evidence, that OpenV never filled in: test evidence has its own bundles,
-  which a result cites. It is removed when this update is installed. If
-  you run OpenV yourself and filled it in outside OpenV, the server does
-  not start after the update, and its log says how many figures name a
-  test result and how to clear them.
 
 ## 0.15.1 — 2026-09-30
 

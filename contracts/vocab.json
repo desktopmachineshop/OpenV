@@ -195,7 +195,8 @@
     "project-review-round",
     "review-queue-decisions",
     "artifact-stepping",
-    "workspace-billing"
+    "workspace-billing",
+    "workspace-automations"
   ],
   "event_types": [
     "artifact.created",
