@@ -296,21 +296,8 @@ func (h *Handler) requireOrgRoleFor(w http.ResponseWriter, r *http.Request, orgI
 	return h.requireWritable(w, r, orgID)
 }
 
-// requireOrgAdminFor is requireOrgRoleFor at the admin's role, for a
-// resource the workspace's admins alone may know of, as a run with no
-// project is theirs (requireRunAccess): a member who is no admin gets
-// absent too, as a caller who is no member does, since the admin's 403
-// would tell them the resource exists (#379 bug 172).
-func (h *Handler) requireOrgAdminFor(w http.ResponseWriter, r *http.Request, orgID string, absent notFound) bool {
-	if !h.orgAccess(w, r, orgID, orgs.RoleAdmin, absent, absent) {
-		return false
-	}
-	return h.requireWritable(w, r, orgID)
-}
-
-// orgAccess is requireOrgRoleFor's access question, without the plan gate.
-// A member below minRole gets below, the zero notFound standing for the
-// admin guard's own 403.
+// orgAccess is requireOrgRoleFor less the plan gate; a member below minRole
+// gets below (the zero notFound: the admin guard's 403).
 func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string, minRole string, absent, below notFound) bool {
 	lookedUp := absent != (notFound{})
 	absent = absent.or(unknownWorkspace)
@@ -418,10 +405,9 @@ func (h *Handler) isOrgAdmin(r *http.Request, orgID string) bool {
 
 // requireRunAccess enforces access to an agent run: the user who launched it
 // always passes; project-scoped runs fall back to the project role ladder;
-// unscoped runs require workspace-admin rights on the run's org. A caller
-// who may not read the run gets the 404 of a run no row has, a member of
-// the workspace who may not read an unscoped run among them (#379 bug
-// 172). Writes the error response itself on failure.
+// unscoped runs require workspace-admin rights on the run's org. A caller who
+// may not read the run gets the 404 of a run no row has, a member who is no
+// admin at an unscoped run too (#379 bug 172). Writes its error response.
 func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *agentruns.Run, minRole string) bool {
 	if user := CurrentUser(r); user != nil && run.LaunchedBy != nil && *run.LaunchedBy == user.ID {
 		return true
@@ -430,7 +416,7 @@ func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *
 	if run.ProjectID != nil && *run.ProjectID != "" {
 		return h.requireProjectRoleFor(w, r, *run.ProjectID, minRole, absent)
 	}
-	return h.requireOrgAdminFor(w, r, run.OrgID, absent)
+	return h.orgAccess(w, r, run.OrgID, orgs.RoleAdmin, absent, absent) && h.requireWritable(w, r, run.OrgID)
 }
 
 // hasRunAccess reports whether the request would pass requireRunAccess.
