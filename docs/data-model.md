@@ -88,7 +88,9 @@ the figure; `''` when none), `mime_type`, `file_path` (under
 One row per version of a figure — a new image, or a new title over the
 same image — with the file fields and `title` as they stood at that
 version, `created_by` and `created_at`. The attachment row holds the
-current version; superseded files stay on disk.
+current version; superseded files stay on disk while the figure does.
+Deleting the figure (or its project, or purging its workspace) deletes
+every version and then removes every version's file.
 
 ### chatter
 Per-artifact activity feed: `artifact_id`, `message`, `is_auto_entry`
