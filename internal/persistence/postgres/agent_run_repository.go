@@ -429,9 +429,20 @@ func (rep *AgentRunRepository) UpdatePartialText(runID string, text string) (boo
 // The half-written answer goes with them: a failed run has no reply coming,
 // and leaving partial_text behind makes the run detail panel render "Output
 // so far" under a live cursor on a run that will never write another word.
+//
+// A run whose cancel was requested ends cancelled instead, with no error and
+// no error class, as its worker reporting it cancelled would have ended it:
+// someone asked it to stop, and it has stopped (#379 bug 167: it was failed
+// as "worker lost", and its launcher was told the run they cancelled had
+// failed). The flag is read from the row as it is written, so a cancel
+// that commits while the sweep waits for the row is seen.
 func (rep *AgentRunRepository) FailStale(cutoff time.Time) ([]string, error) {
 	rows, err := rep.db.Query(`
-		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', error_class = 'worker_error', finished_at = NOW(), run_token_hash = '', partial_text = ''
+		UPDATE agent_runs SET
+			status = CASE WHEN cancel_requested THEN 'cancelled' ELSE 'failed' END,
+			error = CASE WHEN cancel_requested THEN '' ELSE 'worker lost (heartbeat timeout)' END,
+			error_class = CASE WHEN cancel_requested THEN '' ELSE 'worker_error' END,
+			finished_at = NOW(), run_token_hash = '', partial_text = ''
 		WHERE status IN ('claimed', 'running') AND heartbeat_at < $1
 		RETURNING id
 	`, cutoff)

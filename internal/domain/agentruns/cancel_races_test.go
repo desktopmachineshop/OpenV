@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/agents"
 )
 
 // A cancel lands whatever a race does to the run around it (#379 bugs
@@ -123,5 +125,65 @@ func TestFinishKeepsACancelRequestedAsTheRunFinished(t *testing.T) {
 	}
 	if r := findRetryOf(repo, "r1"); r != nil {
 		t.Errorf("a run asked to stop as it finished was retried: %+v", r)
+	}
+}
+
+// The reaper ends a run whose cancel was requested cancelled, as its worker
+// reporting it cancelled would have: no error, no error class, its token
+// revoked, announced cancelled and published as a cancelled RunFinished,
+// which the notifier does not report, and not retried. A run nobody asked
+// to stop is failed as worker lost, and retried, as before. Before the fix
+// the reaper failed both, and the notifier told the launcher "Agent run
+// failed" for the run they had cancelled (#379 bug 167).
+func TestFailStaleEndsARunAskedToStopCancelled(t *testing.T) {
+	silent := time.Now().Add(-time.Hour)
+	stopping := runningRun("stopping", 1, 3)
+	stopping.CancelRequested, stopping.HeartbeatAt, stopping.RunTokenHash = true, &silent, "hash"
+	lost := runningRun("lost", 1, 3)
+	lost.HeartbeatAt, lost.RunTokenHash = &silent, "hash"
+	repo := &fakeRunRepo{runs: map[string]*Run{"stopping": stopping, "lost": lost}, logs: map[string][]LogEntry{}}
+	catalog := &fakeAgentCatalog{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Reviewer", Provider: "claude"}}}
+	bus := &fakeBus{}
+	svc := NewDefaultService(repo, catalog, bus)
+	rec := &statusRecorder{}
+	svc.AddSubscriber(rec)
+
+	ids, err := svc.FailStale(2 * time.Minute)
+	if err != nil {
+		t.Fatalf("FailStale: %v", err)
+	}
+	if len(ids) != 2 {
+		t.Fatalf("FailStale ended %v, want both silent runs", ids)
+	}
+
+	if got := repo.runs["stopping"]; got.Status != StatusCancelled || got.Error != "" || got.ErrorClass != "" || got.RunTokenHash != "" || got.FinishedAt == nil {
+		t.Errorf("the run asked to stop: %s, error %q (%q), token %q, finished at %v; want cancelled, no error, revoked, finished",
+			got.Status, got.Error, got.ErrorClass, got.RunTokenHash, got.FinishedAt)
+	}
+	if got := repo.runs["lost"]; got.Status != StatusFailed || got.Error != "worker lost (heartbeat timeout)" || got.ErrorClass != ErrorClassWorkerError || got.RunTokenHash != "" {
+		t.Errorf("the run nobody asked to stop: %s, error %q (%q), token %q; want failed as worker lost (worker_error), revoked",
+			got.Status, got.Error, got.ErrorClass, got.RunTokenHash)
+	}
+
+	announced := map[string]bool{}
+	for _, a := range rec.announced {
+		announced[a] = true
+	}
+	if !announced["stopping cancelled"] || !announced["lost failed"] || announced["stopping failed"] {
+		t.Errorf("announced %q, want the run asked to stop cancelled and the other failed", rec.announced)
+	}
+	published := map[string]interface{}{}
+	for _, e := range bus.finished() {
+		published[e.EntityID] = e.Payload["status"]
+	}
+	if want := map[string]interface{}{"stopping": StatusCancelled, "lost": StatusFailed}; !reflect.DeepEqual(published, want) {
+		t.Errorf("RunFinished published %v, want %v", published, want)
+	}
+
+	if r := findRetryOf(repo, "stopping"); r != nil {
+		t.Errorf("the run asked to stop was retried: %+v", r)
+	}
+	if r := findRetryOf(repo, "lost"); r == nil {
+		t.Error("the run whose worker was lost was not retried, want it retried as before")
 	}
 }

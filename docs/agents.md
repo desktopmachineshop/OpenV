@@ -430,7 +430,8 @@ when `--worker-key` or `--pool-key` is given, though both still work.
 
 `agentd` polls for queued runs, launches the configured provider CLI with
 `openv-mcp` wired in, streams progress back, and reports completion. Stale runs
-that stop heartbeating are failed automatically by the server's reaper.
+that stop heartbeating are ended automatically by the server's reaper: failed,
+or cancelled when their cancel was requested.
 
 ## Enable transient runners (operators)
 
@@ -1042,7 +1043,7 @@ the run to finish:
   delta**, capped at 64 KB — in its 750 ms log batch whenever it changed, so
   a batch lost on the wire costs freshness and never corrupts the display;
 - the API stores it on the run (`agent_runs.partial_text`, cleared whenever
-  the run stops being live: at finish, when the stale-run reaper fails it, and
+  the run stops being live: at finish, when the stale-run reaper ends it, and
   when a worker hands it back to the queue) and, for a run that belongs to a
   guided session or an interview, broadcasts
   `assistant_partial` `{run_id, text}` on that session's SSE channel, at most

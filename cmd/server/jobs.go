@@ -89,7 +89,8 @@ func runPurgeLoop(ctx context.Context, orgService *orgs.DefaultService, agentSer
 }
 
 // runReaper sweeps every 30 seconds, the first time 30 seconds after it
-// starts: it fails stale runs, deletes expired sessions and invitations, and
+// starts: it ends stale runs (failed, or cancelled when their cancel was
+// requested, #379 bug 167), deletes expired sessions and invitations, and
 // ends lapsed runner leases when there is a runner pool.
 func runReaper(
 	ctx context.Context,
@@ -109,7 +110,7 @@ func runReaper(
 			if ids, err := runService.FailStale(2 * time.Minute); err != nil {
 				slog.Error("reaper FailStale failed", "error", err)
 			} else if len(ids) > 0 {
-				slog.Warn("reaper failed stale runs", "count", len(ids))
+				slog.Warn("reaper ended stale runs", "count", len(ids))
 			}
 			_ = userRepo.DeleteExpiredSessions(time.Now(), sessionPolicy.MaxAge, sessionPolicy.Idle)
 			// Invitations that nobody accepted expire; the rows are of

@@ -409,7 +409,8 @@ type Repository interface {
 	// revoked; reports whether it was applied.
 	UpdateTokenHash(runID, hash string) (bool, error)
 	// FailStale marks claimed/running runs failed when their heartbeat is
-	// older than cutoff; returns the affected run IDs.
+	// older than cutoff, or cancelled, with no error, when their cancel was
+	// requested; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
 	AppendLogs(runID string, entries []LogEntry) error
 	// UpdatePartialText stores the assistant text a live run has written so
@@ -493,6 +494,8 @@ type Service interface {
 	// id no run has is skipped.
 	AnnounceCancelled(ids []string)
 	Heartbeat(id string) error
+	// FailStale ends the runs whose worker has been silent for maxSilence:
+	// failed as worker lost, or cancelled when their cancel was requested.
 	FailStale(maxSilence time.Duration) ([]string, error)
 	// FinalizeIfResolved completes an awaiting_approval run once every proposal
 	// it produced has been reviewed, publishing RunFinished on the transition.

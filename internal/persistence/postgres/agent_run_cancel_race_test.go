@@ -3,10 +3,13 @@ package postgres
 import (
 	"database/sql"
 	"errors"
+	"reflect"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/events"
 )
 
 // A cancel lands whatever a race does to the run around it (#379 bugs 165
@@ -210,5 +213,106 @@ func TestAFinishRacingACancelKeepsTheCancel(t *testing.T) {
 	}
 	if !a.run.CancelRequested {
 		t.Error("Finish answered the run with its cancel not requested, want requested: its auto-retry decides on it")
+	}
+}
+
+// acrBus records the events a service publishes.
+type acrBus struct {
+	mu        sync.Mutex
+	published []events.Event
+}
+
+func (b *acrBus) Publish(e events.Event) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.published = append(b.published, e)
+}
+
+func (b *acrBus) Subscribe(func(events.Event)) {}
+
+// finished answers the status each RunFinished published carries, by run.
+func (b *acrBus) finished() map[string]interface{} {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	got := map[string]interface{}{}
+	for _, e := range b.published {
+		if e.EventType == events.RunFinished {
+			got[e.EntityID] = e.Payload["status"]
+		}
+	}
+	return got
+}
+
+// The reaper and a cancel (#379 bug 167): a run asked to stop whose worker
+// then went silent ends cancelled when the reaper sweeps it, with no error
+// and no error class, its token and half-written answer gone, and the
+// RunFinished the reaper publishes for it says cancelled, which the
+// notifier does not report. A cancel that commits while the sweep waits for
+// the run's row is seen the same way. A silent run nobody asked to stop is
+// failed as worker lost, as before. Before the fix the reaper failed the
+// run asked to stop, and the notifier told its launcher "Agent run failed".
+func TestTheReaperEndsARunAskedToStopCancelled(t *testing.T) {
+	for _, when := range []string{"after the cancel", "while the cancel holds the run"} {
+		t.Run(when, func(t *testing.T) {
+			f := newClaimFixture(t)
+			bus := &acrBus{}
+			svc := agentruns.NewDefaultService(f.repo, nil, bus)
+			stopping := acrClaim(t, f, agentruns.StatusRunning)
+			lost := acrClaim(t, f, agentruns.StatusRunning)
+			if applied, err := f.repo.UpdatePartialText(stopping, "Half an answ"); err != nil || !applied {
+				t.Fatalf("seed partial text = %v, %v", applied, err)
+			}
+			f.exec(t, `UPDATE agent_runs SET heartbeat_at = heartbeat_at - INTERVAL '1 hour' WHERE id IN ($1, $2)`, stopping, lost)
+
+			var ids []string
+			var err error
+			if when == "after the cancel" {
+				if _, err := svc.RequestCancel(stopping); err != nil {
+					t.Fatalf("RequestCancel: %v", err)
+				}
+				ids, err = svc.FailStale(2 * time.Minute)
+			} else {
+				hold := acrHoldRun(t, f.db, stopping)
+				type reaped struct {
+					ids []string
+					err error
+				}
+				done := make(chan reaped, 1)
+				go func() {
+					ids, err := svc.FailStale(2 * time.Minute)
+					done <- reaped{ids, err}
+				}()
+				acrAwaitLockWaiters(t, f.db, 1)
+				if _, err := hold.Exec(`UPDATE agent_runs SET `+requestLiveRunCancel+` WHERE id = $1`, stopping); err != nil {
+					t.Fatal(err)
+				}
+				if err := hold.Commit(); err != nil {
+					t.Fatal(err)
+				}
+				r := <-done
+				ids, err = r.ids, r.err
+			}
+			if err != nil {
+				t.Fatalf("FailStale: %v", err)
+			}
+			if len(ids) != 2 {
+				t.Fatalf("the reaper ended %v, want both silent runs", ids)
+			}
+
+			run := f.mustFind(t, stopping)
+			if run.Status != agentruns.StatusCancelled || !run.CancelRequested || run.Error != "" || run.ErrorClass != "" ||
+				run.FinishedAt == nil || run.PartialText != "" || f.tokenHash(t, stopping) != "" {
+				t.Errorf("the run asked to stop after the sweep: %s, cancel requested %v, error %q (%q), finished at %v, partial %q, token %q; want cancelled with no error, finished, cleared, revoked",
+					run.Status, run.CancelRequested, run.Error, run.ErrorClass, run.FinishedAt, run.PartialText, f.tokenHash(t, stopping))
+			}
+			other := f.mustFind(t, lost)
+			if other.Status != agentruns.StatusFailed || other.Error != "worker lost (heartbeat timeout)" || other.ErrorClass != agentruns.ErrorClassWorkerError {
+				t.Errorf("the run nobody asked to stop after the sweep: %s, error %q (%q); want failed as worker lost (worker_error)",
+					other.Status, other.Error, other.ErrorClass)
+			}
+			if got, want := bus.finished(), map[string]interface{}{stopping: agentruns.StatusCancelled, lost: agentruns.StatusFailed}; !reflect.DeepEqual(got, want) {
+				t.Errorf("RunFinished published %v, want %v", got, want)
+			}
+		})
 	}
 }

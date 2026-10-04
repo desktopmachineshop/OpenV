@@ -506,7 +506,13 @@ func (s *DefaultService) Heartbeat(id string) error {
 	return err
 }
 
-// FailStale fails runs whose worker went silent.
+// FailStale fails runs whose worker went silent. A run whose cancel was
+// requested ends cancelled instead, as its worker reporting it cancelled
+// would have ended it (#379 bug 167: it was failed as "worker lost", and
+// the notifier told its launcher that the run they had cancelled failed).
+// Each is announced and published as stored, so a cancelled one goes out as
+// a cancelled RunFinished, which the notifier does not report and the
+// auto-retry does not relaunch.
 func (s *DefaultService) FailStale(maxSilence time.Duration) ([]string, error) {
 	ids, err := s.repo.FailStale(time.Now().UTC().Add(-maxSilence))
 	if err != nil {

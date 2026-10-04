@@ -83,7 +83,7 @@ func TestAutoRetryNeverRelaunchesARunAskedToStop(t *testing.T) {
 			t.Errorf("a run asked to stop was retried: %+v", r)
 		}
 	})
-	t.Run("the reaper fails it", func(t *testing.T) {
+	t.Run("the reaper ends it", func(t *testing.T) {
 		run := runningRun("r1", 1, 3)
 		run.CancelRequested = true
 		old := time.Now().Add(-time.Hour)
@@ -92,11 +92,12 @@ func TestAutoRetryNeverRelaunchesARunAskedToStop(t *testing.T) {
 		if _, err := svc.FailStale(2 * time.Minute); err != nil {
 			t.Fatalf("FailStale: %v", err)
 		}
-		if repo.runs["r1"].Status != StatusFailed {
-			t.Fatalf("the reaper left the run %s, want failed", repo.runs["r1"].Status)
+		// The reaper ends a run asked to stop cancelled (#379 bug 167).
+		if repo.runs["r1"].Status != StatusCancelled {
+			t.Fatalf("the reaper left the run %s, want cancelled", repo.runs["r1"].Status)
 		}
 		if r := findRetryOf(repo, "r1"); r != nil {
-			t.Errorf("a run asked to stop was retried after the reaper failed it: %+v", r)
+			t.Errorf("a run asked to stop was retried after the reaper ended it: %+v", r)
 		}
 	})
 }

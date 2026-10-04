@@ -21,6 +21,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   run that then failed in a way that is normally retried was started again
   automatically. The cancel is now kept, and the run is not retried.
 
+- **A run you cancelled shows as cancelled when its runner goes quiet.**
+  When a run's runner stopped responding after you asked the run to stop,
+  the run was failed as "worker lost", and you were told "Agent run failed"
+  about a run you had cancelled. It now ends cancelled, with no error and
+  no failure notification.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

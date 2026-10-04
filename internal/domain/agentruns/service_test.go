@@ -194,7 +194,8 @@ func (f *fakeRunRepo) FinalizeApproval(runID, status, errMsg, errorClass string,
 }
 
 // FailStale mirrors the SQL reaper: claimed/running runs whose heartbeat
-// predates cutoff (a nil heartbeat counts as stale) are failed and their ids
+// predates cutoff (a nil heartbeat counts as stale) are failed, or
+// cancelled with no error when their cancel was requested, and their ids
 // returned.
 func (f *fakeRunRepo) FailStale(cutoff time.Time) ([]string, error) {
 	var ids []string
@@ -209,6 +210,9 @@ func (f *fakeRunRepo) FailStale(cutoff time.Time) ([]string, error) {
 		r.Status = StatusFailed
 		r.Error = "worker lost (heartbeat timeout)"
 		r.ErrorClass = ErrorClassWorkerError
+		if r.CancelRequested {
+			r.Status, r.Error, r.ErrorClass = StatusCancelled, "", ""
+		}
 		r.FinishedAt = &now
 		r.RunTokenHash = ""
 		ids = append(ids, id)
