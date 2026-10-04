@@ -407,6 +407,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   both stayed on the server. They now go with the workspace when it is
   purged.
 
+- **Deleting a project removes the files uploaded to it.** Deleting a
+  project took everything in it out of the workspace, but the files
+  uploaded to it, its figures with every earlier version and its evidence
+  files, stayed stored on the server. They are now removed as the project
+  is deleted. A file the server cannot remove is noted in its log, and the
+  project is deleted all the same. Files of projects deleted before this
+  update stay where they are.
+
+- **Deleting a project stops its agent runs.** An agent run waiting in a
+  deleted project's queue still started, with no project to work in, and
+  one already running carried on to the end. Deleting a project now
+  cancels its waiting runs and asks its running ones to stop, as **Cancel**
+  does, and a run's access to OpenV ends at once. The runs stay in the
+  workspace's usage, as before.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

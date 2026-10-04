@@ -2,6 +2,7 @@ package agentruns
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -648,6 +649,44 @@ func TestRequestCancelTerminalIsNoop(t *testing.T) {
 		if repo.runs["r1"].CancelRequested {
 			t.Errorf("stored %s run gained a cancel flag", status)
 		}
+	}
+}
+
+// statusRecorder records the runs a service announces a status of.
+type statusRecorder struct {
+	Subscriber
+	announced []string
+}
+
+func (r *statusRecorder) RunStatusChanged(run *Run) {
+	r.announced = append(r.announced, run.ID+" "+run.Status)
+}
+
+// AnnounceCancelled tells the subscribers of runs a project's delete
+// cancelled in its own transaction, as RequestCancel tells them of its own
+// cancel: each run in the state the cancel left it, a queued one cancelled
+// and a running one still running with its cancel requested, and no
+// RunFinished for either. An id no run has is skipped (#379 bug 137).
+func TestAnnounceCancelledTellsTheSubscribersAsACancelDoes(t *testing.T) {
+	bus := &fakeBus{}
+	svc, _ := newFakeServiceWithBus(bus,
+		&Run{ID: "queued", Status: StatusCancelled, CancelRequested: true},
+		&Run{ID: "running", Status: StatusRunning, CancelRequested: true, WorkerID: "w-1"},
+	)
+	rec := &statusRecorder{}
+	svc.AddSubscriber(rec)
+
+	svc.AnnounceCancelled([]string{"queued", "gone", "running"})
+	if want := []string{"queued cancelled", "running running"}; !reflect.DeepEqual(rec.announced, want) {
+		t.Errorf("announced %q, want %q", rec.announced, want)
+	}
+	before := len(rec.announced)
+	svc.AnnounceCancelled(nil)
+	if len(rec.announced) != before {
+		t.Errorf("announcing no runs announced %q", rec.announced[before:])
+	}
+	if len(bus.published) != 0 {
+		t.Errorf("announcing cancelled runs published %+v, want nothing", bus.published)
 	}
 }
 

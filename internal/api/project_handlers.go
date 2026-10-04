@@ -250,7 +250,11 @@ func (h *Handler) ListLinkedArtifacts(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteProject deletes a project and everything that belongs to it alone
-// (#379 bug 86).
+// (#379 bug 86), cancelling its live agent runs as it goes (bug 137). Once
+// the delete has committed, it announces the runs it cancelled, as a cancel
+// does, and removes the stored files of the figures and evidence it deleted
+// (bug 136). A file that will not go is logged, not answered: the delete
+// happened, and the project is gone either way.
 func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -258,7 +262,7 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.ProjectService.DeleteProject(id)
+	removed, err := h.ProjectService.DeleteProject(id)
 	if errors.Is(err, projects.ErrNotFound) {
 		// Gone since the guard read it: as for an id no row has (#379 bug
 		// 88; it answered 500).
@@ -268,6 +272,12 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondInternal(w, r, "failed to delete project", err)
 		return
+	}
+	if removed != nil {
+		if h.RunService != nil {
+			h.RunService.AnnounceCancelled(removed.CancelledRuns)
+		}
+		removeStoredFiles(removed.Files)
 	}
 
 	w.WriteHeader(http.StatusNoContent)

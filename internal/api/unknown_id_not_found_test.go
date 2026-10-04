@@ -125,8 +125,8 @@ func (vanishingProjects) GetByID(id string) (*projects.Project, error) {
 	}
 	return nil, projects.ErrNotFound
 }
-func (vanishingProjects) Update(*projects.Project) error { return projects.ErrNotFound }
-func (vanishingProjects) Delete(string) error            { return projects.ErrNotFound }
+func (vanishingProjects) Update(*projects.Project) error           { return projects.ErrNotFound }
+func (vanishingProjects) Delete(string) (*projects.Removed, error) { return nil, projects.ErrNotFound }
 
 // A project deleted between the guard and the write answers as one no row
 // has, 404 "project not found", where its update and delete answered 500
