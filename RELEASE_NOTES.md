@@ -38,6 +38,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   needs to be unique only within its project, as the artifact reference it
   is built on is. Figures already added keep their references.
 
+- **Sign-ins last as long as they should on a server whose clock is not
+  set to UTC.** On an OpenV server running in another time zone, as a
+  self-hosted one can, accounts, sign-in sessions, password reset links and
+  email verification links recorded their times shifted by the zone's
+  offset. West of UTC, every sign-in ended hours before its idle limit or
+  its lifetime, and at once where `OPENV_SESSION_IDLE` or
+  `OPENV_SESSION_MAX_AGE` was set shorter than the offset: the person was
+  signed out by their next click. They now record every time in UTC, as on
+  OpenV's hosted service.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features
