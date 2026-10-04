@@ -450,6 +450,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   does, and a run's access to OpenV ends at once. The runs stay in the
   workspace's usage, as before.
 
+- **Deleting a figure removes every version of its file.** Deleting a
+  figure removed only the file of its current version, and the files of
+  its earlier versions stayed stored on the server. The file also went
+  before the figure did, so a delete that failed left a figure whose image
+  could no longer be opened. The figure is now deleted first, and then the
+  file of every version of it is removed. A delete that fails removes
+  nothing, and a file the server cannot remove is noted in its log while
+  the figure is deleted all the same.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

@@ -473,7 +473,13 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-// DeleteAttachment deletes an attachment
+// DeleteAttachment deletes a figure with every version of it. The rows go
+// first, and only once their delete has committed are the stored files of
+// every version removed (#379 bug 145: only the current version's file was
+// removed, and before the row was, so a failed delete left a figure with no
+// file and a deleted one left its earlier versions' files on disk). A delete
+// that fails removes no file; a file that will not go is logged, not
+// answered: the figure is gone either way.
 func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -487,17 +493,12 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete file from disk
-	if err := os.Remove(attachment.FilePath); err != nil && !os.IsNotExist(err) {
-		respondInternal(w, r, "Failed to delete file", err)
-		return
-	}
-
-	// Delete database record
-	if err := h.AttachmentService.DeleteAttachment(id); err != nil {
+	files, err := h.AttachmentService.DeleteAttachment(id)
+	if err != nil {
 		respondInternal(w, r, "Failed to delete attachment", err)
 		return
 	}
+	removeStoredFiles(files)
 
 	w.WriteHeader(http.StatusNoContent)
 }

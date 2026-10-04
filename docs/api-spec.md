@@ -509,7 +509,7 @@ Every artifact carries two identifiers, and they answer different questions:
 | POST | `/api/v1/attachments/{id}/versions` | Replace a figure's file with a new version (multipart) | editor |
 | POST | `/api/v1/attachments/{id}/versions/{version}/restore` | Bring an older version's file and title back as a NEW version; nothing is deleted. 404 for a version the figure never had, 409 for the one already current | editor |
 | GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first; each entry carries the file, its `kind` and the `title` the figure had at that version, so a rename and a new file read alike | viewer |
-| DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
+| DELETE | `/api/v1/attachments/{id}` | Delete a figure with every version of it. Once the delete has committed, the stored file of every version is removed from the uploads directory; one that cannot be removed is logged and does not fail the delete, and a delete that fails removes no file | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | GET | `/api/v1/projects/{projectID}/attachments` | Every attachment in the project, in artifact order then figure number. Serves cross-artifact figure citations, which need the project's figures as one list | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |

@@ -201,14 +201,41 @@ func (r *AttachmentRepository) FindByProjectID(projectID string) ([]*attachments
 	return result, nil
 }
 
-// Delete removes an attachment
-func (r *AttachmentRepository) Delete(id string) error {
-	query := `DELETE FROM attachments WHERE id = $1`
-	_, err := r.db.Exec(query, id)
+// Delete deletes a figure with every version of it, in one transaction, and
+// answers the stored files of the rows it deleted, each once, sorted: every
+// version's (a restored version shares its file with the version it
+// restored) and the figure's current one (#379 bug 145: only the current
+// file was removed, and before the row was). The paths come from the
+// statements that delete the rows, so a file is answered exactly when its
+// row went. A version added meanwhile is answered too: it moves the
+// figure's row to its file, and the figure's row goes last, after any
+// version that holds it has committed (its own version row then goes with
+// it, by the foreign key); a version that comes after waits for the delete
+// and then finds no figure. An id no row has, a malformed one included,
+// deletes nothing and answers no file.
+func (r *AttachmentRepository) Delete(id string) ([]string, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to delete attachment: %w", err)
+		return nil, fmt.Errorf("failed to delete attachment: %w", err)
 	}
-	return nil
+	defer func() { _ = tx.Rollback() }()
+
+	var files storedFiles
+	for _, stmt := range []string{
+		`DELETE FROM attachment_versions WHERE attachment_id = $1 RETURNING file_path`,
+		`DELETE FROM attachments WHERE id = $1 RETURNING file_path`,
+	} {
+		if err := files.collect(tx, stmt, id); err != nil {
+			if malformedID(err) {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("failed to delete attachment: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to delete attachment: %w", err)
+	}
+	return files.sorted(), nil
 }
 
 // SaveWithFigureRef stores a new figure, drawing its number from the

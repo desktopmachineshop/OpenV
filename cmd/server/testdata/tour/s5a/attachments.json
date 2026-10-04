@@ -3028,9 +3028,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     }
   ],
-  "uploads": [
-    "<uuid:2>_fig2.png (117 bytes)"
-  ],
+  "uploads": [],
   "outbound_requests": [
     "none: the server sent no request through HTTP_PROXY or HTTPS_PROXY"
   ]

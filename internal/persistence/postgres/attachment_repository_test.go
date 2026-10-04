@@ -138,7 +138,7 @@ func TestFigureNumbersAreNeverReissued(t *testing.T) {
 	}
 
 	// Deleting Figure 2 must not put its number back in circulation.
-	if err := repo.Delete(second.ID); err != nil {
+	if _, err := repo.Delete(second.ID); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 	third := figure("three.png")

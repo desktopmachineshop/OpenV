@@ -221,7 +221,12 @@ type Repository interface {
 	// the order a reader meets them. Cross-artifact figure references need
 	// the project's figures without knowing which artifact holds each.
 	FindByProjectID(projectID string) ([]*Attachment, error)
-	Delete(id string) error
+	// Delete deletes a figure with every version of it, in one transaction,
+	// and answers the stored files of the rows it deleted, each once: every
+	// version's and the current one's, for the caller to remove once the
+	// delete has committed (#379 bug 145). A figure no row has deletes
+	// nothing and answers no file.
+	Delete(id string) ([]string, error)
 
 	// SaveWithFigureRef stores a new attachment, minting its figure number
 	// from the artifact's counter and recording it as version 1. artifactRef
@@ -257,7 +262,10 @@ type Service interface {
 	// GetAttachmentsByProject returns every attachment in a project as one
 	// list (see Repository.FindByProjectID).
 	GetAttachmentsByProject(projectID string) ([]*Attachment, error)
-	DeleteAttachment(id string) error
+	// DeleteAttachment deletes a figure with every version of it and answers
+	// their stored files, which the caller removes once it has (see
+	// Repository.Delete).
+	DeleteAttachment(id string) ([]string, error)
 
 	// CreateFigure stores a new figure on an artifact, allocating its number.
 	CreateFigure(attachment *Attachment, artifactRef string) error
@@ -316,8 +324,9 @@ func (s *DefaultService) GetAttachmentsByProject(projectID string) ([]*Attachmen
 	return s.repository.FindByProjectID(projectID)
 }
 
-// DeleteAttachment deletes an attachment
-func (s *DefaultService) DeleteAttachment(id string) error {
+// DeleteAttachment deletes a figure with every version of it and answers
+// their stored files.
+func (s *DefaultService) DeleteAttachment(id string) ([]string, error) {
 	return s.repository.Delete(id)
 }
 
