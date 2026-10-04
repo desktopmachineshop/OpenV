@@ -54,7 +54,8 @@ interface ArtifactHeaderProps {
   /**
    * The artifact as a baseline captured it. Its id is the live artifact's,
    * so every action here (Edit, Delete, a status change, History with its
-   * Restore) would act on the live one; read-only shows none of them.
+   * Restore) would act on the live one; read-only shows none of them, and
+   * neither loads nor counts the live artifact's versions.
    */
   readOnly?: boolean;
 }
@@ -155,10 +156,12 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       }
     };
 
-    if (artifact.version > 1) {
+    // A baseline's artifact (read-only) is the one version the baseline
+    // holds: the live artifact's history is not its to count or list.
+    if (!readOnly && artifact.version > 1) {
       loadVersions();
     }
-  }, [artifact.id, artifact.version]);
+  }, [artifact.id, artifact.version, readOnly]);
 
   const handleVersionRestore = async (version: number) => {
     if (version === artifact.version) {
@@ -270,7 +273,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
               Version {displayArtifact.version}
             </span>
-            {displayArtifact.version > 1 && (
+            {!readOnly && displayArtifact.version > 1 && (
               <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                 • {versions.length} total
               </span>

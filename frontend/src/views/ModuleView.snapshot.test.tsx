@@ -402,9 +402,9 @@ const LIVE_DOCUMENT = [
   'qualityAPI.artifact("req-1")',
   'linkAPI.listForArtifact("req-1")',
 ];
-// The same for the baseline's req-1 (v2): links come from the version.
+// The same for the baseline's req-1 (v2): links come from the version, and
+// the live artifact's versions are not loaded (#379, bug 122).
 const BASELINE_DOCUMENT = [
-  'artifactAPI.getVersions("req-1")',
   'qualityAPI.artifact("req-1")',
   'linkAPI.listForArtifactVersion("req-1", 2)',
 ];

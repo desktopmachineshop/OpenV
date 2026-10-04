@@ -8,7 +8,9 @@ import { DialogProvider } from '../components/ui';
 import { useAppStore } from '../state/store';
 
 // A baseline is a frozen record: reading an artifact in it must offer nothing
-// that writes to the live artifact of the same id (#379, bug 103).
+// that writes to the live artifact of the same id (#379, bug 103), and its
+// header shows the version the baseline holds, not the live artifact's
+// history (bug 122).
 
 const art = (id: string, ref: string, parent: string | null, type: string, title: string, version: number) => ({
   id,
@@ -45,7 +47,8 @@ vi.mock('../api/client', async (orig) =>
     projectAPI: { get: () => ok({ id: 'p1', org_id: 'o1', name: 'Fuel pump', parent_project_id: '' }) },
     artifactAPI: {
       list: () => ok(JSON.parse(JSON.stringify(LIVE))),
-      getVersions: () => ok([]),
+      // The live req-1's three versions.
+      getVersions: () => ok([1, 2, 3].map((v) => ({ ...LIVE[1], version: v }))),
     },
     linkAPI: {
       list: () => ok([]),
@@ -155,5 +158,35 @@ describe('ModuleView baseline document', () => {
     expect(documentButtons().filter((b) => WRITES.includes(b))).toEqual([]);
     expect(vi.mocked(artifactAPI.changeStatus)).not.toHaveBeenCalled();
     expect(vi.mocked(artifactAPI.delete)).not.toHaveBeenCalled();
+  });
+
+  // Bug 122: the header said "Version 2 • 3 total", the live artifact's
+  // count, for an artifact the baseline holds in one version.
+  it("shows the baseline's version and not the live artifact's count", async () => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/projects/p1/requirements?artifact=req-1']}>
+          <DialogProvider>
+            <Routes>
+              <Route path="/projects/:projectId/requirements" element={<ModuleView />} />
+            </Routes>
+          </DialogProvider>
+        </MemoryRouter>
+      );
+    });
+    await flush();
+    const header = () => container.querySelector('[aria-label="Artifact document"]')?.textContent ?? '';
+
+    // Live, the count is the live artifact's.
+    expect(header()).toContain('Version 3');
+    expect(header()).toContain('• 3 total');
+
+    await choose(container.querySelector<HTMLSelectElement>('select[title="Select baseline"]')!, 'bl-1');
+    await click(byText('button', 'Expand all'));
+    const loads = vi.mocked(artifactAPI.getVersions).mock.calls.length;
+    await click(byText('code', 'REQ-1'));
+    expect(header()).toContain('Version 2');
+    expect(header()).not.toContain('total');
+    expect(vi.mocked(artifactAPI.getVersions).mock.calls.length).toBe(loads);
   });
 });

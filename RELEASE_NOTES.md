@@ -234,6 +234,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   step that moves you on (checkout, confirming a plan change, updating
   the card after a failed payment) drawn as the main button.
 
+- **An artifact in a baseline shows the version the baseline holds, and
+  nothing else.** Reading an artifact in a baseline showed its version
+  beside a count of the live artifact's versions, as in "Version 2 • 5
+  total", which said nothing about the baseline and read as if the
+  baseline held five. The header now shows only the version the baseline
+  holds, "Version 2", and no longer loads the live artifact's history to
+  count it. Live, the header reads as before.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
