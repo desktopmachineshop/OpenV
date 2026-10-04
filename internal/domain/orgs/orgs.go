@@ -205,8 +205,11 @@ type Repository interface {
 	ListDeletedOrgsForUser(userID string) ([]*Org, error)
 	// ListExpiredDeletedOrgIDs returns orgs soft-deleted before the cutoff.
 	ListExpiredDeletedOrgIDs(before time.Time) ([]string, error)
-	// PurgeOrg hard-deletes the org and everything it contains.
-	PurgeOrg(id string) error
+	// PurgeOrg hard-deletes the org and everything it contains, in one
+	// transaction, and answers the stored files of the rows it deleted (its
+	// figures with every version, its evidence files and its logo), each
+	// once, for the caller to remove once it has committed (#379 bug 143).
+	PurgeOrg(id string) ([]string, error)
 
 	UpsertMember(orgID, userID, role string) error
 	RemoveMember(orgID, userID string) error         // ErrNotMember when there was none

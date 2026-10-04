@@ -262,7 +262,6 @@ table attachments rows 0
   column file_path character varying(1024) NOT NULL
   column file_size integer NOT NULL
   column created_at timestamp without time zone NOT NULL DEFAULT now()
-  column test_result_id uuid
   column figure_ref character varying(64)
   column figure_num integer
   column version integer NOT NULL DEFAULT 1
@@ -272,7 +271,6 @@ table attachments rows 0
   index attachments_pkey CREATE UNIQUE INDEX attachments_pkey ON public.attachments USING btree (id)
   index idx_attachments_artifact_figure_ref CREATE UNIQUE INDEX idx_attachments_artifact_figure_ref ON public.attachments USING btree (artifact_id, figure_ref) WHERE (figure_ref IS NOT NULL)
   index idx_attachments_artifact_id CREATE INDEX idx_attachments_artifact_id ON public.attachments USING btree (artifact_id)
-  index idx_attachments_test_result_id CREATE INDEX idx_attachments_test_result_id ON public.attachments USING btree (test_result_id)
 table attribute_definitions rows 0
   column id uuid NOT NULL
   column org_id uuid
@@ -330,6 +328,12 @@ table baselines rows 0
   constraint baselines_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index baselines_pkey CREATE UNIQUE INDEX baselines_pkey ON public.baselines USING btree (id)
   index idx_baselines_project_id CREATE INDEX idx_baselines_project_id ON public.baselines USING btree (project_id)
+table boot_tasks rows 0
+  column name text NOT NULL
+  column ran_at timestamp with time zone NOT NULL DEFAULT now()
+  column outcome text NOT NULL DEFAULT ''::text
+  constraint boot_tasks_pkey PRIMARY KEY (name)
+  index boot_tasks_pkey CREATE UNIQUE INDEX boot_tasks_pkey ON public.boot_tasks USING btree (name)
 table chatter rows 0
   column id uuid NOT NULL
   column artifact_id uuid NOT NULL
@@ -849,7 +853,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 55
+table schema_migrations rows 58
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1090,4 +1094,7 @@ ledger 0051 timestamptz_share_link_expiry
 ledger 0052 crew_node_references
 ledger 0053 project_owned_rows
 ledger 0054 figure_refs_per_project
+ledger 0055 figure_counters_without_artifact
+ledger 0056 boot_tasks
+ledger 0057 drop_attachment_test_result
 ledger 0058 cancel_requeued_cancelled_runs

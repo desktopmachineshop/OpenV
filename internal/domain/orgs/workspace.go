@@ -43,8 +43,8 @@ type Workspaces interface {
 	// ListDeletedForUser returns the caller's soft-deleted workspaces.
 	ListDeletedForUser(userID string) ([]*Org, error)
 	// PurgeExpired hard-deletes workspaces whose grace period has passed,
-	// returning the purged ids.
-	PurgeExpired(now time.Time) ([]string, error)
+	// answering the purged ids and their stored files (Purged).
+	PurgeExpired(now time.Time) (Purged, error)
 }
 
 var slugCleaner = regexp.MustCompile(`[^a-z0-9]+`)

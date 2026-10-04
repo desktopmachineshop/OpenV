@@ -47,6 +47,7 @@ func main()
   call internal/persistence/postgres.MigrateAndBackfill
   if
     call os.Exit
+  call internal/persistence/postgres.RunBootTaskOnce
   call (*internal/domain/links.DefaultService).SetArtifactService
   call (*internal/domain/artifacts.DefaultService).SetLinkSuspector
   call (*internal/domain/artifacts.DefaultService).SetEmbeddingIndexer
@@ -111,11 +112,15 @@ func main()
   call internal/scheduler.New -> (*internal/scheduler.Scheduler).Start
   go
     call (*internal/domain/orgs.DefaultService).PurgeExpired
+    for
+      call os.Remove
     defer (*time.Ticker).Stop
     for
       select
         case
           call (*internal/domain/orgs.DefaultService).PurgeExpired
+          for
+            call os.Remove
   go
     defer (*time.Ticker).Stop
     for

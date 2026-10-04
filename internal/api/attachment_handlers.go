@@ -122,9 +122,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err := h.AttachmentService.CreateFigure(attachment, artifactRef); err != nil {
-		// Clean up file if database save fails
-		_ = os.Remove(storedPath)
-		respondInternal(w, r, "Failed to save attachment metadata", err)
+		figureNotSaved(w, r, storedPath, err)
 		return
 	}
 
@@ -139,6 +137,19 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(attachment)
+}
+
+// figureNotSaved answers an upload whose figure could not be saved, once
+// its stored file is removed: an upload whose project went while the file
+// came in (#379 bug 152) as an upload to an artifact no row has, 404
+// "project not found", and any other failure 500.
+func figureNotSaved(w http.ResponseWriter, r *http.Request, storedPath string, err error) {
+	_ = os.Remove(storedPath)
+	if errors.Is(err, attachments.ErrNoArtifact) {
+		unknownProject.write(w)
+		return
+	}
+	respondInternal(w, r, "Failed to save attachment metadata", err)
 }
 
 // GetAttachmentMeta retrieves attachment metadata
@@ -473,7 +484,13 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-// DeleteAttachment deletes an attachment
+// DeleteAttachment deletes a figure with every version of it. The rows go
+// first, and only once their delete has committed are the stored files of
+// every version removed (#379 bug 145: only the current version's file was
+// removed, and before the row was, so a failed delete left a figure with no
+// file and a deleted one left its earlier versions' files on disk). A delete
+// that fails removes no file; a file that will not go is logged, not
+// answered: the figure is gone either way.
 func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -487,17 +504,12 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete file from disk
-	if err := os.Remove(attachment.FilePath); err != nil && !os.IsNotExist(err) {
-		respondInternal(w, r, "Failed to delete file", err)
-		return
-	}
-
-	// Delete database record
-	if err := h.AttachmentService.DeleteAttachment(id); err != nil {
+	files, err := h.AttachmentService.DeleteAttachment(id)
+	if err != nil {
 		respondInternal(w, r, "Failed to delete attachment", err)
 		return
 	}
+	removeStoredFiles(files)
 
 	w.WriteHeader(http.StatusNoContent)
 }

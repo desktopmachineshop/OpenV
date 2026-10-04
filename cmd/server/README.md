@@ -11,7 +11,7 @@ step M4, `main()` only calls stages; plan §7.1
 
 | Area (`docs/areas.json`) | Files here |
 |---|---|
-| platform-http | `main.go`, `app.go`, `config.go`, `http.go`, `jobs.go`, `logging.go`, `lookups.go`, `wire_config.go`, `wire_storage.go`, `wire_jobs.go`, `wire_http.go`, `testdata/**`, `*.md` |
+| platform-http | `main.go`, `app.go`, `config.go`, `http.go`, `jobs.go`, `logging.go`, `lookups.go`, `upload_sweep.go`, `wire_config.go`, `wire_storage.go`, `wire_jobs.go`, `wire_http.go`, `testdata/**`, `*.md` |
 | requirements-core | `wire_core.go`, `wire_projects.go` |
 | tenancy-identity | `wire_workspace.go`, `wire_sso.go` |
 | agent-suite | `wire_agents.go` |
@@ -28,7 +28,8 @@ Test files (`*_test.go`) need no area.
 | `wire_*.go` | the stages, methods on `*app` that `main()` calls in this order: `signals`, `config` (`wire_config.go`); `connect`, `storage` (`wire_storage.go`); `core`; `workspace`, `runners` (`wire_workspace.go`); `projects`; `agents`; `realtime`; `notify`, `release` (`wire_notify.go`); `jobs`; `sso`; `billing`, `handlers`, `server` (`wire_http.go`) |
 | `config.go` | the env getters `envOr`, `envInt`, `envBool` and `envSecret`, over `internal/envparse` |
 | `http.go` | the one `mux.NewRouter()`, `/metrics`, the middleware chain (`buildHTTPHandler`) and `newServer` |
-| `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`, `reconcileHostedRunners` |
+| `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`, `reconcileHostedRunners`; `removeStoredFiles`, which removes the files a committed purge took |
+| `upload_sweep.go` | `sweepUnreferencedUploads`, which stage `storage` runs once per database after the migrations: the stored files no row names, by the fail-safe rules at the top of the file |
 | `lookups.go` | closures over the database and services that stages hand to services |
 | `logging.go` | `initLogging` and `fatal` |
 | `boot_*_test.go`, `harness*_test.go` | the S4 boot harness: the real binary booted per env profile |

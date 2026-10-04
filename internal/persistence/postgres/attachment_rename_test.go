@@ -17,7 +17,7 @@ func TestRenameFigureIsATrackedVersion(t *testing.T) {
 	repo := NewAttachmentRepository(db)
 
 	att := attachments.NewAttachment(attachments.CreateAttachmentRequest{
-		ArtifactID:       uuid.New().String(),
+		ArtifactID:       seedFigureArtifact(t, db),
 		Filename:         "Screenshot 1234.png",
 		OriginalFilename: "Screenshot 1234.png",
 		MimeType:         "image/png",

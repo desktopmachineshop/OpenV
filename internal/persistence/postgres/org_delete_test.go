@@ -202,8 +202,8 @@ func TestOrgPurge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PurgeExpired: %v", err)
 	}
-	if len(purged) != 1 || purged[0] != doomed.ID {
-		t.Fatalf("purged = %v, want [%s]", purged, doomed.ID)
+	if len(purged.IDs) != 1 || purged.IDs[0] != doomed.ID {
+		t.Fatalf("purged = %v, want [%s]", purged.IDs, doomed.ID)
 	}
 
 	count := func(q string, args ...interface{}) int {
