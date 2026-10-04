@@ -112,7 +112,7 @@ func planAPIArea(root string, n name) (*plan, error) {
 		"to make one of its templates win over an overlapping one, and say so in the pull request.", call))
 	p.steps = append(p.steps,
 		"Write the handler and the service it calls (internal/api/README.md, \"Add an API area\" and \"Add an endpoint to an area\"). "+
-			"A new service is one HandlerDeps field, plus its Handler field and copy in NewHandler until M14, plus one line in "+
+			"A new service is one HandlerDeps field, which Handler embeds, plus one line in "+
 			"cmd/server/wire_http.go (K5).",
 		"Regenerate the route goldens: "+regenRoutes,
 		"The tour and its S5e matrix send every route of internal/api/testdata/routes.txt: give "+route+" its case and regenerate "+
