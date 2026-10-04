@@ -689,9 +689,13 @@ func requireWorker(w http.ResponseWriter, r *http.Request) bool {
 // verifies the worker credential may act on it: the run must belong to the
 // worker's org, and a personal runner key may only touch runs its user could
 // have claimed (their own, or an ownerless one its user could see — mirrors
-// Claim). Cross-org and unknown run IDs, and runs the key could not claim,
-// all answer 404 so a worker cannot probe whether a run exists. Returns nil
-// after writing the response when access is denied.
+// Claim), and the live run its user's runner claimed (claimed_by), which
+// stays its runner's until it is over, whoever can see it meanwhile: a
+// project's delete leaves a run with no project, which only workspace
+// admins see, and a member's runner got 404 reading and reporting its
+// cancel (#379 bug 147). Cross-org and unknown run IDs, and runs the key
+// could not claim, all answer 404 so a worker cannot probe whether a run
+// exists. Returns nil after writing the response when access is denied.
 func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
 	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
@@ -699,8 +703,9 @@ func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agen
 		return nil
 	}
 	if holder := WorkerUser(r); holder != "" {
-		sees := run.LaunchedBy != nil && *run.LaunchedBy == holder
-		if run.LaunchedBy == nil {
+		live := run.Status == agentruns.StatusClaimed || run.Status == agentruns.StatusRunning
+		sees := (run.LaunchedBy != nil && *run.LaunchedBy == holder) || (live && run.ClaimedBy != nil && *run.ClaimedBy == holder)
+		if !sees && run.LaunchedBy == nil {
 			if sees, err = h.holderSeesRun(holder, run); err != nil {
 				respondInternal(w, r, "failed to resolve run access", err)
 				return nil

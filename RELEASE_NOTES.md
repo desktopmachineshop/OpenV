@@ -45,6 +45,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   pointing at its cards, sessions, automations and crews, and the server no
   longer logs a "failed to move card" error for them.
 
+- **A member's own runner stops a run whose project is deleted.** When a
+  project was deleted while the personal runner of a member who is not a
+  workspace admin was working on one of its runs, the runner lost sight of
+  the run: it never learned the run was cancelled, kept working until the
+  run was failed as "worker lost", and an automatic retry could then start
+  it again outside any project. The runner now stops the run and reports it
+  cancelled, and a run someone asked to stop is never retried
+  automatically.
+
 - **A cancelled run stays cancelled.** A run whose cancel was requested went
   back to the queue, and was started again by the next runner, when its
   runner shut down before stopping it or could not start it; it now ends

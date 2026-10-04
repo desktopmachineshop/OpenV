@@ -323,6 +323,7 @@ func workerRunReq(body, orgID, userID, runID string) *http.Request {
 // Every other run answers the same 404 (OpenV REQ-27, REQ-16).
 func TestWorkerRunLifecycleScoping(t *testing.T) {
 	launcher := "user-1"
+	holder := "user-3"
 	project := "proj-1"
 	newRuns := func() map[string]*agentruns.Run {
 		return map[string]*agentruns.Run{
@@ -330,6 +331,13 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 			"run-foreign":   {ID: "run-foreign", OrgID: "org-2", Status: agentruns.StatusClaimed},
 			"run-unowned":   {ID: "run-unowned", OrgID: "org-1", Status: agentruns.StatusClaimed},
 			"run-unowned-p": {ID: "run-unowned-p", OrgID: "org-1", Status: agentruns.StatusClaimed, ProjectID: &project},
+			// An ownerless run user-3's runner claimed in a project since
+			// deleted: it has no project, and its cancel is requested.
+			"run-claimed-gone": {ID: "run-claimed-gone", OrgID: "org-1", Status: agentruns.StatusRunning, ClaimedBy: &holder,
+				CancelRequested: true},
+			// The same run once its runner reported it cancelled.
+			"run-claimed-done": {ID: "run-claimed-done", OrgID: "org-1", Status: agentruns.StatusCancelled, ClaimedBy: &holder,
+				CancelRequested: true},
 		}
 	}
 
@@ -364,6 +372,14 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 		{"workspace admin's personal key on an ownerless run with no project passes", "run-unowned", "org-1",
 			"user-admin", 0},
 		{"workspace key on an ownerless run with no project passes", "run-unowned", "org-1", "", 0},
+		// #379 bug 147: a non-admin member's runner keeps the run it holds
+		// when the run's project is deleted, to read the cancel and report
+		// it; nobody else gains it, nor the runner once the run is over.
+		{"personal key on the live run its holder's runner claimed, its project gone, passes", "run-claimed-gone", "org-1",
+			"user-3", 0},
+		{"another member's personal key on that run gets 404", "run-claimed-gone", "org-1", "user-2", http.StatusNotFound},
+		{"personal key on the run its holder's runner claimed, once it is over, gets 404", "run-claimed-done", "org-1",
+			"user-3", http.StatusNotFound},
 	}
 
 	for _, ep := range endpoints {

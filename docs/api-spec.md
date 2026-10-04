@@ -102,7 +102,10 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
   that a member's own personal key launched is not taken by that member's
   runner unless the member is a workspace admin. The run lifecycle calls
   (start, logs, finish, release) answer a personal key `404` on any other
-  run.
+  run, except the one its runner claimed, which it reaches while the run is
+  claimed or running, whoever can see it meanwhile: a run whose project is
+  deleted has no project, and the runner of a member who is no workspace
+  admin still reads its cancel and reports it cancelled.
 - **Session keys** — a personal key bound to a transient runner lease
   (`worker_keys.session_id` set), minted when a member leases a pool node and
   revoked when the lease ends. It routes like any personal key; it is kept
