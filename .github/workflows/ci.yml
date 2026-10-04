@@ -76,9 +76,14 @@ jobs:
       # below run again (-count=1 -v, to fail on a skip and to tie every golden
       # to a test that passed): skipped here, so that each runs once. The boot
       # harness's own checks (TestBootSteps, TestBootStepsFollowStages,
-      # TestBootGoldensAreClaimed) still run here.
+      # TestBootGoldensAreClaimed) still run here. They run under the race
+      # detector: a lock lost on state goroutines share (the providers a
+      # runner's sign-in adds and its claim loop reads, #379 bug 125) passes
+      # every test without -race. The step's time is the Postgres package's
+      # and the runner's waits, so -race costs about 20 s once the build
+      # cache holds its build (about 90 s when it does not).
       - name: go test
-        run: go test -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$' . ./cmd/... ./internal/...
+        run: go test -race -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$' . ./cmd/... ./internal/...
 
       # The refactor tools outside Go: classify_commits (S14a) and the
       # Refactor guard's checker (S14b, which refactor-guard.yml also runs

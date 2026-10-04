@@ -19,6 +19,7 @@ func TestProposalRepositoryRefRoundTrip(t *testing.T) {
 	agentID := uuid.New().String()
 	runID := uuid.New().String()
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 	if _, err := db.Exec(`INSERT INTO agents (id, slug, name, provider) VALUES ($1, 'tc', 'TC', 'claude-code')`, agentID); err != nil {
 		t.Fatalf("seed agent: %v", err)
 	}

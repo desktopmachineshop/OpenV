@@ -546,7 +546,11 @@ Notes:
     (`single`, `business_lite`, `business`, `enterprise`, `self_host`,
     `open_source` — granted to an open-source project's workspace; it
     publishes every project's latest baseline on the site's open-source
-    page, see `docs/sharing.md`). A platform admin moves a workspace
+    page, see `docs/sharing.md`, or the legacy `free` and `team`). A name
+    that is not a plan keeps the default, `self_host` on a self-hosted
+    deployment and `single` otherwise, with a warning in the boot log
+    naming the variable; the boot log's `workspace limits configured` line
+    names the plan in use. A platform admin moves a workspace
     between plans from the Platform admin page (account menu; the same page
     grants platform-admin standing to other accounts) or with
     `PUT /api/v1/orgs/{id}/plan {"plan": ...}`, for

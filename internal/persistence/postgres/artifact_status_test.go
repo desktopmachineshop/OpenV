@@ -34,6 +34,7 @@ func TestArtifactStatusBackfill(t *testing.T) {
 	}
 
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 	insert := func(attributes string, archived bool) string {
 		id := uuid.New().String()
 		validTo := "NULL"
@@ -99,8 +100,10 @@ func TestArtifactStatusRoundTrip(t *testing.T) {
 	repo := NewArtifactRepository(db)
 	svc := artifacts.NewDefaultService(repo)
 
+	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 	a := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
-		ProjectID: uuid.New().String(),
+		ProjectID: projectID,
 		Type:      "requirement",
 		Title:     "Round trip",
 	})

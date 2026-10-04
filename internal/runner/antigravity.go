@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
@@ -315,15 +316,16 @@ func (p *antigravityParser) Result(exitCode int, stderrTail string) (Result, err
 	return res, nil
 }
 
-// antigravityFailure appends the authentication note when the failure looks
-// like one: a run on a runner with no key fails this way, and the note is the
-// difference between "retry" and "this needs a key".
+// antigravityFailure appends the authentication note when the failure is
+// one: a run on a runner with no key fails this way, and the note is the
+// difference between "retry" and "this needs a key". The failure classifier
+// decides (classifyAgentError: whole words and status codes, a rate limit
+// outranking a mere mention of an API key), so the note is added exactly
+// when the run fails as auth, and, though the note itself speaks of an API
+// key, adding it never changes the run's class.
 func antigravityFailure(detail string) string {
-	lower := strings.ToLower(detail)
-	for _, signal := range []string{"auth", "sign in", "sign-in", "login", "credential", "unauthenticated"} {
-		if strings.Contains(lower, signal) {
-			return detail + " — " + antigravityAuthNote
-		}
+	if classifyAgentError(errors.New(detail)) == agentruns.ErrorClassAuth {
+		return detail + " — " + antigravityAuthNote
 	}
 	return detail
 }

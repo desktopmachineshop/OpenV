@@ -26,6 +26,7 @@ table agent_proposals rows 0
   column reviewed_at timestamp without time zone
   column ref text NOT NULL DEFAULT ''::text
   constraint agent_proposals_pkey PRIMARY KEY (id)
+  constraint agent_proposals_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   constraint agent_proposals_run_id_fkey FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE CASCADE
   index agent_proposals_pkey CREATE UNIQUE INDEX agent_proposals_pkey ON public.agent_proposals USING btree (id)
   index idx_agent_proposals_project CREATE INDEX idx_agent_proposals_project ON public.agent_proposals USING btree (project_id)
@@ -89,6 +90,7 @@ table agent_runs rows 0
   column claimed_by uuid
   constraint agent_runs_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
   constraint agent_runs_pkey PRIMARY KEY (id)
+  constraint agent_runs_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
   index agent_runs_pkey CREATE UNIQUE INDEX agent_runs_pkey ON public.agent_runs USING btree (id)
   index idx_agent_runs_agent_id CREATE INDEX idx_agent_runs_agent_id ON public.agent_runs USING btree (agent_id)
   index idx_agent_runs_automation CREATE INDEX idx_agent_runs_automation ON public.agent_runs USING btree (automation_id, created_at)
@@ -149,8 +151,10 @@ table agent_teams rows 0
   column org_id uuid NOT NULL
   constraint agent_teams_entry_node_id_fkey FOREIGN KEY (entry_node_id) REFERENCES agent_team_nodes(id) ON DELETE SET NULL
   constraint agent_teams_pkey PRIMARY KEY (id)
+  constraint agent_teams_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index agent_teams_pkey CREATE UNIQUE INDEX agent_teams_pkey ON public.agent_teams USING btree (id)
   index idx_agent_teams_entry_node CREATE INDEX idx_agent_teams_entry_node ON public.agent_teams USING btree (entry_node_id) WHERE (entry_node_id IS NOT NULL)
+  index idx_agent_teams_project CREATE INDEX idx_agent_teams_project ON public.agent_teams USING btree (project_id)
 table agents rows 0
   column id uuid NOT NULL
   column slug character varying(128) NOT NULL
@@ -192,6 +196,7 @@ table artifact_ref_counters rows 0
   column prefix character varying(16) NOT NULL
   column next_num integer NOT NULL
   constraint artifact_ref_counters_pkey PRIMARY KEY (project_id, prefix)
+  constraint artifact_ref_counters_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index artifact_ref_counters_pkey CREATE UNIQUE INDEX artifact_ref_counters_pkey ON public.artifact_ref_counters USING btree (project_id, prefix)
 table artifacts rows 0
   column id uuid NOT NULL
@@ -211,6 +216,7 @@ table artifacts rows 0
   column status character varying(32) NOT NULL DEFAULT 'draft'::character varying
   column ref character varying(32)
   constraint artifacts_pkey PRIMARY KEY (id, version)
+  constraint artifacts_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index artifacts_pkey CREATE UNIQUE INDEX artifacts_pkey ON public.artifacts USING btree (id, version)
   index idx_artifacts_body_trgm CREATE INDEX idx_artifacts_body_trgm ON public.artifacts USING gin (body gin_trgm_ops)  @requires(pg_trgm)
   index idx_artifacts_id_active CREATE UNIQUE INDEX idx_artifacts_id_active ON public.artifacts USING btree (id) WHERE (valid_to IS NULL)
@@ -280,6 +286,7 @@ table attribute_definitions rows 0
   column sort_order integer NOT NULL DEFAULT 0
   column created_at timestamp with time zone NOT NULL DEFAULT now()
   constraint attribute_definitions_pkey PRIMARY KEY (id)
+  constraint attribute_definitions_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index attribute_definitions_pkey CREATE UNIQUE INDEX attribute_definitions_pkey ON public.attribute_definitions USING btree (id)
   index idx_attribute_definitions_org CREATE INDEX idx_attribute_definitions_org ON public.attribute_definitions USING btree (org_id) WHERE (project_id IS NULL)
   index idx_attribute_definitions_project CREATE INDEX idx_attribute_definitions_project ON public.attribute_definitions USING btree (project_id) WHERE (project_id IS NOT NULL)
@@ -306,9 +313,11 @@ table automations rows 0
   column org_id uuid NOT NULL
   constraint automations_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
   constraint automations_pkey PRIMARY KEY (id)
+  constraint automations_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index automations_pkey CREATE UNIQUE INDEX automations_pkey ON public.automations USING btree (id)
   index idx_automations_event CREATE INDEX idx_automations_event ON public.automations USING btree (event_type) WHERE (enabled AND ((kind)::text = 'triggered'::text))
   index idx_automations_next_run CREATE INDEX idx_automations_next_run ON public.automations USING btree (next_run_at) WHERE (enabled AND ((kind)::text = 'scheduled'::text))
+  index idx_automations_project CREATE INDEX idx_automations_project ON public.automations USING btree (project_id)
 table baselines rows 0
   column id uuid NOT NULL
   column project_id uuid NOT NULL
@@ -442,6 +451,7 @@ table guided_sessions rows 0
   column org_id uuid NOT NULL
   column pending_nudge jsonb
   constraint guided_sessions_pkey PRIMARY KEY (id)
+  constraint guided_sessions_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index guided_sessions_pkey CREATE UNIQUE INDEX guided_sessions_pkey ON public.guided_sessions USING btree (id)
   index idx_guided_sessions_project_id CREATE INDEX idx_guided_sessions_project_id ON public.guided_sessions USING btree (project_id)
 table hosted_workers rows 0
@@ -510,6 +520,7 @@ table interviews rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   constraint interviews_pkey PRIMARY KEY (id)
+  constraint interviews_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index idx_interviews_persona CREATE INDEX idx_interviews_persona ON public.interviews USING btree (persona_artifact_id)
   index idx_interviews_project_id CREATE INDEX idx_interviews_project_id ON public.interviews USING btree (project_id)
   index interviews_pkey CREATE UNIQUE INDEX interviews_pkey ON public.interviews USING btree (id)
@@ -838,7 +849,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 52
+table schema_migrations rows 53
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -939,6 +950,7 @@ table test_runs rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   constraint test_runs_pkey PRIMARY KEY (id)
+  constraint test_runs_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index idx_test_runs_project_id CREATE INDEX idx_test_runs_project_id ON public.test_runs USING btree (project_id)
   index test_runs_pkey CREATE UNIQUE INDEX test_runs_pkey ON public.test_runs USING btree (id)
 table user_repo_paths rows 0
@@ -1001,6 +1013,7 @@ table work_items rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   constraint work_items_pkey PRIMARY KEY (id)
+  constraint work_items_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index idx_work_items_column CREATE INDEX idx_work_items_column ON public.work_items USING btree (project_id, board_column, sort_order)
   index idx_work_items_project_id CREATE INDEX idx_work_items_project_id ON public.work_items USING btree (project_id)
   index idx_work_items_source_chatter CREATE INDEX idx_work_items_source_chatter ON public.work_items USING btree (source_chatter_id) WHERE (source_chatter_id IS NOT NULL)
@@ -1075,3 +1088,4 @@ ledger 0049 test_results_history
 ledger 0050 timestamptz_client_times
 ledger 0051 timestamptz_share_link_expiry
 ledger 0052 crew_node_references
+ledger 0053 project_owned_rows

@@ -60,7 +60,8 @@ type PortableEdge struct {
 }
 
 // AgentDirectory resolves agents for export (by global id) and import (by slug
-// within the target org). agents.Service satisfies this interface.
+// within the target org). agents.Service satisfies this interface. An agent
+// no row has is agents.ErrNotFound, or nil with no error.
 type AgentDirectory interface {
 	Get(id string) (*agents.Agent, error)
 	GetBySlug(orgID, slug string) (*agents.Agent, error)
@@ -116,6 +117,9 @@ func Serialize(graph *teams.TeamGraph, dir AgentDirectory) (*PortableCrew, error
 			continue
 		}
 		agent, err := dir.Get(n.AgentID)
+		if errors.Is(err, agents.ErrNotFound) {
+			agent, err = nil, nil
+		}
 		if err != nil {
 			return nil, fmt.Errorf("resolve agent %s: %w", n.AgentID, err)
 		}
@@ -195,6 +199,9 @@ func Import(p *PortableCrew, orgID string, projectID *string, dir AgentDirectory
 	keyToNodeID := make(map[string]string, len(p.Nodes))
 	for _, pn := range p.Nodes {
 		agent, err := dir.GetBySlug(orgID, pn.AgentSlug)
+		if errors.Is(err, agents.ErrNotFound) {
+			agent, err = nil, nil
+		}
 		if err != nil {
 			return nil, fmt.Errorf("resolve agent slug %q: %w", pn.AgentSlug, err)
 		}

@@ -136,6 +136,9 @@ type Repository interface {
 
 	SaveNode(n *Node) error
 	UpdateNode(n *Node) error
+	// FindNodeByID answers ErrNodeNotFound for a node no row has (#379 bug
+	// 88). The service also treats a nil node with no error as not found,
+	// as a stand-in repository may answer.
 	FindNodeByID(id string) (*Node, error)
 	ListNodesByTeam(teamID string) ([]*Node, error)
 	DeleteNode(id string) error
@@ -344,7 +347,7 @@ func (s *DefaultService) UpdateTeam(id string, name, description, entryNodeID *s
 			t.EntryNodeID = nil
 		} else {
 			n, err := s.repo.FindNodeByID(*entryNodeID)
-			if err != nil {
+			if err != nil && !errors.Is(err, ErrNodeNotFound) {
 				return nil, err
 			}
 			if n == nil || n.TeamID != id {
@@ -415,13 +418,13 @@ func (s *DefaultService) AddNode(teamID string, spec NodeSpec) (*Node, error) {
 	return n, nil
 }
 
-// UpdateNode applies non-nil label/agentID/department changes and a
-// non-nil position.
-// GetNode retrieves a team node by ID (nil, nil when none).
+// GetNode retrieves a team node by ID: ErrNodeNotFound when none.
 func (s *DefaultService) GetNode(nodeID string) (*Node, error) {
 	return s.repo.FindNodeByID(nodeID)
 }
 
+// UpdateNode applies non-nil label/agentID/department changes and a
+// non-nil position.
 func (s *DefaultService) UpdateNode(nodeID string, label, agentID, userID, department *string, position map[string]interface{}) (*Node, error) {
 	n, err := s.repo.FindNodeByID(nodeID)
 	if err != nil {
@@ -492,14 +495,14 @@ func (s *DefaultService) AddEdge(teamID, fromNodeID, toNodeID, edgeType string, 
 	}
 
 	from, err := s.repo.FindNodeByID(fromNodeID)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNodeNotFound) {
 		return nil, err
 	}
 	if from == nil || from.TeamID != teamID {
 		return nil, errors.New("from node does not belong to team")
 	}
 	to, err := s.repo.FindNodeByID(toNodeID)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNodeNotFound) {
 		return nil, err
 	}
 	if to == nil || to.TeamID != teamID {

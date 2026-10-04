@@ -160,7 +160,8 @@ test:
 
 ## Run the gates CI runs on a pull request, in their order, before pushing.
 ## From .github/workflows/ci.yml: the backend job (gofmt over ./cmd
-## ./internal; go vet and go test over the root, ./cmd/... and ./internal/...;
+## ./internal; go vet and go test -race over the root, ./cmd/... and
+## ./internal/...;
 ## the refactor tools' Python tests; the Postgres vector assertion) and the
 ## frontend job (tsc, lint, vitest, the refactor tools' Node tests, among
 ## them tsdeclmove's F1 run, which repeats those gates on a copy of the tree
@@ -220,10 +221,10 @@ check:
 	fi
 	go vet . ./cmd/... ./internal/...
 	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
-		echo "go test . ./cmd/... ./internal/..."; go test . ./cmd/... ./internal/...; \
+		echo "go test -race . ./cmd/... ./internal/..."; go test -race . ./cmd/... ./internal/...; \
 	else \
-		echo "go test -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)\$$' . ./cmd/... ./internal/... (the tour and boots run below)"; \
-		go test -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$$' . ./cmd/... ./internal/...; \
+		echo "go test -race -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)\$$' . ./cmd/... ./internal/... (the tour and boots run below)"; \
+		go test -race -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$$' . ./cmd/... ./internal/...; \
 	fi
 	python3 -m unittest scripts/refactor/classify_commits_test.py scripts/refactor/refactor_guard_test.py
 	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \

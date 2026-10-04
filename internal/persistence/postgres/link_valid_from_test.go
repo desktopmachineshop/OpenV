@@ -20,6 +20,7 @@ func TestLinkFindAllReadsValidFrom(t *testing.T) {
 	linkRepo := NewLinkRepository(db)
 
 	project := uuid.New().String()
+	seedProjects(t, db, project)
 	var ids []string
 	for _, title := range []string{"Requirement", "Test case"} {
 		a := artifacts.NewArtifact(artifacts.CreateArtifactRequest{ProjectID: project, Type: "requirement", Title: title})

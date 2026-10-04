@@ -2,9 +2,9 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 
 	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 )
 
 // ProjectInfoRepository implements exports.ProjectRepository
@@ -17,7 +17,8 @@ func NewProjectInfoRepository(db *sql.DB) *ProjectInfoRepository {
 	return &ProjectInfoRepository{db: db}
 }
 
-// FindByID retrieves project information by ID
+// FindByID retrieves project information by ID: projects.ErrNotFound for an
+// id no project has, a malformed one included (#379 bug 88).
 func (r *ProjectInfoRepository) FindByID(id string) (*exports.ProjectInfo, error) {
 	project := &exports.ProjectInfo{}
 
@@ -35,7 +36,7 @@ func (r *ProjectInfoRepository) FindByID(id string) (*exports.ProjectInfo, error
 
 	if err != nil {
 		if noRow(err) {
-			return nil, errors.New("project not found")
+			return nil, projects.ErrNotFound
 		}
 		return nil, err
 	}

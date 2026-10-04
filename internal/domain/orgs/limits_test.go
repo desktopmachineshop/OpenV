@@ -389,6 +389,36 @@ func TestValidPlan(t *testing.T) {
 	}
 }
 
+// A deployment's default plan may be any plan a workspace can be put on,
+// the open-source plan included, which SetDefaultPlan used to ignore; a
+// name that is not a plan is still never installed (#379 bug 117).
+// PlanNames, which cmd/server's warning about such a name lists, is exactly
+// the plans ValidPlan accepts.
+func TestSetDefaultPlanTakesEveryValidPlan(t *testing.T) {
+	was := DefaultPlan()
+	t.Cleanup(func() { SetDefaultPlan(was) })
+	for _, plan := range PlanNames() {
+		if !ValidPlan(plan) {
+			t.Errorf("PlanNames lists %q, which ValidPlan refuses", plan)
+		}
+		SetDefaultPlan(PlanSingle)
+		SetDefaultPlan(plan)
+		if got := DefaultPlan(); got != plan {
+			t.Errorf("SetDefaultPlan(%q) left the default plan %q", plan, got)
+		}
+	}
+	if len(PlanNames()) != len(allPlans) {
+		t.Errorf("PlanNames lists %d plans, want all %d", len(PlanNames()), len(allPlans))
+	}
+	SetDefaultPlan(PlanBusiness)
+	for _, name := range []string{"", "platinum", "Business", "open-source", "self-host"} {
+		SetDefaultPlan(name)
+		if got := DefaultPlan(); got != PlanBusiness {
+			t.Errorf("SetDefaultPlan(%q) changed the default plan to %q", name, got)
+		}
+	}
+}
+
 // Issue #361: Business is sold as everything in Business Lite and more, but
 // every cloud-runner number in it was byte-identical to Business Lite's, so
 // the tier bought company features and not one minute of extra runner.

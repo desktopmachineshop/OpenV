@@ -105,7 +105,7 @@ buckets live in the API process, so they assume a single API instance.
 | `OPENV_OIDC_SCOPES` | server | `openid email profile` | Space-separated scopes to ask the provider for. |
 | `OPENV_PASSWORD_RESET_BURST` | server | `3` | Password reset mails one address may be sent at once. |
 | `OPENV_PASSWORD_RESET_REFILL_PER_HOUR` | server | `6` | Password reset mails per address per hour, steady state. |
-| `OPENV_PLAN_DEFAULT` | server | `single`, or `self_host` with `OPENV_SELF_HOSTED` | The plan new workspaces are created on: `single`, `business_lite`, `business`, `enterprise`, `self_host` or the legacy `free` and `team`. Any other name is ignored and leaves `single`, on a self-hosted deployment too. |
+| `OPENV_PLAN_DEFAULT` | server | `single`, or `self_host` with `OPENV_SELF_HOSTED` | The plan new workspaces are created on: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` or the legacy `free` and `team`. Any other name keeps the default, `self_host` on a self-hosted deployment, with a warning in the boot log naming the variable. |
 | `OPENV_REGISTER_IP_BURST` | server | `5` | Registrations one client address may make at once. |
 | `OPENV_REGISTER_IP_REFILL_PER_HOUR` | server | `10` | Registrations per client address per hour, steady state. |
 | `OPENV_REGISTRATION` | server | `open` | `closed` lets new accounts in only through an invitation link issued to the address being registered, or single sign-on. Any other value keeps it open, with a warning. |

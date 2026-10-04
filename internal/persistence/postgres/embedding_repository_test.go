@@ -62,6 +62,7 @@ func TestNearestByEmbedding(t *testing.T) {
 
 	projA := uuid.New().String()
 	projB := uuid.New().String()
+	seedProjects(t, db, projA, projB)
 
 	// query points along axis 0. near is almost parallel; far is orthogonal.
 	near := saveEmbeddedArtifact(t, ar, er, projA, "requirement", "Near match", vecFromWeights(map[int]float32{0: 1, 1: 0.1}))
@@ -155,6 +156,7 @@ func TestDuplicateCandidates(t *testing.T) {
 	ar := NewArtifactRepository(db)
 	er := NewEmbeddingRepository(db)
 	proj := uuid.New().String()
+	seedProjects(t, db, proj)
 
 	// r1 and r2 are near-duplicates (cosine similarity ~0.999 > 0.85).
 	r1 := saveEmbeddedArtifact(t, ar, er, proj, "requirement", "The system shall log in users", vecFromWeights(map[int]float32{0: 1}))

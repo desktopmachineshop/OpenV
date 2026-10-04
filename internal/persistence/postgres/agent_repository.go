@@ -103,20 +103,23 @@ func (r *AgentRepository) Update(a *agents.Agent) error {
 	return err
 }
 
-// FindByID returns an agent by id, or nil.
+// FindByID returns an agent by id, or agents.ErrNotFound for an id no agent
+// has, a malformed one included (#379 bug 88: it answered nil, nil).
 func (r *AgentRepository) FindByID(id string) (*agents.Agent, error) {
 	a, err := scanAgent(r.db.QueryRow(`SELECT `+agentColumns+` FROM agents WHERE id = $1`, id))
 	if noRow(err) {
-		return nil, nil
+		return nil, agents.ErrNotFound
 	}
 	return a, err
 }
 
-// FindBySlug returns an agent by slug within an org, or nil.
+// FindBySlug returns an agent by slug within an org, or agents.ErrNotFound
+// when the org has none of that slug, a malformed org id included (#379 bug
+// 88: it answered nil, nil).
 func (r *AgentRepository) FindBySlug(orgID, slug string) (*agents.Agent, error) {
 	a, err := scanAgent(r.db.QueryRow(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid AND slug = $2`, orgID, slug))
 	if noRow(err) {
-		return nil, nil
+		return nil, agents.ErrNotFound
 	}
 	return a, err
 }

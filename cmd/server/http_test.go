@@ -34,8 +34,9 @@ import (
 // BodyLimit and CORS (none of the three wraps the response writer or reads
 // the body), and CORS and Compression (CORS never wraps the writer, and
 // Compression has nothing to do to the empty answer CORS gives a preflight).
-// The router's own ContentTypeMiddleware is not reached either: it answers
-// OPTIONS, and CORS answers every OPTIONS before it.
+// The router has no middleware of its own: CORS answers every OPTIONS before
+// it, which is why the OPTIONS-only ContentTypeMiddleware it used to carry was
+// removed (#379 question 41).
 func TestBuildHTTPHandlerLayerOrder(t *testing.T) {
 	// Auth inside metrics, inside RequestLog, inside Compression; the router
 	// inside Auth.
