@@ -17,8 +17,8 @@ import (
 
 // A sign-in CLI that fails says why in its last lines, and the failure the
 // member is shown quotes them. The piped flow (codex on a personal runner,
-// Worker.handleLogin) and the loopback flow (codex on a headless one,
-// Worker.handleLoopbackLogin) read the CLI's output on a goroutine of their
+// loginBroker.handleLogin) and the loopback flow (codex on a headless one,
+// loginBroker.handleLoopbackLogin) read the CLI's output on a goroutine of their
 // own into a tail of its last lines. That reader used to add to the tail
 // while the flow read it, a data race the race detector reports, and
 // Cmd.Wait closed the reader's pipe as soon as the CLI exited, so the lines
@@ -123,7 +123,7 @@ func runStandInSignIn(t *testing.T, bin string, headless bool, flow func(w *Work
 // last 30 lines, and a failure quotes all of them, the CLI's reason last.
 func TestPipedSignInFailureQuotesTheCLIsLastLines(t *testing.T) {
 	got := runFailingSignIn(t, false, func(w *Worker, ctx context.Context, login *providers.LoginRequest) {
-		w.handleLogin(ctx, login)
+		w.logins.handleLogin(ctx, login)
 	})
 	want := loginProgress{Status: providers.LoginFailed, Detail: failedSignInDetail(30)}
 	if got != want {
@@ -136,7 +136,7 @@ func TestPipedSignInFailureQuotesTheCLIsLastLines(t *testing.T) {
 func TestLoopbackSignInFailureQuotesTheCLIsLastLines(t *testing.T) {
 	got := runFailingSignIn(t, true, func(w *Worker, ctx context.Context, login *providers.LoginRequest) {
 		flow, _ := flowFor(login.Provider)
-		w.handleLoopbackLogin(ctx, login, flow)
+		w.logins.handleLoopbackLogin(ctx, login, flow)
 	})
 	want := loginProgress{Status: providers.LoginFailed, Detail: failedSignInDetail(40)}
 	if got != want {
@@ -152,11 +152,11 @@ var signInFlows = []struct {
 	run      func(w *Worker, ctx context.Context, login *providers.LoginRequest)
 }{
 	{"piped", false, func(w *Worker, ctx context.Context, login *providers.LoginRequest) {
-		w.handleLogin(ctx, login)
+		w.logins.handleLogin(ctx, login)
 	}},
 	{"loopback", true, func(w *Worker, ctx context.Context, login *providers.LoginRequest) {
 		flow, _ := flowFor(login.Provider)
-		w.handleLoopbackLogin(ctx, login, flow)
+		w.logins.handleLoopbackLogin(ctx, login, flow)
 	}},
 }
 
