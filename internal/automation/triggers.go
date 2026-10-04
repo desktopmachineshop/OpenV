@@ -138,7 +138,7 @@ func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.
 
 	// Hourly rate cap.
 	if a.MaxRunsPerHour > 0 {
-		count, err := m.runService.CountRunsSince(a.ID, time.Now().Add(-time.Hour))
+		count, err := m.runService.CountRunsSince(a.ID, time.Now().UTC().Add(-time.Hour))
 		if err != nil {
 			slog.Warn("triggers: automation skipped: hourly run count failed",
 				slog.String("automation_id", a.ID),
@@ -212,7 +212,7 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 			slog.Any("error", err))
 		return
 	}
-	if err := m.repo.MarkRun(a.ID, time.Now(), a.NextRunAt); err != nil {
+	if err := m.repo.MarkRun(a.ID, time.Now().UTC(), a.NextRunAt); err != nil {
 		slog.Warn("triggers: failed to stamp last_run_at",
 			slog.String("automation_id", a.ID),
 			slog.Any("error", err))

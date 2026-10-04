@@ -135,3 +135,83 @@ func TestNextAfter(t *testing.T) {
 		})
 	}
 }
+
+// scopeRepo stores automations in memory.
+type scopeRepo struct {
+	Repository
+	byID map[string]*Automation
+}
+
+func (r *scopeRepo) Save(a *Automation) error   { c := *a; r.byID[a.ID] = &c; return nil }
+func (r *scopeRepo) Update(a *Automation) error { c := *a; r.byID[a.ID] = &c; return nil }
+func (r *scopeRepo) FindByID(id string) (*Automation, error) {
+	if a, ok := r.byID[id]; ok {
+		c := *a
+		return &c, nil
+	}
+	return nil, nil
+}
+
+// TestAnAutomationsScope pins how a request names an automation's scope
+// (#379 question 42): a project, or the whole workspace, which is stored as
+// no project. Create takes an absent or empty project_id as the whole
+// workspace (an empty one was stored as sent, which the project_id UUID
+// column refused); update leaves the scope alone for an absent (or null)
+// project_id, and moves the automation for any other: to the whole
+// workspace for the empty string, as an empty agent_id or team_id clears
+// the target.
+func TestAnAutomationsScope(t *testing.T) {
+	str := func(s string) *string { return &s }
+	show := func(p *string) string {
+		if p == nil {
+			return "the whole workspace"
+		}
+		return *p
+	}
+	repo := &scopeRepo{byID: map[string]*Automation{}}
+	svc := NewDefaultService(repo)
+	for _, tc := range []struct {
+		name    string
+		project *string
+		want    string
+	}{
+		{"no project_id", nil, "the whole workspace"},
+		{"an empty project_id", str(""), "the whole workspace"},
+		{"a project", str("proj-1"), "proj-1"},
+	} {
+		a, err := svc.Create(CreateAutomationRequest{OrgID: "org-1", Name: "Watch", AgentID: str("agent-1"),
+			Kind: KindManual, ProjectID: tc.project})
+		if err != nil {
+			t.Fatalf("create with %s: %v", tc.name, err)
+		}
+		if got := show(repo.byID[a.ID].ProjectID); got != tc.want {
+			t.Errorf("create with %s stored the scope %s, want %s", tc.name, got, tc.want)
+		}
+	}
+
+	a, err := svc.Create(CreateAutomationRequest{OrgID: "org-1", Name: "Watch", AgentID: str("agent-1"),
+		Kind: KindManual, ProjectID: str("proj-1")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name    string
+		project *string
+		want    string
+	}{
+		{"no project_id", nil, "proj-1"},
+		{"another project", str("proj-2"), "proj-2"},
+		{"an empty project_id", str(""), "the whole workspace"},
+		{"no project_id again", nil, "the whole workspace"},
+		{"a project again", str("proj-1"), "proj-1"},
+	} {
+		updated, err := svc.Update(a.ID, UpdateAutomationRequest{ProjectID: tc.project})
+		if err != nil {
+			t.Fatalf("update with %s: %v", tc.name, err)
+		}
+		if got := show(repo.byID[a.ID].ProjectID); got != tc.want || show(updated.ProjectID) != tc.want {
+			t.Errorf("update with %s stored the scope %s and answered %s, want %s", tc.name, got,
+				show(updated.ProjectID), tc.want)
+		}
+	}
+}

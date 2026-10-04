@@ -10,89 +10,22 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { EVENT_TYPES } from './AutomationsPageEvents';
-
-const CRON_PRESETS: { label: string; value: string }[] = [
-  { label: 'Hourly', value: '0 * * * *' },
-  { label: 'Daily at 9am', value: '0 9 * * *' },
-  { label: 'Every 15 minutes', value: '*/15 * * * *' },
-];
-
-// Display copy for automation kinds. The domain constant is 'scheduled'
-// (DB index + backend code) — never 'cron'; the cron expression is only the
-// schedule field of a Scheduled automation.
-const KIND_LABELS: Record<string, string> = {
-  manual: 'Manual',
-  scheduled: 'Scheduled',
-  triggered: 'Triggered',
-};
-
-const kindLabel = (kind: string): string => KIND_LABELS[kind] || kind;
-
-const kindColor = (kind: string): string => {
-  switch (kind) {
-    case 'scheduled':
-      return 'var(--accent)';
-    case 'triggered':
-      return 'var(--warning)';
-    default:
-      return 'var(--neutral)';
-  }
-};
-
-interface FilterRow {
-  key: string;
-  value: string;
-}
-
-interface FormState {
-  id: string | null;
-  name: string;
-  targetKind: 'agent' | 'team';
-  agent_id: string;
-  team_id: string;
-  kind: 'manual' | 'scheduled' | 'triggered';
-  cron_expr: string;
-  event_type: string;
-  filters: FilterRow[];
-  cooldown_seconds: number;
-  max_runs_per_hour: number;
-  prompt_template: string;
-}
-
-const emptyForm = (): FormState => ({
-  id: null,
-  name: '',
-  targetKind: 'agent',
-  agent_id: '',
-  team_id: '',
-  kind: 'manual',
-  cron_expr: '0 9 * * *',
-  event_type: EVENT_TYPES[0],
-  filters: [],
-  cooldown_seconds: 0,
-  max_runs_per_hour: 0,
-  prompt_template: '',
-});
-
-const toForm = (a: Automation): FormState => ({
-  id: a.id,
-  name: a.name,
-  targetKind: a.team_id ? 'team' : 'agent',
-  agent_id: a.agent_id || '',
-  team_id: a.team_id || '',
-  kind: a.kind,
-  cron_expr: a.cron_expr || '0 9 * * *',
-  event_type: a.event_type || EVENT_TYPES[0],
-  filters: Object.entries(a.event_filter || {}).map(([key, value]) => ({
-    key,
-    value: String(value),
-  })),
-  cooldown_seconds: a.cooldown_seconds || 0,
-  max_runs_per_hour: a.max_runs_per_hour || 0,
-  prompt_template: a.prompt_template || '',
-});
+import {
+  AutomationScope,
+  automationPayload,
+  coversProject,
+  CRON_PRESETS,
+  crewsForScope,
+  emptyForm,
+  FormState,
+  kindColor,
+  kindLabel,
+  toForm,
+} from './AutomationsPageForm';
+import { ScopeField, WorkspaceScopePill } from './AutomationsPageScope';
 
 export const AutomationsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -105,6 +38,12 @@ export const AutomationsPage: React.FC = () => {
     ? ['Name', 'Kind', 'Enabled', '']
     : ['Name', 'Kind', 'Target', 'Schedule / Event', 'Enabled', 'Last run', 'Next run', ''];
   const activeOrgId = useAppStore((s) => s.activeOrgId);
+  // A workspace admin writes the whole workspace's automations and, with the
+  // feature on, chooses an automation's scope; anyone else sees them listed.
+  const isAdmin = useAppStore((s) =>
+    Boolean(s.currentUser?.is_admin || s.orgs.find((o) => o.id === s.activeOrgId)?.role === 'admin')
+  );
+  const canChooseScope = useFeature('workspace-automations') && isAdmin;
   const navigate = useNavigate();
   const confirm = useConfirm();
 
@@ -116,9 +55,11 @@ export const AutomationsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
+    // The workspace's automations, of which the page lists this project's
+    // and the whole workspace's.
     automationsAPI
-      .list(projectId || undefined)
-      .then((res) => setAutomations(res.data || []))
+      .list()
+      .then((res) => setAutomations((res.data || []).filter((a) => coversProject(a, projectId))))
       .catch((err: any) =>
         setError(err.response?.data?.error || err.message || 'Failed to load automations')
       );
@@ -158,23 +99,7 @@ export const AutomationsPage: React.FC = () => {
     if (!form || !form.name.trim()) return;
     setSaving(true);
     setError('');
-    const event_filter: Record<string, any> = {};
-    form.filters.forEach((f) => {
-      if (f.key.trim()) event_filter[f.key.trim()] = f.value;
-    });
-    const payload: Partial<Automation> = {
-      name: form.name.trim(),
-      project_id: projectId || null,
-      agent_id: form.targetKind === 'agent' ? form.agent_id || null : null,
-      team_id: form.targetKind === 'team' ? form.team_id || null : null,
-      kind: form.kind,
-      prompt_template: form.prompt_template,
-      cron_expr: form.kind === 'scheduled' ? form.cron_expr : '',
-      event_type: form.kind === 'triggered' ? form.event_type : '',
-      event_filter: form.kind === 'triggered' ? event_filter : {},
-      cooldown_seconds: form.kind === 'triggered' ? Number(form.cooldown_seconds) || 0 : 0,
-      max_runs_per_hour: form.kind === 'triggered' ? Number(form.max_runs_per_hour) || 0 : 0,
-    };
+    const payload = automationPayload(form, projectId);
     try {
       if (form.id) {
         await automationsAPI.update(form.id, payload);
@@ -231,6 +156,18 @@ export const AutomationsPage: React.FC = () => {
     return '—';
   };
 
+  // A whole-workspace automation is its workspace admins' to change; the
+  // rest of the workspace sees it listed.
+  const writable = (a: Automation): boolean => Boolean(a.project_id) || isAdmin;
+
+  // A whole-workspace automation cannot keep a crew made in one project.
+  const setScope = (scope: AutomationScope) =>
+    setForm((f) => {
+      if (!f) return f;
+      const keeps = crewsForScope(crews, scope).some((c) => c.id === f.team_id);
+      return { ...f, scope, team_id: keeps ? f.team_id : '' };
+    });
+
   const scheduleLabel = (a: Automation): string => {
     if (a.kind === 'scheduled') return a.cron_expr || '—';
     if (a.kind === 'triggered') return a.event_type || '—';
@@ -276,12 +213,17 @@ export const AutomationsPage: React.FC = () => {
             {automations.map((a) => (
               <tr key={a.id} style={{ background: 'var(--surface)' }}>
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                  <span
-                    style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
-                    onClick={() => setForm(toForm(a))}
-                  >
-                    {a.name}
-                  </span>
+                  {writable(a) ? (
+                    <span
+                      style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => setForm(toForm(a))}
+                    >
+                      {a.name}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{a.name}</span>
+                  )}
+                  {!a.project_id && <WorkspaceScopePill />}
                 </td>
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <span
@@ -329,6 +271,7 @@ export const AutomationsPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={a.enabled}
+                      disabled={!writable(a)}
                       onChange={() => toggleEnabled(a)}
                       style={{ width: 'auto' }}
                     />
@@ -348,6 +291,7 @@ export const AutomationsPage: React.FC = () => {
                   </>
                 )}
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', whiteSpace: 'nowrap' }}>
+                  {writable(a) && (
                   <div style={{ display: 'flex', gap: 6, flexDirection: isPhone ? 'column' : 'row' }}>
                   <button
                     className="button"
@@ -372,6 +316,7 @@ export const AutomationsPage: React.FC = () => {
                     Delete
                   </button>
                   </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -398,6 +343,8 @@ export const AutomationsPage: React.FC = () => {
             <input value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
 
+          <ScopeField scope={form.scope} canChoose={canChooseScope} onChange={setScope} />
+
           <div className="form-group">
             <label>Target</label>
             <div style={{ marginBottom: 8 }}>
@@ -423,7 +370,7 @@ export const AutomationsPage: React.FC = () => {
             ) : (
               <select value={form.team_id} onChange={(e) => set({ team_id: e.target.value })}>
                 <option value="">Choose crew…</option>
-                {crews.map((c) => (
+                {crewsForScope(crews, form.scope).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>

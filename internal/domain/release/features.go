@@ -50,6 +50,7 @@ var Registry = []Feature{
 	{Key: FeatureReviewDecisions, ShippedIn: "0.13.0", Summary: "Approve or send back from the review queue itself, one row at a time or a whole selection, with the reason posted as a note"},
 	{Key: FeatureArtifactStepping, ShippedIn: "0.14.0", Summary: "Step from one artifact to the next in document order: the ‹ / › controls and the position, J and K on a keyboard, and a sideways swipe on a phone"},
 	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
+	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
 }
 
 // Feature keys the code gates on.
@@ -119,6 +120,16 @@ const (
 	// ?artifact= the tree does — so the gate covers the CONTROLS only, and a
 	// link shared from a nightly workspace opens everywhere.
 	FeatureArtifactStepping = "artifact-stepping"
+	// FeatureWorkspaceAutomations is choosing an automation's scope on the
+	// Automations page: this project or the whole workspace, for workspace
+	// admins. It gates CHOOSING only — the form's scope control, and moving
+	// an existing automation to another scope through the update endpoint,
+	// which is new with it. Creating a whole-workspace automation through the
+	// API, which workspace admins could already do, is never gated, and every
+	// member sees the whole-workspace automations listed on a project's page,
+	// as the API already lists them to every member: a gate on reading would
+	// hide what an admin on another channel, or a preview, has made.
+	FeatureWorkspaceAutomations = "workspace-automations"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

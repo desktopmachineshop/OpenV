@@ -110,6 +110,11 @@ link.deleted                  link_type          string                   DELETE
 link.deleted                  link_type          string                   proposal applier DeleteLink
 link.deleted                  to_id              string                   DELETE /api/v1/links/{id}
 link.deleted                  to_id              string                   proposal applier DeleteLink
+link.updated                  (actor)            user:u-admin             PUT /api/v1/links/{id}
+link.updated                  (org)              org-1                    PUT /api/v1/links/{id}
+link.updated                  from_id            string                   PUT /api/v1/links/{id}
+link.updated                  link_type          string                   PUT /api/v1/links/{id}
+link.updated                  to_id              string                   PUT /api/v1/links/{id}
 org.invitation_accepted       (actor)            user:u-invited           POST /api/v1/auth/invitations/accept
 org.invitation_accepted       (actor)            user:u-sso               OIDC sign-in with a provider-verified address
 org.invitation_accepted       (org)              org-1                    OIDC sign-in with a provider-verified address
@@ -188,5 +193,3 @@ workitem.moved                column             string                   POST /
 workitem.updated              (actor)            user:u-admin             PUT /api/v1/work-items/{id}
 workitem.updated              (org)              -                        PUT /api/v1/work-items/{id}
 workitem.updated              title              string                   PUT /api/v1/work-items/{id}
-# Event types nothing publishes today:
-link.updated                  (no publisher)     -                        -

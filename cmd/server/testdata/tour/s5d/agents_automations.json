@@ -2319,7 +2319,7 @@
     },
     {
       "n": 61,
-      "title": "an automation of an agent no row has: 400, the foreign key's refusal as the driver words it (Q19)",
+      "title": "an automation of an agent no row has: 400, agent not found, as for another workspace's agent",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/automations",
@@ -2335,21 +2335,21 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 120,
+      "content_length": 28,
       "kind": "json",
       "body": [
-        "{\"error\":\"pq: insert or update on table \\\"automations\\\" violates foreign key constraint \\\"automations_agent_id_fkey\\\"\"}"
+        "{\"error\":\"agent not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "pq: insert or update on table \"automations\" violates foreign key constraint \"automations_agent_id_fkey\""
+        "error": "agent not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 62,
-      "title": "an automation of a crew no row has: 201, stored as sent (team_id has no foreign key)",
+      "title": "an automation of a crew no row has: 400, crew not found, as for another workspace's crew",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/automations",
@@ -2361,6 +2361,36 @@
         ],
         "body": "{\"kind\":\"manual\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\"}"
       },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 27,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"crew not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "crew not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 63,
+      "title": "an automation of the crew G",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "POST /api/v1/automations",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/automations",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"kind\":\"manual\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<crew.g>\"}"
+      },
       "status": 201,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
@@ -2368,14 +2398,14 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"}"
+        "{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<crew.g>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<a.ghost>",
         "org_id": "<w>",
         "name": "Tour Ghost Crew",
-        "team_id": "<phantom>",
+        "team_id": "<crew.g>",
         "kind": "manual",
         "enabled": true,
         "prompt_template": "",
@@ -2386,14 +2416,44 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 62>",
-        "updated_at": "<time@step 62>"
+        "created_at": "<time@step 63>",
+        "updated_at": "<time@step 63>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 63,
+      "n": 64,
+      "title": "an automation of Q for all of W: 400, a whole-workspace automation runs in every project, and Q only in P",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "POST /api/v1/automations",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/automations",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"kind\":\"manual\",\"name\":\"Tour Pinned Wide\",\"team_id\":\"<crew.q>\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 88,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a crew pinned to a project cannot run an automation for the whole workspace\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a crew pinned to a project cannot run an automation for the whole workspace"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 65,
       "title": "an automation of the crew E",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2413,7 +2473,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"}"
+        "{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2431,14 +2491,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 63>",
-        "updated_at": "<time@step 63>"
+        "created_at": "<time@step 65>",
+        "updated_at": "<time@step 65>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 64,
+      "n": 66,
       "title": "an automation of the crew H",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2458,7 +2518,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"}"
+        "{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2476,14 +2536,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 64>",
-        "updated_at": "<time@step 64>"
+        "created_at": "<time@step 66>",
+        "updated_at": "<time@step 66>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 65,
+      "n": 67,
       "title": "an automation whose template is an unknown placeholder alone",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2503,7 +2563,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}"
+        "{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 67>\",\"updated_at\":\"<time@step 67>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2521,14 +2581,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 65>",
-        "updated_at": "<time@step 65>"
+        "created_at": "<time@step 67>",
+        "updated_at": "<time@step 67>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 66,
+      "n": 68,
       "title": "an automation whose template is two unknown placeholders and a space",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2548,7 +2608,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"}"
+        "{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2566,14 +2626,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 66>",
-        "updated_at": "<time@step 66>"
+        "created_at": "<time@step 68>",
+        "updated_at": "<time@step 68>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 67,
+      "n": 69,
       "title": "the member creates one for all of W: the workspace admin guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -2603,7 +2663,7 @@
       "events": []
     },
     {
-      "n": 68,
+      "n": 70,
       "title": "the member creates one pinned to P, with no template: 201, P's editor guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -2623,7 +2683,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}"
+        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2642,14 +2702,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<member>",
-        "created_at": "<time@step 68>",
-        "updated_at": "<time@step 68>"
+        "created_at": "<time@step 70>",
+        "updated_at": "<time@step 70>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 69,
+      "n": 71,
       "title": "the outsider creates one pinned to P: P's guard",
       "actor": "outsider",
       "route": "POST /api/v1/automations",
@@ -2678,7 +2738,7 @@
       "events": []
     },
     {
-      "n": 70,
+      "n": 72,
       "title": "W's automations: newest first",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2694,7 +2754,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
+        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 67>\",\"updated_at\":\"<time@step 67>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<crew.g>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2714,8 +2774,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<member>",
-          "created_at": "<time@step 68>",
-          "updated_at": "<time@step 68>"
+          "created_at": "<time@step 70>",
+          "updated_at": "<time@step 70>"
         },
         {
           "id": "<a.space>",
@@ -2732,8 +2792,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 66>",
-          "updated_at": "<time@step 66>"
+          "created_at": "<time@step 68>",
+          "updated_at": "<time@step 68>"
         },
         {
           "id": "<a.blank>",
@@ -2750,8 +2810,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 65>",
-          "updated_at": "<time@step 65>"
+          "created_at": "<time@step 67>",
+          "updated_at": "<time@step 67>"
         },
         {
           "id": "<a.headless>",
@@ -2768,8 +2828,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 64>",
-          "updated_at": "<time@step 64>"
+          "created_at": "<time@step 66>",
+          "updated_at": "<time@step 66>"
         },
         {
           "id": "<a.crew>",
@@ -2786,14 +2846,14 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 63>",
-          "updated_at": "<time@step 63>"
+          "created_at": "<time@step 65>",
+          "updated_at": "<time@step 65>"
         },
         {
           "id": "<a.ghost>",
           "org_id": "<w>",
           "name": "Tour Ghost Crew",
-          "team_id": "<phantom>",
+          "team_id": "<crew.g>",
           "kind": "manual",
           "enabled": true,
           "prompt_template": "",
@@ -2804,8 +2864,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 62>",
-          "updated_at": "<time@step 62>"
+          "created_at": "<time@step 63>",
+          "updated_at": "<time@step 63>"
         },
         {
           "id": "<a.dormant>",
@@ -2890,7 +2950,7 @@
       }
     },
     {
-      "n": 71,
+      "n": 73,
       "title": "the member reads W's automations: every one, those for all of W too",
       "actor": "member",
       "acting_in": "<w>",
@@ -2906,7 +2966,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
+        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 67>\",\"updated_at\":\"<time@step 67>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<crew.g>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2926,8 +2986,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<member>",
-          "created_at": "<time@step 68>",
-          "updated_at": "<time@step 68>"
+          "created_at": "<time@step 70>",
+          "updated_at": "<time@step 70>"
         },
         {
           "id": "<a.space>",
@@ -2944,8 +3004,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 66>",
-          "updated_at": "<time@step 66>"
+          "created_at": "<time@step 68>",
+          "updated_at": "<time@step 68>"
         },
         {
           "id": "<a.blank>",
@@ -2962,8 +3022,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 65>",
-          "updated_at": "<time@step 65>"
+          "created_at": "<time@step 67>",
+          "updated_at": "<time@step 67>"
         },
         {
           "id": "<a.headless>",
@@ -2980,8 +3040,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 64>",
-          "updated_at": "<time@step 64>"
+          "created_at": "<time@step 66>",
+          "updated_at": "<time@step 66>"
         },
         {
           "id": "<a.crew>",
@@ -2998,14 +3058,14 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 63>",
-          "updated_at": "<time@step 63>"
+          "created_at": "<time@step 65>",
+          "updated_at": "<time@step 65>"
         },
         {
           "id": "<a.ghost>",
           "org_id": "<w>",
           "name": "Tour Ghost Crew",
-          "team_id": "<phantom>",
+          "team_id": "<crew.g>",
           "kind": "manual",
           "enabled": true,
           "prompt_template": "",
@@ -3016,8 +3076,8 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<owner>",
-          "created_at": "<time@step 62>",
-          "updated_at": "<time@step 62>"
+          "created_at": "<time@step 63>",
+          "updated_at": "<time@step 63>"
         },
         {
           "id": "<a.dormant>",
@@ -3102,7 +3162,7 @@
       }
     },
     {
-      "n": 72,
+      "n": 74,
       "title": "P's automations",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3119,7 +3179,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}]"
+        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3139,14 +3199,14 @@
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
           "created_by": "<member>",
-          "created_at": "<time@step 68>",
-          "updated_at": "<time@step 68>"
+          "created_at": "<time@step 70>",
+          "updated_at": "<time@step 70>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 73,
+      "n": 75,
       "title": "the automations of a project no row has: null (Q14)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3170,7 +3230,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 74,
+      "n": 76,
       "title": "X's automations: null (Q14)",
       "actor": "owner",
       "acting_in": "<x>",
@@ -3193,7 +3253,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 75,
+      "n": 77,
       "title": "the member reads the manual automation, which is for all of W",
       "actor": "member",
       "acting_in": "<w>",
@@ -3233,7 +3293,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 76,
+      "n": 78,
       "title": "the outsider reads it: the workspace guard",
       "actor": "outsider",
       "route": "GET /api/v1/automations/{id}",
@@ -3257,7 +3317,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 77,
+      "n": 79,
       "title": "an automation no row has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3282,7 +3342,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 78,
+      "n": 80,
       "title": "the id nope: 404, the UUID cast fails and any error is not found",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3307,7 +3367,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 79,
+      "n": 81,
       "title": "the member updates the manual automation, which is for all of W: the admin guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -3337,7 +3397,7 @@
       "events": []
     },
     {
-      "n": 80,
+      "n": 82,
       "title": "update an automation no row has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3367,7 +3427,7 @@
       "events": []
     },
     {
-      "n": 81,
+      "n": 83,
       "title": "update with a body that does not decode: 400, after the lookup and the guard",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3397,7 +3457,7 @@
       "events": []
     },
     {
-      "n": 82,
+      "n": 84,
       "title": "disable the yearly automation: next_run_at goes",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3417,7 +3477,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 82>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 84>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3436,13 +3496,13 @@
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
         "created_at": "<time@step 52>",
-        "updated_at": "<time@step 82>"
+        "updated_at": "<time@step 84>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 83,
+      "n": 85,
       "title": "enable it again: next_run_at is computed again",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3465,7 +3525,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 83>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 85>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3485,13 +3545,13 @@
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
         "created_at": "<time@step 52>",
-        "updated_at": "<time@step 83>"
+        "updated_at": "<time@step 85>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 84,
+      "n": 86,
       "title": "change its cron to 0 0 1 7 *: next_run_at follows",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3514,7 +3574,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 7 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 84>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 7 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 86>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3534,13 +3594,13 @@
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
         "created_at": "<time@step 52>",
-        "updated_at": "<time@step 84>"
+        "updated_at": "<time@step 86>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 85,
+      "n": 87,
       "title": "change its cron to nope while it is enabled: 400, robfig's text (Q19)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3570,7 +3630,7 @@
       "events": []
     },
     {
-      "n": 86,
+      "n": 88,
       "title": "rename the manual automation to \"\": 400",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3600,7 +3660,7 @@
       "events": []
     },
     {
-      "n": 87,
+      "n": 89,
       "title": "clear its agent, leaving no target: 400",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3630,7 +3690,7 @@
       "events": []
     },
     {
-      "n": 88,
+      "n": 90,
       "title": "the member renames its automation pinned to P: 200",
       "actor": "member",
       "acting_in": "<w>",
@@ -3650,7 +3710,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Run\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 88>\"}"
+        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Run\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 90>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3669,14 +3729,135 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<member>",
-        "created_at": "<time@step 68>",
-        "updated_at": "<time@step 88>"
+        "created_at": "<time@step 70>",
+        "updated_at": "<time@step 90>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 89,
+      "n": 91,
+      "title": "the member moves its automation pinned to P to all of W: the workspace admin guard of where it goes",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/automations/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/automations/<a.member>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"project_id\":\"\"}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 44,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"workspace admin access required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "workspace admin access required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 92,
+      "title": "move the manual automation, for all of W, to P: 200, pinned to P",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/automations/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/automations/<a.manual>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"project_id\":\"<p>\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 92>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<a.manual>",
+        "org_id": "<w>",
+        "name": "Tour Manual",
+        "agent_id": "<auto.agent>",
+        "project_id": "<p>",
+        "kind": "manual",
+        "enabled": true,
+        "prompt_template": "Run {{automation.name}} now{{unknown}}",
+        "cron_expr": "",
+        "catch_up": false,
+        "event_type": "",
+        "event_filter": {},
+        "cooldown_seconds": 60,
+        "max_runs_per_hour": 10,
+        "created_by": "<owner>",
+        "created_at": "<time@step 51>",
+        "updated_at": "<time@step 92>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 93,
+      "title": "and back to all of W: 200, project_id gone",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/automations/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/automations/<a.manual>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"project_id\":\"\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 93>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<a.manual>",
+        "org_id": "<w>",
+        "name": "Tour Manual",
+        "agent_id": "<auto.agent>",
+        "kind": "manual",
+        "enabled": true,
+        "prompt_template": "Run {{automation.name}} now{{unknown}}",
+        "cron_expr": "",
+        "catch_up": false,
+        "event_type": "",
+        "event_filter": {},
+        "cooldown_seconds": 60,
+        "max_runs_per_hour": 10,
+        "created_by": "<owner>",
+        "created_at": "<time@step 51>",
+        "updated_at": "<time@step 93>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 94,
       "title": "disable the yearly automation and give it the cron nope in one update: 200, the cron stored unparsed, since a disabled schedule is not computed",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3696,7 +3877,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"nope\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 89>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"nope\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 94>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3715,13 +3896,13 @@
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
         "created_at": "<time@step 52>",
-        "updated_at": "<time@step 89>"
+        "updated_at": "<time@step 94>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 90,
+      "n": 95,
       "title": "the member runs the manual automation now, which is for all of W: the admin guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -3747,7 +3928,7 @@
       "events": []
     },
     {
-      "n": 91,
+      "n": 96,
       "title": "run an automation no row has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3773,7 +3954,7 @@
       "events": []
     },
     {
-      "n": 92,
+      "n": 97,
       "title": "run the manual automation now: 201, the template rendered with {{unknown}} empty, no project and so no card",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3789,7 +3970,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.manual.run>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.manual>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Run Tour Manual now\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 92>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<a.manual.run>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.manual>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Run Tour Manual now\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 97>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3809,7 +3990,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 92>",
+        "created_at": "<time@step 97>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -3818,7 +3999,7 @@
       "events": []
     },
     {
-      "n": 93,
+      "n": 98,
       "title": "the member runs its automation in P now: an empty template's copy, launched by the member, and P's tracking card (workitem.created, as the run)",
       "actor": "member",
       "acting_in": "<w>",
@@ -3834,7 +4015,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:14>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.member>\",\"work_item_id\":\"<uuid:15>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Member Run\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"created_at\":\"<time@step 93>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<uuid:14>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.member>\",\"work_item_id\":\"<uuid:15>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Member Run\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"created_at\":\"<time@step 98>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3856,7 +4037,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<member>",
-        "created_at": "<time@step 93>",
+        "created_at": "<time@step 98>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -3876,7 +4057,7 @@
       ]
     },
     {
-      "n": 94,
+      "n": 99,
       "title": "run the automation of {{unknown}} alone: the empty rendering falls back to the same copy",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3892,7 +4073,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:16>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.blank>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Blank\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 94>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<uuid:16>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.blank>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Blank\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 99>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3912,7 +4093,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 94>",
+        "created_at": "<time@step 99>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -3921,7 +4102,7 @@
       "events": []
     },
     {
-      "n": 95,
+      "n": 100,
       "title": "run the automation of two unknown placeholders and a space: a rendering of only whitespace falls back too",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3937,7 +4118,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:17>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.space>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Space\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 95>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<uuid:17>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.space>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Space\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 100>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3957,7 +4138,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 95>",
+        "created_at": "<time@step 100>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -3966,7 +4147,7 @@
       "events": []
     },
     {
-      "n": 96,
+      "n": 101,
       "title": "run the automation of the crew E: its entry node's agent, with team_id and team_node_id",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3982,7 +4163,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:18>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.crew>\",\"team_id\":\"<crew.e>\",\"team_node_id\":\"<crew.e.node>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Lead Tour Crew Run.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 96>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<uuid:18>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.crew>\",\"team_id\":\"<crew.e>\",\"team_node_id\":\"<crew.e.node>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Lead Tour Crew Run.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 101>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4004,7 +4185,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 96>",
+        "created_at": "<time@step 101>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -4013,7 +4194,7 @@
       "events": []
     },
     {
-      "n": 97,
+      "n": 102,
       "title": "run the automation of the crew H: 400, it has no entry node",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4039,8 +4220,8 @@
       "events": []
     },
     {
-      "n": 98,
-      "title": "run the automation of a crew no row has: 400, the lookup's text",
+      "n": 103,
+      "title": "run the automation of the crew G, deleted since: 400, the lookup's text",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/automations/{id}/run-now",
@@ -4065,7 +4246,7 @@
       "events": []
     },
     {
-      "n": 99,
+      "n": 104,
       "title": "run the disabled triggered automation now: 201, run-now does not read enabled",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4081,7 +4262,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:19>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.dormant>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Dormant\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 99>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<uuid:19>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.dormant>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Dormant\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 104>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4101,7 +4282,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 99>",
+        "created_at": "<time@step 104>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -4110,7 +4291,7 @@
       "events": []
     },
     {
-      "n": 100,
+      "n": 105,
       "title": "the member deletes the manual automation, which is for all of W: the admin guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -4136,7 +4317,7 @@
       "events": []
     },
     {
-      "n": 101,
+      "n": 106,
       "title": "the member deletes its automation pinned to P: 204",
       "actor": "member",
       "acting_in": "<w>",
@@ -4155,7 +4336,7 @@
       "events": []
     },
     {
-      "n": 102,
+      "n": 107,
       "title": "the member's automation: 404",
       "actor": "member",
       "acting_in": "<w>",
@@ -4180,7 +4361,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 103,
+      "n": 108,
       "title": "delete an automation no row has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4206,7 +4387,7 @@
       "events": []
     },
     {
-      "n": 104,
+      "n": 109,
       "title": "delete the manual automation: 204",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4225,7 +4406,7 @@
       "events": []
     },
     {
-      "n": 105,
+      "n": 110,
       "title": "the run it launched: it keeps its automation_id (no foreign key)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4241,7 +4422,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.manual.run>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.manual>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Run Tour Manual now\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 92>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<a.manual.run>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.manual>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Run Tour Manual now\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 97>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4261,7 +4442,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 92>",
+        "created_at": "<time@step 97>",
         "agent_content_hash": "<hex64:12>",
         "agent_name": "Tour Auto \u0026 Co",
         "agent_provider": "claude-code"
@@ -4269,7 +4450,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 106,
+      "n": 111,
       "title": "an enabled triggered automation of tour-trigger for all of W, on artifact.created",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4289,7 +4470,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 106>\",\"updated_at\":\"<time@step 106>\"}"
+        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 111>\",\"updated_at\":\"<time@step 111>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4307,14 +4488,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 106>",
-        "updated_at": "<time@step 106>"
+        "created_at": "<time@step 111>",
+        "updated_at": "<time@step 111>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 107,
+      "n": 112,
       "title": "an enabled triggered automation of tour-trigger pinned to P, on artifact.created",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4334,7 +4515,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 107>\",\"updated_at\":\"<time@step 107>\"}"
+        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 112>\",\"updated_at\":\"<time@step 112>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4353,14 +4534,14 @@
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 107>",
-        "updated_at": "<time@step 107>"
+        "created_at": "<time@step 112>",
+        "updated_at": "<time@step 112>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 108,
+      "n": 113,
       "title": "the automation for all of W: last_run_at, from the requirement in P; the outsider's requirement, in another workspace, did not fire it",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4379,7 +4560,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 108>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 106>\",\"updated_at\":\"<time@before step 108>\"}"
+        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 113>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 111>\",\"updated_at\":\"<time@before step 113>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4392,19 +4573,19 @@
         "prompt_template": "Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.",
         "cron_expr": "",
         "catch_up": false,
-        "last_run_at": "<time@before step 108>",
+        "last_run_at": "<time@before step 113>",
         "event_type": "artifact.created",
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 106>",
-        "updated_at": "<time@before step 108>"
+        "created_at": "<time@step 111>",
+        "updated_at": "<time@before step 113>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 109,
+      "n": 114,
       "title": "the automation pinned to P: last_run_at, from the requirement in P",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4420,7 +4601,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 108>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 107>\",\"updated_at\":\"<time@before step 108>\"}"
+        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 113>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 112>\",\"updated_at\":\"<time@before step 113>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4434,19 +4615,19 @@
         "prompt_template": "Review {{event.title}} in P.",
         "cron_expr": "",
         "catch_up": false,
-        "last_run_at": "<time@before step 108>",
+        "last_run_at": "<time@before step 113>",
         "event_type": "artifact.created",
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
         "created_by": "<owner>",
-        "created_at": "<time@step 107>",
-        "updated_at": "<time@before step 108>"
+        "created_at": "<time@step 112>",
+        "updated_at": "<time@before step 113>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 110,
+      "n": 115,
       "title": "tour-trigger's runs, newest first: the run of the automation pinned to P, then the run of the one for all of W, both fired by the requirement in P, scoped to P with their tracking cards there and its title in their prompts; the outsider's requirement fired none",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4466,7 +4647,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:20>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch.p>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:22>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Review Tour barrier in P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"},{\"id\":\"<uuid:23>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:24>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Look at Tour barrier (requirement) in project <p>.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<uuid:20>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch.p>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:22>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Review Tour barrier in P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 113>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"},{\"id\":\"<uuid:23>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:24>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Look at Tour barrier (requirement) in project <p>.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 113>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4489,7 +4670,7 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@before step 108>",
+          "created_at": "<time@before step 113>",
           "agent_content_hash": "<hex64:15>",
           "agent_name": "Tour Trigger",
           "agent_provider": "claude-code"
@@ -4513,7 +4694,7 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@before step 108>",
+          "created_at": "<time@before step 113>",
           "agent_content_hash": "<hex64:15>",
           "agent_name": "Tour Trigger",
           "agent_provider": "claude-code"

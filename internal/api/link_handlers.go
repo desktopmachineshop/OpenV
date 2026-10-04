@@ -200,7 +200,8 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
 	}
-	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor, missing("link not found")) {
+	projectID := h.projectIDForArtifact(existing.FromID)
+	if !h.requireProjectRoleFor(w, r, projectID, members.RoleEditor, missing("link not found")) {
 		return
 	}
 
@@ -212,6 +213,15 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	// Refresh link snapshots for both artifacts touched by this link
 	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+
+	// The one path that changes a link's type or attributes, so the one
+	// publisher of link.updated (#379 bug 132), shaped as link.created is,
+	// with the type the link has now.
+	h.publish(r, events.LinkUpdated, projectID, link.ID, map[string]interface{}{
+		"link_type": link.Type,
+		"from_id":   link.FromID,
+		"to_id":     link.ToID,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(link)
