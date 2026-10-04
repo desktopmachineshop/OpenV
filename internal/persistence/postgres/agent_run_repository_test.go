@@ -592,6 +592,7 @@ func TestFinalizeIfResolvedStoresTheApplyFailure(t *testing.T) {
 	clean := f.queueRun(t, runSpec{})
 	f.setRunState(t, clean, agentruns.StatusAwaitingApproval, "")
 	project := uuid.New().String()
+	seedProjects(t, f.db, project)
 	for _, p := range []struct{ run, status string }{{failed, "apply_failed"}, {failed, "rejected"}, {clean, "applied"}} {
 		if _, err := f.db.Exec(`INSERT INTO agent_proposals (id, run_id, project_id, op, status) VALUES ($1, $2, $3, 'create_link', $4)`,
 			uuid.New().String(), p.run, project, p.status); err != nil {

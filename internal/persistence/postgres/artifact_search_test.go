@@ -20,6 +20,7 @@ func TestArtifactSearchInProjects(t *testing.T) {
 	projA := uuid.New().String()
 	projB := uuid.New().String()
 	projHidden := uuid.New().String()
+	seedProjects(t, db, projA, projB, projHidden)
 
 	save := func(projectID, title, body string) *artifacts.Artifact {
 		t.Helper()

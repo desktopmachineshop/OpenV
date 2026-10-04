@@ -59,8 +59,9 @@ func rtWantWrapped(t *testing.T, what string, err error, prefix string) {
 // not found" from GetByID, Update and Delete alike; a malformed id is that
 // error from GetByID, but Postgres's refusal, wrapped, from Update and Delete,
 // as are an id a project has, a parent no row has and a malformed workspace.
-// Delete takes the project's memberships and team grants and detaches its
-// children, and leaves its work items and crews, which have no foreign key.
+// Delete takes the project's memberships and team grants, its work items
+// and crews (#379 bug 86: they had no foreign key and were left behind; see
+// project_delete_test.go for all it takes), and detaches its children.
 func TestProjectRepositoryRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewProjectRepository(db)
@@ -174,8 +175,8 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 		rtSeed(t, db, `INSERT INTO org_teams (id, org_id, name) VALUES ($1, $2, 'Reviewers')`, peopleTeam, orgID)
 		rtSeed(t, db, `INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'owner')`, parent.ID, userID)
 		rtSeed(t, db, `INSERT INTO project_team_access (project_id, org_team_id, role) VALUES ($1, $2, 'viewer')`, parent.ID, peopleTeam)
-		rtSeed(t, db, `INSERT INTO work_items (id, project_id, title) VALUES ($1, $2, 'Left behind')`, uuid.New().String(), parent.ID)
-		rtSeed(t, db, `INSERT INTO agent_teams (id, org_id, project_id, name) VALUES ($1, $2, $3, 'Left behind')`,
+		rtSeed(t, db, `INSERT INTO work_items (id, project_id, title) VALUES ($1, $2, 'Goes with it')`, uuid.New().String(), parent.ID)
+		rtSeed(t, db, `INSERT INTO agent_teams (id, org_id, project_id, name) VALUES ($1, $2, $3, 'Goes with it')`,
 			uuid.New().String(), orgID, parent.ID)
 
 		if err := repo.Delete(parent.ID); err != nil {
@@ -190,7 +191,7 @@ func TestProjectRepositoryRoundTrip(t *testing.T) {
 		for _, c := range []struct {
 			table string
 			want  int
-		}{{"project_members", 0}, {"project_team_access", 0}, {"work_items", 1}, {"agent_teams", 1}} {
+		}{{"project_members", 0}, {"project_team_access", 0}, {"work_items", 0}, {"agent_teams", 0}} {
 			var n int
 			if err := db.QueryRow(`SELECT COUNT(*) FROM `+c.table+` WHERE project_id = $1`, parent.ID).Scan(&n); err != nil || n != c.want {
 				t.Errorf("a deleted project's rows in %s: %d (%v), want %d", c.table, n, err, c.want)

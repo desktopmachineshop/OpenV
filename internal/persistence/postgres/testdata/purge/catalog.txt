@@ -8,7 +8,7 @@
 # Regenerate (a behavior change only) with every S3 golden, against a server with the vector and
 # pg_trgm extensions:
 # UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'
-agent_proposals scope project_id cascade from agent_runs
+agent_proposals scope project_id cascade from agent_runs,projects
 agent_run_logs scope - cascade from agent_runs
 agent_runs scope org_id,project_id deleted
 agent_team_edges scope - cascade from agent_team_nodes,agent_teams

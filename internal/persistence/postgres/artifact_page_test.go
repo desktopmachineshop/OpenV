@@ -20,6 +20,7 @@ func TestArtifactPageQueries(t *testing.T) {
 
 	projectID := uuid.New().String()
 	otherProject := uuid.New().String()
+	seedProjects(t, db, projectID, otherProject)
 
 	var rootID string
 	const total = 9

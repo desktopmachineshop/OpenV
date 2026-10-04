@@ -62,11 +62,13 @@ func rtSeedAgent(t *testing.T, db *sql.DB, id, orgID, slug string) {
 // node never did); so is a malformed id in UpdateTeam, MarkDefault and
 // DeleteTeam, while deleting a crew no row has is no error. An entry node no
 // row has is the foreign key's refusal, in SaveTeam and UpdateTeam alike
-// (bug 91: it was stored).
+// (bug 91: it was stored), and so is a project no row has (bug 86: it was
+// stored, and the crew outlived its project).
 func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
 	orgID, projectID, agentID := uuid.New().String(), uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, projectID)
 	rtSeedAgent(t, db, agentID, orgID, "lead")
 
 	saved := &teams.Team{ID: uuid.New().String(), OrgID: orgID, Name: "Requirements crew",
@@ -157,6 +159,8 @@ func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 		gone := uuid.New().String()
 		rtWantPQ(t, "SaveTeam with an entry node no row has", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
 			Name: "x", EntryNodeID: &gone}), "23503", "agent_teams_entry_node_id_fkey")
+		rtWantPQ(t, "SaveTeam for a project no row has", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
+			Name: "x", ProjectID: &gone}), "23503", "agent_teams_project_id_fkey")
 		var n int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM agent_teams`).Scan(&n); err != nil || n != 2 {
 			t.Errorf("crews after the refused saves: %d (%v), want the two saved", n, err)
@@ -265,6 +269,7 @@ func TestTeamRepositoryListTeams(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
 	orgID, otherOrg, project, otherProject := uuid.New().String(), uuid.New().String(), uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, project, otherProject)
 
 	// Saved out of order: the order is the query's.
 	for _, c := range []struct {

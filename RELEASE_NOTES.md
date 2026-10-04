@@ -229,6 +229,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   "failed to update member role", as if the server had failed. It now
   answers "project not found", as opening a deleted project does.
 
+- **Deleting a project now deletes everything in it.** Deleting a project
+  removed the project itself, its members, baselines and share links, but
+  left its artifacts with all their versions, comments, attachments and
+  links, its to-dos, crews, test runs, interviews, guided sessions,
+  project attributes, automations and agent proposals stored, out of sight
+  but still on the server, and links between its artifacts and other
+  projects' stayed in place. All of it now goes with the project, at once
+  or not at all, links to and from other projects' artifacts included. The
+  project's agent runs stay in the workspace's usage, no longer tied to a
+  project, its entries stay in the activity log, and a project filed
+  under it moves to the top level, as before. When this update is
+  installed, what was left behind by projects deleted earlier is removed
+  the same way.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

@@ -35,6 +35,7 @@ func TestArtifactRefAssignment(t *testing.T) {
 	}
 	repo := NewArtifactRepository(db)
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 
 	r1 := newTestArtifact(projectID, artifacts.TypeRequirement, "First")
 	r2 := newTestArtifact(projectID, artifacts.TypeRequirement, "Second")
@@ -49,7 +50,9 @@ func TestArtifactRefAssignment(t *testing.T) {
 	}
 
 	// Another project starts its own numbering.
-	other := newTestArtifact(uuid.New().String(), artifacts.TypeRequirement, "Elsewhere")
+	otherProject := uuid.New().String()
+	seedProjects(t, db, otherProject)
+	other := newTestArtifact(otherProject, artifacts.TypeRequirement, "Elsewhere")
 	if err := repo.Save(other); err != nil {
 		t.Fatalf("Save(other project): %v", err)
 	}
@@ -111,6 +114,7 @@ func TestArtifactRefReassignedOnTypeChange(t *testing.T) {
 	}
 	repo := NewArtifactRepository(db)
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 
 	h := newTestArtifact(projectID, artifacts.TypeHeading, "Accidental heading")
 	if err := repo.Save(h); err != nil {
@@ -164,6 +168,7 @@ func TestArtifactRefBackfill(t *testing.T) {
 		t.Fatalf("InitSchema: %v", err)
 	}
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 	// The frozen baseline schema predates the status (0003) and ref (0018)
 	// columns, so the seed uses only baseline columns.
 	insert := func(typ, title string, sortOrder int) string {
