@@ -229,6 +229,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   "failed to update member role", as if the server had failed. It now
   answers "project not found", as opening a deleted project does.
 
+- **A mistyped `OPENV_PLAN_DEFAULT` is warned about at boot.** For
+  operators: when `OPENV_PLAN_DEFAULT` named no plan, new workspaces were
+  quietly created on the `single` plan, even on a self-hosted deployment,
+  and the boot log still showed the mistyped name as the default plan. Such
+  a name now keeps the deployment's default, `self_host` with
+  `OPENV_SELF_HOSTED=true` and `single` otherwise; the boot log carries a
+  warning naming the variable, and its `workspace limits configured` line
+  shows the plan actually used. `open_source`, which was ignored the same
+  way, is now accepted.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
