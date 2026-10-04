@@ -459,6 +459,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   nothing, and a file the server cannot remove is noted in its log while
   the figure is deleted all the same.
 
+- **Purging a deleted workspace removes its files.** When a deleted
+  workspace's 30 days ran out and it was purged, every file uploaded to it
+  stayed stored on the server: its figures with every earlier version, its
+  evidence files and its logo. They are now removed with the workspace. A
+  file the server cannot remove is noted in its log, and the workspace is
+  purged all the same.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

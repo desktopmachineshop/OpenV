@@ -19,7 +19,7 @@ artifact_embeddings scope artifact_id deleted  @requires(vector)
 artifact_ref_counters scope project_id deleted
 artifacts scope project_id deleted
 attachment_figure_counters scope artifact_id deleted
-attachment_versions scope - cascade from attachments
+attachment_versions scope - deleted
 attachments scope artifact_id deleted
 attribute_definitions scope org_id,project_id deleted
 automations scope org_id,project_id deleted
@@ -30,7 +30,7 @@ domain_events scope org_id,project_id deleted
 email_verifications scope - not reached
 evidence_bundles scope project_id cascade from projects
 evidence_citations scope - cascade from evidence_bundles,test_results
-evidence_files scope - cascade from evidence_bundles
+evidence_files scope - deleted
 guided_session_messages scope - cascade from guided_sessions
 guided_sessions scope org_id,project_id deleted
 hosted_workers scope org_id cascade from organizations
