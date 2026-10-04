@@ -45,7 +45,7 @@ func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	list, err := h.orgService.ListMembers(orgID)
+	list, err := h.OrgService.ListMembers(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to list workspace members", err)
 		return
@@ -97,8 +97,8 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 	// Read the role before changing it: "you are now an admin" is what the
 	// member needs, and "was a member" is what an admin reviewing the change
 	// needs, so both ends of the transition are carried on the event.
-	previous, _ := h.orgService.RoleInOrg(vars["id"], vars["userId"])
-	if err := h.orgService.SetMemberRole(vars["id"], vars["userId"], req.Role); err != nil {
+	previous, _ := h.OrgService.RoleInOrg(vars["id"], vars["userId"])
+	if err := h.OrgService.SetMemberRole(vars["id"], vars["userId"], req.Role); err != nil {
 		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrNotMember) || errors.Is(err, orgs.ErrLastAdmin) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		} else {
@@ -129,7 +129,7 @@ func (h *Handler) RemoveOrgMember(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, vars["id"], minRole) {
 		return
 	}
-	if err := h.orgService.RemoveMember(vars["id"], vars["userId"]); err != nil {
+	if err := h.OrgService.RemoveMember(vars["id"], vars["userId"]); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}

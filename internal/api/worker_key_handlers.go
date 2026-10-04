@@ -20,7 +20,7 @@ func (h *Handler) ListWorkerKeys(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
-	list, err := h.workerKeyService.List(orgID)
+	list, err := h.WorkerKeyService.List(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to list worker keys", err)
 		return
@@ -41,7 +41,7 @@ func (h *Handler) CreateWorkerKey(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	key, plaintext, err := h.workerKeyService.Create(orgID, req.Name, CurrentUserID(r), nil)
+	key, plaintext, err := h.WorkerKeyService.Create(orgID, req.Name, CurrentUserID(r), nil)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -58,7 +58,7 @@ func (h *Handler) RevokeWorkerKey(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, vars["id"], orgs.RoleAdmin) {
 		return
 	}
-	if err := h.workerKeyService.Revoke(vars["id"], vars["keyId"]); err != nil {
+	if err := h.WorkerKeyService.Revoke(vars["id"], vars["keyId"]); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}

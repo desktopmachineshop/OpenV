@@ -59,21 +59,21 @@ func TestConfirmLink(t *testing.T) {
 			linkID: {ID: linkID, FromID: artifactID, ToID: "art-to", Type: "verifies", Suspect: true},
 		}}
 		h := newTestHandler(t, func(h *Handler) {
-			h.linkService = linkSvc
-			h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+			h.LinkService = linkSvc
+			h.ArtifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 				artifactID: {ID: artifactID, ProjectID: projectID, Type: "requirement"},
 			}}
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				projectID: {ID: projectID, OrgID: orgID},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{orgID: {}}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{orgID: {}}}
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				projectID: {
 					"editor": members.RoleEditor,
 					"viewer": members.RoleViewer,
 				},
 			}}
-			h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
+			h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 				"agent-direct":   {ID: "agent-direct", WriteMode: agents.WriteModeDirect},
 				"agent-proposal": {ID: "agent-proposal", WriteMode: agents.WriteModeProposal},
 			}}

@@ -47,14 +47,14 @@ func newImpactHandler(t *testing.T) *Handler {
 		},
 	}})
 	return newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-a": {ID: "proj-a", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-a": {"viewer-a": members.RoleViewer},
 		}}
-		h.baselineService = baselineSvc
+		h.BaselineService = baselineSvc
 	})
 }
 

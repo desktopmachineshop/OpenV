@@ -50,13 +50,13 @@ func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 	// answers a baseline that does not exist (REQ-6): an id no baseline has,
 	// a malformed one and another project's are 404, and nothing is stored.
 	if req.BaselineID != nil {
-		if _, err := h.baselineService.GetProjectBaseline(projectID, *req.BaselineID); err != nil {
+		if _, err := h.BaselineService.GetProjectBaseline(projectID, *req.BaselineID); err != nil {
 			respondError(w, r, http.StatusNotFound, "baseline not found", err)
 			return
 		}
 	}
 	req.ProjectID = projectID
-	run, err := h.vvService.CreateRun(req, CurrentUserID(r))
+	run, err := h.VVService.CreateRun(req, CurrentUserID(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -70,7 +70,7 @@ func (h *Handler) ListTestRuns(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	runs, err := h.vvService.ListRuns(projectID)
+	runs, err := h.VVService.ListRuns(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list test runs", err)
 		return
@@ -79,7 +79,7 @@ func (h *Handler) ListTestRuns(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTestRun(w http.ResponseWriter, r *http.Request) {
-	run, err := h.vvService.GetRun(mux.Vars(r)["id"])
+	run, err := h.VVService.GetRun(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
@@ -92,7 +92,7 @@ func (h *Handler) GetTestRun(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	run, err := h.vvService.GetRun(id)
+	run, err := h.VVService.GetRun(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
@@ -107,7 +107,7 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.vvService.UpdateRunStatus(id, req.Status)
+	updated, err := h.VVService.UpdateRunStatus(id, req.Status)
 	if err != nil {
 		switch {
 		case errors.Is(err, vv.ErrInvalidStatus):
@@ -126,7 +126,7 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	run, err := h.vvService.GetRun(id)
+	run, err := h.VVService.GetRun(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
@@ -134,7 +134,7 @@ func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleEditor, missing("test run not found")) {
 		return
 	}
-	if err := h.vvService.DeleteRun(id); err != nil {
+	if err := h.VVService.DeleteRun(id); err != nil {
 		switch {
 		case errors.Is(err, vv.ErrRunHasResults):
 			// Its results are the record REQ-13 keeps: the run is closed,
@@ -152,7 +152,7 @@ func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 	runID := mux.Vars(r)["id"]
-	run, err := h.vvService.GetRun(runID)
+	run, err := h.VVService.GetRun(runID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
@@ -171,7 +171,7 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 	if run := CurrentRun(r); run != nil {
 		agentRunID = run.ID
 	}
-	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r), agentRunID)
+	result, err := h.VVService.UpsertResult(runID, req, CurrentUserID(r), Actor(r), agentRunID)
 	if err != nil {
 		respondResultError(w, r, err)
 		return
@@ -204,7 +204,7 @@ func respondResultError(w http.ResponseWriter, r *http.Request, err error) {
 
 func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 	runID := mux.Vars(r)["id"]
-	run, err := h.vvService.GetRun(runID)
+	run, err := h.VVService.GetRun(runID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
@@ -214,9 +214,9 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 	}
 	// The current result per test case; ?history=true lists every result
 	// recorded, the superseded ones included (REQ-13).
-	list := h.vvService.ListResults
+	list := h.VVService.ListResults
 	if r.URL.Query().Get("history") == "true" {
-		list = h.vvService.ListResultHistory
+		list = h.VVService.ListResultHistory
 	}
 	results, err := list(runID)
 	if err != nil {
@@ -235,7 +235,7 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	runID := mux.Vars(r)["id"]
-	testRun, err := h.vvService.GetRun(runID)
+	testRun, err := h.VVService.GetRun(runID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
@@ -264,16 +264,16 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgID := ActiveOrg(r)
-	if project, err := h.projectService.GetProject(testRun.ProjectID); err == nil && project != nil && project.OrgID != "" {
+	if project, err := h.ProjectService.GetProject(testRun.ProjectID); err == nil && project != nil && project.OrgID != "" {
 		orgID = project.OrgID
 	}
-	agent, err := h.agentService.GetBySlug(orgID, req.AgentSlug)
+	agent, err := h.AgentService.GetBySlug(orgID, req.AgentSlug)
 	if err != nil || agent == nil {
 		writeJSONError(w, http.StatusNotFound, "agent not found")
 		return
 	}
 
-	runnable, skipped, err := h.vvService.AgentExecutableCases(testRun.ProjectID, req.TestCaseIDs)
+	runnable, skipped, err := h.VVService.AgentExecutableCases(testRun.ProjectID, req.TestCaseIDs)
 	if err != nil {
 		respondInternal(w, r, "failed to select agent-executable test cases", err)
 		return
@@ -367,7 +367,7 @@ func (h *Handler) vvReportData(w http.ResponseWriter, r *http.Request) (*exports
 		respondInternal(w, r, "failed to export project", err)
 		return nil, nil, false
 	}
-	latest, err := h.vvService.LatestResults(projectID)
+	latest, err := h.VVService.LatestResults(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load latest test results", err)
 		return nil, nil, false
@@ -429,7 +429,7 @@ func (h *Handler) childCoverage(childID string, done map[string]*vv.CoverageRepo
 		slog.Warn("vv: could not read a child project for the flow-up", "project_id", childID, "error", err)
 		return nil
 	}
-	childLatest, err := h.vvService.LatestResults(childID)
+	childLatest, err := h.VVService.LatestResults(childID)
 	if err != nil {
 		slog.Warn("vv: could not read a child project's results", "project_id", childID, "error", err)
 		childLatest = map[string]*vv.TestResult{}
@@ -510,18 +510,18 @@ func (h *Handler) GetVVReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	latest, err := h.vvService.LatestResults(projectID)
+	latest, err := h.VVService.LatestResults(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load latest test results", err)
 		return
 	}
-	runs, err := h.vvService.ListRuns(projectID)
+	runs, err := h.VVService.ListRuns(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list test runs", err)
 		return
 	}
 
-	data, filename, err := h.reportService.GenerateVVReport(projectID, r.URL.Query().Get("baseline_id"), latest, runs,
+	data, filename, err := h.ReportService.GenerateVVReport(projectID, r.URL.Query().Get("baseline_id"), latest, runs,
 		h.flowDownCoverage)
 	if err != nil {
 		if errors.Is(err, baselines.ErrNotFound) {

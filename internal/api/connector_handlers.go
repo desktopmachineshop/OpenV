@@ -28,12 +28,12 @@ func (h *Handler) CreateConnectorPairing(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	user := CurrentUser(r)
-	code, expires, err := h.workerKeyService.CreatePairing(orgID, user.ID)
+	code, expires, err := h.WorkerKeyService.CreatePairing(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to create pairing code", err)
 		return
 	}
-	apiURL := h.publicAPIURL
+	apiURL := h.PublicAPIURL
 	if apiURL == "" {
 		apiURL = "http://localhost:8080"
 	}
@@ -60,22 +60,22 @@ func (h *Handler) ExchangeConnectorPairing(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusBadRequest, "pairing code is required")
 		return
 	}
-	key, plaintext, err := h.workerKeyService.ExchangePairing(req.Code, "")
+	key, plaintext, err := h.WorkerKeyService.ExchangePairing(req.Code, "")
 	if err != nil {
 		writeJSONError(w, http.StatusForbidden, err.Error())
 		return
 	}
 	orgName := ""
-	if org, err := h.orgService.Get(key.OrgID); err == nil {
+	if org, err := h.OrgService.Get(key.OrgID); err == nil {
 		orgName = org.Name
 	}
 	userName := ""
 	if key.UserID != nil {
-		if u, err := h.userService.GetByID(*key.UserID); err == nil && u != nil {
+		if u, err := h.UserService.GetByID(*key.UserID); err == nil && u != nil {
 			userName = u.Name
 		}
 	}
-	apiURL := h.publicAPIURL
+	apiURL := h.PublicAPIURL
 	if apiURL == "" {
 		apiURL = "http://localhost:8080"
 	}
@@ -111,19 +111,19 @@ func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "unknown os")
 		return
 	}
-	if h.connectorDistDir == "" {
+	if h.ConnectorDistDir == "" {
 		writeJSONError(w, http.StatusNotFound, "connector downloads are not configured on this deployment")
 		return
 	}
 
-	if path := filepath.Join(h.connectorDistDir, single); fileExists(path) {
+	if path := filepath.Join(h.ConnectorDistDir, single); fileExists(path) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", "attachment; filename="+serveAs)
 		http.ServeFile(w, r, path)
 		return
 	}
 
-	if path := filepath.Join(h.connectorDistDir, zipName); fileExists(path) {
+	if path := filepath.Join(h.ConnectorDistDir, zipName); fileExists(path) {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", "attachment; filename="+zipName)
 		http.ServeFile(w, r, path)

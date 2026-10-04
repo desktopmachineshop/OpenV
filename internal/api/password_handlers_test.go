@@ -44,7 +44,7 @@ func passwordReq(body, cookie string, user *users.User) *http.Request {
 func newPasswordHandler(t *testing.T, err error) (*Handler, *fakePasswordService) {
 	svc := &fakePasswordService{err: err}
 	return newTestHandler(t, func(h *Handler) {
-		h.userService = svc
+		h.UserService = svc
 		h.authAccountLimiter = newRateLimiter(100, 1)
 	}), svc
 }
@@ -116,7 +116,7 @@ func TestChangePasswordRefusesAnAnonymousCaller(t *testing.T) {
 func TestChangePasswordThrottlesGuesses(t *testing.T) {
 	svc := &fakePasswordService{err: users.ErrPasswordIncorrect}
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
+		h.UserService = svc
 		h.authAccountLimiter = newRateLimiter(3, 1)
 	})
 	user := &users.User{ID: "u-1", Email: "Owner@Example.com"}

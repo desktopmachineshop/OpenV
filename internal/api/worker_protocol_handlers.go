@@ -74,7 +74,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	// its member's runs and only the ownerless ones its member could see
 	// (the claim query asks it, as holderSeesRun does), and the claim
 	// records the member, whose local paths the run's token reads.
-	run, err := h.runService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
+	run, err := h.RunService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
 	if err != nil {
 		respondInternal(w, r, "failed to claim a run", err)
 		return
@@ -88,13 +88,13 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	// fresh so the worker can hand it to the MCP server. If the handshake
 	// fails after the claim, release the run back to the queue so it isn't
 	// stranded in 'claimed' until the stale reaper.
-	agent, err := h.agentService.Get(run.AgentID)
+	agent, err := h.AgentService.Get(run.AgentID)
 	if err != nil || agent == nil {
 		h.releaseFailedClaim(run.ID, req.WorkerID)
 		respondInternal(w, r, "agent not found for claimed run", err)
 		return
 	}
-	token, err := h.runService.ReissueToken(run.ID)
+	token, err := h.RunService.ReissueToken(run.ID)
 	if err != nil {
 		h.releaseFailedClaim(run.ID, req.WorkerID)
 		respondInternal(w, r, "failed to issue run token", err)
@@ -111,7 +111,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 // releaseFailedClaim rolls a claim back to queued after a failed claim
 // handshake (best effort — the stale reaper remains the backstop).
 func (h *Handler) releaseFailedClaim(runID, workerID string) {
-	if err := h.runService.ReleaseClaim(runID, workerID); err != nil {
+	if err := h.RunService.ReleaseClaim(runID, workerID); err != nil {
 		slog.Error("api: failed to release claim after failed handshake",
 			"run_id", runID, "worker_id", workerID, "error", err)
 	}
@@ -127,14 +127,14 @@ func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[st
 	if run.ProjectID == nil || *run.ProjectID == "" {
 		return auth
 	}
-	project, err := h.projectService.GetProject(*run.ProjectID)
+	project, err := h.ProjectService.GetProject(*run.ProjectID)
 	if err != nil || project == nil || project.AgentAuth != projects.AgentAuthAPIKey {
 		return auth
 	}
 	auth["mode"] = projects.AgentAuthAPIKey
 	keyEnv := providers.DefaultAPIKeyEnv(agent.Provider)
-	if h.providerService != nil {
-		if settings, err := h.providerService.List(run.OrgID); err == nil {
+	if h.ProviderService != nil {
+		if settings, err := h.ProviderService.List(run.OrgID); err == nil {
 			for _, s := range settings {
 				if s.Provider == agent.Provider && s.APIKeyEnv != "" {
 					keyEnv = s.APIKeyEnv
@@ -155,7 +155,7 @@ func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
 	if run == nil {
 		return
 	}
-	if err := h.runService.MarkRunning(run.ID); err != nil {
+	if err := h.RunService.MarkRunning(run.ID); err != nil {
 		// A conflicting status (e.g. the run was cancelled or reaped while
 		// the worker was starting) is the worker's problem: 409 with the
 		// domain sentinel. Anything else is ours — answer 5xx so the worker
@@ -191,7 +191,7 @@ func (h *Handler) ReleaseAgentRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if err := h.runService.ReleaseClaim(run.ID, req.WorkerID); err != nil {
+	if err := h.RunService.ReleaseClaim(run.ID, req.WorkerID); err != nil {
 		respondInternal(w, r, "failed to release run", err)
 		return
 	}
@@ -210,7 +210,7 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	run, err := h.runService.AppendLogs(mux.Vars(r)["id"], entries, partialText)
+	run, err := h.RunService.AppendLogs(mux.Vars(r)["id"], entries, partialText)
 	if err != nil {
 		respondInternal(w, r, "failed to append run logs", err)
 		return
@@ -260,7 +260,7 @@ func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	run, err := h.runService.Finish(mux.Vars(r)["id"], req)
+	run, err := h.RunService.Finish(mux.Vars(r)["id"], req)
 	if err != nil {
 		// Already-finished / bad-status transitions are 409 with the domain
 		// sentinel. Every other failure (a DB blip, say) must be a 5xx: the
@@ -305,7 +305,7 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	children, err := h.teamService.ResolveDelegates(*run.TeamNodeID)
+	children, err := h.TeamService.ResolveDelegates(*run.TeamNodeID)
 	if err != nil {
 		// The run's crew node was removed after the run launched (the run
 		// keeps its id, with no foreign key): the node routes' answer.
@@ -333,7 +333,7 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parentID := run.ID
-	child, _, err := h.runService.Launch(agentruns.LaunchRequest{
+	child, _, err := h.RunService.Launch(agentruns.LaunchRequest{
 		OrgID:       run.OrgID,
 		AgentID:     target.AgentID,
 		ProjectID:   run.ProjectID,
@@ -368,7 +368,7 @@ func (h *Handler) DelegateStatus(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "delegation requires an agent run token")
 		return
 	}
-	child, err := h.runService.Get(mux.Vars(r)["id"])
+	child, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent run not found", err)
 		return

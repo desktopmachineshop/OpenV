@@ -232,7 +232,7 @@ func TestRestoringAVersionTheArtifactNeverHadIsNotFound(t *testing.T) {
 // artifact's current row, which the delete closes.
 func TestADeletedArtifactsHistoryStaysReadableToItsReaders(t *testing.T) {
 	h, _, _, id := historyFixture(t)
-	if err := h.artifactService.DeleteArtifact(id); err != nil {
+	if err := h.ArtifactService.DeleteArtifact(id); err != nil {
 		t.Fatal(err)
 	}
 

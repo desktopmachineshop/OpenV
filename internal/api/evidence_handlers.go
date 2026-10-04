@@ -84,10 +84,10 @@ func maxEvidenceBytes() int64 {
 // evidenceStorageLimitBytes is the workspace's total evidence allowance, from
 // the org limits. Zero means unlimited.
 func (h *Handler) evidenceStorageLimitBytes(orgID string) int64 {
-	if h.orgService == nil {
+	if h.OrgService == nil {
 		return 0
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil || org == nil {
 		return 0
 	}
@@ -103,11 +103,11 @@ func (h *Handler) evidenceStorageLimitBytes(orgID string) int64 {
 // bundle exists in a project they have no access to: absent is the answer of
 // the id the handler was given, the bundle's or that of a file in it.
 func (h *Handler) evidenceBundleChecked(w http.ResponseWriter, r *http.Request, id, minRole string, absent notFound) *evidence.Bundle {
-	if h.evidenceService == nil {
+	if h.EvidenceService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return nil
 	}
-	bundle, err := h.evidenceService.Get(id)
+	bundle, err := h.EvidenceService.Get(id)
 	if errors.Is(err, evidence.ErrNotFound) {
 		writeJSONError(w, http.StatusNotFound, "evidence bundle not found")
 		return nil
@@ -145,14 +145,14 @@ func (h *Handler) writeEvidenceError(w http.ResponseWriter, r *http.Request, ver
 // ListEvidenceBundles returns a project's capture sessions, newest first.
 func (h *Handler) ListEvidenceBundles(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
-	if h.evidenceService == nil {
+	if h.EvidenceService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return
 	}
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	list, err := h.evidenceService.List(projectID)
+	list, err := h.EvidenceService.List(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list evidence bundles", err)
 		return
@@ -166,7 +166,7 @@ func (h *Handler) ListEvidenceBundles(w http.ResponseWriter, r *http.Request) {
 // CreateEvidenceBundle records a new capture session.
 func (h *Handler) CreateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
-	if h.evidenceService == nil {
+	if h.EvidenceService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return
 	}
@@ -183,7 +183,7 @@ func (h *Handler) CreateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 		id := u.ID
 		createdBy = &id
 	}
-	bundle, err := h.evidenceService.Create(projectID, req, createdBy)
+	bundle, err := h.EvidenceService.Create(projectID, req, createdBy)
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to create the evidence bundle", err)
 		return
@@ -214,7 +214,7 @@ func (h *Handler) UpdateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	bundle, err := h.evidenceService.Update(id, req)
+	bundle, err := h.EvidenceService.Update(id, req)
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to update the evidence bundle", err)
 		return
@@ -231,7 +231,7 @@ func (h *Handler) DeleteEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 	if h.evidenceBundleChecked(w, r, id, members.RoleEditor, bundleNotFound) == nil {
 		return
 	}
-	files, err := h.evidenceService.Delete(id)
+	files, err := h.EvidenceService.Delete(id)
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to delete the evidence bundle", err)
 		return
@@ -280,7 +280,7 @@ func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 	// evidence of anything and only the bytes that landed are.
 	orgID := h.orgIDForProject(bundle.ProjectID)
 	storageLimit := h.evidenceStorageLimitBytes(orgID)
-	if err := h.evidenceService.CheckQuota(bundle.ProjectID, 0, storageLimit); err != nil {
+	if err := h.EvidenceService.CheckQuota(bundle.ProjectID, 0, storageLimit); err != nil {
 		h.writeEvidenceError(w, r, "failed to check the evidence storage limit", err)
 		return
 	}
@@ -292,7 +292,7 @@ func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 	// Flat directory, UUID-prefixed name: evidence filenames are the
 	// uploader's and are not unique across projects, and the stored name must
 	// never be able to escape the uploads directory.
-	storedPath := filepath.Join(h.uploadsDir, "evidence-"+uuid.New().String())
+	storedPath := filepath.Join(h.UploadsDir, "evidence-"+uuid.New().String())
 	dst, err := os.Create(storedPath)
 	if err != nil {
 		respondInternal(w, r, "failed to store the evidence file", err)
@@ -319,7 +319,7 @@ func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("that file is larger than the %s evidence upload limit", evidence.HumanBytes(limit)))
 		return
 	}
-	if err := h.evidenceService.CheckQuota(bundle.ProjectID, written, storageLimit); err != nil {
+	if err := h.EvidenceService.CheckQuota(bundle.ProjectID, written, storageLimit); err != nil {
 		_ = os.Remove(storedPath)
 		h.writeEvidenceError(w, r, "failed to check the evidence storage limit", err)
 		return
@@ -341,7 +341,7 @@ func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 		SHA256:     hex.EncodeToString(hash.Sum(nil)),
 		UploadedBy: uploadedBy,
 	}
-	if err := h.evidenceService.AddFile(bundleID, file); err != nil {
+	if err := h.EvidenceService.AddFile(bundleID, file); err != nil {
 		_ = os.Remove(storedPath)
 		h.writeEvidenceError(w, r, "failed to record the evidence file", err)
 		return
@@ -356,11 +356,11 @@ func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 // default-src 'none' policy with nosniff. There is no case where rendering one
 // on the API origin is the right thing.
 func (h *Handler) DownloadEvidenceFile(w http.ResponseWriter, r *http.Request) {
-	if h.evidenceService == nil {
+	if h.EvidenceService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return
 	}
-	file, err := h.evidenceService.GetFile(mux.Vars(r)["id"])
+	file, err := h.EvidenceService.GetFile(mux.Vars(r)["id"])
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to load the evidence file", err)
 		return
@@ -376,11 +376,11 @@ func (h *Handler) DownloadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 
 // DeleteEvidenceFile removes one file from a bundle.
 func (h *Handler) DeleteEvidenceFile(w http.ResponseWriter, r *http.Request) {
-	if h.evidenceService == nil {
+	if h.EvidenceService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return
 	}
-	file, err := h.evidenceService.GetFile(mux.Vars(r)["id"])
+	file, err := h.EvidenceService.GetFile(mux.Vars(r)["id"])
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to load the evidence file", err)
 		return
@@ -388,7 +388,7 @@ func (h *Handler) DeleteEvidenceFile(w http.ResponseWriter, r *http.Request) {
 	if h.evidenceBundleChecked(w, r, file.BundleID, members.RoleEditor, missing("evidence file not found")) == nil {
 		return
 	}
-	removed, err := h.evidenceService.DeleteFile(file.ID)
+	removed, err := h.EvidenceService.DeleteFile(file.ID)
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to delete the evidence file", err)
 		return
@@ -403,7 +403,7 @@ func (h *Handler) ListResultCitations(w http.ResponseWriter, r *http.Request) {
 	if !h.evidenceResultAllowed(w, r, resultID, members.RoleViewer) {
 		return
 	}
-	list, err := h.evidenceService.CitationsForResult(resultID)
+	list, err := h.EvidenceService.CitationsForResult(resultID)
 	if err != nil {
 		respondInternal(w, r, "failed to list the result's evidence", err)
 		return
@@ -418,11 +418,11 @@ func (h *Handler) ListResultCitations(w http.ResponseWriter, r *http.Request) {
 // run grid renders its evidence column in one request rather than one per row.
 func (h *Handler) ListRunCitations(w http.ResponseWriter, r *http.Request) {
 	runID := mux.Vars(r)["id"]
-	if h.evidenceService == nil || h.vvService == nil {
+	if h.EvidenceService == nil || h.VVService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return
 	}
-	run, err := h.vvService.GetRun(runID)
+	run, err := h.VVService.GetRun(runID)
 	if err != nil || run == nil {
 		writeJSONError(w, http.StatusNotFound, "test run not found")
 		return
@@ -430,7 +430,7 @@ func (h *Handler) ListRunCitations(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
-	byResult, err := h.evidenceService.CitationsForRun(runID)
+	byResult, err := h.EvidenceService.CitationsForRun(runID)
 	if err != nil {
 		respondInternal(w, r, "failed to list the run's evidence", err)
 		return
@@ -464,7 +464,7 @@ func (h *Handler) CiteEvidence(w http.ResponseWriter, r *http.Request) {
 	if h.evidenceBundleChecked(w, r, req.BundleID, members.RoleViewer, bundleNotFound) == nil {
 		return
 	}
-	citation, err := h.evidenceService.Cite(resultID, req.BundleID, req.Note)
+	citation, err := h.EvidenceService.Cite(resultID, req.BundleID, req.Note)
 	if err != nil {
 		h.writeEvidenceError(w, r, "failed to cite the evidence", err)
 		return
@@ -479,7 +479,7 @@ func (h *Handler) UnciteEvidence(w http.ResponseWriter, r *http.Request) {
 	if !h.evidenceResultAllowed(w, r, vars["id"], members.RoleEditor) {
 		return
 	}
-	if err := h.evidenceService.Uncite(vars["id"], vars["bundleId"]); err != nil {
+	if err := h.EvidenceService.Uncite(vars["id"], vars["bundleId"]); err != nil {
 		h.writeEvidenceError(w, r, "failed to remove the citation", err)
 		return
 	}
@@ -489,11 +489,11 @@ func (h *Handler) UnciteEvidence(w http.ResponseWriter, r *http.Request) {
 // evidenceResultAllowed resolves a test result to its project and enforces the
 // caller's role there.
 func (h *Handler) evidenceResultAllowed(w http.ResponseWriter, r *http.Request, resultID, minRole string) bool {
-	if h.evidenceService == nil || h.vvService == nil {
+	if h.EvidenceService == nil || h.VVService == nil {
 		writeJSONError(w, http.StatusNotFound, "evidence is not configured on this server")
 		return false
 	}
-	projectID, err := h.evidenceService.ProjectForResult(resultID)
+	projectID, err := h.EvidenceService.ProjectForResult(resultID)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve the test result", err)
 		return false

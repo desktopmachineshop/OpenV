@@ -89,8 +89,8 @@ func (f *fakeSharedProductService) Delete(id string) error {
 
 func sharedTestHandler(t *testing.T, svc *fakeSharedProductService) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.sharedProductService = svc
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+		h.SharedProductService = svc
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"member": orgs.RoleMember, "admin": orgs.RoleAdmin},
 		}}
 	})

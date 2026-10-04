@@ -319,6 +319,14 @@ GUARD_CODE = [
     # F1 may still edit its spec (frontend/scripts/specs/*.json) in a class T
     # commit, and its testdata/ is frozen data like every other.
     ("S14f", ["frontend/scripts/tsdeclmove*.mjs"]),
+    # M14's generator: scripts/refactor/embed_deps.sh and the embeddeps
+    # rewriter it drives (Handler embeds HandlerDeps). M14's class R commit
+    # is exactly what the script writes on the commit's parent, which the
+    # class R check re-runs, so the script and the tool are that commit's
+    # proof: a refactor pull request changes them only in a class C or T
+    # commit, never in a commit they prove. The tool's sources and tests
+    # only: its testdata/ is frozen data like every other.
+    ("M14", ["scripts/refactor/embed_deps.sh", "internal/tools/embeddeps/*.go"]),
     # S10's notification content: the Go test that drives every delivery
     # path and writes the per-type goldens, its recording harness, the
     # completeness test beside the type constants, and the vitest that pins

@@ -38,7 +38,7 @@ func (h *Handler) StartGuidedSession(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
 		return
 	}
-	session, err := h.guidedService.StartSession(req.ProjectID, CurrentUserID(r))
+	session, err := h.GuidedService.StartSession(req.ProjectID, CurrentUserID(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -52,7 +52,7 @@ func (h *Handler) ListGuidedSessions(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	sessions, err := h.guidedService.ListSessions(projectID)
+	sessions, err := h.GuidedService.ListSessions(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list guided sessions", err)
 		return
@@ -81,7 +81,7 @@ func (h *Handler) SaveGuidedStep(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.guidedService.SaveStep(session.ID, req.Step, req.Answers)
+	updated, err := h.GuidedService.SaveStep(session.ID, req.Step, req.Answers)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -101,7 +101,7 @@ func (h *Handler) MaterializeGuidedDrafts(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	ids, err := h.guidedService.MaterializeDrafts(session.ID, req.Drafts)
+	ids, err := h.GuidedService.MaterializeDrafts(session.ID, req.Drafts)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -118,13 +118,13 @@ func (h *Handler) CommitGuidedSession(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		return
 	}
-	if run := CurrentRun(r); run != nil && h.agentService != nil {
-		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+	if run := CurrentRun(r); run != nil && h.AgentService != nil {
+		if agent, err := h.AgentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
 			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot commit a guided session")
 			return
 		}
 	}
-	result, err := h.guidedService.Commit(session.ID)
+	result, err := h.GuidedService.Commit(session.ID)
 	if result != nil {
 		h.publishGuidedApprovals(r, session.ID, result.Approved)
 	}
@@ -161,7 +161,7 @@ func (h *Handler) AbandonGuidedSession(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		return
 	}
-	abandoned, err := h.guidedService.Abandon(session.ID)
+	abandoned, err := h.GuidedService.Abandon(session.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

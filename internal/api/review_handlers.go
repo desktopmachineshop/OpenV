@@ -29,12 +29,12 @@ func (h *Handler) ReviewQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	suspectLinks, err := h.linkService.ListSuspectByProject(projectID)
+	suspectLinks, err := h.LinkService.ListSuspectByProject(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load suspect links", err)
 		return
 	}
-	inReview, err := h.artifactService.ListByStatus(projectID, artifacts.StatusInReview)
+	inReview, err := h.ArtifactService.ListByStatus(projectID, artifacts.StatusInReview)
 	if err != nil {
 		respondInternal(w, r, "failed to load in-review artifacts", err)
 		return

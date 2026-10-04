@@ -55,14 +55,14 @@ func (f *fakeAttributeService) ListByProject(projectID string) ([]*attributes.De
 
 func attrTestHandler(t *testing.T, attrSvc *fakeAttributeService) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.attributeService = attrSvc
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.AttributeService = attrSvc
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"org-admin": orgs.RoleAdmin, "org-member": orgs.RoleMember},
 		}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"proj-editor": members.RoleEditor, "proj-viewer": members.RoleViewer},
 		}}
 	})

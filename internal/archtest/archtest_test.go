@@ -58,6 +58,7 @@ var rules = []rule{
 	{"invalid request body literals", "invalid-request-body-literals", "counts.invalid_request_body_literals", inRatchets("counts.invalid_request_body_literals", ceilingHow), checkInvalidBodyLiterals},
 	{"require helpers outside authz", "require-helpers-outside-authz", "counts.require_outside_authz", inRatchets("counts.require_outside_authz", ceilingHow), checkRequireOutsideAuthz},
 	{"K3 helper homes", "k3-helper-homes", "helper_homes", inRatchets("helper_homes", setHow), checkHelperHomes},
+	{"K5 raw HandlerDeps reads", "k5-raw-handlerdeps-reads", "", banText, checkRawHandlerDeps},
 	{"direct env reads", "direct-env-reads", "env_reads", inRatchets("env_reads", "a ceiling per package that may only fall; a package not listed may read none"), checkEnvReads},
 	{"R8 decode errors", "r8-decode-errors", "", "none: the protected types are decodeAliasTypes in decode_test.go, a list that only grows", checkDecodeAliases},
 	{"build context", "build-context", "", "none: the Dockerfile's COPY list is the allowlist", checkBuildContext},

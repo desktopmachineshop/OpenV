@@ -59,9 +59,9 @@ func baselineRecordFixture(t *testing.T, exportSvc *fakeExportService) (*Handler
 		map[string]map[string]string{"proj-1": {
 			"owner": members.RoleOwner, "editor": members.RoleEditor, "viewer": members.RoleViewer,
 		}}, exportSvc, baselineSvc, &fakeVVService{})
-	h.downloadService = downloads.NewService(exportSvc, reports.NewService(exportSvc, baselineSvc))
+	h.DownloadService = downloads.NewService(exportSvc, reports.NewService(exportSvc, baselineSvc))
 	bus := &recordingBus{}
-	h.bus = bus
+	h.Bus = bus
 	return h, repo, bus
 }
 
@@ -206,7 +206,7 @@ func TestATestRunsBaselineIsOneOfItsProject(t *testing.T) {
 	h, repo, _ := baselineRecordFixture(t, &fakeExportService{})
 	repo.byID["b-other"] = &baselines.Baseline{ID: "b-other", ProjectID: "proj-2", Name: "Other"}
 	runs := &runRecordingVV{}
-	h.vvService = runs
+	h.VVService = runs
 	const route = "/api/v1/projects/proj-1/test-runs"
 
 	for _, id := range []string{"11111111-1111-4111-8111-111111111111", "not-a-uuid", "", "b-other"} {

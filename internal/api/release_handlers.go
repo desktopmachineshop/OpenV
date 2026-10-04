@@ -34,7 +34,7 @@ func (h *Handler) registerReleaseRoutes(router *mux.Router) {
 // deploy that has just landed. Public because CI reads it with no credentials,
 // and a commit hash of an open repository is not a secret.
 func (h *Handler) GetPublicBuild(w http.ResponseWriter, r *http.Request) {
-	body := map[string]string{"commit": h.buildSHA}
+	body := map[string]string{"commit": h.BuildSHA}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(body)
@@ -67,18 +67,18 @@ func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	resp := releaseResponse{Notes: []string{}, Releases: []release.Release{}, Deployment: h.deploymentKind}
+	resp := releaseResponse{Notes: []string{}, Releases: []release.Release{}, Deployment: h.DeploymentKind}
 	if resp.Deployment == "" {
 		resp.Deployment = "shared"
 	}
-	if h.releaseService != nil {
-		resp.Releases = append(resp.Releases, h.releaseService.Released()...)
-		if cur := h.releaseService.Current(); cur != nil {
+	if h.ReleaseService != nil {
+		resp.Releases = append(resp.Releases, h.ReleaseService.Released()...)
+		if cur := h.ReleaseService.Current(); cur != nil {
 			resp.Version, resp.Date, resp.Markdown = cur.Version, cur.Date, cur.Markdown
 			resp.Notes = append(resp.Notes, cur.Notes...)
 			resp.Categories = cur.Categories
 		}
-		resp.Stable = h.releaseService.CurrentStable()
+		resp.Stable = h.ReleaseService.CurrentStable()
 	}
 	// The version is what an open tab polls; a fresh answer every time is
 	// the point.
@@ -93,11 +93,11 @@ func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
 // Nothing here is private: the same versions head the public notes file.
 func (h *Handler) GetPublicRelease(w http.ResponseWriter, r *http.Request) {
 	feed := map[string]string{"version": "", "stable": "", "stable_since": ""}
-	if h.releaseService != nil {
-		if cur := h.releaseService.Current(); cur != nil {
+	if h.ReleaseService != nil {
+		if cur := h.ReleaseService.Current(); cur != nil {
 			feed["version"] = cur.Version
 		}
-		if s := h.releaseService.CurrentStable(); s != nil {
+		if s := h.ReleaseService.CurrentStable(); s != nil {
 			feed["stable"], feed["stable_since"] = s.Version, s.Since
 		}
 	}

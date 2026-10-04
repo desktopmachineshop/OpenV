@@ -62,22 +62,22 @@ func namingHandler(t *testing.T) (*Handler, *fakeNameUserService) {
 		"u2": {ID: "u2", Email: "sam@example.com"}, // no display name
 	}}
 	return newTestHandler(t, func(h *Handler) {
-		h.userService = userSvc
-		h.artifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+		h.UserService = userSvc
+		h.ArtifactService = &fakeArtifactService{byID: map[string]*artifacts.Artifact{
 			"a1": {ID: "a1", Ref: "REQ-12", Title: "The positioner shall comply with UL1740"},
 			"a2": {ID: "a2", Ref: "TC-3", Title: "Compliance test"},
 			"a3": {ID: "a3", Title: "Untitled ref-less artifact"},
 		}}
-		h.workItemService = &fakeNameWorkItemService{byID: map[string]*workitems.WorkItem{
+		h.WorkItemService = &fakeNameWorkItemService{byID: map[string]*workitems.WorkItem{
 			"w1": {ID: "w1", Title: "Wire the safety interlock"},
 		}}
-		h.baselineService = &fakeNameBaselineService{byID: map[string]*baselines.Baseline{
+		h.BaselineService = &fakeNameBaselineService{byID: map[string]*baselines.Baseline{
 			"b1": {ID: "b1", Name: "Release 1.2"},
 		}}
-		h.runService = &fakeRunService{byID: map[string]*agentruns.Run{
+		h.RunService = &fakeRunService{byID: map[string]*agentruns.Run{
 			"r1": {ID: "r1", AgentID: "ag1"},
 		}}
-		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
+		h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 			"ag1": {ID: "ag1", Slug: "req-analyst", Name: "Requirements Analyst"},
 		}}
 	}), userSvc
@@ -261,7 +261,7 @@ func TestDecorateEventsWithoutServices(t *testing.T) {
 func TestListDomainEventsServesNames(t *testing.T) {
 	const orgID = "org-1"
 	h, _ := namingHandler(t)
-	h.eventRepo = &fakeEventRepo{byOrg: map[string][]events.Event{
+	h.EventRepo = &fakeEventRepo{byOrg: map[string][]events.Event{
 		orgID: {{
 			ID: "e1", OrgID: orgID, ProjectID: "proj-1", EventType: events.ArtifactUpdated,
 			EntityID: "a1", Actor: "user:u1",

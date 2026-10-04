@@ -58,7 +58,7 @@ func (h *Handler) ListTeams(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	list, err := h.teamService.ListTeams(ActiveOrg(r), r.URL.Query().Get("project_id"))
+	list, err := h.TeamService.ListTeams(ActiveOrg(r), r.URL.Query().Get("project_id"))
 	if err != nil {
 		respondInternal(w, r, "failed to list crews", err)
 		return
@@ -85,7 +85,7 @@ func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		if !h.requireProjectVisible(w, r, *req.ProjectID, crewPinNotFound) {
 			return
 		}
-		project, err := h.projectService.GetProject(*req.ProjectID)
+		project, err := h.ProjectService.GetProject(*req.ProjectID)
 		if err != nil || project == nil {
 			crewPinNotFound.write(w)
 			return
@@ -100,7 +100,7 @@ func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	} else if !h.requireOrgRole(w, r, ActiveOrg(r), orgs.RoleAdmin) {
 		return
 	}
-	team, err := h.teamService.CreateTeam(ActiveOrg(r), req.Name, req.Description, req.ProjectID)
+	team, err := h.TeamService.CreateTeam(ActiveOrg(r), req.Name, req.Description, req.ProjectID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -113,7 +113,7 @@ func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
+	graph, err := h.TeamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return
@@ -129,7 +129,7 @@ func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
 // the node or edge the handler looked up first. Returns nil when the
 // response has already been written.
 func (h *Handler) teamWriteChecked(w http.ResponseWriter, r *http.Request, teamID string, absent notFound) *teams.Team {
-	graph, err := h.teamService.GetTeam(teamID)
+	graph, err := h.TeamService.GetTeam(teamID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return nil
@@ -156,7 +156,7 @@ func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	team, err := h.teamService.UpdateTeam(mux.Vars(r)["id"], req.Name, req.Description, req.EntryNodeID)
+	team, err := h.TeamService.UpdateTeam(mux.Vars(r)["id"], req.Name, req.Description, req.EntryNodeID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -171,7 +171,7 @@ func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 	if h.teamWriteChecked(w, r, mux.Vars(r)["id"], missing("team not found")) == nil {
 		return
 	}
-	if err := h.teamService.DeleteTeam(mux.Vars(r)["id"]); err != nil {
+	if err := h.TeamService.DeleteTeam(mux.Vars(r)["id"]); err != nil {
 		respondInternal(w, r, "failed to delete crew", err)
 		return
 	}
@@ -201,7 +201,7 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 		if !h.requireProjectVisible(w, r, *req.ProjectID, crewPinNotFound) {
 			return
 		}
-		project, err := h.projectService.GetProject(*req.ProjectID)
+		project, err := h.ProjectService.GetProject(*req.ProjectID)
 		if err != nil || project == nil {
 			crewPinNotFound.write(w)
 			return
@@ -216,7 +216,7 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 	} else if !h.requireOrgRole(w, r, source.OrgID, orgs.RoleAdmin) {
 		return
 	}
-	team, err := h.teamService.CloneTeam(mux.Vars(r)["id"], req.Name, req.ProjectID)
+	team, err := h.TeamService.CloneTeam(mux.Vars(r)["id"], req.Name, req.ProjectID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -232,7 +232,7 @@ func (h *Handler) ExportCrew(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
+	graph, err := h.TeamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "crew not found", err)
 		return
@@ -240,7 +240,7 @@ func (h *Handler) ExportCrew(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRoleFor(w, r, graph.Team.OrgID, orgs.RoleMember, missing("crew not found")) {
 		return
 	}
-	portable, err := crewtemplates.Serialize(graph, h.agentService)
+	portable, err := crewtemplates.Serialize(graph, h.AgentService)
 	if err != nil {
 		respondInternal(w, r, "failed to export crew", err)
 		return
@@ -266,7 +266,7 @@ func (h *Handler) ImportCrew(w http.ResponseWriter, r *http.Request) {
 		if !h.requireProjectVisible(w, r, *projectID, crewPinNotFound) {
 			return
 		}
-		project, err := h.projectService.GetProject(*projectID)
+		project, err := h.ProjectService.GetProject(*projectID)
 		if err != nil || project == nil {
 			crewPinNotFound.write(w)
 			return
@@ -287,7 +287,7 @@ func (h *Handler) ImportCrew(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	result, err := crewtemplates.Import(&doc, orgID, projectID, h.agentService, h.teamService)
+	result, err := crewtemplates.Import(&doc, orgID, projectID, h.AgentService, h.TeamService)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -356,7 +356,7 @@ func (h *Handler) AddTeamNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	node, err := h.teamService.AddNode(mux.Vars(r)["id"], teams.NodeSpec{
+	node, err := h.TeamService.AddNode(mux.Vars(r)["id"], teams.NodeSpec{
 		NodeType:   req.NodeType,
 		AgentID:    req.AgentID,
 		UserID:     req.UserID,
@@ -376,7 +376,7 @@ func (h *Handler) UpdateTeamNode(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	node, err := h.teamService.GetNode(mux.Vars(r)["id"])
+	node, err := h.TeamService.GetNode(mux.Vars(r)["id"])
 	if err != nil || node == nil {
 		writeJSONError(w, http.StatusNotFound, "team node not found")
 		return
@@ -395,7 +395,7 @@ func (h *Handler) UpdateTeamNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.teamService.UpdateNode(mux.Vars(r)["id"], req.Label, req.AgentID, req.UserID, req.Department, req.Position)
+	updated, err := h.TeamService.UpdateNode(mux.Vars(r)["id"], req.Label, req.AgentID, req.UserID, req.Department, req.Position)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -407,7 +407,7 @@ func (h *Handler) RemoveTeamNode(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	node, err := h.teamService.GetNode(mux.Vars(r)["id"])
+	node, err := h.TeamService.GetNode(mux.Vars(r)["id"])
 	if err != nil || node == nil {
 		writeJSONError(w, http.StatusNotFound, "team node not found")
 		return
@@ -415,7 +415,7 @@ func (h *Handler) RemoveTeamNode(w http.ResponseWriter, r *http.Request) {
 	if h.teamWriteChecked(w, r, node.TeamID, missing("team node not found")) == nil {
 		return
 	}
-	if err := h.teamService.RemoveNode(mux.Vars(r)["id"]); err != nil {
+	if err := h.TeamService.RemoveNode(mux.Vars(r)["id"]); err != nil {
 		respondInternal(w, r, "failed to remove crew node", err)
 		return
 	}
@@ -439,7 +439,7 @@ func (h *Handler) AddTeamEdge(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	edge, err := h.teamService.AddEdge(mux.Vars(r)["id"], req.FromNodeID, req.ToNodeID, req.EdgeType, req.Config)
+	edge, err := h.TeamService.AddEdge(mux.Vars(r)["id"], req.FromNodeID, req.ToNodeID, req.EdgeType, req.Config)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -452,7 +452,7 @@ func (h *Handler) UpdateTeamEdge(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	edge, err := h.teamService.GetEdge(mux.Vars(r)["id"])
+	edge, err := h.TeamService.GetEdge(mux.Vars(r)["id"])
 	if err != nil || edge == nil {
 		writeJSONError(w, http.StatusNotFound, "team edge not found")
 		return
@@ -467,7 +467,7 @@ func (h *Handler) UpdateTeamEdge(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.teamService.UpdateEdge(mux.Vars(r)["id"], req.Config)
+	updated, err := h.TeamService.UpdateEdge(mux.Vars(r)["id"], req.Config)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -479,7 +479,7 @@ func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	edge, err := h.teamService.GetEdge(mux.Vars(r)["id"])
+	edge, err := h.TeamService.GetEdge(mux.Vars(r)["id"])
 	if err != nil || edge == nil {
 		writeJSONError(w, http.StatusNotFound, "team edge not found")
 		return
@@ -487,7 +487,7 @@ func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
 	if h.teamWriteChecked(w, r, edge.TeamID, missing("team edge not found")) == nil {
 		return
 	}
-	if err := h.teamService.RemoveEdge(mux.Vars(r)["id"]); err != nil {
+	if err := h.TeamService.RemoveEdge(mux.Vars(r)["id"]); err != nil {
 		respondInternal(w, r, "failed to remove crew edge", err)
 		return
 	}
@@ -499,7 +499,7 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireNoProposalRunLaunch(w, r) {
 		return
 	}
-	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
+	graph, err := h.TeamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return
@@ -558,7 +558,7 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	}
 	// A crew's run stays in the crew's workspace, whoever edits the project.
 	if req.ProjectID != "" && graph.Team.OrgID != "" {
-		if project, err := h.projectService.GetProject(req.ProjectID); err != nil || project == nil || project.OrgID != graph.Team.OrgID {
+		if project, err := h.ProjectService.GetProject(req.ProjectID); err != nil || project == nil || project.OrgID != graph.Team.OrgID {
 			writeJSONError(w, http.StatusBadRequest, "project does not belong to this workspace")
 			return
 		}
@@ -567,7 +567,7 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	// then the caller's active workspace.
 	orgID := graph.Team.OrgID
 	if orgID == "" && req.ProjectID != "" {
-		if project, err := h.projectService.GetProject(req.ProjectID); err == nil && project != nil {
+		if project, err := h.ProjectService.GetProject(req.ProjectID); err == nil && project != nil {
 			orgID = project.OrgID
 		}
 	}

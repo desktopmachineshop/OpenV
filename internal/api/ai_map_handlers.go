@@ -31,7 +31,7 @@ func (h *Handler) ProjectAIMap(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "project not found", err)
 		return
@@ -41,7 +41,7 @@ func (h *Handler) ProjectAIMap(w http.ResponseWriter, r *http.Request) {
 	source := "live state"
 
 	if baselineID := r.URL.Query().Get("baseline_id"); baselineID != "" {
-		baseline, err := h.baselineService.GetProjectBaseline(projectID, baselineID)
+		baseline, err := h.BaselineService.GetProjectBaseline(projectID, baselineID)
 		if err != nil {
 			writeJSONError(w, http.StatusNotFound, "baseline not found in this project")
 			return
@@ -53,12 +53,12 @@ func (h *Handler) ProjectAIMap(w http.ResponseWriter, r *http.Request) {
 		source = fmt.Sprintf("baseline %q (%s, captured %s)",
 			baseline.Name, baseline.ID, baseline.CreatedAt.UTC().Format(time.RFC3339))
 	} else {
-		arts, err := h.artifactService.GetArtifactsByProject(projectID)
+		arts, err := h.ArtifactService.GetArtifactsByProject(projectID)
 		if err != nil {
 			respondInternal(w, r, "failed to list artifacts", err)
 			return
 		}
-		lks, err := h.linkService.GetAllLinks(projectID)
+		lks, err := h.LinkService.GetAllLinks(projectID)
 		if err != nil {
 			respondInternal(w, r, "failed to list links", err)
 			return

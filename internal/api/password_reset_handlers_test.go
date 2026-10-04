@@ -71,9 +71,9 @@ func newResetHandler(t *testing.T, mailerOn bool) (*Handler, *fakeResetService, 
 	mailer := newTestMailer()
 	mailer.enabled = mailerOn
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.mailer = mailer
-		h.emailLinkBase = "https://app.example.com"
+		h.UserService = svc
+		h.Mailer = mailer
+		h.EmailLinkBase = "https://app.example.com"
 		h.authIPLimiter = newRateLimiter(100, 1)
 		h.passwordResetLimiter = newRateLimiter(2, 1)
 	})
