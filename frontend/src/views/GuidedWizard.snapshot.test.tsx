@@ -468,6 +468,7 @@ afterEach(() => {
 });
 
 describe('GuidedWizard characterization (S16b)', () => {
+  // ~1.5 s alone, but past vitest's 5 s default in a busy parallel run (#379, bug 135).
   it('walks every step and saves the answers it saves today', async () => {
     expect(NEED_SENTENCE_121).toHaveLength(121);
     expect(REQ_121).toHaveLength(121);
@@ -839,5 +840,5 @@ describe('GuidedWizard characterization (S16b)', () => {
         2
       ) + '\n'
     ).toMatchFileSnapshot('./__snapshots__/GuidedWizard.api.json');
-  });
+  }, 20_000);
 });

@@ -197,6 +197,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   more in between. A click now loads the artifact once, live or in a
   baseline.
 
+- **Following a citation or pasting a copy in the requirements workspace
+  selects it.** Clicking a reference such as #REQ-12 in an artifact's
+  description or notes, or one to a figure that is no longer there, went
+  straight back to the artifact selected before instead of opening the
+  one it named. Paste before, Paste after and Duplicate in the tree's
+  right-click menu made the copy but left the selection where it was.
+  Each now selects the artifact it names, or the new copy, as a click in
+  the tree does, and the page's address follows it.
+
 - **An expired share link no longer offers Revoke.** In project settings,
   a share link past its expiry date already opens nothing, yet its row
   still had a Revoke button, while a revoked link's row had none. An
