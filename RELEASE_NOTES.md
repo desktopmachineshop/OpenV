@@ -160,6 +160,19 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   now read "Description" and "Other". The page also stops carrying a label
   for a "non-functional" type that no artifact can have.
 
+- **Antigravity CLI waits for a stable-channel workspace's stable release,
+  as every new feature does.** The Antigravity CLI agent provider was
+  offered to every workspace from the release that shipped it, stable
+  channel included, even where the workspace's stable release did not
+  carry it yet. Such a workspace is now offered it, in the agent editor's
+  provider list and under AI providers in workspace settings, once its
+  stable release carries it (0.7.0 or later), and an agent or provider
+  setting that names it is refused until then with the usual "reaches
+  stable-channel workspaces at their next stable release" message. An
+  agent already on Antigravity CLI keeps it: it can still be edited and
+  still runs. Nightly workspaces, and stable-channel workspaces already on
+  0.15.0, see no change.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

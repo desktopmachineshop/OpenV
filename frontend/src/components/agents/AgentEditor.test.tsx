@@ -3,6 +3,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { mockApi } from '../../test/mockApi';
 import { AgentEditor, ALLOWED_TOOLS_REQUIRED } from './AgentEditor';
 import { agentsAPI, providerSettingsAPI, AgentDef } from '../../api/client';
+import { useAppStore } from '../../state/store';
 
 // The editor talks to the agents and provider-settings endpoints; every
 // client method is stubbed, and the tests answer the ones the editor calls.
@@ -114,4 +115,56 @@ test('shows the API message when the server refuses the definition', async () =>
     saveButton().click();
   });
   expect(container.textContent).toContain('requires allowed_tools');
+});
+
+// antigravity-cli ships behind its release feature (REQ-137, #379 bug 82): a
+// workspace whose channel has not received it is not offered it, whether the
+// picker lists the server's providers or its own fallback, while an agent
+// already on it keeps it.
+describe('the antigravity-cli gate', () => {
+  const initialStore = useAppStore.getState();
+  const gates = (on: boolean) =>
+    useAppStore.setState({
+      features: { channel: 'stable', stable_release: '0.6.0', preview: false, features: { 'antigravity-cli': on } },
+    });
+  const providerOptions = () =>
+    Array.from(container.querySelectorAll<HTMLSelectElement>('select'))
+      .find((s) => Array.from(s.options).some((o) => o.value === 'claude-code'))!;
+  const offered = () => Array.from(providerOptions().options).map((o) => o.value);
+  const SERVER_LIST = ['claude-code', 'gemini-cli', 'antigravity-cli'].map((provider) => ({ provider, available_models: [] }));
+
+  afterEach(() => {
+    useAppStore.setState(initialStore, true);
+  });
+
+  test('a new agent is not offered it until the feature is on', async () => {
+    gates(false);
+    // The fallback list, before (or without) the server's.
+    await render(<AgentEditor agent={null} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    expect(offered()).not.toContain('antigravity-cli');
+    expect(offered()).toContain('gemini-cli');
+
+    // The server's list.
+    providers.list.mockResolvedValue({ data: SERVER_LIST } as any);
+    act(() => root.unmount());
+    act(() => {
+      root = createRoot(container);
+    });
+    await render(<AgentEditor agent={null} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    expect(offered()).toEqual(['claude-code', 'gemini-cli']);
+
+    await act(async () => {
+      gates(true);
+    });
+    expect(offered()).toEqual(['claude-code', 'gemini-cli', 'antigravity-cli']);
+  });
+
+  test('an agent already on it keeps it with the feature off', async () => {
+    gates(false);
+    providers.list.mockResolvedValue({ data: SERVER_LIST } as any);
+    const agent = { ...agentFixture(['mcp__openv__*']), provider: 'antigravity-cli' } as AgentDef;
+    await render(<AgentEditor agent={agent} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    expect(offered()).toContain('antigravity-cli');
+    expect(providerOptions().value).toBe('antigravity-cli');
+  });
 });

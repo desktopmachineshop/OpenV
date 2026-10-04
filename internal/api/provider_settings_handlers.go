@@ -28,7 +28,14 @@ func (h *Handler) ListProviderSettings(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list provider settings", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	// A provider the workspace's channel has not received is not offered.
+	offered := list[:0]
+	for _, setting := range list {
+		if h.providerOffered(r, ActiveOrg(r), setting.Provider) {
+			offered = append(offered, setting)
+		}
+	}
+	json.NewEncoder(w).Encode(offered)
 }
 
 func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +48,10 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	setting.OrgID = ActiveOrg(r)
+	if !h.providerOffered(r, setting.OrgID, setting.Provider) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
 	if err := h.ProviderService.Upsert(&setting); err != nil {
 		if errors.Is(err, providers.ErrInvalidSetting) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
