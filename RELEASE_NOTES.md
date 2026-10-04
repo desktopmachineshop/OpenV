@@ -227,6 +227,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   change is now still there when you come back, and the rules load once,
   as in project settings.
 
+- **The Billing tab's buttons look like the rest of settings.** In
+  workspace settings, Billing's Continue to Stripe, Manage billing, Update
+  the card, Change plan and Keep the current plan buttons drew as plain
+  browser buttons. They now match the other buttons in settings, with the
+  step that moves you on (checkout, confirming a plan change, updating
+  the card after a failed payment) drawn as the main button.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
