@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -96,7 +97,7 @@ func (s *Scheduler) fire(a *automations.Automation) {
 	prompt := automations.RenderPrompt(a.PromptTemplate, map[string]string{
 		"automation.name": a.Name,
 	})
-	if prompt == "" {
+	if strings.TrimSpace(prompt) == "" {
 		prompt = "Scheduled run of automation: " + a.Name
 	}
 

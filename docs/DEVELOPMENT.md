@@ -628,23 +628,23 @@ against a stand-in repository that models the claim SQL, the scheduler's
 tests pin catch-up at start (done before `Start` returns: an automation
 that fell due while the server was down gets one run with `catch_up` and
 none without, and its row is claimed either way, though `last_run_at` is
-stamped only once a run has launched), a tick, the claim a
-replica must win before it fires (two schedulers racing for one due
-automation launch one run, and a claim answered with an error launches
-none), a cron expression that does not parse (the automation never fires:
-the scheduler switches it off, `enabled` false and `next_run_at` NULL, and
-logs why), the prompt (`Scheduled run of
-automation: <name>` when the template renders empty), the target, and
+stamped only once a run has launched), a tick, the claim a replica must
+win before it fires (two schedulers racing for one due automation launch
+one run, and a claim answered with an error launches none), a cron
+expression that does not parse (the automation never fires: the scheduler
+switches it off, `enabled` false and `next_run_at` NULL, and logs why),
+the prompt (`Scheduled run of automation: <name>` when the template
+renders empty or only whitespace, as in all three paths), the target, and
 `ResolveTarget`, which all three paths call. In `internal/automation`, the
 trigger matcher's tests pin the event filter (two numbers compared as
-numbers, any other pair as `fmt` prints it), the
-guards in their order (an event caused by one of the automation's own
-runs, actor `agent:<run>`, then the cooldown, then the hourly cap), the
-prompt variables, the run launched and the `last_run_at` stamp, and that
-`Start` subscribes to the event bus. `TestRunNowCopy` in `internal/api`
-pins run-now's copy (`Manual run of automation: <name>`, the caller as
-launcher, no guard and no stamp), and `TestSchedulersShareTheRealClaim`
-in `internal/persistence/postgres` races two real schedulers on the real
+numbers, any other pair as `fmt` prints it), the guards in their order (an
+event caused by one of the automation's own runs, actor `agent:<run>`,
+then the cooldown, then the hourly cap), the prompt variables, the run
+launched and the `last_run_at` stamp, and that `Start` subscribes to the
+event bus. `TestRunNowCopy` in `internal/api` pins run-now's copy (`Manual
+run of automation: <name>`, the caller as launcher, no guard and no
+stamp), and `TestSchedulersShareTheRealClaim` in
+`internal/persistence/postgres` races two real schedulers on the real
 claim when `OPENV_TEST_DATABASE_URL` is set (both CI legs run it). There
 is no golden: a change to any of this fails an expectation in these tests,
 which the pull request then changes with it. The scheduler and matcher

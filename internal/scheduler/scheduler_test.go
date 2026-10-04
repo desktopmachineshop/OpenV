@@ -192,9 +192,9 @@ func TestSchedulerStartTicks(t *testing.T) {
 // TestSchedulerPrompt pins the prompt a scheduled run gets: the template
 // rendered with automation.name as its one variable (any other placeholder,
 // event ones included, renders empty), or, when that renders to the empty
-// string, "Scheduled run of automation: <name>". A render of only
-// whitespace is kept as it is (the trigger matcher trims, this copy does
-// not).
+// string or only whitespace, "Scheduled run of automation: <name>", as the
+// trigger matcher's and run-now's copies do (the regression test for bug 77
+// of issue #379: this copy kept a render of only whitespace as the prompt).
 func TestSchedulerPrompt(t *testing.T) {
 	cases := []struct{ name, template, want string }{
 		{"an empty template", "", "Scheduled run of automation: Weekly report"},
@@ -203,7 +203,10 @@ func TestSchedulerPrompt(t *testing.T) {
 		{"no other variable", "{{automation.name}} on {{event.type}} in {{project.id}}{{event.entity_id}}",
 			"Weekly report on  in "},
 		{"only unknown placeholders", "{{event.type}}{{project.id}}", "Scheduled run of automation: Weekly report"},
-		{"unknown placeholders and a space", "{{event.type}} {{project.id}}", " "},
+		{"unknown placeholders and a space", "{{event.type}} {{project.id}}",
+			"Scheduled run of automation: Weekly report"},
+		{"a template of whitespace", " \n\t", "Scheduled run of automation: Weekly report"},
+		{"text inside whitespace, kept as it is", "  Summarise {{automation.name}}.\n", "  Summarise Weekly report.\n"},
 		{"plain text", "Summarise the week.", "Summarise the week."},
 	}
 	for _, tc := range cases {
