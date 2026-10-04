@@ -69,7 +69,7 @@ func (s *DefaultService) CreateOrg(name, orgType string, createdBy string) (*Org
 	if orgType != TypePersonal && orgType != TypeCompany {
 		return nil, fmt.Errorf("invalid organization type %q", orgType)
 	}
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	org := &Org{
 		ID:         uuid.New().String(),
 		Name:       name,
@@ -142,7 +142,7 @@ func (s *DefaultService) UpdateOrg(id string, name *string) (*Org, error) {
 	if name != nil && strings.TrimSpace(*name) != "" {
 		org.Name = strings.TrimSpace(*name)
 	}
-	org.UpdatedAt = time.Now()
+	org.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	if err := s.repo.UpdateOrg(org); err != nil {
 		return nil, err
 	}

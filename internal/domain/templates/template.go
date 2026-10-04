@@ -104,7 +104,7 @@ func (s *DefaultService) CreateTemplateFromProject(projectID string, name string
 		Description: description,
 		Snapshot:    json.RawMessage(snapshot),
 		IsDefault:   false,
-		CreatedAt:   time.Now(),
+		CreatedAt:   time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 
 	if err := s.repo.Create(template); err != nil {

@@ -59,7 +59,7 @@ type CreateChatterEntryRequest struct {
 
 // NewChatterEntry creates a new chatter entry
 func NewChatterEntry(artifactID, message string, isAutoEntry bool, entryType string) *ChatterEntry {
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	return &ChatterEntry{
 		ID:          uuid.New().String(),
 		ArtifactID:  artifactID,

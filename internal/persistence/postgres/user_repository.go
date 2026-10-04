@@ -274,9 +274,25 @@ func (r *UserRepository) ConsumePasswordReset(tokenHash string, now time.Time) (
 }
 
 // DeleteSpentEmailVerifications removes used links and links that expired
-// before cutoff; housekeeping only, correctness never depends on it.
+// before cutoff; housekeeping only, correctness never depends on it. The
+// reaper sweeps with it (#379 bug 163: nothing did, so every spent link
+// stayed). A link still live, unused and unexpired, is never removed.
+// expires_at is a TIMESTAMP holding a UTC wall clock and the reaper hands in
+// its own time.Now(), so cutoff is taken to UTC, as DeleteExpiredSessions
+// takes its now: a local one would remove live links east of UTC and keep
+// expired ones west.
 func (r *UserRepository) DeleteSpentEmailVerifications(cutoff time.Time) error {
-	_, err := r.db.Exec(`DELETE FROM email_verifications WHERE used OR expires_at < $1`, cutoff)
+	_, err := r.db.Exec(`DELETE FROM email_verifications WHERE used OR expires_at < $1`, cutoff.UTC())
+	return err
+}
+
+// DeleteSpentPasswordResets removes used reset links and links that expired
+// before cutoff, by the rules of DeleteSpentEmailVerifications: housekeeping
+// for the reaper, a live link never removed, cutoff taken to UTC (#379 bug
+// 163: a used link stayed for good, and an expired one until its account
+// asked for another).
+func (r *UserRepository) DeleteSpentPasswordResets(cutoff time.Time) error {
+	_, err := r.db.Exec(`DELETE FROM password_resets WHERE used OR expires_at < $1`, cutoff.UTC())
 	return err
 }
 

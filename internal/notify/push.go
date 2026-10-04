@@ -343,7 +343,7 @@ func (d *PushDispatcher) deliver(n *notifications.Notification) {
 //     success clears the mark.
 func (d *PushDispatcher) sendOne(s *pushsubs.Subscription, payload []byte, ntype string) {
 	status, err := d.sender.Send(s, payload)
-	now := d.now()
+	now := d.now().UTC() // last_used_at and failed_at are TIMESTAMPs holding UTC wall clocks (#379 bug 162)
 	switch {
 	case err != nil:
 		slog.Warn("push: send failed", "user_id", s.UserID, "type", ntype, "error", err)

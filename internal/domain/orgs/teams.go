@@ -65,7 +65,7 @@ func (s *DefaultTeamService) CreateTeam(orgID, name, description string, created
 	if _, err := s.orgs.Get(orgID); err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	team := &OrgTeam{
 		ID:          uuid.New().String(),
 		OrgID:       orgID,
@@ -129,7 +129,7 @@ func (s *DefaultTeamService) UpdateTeam(id string, name, description *string) (*
 	if description != nil {
 		team.Description = *description
 	}
-	team.UpdatedAt = time.Now()
+	team.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	if err := s.repo.UpdateTeam(team); err != nil {
 		return nil, err
 	}

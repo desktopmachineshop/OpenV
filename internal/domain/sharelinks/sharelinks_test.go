@@ -195,3 +195,30 @@ func TestUsable(t *testing.T) {
 		}
 	}
 }
+
+// TestALinkStampsItsTimesInUTC: created_at and revoked_at are TIMESTAMP
+// columns holding the UTC wall clock, so the service hands them UTC times
+// whatever the server's zone (#379 bug 170).
+func TestALinkStampsItsTimesInUTC(t *testing.T) {
+	for _, offset := range []int{2, -5} {
+		zone := time.FixedZone("server", offset*3600)
+		now := time.Date(2026, 10, 4, 11, 30, 0, 0, zone)
+		repo := newMemRepo()
+		svc := NewService(repo)
+		svc.now = func() time.Time { return now }
+		link, _, err := svc.Create("p1", RolePublic, "", nil, nil)
+		if err != nil {
+			t.Fatalf("UTC%+d: Create: %v", offset, err)
+		}
+		if link.CreatedAt.Location() != time.UTC || !link.CreatedAt.Equal(now) {
+			t.Errorf("UTC%+d: created at %v, want %v", offset, link.CreatedAt, now.UTC())
+		}
+		if err := svc.Revoke(link.ID); err != nil {
+			t.Fatalf("UTC%+d: Revoke: %v", offset, err)
+		}
+		stored, _ := repo.Get(link.ID)
+		if stored.RevokedAt == nil || stored.RevokedAt.Location() != time.UTC || !stored.RevokedAt.Equal(now) {
+			t.Errorf("UTC%+d: revoked at %v, want %v", offset, stored.RevokedAt, now.UTC())
+		}
+	}
+}

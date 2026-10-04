@@ -208,7 +208,7 @@ func NewAttachment(req CreateAttachmentRequest) *Attachment {
 		FilePath:         req.FilePath,
 		FileSize:         req.FileSize,
 		Version:          1,
-		CreatedAt:        time.Now(),
+		CreatedAt:        time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 }
 

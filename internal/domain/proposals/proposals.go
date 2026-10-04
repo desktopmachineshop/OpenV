@@ -193,7 +193,7 @@ func (s *DefaultService) Propose(runID, projectID, op string, targetID *string, 
 		Payload:   payload,
 		Ref:       ref,
 		Status:    StatusPending,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 	if err := s.repo.Save(p); err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func (s *DefaultService) Approve(id string, reviewedBy *string, note string) (*P
 		return nil, ErrNotPending
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // reviewed_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	p.ReviewedBy = reviewedBy
 	p.ReviewNote = note
 	p.ReviewedAt = &now
@@ -278,7 +278,7 @@ func (s *DefaultService) Reject(id string, reviewedBy *string, note string) (*Pr
 	if p.Status != StatusPending {
 		return nil, ErrNotPending
 	}
-	now := time.Now()
+	now := time.Now().UTC() // reviewed_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	p.Status = StatusRejected
 	p.ReviewedBy = reviewedBy
 	p.ReviewNote = note

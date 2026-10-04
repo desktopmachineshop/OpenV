@@ -245,7 +245,7 @@ func (s *DefaultService) CreateRun(req CreateRunRequest, createdBy *string) (*Te
 		return nil, errors.New("project id is required")
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	run := &TestRun{
 		ID:          uuid.New().String(),
 		ProjectID:   req.ProjectID,
@@ -291,7 +291,7 @@ func (s *DefaultService) UpdateRunStatus(id, status string) (*TestRun, error) {
 		return nil, ErrInvalidTransition
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	run.Status = status
 	run.CompletedAt = &now
 	run.UpdatedAt = now
@@ -365,7 +365,12 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 		}
 	}
 
-	now := time.Now()
+	// executed_at, created_at and updated_at are TIMESTAMPs holding UTC wall
+	// clocks, and a test case's latest result is the one with the latest
+	// executed_at: a local now moved it by the server's offset, so west of
+	// UTC a result recorded now lost to one a server in UTC recorded an hour
+	// before (#379 bug 162).
+	now := time.Now().UTC()
 	result := &TestResult{
 		ID:              uuid.New().String(),
 		RunID:           runID,

@@ -166,12 +166,17 @@ func (s *DefaultLoginService) StartLogin(orgID, provider, target string, request
 		return nil, err
 	}
 	if existing != nil {
+		// updated_at is a TIMESTAMP read back as UTC. Every write here stamps
+		// it in UTC, as the claim's NOW() does: a local stamp read back five
+		// hours old west of UTC, so a fresh request was abandoned and
+		// replaced, and east of UTC a stale one was handed out again for two
+		// hours more (#379 bug 162).
 		if time.Since(existing.UpdatedAt) < LoginStaleAfter {
 			return existing, nil
 		}
 		existing.Status = LoginFailed
 		existing.Detail = "abandoned: no progress from worker"
-		existing.UpdatedAt = time.Now()
+		existing.UpdatedAt = time.Now().UTC()
 		if err := s.repo.UpdateLogin(existing); err != nil {
 			return nil, err
 		}
@@ -181,7 +186,7 @@ func (s *DefaultLoginService) StartLogin(orgID, provider, target string, request
 	if target == LoginTargetUser {
 		detail = "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running."
 	}
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	login := &LoginRequest{
 		ID:          uuid.New().String(),
 		OrgID:       orgID,
@@ -221,7 +226,7 @@ func (s *DefaultLoginService) SubmitCode(id, code string) (*LoginRequest, error)
 		return nil, fmt.Errorf("login request is already %s", login.Status)
 	}
 	login.Code = code
-	login.UpdatedAt = time.Now()
+	login.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	if err := s.repo.UpdateLogin(login); err != nil {
 		return nil, err
 	}
@@ -237,7 +242,7 @@ func (s *DefaultLoginService) Cancel(id string) (*LoginRequest, error) {
 	if login.Active() {
 		login.Status = LoginCancelled
 		login.Detail = "Cancelled by user."
-		login.UpdatedAt = time.Now()
+		login.UpdatedAt = time.Now().UTC()
 		if err := s.repo.UpdateLogin(login); err != nil {
 			return nil, err
 		}
@@ -277,7 +282,7 @@ func (s *DefaultLoginService) Progress(id, status, authURL, detail, pasteKind st
 	if pasteKind != "" {
 		login.PasteKind = pasteKind
 	}
-	login.UpdatedAt = time.Now()
+	login.UpdatedAt = time.Now().UTC()
 	if err := s.repo.UpdateLogin(login); err != nil {
 		return nil, err
 	}

@@ -88,10 +88,8 @@ func runPurgeLoop(ctx context.Context, orgService *orgs.DefaultService, agentSer
 	}
 }
 
-// runReaper sweeps every 30 seconds, the first time 30 seconds after it
-// starts: it ends stale runs (failed, or cancelled when their cancel was
-// requested, #379 bug 167), deletes expired sessions and invitations, and
-// ends lapsed runner leases when there is a runner pool.
+// runReaper sweeps (reap) every 30 seconds, the first time 30 seconds after
+// it starts.
 func runReaper(
 	ctx context.Context,
 	runService *agentruns.DefaultService,
@@ -107,25 +105,44 @@ func runReaper(
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if ids, err := runService.FailStale(2 * time.Minute); err != nil {
-				slog.Error("reaper FailStale failed", "error", err)
-			} else if len(ids) > 0 {
-				slog.Warn("reaper ended stale runs", "count", len(ids))
-			}
-			_ = userRepo.DeleteExpiredSessions(time.Now(), sessionPolicy.MaxAge, sessionPolicy.Idle)
-			// Invitations that nobody accepted expire; the rows are of
-			// no further use to anyone.
-			_ = invitationService.PurgeExpired(time.Now())
-			// Transient runners: end lapsed leases (hard expiry, idle
-			// window, or a node that stopped heartbeating) so their
-			// nodes go back to the pool and their credentials die.
-			if runnerSessionService != nil {
-				if ended, err := runnerSessionService.Sweep(time.Now()); err != nil {
-					slog.Error("runner session sweep failed", "error", err)
-				} else if len(ended) > 0 {
-					slog.Info("ended lapsed runner sessions", "count", len(ended))
-				}
-			}
+			reap(runService, userRepo, invitationService, runnerSessionService, sessionPolicy)
+		}
+	}
+}
+
+// reap is one sweep of the reaper: it ends stale runs (failed, or cancelled
+// when their cancel was requested, #379 bug 167), deletes expired
+// sessions, spent sign-up verification and password reset links, and
+// expired invitations, and ends lapsed runner leases when there is a runner
+// pool.
+func reap(
+	runService *agentruns.DefaultService,
+	userRepo *postgres.UserRepository,
+	invitationService *invitations.DefaultService,
+	runnerSessionService runnersessions.Service,
+	sessionPolicy users.SessionPolicy,
+) {
+	if ids, err := runService.FailStale(2 * time.Minute); err != nil {
+		slog.Error("reaper FailStale failed", "error", err)
+	} else if len(ids) > 0 {
+		slog.Warn("reaper ended stale runs", "count", len(ids))
+	}
+	_ = userRepo.DeleteExpiredSessions(time.Now(), sessionPolicy.MaxAge, sessionPolicy.Idle)
+	// Verification and reset links that were used or have expired are of no
+	// further use; a live one is kept (#379 bug 163: nothing removed them).
+	_ = userRepo.DeleteSpentEmailVerifications(time.Now())
+	_ = userRepo.DeleteSpentPasswordResets(time.Now())
+	// Invitations that nobody accepted expire; the rows are of
+	// no further use to anyone.
+	_ = invitationService.PurgeExpired(time.Now())
+	// Transient runners: end lapsed leases (hard expiry, idle
+	// window, or a node that stopped heartbeating) so their
+	// nodes go back to the pool and their credentials die.
+	if runnerSessionService != nil {
+		if ended, err := runnerSessionService.Sweep(time.Now()); err != nil {
+			slog.Error("runner session sweep failed", "error", err)
+		} else if len(ended) > 0 {
+			slog.Info("ended lapsed runner sessions", "count", len(ended))
 		}
 	}
 }
