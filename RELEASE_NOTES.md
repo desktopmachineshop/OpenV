@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.16.1 — 2026-10-04
+
 ### Bug fixes
 
 - **Agent runs and runners keep time on a server whose clock is not set to
