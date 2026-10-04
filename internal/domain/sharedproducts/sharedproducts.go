@@ -267,7 +267,10 @@ func (s *DefaultService) Publish(in Product, orgID, userID string) (*Product, er
 		return nil, err
 	}
 
-	count, err := s.repo.CountByOrgSince(orgID, s.now().Add(-24*time.Hour))
+	// created_at is a TIMESTAMP holding the UTC wall clock, so the window's
+	// start is handed in UTC too: a local one made the day 29 hours long
+	// west of UTC and 22 hours east of it (#379 bug 171).
+	count, err := s.repo.CountByOrgSince(orgID, s.now().UTC().Add(-24*time.Hour))
 	if err != nil {
 		return nil, err
 	}

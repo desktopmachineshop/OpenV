@@ -65,7 +65,12 @@ type UpdateLinkRequest struct {
 
 // NewLink creates a new link with generated ID
 func NewLink(req CreateLinkRequest) *Link {
-	now := time.Now()
+	// valid_from, created_at and updated_at are TIMESTAMPs holding UTC wall
+	// clocks. The repository's Delete closes valid_from with valid_to =
+	// NOW(), which is UTC, so a local one gave a removed link a history that
+	// ended before it began (east of UTC) or began hours early (west) (#379
+	// bug 162).
+	now := time.Now().UTC()
 	return &Link{
 		ID:         uuid.New().String(),
 		FromID:     req.FromID,
@@ -230,7 +235,7 @@ func (s *DefaultService) UpdateLink(id string, req UpdateLinkRequest) (*Link, er
 	link.Type = req.Type
 	link.Attributes = req.Attributes
 	link.Version++
-	link.UpdatedAt = time.Now()
+	link.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 
 	err = s.repo.Update(link)
 	if err != nil {

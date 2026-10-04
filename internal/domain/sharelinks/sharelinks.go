@@ -136,7 +136,7 @@ func (s *DefaultService) Create(projectID, role, label string, createdBy *string
 		Role:      role,
 		Label:     strings.TrimSpace(label),
 		CreatedBy: createdBy,
-		CreatedAt: s.now(),
+		CreatedAt: s.now().UTC(), // a TIMESTAMP column holds the UTC wall clock (#379 bug 170)
 		ExpiresAt: expiresAt,
 	}
 	if err := s.repo.Create(link, users.HashToken(token)); err != nil {
@@ -154,7 +154,10 @@ func (s *DefaultService) List(projectID string) ([]*Link, error) {
 }
 
 // Revoke implements Service.
-func (s *DefaultService) Revoke(id string) error { return s.repo.Revoke(id, s.now()) }
+func (s *DefaultService) Revoke(id string) error {
+	// revoked_at is a TIMESTAMP holding the UTC wall clock (#379 bug 170).
+	return s.repo.Revoke(id, s.now().UTC())
+}
 
 // Resolve implements Service.
 func (s *DefaultService) Resolve(token string) (*Link, error) {

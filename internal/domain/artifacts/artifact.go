@@ -186,7 +186,7 @@ type UpdateArtifactRequest struct {
 
 // NewArtifact creates a new artifact with generated ID
 func NewArtifact(req CreateArtifactRequest) *Artifact {
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	order := 0
 	if req.SortOrder != nil {
 		order = *req.SortOrder
@@ -506,8 +506,9 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 	// opens (issue #161 — the repository archives the old row with
 	// valid_to = this ValidFrom; carrying the stale ValidFrom forward gave
 	// the archived row a zero-length interval and the new row a validity
-	// window reaching back before it existed).
-	now := time.Now()
+	// window reaching back before it existed). Both are TIMESTAMPs holding
+	// UTC wall clocks (#379 bug 162).
+	now := time.Now().UTC()
 	artifact.Version++
 	artifact.ValidFrom = now
 	artifact.UpdatedAt = now
@@ -608,7 +609,9 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 	// Create a new version based on the old version. The ref is the
 	// artifact's, not the restored version's, and stays as it is (REQ-4),
 	// unless the restore changes the type to one with another prefix: then
-	// it is minted again, as a retype edit's is (ref.go).
+	// it is minted again, as a retype edit's is (ref.go). One UTC now stamps
+	// both TIMESTAMPs, as UpdateArtifact's does (#379 bug 162).
+	now := time.Now().UTC()
 	restored := &Artifact{
 		ID:         current.ID,
 		ProjectID:  current.ProjectID,
@@ -621,10 +624,10 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 		Status:     restoredStatus,
 		Attributes: versionToRestore.Attributes,
 		Version:    current.Version + 1,
-		ValidFrom:  time.Now(),
+		ValidFrom:  now,
 		ValidTo:    nil,
 		CreatedAt:  current.CreatedAt,
-		UpdatedAt:  time.Now(),
+		UpdatedAt:  now,
 	}
 	restored.syncStatusAttribute()
 

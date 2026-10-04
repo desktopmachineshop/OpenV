@@ -121,7 +121,7 @@ func New(eventType, projectID, entityID, actor string, payload map[string]interf
 		EntityID:  entityID,
 		Actor:     actor,
 		Payload:   payload,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(), // domain_events.created_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 }
 

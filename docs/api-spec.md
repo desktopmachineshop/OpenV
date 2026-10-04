@@ -1241,10 +1241,10 @@ entries is still accepted (older runners). `partial_text` is the assistant
 answer written so far — the whole text, not a delta, capped at 64 KB — and an
 empty string means "unchanged". It is stored on the run as `partial_text`,
 returned with the run, cleared whenever the run stops being live — at finish
-(`final_text` takes over), when the stale-run reaper fails it, and when a
+(`final_text` takes over), when the stale-run reaper ends it, and when a
 worker releases it back to the queue — and broadcast as `partial` on the run's
 own stream and as `assistant_partial` on any session the run belongs to.
-| POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
+| POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation → the run. A queued run is cancelled at once; a claimed or running run is asked to stop (`cancel_requested`), and its worker stops it and reports it cancelled. The run's status when the cancel is written decides, not when it was read: a run its worker hands back to the queue meanwhile is cancelled. A finished run, or one awaiting approval, is answered as it is | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/retry` | Re-enqueue a failed, cancelled or timed-out run as a new one (`retried_from_run_id`); `409` otherwise. Refused `403` for a proposal-mode agent run, `401` for any other run token | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
@@ -1257,7 +1257,17 @@ fails when an approved proposal could not be applied: its `error` is then
 `agent_error`, which is never retried automatically; a member may still
 retry it (REQ-79, REQ-84). Deleting its project cancels it instead, its
 proposals gone with the project. A run whose cancel was requested is never
-retried automatically either, however it ends.
+retried automatically either, however it ends, even when the cancel came
+as its worker was reporting it finished: a finish keeps the cancel.
+
+A claimed or running run whose worker has sent nothing (logs, heartbeat)
+for two minutes is ended by the stale-run reaper: failed, with `error`
+`worker lost (heartbeat timeout)` and `error_class` `worker_error`, which
+is retried automatically while the run has attempts left (a crew,
+automation or session run excepted). A run whose cancel was requested ends
+`cancelled` instead, with no error, as its worker reporting it cancelled
+would have ended it; its launcher gets no "Agent run failed" notification
+for it.
 
 When a crew run succeeds (for one awaiting approval, once it is finalised),
 each `hands-off-to` and `reviews` edge of its crew node starts what it leads

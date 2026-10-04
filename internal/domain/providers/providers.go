@@ -206,7 +206,7 @@ func (s *DefaultService) Upsert(setting *ProviderSetting) error {
 	if setting.LastDetected == nil {
 		setting.LastDetected = map[string]interface{}{}
 	}
-	setting.UpdatedAt = time.Now()
+	setting.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	if err := s.repo.Upsert(setting); err != nil {
 		return err
 	}
@@ -239,6 +239,6 @@ func (s *DefaultService) RecordDetection(orgID, provider string, detected map[st
 		setting.LastDetected[k] = v
 	}
 	setting.LastDetected["checked_at"] = time.Now().UTC().Format(time.RFC3339)
-	setting.UpdatedAt = time.Now()
+	setting.UpdatedAt = time.Now().UTC()
 	return s.repo.Upsert(setting)
 }

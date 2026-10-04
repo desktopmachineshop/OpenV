@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
 
 // TestBootMisconfigured boots the real server once per fatal configuration
@@ -24,10 +27,11 @@ import (
 //     or may not beat the exit;
 //   - the exit status, and that the server never answered /health;
 //   - whether the migrations ran before the fatal check, read from the
-//     boot's own database after the exit: no tables at all, or a
-//     schema_migrations ledger that runs from version 1 without a gap (the
-//     count is not recorded, so a new migration changes no golden here);
-//     for a boot whose DATABASE_URL names no server, that it had none;
+//     boot's own database after the exit: no tables at all, or which of the
+//     registered migrations its schema_migrations ledger records, all, none
+//     or some, naming those it lacks (ledgerState; the count is not
+//     recorded, so a new migration changes no golden here); for a boot whose
+//     DATABASE_URL names no server, that it had none;
 //   - what the server sent through the recording proxy (nothing);
 //   - for a boot pointed at a stand-in database, whether the password it
 //     received was DB_PASSWORD exactly as set.
@@ -241,10 +245,10 @@ type migrationState struct {
 }
 
 // migrationsRan reads the boot's database after the server exited: whether
-// it has any table, and if so whether the schema_migrations ledger runs from
-// version 1 without a gap, as MigrateAndBackfill leaves it when it returns.
-// A boot that sets DATABASE_URL itself never handed the server the fresh
-// database, so there is nothing of its to read.
+// it has any table, and if so which registered migrations its
+// schema_migrations ledger records (ledgerState). A boot that sets
+// DATABASE_URL itself never handed the server the fresh database, so there
+// is nothing of its to read.
 func migrationsRan(t *testing.T, db testDatabase, b misconfiguredBoot) migrationState {
 	t.Helper()
 	if b.standIn {
@@ -263,7 +267,7 @@ func migrationsRan(t *testing.T, db testDatabase, b misconfiguredBoot) migration
 		t.Fatalf("count the boot's tables: %v", err)
 	}
 	if tables == 0 {
-		return migrationState{text: "no (the database has no tables)"}
+		return migrationState{text: "none (the database has no tables)"}
 	}
 	var ledger bool
 	if err := conn.QueryRow(`SELECT to_regclass('public.schema_migrations') IS NOT NULL`).Scan(&ledger); err != nil {
@@ -272,13 +276,90 @@ func migrationsRan(t *testing.T, db testDatabase, b misconfiguredBoot) migration
 	if !ledger {
 		return migrationState{yes: true, text: "in part (the database has tables but no schema_migrations ledger)"}
 	}
-	var first, last, n int
-	if err := conn.QueryRow(`SELECT COALESCE(min(version), 0), COALESCE(max(version), 0), count(*) FROM schema_migrations`).
-		Scan(&first, &last, &n); err != nil {
+	rows, err := conn.Query(`SELECT version FROM schema_migrations ORDER BY version`)
+	if err != nil {
 		t.Fatalf("read the ledger: %v", err)
 	}
-	if n > 0 && first == 1 && last == n {
-		return migrationState{yes: true, text: "yes (the schema_migrations ledger runs from version 1 without a gap)"}
+	defer rows.Close()
+	var applied []int
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			t.Fatalf("read the ledger: %v", err)
+		}
+		applied = append(applied, v)
 	}
-	return migrationState{yes: true, text: fmt.Sprintf("in part (the schema_migrations ledger holds %d versions, %d to %d)", n, first, last)}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("read the ledger: %v", err)
+	}
+	return ledgerState(applied, postgres.MigrationVersions())
+}
+
+// ledgerState reads the versions a schema_migrations ledger records against
+// the registry's (#379 bug 160): "all" when it records every registered
+// version, "none" when it records none of them, and otherwise "in part",
+// naming the registered versions it lacks. It used to read any ledger that
+// did not run from version 1 without a gap as "in part", so a registry that
+// skips a number, or a ledger that also records a version this binary does
+// not register, read as a partial migration although every registered one
+// had run.
+func ledgerState(applied, registered []int) migrationState {
+	recorded := make(map[int]bool, len(applied))
+	for _, v := range applied {
+		recorded[v] = true
+	}
+	var missing []string
+	for _, v := range registered {
+		if !recorded[v] {
+			missing = append(missing, strconv.Itoa(v))
+		}
+	}
+	switch {
+	case len(missing) == 0:
+		return migrationState{yes: true, text: "all (the schema_migrations ledger records every registered migration)"}
+	case len(missing) == len(registered):
+		return migrationState{yes: true, text: "none (the schema_migrations ledger records no registered migration)"}
+	}
+	return migrationState{yes: true, text: "in part (the schema_migrations ledger lacks the registered versions " +
+		strings.Join(missing, ", ") + ")"}
+}
+
+// TestTheLedgerReadsAgainstTheRegistry pins ledgerState, with no database
+// (#379 bug 160): a ledger reads as all of the migrations having run when it
+// records every registered version, whatever the numbers in between or
+// beyond, as none when it records no registered version, and as in part
+// otherwise, naming the registered versions it lacks.
+func TestTheLedgerReadsAgainstTheRegistry(t *testing.T) {
+	upTo := func(n int) []int {
+		var v []int
+		for i := 1; i <= n; i++ {
+			v = append(v, i)
+		}
+		return v
+	}
+	for _, c := range []struct {
+		name                string
+		applied, registered []int
+		want                string
+	}{
+		{"every registered version", upTo(5), upTo(5),
+			"all (the schema_migrations ledger records every registered migration)"},
+		{"every version of a registry that skips a number", []int{1, 2, 4, 5}, []int{1, 2, 4, 5},
+			"all (the schema_migrations ledger records every registered migration)"},
+		{"every registered version and one this binary does not register", []int{1, 2, 3, 7}, upTo(3),
+			"all (the schema_migrations ledger records every registered migration)"},
+		{"the whole registry", postgres.MigrationVersions(), postgres.MigrationVersions(),
+			"all (the schema_migrations ledger records every registered migration)"},
+		{"an empty ledger", nil, upTo(3),
+			"none (the schema_migrations ledger records no registered migration)"},
+		{"only a version this binary does not register", []int{9}, upTo(3),
+			"none (the schema_migrations ledger records no registered migration)"},
+		{"some registered versions", []int{1, 2, 4}, upTo(5),
+			"in part (the schema_migrations ledger lacks the registered versions 3, 5)"},
+	} {
+		got := ledgerState(c.applied, c.registered)
+		if got.text != c.want || !got.yes {
+			t.Errorf("%s: %+v, want %q, migrations ran", c.name, got, c.want)
+		}
+	}
 }

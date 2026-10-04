@@ -318,115 +318,38 @@ func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error
 	return true, tx.Commit()
 }
 
-// cancelQueuedRun is what cancelling a queued run writes: the run is
-// cancelled at once and its token revoked. CancelQueued and a project's
-// delete (cancelProjectRuns) write it alike; so do the delete for a run
-// awaiting approval, and ReleaseClaim for a run whose cancel was requested,
-// neither of which any worker will report.
-const cancelQueuedRun = `status = 'cancelled', cancel_requested = TRUE, finished_at = NOW(), run_token_hash = ''`
-
-// requestLiveRunCancel is what asking a claimed or running run to stop
-// writes: the flag its worker reads on its next log push or heartbeat, after
-// which it stops the agent and reports the run cancelled.
-const requestLiveRunCancel = `cancel_requested = TRUE`
-
-// CancelQueued conditionally cancels a run only while it is still queued,
-// revoking its token; reports whether it was applied.
-func (rep *AgentRunRepository) CancelQueued(id string) (bool, error) {
-	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET `+cancelQueuedRun+`
-		WHERE id = $1 AND status = 'queued'
-	`, id)
-	if err != nil {
-		return false, err
-	}
-	n, err := res.RowsAffected()
-	return n > 0, err
-}
-
-// SetCancelRequested flags a claimed/running run for cooperative
-// cancellation; reports whether the flag was applied.
-func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
-	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET `+requestLiveRunCancel+`
-		WHERE id = $1 AND status IN ('claimed', 'running')
-	`, id)
-	if err != nil {
-		return false, err
-	}
-	n, err := res.RowsAffected()
-	return n > 0, err
-}
-
-// cancelProjectRuns cancels a project's live runs inside the transaction that
-// deletes the project (#379 bug 137: they went on with no project, their
-// token reaching nothing), as RequestCancel cancels one: a queued run is
-// cancelled, with its token revoked, as CancelQueued writes it; a claimed or
-// running run is asked to stop, as SetCancelRequested writes it, and its
-// token is revoked at once besides, since the project it acted in is gone.
-// The worker reports to the server with its own key, not the run's token,
-// so it still reads the flag and reports the run cancelled. A run awaiting
-// approval is cancelled as a queued one is (#379 bug 146): its proposals go
-// with the project, so no review could ever finalise it. It answers the ids
-// of the runs it cancelled or asked to stop, for the caller to announce
-// once the transaction has committed.
-//
-// The queued runs go first. A claim takes a queued run with FOR UPDATE SKIP
-// LOCKED, so it skips the runs the first statement holds, and after the
-// commit finds them cancelled; a claim that took one of them before that
-// statement reached it made it claimed, which the second statement, reading
-// afresh, then asks to stop. The other order would let a run queued when
-// the live runs were read be claimed before the queued ones were, and escape
-// both.
-func cancelProjectRuns(tx *sql.Tx, projectID string) ([]string, error) {
-	var ids []string
-	for _, stmt := range []string{
-		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'queued' RETURNING id`,
-		`UPDATE agent_runs SET ` + requestLiveRunCancel + `, run_token_hash = '' WHERE project_id = $1 AND status IN ('claimed', 'running') RETURNING id`,
-		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'awaiting_approval' RETURNING id`,
-	} {
-		rows, err := tx.Query(stmt, projectID)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
-			var id string
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			ids = append(ids, id)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		rows.Close()
-	}
-	return ids, nil
-}
-
 // UpdateTerminal writes a run's terminal result fields and revokes its run
 // token, but only while a worker still holds the run (claimed or running), so
 // neither a run already finished nor one back in the queue takes a result;
 // reports whether the transition was applied.
+//
+// The cancel flag is never cleared: a cancel requested after the caller
+// read the run is kept, and r.CancelRequested is set to the flag as stored,
+// so the caller's auto-retry decision sees it (#379 bug 166: the flag the
+// caller had read, false, was written back over a cancel requested
+// meanwhile, and a retryable failure was then retried).
 func (rep *AgentRunRepository) UpdateTerminal(r *agentruns.Run) (bool, error) {
 	touched, err := json.Marshal(r.ArtifactsTouched)
 	if err != nil {
 		return false, err
 	}
-	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = $2, cancel_requested = $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
+	var cancelRequested bool
+	err = rep.db.QueryRow(`
+		UPDATE agent_runs SET status = $2, cancel_requested = agent_runs.cancel_requested OR $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
 			exit_code = $8, final_text = $9, error = $10, tokens_in = $11, tokens_out = $12, cost_usd = $13, artifacts_touched = $14,
 			error_class = $15, run_token_hash = '', partial_text = ''
 		WHERE id = $1 AND status IN ('claimed', 'running')
+		RETURNING cancel_requested
 	`, r.ID, r.Status, r.CancelRequested, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt,
-		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.ErrorClass)
+		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.ErrorClass).Scan(&cancelRequested)
+	if noRow(err) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	n, err := res.RowsAffected()
-	return n > 0, err
+	r.CancelRequested = cancelRequested
+	return true, nil
 }
 
 // UpdateWorkItemID links a run to its kanban card.
@@ -508,9 +431,20 @@ func (rep *AgentRunRepository) UpdatePartialText(runID string, text string) (boo
 // The half-written answer goes with them: a failed run has no reply coming,
 // and leaving partial_text behind makes the run detail panel render "Output
 // so far" under a live cursor on a run that will never write another word.
+//
+// A run whose cancel was requested ends cancelled instead, with no error and
+// no error class, as its worker reporting it cancelled would have ended it:
+// someone asked it to stop, and it has stopped (#379 bug 167: it was failed
+// as "worker lost", and its launcher was told the run they cancelled had
+// failed). The flag is read from the row as it is written, so a cancel
+// that commits while the sweep waits for the row is seen.
 func (rep *AgentRunRepository) FailStale(cutoff time.Time) ([]string, error) {
 	rows, err := rep.db.Query(`
-		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', error_class = 'worker_error', finished_at = NOW(), run_token_hash = '', partial_text = ''
+		UPDATE agent_runs SET
+			status = CASE WHEN cancel_requested THEN 'cancelled' ELSE 'failed' END,
+			error = CASE WHEN cancel_requested THEN '' ELSE 'worker lost (heartbeat timeout)' END,
+			error_class = CASE WHEN cancel_requested THEN '' ELSE 'worker_error' END,
+			finished_at = NOW(), run_token_hash = '', partial_text = ''
 		WHERE status IN ('claimed', 'running') AND heartbeat_at < $1
 		RETURNING id
 	`, cutoff)

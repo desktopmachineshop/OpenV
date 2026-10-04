@@ -1,0 +1,318 @@
+package postgres
+
+import (
+	"database/sql"
+	"errors"
+	"reflect"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/events"
+)
+
+// A cancel lands whatever a race does to the run around it (#379 bugs 165
+// to 167): a release, a claim, a worker's finish or the reaper writing the
+// run while a cancel is under way never loses the cancel. Each race is made
+// deterministic with row locks: a transaction of the test's own holds the
+// run's row, the writers under test queue behind it in the order they
+// start, and the test lets them through once they all wait.
+// Postgres-gated (OPENV_TEST_DATABASE_URL).
+
+// acrHoldRun locks the run's row in a transaction of its own, as a writer
+// holding it would, and answers the transaction for the test to write in
+// and commit.
+func acrHoldRun(t *testing.T, db *sql.DB, runID string) *sql.Tx {
+	t.Helper()
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+	if _, err := tx.Exec(`SELECT id FROM agent_runs WHERE id = $1 FOR UPDATE`, runID); err != nil {
+		t.Fatal(err)
+	}
+	return tx
+}
+
+// acrAwaitLockWaiters waits until n sessions on the test's database wait for
+// a lock: the writers started behind acrHoldRun's lock, each queued behind
+// the one started before it.
+func acrAwaitLockWaiters(t *testing.T, db *sql.DB, n int) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		var waiting int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM pg_stat_activity
+			WHERE datname = current_database() AND wait_event_type = 'Lock'`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting >= n {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("%d sessions wait for the run's row, want %d", waiting, n)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// acrAnswer is what a service call started behind a held row answered.
+type acrAnswer struct {
+	run *agentruns.Run
+	err error
+}
+
+// acrClaim queues a run and claims it for worker w-1, running when status
+// says so, holding a token.
+func acrClaim(t *testing.T, f *claimFixture, status string) string {
+	t.Helper()
+	id := f.queueRun(t, runSpec{})
+	if claimed, err := f.repo.Claim("w-1", f.orgID, "", claudeOnly, 0, false); err != nil || claimed == nil || claimed.ID != id {
+		t.Fatalf("Claim = %v, %v, want the run", claimed, err)
+	}
+	if status == agentruns.StatusRunning {
+		if applied, err := f.repo.MarkRunning(id, time.Now().UTC()); err != nil || !applied {
+			t.Fatalf("MarkRunning = %v, %v", applied, err)
+		}
+	}
+	f.exec(t, `UPDATE agent_runs SET run_token_hash = 'hash' WHERE id = $1`, id)
+	return id
+}
+
+// The race of #379 bug 165: a cancel reads a run as claimed or running
+// while its worker hands it back. The release holds the run's row, and the
+// cancel's write, waiting behind it, lands on the run the release left
+// queued: the run ends cancelled, finished, its token revoked, as a cancel
+// ends a queued run, and no claim takes it after. Before the fix the cancel
+// wrote only to a claimed or running run, matched nothing, and the run
+// answered queued, its cancel lost, for the next claim to start again.
+func TestACancelRacingAReleaseEndsTheRunCancelled(t *testing.T) {
+	for _, status := range []string{agentruns.StatusClaimed, agentruns.StatusRunning} {
+		t.Run(status, func(t *testing.T) {
+			f := newClaimFixture(t)
+			svc := agentruns.NewDefaultService(f.repo, nil, nil)
+			id := acrClaim(t, f, status)
+
+			hold := acrHoldRun(t, f.db, id)
+			released := make(chan error, 1)
+			go func() {
+				ok, err := f.repo.ReleaseClaim(id, "w-1")
+				if err == nil && !ok {
+					err = errors.New("nothing released")
+				}
+				released <- err
+			}()
+			acrAwaitLockWaiters(t, f.db, 1)
+			cancelled := make(chan acrAnswer, 1)
+			go func() {
+				run, err := svc.RequestCancel(id)
+				cancelled <- acrAnswer{run, err}
+			}()
+			acrAwaitLockWaiters(t, f.db, 2)
+			if err := hold.Commit(); err != nil {
+				t.Fatal(err)
+			}
+			if err := <-released; err != nil {
+				t.Fatalf("ReleaseClaim: %v", err)
+			}
+			a := <-cancelled
+			if a.err != nil {
+				t.Fatalf("RequestCancel: %v", a.err)
+			}
+
+			run := f.mustFind(t, id)
+			if run.Status != agentruns.StatusCancelled || !run.CancelRequested || run.FinishedAt == nil || f.tokenHash(t, id) != "" {
+				t.Errorf("the run after the release and the cancel: %s, cancel requested %v, finished at %v, token %q; want cancelled, requested, finished, revoked",
+					run.Status, run.CancelRequested, run.FinishedAt, f.tokenHash(t, id))
+			}
+			if a.run.Status != agentruns.StatusCancelled {
+				t.Errorf("RequestCancel answered %s, want cancelled", a.run.Status)
+			}
+			if next, err := f.repo.Claim("w-2", f.orgID, "", claudeOnly, 0, false); err != nil || next != nil {
+				t.Errorf("a claim after the cancel took %v (%v), want nothing", next, err)
+			}
+		})
+	}
+}
+
+// A cancel that reads a run as queued while a worker claims it lands on the
+// claimed run as a request to stop: the claim keeps the run, its worker and
+// its token, and the worker reads the cancel on its next report. The
+// claim's write is made in the transaction holding the run's row (Claim
+// itself skips a row another transaction holds), and the cancel waits for
+// it.
+func TestACancelRacingAClaimAsksTheClaimedRunToStop(t *testing.T) {
+	f := newClaimFixture(t)
+	svc := agentruns.NewDefaultService(f.repo, nil, nil)
+	id := f.queueRun(t, runSpec{})
+
+	hold := acrHoldRun(t, f.db, id)
+	cancelled := make(chan acrAnswer, 1)
+	go func() {
+		run, err := svc.RequestCancel(id)
+		cancelled <- acrAnswer{run, err}
+	}()
+	acrAwaitLockWaiters(t, f.db, 1)
+	if _, err := hold.Exec(`UPDATE agent_runs SET status = 'claimed', worker_id = 'w-1', heartbeat_at = NOW(), run_token_hash = 'hash' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := hold.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	a := <-cancelled
+	if a.err != nil {
+		t.Fatalf("RequestCancel: %v", a.err)
+	}
+
+	run := f.mustFind(t, id)
+	if run.Status != agentruns.StatusClaimed || run.WorkerID != "w-1" || !run.CancelRequested || run.FinishedAt != nil || f.tokenHash(t, id) != "hash" {
+		t.Errorf("the run after the claim and the cancel: %s by %q, cancel requested %v, finished at %v, token %q; want claimed by w-1, requested, unfinished, its token kept",
+			run.Status, run.WorkerID, run.CancelRequested, run.FinishedAt, f.tokenHash(t, id))
+	}
+	if a.run.Status != agentruns.StatusClaimed || !a.run.CancelRequested {
+		t.Errorf("RequestCancel answered %s, cancel requested %v; want claimed, requested", a.run.Status, a.run.CancelRequested)
+	}
+}
+
+// The race of #379 bug 166: a cancel is requested while the run's worker
+// reports it finished. The finish has read the run, its cancel not yet
+// requested, and the cancel holds the run's row as the finish writes; the
+// finish waits, then ends the run as its worker reported it and keeps the
+// cancel, and answers the run as stored, still asked to stop, which is
+// what its auto-retry decides on. Before the fix the finish wrote the flag
+// it had read, false, over the cancel.
+func TestAFinishRacingACancelKeepsTheCancel(t *testing.T) {
+	f := newClaimFixture(t)
+	svc := agentruns.NewDefaultService(f.repo, nil, nil)
+	id := acrClaim(t, f, agentruns.StatusRunning)
+
+	hold := acrHoldRun(t, f.db, id)
+	finished := make(chan acrAnswer, 1)
+	go func() {
+		run, err := svc.Finish(id, agentruns.FinishRequest{Status: agentruns.StatusFailed, Error: "killed", ErrorClass: agentruns.ErrorClassWorkerError})
+		finished <- acrAnswer{run, err}
+	}()
+	acrAwaitLockWaiters(t, f.db, 1)
+	if _, err := hold.Exec(`UPDATE agent_runs SET `+requestLiveRunCancel+` WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := hold.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	a := <-finished
+	if a.err != nil {
+		t.Fatalf("Finish: %v", a.err)
+	}
+
+	run := f.mustFind(t, id)
+	if run.Status != agentruns.StatusFailed || run.ErrorClass != agentruns.ErrorClassWorkerError || !run.CancelRequested || f.tokenHash(t, id) != "" {
+		t.Errorf("the run after the cancel and the finish: %s (%s), cancel requested %v, token %q; want failed (worker_error), still requested, revoked",
+			run.Status, run.ErrorClass, run.CancelRequested, f.tokenHash(t, id))
+	}
+	if !a.run.CancelRequested {
+		t.Error("Finish answered the run with its cancel not requested, want requested: its auto-retry decides on it")
+	}
+}
+
+// acrBus records the events a service publishes.
+type acrBus struct {
+	mu        sync.Mutex
+	published []events.Event
+}
+
+func (b *acrBus) Publish(e events.Event) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.published = append(b.published, e)
+}
+
+func (b *acrBus) Subscribe(func(events.Event)) {}
+
+// finished answers the status each RunFinished published carries, by run.
+func (b *acrBus) finished() map[string]interface{} {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	got := map[string]interface{}{}
+	for _, e := range b.published {
+		if e.EventType == events.RunFinished {
+			got[e.EntityID] = e.Payload["status"]
+		}
+	}
+	return got
+}
+
+// The reaper and a cancel (#379 bug 167): a run asked to stop whose worker
+// then went silent ends cancelled when the reaper sweeps it, with no error
+// and no error class, its token and half-written answer gone, and the
+// RunFinished the reaper publishes for it says cancelled, which the
+// notifier does not report. A cancel that commits while the sweep waits for
+// the run's row is seen the same way. A silent run nobody asked to stop is
+// failed as worker lost, as before. Before the fix the reaper failed the
+// run asked to stop, and the notifier told its launcher "Agent run failed".
+func TestTheReaperEndsARunAskedToStopCancelled(t *testing.T) {
+	for _, when := range []string{"after the cancel", "while the cancel holds the run"} {
+		t.Run(when, func(t *testing.T) {
+			f := newClaimFixture(t)
+			bus := &acrBus{}
+			svc := agentruns.NewDefaultService(f.repo, nil, bus)
+			stopping := acrClaim(t, f, agentruns.StatusRunning)
+			lost := acrClaim(t, f, agentruns.StatusRunning)
+			if applied, err := f.repo.UpdatePartialText(stopping, "Half an answ"); err != nil || !applied {
+				t.Fatalf("seed partial text = %v, %v", applied, err)
+			}
+			f.exec(t, `UPDATE agent_runs SET heartbeat_at = heartbeat_at - INTERVAL '1 hour' WHERE id IN ($1, $2)`, stopping, lost)
+
+			var ids []string
+			var err error
+			if when == "after the cancel" {
+				if _, err := svc.RequestCancel(stopping); err != nil {
+					t.Fatalf("RequestCancel: %v", err)
+				}
+				ids, err = svc.FailStale(2 * time.Minute)
+			} else {
+				hold := acrHoldRun(t, f.db, stopping)
+				type reaped struct {
+					ids []string
+					err error
+				}
+				done := make(chan reaped, 1)
+				go func() {
+					ids, err := svc.FailStale(2 * time.Minute)
+					done <- reaped{ids, err}
+				}()
+				acrAwaitLockWaiters(t, f.db, 1)
+				if _, err := hold.Exec(`UPDATE agent_runs SET `+requestLiveRunCancel+` WHERE id = $1`, stopping); err != nil {
+					t.Fatal(err)
+				}
+				if err := hold.Commit(); err != nil {
+					t.Fatal(err)
+				}
+				r := <-done
+				ids, err = r.ids, r.err
+			}
+			if err != nil {
+				t.Fatalf("FailStale: %v", err)
+			}
+			if len(ids) != 2 {
+				t.Fatalf("the reaper ended %v, want both silent runs", ids)
+			}
+
+			run := f.mustFind(t, stopping)
+			if run.Status != agentruns.StatusCancelled || !run.CancelRequested || run.Error != "" || run.ErrorClass != "" ||
+				run.FinishedAt == nil || run.PartialText != "" || f.tokenHash(t, stopping) != "" {
+				t.Errorf("the run asked to stop after the sweep: %s, cancel requested %v, error %q (%q), finished at %v, partial %q, token %q; want cancelled with no error, finished, cleared, revoked",
+					run.Status, run.CancelRequested, run.Error, run.ErrorClass, run.FinishedAt, run.PartialText, f.tokenHash(t, stopping))
+			}
+			other := f.mustFind(t, lost)
+			if other.Status != agentruns.StatusFailed || other.Error != "worker lost (heartbeat timeout)" || other.ErrorClass != agentruns.ErrorClassWorkerError {
+				t.Errorf("the run nobody asked to stop after the sweep: %s, error %q (%q); want failed as worker lost (worker_error)",
+					other.Status, other.Error, other.ErrorClass)
+			}
+			if got, want := bus.finished(), map[string]interface{}{stopping: agentruns.StatusCancelled, lost: agentruns.StatusFailed}; !reflect.DeepEqual(got, want) {
+				t.Errorf("RunFinished published %v, want %v", got, want)
+			}
+		})
+	}
+}

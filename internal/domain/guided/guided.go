@@ -180,7 +180,7 @@ func (s *DefaultService) StartSession(projectID string, createdBy *string) (*Ses
 		return nil, errors.New("project id is required")
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	session := &Session{
 		ID:               uuid.New().String(),
 		ProjectID:        projectID,
@@ -231,7 +231,7 @@ func (s *DefaultService) SaveStep(sessionID string, step int, answers map[string
 		session.Answers[key] = value
 	}
 	session.CurrentStep = step
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 
 	if err := s.repo.Update(session); err != nil {
 		return nil, err
@@ -294,7 +294,7 @@ func (s *DefaultService) MaterializeDrafts(sessionID string, drafts []DraftSpec)
 		session.DraftArtifactIDs = []string{}
 	}
 	session.DraftArtifactIDs = append(session.DraftArtifactIDs, createdIDs...)
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = time.Now().UTC()
 
 	if err := s.repo.Update(session); err != nil {
 		return createdIDs, err
@@ -339,7 +339,7 @@ func (s *DefaultService) Commit(sessionID string) (*CommitResult, error) {
 	}
 
 	session.Status = StatusCommitted
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = time.Now().UTC()
 
 	if err := s.repo.Update(session); err != nil {
 		return &CommitResult{Approved: approved}, err
@@ -421,7 +421,7 @@ func (s *DefaultService) AppendChatMessage(sessionID, role, content string) (*Ch
 		SessionID: sessionID,
 		Role:      role,
 		Content:   content,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 
 	if err := s.repo.SaveChatMessage(message); err != nil {
@@ -443,7 +443,7 @@ func (s *DefaultService) AttachAgentRun(sessionID, runID string) error {
 		return err
 	}
 	session.AgentRunID = &runID
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = time.Now().UTC()
 	return s.repo.Update(session)
 }
 
@@ -465,7 +465,7 @@ func (s *DefaultService) Abandon(sessionID string) (*Session, error) {
 	}
 
 	session.Status = StatusAbandoned
-	session.UpdatedAt = time.Now()
+	session.UpdatedAt = time.Now().UTC()
 
 	if err := s.repo.Update(session); err != nil {
 		return nil, err

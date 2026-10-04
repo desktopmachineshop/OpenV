@@ -182,7 +182,7 @@ func (s *DefaultService) CreateInterview(projectID, name, brief string, agentID 
 		return nil, errors.New("interview name is required")
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	interview := &Interview{
 		ID:                uuid.New().String(),
 		ProjectID:         projectID,
@@ -222,7 +222,7 @@ func (s *DefaultService) CloseInterview(id string) (*Interview, error) {
 	}
 
 	interview.Status = InterviewStatusClosed
-	interview.UpdatedAt = time.Now()
+	interview.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 
 	if err := s.repo.UpdateInterview(interview); err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func (s *DefaultService) SetInterviewPersona(id string, personaArtifactID *strin
 	}
 
 	interview.PersonaArtifactID = personaArtifactID
-	interview.UpdatedAt = time.Now()
+	interview.UpdatedAt = time.Now().UTC()
 
 	if err := s.repo.UpdateInterview(interview); err != nil {
 		return nil, err
@@ -273,7 +273,7 @@ func (s *DefaultService) CreateInvite(interviewID, inviteeLabel string, expiresA
 		InviteeLabel: inviteeLabel,
 		ExpiresAt:    expiresAt,
 		Revoked:      false,
-		CreatedAt:    time.Now(),
+		CreatedAt:    time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock; expires_at, a TIMESTAMPTZ, keeps its offset (#379 bug 162)
 	}
 
 	if err := s.repo.SaveInvite(invite); err != nil {
@@ -372,7 +372,7 @@ func (s *DefaultService) StartOrResumeSession(inviteID, interviewID, participant
 		InviteID:        inviteID,
 		ParticipantName: participantName,
 		Status:          SessionStatusActive,
-		StartedAt:       time.Now(),
+		StartedAt:       time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 
 	if err := s.repo.SaveSession(session); err != nil {
@@ -435,7 +435,7 @@ func (s *DefaultService) AppendMessage(sessionID, role, content string) (*Messag
 		SessionID: sessionID,
 		Role:      role,
 		Content:   content,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 
 	if err := s.repo.SaveMessage(message); err != nil {
@@ -457,7 +457,7 @@ func (s *DefaultService) CompleteSession(sessionID, summary string) error {
 		return err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // ended_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	session.Status = SessionStatusCompleted
 	session.Summary = summary
 	session.EndedAt = &now

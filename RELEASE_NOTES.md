@@ -25,6 +25,79 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   or as a web push, now opens it there instead of the projects list, and
   an invention that is taking long on the projects list links to its run.
 
+### Bug fixes
+
+- **Cancel always stops a run.** Cancelling a run at the moment its runner
+  handed it back to the queue, as a runner shutting down does, could be
+  lost: the run went back to waiting, and the next runner started it again.
+  The run is now cancelled.
+
+- **A run you cancel as it fails is not started again.** A cancel that
+  came while the run's runner was reporting it finished was forgotten, so a
+  run that then failed in a way that is normally retried was started again
+  automatically. The cancel is now kept, and the run is not retried.
+
+- **Deleting a project stops every one of its runs.** A run its runner
+  handed back to the queue at the moment its project was deleted, as a
+  runner shutting down does, escaped the delete: it waited in the queue
+  with no project, and the next runner started it. It is now cancelled
+  with the project's other runs.
+
+- **A run you cancelled shows as cancelled when its runner goes quiet.**
+  When a run's runner stopped responding after you asked the run to stop,
+  the run was failed as "worker lost", and you were told "Agent run failed"
+  about a run you had cancelled. It now ends cancelled, with no error and
+  no failure notification.
+
+- **Artifacts, links, baselines, notes and test runs keep time on a server
+  whose clock is not set to UTC.** On an OpenV server running in another
+  time zone, as a self-hosted one can, artifacts and each of their
+  versions, links, baselines, notes and test runs and results recorded
+  their times shifted by the zone's offset, and showed them hours off. A
+  removed link's history began hours before the link was made west of UTC,
+  and ended before it began east of UTC. West of UTC, a test result
+  recorded a moment ago counted as older than one recorded an hour earlier
+  while the server ran in UTC, so the V&V coverage kept showing the earlier
+  result. They now record every time in UTC, as on OpenV's hosted service.
+  Times recorded before this update keep their offset.
+
+- **Guided sessions, interviews, agent proposals, AI provider sign-ins and
+  repository connections keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, they recorded their times shifted by the zone's offset, and
+  showed them hours off. West of UTC, a CLI sign-in to an AI provider read
+  as hours old the moment it started, so starting it again abandoned the
+  sign-in in progress and began another; east of UTC, a sign-in that had
+  stalled was handed out again for hours instead of starting afresh. They
+  now record every time in UTC, as on OpenV's hosted service.
+
+- **Workspaces, teams, product profiles, templates, figures, the activity
+  feed and push devices keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, a workspace's and a people team's creation and update times, a
+  product profile's, a template's, each version of a figure, each entry of
+  the activity feed, when a device was registered for push notifications
+  and when it last received or failed one, and when each release was
+  announced and each stable release turned on for a workspace, were
+  recorded shifted by the zone's offset, and showed hours off: two hours
+  east of UTC, a workspace created at 09:00 UTC showed as created at 11:00.
+  They now record every time in UTC, as on OpenV's hosted service.
+
+- **Project share links, and the daily limit on adding invented products
+  to the shared collection, keep time on a server whose clock is not set
+  to UTC.** On an OpenV server running in another time zone, as a
+  self-hosted one can, a project share link recorded when it was made and
+  when it was revoked shifted by the zone's offset. The limit on how many
+  invented products a workspace adds to the shared collection each day
+  counted the last 29 hours west of UTC and the last 22 hours east of it.
+  They now keep time in UTC, as on OpenV's hosted service.
+
+- **Used and expired email verification and password reset links are
+  cleaned up.** OpenV kept every email verification link and password
+  reset link it had sent, once used or expired, for good. The server now
+  deletes each within a minute of its being used or expiring. A link still
+  waiting to be used is kept.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

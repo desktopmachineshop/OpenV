@@ -27,7 +27,7 @@ type fakeRunRepo struct {
 
 	// Interleaving hooks: run just before the conditional check, so tests can
 	// simulate a concurrent actor winning the race.
-	onCancelQueued   func()
+	onRequestCancel  func()
 	onUpdateTerminal func()
 	onMarkRunning    func()
 }
@@ -50,31 +50,34 @@ func (f *fakeRunRepo) Save(r *Run) error {
 	return nil
 }
 
-func (f *fakeRunRepo) CancelQueued(id string) (bool, error) {
-	if f.onCancelQueued != nil {
-		f.onCancelQueued()
+// RequestCancel mirrors the SQL: the cancel is the one the STORED status
+// asks for when it is written, a queued run cancelled and a claimed or
+// running one flagged; any other run is left as it is.
+func (f *fakeRunRepo) RequestCancel(id string) (bool, error) {
+	if f.onRequestCancel != nil {
+		f.onRequestCancel()
 	}
 	r, ok := f.runs[id]
-	if !ok || r.Status != StatusQueued {
+	if !ok {
 		return false, nil
 	}
-	now := time.Now()
-	r.Status = StatusCancelled
-	r.CancelRequested = true
-	r.FinishedAt = &now
-	r.RunTokenHash = ""
+	switch r.Status {
+	case StatusQueued:
+		now := time.Now()
+		r.Status = StatusCancelled
+		r.CancelRequested = true
+		r.FinishedAt = &now
+		r.RunTokenHash = ""
+	case StatusClaimed, StatusRunning:
+		r.CancelRequested = true
+	default:
+		return false, nil
+	}
 	return true, nil
 }
 
-func (f *fakeRunRepo) SetCancelRequested(id string) (bool, error) {
-	r, ok := f.runs[id]
-	if !ok || (r.Status != StatusClaimed && r.Status != StatusRunning) {
-		return false, nil
-	}
-	r.CancelRequested = true
-	return true, nil
-}
-
+// UpdateTerminal mirrors the SQL: a cancel requested since the caller read
+// the run is kept, and the caller's copy learns the flag as stored.
 func (f *fakeRunRepo) UpdateTerminal(run *Run) (bool, error) {
 	if f.onUpdateTerminal != nil {
 		f.onUpdateTerminal()
@@ -83,6 +86,7 @@ func (f *fakeRunRepo) UpdateTerminal(run *Run) (bool, error) {
 	if !ok || (stored.Status != StatusClaimed && stored.Status != StatusRunning) {
 		return false, nil
 	}
+	run.CancelRequested = stored.CancelRequested || run.CancelRequested
 	cp := *run
 	cp.RunTokenHash = ""
 	f.runs[run.ID] = &cp
@@ -190,7 +194,8 @@ func (f *fakeRunRepo) FinalizeApproval(runID, status, errMsg, errorClass string,
 }
 
 // FailStale mirrors the SQL reaper: claimed/running runs whose heartbeat
-// predates cutoff (a nil heartbeat counts as stale) are failed and their ids
+// predates cutoff (a nil heartbeat counts as stale) are failed, or
+// cancelled with no error when their cancel was requested, and their ids
 // returned.
 func (f *fakeRunRepo) FailStale(cutoff time.Time) ([]string, error) {
 	var ids []string
@@ -205,6 +210,9 @@ func (f *fakeRunRepo) FailStale(cutoff time.Time) ([]string, error) {
 		r.Status = StatusFailed
 		r.Error = "worker lost (heartbeat timeout)"
 		r.ErrorClass = ErrorClassWorkerError
+		if r.CancelRequested {
+			r.Status, r.Error, r.ErrorClass = StatusCancelled, "", ""
+		}
 		r.FinishedAt = &now
 		r.RunTokenHash = ""
 		ids = append(ids, id)
@@ -614,7 +622,7 @@ func TestRequestCancelLosesRaceToClaim(t *testing.T) {
 	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusQueued})
 	// A worker claims the run between the service's read and its conditional
 	// cancel: the claim must survive, and the cancel becomes cooperative.
-	repo.onCancelQueued = func() {
+	repo.onRequestCancel = func() {
 		now := time.Now()
 		repo.runs["r1"].Status = StatusClaimed
 		repo.runs["r1"].WorkerID = "w-1"

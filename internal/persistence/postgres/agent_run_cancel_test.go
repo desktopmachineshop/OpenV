@@ -35,8 +35,8 @@ func TestReleaseClaimEndsACancelRequestedRunCancelled(t *testing.T) {
 			if applied, err := f.repo.UpdatePartialText(id, "Half an answ"); err != nil || !applied {
 				t.Fatalf("seed partial text = %v, %v", applied, err)
 			}
-			if applied, err := f.repo.SetCancelRequested(id); err != nil || !applied {
-				t.Fatalf("SetCancelRequested = %v, %v", applied, err)
+			if applied, err := f.repo.RequestCancel(id); err != nil || !applied {
+				t.Fatalf("RequestCancel = %v, %v", applied, err)
 			}
 
 			ok, err := f.repo.ReleaseClaim(id, "w-1")

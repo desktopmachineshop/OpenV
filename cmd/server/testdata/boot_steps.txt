@@ -132,6 +132,8 @@ func main()
         case
           call (*internal/domain/agentruns.DefaultService).FailStale
           call (*internal/persistence/postgres.UserRepository).DeleteExpiredSessions
+          call (*internal/persistence/postgres.UserRepository).DeleteSpentEmailVerifications
+          call (*internal/persistence/postgres.UserRepository).DeleteSpentPasswordResets
           call (*internal/domain/invitations.DefaultService).PurgeExpired
           if
             call (internal/domain/runnersessions.Service).Sweep

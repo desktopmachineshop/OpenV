@@ -53,7 +53,7 @@ func New(userID, endpoint, p256dh, auth, userAgent string) *Subscription {
 		P256dh:    strings.TrimSpace(p256dh),
 		Auth:      strings.TrimSpace(auth),
 		UserAgent: strings.TrimSpace(userAgent),
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 	}
 }
 
