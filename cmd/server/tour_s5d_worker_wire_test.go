@@ -342,7 +342,7 @@ func workerWireTour(tr *tour) {
 		agent, jsonBody(`{"prompt":"Tidy W."}`)).capture("run_b", "/id")
 	runB := tr.takeRun(box, "tour-box", "run_b", "run_b's token, a run with no project that W's box key claimed; "+
 		"the member's runner key does not take it, since only W's admins see a run with no project that no one launched")
-	tr.step("the member reads run_b, unscoped and not its own: the workspace admin guard", m, get, run("run_b"))
+	tr.step("the member reads run_b, unscoped and not its own: 404, as for a run no row has", m, get, run("run_b"))
 	tr.step("run_b's token launches in P: 404, the run is not scoped to P", runB, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Help."}`))
 	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by and run_b as "+

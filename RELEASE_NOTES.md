@@ -27,6 +27,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A run you cannot open is not found, whoever you are.** A run that
+  belongs to no project opens only for the member who launched it and for
+  the workspace's admins. Any other member of the workspace who followed a
+  link to it was told that workspace admin access was required, which
+  told them the run existed. They are now told the run is not found, as
+  someone outside the workspace is.
+
 - **Cancel always stops a run.** Cancelling a run at the moment its runner
   handed it back to the queue, as a runner shutting down does, could be
   lost: the run went back to waiting, and the next runner started it again.

@@ -173,7 +173,7 @@ Enforced per-handler via `internal/api/authz.go`:
   for any project in their org, a workspace key as an editor, a personal key
   only where its holder would, reads included; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
-  unscoped runs.
+  unscoped runs (any other member gets the run's `404`, below).
 - **Crew writes**: project-pinned crews need project editor; workspace-wide
   crews need org admin. Automations follow the same split. A crew's pin
   (`project_id` on create, import and clone) must name a project of the
@@ -220,7 +220,11 @@ Enforced per-handler via `internal/api/authz.go`:
   a run token polling a run outside its project (`GET
   /agent-runs/delegate/{id}`) gets `404` `agent run not found`. A caller who
   reaches the project or workspace but lacks the role a route needs gets
-  `403`. An account's uploaded picture is read only by the account itself,
+  `403`, except at a run with no project, which only its launcher and the
+  workspace's admins may read: a member who is neither gets `404` `agent
+  run not found` from `GET /agent-runs/{id}`, its `/tree`, `/logs` and
+  `/stream`, and `POST` its `/cancel` and `/retry`, as an outsider does
+  (#379 bug 172). An account's uploaded picture is read only by the account itself,
   a member of a workspace it is a member of and a platform admin; anyone
   else gets `404` `user has no uploaded picture`, as for an account with no
   picture or none at all (#379's decision 14). A public link's token is not

@@ -211,7 +211,8 @@ func retryReq(userID, runID string) *http.Request {
 // TestRetryAgentRunAuthz locks in that retrying mirrors the launch/cancel
 // access ladder: the original launcher always passes, project-scoped runs
 // need project editor rights, unscoped runs need workspace admin rights —
-// and a denied request never reaches the service.
+// and a denied request never reaches the service. A caller who may not
+// read the run gets its 404, as for a run no row has.
 func TestRetryAgentRunAuthz(t *testing.T) {
 	const orgID = "org-1"
 	launcher := "launcher"
@@ -249,7 +250,8 @@ func TestRetryAgentRunAuthz(t *testing.T) {
 		{"launcher retries own unscoped run", launcher, "run-unscoped", 0},
 		{"project editor retries another member's run", "editor", "run-project", 0},
 		{"project viewer is denied", "viewer", "run-project", http.StatusForbidden},
-		{"plain member cannot retry another member's unscoped run", "org-member", "run-unscoped", http.StatusForbidden},
+		// Nor may they read it, so it is to them one no row has (#379 bug 172).
+		{"plain member cannot retry another member's unscoped run", "org-member", "run-unscoped", http.StatusNotFound},
 		{"org admin retries an unscoped run", "org-admin", "run-unscoped", 0},
 		{"unknown run answers 404", "org-admin", "run-missing", http.StatusNotFound},
 	}

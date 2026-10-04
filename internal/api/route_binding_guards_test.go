@@ -41,7 +41,9 @@ type guardHelper struct {
 //     PUT, PATCH and DELETE, the plan read-only gate, which alwaysWritable
 //     routes (route_handlers.txt) skip.
 //   - org:<role>: workspace membership, admin when <role> is admin; then the
-//     plan read-only gate, as for project.
+//     plan read-only gate, as for project. (requireOrgAdminFor refuses a
+//     member who is no admin with the not-found an outsider gets, and not
+//     the 403, for what the workspace's admins alone may know of.)
 //   - run:<role>: the run's launcher; else project:<role> for a run in a
 //     project, else org:admin.
 //   - scoped-write: project:editor for a crew, automation or attribute
@@ -86,6 +88,7 @@ var guardHelpers = map[string]guardHelper{
 	"requireProjectRoleFor":           {kind: "project", roleParam: "minRole"},
 	"requireOrgRole":                  {kind: "org", roleParam: "minRole"},
 	"requireOrgRoleFor":               {kind: "org", roleParam: "minRole"},
+	"requireOrgAdminFor":              {kind: "org:admin"},
 	"requireRunAccess":                {kind: "run", roleParam: "minRole"},
 	"requireTeamWrite":                {kind: "scoped-write"},
 	"requireAutomationWrite":          {kind: "scoped-write"},
