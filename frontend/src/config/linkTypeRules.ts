@@ -49,7 +49,8 @@ export const linkTypeRules: LinkTypeRule[] = [
     inverseLabel: 'refined by',
     allowedFromTypes: ['requirement'],
     allowedToTypes: ['requirement'],
-    description: 'A requirement in a subsystem or supplier project refines a requirement of its parent project',
+    description:
+      "A requirement in a subsystem or supplier project refines a requirement of its parent project; the parent's verification rolls the refinements up",
   },
   {
     type: 'derives-from',

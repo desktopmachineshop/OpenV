@@ -21,8 +21,9 @@ import { useAppStore } from '../state/store';
 //              suggestion replaces it, one for an unknown field is refused;
 //              target users typed. Next.
 //   step-2     two personas added and one replaced by its title in any case
-//              (one batch); a third typed with a trailing space; a fourth left
-//              empty, which is saved but never materialised. Next.
+//              (one batch); a third typed with a trailing space, which its
+//              title and its needs' sentences leave out (#379, bug 110); a
+//              fourth left empty, which is saved but never materialised. Next.
 //   step-3     needs from cards: one matched to its persona by name, whose
 //              sentence is exactly 121 characters (cut to 117 and "…"), one
 //              for an unknown persona (falls to the first) and then replaced by

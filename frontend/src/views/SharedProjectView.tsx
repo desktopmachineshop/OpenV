@@ -31,15 +31,19 @@ interface SharedProjectViewProps {
   source: 'share' | 'open-source';
 }
 
+// One label per artifact type the server has (Go's artifact type catalogue,
+// pinned against it by src/arch/vocabParity.test.ts); a heading reads as the
+// section it is.
 const TYPE_LABELS: Record<string, string> = {
-  requirement: 'Requirement',
+  heading: 'Section',
+  description: 'Description',
+  persona: 'Persona',
   'user-need': 'User need',
+  requirement: 'Requirement',
   'design-item': 'Design item',
   'test-case': 'Test case',
   hazard: 'Hazard',
-  persona: 'Persona',
-  heading: 'Section',
-  'non-functional': 'Non-functional requirement',
+  other: 'Other',
 };
 
 const typeLabel = (type: string): string => TYPE_LABELS[type] || type;

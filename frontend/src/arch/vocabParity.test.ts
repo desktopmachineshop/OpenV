@@ -711,11 +711,14 @@ const COPIES: Copy[] = [
     read: featureGates,
   },
   {
+    // A project's activity log: every event type but the workspace-level
+    // org.* ones, which carry no project and so never reach it.
     id: 'ActivityLog EVENT_TYPES',
     vocabulary: 'event_types',
     kind: 'mirror',
     where: 'views/ActivityLog.tsx EVENT_TYPES',
     read: () => listOf('views/ActivityLog.tsx', 'EVENT_TYPES'),
+    goView: (go) => plain([...go.keys()].filter((k) => !k.startsWith('org.'))),
   },
   {
     id: 'AutomationsPage EVENT_TYPES',

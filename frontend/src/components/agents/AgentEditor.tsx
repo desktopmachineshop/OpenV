@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AgentDef, agentsAPI, ProviderSetting, providerSettingsAPI } from '../../api/client';
 import { ModelSelect } from './ModelSelect';
 import { useViewport } from '../../hooks/useViewport';
+import { useFeature } from '../../hooks/useFeature';
 
 // Used until the provider settings load (or if they fail to) — the server
 // returns the same list, in the same order, with each provider's models.
@@ -14,6 +15,12 @@ const FALLBACK_PROVIDERS = [
   'openai-api',
   'google-api',
 ];
+
+// The antigravity-cli provider ships behind its release feature (REQ-137):
+// a stable-channel workspace is offered it once its stable release carries
+// the feature. An agent already on it keeps it in the picker, so editing that
+// agent never silently moves it to another provider.
+export const ANTIGRAVITY_FEATURE = 'antigravity-cli';
 
 interface AgentEditorProps {
   agent: AgentDef | null; // null = creating a new agent
@@ -73,6 +80,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [providerSettings, setProviderSettings] = useState<ProviderSetting[]>([]);
+  const antigravityOn = useFeature(ANTIGRAVITY_FEATURE);
 
   // Provider settings carry each provider's available models; a failure here
   // is not worth an error banner — the form falls back to free-text entry.
@@ -173,9 +181,9 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   };
 
   const activeProvider = providerSettings.find((p) => p.provider === form.provider);
-  const providerNames = providerSettings.length
-    ? providerSettings.map((p) => p.provider)
-    : FALLBACK_PROVIDERS;
+  const providerNames = (providerSettings.length ? providerSettings.map((p) => p.provider) : FALLBACK_PROVIDERS).filter(
+    (p) => p !== 'antigravity-cli' || antigravityOn || agent?.provider === p
+  );
 
   return (
     <div className="card measure" style={{ marginBottom: 0 }}>
