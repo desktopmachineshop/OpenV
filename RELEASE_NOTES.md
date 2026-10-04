@@ -9,6 +9,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Artifacts, links, baselines, notes and test runs keep time on a server
+  whose clock is not set to UTC.** On an OpenV server running in another
+  time zone, as a self-hosted one can, artifacts and each of their
+  versions, links, baselines, notes and test runs and results recorded
+  their times shifted by the zone's offset, and showed them hours off. A
+  removed link's history began hours before the link was made west of UTC,
+  and ended before it began east of UTC. West of UTC, a test result
+  recorded a moment ago counted as older than one recorded an hour earlier
+  while the server ran in UTC, so the V&V coverage kept showing the earlier
+  result. They now record every time in UTC, as on OpenV's hosted service.
+  Times recorded before this update keep their offset.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

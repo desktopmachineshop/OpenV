@@ -109,7 +109,7 @@ func (s *DefaultService) ChangeStatus(id string, to string) (*Artifact, error) {
 	artifact.Status = to
 	artifact.syncStatusAttribute()
 	artifact.Version++
-	now := time.Now()
+	now := time.Now().UTC() // valid_from and updated_at are TIMESTAMPs holding UTC wall clocks (#379 bug 162)
 	artifact.ValidFrom = now
 	artifact.UpdatedAt = now
 

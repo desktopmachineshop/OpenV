@@ -83,7 +83,7 @@ func (s *DefaultService) CreateBaseline(projectID string, name string, snapshot 
 		ProjectID: projectID,
 		Name:      name,
 		Snapshot:  json.RawMessage(snapshot),
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(), // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 		CreatedBy: createdBy,
 	}
 

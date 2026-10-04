@@ -139,7 +139,7 @@ func (s *DefaultService) submitForReview(a *Artifact) (*Artifact, error) {
 	a.Status = StatusInReview
 	a.syncStatusAttribute()
 	a.Version++
-	now := time.Now()
+	now := time.Now().UTC() // as ChangeStatus stamps (#379 bug 162)
 	a.ValidFrom = now
 	a.UpdatedAt = now
 	if err := s.repo.Update(a); err != nil {

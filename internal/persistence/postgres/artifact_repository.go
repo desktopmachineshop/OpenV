@@ -407,13 +407,14 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 	return tx.Commit()
 }
 
-// Delete soft-deletes an artifact
+// Delete soft-deletes an artifact. valid_to is a TIMESTAMP holding a UTC
+// wall clock, as the valid_from it closes is (#379 bug 162).
 func (r *ArtifactRepository) Delete(id string) error {
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
 	query := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
-	_, err := r.db.ExecContext(ctx, query, time.Now(), id)
+	_, err := r.db.ExecContext(ctx, query, time.Now().UTC(), id)
 	return err
 }
 
