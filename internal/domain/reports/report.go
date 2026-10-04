@@ -340,9 +340,23 @@ func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportMo
 		}
 	}
 
-	// Traceability rows, deduplicated and sorted so two renders agree.
+	// Traceability rows, deduplicated and sorted so two renders agree. A
+	// link's far end in another project is named as the export's
+	// linked_artifacts describe it (REQ-145): "Supplier / REQ-7 Cache hits".
 	if opts.Content.Traceability {
-		m.links = buildLinkRows(data.Links, m.artifactTitles)
+		titles := m.artifactTitles
+		if len(data.LinkedArtifacts) > 0 {
+			titles = make(map[string]string, len(m.artifactTitles)+len(data.LinkedArtifacts))
+			for id, title := range m.artifactTitles {
+				titles[id] = title
+			}
+			for _, far := range data.LinkedArtifacts {
+				if far != nil && titles[far.ID] == "" {
+					titles[far.ID] = strings.TrimSpace(far.QualifiedRef() + " " + far.Title)
+				}
+			}
+		}
+		m.links = buildLinkRows(data.Links, titles)
 	}
 
 	// Field labels: definitions name custom keys; standard keys have fixed
@@ -397,6 +411,31 @@ func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportMo
 	}
 	return m
 }
+
+// plainBlocks lays out text that is not Markdown, as a project description
+// is not: the app shows it as typed. A blank line ends a paragraph and a line
+// break is kept where the writer typed one; nothing in it is markup, so
+// "<pump>" or "**" print as written.
+func plainBlocks(text string) []doc.Block {
+	text = strings.TrimSpace(strings.ReplaceAll(text, "\r\n", "\n"))
+	var out []doc.Block
+	for _, para := range blankLine.Split(text, -1) {
+		var inlines []doc.Inline
+		for i, line := range strings.Split(para, "\n") {
+			if i > 0 {
+				inlines = append(inlines, doc.Inline{Break: true})
+			}
+			if line != "" {
+				inlines = append(inlines, doc.Inline{Text: line})
+			}
+		}
+		out = append(out, doc.Paragraph{Inlines: inlines})
+	}
+	return out
+}
+
+// blankLine separates two paragraphs of plain text.
+var blankLine = regexp.MustCompile(`\n[ \t]*\n(?:[ \t]*\n)*`)
 
 // title returns the display heading for an artifact in this report.
 func (m *reportModel) title(a *artifacts.Artifact) string {

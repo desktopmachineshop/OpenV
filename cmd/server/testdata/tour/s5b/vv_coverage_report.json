@@ -3287,43 +3287,40 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour V&V: coverage"
         ],
-        "pages": 12,
+        "pages": 11,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour V&V: coverage Specification Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Verification & Validation Contents 23 artifacts: 2 user needs, 12 requirements, 7 test cases, 2 hazards Includes all fields; traceability; V&V status; test results Tour V&V: coverage · Live <datetime> UTC Page 1 of 12"
+            "text": "Tour Owner's Space Tour V&V: coverage Specification Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Verification & Validation Contents 23 artifacts: 2 user needs, 12 requirements, 7 test cases, 2 hazards Includes all fields; traceability; V&V status; test results Tour V&V: coverage · Live <datetime> UTC Page 1 of 11"
           },
           {
-            "text": "Contents Verification summary 9 Test results 11 Tour V&V: coverage · Live <datetime> UTC Page 2 of 12"
+            "text": "Contents Verification summary 9 Test results 11 Tour V&V: coverage · Live <datetime> UTC Page 2 of 11"
           },
           {
-            "text": "Tour V&V: coverage · Live <datetime> UTC Page 3 of 12"
+            "text": "NEED-1 Get an answer fast Reference NEED-1 Type User need Version v2 Status draft Traceability Direction Relationship Artifact Incoming gives rise to REQ-1 Answer in time NEED-2 See every past answer Reference NEED-2 Type User need Version v1 Status draft REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing derives from NEED-1 Get an answer fast REQ-2 Log each answer Reference REQ-2 Type Requirement Version v2 Status draft Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming verified by TC-2 Read the log back Tour V&V: coverage · Live <datetime> UTC Page 3 of 11"
           },
           {
-            "text": "NEED-1 Get an answer fast Reference NEED-1 Type User need Version v2 Status draft Traceability Direction Relationship Artifact Incoming gives rise to REQ-1 Answer in time NEED-2 See every past answer Reference NEED-2 Type User need Version v1 Status draft REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing derives from NEED-1 Get an answer fast REQ-2 Log each answer Reference REQ-2 Type Requirement Version v2 Status draft Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming verified by TC-2 Read the log back Tour V&V: coverage · Live <datetime> UTC Page 4 of 12"
+            "text": "REQ-3 Survive a restart Reference REQ-3 Type Requirement Version v2 Status draft Verification method test V&V rollup blocked Traceability Direction Relationship Artifact Incoming verified by TC-3 Restart the rig REQ-4 Export the log Reference REQ-4 Type Requirement Version v2 Status draft Verification method test V&V rollup unrun Traceability Direction Relationship Artifact Incoming verified by TC-4 Compare the export REQ-5 Meet the supplier timing Reference REQ-5 Type Requirement Version v2 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming refined by Tour supplier part / REQ-1 Supplier timing REQ-6 Label the enclosure Reference REQ-6 Type Requirement Version v1 Tour V&V: coverage · Live <datetime> UTC Page 4 of 11"
           },
           {
-            "text": "REQ-3 Survive a restart Reference REQ-3 Type Requirement Version v2 Status draft Verification method test V&V rollup blocked Traceability Direction Relationship Artifact Incoming verified by TC-3 Restart the rig REQ-4 Export the log Reference REQ-4 Type Requirement Version v2 Status draft Verification method test V&V rollup unrun Traceability Direction Relationship Artifact Incoming verified by TC-4 Compare the export REQ-5 Meet the supplier timing Reference REQ-5 Type Requirement Version v2 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming refined by <c_r> REQ-6 Label the enclosure Reference REQ-6 Type Requirement Version v1 Tour V&V: coverage · Live <datetime> UTC Page 5 of 12"
+            "text": "Status draft Verification method inspection Verification status verified V&V rollup verified manually REQ-7 Stay within the power budget Reference REQ-7 Type Requirement Version v1 Status draft Verification method analysis V&V rollup uncovered REQ-8 Look tidy on the shelf Reference REQ-8 Type Requirement Version v1 Status draft V&V rollup method missing REQ-9 Keep the clock in step Reference REQ-9 Type Requirement Version v3 Status draft Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming verified by TC-6 Check the clock drift Incoming verified by TC-7 Check the clock sync REQ-10 Share the timing budget Reference REQ-10 Type Requirement Version v2 Status draft Tour V&V: coverage · Live <datetime> UTC Page 5 of 11"
           },
           {
-            "text": "Status draft Verification method inspection Verification status verified V&V rollup verified manually REQ-7 Stay within the power budget Reference REQ-7 Type Requirement Version v1 Status draft Verification method analysis V&V rollup uncovered REQ-8 Look tidy on the shelf Reference REQ-8 Type Requirement Version v1 Status draft V&V rollup method missing REQ-9 Keep the clock in step Reference REQ-9 Type Requirement Version v3 Status draft Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming verified by TC-6 Check the clock drift Incoming verified by TC-7 Check the clock sync REQ-10 Share the timing budget Reference REQ-10 Type Requirement Version v2 Status draft Tour V&V: coverage · Live <datetime> UTC Page 6 of 12"
+            "text": "Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming refined by Tour second supplier part / REQ-1 Second budget share REQ-11 Meet the sub-supplier timing Reference REQ-11 Type Requirement Version v2 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming refined by Tour supplier part / REQ-2 Sub-supplier timing HAZ-1 Late answer Reference HAZ-1 Type Hazard Version v2 Status draft HAZ-2 Lost record Reference HAZ-2 Type Hazard Version v1 Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Status draft Latest result pass · <datetime> · Run 1 Traceability Direction Relationship Artifact Tour V&V: coverage · Live <datetime> UTC Page 6 of 11"
           },
           {
-            "text": "Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming refined by <c2_split> REQ-11 Meet the sub-supplier timing Reference REQ-11 Type Requirement Version v2 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming refined by <c_deep> HAZ-1 Late answer Reference HAZ-1 Type Hazard Version v2 Status draft HAZ-2 Lost record Reference HAZ-2 Type Hazard Version v1 Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Status draft Latest result pass · <datetime> · Run 1 Traceability Direction Relationship Artifact Tour V&V: coverage · Live <datetime> UTC Page 7 of 12"
+            "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time TC-2 Read the log back Reference TC-2 Type Test case Version v2 Status draft Latest result fail · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-2 Log each answer TC-3 Restart the rig Reference TC-3 Type Test case Version v2 Status draft Latest result blocked · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-3 Survive a restart TC-4 Compare the export Reference TC-4 Type Test case Version v2 Status draft Latest result not run Traceability Direction Relationship Artifact Outgoing verifies REQ-4 Export the log TC-5 Spare check Reference TC-5 Type Test case Version v1 Tour V&V: coverage · Live <datetime> UTC Page 7 of 11"
           },
           {
-            "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time TC-2 Read the log back Reference TC-2 Type Test case Version v2 Status draft Latest result fail · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-2 Log each answer TC-3 Restart the rig Reference TC-3 Type Test case Version v2 Status draft Latest result blocked · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-3 Survive a restart TC-4 Compare the export Reference TC-4 Type Test case Version v2 Status draft Latest result not run Traceability Direction Relationship Artifact Outgoing verifies REQ-4 Export the log TC-5 Spare check Reference TC-5 Type Test case Version v1 Tour V&V: coverage · Live <datetime> UTC Page 8 of 12"
+            "text": "Status draft Latest result not run TC-6 Check the clock drift Reference TC-6 Type Test case Version v2 Status draft Latest result blocked · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-9 Keep the clock in step TC-7 Check the clock sync Reference TC-7 Type Test case Version v2 Status draft Latest result fail · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-9 Keep the clock in step REQ-12 Added after B1 Reference REQ-12 Type Requirement Version v1 Status draft Verification method test V&V rollup uncovered Tour V&V: coverage · Live <datetime> UTC Page 8 of 11"
           },
           {
-            "text": "Status draft Latest result not run TC-6 Check the clock drift Reference TC-6 Type Test case Version v2 Status draft Latest result blocked · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-9 Keep the clock in step TC-7 Check the clock sync Reference TC-7 Type Test case Version v2 Status draft Latest result fail · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-9 Keep the clock in step REQ-12 Added after B1 Reference REQ-12 Type Requirement Version v1 Status draft Verification method test V&V rollup uncovered Tour V&V: coverage · Live <datetime> UTC Page 9 of 12"
+            "text": "Verification summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified manually: 1 method missing: 1 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gaps Requirements without a verification method (1) • REQ-8 Look tidy on the shelf Requirements without a test case (1) • REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) • REQ-7 Stay within the power budget Requirements with failing tests (3) • REQ-2 Log each answer • REQ-9 Keep the clock in step • REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) • TC-5 Spare check User needs without a derived requirement (1) • NEED-2 See every past answer Tour V&V: coverage · Live <datetime> UTC Page 9 of 11"
           },
           {
-            "text": "Verification summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified manually: 1 method missing: 1 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gaps Requirements without a verification method (1) • REQ-8 Look tidy on the shelf Requirements without a test case (1) • REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) • REQ-7 Stay within the power budget Requirements with failing tests (3) • REQ-2 Log each answer • REQ-9 Keep the clock in step • REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) • TC-5 Spare check User needs without a derived requirement (1) • NEED-2 See every past answer Tour V&V: coverage · Live <datetime> UTC Page 10 of 12"
+            "text": "Unmitigated hazards (2) • HAZ-1 Late answer • HAZ-2 Lost record Tour V&V: coverage · Live <datetime> UTC Page 10 of 11"
           },
           {
-            "text": "Unmitigated hazards (2) • HAZ-1 Late answer • HAZ-2 Lost record Tour V&V: coverage · Live <datetime> UTC Page 11 of 12"
-          },
-          {
-            "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer pass <datetime> Run 1 TC-2 Read the log back fail <datetime> Run 1 TC-3 Restart the rig blocked <datetime> Run 1 TC-4 Compare the export not run TC-5 Spare check not run TC-6 Check the clock drift blocked <datetime> Run 1 TC-7 Check the clock sync fail <datetime> Run 1 Test runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> A retry, abandoned. Run 1 Status: completed Started: <datetime> Completed: <datetime> The first pass over P. Run 0 Status: completed Started: <datetime> Completed: <datetime> An early pass over P. Tour V&V: coverage · Live <datetime> UTC Page 12 of 12"
+            "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer pass <datetime> Run 1 TC-2 Read the log back fail <datetime> Run 1 TC-3 Restart the rig blocked <datetime> Run 1 TC-4 Compare the export not run TC-5 Spare check not run TC-6 Check the clock drift blocked <datetime> Run 1 TC-7 Check the clock sync fail <datetime> Run 1 Test runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> A retry, abandoned. Run 1 Status: completed Started: <datetime> Completed: <datetime> The first pass over P. Run 0 Status: completed Started: <datetime> Completed: <datetime> An early pass over P. Tour V&V: coverage · Live <datetime> UTC Page 11 of 11"
           }
         ],
         "images": 0,
@@ -7455,9 +7452,7 @@
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">",
-              "<c_r>",
-              "</w:t>",
+              "<w:t xml:space=\"preserve\">Tour supplier part / REQ-1 Supplier timing</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -9330,9 +9325,7 @@
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">",
-              "<c2_split>",
-              "</w:t>",
+              "<w:t xml:space=\"preserve\">Tour second supplier part / REQ-1 Second budget share</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -9791,9 +9784,7 @@
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">",
-              "<c_deep>",
-              "</w:t>",
+              "<w:t xml:space=\"preserve\">Tour supplier part / REQ-2 Sub-supplier timing</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",

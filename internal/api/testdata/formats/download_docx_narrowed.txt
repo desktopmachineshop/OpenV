@@ -89,10 +89,7 @@ word/document.xml:
 </w:p>
 <w:p>
 <w:r>
-<w:t xml:space="preserve">The S9 format fixture: </w:t>
-</w:r>
-<w:r>
-<w:t xml:space="preserve"> renderer &amp; its escaping.</w:t>
+<w:t xml:space="preserve">The S9 format fixture: &lt;every&gt; renderer &amp; its escaping.</w:t>
 </w:r>
 </w:p>
 <w:tbl>
@@ -1235,7 +1232,7 @@ word/document.xml:
 <w:sz w:val="18"/>
 <w:szCs w:val="18"/>
 </w:rPr>
-<w:t xml:space="preserve">5e9a0000-0000-4000-8000-000000000121</w:t>
+<w:t xml:space="preserve">Formats supplier / REQ-1 Cache hits</w:t>
 </w:r>
 </w:p>
 </w:tc>

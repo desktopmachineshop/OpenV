@@ -2006,22 +2006,19 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
+            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 4"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 4"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace TC-1 Time the answer Reference TC-1 Type Test case Tour <spec> & baselines · Live <datetime> UTC Page 3 of 4"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace TC-1 Time the answer Reference TC-1 Type Test case Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
-          },
-          {
-            "text": "Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
+            "text": "Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 4"
           }
         ],
         "images": 1,
@@ -4988,22 +4985,19 @@
           "Subject: Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 5"
+            "text": "Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 4"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 5"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 4"
           },
           {
-            "text": "Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 5"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Priority should Status draft Owner Grace Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 4"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Priority must Status draft Owner Ada Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Priority should Status draft Owner Grace Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 5"
-          },
-          {
-            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description Priority could Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 5 of 5"
+            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description Priority could Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 4"
           }
         ],
         "images": 1,
@@ -5146,25 +5140,22 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 6,
+        "pages": 5,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 6"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
           },
           {
-            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 6"
+            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 6"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 4 of 6"
+            "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
           },
           {
-            "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 6"
-          },
-          {
-            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 6 of 6"
+            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
           }
         ],
         "images": 1,
@@ -8811,19 +8802,16 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 4,
+        "pages": 3,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Requirements review Contents 4 artifacts: 1 heading, 3 requirements Includes fields: Priority, Status, Verification method; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 4"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Requirements review Contents 4 artifacts: 1 heading, 3 requirements Includes fields: Priority, Status, Verification method; traceability; figures Tour <spec> & baselines · Live <datetime> UTC Page 1 of 3"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 4"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 3"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 4"
-          },
-          {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Figure REQ-1-FIG-1 — Answer timing REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Tour <spec> & baselines · Live <datetime> UTC Page 4 of 4"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Figure REQ-1-FIG-1 — Answer timing REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Tour <spec> & baselines · Live <datetime> UTC Page 3 of 3"
           }
         ],
         "images": 1,
@@ -8865,22 +8853,19 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 5,
+        "pages": 4,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Test planning Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Priority, Status, Verification method, Execution method; traceability Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Test planning Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Priority, Status, Verification method, Execution method; traceability Tour <spec> & baselines · Live <datetime> UTC Page 1 of 4"
           },
           {
-            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
+            "text": "Contents 1 Scope 3 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 4"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Tour <spec> & baselines · Live <datetime> UTC Page 3 of 4"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
-          },
-          {
-            "text": "Version v2 The system shall do the new thing. Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
+            "text": "Version v2 The system shall do the new thing. Description Priority must Status draft Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 4"
           }
         ],
         "images": 0,
@@ -8922,28 +8907,25 @@
           "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 7,
+        "pages": 6,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Verification & Validation Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; V&V status; test results Tour <spec> & baselines · Live <datetime> UTC Page 1 of 7"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Template Verification & Validation Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; V&V status; test results Tour <spec> & baselines · Live <datetime> UTC Page 1 of 6"
           },
           {
-            "text": "Contents 1 Scope 3 Verification summary 5 Test results 6 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 7"
+            "text": "Contents 1 Scope 3 Verification summary 5 Test results 6 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 6"
           },
           {
-            "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 7"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Latest result not run Traceability Direction Relationship Artifact Tour <spec> & baselines · Live <datetime> UTC Page 3 of 6"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Latest result not run Traceability Direction Relationship Artifact Tour <spec> & baselines · Live <datetime> UTC Page 4 of 7"
+            "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 6"
           },
           {
-            "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 7"
+            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 5 of 6"
           },
           {
-            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 6 of 7"
-          },
-          {
-            "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer not run Test runs No test runs recorded. Tour <spec> & baselines · Live <datetime> UTC Page 7 of 7"
+            "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer not run Test runs No test runs recorded. Tour <spec> & baselines · Live <datetime> UTC Page 6 of 6"
           }
         ],
         "images": 0,
@@ -12517,25 +12499,22 @@
           "Subject: Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC.",
           "Title: Tour <spec> & baselines"
         ],
-        "pages": 6,
+        "pages": 5,
         "page_text": [
           {
-            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Owner; traceability; figures; V&V status Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 6"
+            "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Baseline snapshot Snapshot: baseline \"B1 <v1>\" (id <b1>) captured <datetime> UTC. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes fields: Owner; traceability; figures; V&V status Tour <spec> & baselines · Baseline B1 <v1> Page 1 of 5"
           },
           {
-            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 6"
+            "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Baseline B1 <v1> Page 2 of 5"
           },
           {
-            "text": "Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 6"
+            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 3 of 5"
           },
           {
-            "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v4 The system shall answer within 2 s . Description Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing decomposes to REQ-2 Keep records REQ-2 Keep records Reference REQ-2 Type Requirement Version v3 The system shall keep a record of each answer. Description Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming decomposed from REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 6"
+            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 4 of 5"
           },
           {
-            "text": "REQ-3 Old rule Reference REQ-3 Type Requirement Version v1 The system shall do the old thing. Description V&V rollup method missing TC-1 Time the answer Reference TC-1 Type Test case Version v2 Measure the answer time. Description Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Tour <spec> & baselines · Baseline B1 <v1> Page 5 of 6"
-          },
-          {
-            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep records - method missing REQ-3 Old rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep records • REQ-3 Old rule Tour <spec> & baselines · Baseline B1 <v1> Page 6 of 6"
+            "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep records - method missing REQ-3 Old rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep records • REQ-3 Old rule Tour <spec> & baselines · Baseline B1 <v1> Page 5 of 5"
           }
         ],
         "images": 1,
@@ -16149,25 +16128,22 @@
                   "Subject: Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since.",
                   "Title: Tour <spec> & baselines"
                 ],
-                "pages": 6,
+                "pages": 5,
                 "page_text": [
                   {
-                    "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 6"
+                    "text": "Tour Owner's Space Tour <spec> & baselines Specification The project the tour's baselines and documents read. Live project Live project state as of <datetime> UTC. This is not a baseline: the project may have changed since. Workspace Tour Owner's Space Generated <datetime> UTC Contents 5 artifacts: 1 heading, 3 requirements, 1 test case Includes all fields; traceability; figures; V&V status Tour <spec> & baselines · Live <datetime> UTC Page 1 of 5"
                   },
                   {
-                    "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 6"
+                    "text": "Contents 1 Scope 3 Verification summary 5 Tour <spec> & baselines · Live <datetime> UTC Page 2 of 5"
                   },
                   {
-                    "text": "Tour <spec> & baselines · Live <datetime> UTC Page 3 of 6"
+                    "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 3 of 5"
                   },
                   {
-                    "text": "1 Scope What the specification covers. REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 The system shall answer within 2 s . Description Priority must Status draft Owner Ada V&V rollup method missing Figure REQ-1-FIG-1 — Answer timing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer REQ-2 Keep audit records Reference REQ-2 Type Requirement Version v5 The system shall keep an audit record of each answer. Description Priority should Status draft Owner Grace V&V rollup method missing Tour <spec> & baselines · Live <datetime> UTC Page 4 of 6"
+                    "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 4 of 5"
                   },
                   {
-                    "text": "TC-1 Time the answer Reference TC-1 Type Test case Version v3 Measure the answer time. Description Status draft Owner Ada Traceability Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time Outgoing verifies REQ-4 New rule REQ-4 New rule Reference REQ-4 Type Requirement Version v2 The system shall do the new thing. Description Priority must Status draft Owner Grace V&V rollup method missing Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Tour <spec> & baselines · Live <datetime> UTC Page 5 of 6"
-                  },
-                  {
-                    "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 6 of 6"
+                    "text": "Verification summary Requirements: 3 method missing: 3 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time - method missing REQ-2 Keep audit records - method missing REQ-4 New rule - method missing Gaps Requirements without a verification method (3) • REQ-1 Answer in time • REQ-2 Keep audit records • REQ-4 New rule Tour <spec> & baselines · Live <datetime> UTC Page 5 of 5"
                   }
                 ],
                 "images": 1,
