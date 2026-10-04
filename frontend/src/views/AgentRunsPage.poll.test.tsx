@@ -18,18 +18,29 @@ import type { AgentRun, WorkerStatus } from '../api/client';
 // run the switch comes with stays open. Another status filter keeps the
 // list while its answer loads, and so does a workspace switch that keeps the
 // project, as ProjectLayout makes to follow a link into another workspace.
+//
+// An error belongs to the project it was raised for: a switch of project
+// hides the old project's (#379 bug 180), while another status filter or a
+// workspace switch that keeps the project keeps it until an answer. The
+// runner status belongs to the workspace it was read for: a workspace switch
+// hides the old workspace's "no runner is online" warning until the new
+// one's status arrives, and a read that fails keeps the workspace's last
+// known status (#379 bug 181).
 
 interface Deferred<T> {
   promise: Promise<T>;
   resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
 }
 
 const deferred = <T,>(): Deferred<T> => {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((r) => {
-    resolve = r;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 };
 
 // Each request the page makes, in order, with the answer the test gives it.
@@ -57,7 +68,12 @@ vi.mock('../api/client', async (orig) =>
 
 // Beside the runs, and not what this test is about.
 vi.mock('../components/agents/ProposalReviewPanel', () => ({ ProposalReviewPanel: () => null }));
-vi.mock('../components/RunnerConnectPrompt', () => ({ RunnerConnectPrompt: () => null }));
+// The Agent Connector shows the reason it is given, or that it has none.
+vi.mock('../components/RunnerConnectPrompt', () => ({
+  RunnerConnectPrompt: ({ reason }: { reason?: string }) => (
+    <aside aria-label="Agent Connector">{reason ?? 'no reason given'}</aside>
+  ),
+}));
 vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
 // The detail panel is RunDetailPanel's own; here it shows which run is open.
 vi.mock('../components/agents/RunDetailPanel', async (orig) => ({
@@ -111,6 +127,13 @@ const answer = async <T,>(request: { answer: Deferred<{ data: T }> }, data: T) =
   await settle();
 };
 
+const refuse = async (request: { answer: { reject: (reason: unknown) => void } }, message: string) => {
+  await act(async () => {
+    request.answer.reject(new Error(message));
+  });
+  await settle();
+};
+
 const mount = async (at = '/projects/p1/agent-runs') => {
   await act(async () => {
     root.render(
@@ -128,6 +151,8 @@ const mount = async (at = '/projects/p1/agent-runs') => {
 const rows = () => Array.from(container.querySelectorAll('tbody tr')).map((tr) => tr.querySelector('td')?.textContent);
 const banner = () => container.textContent?.includes('queued but') ?? false;
 const detail = () => container.querySelector('[aria-label="Run detail"]')?.textContent ?? null;
+const error = () => container.querySelector('[role="alert"] span')?.textContent ?? null;
+const connector = () => container.querySelector('[aria-label="Agent Connector"]')?.textContent ?? null;
 const where = () => container.querySelector('[data-testid="where"]')?.textContent;
 const go = async (to: string) => {
   await act(async () => {
@@ -315,5 +340,98 @@ describe("a project's Runs page on a switch (#379 bug 177)", () => {
     expect(rows()).toEqual(['🤖 Alpha']);
     expect(detail()).toBe('run-p1');
     expect(where()).toBe('/projects/p1/agent-runs?run=run-p1');
+  });
+});
+
+describe("a project's Runs page's error (#379 bug 180)", () => {
+  it("hides the old project's error on a project switch", async () => {
+    await mount();
+    await refuse(lists[0], 'p1 is down');
+    expect(error()).toBe('p1 is down');
+
+    await go('/projects/p2/agent-runs');
+    expect(error()).toBeNull();
+    await answer(lists[1], [run('run-p2', 'Bravo', 'p2')]);
+    expect(error()).toBeNull();
+    expect(rows()).toEqual(['🤖 Bravo']);
+  });
+
+  it("shows the new project's own error", async () => {
+    await mount();
+    await refuse(lists[0], 'p1 is down');
+    await go('/projects/p2/agent-runs');
+    await refuse(lists[1], 'p2 is down');
+    expect(error()).toBe('p2 is down');
+  });
+
+  it('keeps the error through another status filter and a workspace switch that keeps the project, until an answer', async () => {
+    await mount();
+    await refuse(lists[0], 'p1 is down');
+    await filter('failed');
+    expect(error()).toBe('p1 is down');
+    await act(async () => {
+      useAppStore.setState({ activeOrgId: 'o2' });
+    });
+    await settle();
+    expect(lists).toHaveLength(3);
+    expect(error()).toBe('p1 is down');
+    await answer(lists[2], []);
+    expect(error()).toBeNull();
+  });
+});
+
+describe("a project's Runs page's runner warning (#379 bug 181)", () => {
+  const switchWorkspace = async () => {
+    // ProjectLayout following a link into another workspace's project.
+    await act(async () => {
+      useAppStore.setState({ activeOrgId: 'o2' });
+    });
+    await settle();
+    expect(statuses.map((s) => s.orgId)).toEqual(['o1', 'o2']);
+  };
+
+  it("hides the old workspace's warning on a workspace switch until the new workspace's status", async () => {
+    await mount();
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+    await answer(statuses[0], status(3));
+    expect(banner()).toBe(true);
+
+    await switchWorkspace();
+    expect(banner()).toBe(false);
+    expect(rows()).toEqual(['🤖 Alpha']);
+    await answer(statuses[1], status(2));
+    expect(banner()).toBe(true);
+    expect(container.textContent).toContain('2 runs queued but');
+  });
+
+  it("does not bring the old workspace's warning back when the new workspace's status fails", async () => {
+    await mount();
+    await answer(statuses[0], status(3));
+    await switchWorkspace();
+    await refuse(statuses[1], 'Network Error');
+    expect(banner()).toBe(false);
+  });
+
+  it("does not count the old workspace's queued runs in the Agent Connector's reason", async () => {
+    await mount();
+    await answer(statuses[0], status(3));
+    expect(connector()).toBe('3 queued runs are waiting for a runner.');
+
+    await switchWorkspace();
+    expect(connector()).toBe('no reason given');
+    await answer(statuses[1], status(1));
+    expect(connector()).toBe('1 queued run is waiting for a runner.');
+  });
+
+  it('keeps the last known warning when a later read in the same workspace fails', async () => {
+    await mount();
+    await answer(statuses[0], status(3));
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    await settle();
+    expect(statuses.map((s) => s.orgId)).toEqual(['o1', 'o1']);
+    await refuse(statuses[1], 'Network Error');
+    expect(banner()).toBe(true);
   });
 });
