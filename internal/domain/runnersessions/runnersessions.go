@@ -362,7 +362,7 @@ func (s *DefaultService) RegisterNode(pool, name string, providers []string) (*N
 		return nil, errors.New("node name is required")
 	}
 	pool = normalizePool(pool)
-	now := time.Now()
+	now := time.Now().UTC()
 
 	// A restarted node reclaims its row: same pool and name, fresh state.
 	// Whatever session it was serving is gone with the process, so the row
@@ -399,7 +399,7 @@ func (s *DefaultService) RegisterNode(pool, name string, providers []string) (*N
 
 // Heartbeat records a beat and hands over any pending assignment.
 func (s *DefaultService) Heartbeat(nodeID string) (*Node, *Assignment, error) {
-	node, err := s.repo.TouchNode(nodeID, time.Now())
+	node, err := s.repo.TouchNode(nodeID, time.Now().UTC())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -431,7 +431,7 @@ func (s *DefaultService) Heartbeat(nodeID string) (*Node, *Assignment, error) {
 		assignment.WorkerKey = s.pending[session.ID]
 		delete(s.pending, session.ID)
 		session.Status = StatusActive
-		session.LastActivityAt = time.Now()
+		session.LastActivityAt = time.Now().UTC()
 		if err := s.repo.UpdateSession(session); err != nil {
 			return nil, nil, err
 		}
@@ -478,7 +478,7 @@ func (s *DefaultService) Start(orgID, userID string, sessionMinutes, idleMinutes
 		return existing, false, nil
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	session := &Session{
 		ID:             uuid.New().String(),
 		OrgID:          orgID,
@@ -536,7 +536,7 @@ func (s *DefaultService) Extend(sessionID string, minutes int) (*Session, error)
 	if minutes <= 0 {
 		minutes = DefaultSessionMinutes
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	// The cap is measured from the original start, so extending repeatedly
 	// cannot hold a pool node indefinitely.
 	hardCap := session.StartedAt.Add(MaxSessionMinutes * time.Minute)
@@ -577,7 +577,7 @@ func (s *DefaultService) end(session *Session, reason string) (*Session, error) 
 			return nil, err
 		}
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	session.Status = StatusEnded
 	session.EndedAt = &now
 	session.EndReason = reason
@@ -600,7 +600,7 @@ func (s *DefaultService) Touch(sessionID string) error {
 	if sessionID == "" {
 		return nil
 	}
-	return s.repo.TouchSession(sessionID, time.Now())
+	return s.repo.TouchSession(sessionID, time.Now().UTC())
 }
 
 // ListLive returns a workspace's current leases.
@@ -615,6 +615,10 @@ func (s *DefaultService) MinutesUsed(orgID string, since time.Time) (int, error)
 
 // Sweep ends every lapsed lease and every session whose node went away.
 func (s *DefaultService) Sweep(now time.Time) ([]*Session, error) {
+	// The lease times are TIMESTAMP columns holding UTC wall clocks, which
+	// the queries compare with now's wall clock: the reaper's time.Now() is
+	// in the server's zone.
+	now = now.UTC()
 	var ended []*Session
 
 	lapsed, err := s.repo.ListLapsedSessions(now)
@@ -666,7 +670,7 @@ func (s *DefaultService) Counts(pool string) (PoolCounts, error) {
 	if err != nil {
 		return PoolCounts{}, err
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	var counts PoolCounts
 	for _, n := range nodes {
 		if !n.Online(now) {

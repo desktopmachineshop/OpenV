@@ -39,7 +39,7 @@ func (s *DefaultService) NoteRun(runID, marker, message string, detail map[strin
 	}
 	payload["marker"] = marker
 	payload["message"] = message
-	entry, err := s.repo.AppendNote(runID, LogEntry{RunID: runID, Kind: LogMarker, Payload: payload, CreatedAt: time.Now()})
+	entry, err := s.repo.AppendNote(runID, LogEntry{RunID: runID, Kind: LogMarker, Payload: payload, CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return err
 	}
