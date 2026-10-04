@@ -40,7 +40,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 | `test/mockApi.ts` | `mockApi`: stubs every method of `api/client` for a `vi.mock` (F2) |
 | `arch/**` | the architecture tests of S12, S12b and S13, their helpers and `arch/__snapshots__/*.txt` |
 | `**/*.test.ts`, `**/*.test.tsx`, `**/__snapshots__/**` | vitest tests, beside what they test; snapshots are files, never inline |
-| `frontend/scripts/*.mjs` | `bundle-check.mjs` (S12b), `tsdeclhash.mjs` and `tsmovecheck.mjs` (S14a), `tsdeclmove.mjs` (S14f), with their `frontend/scripts/*.test.mjs` |
+| `frontend/scripts/*.mjs` | `bundle-check.mjs` (S12b), `tsdeclhash.mjs` and `tsmovecheck.mjs` (S14a), `tsdeclmove.mjs` (S14f), `scaffold.mjs` (N3), with their `frontend/scripts/*.test.mjs` |
 
 ## Invariants (plan §3) that bind here
 

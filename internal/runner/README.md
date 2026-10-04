@@ -70,7 +70,7 @@ server, so what they send is a contract. This README covers both packages;
 3. Regenerate S7's golden; every request must be a route of
    `internal/api/testdata/routes.txt`:
    `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run TestMCPToolsGolden`.
-Scaffold: `go run ./internal/tools/scaffold mcp-tool <name>` (N3)
+Scaffold: `go run ./internal/tools/scaffold -area <area> mcp-tool <name>`, `<area>` as in `tools_<area>.go`
 
 **Change the worker wire.** Server side in
 `internal/api/worker_protocol_handlers.go`, runner side in `client.go`;

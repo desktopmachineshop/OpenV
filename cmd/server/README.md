@@ -75,9 +75,9 @@ Test files (`*_test.go`) need no area.
 
 **Give the API a new dependency** (K5). Add the field to `api.HandlerDeps`
 (`internal/api/handlers.go`), which `api.Handler` embeds, then one line in
-the `api.HandlerDeps` literal of stage `handlers`. A new API area also needs its registrar; see
-`internal/api/README.md`.
-Scaffold: `go run ./internal/tools/scaffold api-area <name>` (N3)
+the `api.HandlerDeps` literal of stage `handlers`. A new API area also
+needs its registrar; see `internal/api/README.md`.
+Scaffold: `go run ./internal/tools/scaffold api-area <name>`
 
 **Add an env var.** Read it with a getter from `config.go` in the stage that
 uses it, under the condition it applies to. Then regenerate S8's inventory:

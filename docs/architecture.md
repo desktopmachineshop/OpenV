@@ -71,7 +71,7 @@ answers for a path, and `internal/tools/areas` and
 
 ## Backend packages
 
-75 packages: the five programs, the root package, 43 domain packages, the
+76 packages: the five programs, the root package, 43 domain packages, the
 API, the persistence layer, 11 service packages, the runner and the MCP
 package, and the tools and guards
 (`internal/tools/*`, `internal/archtest`, `internal/vocabparity`), which
