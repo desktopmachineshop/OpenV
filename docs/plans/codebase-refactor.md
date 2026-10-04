@@ -214,7 +214,7 @@ every one. Fixing a quirk is a separate, release-noted PR (§9.2).
 | Q14 | Some list endpoints encode `null` for an empty list (api-suite-org-v6) | S5a |
 | Q15 | An unknown protected path answers 401; OPTIONS answers 200 unlogged (boot-v4) | S4 |
 | Q16 | The wizard and the notes panel build different artifact text (fe-suite-org-3) | F5 golden strings |
-| Q17 | The purge list has gaps not covered by cascade (persistence-4) | S3 purge-catalog allowlist |
+| Q17 | The purge list has gaps not covered by cascade (persistence-4). **Resolved** under R7 by the release-noted bug-fix pull request for #379's bug 138: `PurgeOrg` deletes `attachment_figure_counters` with the workspace's artifacts, and the allowlist is empty | S3 purge-catalog allowlist |
 | Q18 | Rate-limit buckets are shared across endpoints: `authIPLimiter` is also spent by verify and reset (api-core-v2) | S5c shared-bucket probe, which exercises the real call sites (stronger than a pointer-identity test) |
 | Q19 | One site says `"Invalid request body"`; 124 sites pass `err.Error()` through; 58 sites map any error to 404 | S5; `decodeJSONMsg`; untouched call sites |
 | Q20 | Inline `err.response?.data?.error \|\| err.message` renders string bodies differently from `apiErrorMessage` (fe-suite-org-7) | `legacyErrorText` (X15) |

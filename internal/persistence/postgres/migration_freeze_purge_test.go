@@ -50,10 +50,7 @@ import (
 
 // purgeGapAllowlist is quirk Q17: the org-, project- or artifact-scoped tables
 // a purge leaves rows in today, each with the reason. It may only shrink.
-var purgeGapAllowlist = map[string]string{
-	"attachment_figure_counters": "keyed by artifact_id with no foreign key, and PurgeOrg's list omits it, " +
-		"so a purge leaves its rows behind (persistence-4)",
-}
+var purgeGapAllowlist = map[string]string{}
 
 // purgeScopeColumns are the columns that tie a row to a workspace.
 var purgeScopeColumns = []string{"artifact_id", "org_id", "project_id"}
