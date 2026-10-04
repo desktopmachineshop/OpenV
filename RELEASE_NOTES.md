@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.16.0 — 2026-10-04
+
 ### New features
 
 - **Make an automation for the whole workspace.** On a project's
