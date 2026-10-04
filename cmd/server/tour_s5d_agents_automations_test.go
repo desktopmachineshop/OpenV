@@ -66,10 +66,10 @@ import (
 //     the member reads whole; the read's guard (the outsider) and a phantom
 //     or non-UUID id (404); the update of next_run_at (disabled, enabled,
 //     another cron) and its refusals; run-now's copy (the template rendered,
-//     an unknown placeholder empty; an empty template and one of unknown
-//     placeholders only fall back to "Manual run of automation: <name>",
-//     but one of two placeholders and a space does not, and the run's prompt is
-//     that space; a crew's entry node's agent, with team_id and team_node_id;
+//     an unknown placeholder empty; an empty template, one of unknown
+//     placeholders only, and one of two placeholders and a space, whose
+//     rendering is only whitespace, fall back to "Manual run of automation:
+//     <name>"; a crew's entry node's agent, with team_id and team_node_id;
 //     a crew with no entry node, and one no row has; a disabled automation
 //     runs all the same) and the tracking card a run in P gets
 //     (workitem.created, actor agent:<run>, the launches' only events); and
@@ -515,8 +515,8 @@ func agentsAutomationsAutomations(tr *tour) {
 		"tracking card (workitem.created, as the run)", m, agentsAutomationsRunNow, auto("a.member"))
 	tr.step("run the automation of {{unknown}} alone: the empty rendering falls back to the same copy", o,
 		agentsAutomationsRunNow, auto("a.blank"))
-	tr.step("run the automation of two unknown placeholders and a space: the prompt is that space, since only "+
-		"an empty rendering falls back", o, agentsAutomationsRunNow, auto("a.space"))
+	tr.step("run the automation of two unknown placeholders and a space: a rendering of only whitespace falls "+
+		"back too", o, agentsAutomationsRunNow, auto("a.space"))
 	tr.step("run the automation of the crew E: its entry node's agent, with team_id and team_node_id", o,
 		agentsAutomationsRunNow, auto("a.crew"))
 	tr.step("run the automation of the crew H: 400, it has no entry node", o, agentsAutomationsRunNow,

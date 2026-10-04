@@ -29,9 +29,10 @@ import (
 // The JSON an API client reads (S5d's events golden) cannot see these types,
 // but in-process subscribers can: they type-assert payload values
 // (notify/membership.go payloadBool, orchestration/hooks.go onEvent) and the
-// automation trigger matcher compares them through fmt.Sprintf("%v"), so a
-// string that becomes a *string, or an int that becomes an int64, changes
-// what those subscribers do while the JSON stays the same.
+// automation trigger matcher compares them as numbers or through
+// fmt.Sprintf("%v"), so a string that becomes a *string, or an int that
+// becomes an int64, changes what those subscribers do while the JSON stays
+// the same.
 //
 // TestEventPayloadDrivesReachEveryPublisher keeps the drive list complete:
 // every call in the module that passes an event type constant is reached by

@@ -25,9 +25,10 @@ import (
 // listens, invariant I17). An automation whose next_run_at passed while the
 // server was down, however many occurrences ago, gets exactly one run when
 // it has catch_up, and none when it has not; either way its row is claimed,
-// so next_run_at moves to the cron's next occurrence after now and
-// last_run_at to now. One not yet due is not touched. Then nothing is due:
-// a tick right after fires nothing.
+// so next_run_at moves to the cron's next occurrence after now, but only the
+// one that ran has last_run_at stamped, after its launch (bug 74 of issue
+// #379: the claim stamped the skipped one too). One not yet due is not
+// touched. Then nothing is due: a tick right after fires nothing.
 func TestSchedulerCatchUp(t *testing.T) {
 	logs := captureLog(t)
 	cron := quietCron(t)
@@ -65,18 +66,24 @@ func TestSchedulerCatchUp(t *testing.T) {
 		if !c.won {
 			t.Errorf("the claim of %s was lost, want won", c.id)
 		}
-		within(t, c.id+"'s claim time", c.lastRun, before, after)
-		if c.nextRun == nil || !c.nextRun.Equal(nextAfter(t, cron, c.lastRun)) {
+		within(t, c.id+"'s claim time", c.at, before, after)
+		if c.nextRun == nil || !c.nextRun.Equal(nextAfter(t, cron, c.at)) {
 			t.Errorf("%s's claim advanced next_run_at to %s, want the cron's next occurrence after the claim, %s",
-				c.id, timeOrDash(c.nextRun), nextAfter(t, cron, c.lastRun).Format(time.RFC3339Nano))
+				c.id, timeOrDash(c.nextRun), nextAfter(t, cron, c.at).Format(time.RFC3339Nano))
 		}
 	}
 	for _, id := range []string{"au-catch", "au-skip"} {
-		a := repo.stored(t, id)
-		if a.NextRunAt == nil || !a.NextRunAt.After(after) || a.LastRunAt == nil {
-			t.Errorf("%s after catch-up: next_run_at %s, last_run_at %s, want a next run to come and the claim's time",
-				id, timeOrDash(a.NextRunAt), timeOrDash(a.LastRunAt))
+		if a := repo.stored(t, id); a.NextRunAt == nil || !a.NextRunAt.After(after) {
+			t.Errorf("%s after catch-up: next_run_at %s, want a next run to come", id, timeOrDash(a.NextRunAt))
 		}
+	}
+	stamps := repo.stampsMade()
+	if len(stamps) != 1 || stamps[0].id != "au-catch" {
+		t.Fatalf("stamped last_run_at %v, want au-catch's alone: au-skip ran nothing", stamps)
+	}
+	within(t, "au-catch's last_run_at", stamps[0].at, claims[0].at, after)
+	if a := repo.stored(t, "au-skip"); a.LastRunAt != nil {
+		t.Errorf("au-skip's last_run_at = %s, want unset: its missed run was skipped", timeOrDash(a.LastRunAt))
 	}
 	if a := repo.stored(t, "au-later"); !a.NextRunAt.Equal(later) || a.LastRunAt != nil {
 		t.Errorf("the automation not yet due was changed: next_run_at %s, last_run_at %s",
@@ -89,6 +96,9 @@ func TestSchedulerCatchUp(t *testing.T) {
 	}
 	if n := len(repo.claimsMade()); n != 2 {
 		t.Errorf("a tick right after catch-up made %d more claims, want none", n-2)
+	}
+	if n := len(repo.stampsMade()); n != 1 {
+		t.Errorf("a tick right after catch-up made %d more stamps, want none", n-1)
 	}
 	if got := logs.lines(); len(got) != 0 {
 		t.Errorf("catch-up logged %q, want nothing", got)
@@ -182,9 +192,9 @@ func TestSchedulerStartTicks(t *testing.T) {
 // TestSchedulerPrompt pins the prompt a scheduled run gets: the template
 // rendered with automation.name as its one variable (any other placeholder,
 // event ones included, renders empty), or, when that renders to the empty
-// string, "Scheduled run of automation: <name>". A render of only
-// whitespace is kept as it is (the trigger matcher trims, this copy does
-// not).
+// string or only whitespace, "Scheduled run of automation: <name>", as the
+// trigger matcher's and run-now's copies do (the regression test for bug 77
+// of issue #379: this copy kept a render of only whitespace as the prompt).
 func TestSchedulerPrompt(t *testing.T) {
 	cases := []struct{ name, template, want string }{
 		{"an empty template", "", "Scheduled run of automation: Weekly report"},
@@ -193,7 +203,10 @@ func TestSchedulerPrompt(t *testing.T) {
 		{"no other variable", "{{automation.name}} on {{event.type}} in {{project.id}}{{event.entity_id}}",
 			"Weekly report on  in "},
 		{"only unknown placeholders", "{{event.type}}{{project.id}}", "Scheduled run of automation: Weekly report"},
-		{"unknown placeholders and a space", "{{event.type}} {{project.id}}", " "},
+		{"unknown placeholders and a space", "{{event.type}} {{project.id}}",
+			"Scheduled run of automation: Weekly report"},
+		{"a template of whitespace", " \n\t", "Scheduled run of automation: Weekly report"},
+		{"text inside whitespace, kept as it is", "  Summarise {{automation.name}}.\n", "  Summarise Weekly report.\n"},
 		{"plain text", "Summarise the week.", "Summarise the week."},
 	}
 	for _, tc := range cases {
@@ -212,12 +225,14 @@ func TestSchedulerPrompt(t *testing.T) {
 
 // TestSchedulerTargets pins whom a scheduled run goes to, and what happens
 // when there is no one: a crew's run goes to its entry node's agent with the
-// crew and node named; a crew with no entry node, one whose entry node is
-// gone, one no row has and an automation with no target each launch
-// nothing, log one line, and stay claimed (next_run_at advanced and
-// last_run_at stamped, though no run followed), so the occurrence is
-// skipped, not retried. A launch the run service refuses is logged and
-// skipped the same way.
+// crew and node named, and last_run_at is stamped after the launch; a crew
+// with no entry node, one whose entry node is gone, one no row has and an
+// automation with no target each launch nothing, log one line, and stay
+// claimed (next_run_at advanced), so the occurrence is skipped, not retried,
+// but leave last_run_at unset, since nothing ran (bug 74 of issue #379,
+// decided under Q35: the claim stamped it before the target was resolved). A
+// launch the run service refuses is logged and skipped the same way. A
+// stamp the repository refuses is logged; the run stands.
 func TestSchedulerTargets(t *testing.T) {
 	cron := quietCron(t)
 	crew := func(id string) *automations.Automation {
@@ -277,9 +292,14 @@ func TestSchedulerTargets(t *testing.T) {
 			if got := logs.lines(); !equalLines(got, wantLog) {
 				t.Errorf("logged %q, want %q", got, wantLog)
 			}
-			if a := repo.stored(t, tc.a.ID); a.NextRunAt == nil || !a.NextRunAt.After(time.Now()) || a.LastRunAt == nil {
-				t.Errorf("next_run_at = %s, last_run_at = %s: want both set by the claim, which comes first, "+
-					"whether or not a run follows", timeOrDash(a.NextRunAt), timeOrDash(a.LastRunAt))
+			a := repo.stored(t, tc.a.ID)
+			if a.NextRunAt == nil || !a.NextRunAt.After(time.Now()) {
+				t.Errorf("next_run_at = %s: want it advanced by the claim, which comes first, whether or not a run "+
+					"follows", timeOrDash(a.NextRunAt))
+			}
+			if launched := tc.launch != ""; (a.LastRunAt != nil) != launched || len(repo.stampsMade()) > 1 {
+				t.Errorf("last_run_at = %s after stamps %v: want it stamped only when a run was launched (%v)",
+					timeOrDash(a.LastRunAt), repo.stampsMade(), launched)
 			}
 		})
 	}
@@ -295,12 +315,34 @@ func TestSchedulerTargets(t *testing.T) {
 		if n := len(runs.requests()); n != 1 {
 			t.Errorf("launch attempts = %d, want 1 (the occurrence is skipped, not retried)", n)
 		}
-		if a := repo.stored(t, "au-1"); a.LastRunAt == nil {
-			t.Error("last_run_at is unset, want the claim's stamp though no run was launched")
+		if a := repo.stored(t, "au-1"); a.LastRunAt != nil || a.NextRunAt == nil || !a.NextRunAt.After(time.Now()) {
+			t.Errorf("last_run_at = %s, next_run_at = %s: want unset, no run was launched, and advanced",
+				timeOrDash(a.LastRunAt), timeOrDash(a.NextRunAt))
 		}
 		want := []string{"scheduler: failed to launch run for automation au-1: this workspace has reached its monthly budget"}
 		if got := logs.lines(); !equalLines(got, want) {
 			t.Errorf("logged %q, want %q", got, want)
+		}
+	})
+
+	t.Run("a stamp refused is logged", func(t *testing.T) {
+		logs := captureLog(t)
+		repo := newSchedRepo(scheduled("au-1", "Unstamped", cron, time.Now().Add(-time.Minute)))
+		repo.stampErr = errors.New("deadlock detected")
+		runs := newSchedRuns()
+		s := New(repo, runs, crewGraphs())
+		s.tick()
+		s.tick()
+		want := []string{wantLaunch("au-1", "Scheduled run of automation: Unstamped")}
+		if got := launchLines(runs.requests()); !equalLines(got, want) {
+			t.Errorf("launched\n  %q\nwant the one run\n  %q", got, want)
+		}
+		if stamps := repo.stampsMade(); len(stamps) != 1 {
+			t.Errorf("stamps = %v, want one attempt", stamps)
+		}
+		wantLog := []string{"scheduler: failed to stamp last_run_at for automation au-1: deadlock detected"}
+		if got := logs.lines(); !equalLines(got, wantLog) {
+			t.Errorf("logged %q, want %q", got, wantLog)
 		}
 	})
 }
@@ -310,9 +352,11 @@ func TestSchedulerTargets(t *testing.T) {
 // and only the replica whose claim wins resolves the target and launches.
 // Two schedulers that both read the automation as due race for it: one claim
 // is won and one lost, and exactly one run is launched. A claim the
-// repository answers with an error launches nothing either, unless the
-// cron expression is invalid and the answer also says won (the two claim
-// paths read an error differently).
+// repository answers with an error launches nothing, whether or not the
+// answer also says won, and so does a switch-off of an automation whose cron
+// does not parse (TestSchedulerSwitchesOffAnInvalidCron); the regression
+// test for bug 73 (issue #379): the switch-off's path, which was a claim
+// then, fired on an answer of won with an error, the other path never did.
 func TestSchedulerClaims(t *testing.T) {
 	t.Run("two schedulers racing for one due automation", func(t *testing.T) {
 		logs := captureLog(t)
@@ -381,23 +425,21 @@ func TestSchedulerClaims(t *testing.T) {
 
 	t.Run("a claim the repository answers with an error", func(t *testing.T) {
 		boom := errors.New("connection reset")
-		const invalid = `scheduler: automation au-1 has invalid cron "@fortnightly": ` +
-			`invalid cron expression "@fortnightly": unrecognized descriptor: @fortnightly`
+		const claimFailed = "scheduler: failed to claim au-1: connection reset"
+		const switchOffFailed = "scheduler: failed to switch off automation Erring (au-1): connection reset"
 		cases := []struct {
-			name   string
-			cron   string
-			answer claimResult
-			fires  bool
-			logs   []string
+			name      string
+			cron      string
+			answer    claimResult
+			switchOff bool
+			log       string
 		}{
-			{name: "valid cron, not won", cron: "*/5 * * * *", answer: claimResult{false, boom},
-				logs: []string{"scheduler: failed to claim au-1: connection reset"}},
-			{name: "valid cron, won", cron: "*/5 * * * *", answer: claimResult{true, boom},
-				logs: []string{"scheduler: failed to claim au-1: connection reset"}},
-			{name: "invalid cron, not won", cron: "@fortnightly", answer: claimResult{false, boom},
-				logs: []string{invalid, "scheduler: failed to claim au-1: connection reset"}},
-			{name: "invalid cron, won", cron: "@fortnightly", answer: claimResult{true, boom}, fires: true,
-				logs: []string{invalid, "scheduler: failed to claim au-1: connection reset"}},
+			{name: "valid cron, not won", cron: "*/5 * * * *", answer: claimResult{false, boom}, log: claimFailed},
+			{name: "valid cron, won", cron: "*/5 * * * *", answer: claimResult{true, boom}, log: claimFailed},
+			{name: "invalid cron, not switched off", cron: "@fortnightly", answer: claimResult{false, boom},
+				switchOff: true, log: switchOffFailed},
+			{name: "invalid cron, switched off", cron: "@fortnightly", answer: claimResult{true, boom},
+				switchOff: true, log: switchOffFailed},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -406,37 +448,46 @@ func TestSchedulerClaims(t *testing.T) {
 				repo.claimFails = map[string]claimResult{"au-1": tc.answer}
 				runs := newSchedRuns()
 				New(repo, runs, crewGraphs()).tick()
-				if fired := len(runs.requests()) == 1; fired != tc.fires || len(runs.requests()) > 1 {
-					t.Errorf("launched %d runs, want fired=%v", len(runs.requests()), tc.fires)
+				if n := len(runs.requests()); n != 0 {
+					t.Errorf("launched %d runs, want none: an answer with an error never fires", n)
 				}
-				if got := logs.lines(); !equalLines(got, tc.logs) {
-					t.Errorf("logged %q, want %q", got, tc.logs)
+				if claims, offs := len(repo.claimsMade()), len(repo.switchOffsMade()); (offs == 1) != tc.switchOff ||
+					claims+offs != 1 {
+					t.Errorf("claims %d and switch-offs %d, want one switch-off: %v, else one claim", claims, offs,
+						tc.switchOff)
+				}
+				if got := logs.lines(); !equalLines(got, []string{tc.log}) {
+					t.Errorf("logged %q, want %q", got, []string{tc.log})
 				}
 			})
 		}
 	})
 }
 
-// TestSchedulerInvalidCronFiresOnce pins an automation whose cron expression
-// does not parse (robfig/cron's ParseStandard): the claim logs the parse
-// error and sets next_run_at to NULL, and when it wins the automation still
-// fires, once, with the same run a valid one gets. The row stays enabled
-// but, with no next_run_at, is never due again. Without catch_up, catch-up
-// claims it the same way and fires nothing, so it never runs at all. The
-// create and update paths refuse such an expression (S5d pins their text);
-// the row can only hold one written another way.
-func TestSchedulerInvalidCronFiresOnce(t *testing.T) {
+// TestSchedulerSwitchesOffAnInvalidCron is the regression test for bug 72
+// (issue #379, decided under Q34): an automation whose cron expression does
+// not parse (robfig/cron's ParseStandard) fired once, on a tick or at
+// catch-up with catch_up, and its claim set next_run_at to NULL while the
+// row stayed enabled, so it never ran again and an admin saw it switched on;
+// without catch_up, catch-up claimed it the same way and it never ran at all.
+// Now the scheduler fires no automation whose cron does not parse: it claims
+// nothing, switches the automation off (enabled false, next_run_at NULL, in
+// one atomic step under the claim's condition) and logs why, once; then it
+// is never due again. The create and update paths refuse such an expression
+// (S5d pins their text); the row can only hold one written another way. Of
+// two replicas that both read it due, one switches it off and logs; the
+// other's switch-off is lost, silently, as a lost claim is.
+func TestSchedulerSwitchesOffAnInvalidCron(t *testing.T) {
 	const cron = "every day at noon"
-	const logLine = `scheduler: automation au-bad has invalid cron "every day at noon": ` +
+	const logLine = `scheduler: switched off automation Broken schedule (au-bad): ` +
 		`invalid cron expression "every day at noon": expected exactly 5 fields, found 4: [every day at noon]`
 	cases := []struct {
 		name    string
 		catchUp bool
 		start   func(s *Scheduler)
-		fires   bool
 	}{
-		{name: "on a tick", start: func(s *Scheduler) { s.tick() }, fires: true},
-		{name: "at catch-up, with catch_up", catchUp: true, start: func(s *Scheduler) { s.catchUp() }, fires: true},
+		{name: "on a tick", start: func(s *Scheduler) { s.tick() }},
+		{name: "at catch-up, with catch_up", catchUp: true, start: func(s *Scheduler) { s.catchUp() }},
 		{name: "at catch-up, without catch_up", start: func(s *Scheduler) { s.catchUp() }},
 	}
 	for _, tc := range cases {
@@ -451,22 +502,21 @@ func TestSchedulerInvalidCronFiresOnce(t *testing.T) {
 			before := time.Now()
 			tc.start(s)
 			after := time.Now()
-			var want []string
-			if tc.fires {
-				want = []string{wantLaunch("au-bad", "Scheduled run of automation: Broken schedule")}
+			if got := launchLines(runs.requests()); len(got) != 0 {
+				t.Fatalf("launched %q, want nothing: an automation whose cron does not parse never fires", got)
 			}
-			if got := launchLines(runs.requests()); !equalLines(got, want) {
-				t.Fatalf("launched\n  %q\nwant\n  %q", got, want)
+			if claims := repo.claimsMade(); len(claims) != 0 {
+				t.Errorf("claims = %v, want none", claims)
 			}
-			claims := repo.claimsMade()
-			if len(claims) != 1 || !claims[0].won || claims[0].nextRun != nil {
-				t.Fatalf("claims = %v, want one, won, setting next_run_at to NULL", claims)
+			offs := repo.switchOffsMade()
+			if len(offs) != 1 || offs[0].id != "au-bad" || !offs[0].won {
+				t.Fatalf("switch-offs = %v, want one of au-bad, won", offs)
 			}
-			within(t, "the claim time", claims[0].lastRun, before, after)
+			within(t, "the switch-off's time", offs[0].at, before, after)
 			stored := repo.stored(t, "au-bad")
-			if stored.NextRunAt != nil || !stored.Enabled || stored.LastRunAt == nil {
-				t.Errorf("after the claim: next_run_at %s, enabled %v, last_run_at %s; want NULL, still enabled, stamped",
-					timeOrDash(stored.NextRunAt), stored.Enabled, timeOrDash(stored.LastRunAt))
+			if stored.Enabled || stored.NextRunAt != nil || stored.LastRunAt != nil {
+				t.Errorf("after the switch-off: enabled %v, next_run_at %s, last_run_at %s; want switched off, "+
+					"NULL and never run", stored.Enabled, timeOrDash(stored.NextRunAt), timeOrDash(stored.LastRunAt))
 			}
 			if got := logs.lines(); !equalLines(got, []string{logLine}) {
 				t.Errorf("logged %q, want %q", got, []string{logLine})
@@ -474,14 +524,35 @@ func TestSchedulerInvalidCronFiresOnce(t *testing.T) {
 
 			s.tick()
 			s.tick()
-			if n := len(runs.requests()); n != len(want) {
-				t.Errorf("two more ticks launched %d more runs, want none: it is never due again", n-len(want))
-			}
-			if n := len(repo.claimsMade()); n != 1 {
-				t.Errorf("two more ticks made %d more claims, want none", n-1)
+			if n := len(runs.requests()) + len(repo.claimsMade()) + len(repo.switchOffsMade()); n != 1 {
+				t.Errorf("two more ticks made %d more launches, claims or switch-offs, want none: it is never due again",
+					n-1)
 			}
 		})
 	}
+
+	t.Run("two schedulers racing for it", func(t *testing.T) {
+		logs := captureLog(t)
+		repo := newSchedRepo(scheduled("au-bad", "Broken schedule", cron, time.Now().Add(-time.Minute)))
+		repo.barrier = &sync.WaitGroup{}
+		repo.barrier.Add(2)
+		runsA, runsB := newSchedRuns(), newSchedRuns()
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() { defer wg.Done(); New(repo, runsA, crewGraphs()).tick() }()
+		go func() { defer wg.Done(); New(repo, runsB, crewGraphs()).tick() }()
+		wg.Wait()
+		offs := repo.switchOffsMade()
+		if len(offs) != 2 || !offs[0].won || offs[1].won {
+			t.Errorf("switch-offs = %v, want one won and then one lost", offs)
+		}
+		if n := len(runsA.requests()) + len(runsB.requests()) + len(repo.claimsMade()); n != 0 {
+			t.Errorf("the replicas launched or claimed %d times, want none", n)
+		}
+		if got := logs.lines(); !equalLines(got, []string{logLine}) {
+			t.Errorf("logged %q, want the winner's line alone, %q", got, []string{logLine})
+		}
+	})
 }
 
 // TestResolveTarget pins ResolveTarget, which the scheduler, the trigger
