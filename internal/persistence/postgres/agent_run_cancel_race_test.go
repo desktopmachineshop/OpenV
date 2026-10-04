@@ -172,3 +172,43 @@ func TestACancelRacingAClaimAsksTheClaimedRunToStop(t *testing.T) {
 		t.Errorf("RequestCancel answered %s, cancel requested %v; want claimed, requested", a.run.Status, a.run.CancelRequested)
 	}
 }
+
+// The race of #379 bug 166: a cancel is requested while the run's worker
+// reports it finished. The finish has read the run, its cancel not yet
+// requested, and the cancel holds the run's row as the finish writes; the
+// finish waits, then ends the run as its worker reported it and keeps the
+// cancel, and answers the run as stored, still asked to stop, which is
+// what its auto-retry decides on. Before the fix the finish wrote the flag
+// it had read, false, over the cancel.
+func TestAFinishRacingACancelKeepsTheCancel(t *testing.T) {
+	f := newClaimFixture(t)
+	svc := agentruns.NewDefaultService(f.repo, nil, nil)
+	id := acrClaim(t, f, agentruns.StatusRunning)
+
+	hold := acrHoldRun(t, f.db, id)
+	finished := make(chan acrAnswer, 1)
+	go func() {
+		run, err := svc.Finish(id, agentruns.FinishRequest{Status: agentruns.StatusFailed, Error: "killed", ErrorClass: agentruns.ErrorClassWorkerError})
+		finished <- acrAnswer{run, err}
+	}()
+	acrAwaitLockWaiters(t, f.db, 1)
+	if _, err := hold.Exec(`UPDATE agent_runs SET `+requestLiveRunCancel+` WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := hold.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	a := <-finished
+	if a.err != nil {
+		t.Fatalf("Finish: %v", a.err)
+	}
+
+	run := f.mustFind(t, id)
+	if run.Status != agentruns.StatusFailed || run.ErrorClass != agentruns.ErrorClassWorkerError || !run.CancelRequested || f.tokenHash(t, id) != "" {
+		t.Errorf("the run after the cancel and the finish: %s (%s), cancel requested %v, token %q; want failed (worker_error), still requested, revoked",
+			run.Status, run.ErrorClass, run.CancelRequested, f.tokenHash(t, id))
+	}
+	if !a.run.CancelRequested {
+		t.Error("Finish answered the run with its cancel not requested, want requested: its auto-retry decides on it")
+	}
+}

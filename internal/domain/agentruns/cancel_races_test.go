@@ -100,3 +100,28 @@ func TestRequestCancelLandsWhateverTheRunBecameMeanwhile(t *testing.T) {
 		})
 	}
 }
+
+// A cancel requested while the run's worker reports it finished is kept:
+// the run ends as its worker reported it, its cancel still requested, and
+// a retryable failure is not retried, as no run asked to stop is (#379 bug
+// 147). Before the fix the finish wrote back the flag it had read, false,
+// over the cancel, and the auto-retry launched the run again (#379 bug
+// 166).
+func TestFinishKeepsACancelRequestedAsTheRunFinished(t *testing.T) {
+	svc, repo := newRetryService(runningRun("r1", 1, 3))
+	repo.onUpdateTerminal = func() { repo.runs["r1"].CancelRequested = true }
+
+	run, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassWorkerError, Error: "killed"})
+	if err != nil {
+		t.Fatalf("Finish: %v", err)
+	}
+	if stored := repo.runs["r1"]; stored.Status != StatusFailed || !stored.CancelRequested {
+		t.Errorf("stored run: %s, cancel requested %v; want failed, still requested", stored.Status, stored.CancelRequested)
+	}
+	if !run.CancelRequested {
+		t.Error("Finish answered the run with its cancel not requested, want requested")
+	}
+	if r := findRetryOf(repo, "r1"); r != nil {
+		t.Errorf("a run asked to stop as it finished was retried: %+v", r)
+	}
+}

@@ -423,23 +423,34 @@ func cancelProjectRuns(tx *sql.Tx, projectID string) ([]string, error) {
 // token, but only while a worker still holds the run (claimed or running), so
 // neither a run already finished nor one back in the queue takes a result;
 // reports whether the transition was applied.
+//
+// The cancel flag is never cleared: a cancel requested after the caller
+// read the run is kept, and r.CancelRequested is set to the flag as stored,
+// so the caller's auto-retry decision sees it (#379 bug 166: the flag the
+// caller had read, false, was written back over a cancel requested
+// meanwhile, and a retryable failure was then retried).
 func (rep *AgentRunRepository) UpdateTerminal(r *agentruns.Run) (bool, error) {
 	touched, err := json.Marshal(r.ArtifactsTouched)
 	if err != nil {
 		return false, err
 	}
-	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = $2, cancel_requested = $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
+	var cancelRequested bool
+	err = rep.db.QueryRow(`
+		UPDATE agent_runs SET status = $2, cancel_requested = agent_runs.cancel_requested OR $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
 			exit_code = $8, final_text = $9, error = $10, tokens_in = $11, tokens_out = $12, cost_usd = $13, artifacts_touched = $14,
 			error_class = $15, run_token_hash = '', partial_text = ''
 		WHERE id = $1 AND status IN ('claimed', 'running')
+		RETURNING cancel_requested
 	`, r.ID, r.Status, r.CancelRequested, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt,
-		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.ErrorClass)
+		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.ErrorClass).Scan(&cancelRequested)
+	if noRow(err) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	n, err := res.RowsAffected()
-	return n > 0, err
+	r.CancelRequested = cancelRequested
+	return true, nil
 }
 
 // UpdateWorkItemID links a run to its kanban card.

@@ -1256,7 +1256,8 @@ fails when an approved proposal could not be applied: its `error` is then
 `agent_error`, which is never retried automatically; a member may still
 retry it (REQ-79, REQ-84). Deleting its project cancels it instead, its
 proposals gone with the project. A run whose cancel was requested is never
-retried automatically either, however it ends.
+retried automatically either, however it ends, even when the cancel came
+as its worker was reporting it finished: a finish keeps the cancel.
 
 When a crew run succeeds (for one awaiting approval, once it is finalised),
 each `hands-off-to` and `reviews` edge of its crew node starts what it leads

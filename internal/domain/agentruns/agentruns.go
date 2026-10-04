@@ -387,7 +387,9 @@ type Repository interface {
 	RequestCancel(id string) (bool, error)
 	// UpdateTerminal writes a run's terminal result fields and revokes its run
 	// token, but only while a worker still holds the run (claimed or
-	// running); reports whether the transition was applied.
+	// running); reports whether the transition was applied. A cancel
+	// requested since r was read is kept, never cleared, and once applied
+	// r.CancelRequested is the flag as stored.
 	UpdateTerminal(r *Run) (bool, error)
 	// MarkRunning conditionally transitions a run from claimed to running,
 	// stamping started_at/heartbeat_at, so a run another actor moved on

@@ -342,7 +342,11 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	// The terminal write is conditional so a concurrent finisher (the stale
 	// reaper, a duplicate worker report) can never overwrite an
 	// already-terminal status; it also revokes the run token, so a finished
-	// run's credential stops authenticating.
+	// run's credential stops authenticating. It keeps a cancel requested
+	// since the read above and sets run.CancelRequested to the stored flag,
+	// so the auto-retry below never relaunches a run someone asked to stop
+	// as it finished (#379 bug 166: the flag read above was written back
+	// over that cancel, and the retry ran).
 	applied, err := s.repo.UpdateTerminal(run)
 	if err != nil {
 		return nil, err

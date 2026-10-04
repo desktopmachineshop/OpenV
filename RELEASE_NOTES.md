@@ -16,6 +16,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   lost: the run went back to waiting, and the next runner started it again.
   The run is now cancelled.
 
+- **A run you cancel as it fails is not started again.** A cancel that
+  came while the run's runner was reporting it finished was forgotten, so a
+  run that then failed in a way that is normally retried was started again
+  automatically. The cancel is now kept, and the run is not retried.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

@@ -76,6 +76,8 @@ func (f *fakeRunRepo) RequestCancel(id string) (bool, error) {
 	return true, nil
 }
 
+// UpdateTerminal mirrors the SQL: a cancel requested since the caller read
+// the run is kept, and the caller's copy learns the flag as stored.
 func (f *fakeRunRepo) UpdateTerminal(run *Run) (bool, error) {
 	if f.onUpdateTerminal != nil {
 		f.onUpdateTerminal()
@@ -84,6 +86,7 @@ func (f *fakeRunRepo) UpdateTerminal(run *Run) (bool, error) {
 	if !ok || (stored.Status != StatusClaimed && stored.Status != StatusRunning) {
 		return false, nil
 	}
+	run.CancelRequested = stored.CancelRequested || run.CancelRequested
 	cp := *run
 	cp.RunTokenHash = ""
 	f.runs[run.ID] = &cp
