@@ -11,13 +11,13 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@examp
 -------- message
 From: openv@example.test
 To: ada@example.test
-Subject: Workspace nearing budget
+Subject: Workspace reached 80% of its budget
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Workspace nearing budget
+Workspace reached 80% of its budget
 
-This month's agent spend has reached $212.50 of the $250.00 budget (80%).
+This month's agent runs have spent $212.50 of the $250.00 budget.
 
 Open it in OpenV:
 https://openv.example.test/org/settings?tab=usage
@@ -32,13 +32,13 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@examp
 -------- message
 From: openv@example.test
 To: dee@example.test
-Subject: Workspace nearing budget
+Subject: Workspace reached 80% of its budget
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Workspace nearing budget
+Workspace reached 80% of its budget
 
-This month's agent spend has reached $212.50 of the $250.00 budget (80%).
+This month's agent runs have spent $212.50 of the $250.00 budget.
 
 Open it in OpenV:
 https://openv.example.test/org/settings?tab=usage
@@ -53,13 +53,13 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ada@examp
 -------- message
 From: openv@example.test
 To: ada@example.test
-Subject: Workspace over budget
+Subject: Workspace reached 100% of its budget
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Workspace over budget
+Workspace reached 100% of its budget
 
-This month's agent spend has reached $263.46 of the $250.00 budget (100%).
+This month's agent runs have spent $263.46 of the $250.00 budget.
 
 Open it in OpenV:
 https://openv.example.test/org/settings?tab=usage
@@ -74,13 +74,13 @@ envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO dee@examp
 -------- message
 From: openv@example.test
 To: dee@example.test
-Subject: Workspace over budget
+Subject: Workspace reached 100% of its budget
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 
-Workspace over budget
+Workspace reached 100% of its budget
 
-This month's agent spend has reached $263.46 of the $250.00 budget (100%).
+This month's agent runs have spent $263.46 of the $250.00 budget.
 
 Open it in OpenV:
 https://openv.example.test/org/settings?tab=usage

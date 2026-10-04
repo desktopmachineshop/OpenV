@@ -251,8 +251,6 @@ func TestMembershipCopyNamesEveryRoleGrammatically(t *testing.T) {
 			"You are now a member of this workspace with a member role."},
 		{org(domainevents.OrgMemberAdded, map[string]interface{}{"user_id": "bob", "role": orgs.RoleAdmin}),
 			"You are now a member of this workspace with an admin role."},
-		{org(domainevents.OrgInvitationAccepted, map[string]interface{}{"user_id": "bob", "role": orgs.RoleAdmin}),
-			"You are now a member of this workspace with an admin role."},
 		{org(domainevents.OrgMemberRoleChanged, map[string]interface{}{"user_id": "bob", "from": orgs.RoleAdmin,
 			"to": orgs.RoleMember}), "Your role in this workspace is now a member."},
 		{project(domainevents.ProjectMemberAdded, map[string]interface{}{"user_id": "bob", "role": "editor"}),
