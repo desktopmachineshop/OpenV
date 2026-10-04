@@ -39,6 +39,7 @@ type schedRepo struct {
 	mu         sync.Mutex
 	rows       []*automations.Automation
 	lists      int
+	listedAt   []time.Time
 	claims     []schedClaim
 	switchOffs []schedClaim
 	stamps     []schedStamp
@@ -94,6 +95,7 @@ func newSchedRepo(rows ...*automations.Automation) *schedRepo {
 func (r *schedRepo) ListDueScheduled(now time.Time) ([]*automations.Automation, error) {
 	r.mu.Lock()
 	r.lists++
+	r.listedAt = append(r.listedAt, now)
 	var due []*automations.Automation
 	if r.listErr == nil {
 		for _, a := range r.rows {
@@ -217,6 +219,13 @@ func (r *schedRepo) switchOffsMade() []schedClaim {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return append([]schedClaim(nil), r.switchOffs...)
+}
+
+// listTimes is a copy of the times ListDueScheduled was asked for, in order.
+func (r *schedRepo) listTimes() []time.Time {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]time.Time(nil), r.listedAt...)
 }
 
 func (r *schedRepo) listCount() int {

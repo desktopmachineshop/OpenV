@@ -49,7 +49,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 // Both paths go through the atomic claim so a multi-replica deployment never
 // double-fires (or double-advances) a due automation.
 func (s *Scheduler) catchUp() {
-	due, err := s.repo.ListDueScheduled(time.Now())
+	due, err := s.repo.ListDueScheduled(time.Now().UTC())
 	if err != nil {
 		log.Printf("scheduler: catch-up query failed: %v", err)
 		return
@@ -66,7 +66,7 @@ func (s *Scheduler) catchUp() {
 }
 
 func (s *Scheduler) tick() {
-	due, err := s.repo.ListDueScheduled(time.Now())
+	due, err := s.repo.ListDueScheduled(time.Now().UTC())
 	if err != nil {
 		log.Printf("scheduler: due query failed: %v", err)
 		return
@@ -118,7 +118,7 @@ func (s *Scheduler) fire(a *automations.Automation) {
 	// Only now has the occurrence run: the claim advanced next_run_at but
 	// left last_run_at, so an occurrence that launched nothing is not shown
 	// as run.
-	if err := s.repo.StampLastRun(a.ID, time.Now()); err != nil {
+	if err := s.repo.StampLastRun(a.ID, time.Now().UTC()); err != nil {
 		log.Printf("scheduler: failed to stamp last_run_at for automation %s: %v", a.ID, err)
 	}
 }
@@ -129,9 +129,12 @@ func (s *Scheduler) fire(a *automations.Automation) {
 // peer replica already took the row, and a claim the repository answers
 // with an error never fires, whatever else the answer says. An automation
 // whose cron expression no longer parses is not claimed but switched off
-// (switchOff), so it never fires.
+// (switchOff), so it never fires. Every time the scheduler hands the
+// repository is UTC: next_run_at and last_run_at are TIMESTAMP columns,
+// which keep the wall clock they are sent, so a local time would move the
+// due set and the stamps by the server's offset (#379 bug 133).
 func (s *Scheduler) claim(a *automations.Automation) bool {
-	now := time.Now()
+	now := time.Now().UTC()
 	next, err := automations.NextAfter(a.CronExpr, now)
 	if err != nil {
 		s.switchOff(a, now, err)

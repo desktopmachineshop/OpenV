@@ -612,3 +612,63 @@ func TestResolveTarget(t *testing.T) {
 		})
 	}
 }
+
+// TestSchedulerHandsTheRepositoryUTC is #379 bug 133's unit pin (the
+// database one is TestTheAutomationsStampTimesInUTC in
+// internal/persistence/postgres): next_run_at and last_run_at are TIMESTAMP
+// columns, which keep the wall clock they are sent, so every time the
+// scheduler hands the repository is UTC whatever the server's zone. The due
+// query of catch-up and of a tick, a claim's time and the next_run_at it
+// advances to, a switch-off's time and a last_run_at stamp: on a server two
+// hours east of UTC each was a local time, so a schedule was read in the
+// server's zone and every stamp moved two hours on its way in.
+func TestSchedulerHandsTheRepositoryUTC(t *testing.T) {
+	captureLog(t)
+	prev := time.Local
+	time.Local = time.FixedZone("CEST", 2*60*60)
+	t.Cleanup(func() { time.Local = prev })
+
+	cron := quietCron(t)
+	now := time.Now()
+	atCatchUp := scheduled("au-1", "At catch-up", cron, now.Add(-time.Hour))
+	atCatchUp.CatchUp = true
+	repo := newSchedRepo(atCatchUp, scheduled("au-bad", "Broken", "nope", now.Add(-time.Minute)))
+	runs := newSchedRuns()
+	s := New(repo, runs, crewGraphs())
+	s.catchUp()
+	repo.add(scheduled("au-2", "On a tick", cron, time.Now().Add(-time.Second)))
+	s.tick()
+
+	utc := func(what string, at time.Time) {
+		t.Helper()
+		if at.Location() != time.UTC {
+			t.Errorf("%s is %s, in %s; want UTC", what, at.Format(time.RFC3339Nano), at.Location())
+		}
+	}
+	if lists := repo.listTimes(); len(lists) != 2 {
+		t.Fatalf("due queries = %d, want catch-up's and the tick's", len(lists))
+	} else {
+		utc("catch-up's due query", lists[0])
+		utc("a tick's due query", lists[1])
+	}
+	claims := repo.claimsMade()
+	if len(claims) != 2 || !claims[0].won || !claims[1].won {
+		t.Fatalf("claims = %v, want au-1's at catch-up and au-2's on the tick, both won", claims)
+	}
+	for _, c := range claims {
+		utc(c.id+"'s claim", c.at)
+		utc(c.id+"'s claimed next_run_at", *c.nextRun)
+	}
+	offs := repo.switchOffsMade()
+	if len(offs) != 1 || !offs[0].won {
+		t.Fatalf("switch-offs = %v, want au-bad's, won", offs)
+	}
+	utc("au-bad's switch-off", offs[0].at)
+	stamps := repo.stampsMade()
+	if len(stamps) != 2 {
+		t.Fatalf("stamps = %v, want au-1's and au-2's", stamps)
+	}
+	for _, st := range stamps {
+		utc(st.id+"'s last_run_at", st.at)
+	}
+}

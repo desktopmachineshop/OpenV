@@ -11,6 +11,52 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Agent runs and runners keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, agent runs, cloud runner leases and runner keys recorded their
+  times shifted by the zone's offset, and acted on the shifted times. East
+  of UTC, a run could be failed as "worker lost" while its runner was still
+  preparing it, an automatic retry, and a run reserved for its launcher's
+  own runner, were held back for hours, and a runner that had stopped still
+  showed as online for hours. West of UTC, a run reserved for its
+  launcher's own runner went to a workspace runner at once, an automatic
+  retry ran without waiting, a runner that stopped right after claiming a
+  run was noticed hours late, a runner polling right then showed as
+  offline, the cloud runner pool showed no runner available, and a cloud
+  runner lease counted its whole length against the workspace's minutes as
+  soon as it started. Either way, a run's start, finish and log times, and
+  a cloud runner's time left, showed hours off. They now record every time
+  in UTC, as on OpenV's hosted service.
+
+- **Every project can add figures to its artifacts.** A figure takes its
+  reference from its artifact, as REQ-1-FIG-1 does from REQ-1, and each
+  project numbers its own artifacts from REQ-1, but a figure reference
+  could be used only once on the whole server. Once any project, in any
+  workspace, had a REQ-1-FIG-1, adding the first figure to another
+  project's REQ-1 failed with "Failed to save attachment metadata", and so
+  on for every reference already taken elsewhere. A figure reference now
+  needs to be unique only within its project, as the artifact reference it
+  is built on is. Figures already added keep their references.
+
+## 0.16.0 — 2026-10-04
+
+### New features
+
+- **Make an automation for the whole workspace.** On a project's
+  Automations page, a workspace admin now chooses what a new automation
+  covers: this project, as before, or the whole workspace. A
+  whole-workspace automation runs on events in every project of the
+  workspace, in the project of the event that set it off, and on workspace
+  membership and invitation events, which no project's automation sees.
+  Every project's Automations page lists the whole workspace's automations,
+  marked *Whole workspace*, beside its own; workspace admins edit, run and
+  delete them there, and move an automation between its project and the
+  whole workspace, while other members see them without changing them. A
+  whole-workspace automation runs an agent, or one of the workspace's own
+  crews such as its default crew, not a crew made in one project.
+
+### Bug fixes
+
 - **A failed agent run is retried only when retrying can help.** When an
   agent's CLI fails, OpenV reads its error text to tell a sign-in problem
   (not retried) and a provider outage or rate limit (retried) from the
@@ -385,7 +431,41 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   events through the API now also opens with its own event shown, not
   another. Workspace membership and invitation events concern the whole
   workspace, so they fire only an automation that covers the whole
-  workspace, not one made on a project's Automations page.
+  workspace, not one that covers a single project: see *Make an automation
+  for the whole workspace* above.
+
+- **Automations keep time on a server whose clock is not set to UTC.** On
+  an OpenV server running in another time zone, as a self-hosted one can,
+  automations recorded their times shifted by the zone's offset: the
+  Automations table showed the next and last runs hours off, a scheduled
+  automation ran hours before or after the next run it showed, and a
+  triggered automation's cooldown and runs-per-hour limit counted from the
+  wrong moment, so it could be held back for hours after a run or run past
+  its limit. Automations now record every time in UTC, and a schedule is
+  read in UTC on every server, as it always was on OpenV's hosted service.
+
+- **An automation triggered on a link's update fires.** A triggered
+  automation could be set to run on `link.updated`, but changing a link's
+  type or attributes never set it off, because OpenV recorded no event for
+  it. Changing a link through the API now records a `link.updated` event,
+  as creating and deleting one already did, naming the link's two
+  artifacts and the type it has now: it starts the automations waiting for
+  it, and the change shows in the project's activity log.
+
+- **An automation runs only agents and crews of its own workspace.**
+  Through the API, an automation could be saved naming another
+  workspace's agent or crew, a crew made in another project, or another
+  workspace's project, and its runs then used them. Saving one now answers
+  "agent not found", "crew not found", "the crew is pinned to another
+  project" or "project does not belong to this workspace"; an automation
+  for the whole workspace also refuses a crew made in one project, since it
+  runs in every project. An automation already saved is checked again only
+  when its agent, crew or scope is changed.
+
+- **Switching an automation between an agent and a crew saves.** Editing
+  an automation to run a crew instead of an agent, or an agent instead of a
+  crew, failed with "exactly one of agent_id or team_id must be set". It
+  now saves with the new target.
 
 - **A mistyped `OPENV_PLAN_DEFAULT` is warned about at boot.** For
   operators: when `OPENV_PLAN_DEFAULT` named no plan, new workspaces were
@@ -449,33 +529,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   cancels its waiting runs and asks its running ones to stop, as **Cancel**
   does, and a run's access to OpenV ends at once. The runs stay in the
   workspace's usage, as before.
-
-- **Agent runs and runners keep time on a server whose clock is not set to
-  UTC.** On an OpenV server running in another time zone, as a self-hosted
-  one can, agent runs, cloud runner leases and runner keys recorded their
-  times shifted by the zone's offset, and acted on the shifted times. East
-  of UTC, a run could be failed as "worker lost" while its runner was still
-  preparing it, an automatic retry, and a run reserved for its launcher's
-  own runner, were held back for hours, and a runner that had stopped still
-  showed as online for hours. West of UTC, a run reserved for its
-  launcher's own runner went to a workspace runner at once, an automatic
-  retry ran without waiting, a runner that stopped right after claiming a
-  run was noticed hours late, a runner polling right then showed as
-  offline, the cloud runner pool showed no runner available, and a cloud
-  runner lease counted its whole length against the workspace's minutes as
-  soon as it started. Either way, a run's start, finish and log times, and
-  a cloud runner's time left, showed hours off. They now record every time
-  in UTC, as on OpenV's hosted service.
-
-- **Every project can add figures to its artifacts.** A figure takes its
-  reference from its artifact, as REQ-1-FIG-1 does from REQ-1, and each
-  project numbers its own artifacts from REQ-1, but a figure reference
-  could be used only once on the whole server. Once any project, in any
-  workspace, had a REQ-1-FIG-1, adding the first figure to another
-  project's REQ-1 failed with "Failed to save attachment metadata", and so
-  on for every reference already taken elsewhere. A figure reference now
-  needs to be unique only within its project, as the artifact reference it
-  is built on is. Figures already added keep their references.
 
 ## 0.15.1 — 2026-09-30
 

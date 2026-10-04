@@ -164,7 +164,7 @@ func linksManagedEditsTour(tr *tour) {
 	tr.step("the link once confirmed", owner, "GET /api/v1/links/{id}", at("id", "{{l_derives}}"))
 
 	// Update: type and attributes replaced as sent, auto-versions both ends,
-	// publishes nothing.
+	// publishes link.updated with the type the link has now (#379 bug 132).
 	tr.step("give the verifies link attributes", owner, "PUT /api/v1/links/{id}", at("id", "{{l_verifies}}"),
 		jsonBody(`{"type":"verifies","attributes":{"method":"test","witness":"<qa> & co"}}`))
 	tr.step("retype the derives-from link to one its rule refuses: stored as sent", owner, "PUT /api/v1/links/{id}",
