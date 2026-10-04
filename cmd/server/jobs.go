@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -54,12 +55,20 @@ func reconcileHostedRunners(provisioner hosting.Provisioner, hostedWorkerService
 // runPurgeLoop hard-deletes the workspaces whose deletion grace period has
 // expired: at once, then every 24 hours. Once a workspace's purge has
 // committed, the stored files of its figures, evidence and logo are removed
-// from the uploads directory (#379 bug 143: they stayed on disk), those of
-// the workspaces purged before another's purge failed included.
-func runPurgeLoop(ctx context.Context, orgService *orgs.DefaultService) {
+// from the uploads directory (#379 bug 143: they stayed on disk), and its
+// agent definitions directory is removed (#379 bug 157: it stayed on disk,
+// and the next boot registered its agents again), those of the workspaces
+// purged before another's purge failed included. A file or directory that
+// cannot be removed is logged; the purge stands.
+func runPurgeLoop(ctx context.Context, orgService *orgs.DefaultService, agentService *agents.FileService) {
 	purge := func() {
 		purged, err := orgService.PurgeExpired(time.Now())
 		removed := removeStoredFiles(purged.Files)
+		for _, id := range purged.IDs {
+			if err := agentService.RemoveOrg(id); err != nil {
+				slog.Warn("failed to remove a purged workspace's agent definitions", "org_id", id, "error", err)
+			}
+		}
 		if err != nil {
 			slog.Error("workspace purge failed", "error", err, "purged", len(purged.IDs), "files_removed", removed)
 		} else if len(purged.IDs) > 0 {

@@ -294,6 +294,25 @@ func (s *FileService) Delete(orgID, slug string) error {
 	return s.repo.Delete(agent.ID)
 }
 
+// RemoveOrg deletes a workspace's agent definitions directory, its .trash
+// included, once the workspace has been purged (#379 bug 157): left on disk,
+// the definitions outlived the workspace, and SyncAllFromDisk registered
+// them again at every boot as agents of a workspace that no longer exists.
+// orgID must be a workspace id, a UUID in its canonical form; anything else
+// is refused, so the path removed is always one directory directly inside
+// the agents directory. A directory that is already gone is no error, and a
+// symbolic link in its place is removed, not followed.
+func (s *FileService) RemoveOrg(orgID string) error {
+	if id, err := uuid.Parse(orgID); err != nil || id.String() != orgID {
+		return fmt.Errorf("refusing to remove the agents directory of %q: not a workspace id", orgID)
+	}
+	dir := s.orgDir(orgID)
+	if s.dir == "" || filepath.Dir(dir) != filepath.Clean(s.dir) {
+		return fmt.Errorf("refusing to remove %q: not directly inside the agents directory %q", dir, s.dir)
+	}
+	return os.RemoveAll(dir)
+}
+
 // SyncFromDisk reconciles every *.md in one org's directory with the
 // registry. Files that fail to parse are skipped with an error aggregated
 // in the result. A missing org directory is not an error (nothing to sync).

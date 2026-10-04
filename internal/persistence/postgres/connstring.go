@@ -39,12 +39,13 @@ func connValue(v string) string {
 // openDB opens lib/pq's pool on dsn for Connect, after refusing a
 // connection string that holds a URL lib/pq would not read as one, before
 // anything is dialled (urlShapeError), so the password in it reaches no log
-// (REQ-97).
+// (REQ-97). Each connection of the pool runs in UTC (utcConnector, #379 bug
+// 156).
 func openDB(dsn string) (*sql.DB, error) {
 	if err := urlShapeError(dsn); err != nil {
 		return nil, err
 	}
-	return sql.Open("postgres", dsn)
+	return sql.OpenDB(utcConnector{dsn: dsn}), nil
 }
 
 // urlShapeError refuses, before anything is dialled, a connection string

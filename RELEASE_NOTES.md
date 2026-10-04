@@ -83,6 +83,50 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   not start after the update, and its log says how many figures name a
   test result and how to clear them.
 
+- **Sign-ins last as long as they should on a server whose clock is not
+  set to UTC.** On an OpenV server running in another time zone, as a
+  self-hosted one can, accounts, sign-in sessions, password reset links and
+  email verification links recorded their times shifted by the zone's
+  offset. West of UTC, every sign-in ended hours before its idle limit or
+  its lifetime, and at once where `OPENV_SESSION_IDLE` or
+  `OPENV_SESSION_MAX_AGE` was set shorter than the offset: the person was
+  signed out by their next click. They now record every time in UTC, as on
+  OpenV's hosted service.
+
+- **Workspace invitations, deleted workspaces and hosted runners keep time
+  on a server whose clock is not set to UTC.** On an OpenV server running
+  in another time zone, as a self-hosted one can, they recorded their times
+  shifted by the zone's offset. Inviting an address again, unchanged,
+  within an hour of its last invitation email sent another email every time
+  west of UTC, and east of UTC sent none for hours longer. A deleted
+  workspace's deletion time, and so the date it can be restored until, and
+  a hosted runner's times showed hours off. They now record every time in
+  UTC, as on OpenV's hosted service. A workspace deleted before this update
+  on such a server is purged up to that offset early (west of UTC) or late
+  (east of UTC).
+
+- **Agent runs keep time when the database is not set to UTC.** On a
+  self-hosted OpenV server whose PostgreSQL server, database or database
+  user is set to another time zone, or whose host sets `PGTZ`, the times
+  the database recorded itself, such as when an agent run was claimed,
+  cancelled or failed, or when a record was created, were that zone's
+  local time instead of UTC, and the checks comparing them were off by the
+  zone's offset. East of UTC, a run reserved for its launcher's own runner
+  went to a workspace runner at once, an automatic retry ran without
+  waiting, a runner that stopped right after claiming a run was noticed
+  hours late, and a cloud runner lease counted its whole length against
+  the workspace's minutes as soon as it started. West of UTC, a run could be failed as "worker lost"
+  moments after a runner claimed it, while the runner was still preparing
+  it. OpenV now runs every database connection in UTC, whatever the
+  database's own setting.
+
+- **A purged workspace's agents are removed from the server.** When a
+  deleted workspace's grace period ended and OpenV purged it, the files
+  defining its agents stayed in the server's agents directory
+  (`AGENTS_DIR`), those deleted to its trash included, and every restart
+  registered those agents again, under a workspace that no longer exists.
+  Purging a workspace now removes its agents' files too.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features

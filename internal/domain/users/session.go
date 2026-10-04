@@ -82,7 +82,7 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 		if err != nil {
 			return nil, "", err
 		}
-		now := time.Now()
+		now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 154)
 		// The identity provider asserted a verified address (both callbacks
 		// refuse anything else), so the account is verified from the start.
 		user = &User{
@@ -117,7 +117,7 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 		if user.AvatarPath == "" {
 			user.AvatarURL = avatarURL
 		}
-		user.UpdatedAt = time.Now()
+		user.UpdatedAt = time.Now().UTC()
 		if err := s.repo.UpdateUser(user); err != nil {
 			return nil, "", err
 		}
@@ -135,7 +135,10 @@ func (s *DefaultService) createSession(userID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	now := time.Now()
+	// The session's times are TIMESTAMP columns, which keep the wall clock
+	// they are sent and are read back as UTC: a local time.Now() moved the
+	// deadlines sessionLive enforces by the server's offset (#379 bug 154).
+	now := time.Now().UTC()
 	session := &Session{
 		ID:         uuid.New().String(),
 		UserID:     userID,
@@ -164,6 +167,10 @@ func (s *DefaultService) Logout(token string) error {
 // request. The policy is re-applied on every read rather than trusted from
 // expires_at alone, so shortening OPENV_SESSION_MAX_AGE takes effect for the
 // sessions that already exist instead of only the next ones.
+//
+// It compares instants, so now may be in any zone; what it relies on is that
+// the session's times were stored as UTC wall clocks, which is how a
+// TIMESTAMP column's value is read back (#379 bug 154).
 func (s *DefaultService) sessionLive(session *Session, now time.Time) bool {
 	if session == nil || !session.ExpiresAt.After(now) {
 		return false
@@ -190,7 +197,7 @@ func (s *DefaultService) GetBySessionToken(token string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := time.Now().UTC() // touches a TIMESTAMP (#379 bug 154)
 	if !s.sessionLive(session, now) {
 		return nil, ErrSessionInvalid
 	}

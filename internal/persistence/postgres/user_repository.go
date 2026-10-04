@@ -341,8 +341,13 @@ func (r *UserRepository) DeleteSessionsForUser(userID, exceptTokenHash string) e
 
 // DeleteExpiredSessions removes sessions past their stored expiry, older
 // than maxAge, or unused for longer than idle — the sweep half of the two
-// deadlines GetBySessionToken enforces on read (REQ-99).
+// deadlines GetBySessionToken enforces on read (REQ-99). The three columns
+// are TIMESTAMPs holding UTC wall clocks, and the reaper hands in its own
+// time.Now(), so now is taken to UTC first: a local one moved every deadline
+// by the server's offset, and east of UTC deleted sessions still in use
+// (#379 bug 154).
 func (r *UserRepository) DeleteExpiredSessions(now time.Time, maxAge, idle time.Duration) error {
+	now = now.UTC()
 	_, err := r.db.Exec(`
 		DELETE FROM sessions
 		WHERE expires_at < $1 OR created_at < $2 OR last_seen_at < $3
