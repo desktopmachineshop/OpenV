@@ -1,8 +1,11 @@
 package automation
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"time"
 
@@ -58,27 +61,71 @@ func (m *TriggerMatcher) matches(a *automations.Automation, e domainevents.Event
 	if a.ProjectID != nil && *a.ProjectID != "" && *a.ProjectID != e.ProjectID {
 		return false
 	}
-	// Event filter: flat equality against payload values (string compare).
+	// Event filter: flat equality against payload values.
 	for key, want := range a.EventFilter {
 		got, ok := e.Payload[key]
-		if !ok {
-			return false
-		}
-		if fmt.Sprintf("%v", got) != fmt.Sprintf("%v", want) {
+		if !ok || !filterValueMatches(got, want) {
 			return false
 		}
 	}
 	return true
 }
 
+// filterValueMatches reports whether a payload value matches an event
+// filter's. Two numbers match when they are equal as numbers: a filter's
+// number comes from JSON as a float64 and a publisher's as a Go integer, so
+// comparing their text would miss a filter's 1000000, which prints as
+// 1e+06, against the int 1000000. Any other pair, and two numbers that are
+// not equal as numbers, match when they print alike (fmt %v), so strings,
+// bools, null and lists compare as text, a number matches its string, and a
+// float32 matches the filter number it prints as.
+func filterValueMatches(got, want interface{}) bool {
+	if g, ok := asNumber(got); ok {
+		if w, ok := asNumber(want); ok && g == w {
+			return true
+		}
+	}
+	return fmt.Sprintf("%v", got) == fmt.Sprintf("%v", want)
+}
+
+// asNumber is v as a float64, JSON's number, when v is a Go integer or float
+// of any size (a named type too) or a json.Number.
+func asNumber(v interface{}) (float64, bool) {
+	if n, ok := v.(json.Number); ok {
+		f, err := n.Float64()
+		return f, err == nil
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(rv.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return float64(rv.Uint()), true
+	case reflect.Float32, reflect.Float64:
+		return rv.Float(), true
+	}
+	return 0, false
+}
+
+// passesGuards applies the loop guard, the cooldown and the hourly cap, in
+// that order. A guard whose lookup fails holds the automation back (fail
+// closed) and logs why: it cannot tell whether firing would loop or run
+// over the cap. A run no row has is no failure: it is not this
+// automation's own.
 func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.Event) bool {
 	// Self-trigger loop guard: skip events produced by this automation's own runs.
 	if strings.HasPrefix(e.Actor, "agent:") {
 		runID := strings.TrimPrefix(e.Actor, "agent:")
-		if run, err := m.runService.Get(runID); err == nil && run != nil {
-			if run.AutomationID != nil && *run.AutomationID == a.ID {
-				return false
-			}
+		run, err := m.runService.Get(runID)
+		if err != nil && !errors.Is(err, agentruns.ErrNotFound) {
+			slog.Warn("triggers: automation skipped: self-trigger check failed",
+				slog.String("automation_id", a.ID),
+				slog.String("run_id", runID),
+				slog.Any("error", err))
+			return false
+		}
+		if err == nil && run != nil && run.AutomationID != nil && *run.AutomationID == a.ID {
+			return false
 		}
 	}
 
@@ -92,7 +139,13 @@ func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.
 	// Hourly rate cap.
 	if a.MaxRunsPerHour > 0 {
 		count, err := m.runService.CountRunsSince(a.ID, time.Now().Add(-time.Hour))
-		if err == nil && count >= a.MaxRunsPerHour {
+		if err != nil {
+			slog.Warn("triggers: automation skipped: hourly run count failed",
+				slog.String("automation_id", a.ID),
+				slog.Any("error", err))
+			return false
+		}
+		if count >= a.MaxRunsPerHour {
 			slog.Info("triggers: automation hit max_runs_per_hour",
 				slog.String("automation_id", a.ID),
 				slog.Int("max_runs_per_hour", a.MaxRunsPerHour))
@@ -111,14 +164,10 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 		return
 	}
 
-	// Lean-context rendering: identifiers and event metadata only.
-	vars := map[string]string{
-		"automation.name": a.Name,
-		"event.type":      e.EventType,
-		"event.entity_id": e.EntityID,
-		"event.actor":     e.Actor,
-		"project.id":      e.ProjectID,
-	}
+	// Lean-context rendering: identifiers and event metadata only. The
+	// payload's values go in first, so that the event's own variables,
+	// set after them, win over a payload key named type, entity_id or actor.
+	vars := map[string]string{}
 	for key, value := range e.Payload {
 		switch v := value.(type) {
 		case string:
@@ -129,6 +178,11 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 			vars["event."+key] = fmt.Sprintf("%v", v)
 		}
 	}
+	vars["automation.name"] = a.Name
+	vars["event.type"] = e.EventType
+	vars["event.entity_id"] = e.EntityID
+	vars["event.actor"] = e.Actor
+	vars["project.id"] = e.ProjectID
 
 	prompt := automations.RenderPrompt(a.PromptTemplate, vars)
 	if strings.TrimSpace(prompt) == "" {

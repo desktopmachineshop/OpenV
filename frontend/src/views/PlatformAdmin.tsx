@@ -204,7 +204,8 @@ export const PlatformAdmin: React.FC = () => {
                           style={selectStyle}
                         >
                           {!PLANS.some((p) => p.value === ws.plan) && <option value="">{ws.plan}</option>}
-                          {PLANS.map((p) => (
+                          {/* A legacy plan only for the workspace already on it. */}
+                          {PLANS.filter((p) => !p.legacy || p.value === ws.plan).map((p) => (
                             <option key={p.value} value={p.value}>
                               {p.label}
                             </option>

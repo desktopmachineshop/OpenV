@@ -1007,7 +1007,7 @@ export const GuidedWizard: React.FC = () => {
                           )}
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
-                          As {p.name}, I need {n.capability || '…'} so that {n.outcome || '…'}
+                          As {p.name.trim()}, I need {n.capability || '…'} so that {n.outcome || '…'}
                         </div>
                       </div>
                     ) : null
@@ -1084,7 +1084,7 @@ export const GuidedWizard: React.FC = () => {
             )}
             {needs.map((n) => {
               if (!n.capability.trim()) return null;
-              const personaName = personas.find((p) => p.id === n.persona_id)?.name || 'a user';
+              const personaName = personas.find((p) => p.id === n.persona_id)?.name.trim() || 'a user';
               return (
                 <div key={n.id} className="card" style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>

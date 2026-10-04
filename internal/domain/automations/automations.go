@@ -90,12 +90,22 @@ type Repository interface {
 	// ListDueScheduled returns due scheduled automations as firing candidates
 	// only; callers must claim each with ClaimDueScheduled before firing.
 	ListDueScheduled(now time.Time) ([]*Automation, error)
-	// ClaimDueScheduled atomically claims one due scheduled automation and
-	// advances its next_run_at (nil disables it) in a single statement,
-	// reporting whether the caller won the claim. Concurrent callers across
-	// replicas partition the due set with no overlap, so no automation
-	// double-fires.
-	ClaimDueScheduled(id string, lastRun time.Time, nextRun *time.Time) (bool, error)
+	// ClaimDueScheduled atomically claims one automation due as of now and
+	// advances its next_run_at to nextRun in a single statement, reporting
+	// whether the caller won the claim. Concurrent callers across replicas
+	// partition the due set with no overlap, so no automation double-fires.
+	// The claim leaves last_run_at alone: the winner stamps it with
+	// StampLastRun once a run has actually launched.
+	ClaimDueScheduled(id string, now time.Time, nextRun time.Time) (bool, error)
+	// SwitchOffScheduled atomically switches off one due scheduled
+	// automation, setting enabled to false and next_run_at to NULL, under
+	// the same condition as ClaimDueScheduled, and reports whether the
+	// caller switched it off. The scheduler switches off an automation whose
+	// cron expression no longer parses instead of firing it.
+	SwitchOffScheduled(id string, now time.Time) (bool, error)
+	// StampLastRun sets last_run_at, and nothing else, to the time a run of
+	// the automation was launched.
+	StampLastRun(id string, at time.Time) error
 	ListEnabledTriggered(eventType string) ([]*Automation, error)
 	MarkRun(id string, lastRun time.Time, nextRun *time.Time) error
 }

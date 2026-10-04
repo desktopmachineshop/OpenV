@@ -51,6 +51,10 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if !h.agentProviderAllowed(r, def.Slug, def.Provider) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
 	// Friendly pre-check; the (org_id, slug) unique index is the real guard,
 	// so a concurrent create that slips past this still conflicts below.
 	if existing, _ := h.AgentService.GetBySlug(ActiveOrg(r), def.Slug); existing != nil {
@@ -104,9 +108,14 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Same rules as on create: an update may not take an agent's allowlist
-	// away either (REQ-91).
+	// away either (REQ-91), nor move it onto a provider the workspace has
+	// not been offered yet.
 	if err := def.Validate(); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !h.agentProviderAllowed(r, slug, def.Provider) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
 		return
 	}
 	agent, err := h.AgentService.SaveDefinition(ActiveOrg(r), &def)
@@ -153,6 +162,12 @@ func (h *Handler) SaveAgentRaw(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// The file's provider passes the same gate as a form save; a file that
+	// does not parse is left to the service, which says why.
+	if def, err := agents.ParseFile(req.Content); err == nil && !h.agentProviderAllowed(r, mux.Vars(r)["slug"], def.Provider) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
 		return
 	}
 	agent, err := h.AgentService.SaveRawFile(ActiveOrg(r), mux.Vars(r)["slug"], req.Content)

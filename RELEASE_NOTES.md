@@ -146,6 +146,102 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   minutes are nearly used up no longer ends "(80%)" either; it gives the
   minutes used against the plan's allowance.
 
+- **The refines link type's description is whole.** Hovering the refines
+  link type when adding a link showed "A requirement in a subsystem or
+  supplier project refines a requirement of its parent project" and
+  stopped there, leaving out what the link does for verification. It now
+  reads in full, as the server says it: "…; the parent's verification
+  rolls the refinements up".
+
+- **A shared project names every artifact type.** On a project opened
+  from a share link or the open-source page, a description or an "other"
+  artifact was badged with its raw type name, "description" or "other",
+  where every other artifact read as a word, such as "Requirement". They
+  now read "Description" and "Other". The page also stops carrying a label
+  for a "non-functional" type that no artifact can have.
+
+- **Antigravity CLI waits for a stable-channel workspace's stable release,
+  as every new feature does.** The Antigravity CLI agent provider was
+  offered to every workspace from the release that shipped it, stable
+  channel included, even where the workspace's stable release did not
+  carry it yet. Such a workspace is now offered it, in the agent editor's
+  provider list and under AI providers in workspace settings, once its
+  stable release carries it (0.7.0 or later), and an agent or provider
+  setting that names it is refused until then with the usual "reaches
+  stable-channel workspaces at their next stable release" message. An
+  agent already on Antigravity CLI keeps it: it can still be edited and
+  still runs. Nightly workspaces, and stable-channel workspaces already on
+  0.15.0, see no change.
+
+- **The activity log can show you any kind of event a project records.**
+  The Type filter on a project's Activity page left out six kinds of
+  event the log holds: status changes, review rounds, proposals an agent
+  made for review, and members added to the project, removed from it or
+  given another role. Those events were listed under "all" but could not
+  be picked out on their own. The filter now offers every kind of event a
+  project's activity can hold.
+
+- **The platform admin page names a workspace's legacy plan.** A
+  workspace still on one of the first plan names, free or team, showed
+  its plan in the admin page's plan picker as a bare "free" or "team"
+  entry with no value behind it. It now reads "Free (legacy Single User)"
+  or "Team (legacy Business)", selected, and those two are offered only
+  to the workspace already on one: every other workspace's picker lists
+  the current plans as before.
+
+- **Picking an artifact in the requirements tree loads it once.** A click
+  on a row in the requirements workspace selected the artifact, briefly
+  went back to the one selected before, and then selected the new one
+  again, so the artifact's document, links, quality score and figures
+  were requested twice for one click, with the previous artifact's once
+  more in between. A click now loads the artifact once, live or in a
+  baseline.
+
+- **An expired share link no longer offers Revoke.** In project settings,
+  a share link past its expiry date already opens nothing, yet its row
+  still had a Revoke button, while a revoked link's row had none. An
+  expired link's row now has no Revoke button either; it still shows
+  "expired" and the date.
+
+- **The guided wizard leaves stray spaces out of what it writes.** A
+  persona name typed with a space at its end gave every need written for
+  that persona a sentence like "As Pat the Planner , I need …", with a
+  space before the comma, even though the persona's own title left the
+  space out. A space typed at either end of a persona's role, goals or
+  pain points, or of a hazard's potential harm, likewise went into the
+  artifact as typed. The wizard now trims each of these, in the artifacts
+  it writes and in the need sentences it shows while you work, as the
+  V&V Assistant's cards already did.
+
+- **A double-click on an assistant card adds it once.** A card from the
+  V&V Assistant, beside the guided wizard or in the notes panel, counted
+  as added only once the first click had finished, so a quick second
+  click, or Apply all pressed while a card was still being added, added
+  it again: a card that creates an artifact created two. A card's button
+  is now set aside from the first click until it finishes, and a second
+  click does nothing.
+
+- **Workspace settings keep your quality-rule changes too.** An unsaved
+  change on the Quality rules tab of workspace settings was lost when you
+  switched to another tab, and the rules loaded again on every visit. The
+  change is now still there when you come back, and the rules load once,
+  as in project settings.
+
+- **The Billing tab's buttons look like the rest of settings.** In
+  workspace settings, Billing's Continue to Stripe, Manage billing, Update
+  the card, Change plan and Keep the current plan buttons drew as plain
+  browser buttons. They now match the other buttons in settings, with the
+  step that moves you on (checkout, confirming a plan change, updating
+  the card after a failed payment) drawn as the main button.
+
+- **An artifact in a baseline shows the version the baseline holds, and
+  nothing else.** Reading an artifact in a baseline showed its version
+  beside a count of the live artifact's versions, as in "Version 2 • 5
+  total", which said nothing about the baseline and read as if the
+  baseline held five. The header now shows only the version the baseline
+  holds, "Version 2", and no longer loads the live artifact's history to
+  count it. Live, the header reads as before.
+
 - **A PDF's table of contents names the right pages, with no blank page
   after it.** A PDF download or report with a table of contents had an
   empty page after the contents, and every entry named the page before the
@@ -228,6 +324,59 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   role, just as the project was deleted answered "failed to add member" or
   "failed to update member role", as if the server had failed. It now
   answers "project not found", as opening a deleted project does.
+
+- **A scheduled automation whose schedule can no longer be read is
+  switched off instead of silently stopping.** An automation holding a cron
+  expression OpenV can no longer read ran at most once more and then never
+  again, while the Automations table still showed it switched on. Such an
+  automation is now switched off without running, so the table shows it
+  off: correct its schedule and switch it back on. OpenV already refuses
+  such a schedule when an automation is saved, so only older automations
+  can hold one.
+
+- **An automation's last run shows only runs that were launched.** A
+  scheduled automation's last run moved to its scheduled time even when no
+  run started: when its agent or crew could not be found, when the launch
+  was refused (over the workspace's budget, for instance), or when a run
+  missed while OpenV was down was skipped. Last run now changes only when a
+  run is actually launched. A missed or failed occurrence is still not
+  retried; the next one runs as usual.
+
+- **An event filter on a number of a million or more matches.** A
+  triggered automation whose event filter compared a number in the event,
+  such as an artifact's version, with a number of 1,000,000 or more never
+  fired, because the two were compared as text and the filter's number read
+  as "1e+06". Numbers are now compared as numbers. This affected filters
+  written through the API with a number as the value; a filter set in the
+  app holds text and already matched.
+
+- **A blank prompt falls back to the standard one on every kind of run.**
+  When an automation's prompt template came out blank, a triggered run
+  started with OpenV's standard prompt, but a scheduled run or **Run now**
+  started with the blank prompt itself if the template came out as nothing
+  but spaces or line breaks, as a template of placeholders that do not
+  apply can. All three now start with the standard prompt ("Scheduled run
+  of automation: …", "Manual run of automation: …") whenever the template
+  comes out blank.
+
+- **A triggered automation holds back when its loop guard or hourly cap
+  cannot be checked.** Before it fires, a triggered automation checks that
+  the event was not caused by one of its own runs and that it has not
+  reached its runs-per-hour limit. When OpenV could not make either check,
+  during a brief database outage for instance, the automation fired
+  anyway, so it could set itself off again or run past its limit. It now
+  skips that event, and the skip is logged.
+
+- **More events can trigger an automation.** A triggered automation's
+  event list offered 10 of OpenV's event types; it now offers all of them,
+  adding an artifact's status change and restore, a deleted baseline, a
+  review round started, a new comment, a work item's update, crew
+  hand-offs skipped, an agent's proposal, and changes to project and
+  workspace membership and invitations. An automation saved on one of these
+  events through the API now also opens with its own event shown, not
+  another. Workspace membership and invitation events concern the whole
+  workspace, so they fire only an automation that covers the whole
+  workspace, not one made on a project's Automations page.
 
 - **Deleting a project now deletes everything in it.** Deleting a project
   removed the project itself, its members, baselines and share links, but

@@ -5,17 +5,23 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner } from '../components/ui';
 
-// Event types emitted by the backend (internal/domain/events/events.go).
+// Every event type a project's activity can hold: the types the backend
+// emits (internal/domain/events/events.go), in its order, less the
+// workspace-level org.* membership events, which carry no project and so
+// never appear in a project's log. src/arch/vocabParity.test.ts holds this
+// list to Go's.
 const EVENT_TYPES = [
   'artifact.created',
   'artifact.updated',
-  'artifact.restored',
   'artifact.deleted',
+  'artifact.status_changed',
+  'artifact.restored',
   'link.created',
   'link.updated',
   'link.deleted',
   'baseline.captured',
   'baseline.deleted',
+  'project.review_round_started',
   'chatter.created',
   'testrun.recorded',
   'workitem.created',
@@ -23,6 +29,10 @@ const EVENT_TYPES = [
   'workitem.updated',
   'agentrun.finished',
   'agentrun.successors_skipped',
+  'proposal.created',
+  'project.member_added',
+  'project.member_role_changed',
+  'project.member_removed',
 ];
 
 // Cursor pagination: each page asks for PAGE_SIZE events older than the

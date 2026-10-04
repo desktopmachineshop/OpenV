@@ -307,10 +307,10 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
         </p>
         {live ? (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn btn-primary" disabled={busy || !preview} onClick={submitChange} style={{ width: 'auto' }}>
+            <button type="button" className="button" disabled={busy || !preview} onClick={submitChange} style={{ width: 'auto' }}>
               {busy ? 'Changing…' : 'Change plan'}
             </button>
-            <button type="button" className="btn" disabled={busy} onClick={() => setChanging(false)} style={{ width: 'auto' }}>
+            <button type="button" className="button-secondary" disabled={busy} onClick={() => setChanging(false)} style={{ width: 'auto' }}>
               Keep the current plan
             </button>
           </div>
@@ -318,7 +318,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
           <div>
             <button
               type="button"
-              className="btn btn-primary"
+              className="button"
               disabled={busy || !preview}
               onClick={() => redirect(() => billingAPI.checkout(org.id, plan, interval, currency))}
               style={{ width: 'auto' }}
@@ -393,7 +393,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 <button
                   type="button"
-                  className={state.billing.status === 'past_due' ? 'btn btn-primary' : 'btn'}
+                  className={state.billing.status === 'past_due' ? 'button' : 'button-secondary'}
                   disabled={busy}
                   onClick={() => redirect(() => billingAPI.portal(org.id))}
                   style={{ width: 'auto' }}
@@ -401,7 +401,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
                   {state.billing.status === 'past_due' ? 'Update the card' : 'Manage billing'}
                 </button>
                 {!changing && (
-                  <button type="button" className="btn" disabled={busy} onClick={() => setChanging(true)} style={{ width: 'auto' }}>
+                  <button type="button" className="button-secondary" disabled={busy} onClick={() => setChanging(true)} style={{ width: 'auto' }}>
                     Change plan
                   </button>
                 )}
