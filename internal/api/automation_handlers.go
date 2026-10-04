@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/scheduler"
 )
 
@@ -46,6 +47,10 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 	req.OrgID = ActiveOrg(r)
 	req.CreatedBy = CurrentUserID(r)
 	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID, notFound{}) {
+		return
+	}
+	if problem := h.automationPlacement(req.OrgID, req.ProjectID, req.AgentID, req.TeamID); problem != "" {
+		writeJSONError(w, http.StatusBadRequest, problem)
 		return
 	}
 	automation, err := h.AutomationService.Create(req)
@@ -89,6 +94,41 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// A move to another scope takes the write rights of where it goes too:
+	// a workspace admin's for the whole workspace, an editor's for a
+	// project. Moving is new with the workspace-automations feature, so a
+	// workspace that has not received it cannot move one; a project_id
+	// naming the scope the automation has already is no move.
+	moved := req.ProjectID != nil && scopeOf(req.ProjectID) != scopeOf(automation.ProjectID)
+	if moved {
+		if !h.requireAutomationWrite(w, r, req.ProjectID, automation.OrgID, notFound{}) {
+			return
+		}
+		if !h.featureEnabled(r, automation.OrgID, release.FeatureWorkspaceAutomations) {
+			writeJSONError(w, http.StatusForbidden, featureGateMessage)
+			return
+		}
+	}
+	// Where it is to run, checked when the scope or the target changes, so
+	// that an edit of anything else never refuses an automation saved
+	// before the check existed.
+	project, agent, team := automation.ProjectID, automation.AgentID, automation.TeamID
+	if req.ProjectID != nil {
+		project = req.ProjectID
+	}
+	if req.AgentID != nil {
+		agent = req.AgentID
+	}
+	if req.TeamID != nil {
+		team = req.TeamID
+	}
+	retargeted := scopeOf(agent) != scopeOf(automation.AgentID) || scopeOf(team) != scopeOf(automation.TeamID)
+	if moved || retargeted {
+		if problem := h.automationPlacement(automation.OrgID, project, agent, team); problem != "" {
+			writeJSONError(w, http.StatusBadRequest, problem)
+			return
+		}
+	}
 	updated, err := h.AutomationService.Update(automation.ID, req)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -114,6 +154,51 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// automationPlacement answers what is wrong with where an automation is to
+// run, or "" when nothing is: its project must be one of its workspace's,
+// and its target one that its scope can launch, an agent of the workspace,
+// or a crew of the workspace that is pinned to no project or, for a
+// project's automation, to that project. A whole-workspace automation runs
+// in the project of each event that fires it, so a crew pinned to one
+// project cannot serve it. An agent or crew of another workspace answers
+// as one no row has (I3). With no target, or two, it answers "" and leaves
+// the refusal to the service.
+func (h *Handler) automationPlacement(orgID string, projectID, agentID, teamID *string) string {
+	project := scopeOf(projectID)
+	if project != "" {
+		if p, err := h.ProjectService.GetProject(project); err != nil || p == nil || p.OrgID != orgID {
+			return "project does not belong to this workspace"
+		}
+	}
+	agent, team := scopeOf(agentID), scopeOf(teamID)
+	switch {
+	case agent != "" && team == "":
+		if a, err := h.AgentService.Get(agent); err != nil || a == nil || a.OrgID != orgID {
+			return "agent not found"
+		}
+	case team != "" && agent == "":
+		graph, err := h.TeamService.GetTeam(team)
+		if err != nil || graph == nil || graph.Team == nil || (graph.Team.OrgID != "" && graph.Team.OrgID != orgID) {
+			return "crew not found"
+		}
+		if pin := h.teamPin(graph.Team); pin != "" && pin != project {
+			if project == "" {
+				return "a crew pinned to a project cannot run an automation for the whole workspace"
+			}
+			return "the crew is pinned to another project"
+		}
+	}
+	return ""
+}
+
+// scopeOf is an optional id as a string: "" for none.
+func scopeOf(id *string) string {
+	if id == nil {
+		return ""
+	}
+	return *id
 }
 
 // RunAutomationNow launches an automation's run immediately.

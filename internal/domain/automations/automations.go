@@ -43,7 +43,8 @@ type Automation struct {
 
 // CreateAutomationRequest is the payload for creating an automation.
 // OrgID is stamped server-side from the caller's active workspace, and
-// CreatedBy with the caller; a body cannot set either.
+// CreatedBy with the caller; a body cannot set either. ProjectID is the
+// automation's scope: a project, or, absent or empty, the whole workspace.
 type CreateAutomationRequest struct {
 	OrgID           string                 `json:"-"`
 	Name            string                 `json:"name"`
@@ -63,11 +64,14 @@ type CreateAutomationRequest struct {
 }
 
 // UpdateAutomationRequest carries the editable fields; nil fields are left unchanged.
-// AgentID/TeamID set to the empty string clear the target.
+// AgentID/TeamID set to the empty string clear the target. ProjectID moves
+// the automation to another scope: a project, or, set to the empty string,
+// the whole workspace (JSON null leaves the scope as it is).
 type UpdateAutomationRequest struct {
 	Name            *string                `json:"name,omitempty"`
 	AgentID         *string                `json:"agent_id,omitempty"`
 	TeamID          *string                `json:"team_id,omitempty"`
+	ProjectID       *string                `json:"project_id,omitempty"`
 	Enabled         *bool                  `json:"enabled,omitempty"`
 	PromptTemplate  *string                `json:"prompt_template,omitempty"`
 	CronExpr        *string                `json:"cron_expr,omitempty"`
@@ -154,6 +158,16 @@ func validKind(kind string) bool {
 	return kind == KindManual || kind == KindScheduled || kind == KindTriggered
 }
 
+// scope is the stored project of a requested scope: nil, the whole
+// workspace, for none or the empty string, else a copy of the project id.
+func scope(projectID *string) *string {
+	if projectID == nil || *projectID == "" {
+		return nil
+	}
+	v := *projectID
+	return &v
+}
+
 // validateTarget ensures exactly one of AgentID/TeamID is set.
 func validateTarget(a *Automation) error {
 	hasAgent := a.AgentID != nil && *a.AgentID != ""
@@ -185,7 +199,7 @@ func (s *DefaultService) Create(req CreateAutomationRequest) (*Automation, error
 		Name:            req.Name,
 		AgentID:         req.AgentID,
 		TeamID:          req.TeamID,
-		ProjectID:       req.ProjectID,
+		ProjectID:       scope(req.ProjectID),
 		Kind:            req.Kind,
 		Enabled:         true,
 		PromptTemplate:  req.PromptTemplate,
@@ -288,6 +302,9 @@ func (s *DefaultService) Update(id string, req UpdateAutomationRequest) (*Automa
 			v := *req.TeamID
 			a.TeamID = &v
 		}
+	}
+	if req.ProjectID != nil {
+		a.ProjectID = scope(req.ProjectID)
 	}
 	if req.Enabled != nil && *req.Enabled != a.Enabled {
 		a.Enabled = *req.Enabled

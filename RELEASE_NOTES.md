@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Make an automation for the whole workspace.** On a project's
+  Automations page, a workspace admin now chooses what a new automation
+  covers: this project, as before, or the whole workspace. A
+  whole-workspace automation runs on events in every project of the
+  workspace, in the project of the event that set it off, and on workspace
+  membership and invitation events, which no project's automation sees.
+  Every project's Automations page lists the whole workspace's automations,
+  marked *Whole workspace*, beside its own; workspace admins edit, run and
+  delete them there, and move an automation between its project and the
+  whole workspace, while other members see them without changing them. A
+  whole-workspace automation runs an agent, or one of the workspace's own
+  crews such as its default crew, not a crew made in one project.
+
 ### Bug fixes
 
 - **A failed agent run is retried only when retrying can help.** When an
@@ -376,7 +391,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   events through the API now also opens with its own event shown, not
   another. Workspace membership and invitation events concern the whole
   workspace, so they fire only an automation that covers the whole
-  workspace, not one made on a project's Automations page.
+  workspace, not one that covers a single project: see *Make an automation
+  for the whole workspace* above.
 
 - **Automations keep time on a server whose clock is not set to UTC.** On
   an OpenV server running in another time zone, as a self-hosted one can,
@@ -395,6 +411,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   as creating and deleting one already did, naming the link's two
   artifacts and the type it has now: it starts the automations waiting for
   it, and the change shows in the project's activity log.
+
+- **An automation runs only agents and crews of its own workspace.**
+  Through the API, an automation could be saved naming another
+  workspace's agent or crew, a crew made in another project, or another
+  workspace's project, and its runs then used them. Saving one now answers
+  "agent not found", "crew not found", "the crew is pinned to another
+  project" or "project does not belong to this workspace"; an automation
+  for the whole workspace also refuses a crew made in one project, since it
+  runs in every project. An automation already saved is checked again only
+  when its agent, crew or scope is changed.
+
+- **Switching an automation between an agent and a crew saves.** Editing
+  an automation to run a crew instead of an agent, or an agent instead of a
+  crew, failed with "exactly one of agent_id or team_id must be set". It
+  now saves with the new target.
 
 ## 0.15.1 — 2026-09-30
 

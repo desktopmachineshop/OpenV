@@ -5,17 +5,40 @@ const content = `
 Automations launch agent (or crew) runs without anyone clicking a button. Open
 **Automations** in the project sidebar.
 
+## What an automation covers
+
+An automation covers either **this project**, the one whose Automations page
+it was made on, or the **whole workspace**:
+
+- A project's automation fires on that project's events, and its runs work
+  in that project.
+- A whole-workspace automation fires on matching events in every project of
+  the workspace, each run working in the project of the event that set it
+  off, and on the workspace's own membership and invitation events, whose
+  runs belong to no project. A scheduled or manual one runs with no project.
+
+Only a **workspace admin** makes, edits, runs or deletes a whole-workspace
+automation: the form's **Covers** choice (*This project* or *Whole
+workspace*) is theirs alone, and they can move an existing automation between
+its project and the whole workspace. Every project's Automations page lists
+the whole workspace's automations beside its own, marked *Whole workspace*;
+other members see them there but cannot change them.
+
+A whole-workspace automation runs an agent, or one of the workspace's own
+crews such as its default crew; a crew made in one project runs only that
+project's automations.
+
 ## Kinds of automation
 
 | Kind | When it runs |
 | --- | --- |
 | manual | Only when you click **Run now** |
 | scheduled | On a cron schedule, read in UTC (presets: Hourly, Daily at 9am, Every 15 minutes — or any cron expression) |
-| triggered | When a matching event happens in the project |
+| triggered | When a matching event happens in the project (or, for a whole-workspace automation, anywhere in the workspace) |
 
 ## Trigger events
 
-Triggered automations listen to the project event bus. Available events:
+Triggered automations listen to the workspace's events. Available events:
 
 - artifact.created / artifact.updated / artifact.deleted /
   artifact.status_changed / artifact.restored
@@ -32,8 +55,8 @@ Triggered automations listen to the project event bus. Available events:
   org.invitation_sent / org.invitation_accepted
 
 The org.* events belong to the workspace, not to a project, so they fire only
-automations that cover the whole workspace; an automation made on a project's
-Automations page covers that project alone.
+automations that cover the whole workspace (see *What an automation covers*);
+an automation that covers one project never sees them.
 
 **Filters** narrow the match with key/value pairs on the event payload (for
 example only artifacts of a certain type). Two safety valves keep triggered
@@ -47,9 +70,11 @@ automations from running away:
 **New automation** opens the form:
 
 1. Name it.
-2. Choose the **target** — a single agent or a crew.
-3. Pick the kind and its schedule/event settings.
-4. Write the **prompt template** — the prompt each run starts with. Keep it
+2. A workspace admin chooses what it **covers**: this project or the whole
+   workspace.
+3. Choose the **target** — a single agent or a crew.
+4. Pick the kind and its schedule/event settings.
+5. Write the **prompt template** — the prompt each run starts with. Keep it
    lean; the agent fetches artifact content itself at run time.
 
 Automations are created **enabled**; toggle them on/off from the table at any

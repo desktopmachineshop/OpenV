@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -38,7 +39,11 @@ func TestCreateAutomationStampsTheCaller(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := &fakeAutomationService{}
-			h := newTestHandler(t, func(h *Handler) { h.AutomationService = svc })
+			h := newTestHandler(t, func(h *Handler) {
+				h.AutomationService = svc
+				// The target is checked as the workspace's own (automationPlacement).
+				h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", OrgID: "org-1"}}}
+			})
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/automations", strings.NewReader(tc.body))
 			ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "alice", IsAdmin: true})
 			r = r.WithContext(context.WithValue(ctx, ctxActiveOrg, "org-1"))
