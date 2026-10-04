@@ -28,20 +28,24 @@ import (
 // first; ClaimDueScheduled is one atomic step that wins only while the row is
 // still enabled, scheduled and due as of the claim's time, and then sets
 // next_run_at to the time given (nil disables the schedule) and last_run_at
-// to the claim's time. TestClaimDueScheduledIsExactlyOnce and its neighbours
-// in that package pin the SQL side; TestSchedulersShareTheRealClaim there
-// drives two real schedulers against it.
+// to the claim's time; SwitchOffScheduled is the same step under the same
+// condition, which sets enabled to false and next_run_at to NULL instead.
+// TestClaimDueScheduledIsExactlyOnce and its neighbours in that package pin
+// the SQL side; TestSchedulersShareTheRealClaim there drives two real
+// schedulers against it.
 type schedRepo struct {
 	automations.Repository
 
-	mu     sync.Mutex
-	rows   []*automations.Automation
-	lists  int
-	claims []schedClaim
+	mu         sync.Mutex
+	rows       []*automations.Automation
+	lists      int
+	claims     []schedClaim
+	switchOffs []schedClaim
 	// listErr is ListDueScheduled's answer when set.
 	listErr error
-	// claimFails answers an automation's claims with a fixed result,
-	// changing nothing, as a statement that failed changes nothing.
+	// claimFails answers an automation's claims and switch-offs with a
+	// fixed result, changing nothing, as a statement that failed changes
+	// nothing.
 	claimFails map[string]claimResult
 	// barrier, when set, holds each ListDueScheduled until that many calls
 	// have read the due set, so that racing schedulers each hold the same
@@ -56,7 +60,8 @@ type claimResult struct {
 	err error
 }
 
-// schedClaim is one ClaimDueScheduled call and what it answered.
+// schedClaim is one ClaimDueScheduled or SwitchOffScheduled call and what it
+// answered (a switch-off has no next_run_at).
 type schedClaim struct {
 	id      string
 	lastRun time.Time
@@ -129,6 +134,23 @@ func (r *schedRepo) ClaimDueScheduled(id string, lastRun time.Time, nextRun *tim
 	return won, nil
 }
 
+func (r *schedRepo) SwitchOffScheduled(id string, now time.Time) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if fail, ok := r.claimFails[id]; ok {
+		r.switchOffs = append(r.switchOffs, schedClaim{id: id, lastRun: now, won: fail.won})
+		return fail.won, fail.err
+	}
+	row := r.row(id)
+	won := row != nil && row.Enabled && row.Kind == automations.KindScheduled && row.NextRunAt != nil &&
+		!row.NextRunAt.After(now)
+	if won {
+		row.Enabled, row.NextRunAt = false, nil
+	}
+	r.switchOffs = append(r.switchOffs, schedClaim{id: id, lastRun: now, won: won})
+	return won, nil
+}
+
 // row is the stored automation with that id; the caller holds mu.
 func (r *schedRepo) row(id string) *automations.Automation {
 	for _, a := range r.rows {
@@ -162,6 +184,13 @@ func (r *schedRepo) claimsMade() []schedClaim {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return append([]schedClaim(nil), r.claims...)
+}
+
+// switchOffsMade is a copy of the switch-offs so far, in order.
+func (r *schedRepo) switchOffsMade() []schedClaim {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]schedClaim(nil), r.switchOffs...)
 }
 
 func (r *schedRepo) listCount() int {

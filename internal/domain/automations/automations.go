@@ -96,6 +96,12 @@ type Repository interface {
 	// replicas partition the due set with no overlap, so no automation
 	// double-fires.
 	ClaimDueScheduled(id string, lastRun time.Time, nextRun *time.Time) (bool, error)
+	// SwitchOffScheduled atomically switches off one due scheduled
+	// automation, setting enabled to false and next_run_at to NULL, under
+	// the same condition as ClaimDueScheduled, and reports whether the
+	// caller switched it off. The scheduler switches off an automation whose
+	// cron expression no longer parses instead of firing it.
+	SwitchOffScheduled(id string, now time.Time) (bool, error)
 	ListEnabledTriggered(eventType string) ([]*Automation, error)
 	MarkRun(id string, lastRun time.Time, nextRun *time.Time) error
 }

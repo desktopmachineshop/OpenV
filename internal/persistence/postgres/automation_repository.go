@@ -247,6 +247,30 @@ func (r *AutomationRepository) ClaimDueScheduled(id string, lastRun time.Time, n
 	return n > 0, err
 }
 
+// SwitchOffScheduled atomically switches off a due scheduled automation, as
+// the scheduler does with one whose cron expression no longer parses: under
+// ClaimDueScheduled's condition and lock (enabled, scheduled and due as of
+// now; SKIP LOCKED), it sets enabled to false and next_run_at to NULL, so the
+// automation shows as switched off rather than enabled and never due. It
+// reports whether the caller switched it off; of several replicas racing for
+// the row, exactly one does. last_run_at is left as it was: nothing ran.
+func (r *AutomationRepository) SwitchOffScheduled(id string, now time.Time) (bool, error) {
+	res, err := r.db.Exec(`
+		UPDATE automations SET enabled = FALSE, next_run_at = NULL, updated_at = NOW()
+		WHERE id = (
+			SELECT id FROM automations
+			WHERE id = $1 AND enabled AND kind = 'scheduled'
+			  AND next_run_at IS NOT NULL AND next_run_at <= $2
+			FOR UPDATE SKIP LOCKED
+		)
+	`, id, now)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
 // ListEnabledTriggered returns enabled triggered automations for an event type.
 func (r *AutomationRepository) ListEnabledTriggered(eventType string) ([]*automations.Automation, error) {
 	rows, err := r.db.Query(`

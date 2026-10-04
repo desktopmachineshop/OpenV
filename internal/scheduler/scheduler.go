@@ -113,19 +113,18 @@ func (s *Scheduler) fire(a *automations.Automation) {
 }
 
 // claim atomically claims the automation for this replica, advancing its
-// next_run_at to the next cron occurrence (an invalid cron disables it by
-// advancing to NULL). It reports whether THIS replica won the claim; only the
-// winner should fire. A lost claim means a peer replica already took the row.
+// next_run_at to the cron's next occurrence, and reports whether THIS
+// replica won the claim; only the winner should fire. A lost claim means a
+// peer replica already took the row, and a claim the repository answers
+// with an error never fires, whatever else the answer says. An automation
+// whose cron expression no longer parses is not claimed but switched off
+// (switchOff), so it never fires.
 func (s *Scheduler) claim(a *automations.Automation) bool {
 	now := time.Now()
 	next, err := automations.NextAfter(a.CronExpr, now)
 	if err != nil {
-		log.Printf("scheduler: automation %s has invalid cron %q: %v", a.ID, a.CronExpr, err)
-		claimed, cerr := s.repo.ClaimDueScheduled(a.ID, now, nil)
-		if cerr != nil {
-			log.Printf("scheduler: failed to claim %s: %v", a.ID, cerr)
-		}
-		return claimed
+		s.switchOff(a, now, err)
+		return false
 	}
 	claimed, err := s.repo.ClaimDueScheduled(a.ID, now, &next)
 	if err != nil {
@@ -133,6 +132,24 @@ func (s *Scheduler) claim(a *automations.Automation) bool {
 		return false
 	}
 	return claimed
+}
+
+// switchOff switches off a due automation whose cron expression no longer
+// parses (why), setting enabled to false and next_run_at to NULL, so that an
+// admin sees it off instead of enabled and never due, and logs why. Create
+// and update refuse such an expression, so only a row written another way
+// holds one. Like a claim, the switch-off is one atomic step that only one
+// replica wins; a lost one is silent, and one that fails is retried on the
+// next tick, since the row is still due.
+func (s *Scheduler) switchOff(a *automations.Automation, now time.Time, why error) {
+	switched, err := s.repo.SwitchOffScheduled(a.ID, now)
+	if err != nil {
+		log.Printf("scheduler: failed to switch off automation %s (%s): %v", a.Name, a.ID, err)
+		return
+	}
+	if switched {
+		log.Printf("scheduler: switched off automation %s (%s): %v", a.Name, a.ID, why)
+	}
 }
 
 // ResolveTarget resolves an automation's agent target. Team automations

@@ -629,9 +629,10 @@ tests pin catch-up at start (done before `Start` returns: an automation
 that fell due while the server was down gets one run with `catch_up` and
 none without, and its row is claimed either way), a tick, the claim a
 replica must win before it fires (two schedulers racing for one due
-automation launch one run), a cron expression that does not parse (the
-automation fires once and its `next_run_at` becomes NULL, so it is never
-due again, though it stays enabled), the prompt (`Scheduled run of
+automation launch one run, and a claim answered with an error launches
+none), a cron expression that does not parse (the automation never fires:
+the scheduler switches it off, `enabled` false and `next_run_at` NULL, and
+logs why), the prompt (`Scheduled run of
 automation: <name>` when the template renders empty), the target, and
 `ResolveTarget`, which all three paths call. In `internal/automation`, the
 trigger matcher's tests pin the event filter (each value compared as `fmt`

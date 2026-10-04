@@ -64,9 +64,10 @@ func (r *racingRepo) ListDueScheduled(now time.Time) ([]*automations.Automation,
 // due automation at catch-up, race for it: one claim is won, one lost, and
 // exactly one run is launched; the row's next_run_at moves to the cron's
 // next occurrence. An automation whose cron expression does not parse is
-// claimed with next_run_at NULL and fires once; it stays enabled but is
-// never due again. internal/scheduler's own tests pin the rest against a
-// stand-in that models this SQL.
+// never fired: it is switched off (enabled false, next_run_at NULL; bug 72 of
+// issue #379, which fired it once and left it enabled but never due), and
+// stays so across a restart. internal/scheduler's own tests pin the rest
+// against a stand-in that models this SQL.
 func TestSchedulersShareTheRealClaim(t *testing.T) {
 	db := testDB(t)
 	initTestSchema(t, db)
@@ -155,27 +156,27 @@ func TestSchedulersShareTheRealClaim(t *testing.T) {
 		}
 	})
 
-	t.Run("an invalid cron fires once", func(t *testing.T) {
+	t.Run("an invalid cron is switched off", func(t *testing.T) {
 		id := seed(t, "Broken", "every day at noon")
 		runs := &schedulerClaimRuns{}
 		start(t, repo, runs)
-		if got := runs.requests(); len(got) != 1 || *got[0].AutomationID != id {
-			t.Fatalf("launched %+v, want the broken automation's one run", got)
+		if got := runs.requests(); len(got) != 0 {
+			t.Fatalf("launched %+v, want nothing", got)
 		}
 		a, err := repo.FindByID(id)
 		if err != nil || a == nil {
 			t.Fatalf("FindByID: %v, %v", a, err)
 		}
-		if a.NextRunAt != nil || a.LastRunAt == nil || !a.Enabled {
-			t.Errorf("after the claim: next_run_at %v, last_run_at %v, enabled %v; want NULL, stamped, still enabled",
-				a.NextRunAt, a.LastRunAt, a.Enabled)
+		if a.Enabled || a.NextRunAt != nil || a.LastRunAt != nil {
+			t.Errorf("after catch-up: enabled %v, next_run_at %v, last_run_at %v; want switched off, NULL, never run",
+				a.Enabled, a.NextRunAt, a.LastRunAt)
 		}
 		if due(t, id, time.Now().AddDate(10, 0, 0)) {
 			t.Error("the broken automation is due again within ten years")
 		}
 		start(t, repo, runs) // a restart, which catches up again
-		if n := len(runs.requests()); n != 1 {
-			t.Errorf("a restart launched %d more runs, want none", n-1)
+		if n := len(runs.requests()); n != 0 {
+			t.Errorf("a restart launched %d runs, want none", n)
 		}
 	})
 }

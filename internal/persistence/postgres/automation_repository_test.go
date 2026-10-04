@@ -168,3 +168,68 @@ func TestClaimDueScheduledSkipsNotDue(t *testing.T) {
 		t.Fatalf("claim of a not-yet-due automation = %v, %v, want false, nil", won, err)
 	}
 }
+
+// TestSwitchOffScheduledIsExactlyOnce pins the switch-off the scheduler makes
+// of an automation whose cron expression no longer parses (bug 72 of issue
+// #379, decided under Q34): of two concurrent calls on the same due
+// automation exactly one wins, and the row is then disabled with no
+// next_run_at and its last_run_at untouched, so it is no longer due and a
+// further switch-off finds nothing to do.
+func TestSwitchOffScheduledIsExactlyOnce(t *testing.T) {
+	f := newAutomationFixture(t)
+	id := f.seedDue(t, time.Now().Add(-time.Minute))
+
+	var wg sync.WaitGroup
+	results := make([]bool, 2)
+	errs := make([]error, 2)
+	start := make(chan struct{})
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			results[i], errs[i] = f.repo.SwitchOffScheduled(id, time.Now())
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("switch-off %d: %v", i, err)
+		}
+	}
+	if results[0] == results[1] {
+		t.Fatalf("switch-offs won = %v, want exactly one", results)
+	}
+	a, err := f.repo.FindByID(id)
+	if err != nil || a == nil {
+		t.Fatalf("FindByID: %v, %v", a, err)
+	}
+	if a.Enabled || a.NextRunAt != nil || a.LastRunAt != nil {
+		t.Errorf("after the switch-off: enabled %v, next_run_at %v, last_run_at %v; want false, NULL, NULL",
+			a.Enabled, a.NextRunAt, a.LastRunAt)
+	}
+	if won, err := f.repo.SwitchOffScheduled(id, time.Now()); err != nil || won {
+		t.Fatalf("a second switch-off = %v, %v, want false, nil", won, err)
+	}
+}
+
+// TestSwitchOffScheduledSkipsNotDue pins that the switch-off holds to the
+// claim's condition: an automation not yet due is left enabled with its
+// next_run_at, as one whose cron an admin has just corrected is.
+func TestSwitchOffScheduledSkipsNotDue(t *testing.T) {
+	f := newAutomationFixture(t)
+	future := time.Now().Add(time.Hour)
+	id := f.seedDue(t, future) // not actually due
+
+	if won, err := f.repo.SwitchOffScheduled(id, time.Now()); err != nil || won {
+		t.Fatalf("switch-off of a not-yet-due automation = %v, %v, want false, nil", won, err)
+	}
+	a, err := f.repo.FindByID(id)
+	if err != nil || a == nil {
+		t.Fatalf("FindByID: %v, %v", a, err)
+	}
+	if !a.Enabled || a.NextRunAt == nil {
+		t.Errorf("after a lost switch-off: enabled %v, next_run_at %v; want both as they were", a.Enabled, a.NextRunAt)
+	}
+}

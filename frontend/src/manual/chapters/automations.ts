@@ -43,7 +43,9 @@ automations from running away:
 
 Automations are created **enabled**; toggle them on/off from the table at any
 time. The table also shows each automation's last run and (for scheduled ones)
-the next run time.
+the next run time. If a scheduled automation's cron expression can no longer
+be read, it is not run: it is switched off, so correct its schedule and switch
+it back on.
 
 ## Running and reviewing
 
