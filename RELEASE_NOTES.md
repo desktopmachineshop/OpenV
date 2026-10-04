@@ -95,6 +95,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   The card now shows "✓ Added to project", stays marked as added when you
   come back to the wizard, and offers no second add.
 
+- **A name can no longer add lines of its own to a notification or an
+  email.** A display name, a workspace's name, an artifact's title or an
+  invited address with a line break in it went into notifications and into
+  the emails OpenV sends as it was typed, so the text after the break
+  stood on a line, or in a paragraph, of its own and read as if OpenV had
+  written it. A line break, a tab or another invisible control character
+  in such a name now reads as one space: in the bell, in phone alerts, and
+  in notification, invitation, sign-up and password reset emails. A line
+  break anywhere in an email's text also reaches the mail server as an
+  ordinary line end, which no server can take for the end of the message.
+  Names without such characters read exactly as before.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

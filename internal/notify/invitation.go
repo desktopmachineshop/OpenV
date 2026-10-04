@@ -21,11 +21,11 @@ func InvitationLink(linkBase, token string) string {
 
 // RenderInvitationEmail returns the plain-text subject and body.
 func RenderInvitationEmail(orgName, invitedByName, link string, ttl time.Duration) (subject, body string) {
-	workspace := strings.TrimSpace(orgName)
+	workspace := strings.TrimSpace(memberText(orgName))
 	if workspace == "" {
 		workspace = "an OpenV workspace"
 	}
-	inviter := strings.TrimSpace(invitedByName)
+	inviter := strings.TrimSpace(memberText(invitedByName))
 
 	var b strings.Builder
 	b.WriteString("Hi,\n\n")
