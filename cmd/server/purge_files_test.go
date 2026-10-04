@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
@@ -59,7 +60,11 @@ func TestThePurgeRemovesThePurgedWorkspacesFiles(t *testing.T) {
 	// Cancelled already: the loop purges once, at once, and returns.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	runPurgeLoop(ctx, orgs.NewDefaultService(repo))
+	agentService, err := agents.NewFileService(t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runPurgeLoop(ctx, orgs.NewDefaultService(repo), agentService)
 
 	for _, f := range []string{figure, evidence, logo} {
 		if _, err := os.Stat(f); !os.IsNotExist(err) {

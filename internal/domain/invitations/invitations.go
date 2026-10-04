@@ -255,7 +255,7 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 	if org.OrgType == orgs.TypePersonal {
 		return nil, "", orgs.ErrPersonalOrgMembers
 	}
-	now := time.Now()
+	now := time.Now().UTC() // created_at is a TIMESTAMP holding a UTC wall clock (#379 bug 155)
 	token, err := users.NewToken()
 	if err != nil {
 		return nil, "", err
@@ -291,9 +291,12 @@ func (s *DefaultService) FindPending(orgID, email string) (*Invitation, error) {
 	return s.repo.FindPending(orgID, email, time.Now())
 }
 
-// MarkEmailed records a delivered link; see Service.
+// MarkEmailed records a delivered link; see Service. last_emailed_at is a
+// TIMESTAMP holding a UTC wall clock and the handler hands in its own
+// time.Now(), so at is taken to UTC (#379 bug 155): a local one moved the
+// resend window by the server's offset.
 func (s *DefaultService) MarkEmailed(invID string, at time.Time) error {
-	return s.repo.MarkEmailed(invID, at)
+	return s.repo.MarkEmailed(invID, at.UTC())
 }
 
 // ListPending returns a workspace's live invitations.

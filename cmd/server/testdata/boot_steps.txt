@@ -114,6 +114,8 @@ func main()
     call (*internal/domain/orgs.DefaultService).PurgeExpired
     for
       call os.Remove
+    for
+      call (*internal/domain/agents.FileService).RemoveOrg
     defer (*time.Ticker).Stop
     for
       select
@@ -121,6 +123,8 @@ func main()
           call (*internal/domain/orgs.DefaultService).PurgeExpired
           for
             call os.Remove
+          for
+            call (*internal/domain/agents.FileService).RemoveOrg
   go
     defer (*time.Ticker).Stop
     for

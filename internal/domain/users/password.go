@@ -83,7 +83,7 @@ func (s *DefaultService) IssuePasswordReset(userID, delivery string, issuedBy *s
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 154)
 	v := &PasswordReset{
 		ID:        uuid.New().String(),
 		UserID:    user.ID,
@@ -109,7 +109,9 @@ func (s *DefaultService) ResetPassword(token, newPassword string) (*User, error)
 	if len(newPassword) < MinPasswordLength {
 		return nil, ErrWeakPassword
 	}
-	now := time.Now()
+	// Compared with expires_at, a TIMESTAMP holding a UTC wall clock: a local
+	// now moved the link's deadline by the server's offset (#379 bug 154).
+	now := time.Now().UTC()
 	reset, err := s.repo.ConsumePasswordReset(HashToken(token), now)
 	if err != nil {
 		return nil, err
@@ -172,7 +174,7 @@ func (s *DefaultService) ChangePassword(userID, currentPassword, newPassword, ke
 	if err != nil {
 		return err
 	}
-	if err := s.repo.SetPasswordHash(user.ID, string(hash), time.Now()); err != nil {
+	if err := s.repo.SetPasswordHash(user.ID, string(hash), time.Now().UTC()); err != nil {
 		return err
 	}
 	// The point of a password change is often that the old one leaked, so
