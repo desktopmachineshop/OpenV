@@ -88,6 +88,17 @@ func MigrateAndBackfill(db *sql.DB, agentsDir string) error {
 	})
 }
 
+// MigrationVersions returns the version of every registered migration, in
+// registry order: the versions Migrate records in schema_migrations. The
+// boot harness reads a refused boot's ledger against it (#379 bug 160).
+func MigrationVersions() []int {
+	versions := make([]int, len(migrations))
+	for i, m := range migrations {
+		versions[i] = m.Version
+	}
+	return versions
+}
+
 // migrateLocked is Migrate's body; callers hold the boot advisory lock.
 func migrateLocked(db *sql.DB) error {
 	if _, err := db.Exec(createLedgerSQL); err != nil {
