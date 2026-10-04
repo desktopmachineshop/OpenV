@@ -209,4 +209,37 @@ describe('mockApi on the real client, through vi.mock', () => {
     expect(PLANS.length).toBeGreaterThan(0);
     expect(vi.isMockFunction(resolveAvatarUrl)).toBe(false);
   });
+
+  // A factory as vi.mock(path, factory) types it: one that may return
+  // anything, so nothing but mockApi's default ties the overrides to the
+  // client (#379, bug 111). Each @ts-expect-error is checked by tsc, which
+  // fails on one that no longer marks an error.
+  type Factory = Extract<NonNullable<Parameters<typeof vi.mock>[1]>, (...args: any[]) => unknown>;
+  const original = <T,>() => vi.importActual<T>('../api/client');
+
+  it('type-checks the overrides against the client inside a vi.mock factory', async () => {
+    const typed: Factory = async (orig) =>
+      mockApi(await orig(), { projectAPI: { get: (id) => Promise.resolve({ data: id.toUpperCase() }) } });
+    const staleExport: Factory = async (orig) =>
+      mockApi(await orig(), {
+        // @ts-expect-error -- the client has no export named missingAPI
+        missingAPI: { list: () => Promise.resolve({ data: [] }) },
+      });
+    const staleMethod: Factory = async (orig) =>
+      mockApi(await orig(), {
+        // @ts-expect-error -- releaseAPI has no method named latest
+        releaseAPI: { latest: () => Promise.resolve({ data: {} }) },
+      });
+    const wrongArguments: Factory = async (orig) =>
+      mockApi(await orig(), {
+        // @ts-expect-error -- projectAPI.get takes a string id
+        projectAPI: { get: (id: number) => Promise.resolve({ data: id }) },
+      });
+
+    const mocked = (await typed(original)) as typeof client;
+    await expect(mocked.projectAPI.get('p-1')).resolves.toEqual({ data: 'P-1' });
+    await expect(staleExport(original)).rejects.toThrow('mockApi: the client has no export named missingAPI');
+    await expect(staleMethod(original)).rejects.toThrow('mockApi: releaseAPI has no method named latest');
+    expect(vi.isMockFunction(((await wrongArguments(original)) as typeof client).projectAPI.get)).toBe(true);
+  });
 });

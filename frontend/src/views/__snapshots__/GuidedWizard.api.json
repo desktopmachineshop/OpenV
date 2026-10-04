@@ -4219,6 +4219,248 @@
     ]
   },
   {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      8,
+      {
+        "step_1": {
+          "vision": "Every machine on the floor reports its state before anyone touches it.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists, shop leads and maintenance planners."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "00000000-0000-4000-8000-000000000001",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator",
+              "goals": "Run jobs without surprises",
+              "pains": "Spindles start without warning",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000002",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview of machine state",
+              "artifact_id": "art-5"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000003",
+              "name": "Pat the Planner ",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-6"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000004",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-4",
+          "art-5",
+          "art-6"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000005",
+              "persona_id": "00000000-0000-4000-8000-000000000002",
+              "capability": "a live view of each spindle that is running",
+              "outcome": "I can clear the floor before maintenance",
+              "artifact_id": "art-8"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000006",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "to see who started a job",
+              "outcome": "I can follow up on near misses",
+              "artifact_id": "art-9"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000007",
+              "persona_id": "00000000-0000-4000-8000-000000000003",
+              "capability": "a weekly list of machines due for service",
+              "outcome": "downtime is planned, not forced",
+              "artifact_id": "art-10"
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-8",
+          "art-9",
+          "art-10"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000008",
+              "need_id": "00000000-0000-4000-8000-000000000005",
+              "text": "The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+              "fit_criterion": "Measured from button press to spindle at rest",
+              "verification_method": "test",
+              "artifact_id": "art-12"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "need_id": "00000000-0000-4000-8000-000000000006",
+              "text": "The system shall record which badge started each job and show it on the machine panel until the job is cleared by a lead",
+              "fit_criterion": "Shown until a lead clears it",
+              "verification_method": "test",
+              "artifact_id": "art-13"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "need_id": "00000000-0000-4000-8000-000000000007",
+              "text": "The system shall list the machines due for service each Monday",
+              "fit_criterion": "Matches the maintenance plan",
+              "verification_method": "analysis",
+              "artifact_id": "art-14"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-12",
+          "art-13",
+          "art-14"
+        ],
+        "step_5": {
+          "nfrs": [
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "category": "Performance",
+              "text": "The system shall show any spindle state change on all connected screens within 500 ms of it happening",
+              "fit_criterion": "95th percentile over a shift",
+              "verification_method": "test",
+              "artifact_id": "art-19"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000012",
+              "category": "Performance",
+              "text": "The system shall keep every spindle state change for ninety days without slowing down the live view.",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-20"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000013",
+              "category": "Security",
+              "text": "The system shall require a badge to clear an interlock",
+              "fit_criterion": "Checked at every interlock",
+              "verification_method": "test",
+              "artifact_id": "art-21"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "category": "Usability",
+              "text": "The system shall show machine state in colours readable with gloves on",
+              "fit_criterion": "",
+              "verification_method": "test",
+              "artifact_id": "art-22"
+            }
+          ]
+        },
+        "step_5_ids": [
+          "art-19",
+          "art-20",
+          "art-21",
+          "art-22"
+        ],
+        "step_6": {
+          "hazards": [
+            {
+              "id": "00000000-0000-4000-8000-000000000015",
+              "category": "Safety",
+              "hazard": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
+              "harm": "Crushed or severed fingers",
+              "severity": "moderate",
+              "artifact_id": "art-27"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000016",
+              "category": "Security",
+              "hazard": "A spoofed network command restarts a stopped spindle",
+              "harm": "Injury during maintenance",
+              "severity": "critical",
+              "artifact_id": "art-28"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000017",
+              "category": "Operational",
+              "hazard": "Coolant mist hides the spindle state lamp",
+              "harm": "Operator misreads machine state ",
+              "severity": "moderate",
+              "artifact_id": "art-29"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {
+            "art-13": false
+          },
+          "created": {
+            "art-12": "art-35",
+            "art-19": "art-36",
+            "art-21": "art-37",
+            "art-22": "art-38"
+          }
+        },
+        "copilot_applied": [
+          "m-1:1",
+          "m-2:1",
+          "m-2:3",
+          "m-2:5",
+          "m-3:1",
+          "m-3:3",
+          "m-3:5",
+          "m-4:1",
+          "m-4:3",
+          "m-4:7",
+          "m-5:1",
+          "m-5:3",
+          "m-5:5",
+          "m-5:7",
+          "m-6:1",
+          "m-6:3",
+          "m-6:5",
+          "m-8:1"
+        ],
+        "section_ids": {
+          "personas": "art-3",
+          "needs": "art-7",
+          "requirements": "art-11",
+          "nfrs": "art-15",
+          "nfrs:Performance": "art-16",
+          "nfrs:Security": "art-17",
+          "nfrs:Usability": "art-18",
+          "hazards": "art-23",
+          "hazards:Safety": "art-24",
+          "hazards:Security": "art-25",
+          "hazards:Operational": "art-26",
+          "tests": "art-30",
+          "tests:Functional": "art-31",
+          "tests:Performance": "art-32",
+          "tests:Security": "art-33",
+          "tests:Usability": "art-34"
+        }
+      }
+    ]
+  },
+  {
+    "call": "artifactAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
     "call": "guidedAPI.commit",
     "args": [
       "gs-1"

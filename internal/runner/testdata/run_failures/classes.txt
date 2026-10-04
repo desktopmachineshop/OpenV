@@ -1,5 +1,5 @@
 # The run failure taxonomy (refactor plan step S15a; OpenV REQ-84): the class
-# each runner finish site reports, the substrings of a CLI's failure text that
+# each runner finish site reports, the signals in a CLI's failure text that
 # decide a failed run's class, and which classes the platform retries. Written
 # by TestRunFailureTaxonomyGolden in internal/runner; the outcomes these
 # produce are in outcomes.txt beside it. A refactor leaves this file
@@ -16,6 +16,7 @@ siteAdapterStart, "refused" (ErrAgentPolicy) -> agent_error
 siteAdapterStart, "wrapped: refused" (ErrAgentPolicy) -> agent_error
 siteAgentResult, no error -> ""
 siteAgentResult, "exit status 1" -> agent_error
+siteAgentExit, no error -> agent_error
 siteTimeout, "context deadline exceeded" -> timeout
 sitePanic, no error -> worker_error
 siteAgentPolicy, no error -> agent_error
@@ -25,9 +26,11 @@ siteAgentPolicy, no error -> agent_error
 "401" -> auth
 "403" -> auth
 "api key" -> auth
+"api keys" -> auth
 "authenticated" -> auth
 "authentication" -> auth
 "credential" -> auth
+"credentials" -> auth
 "forbidden" -> auth
 "invalid api key" -> auth
 "invalid_api_key" -> auth
@@ -37,6 +40,7 @@ siteAgentPolicy, no error -> agent_error
 "please log in" -> auth
 "please login" -> auth
 "sign in" -> auth
+"unauthenticated" -> auth
 "unauthorized" -> auth
 
 ## provider signals, checked second (providerSignals)
@@ -52,19 +56,42 @@ siteAgentPolicy, no error -> agent_error
 "econnrefused" -> provider_unavailable
 "gateway timeout" -> provider_unavailable
 "internal server error" -> provider_unavailable
-"network" -> provider_unavailable
+"network error" -> provider_unavailable
+"network is unreachable" -> provider_unavailable
+"network timeout" -> provider_unavailable
+"network unreachable" -> provider_unavailable
 "no route to host" -> provider_unavailable
 "overload" -> provider_unavailable
 "overloaded" -> provider_unavailable
 "quota" -> provider_unavailable
+"quotas" -> provider_unavailable
 "rate limit" -> provider_unavailable
+"rate limited" -> provider_unavailable
+"rate limits" -> provider_unavailable
+"rate-limited" -> provider_unavailable
 "rate_limit" -> provider_unavailable
 "server error" -> provider_unavailable
 "service unavailable" -> provider_unavailable
 "temporarily unavailable" -> provider_unavailable
 "usage limit" -> provider_unavailable
+"usage limits" -> provider_unavailable
 
-## failure texts (classifyAgentError: lower-cased, then a substring match)
+## rate-limit and overload signals, outranking a mention of an API key (throttleSignals)
+"429" -> provider_unavailable
+"capacity" -> provider_unavailable
+"overload" -> provider_unavailable
+"overloaded" -> provider_unavailable
+"quota" -> provider_unavailable
+"quotas" -> provider_unavailable
+"rate limit" -> provider_unavailable
+"rate limited" -> provider_unavailable
+"rate limits" -> provider_unavailable
+"rate-limited" -> provider_unavailable
+"rate_limit" -> provider_unavailable
+"usage limit" -> provider_unavailable
+"usage limits" -> provider_unavailable
+
+## failure texts (classifyAgentError: lower-cased, then a whole-word match)
 "" -> ""
 "exit status 1" -> agent_error
 "Error: 401 Unauthorized" -> auth
@@ -73,10 +100,10 @@ siteAgentPolicy, no error -> agent_error
 "API Error: 429 Too Many Requests" -> provider_unavailable
 "upstream connect error: Connection Reset by peer" -> provider_unavailable
 "503 Service Unavailable: not logged in" -> auth
-"rate limit exceeded; check your API key" -> auth
-"tool Read failed: wrote 403 lines" -> auth
-"processed 1500 files before the tool failed" -> provider_unavailable
-"the network tool is disabled for this agent" -> provider_unavailable
+"rate limit exceeded; check your API key" -> provider_unavailable
+"tool Read failed: wrote 403 lines" -> agent_error
+"processed 1500 files before the tool failed" -> agent_error
+"the network tool is disabled for this agent" -> agent_error
 "Credentials file is missing a field the tool expects" -> auth
 "panic: index out of range" -> agent_error
 
