@@ -610,6 +610,23 @@ request merges (`X2B_CALL_SHAPE_CHANGES` is read from the pull request). The
 job's next step, not the script, fails a refactor whose `ratchets.json` can
 be tightened.
 
+## areas
+
+```
+go run ./internal/tools/areas which <path>
+```
+
+Answers from the area index, `docs/areas.json` (step N1, convention K15),
+which of the twelve areas a file belongs to: it prints the area's name, or
+names the path and every area that claims it, with the glob, and exits 1
+when no area or more than one does (2 on a usage error or a path outside
+the repository). The path is relative to the current directory or
+absolute, and need not exist, so it also says where a new file would go.
+The index's globs use `refactor_guard.py`'s syntax. `areas_test.go` here
+and `frontend/src/arch/areas.test.ts` check that every tracked file
+other than a test file (the index's `test_files`) matches exactly one
+area, that no file matches two, and that every glob matches a tracked file.
+
 ## make check and make check-fast
 
 `make check` runs CI's pull-request gates locally, in CI's order: the
