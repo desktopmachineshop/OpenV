@@ -346,7 +346,7 @@ func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportMo
 	if opts.Content.Traceability {
 		titles := m.artifactTitles
 		if len(data.LinkedArtifacts) > 0 {
-			titles = make(map[string]string, len(m.artifactTitles)+len(data.LinkedArtifacts))
+			titles = make(map[string]string)
 			for id, title := range m.artifactTitles {
 				titles[id] = title
 			}
