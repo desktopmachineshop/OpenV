@@ -93,3 +93,41 @@ batched — nightly or weekly — at the maintainer's discretion. Merging to
 `master` is the normal end of a piece of work: say what is merged and
 waiting, then leave promotion alone unless asked. Approval to merge is not
 approval to promote.
+
+## Where things live
+
+`docs/areas.json` divides the repository into 12 areas, each a slice of the
+product through every layer, with a glossary of the words the UI and the
+code use differently (workspace and org, crew and team, runner and worker).
+`go run ./internal/tools/areas which <path>` names the area a file belongs
+to, or a new one would. Ten directories hold an area guide, a `README.md`
+(a map, the invariants, recipes for the common changes, the guards) and a
+`CLAUDE.md` (what to run before finishing there, and what not to do):
+
+- `cmd/server/`: the composition root and its boot stages
+- `internal/api/`: the handlers, routes and HTTP plumbing
+- `internal/persistence/postgres/`: the repositories and migrations
+- `internal/domain/`: the domain packages
+- `internal/runner/`: the runner, and `internal/mcp/` with it
+- `internal/notify/`: notifications and the other background services
+- `frontend/src/`: the app
+- `frontend/src/api/`: the API client
+- `e2e/`: the Playwright journeys
+- `scripts/`: the scripts, `.github/workflows/` and the `Makefile` gates
+
+## Before you finish
+
+From the repository root, after the area's own commands in its `CLAUDE.md`:
+
+- `make check-fast` while working: gofmt, go vet, the changed Go packages
+  and their importers, the architecture rules, the frontend type check, the
+  CSS order and a build with its bundle check, in under a minute with no
+  Docker.
+- `make check` before pushing: the gates CI runs, without Docker. Set
+  `OPENV_TEST_DATABASE_URL` to a throwaway Postgres to include the database
+  tests, the boot harness and the API tour; pass `NO_RELEASE_NOTES=1` for a
+  pull request labelled `no-release-notes`, and the labels of a refactor in
+  `LABELS`, as in
+  `make check NO_RELEASE_NOTES=1 LABELS="refactor refactor:tooling no-release-notes"`.
+- After a change to the Refactor guard or its lists:
+  `python3 scripts/refactor/refactor_guard_test.py`.

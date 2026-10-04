@@ -325,7 +325,7 @@
     },
     {
       "name": "agent-suite",
-      "description": "The AI agents and what they do: agent definitions, runs and their orchestration, crews and crew templates, automations (scheduled and triggered), proposals, AI providers and their sign-ins, repository connections, the guided wizard with its copilot, stakeholder interviews, the AI map, the seeded default agents, and the core of the MCP server.",
+      "description": "The AI agents and what they do: agent definitions, runs and their orchestration, crews and crew templates, automations (scheduled and triggered), proposals, AI providers and their sign-ins, repository connections, the guided wizard with its copilot, stakeholder interviews, the AI map, the seeded default agents, and the core of the MCP server with its guide (internal/mcp/CLAUDE.md).",
       "globs": [
         "cmd/openv-mcp/**",
         "cmd/server/wire_agents.go",
@@ -365,6 +365,7 @@
         "internal/domain/providers/**",
         "internal/domain/repoconns/**",
         "internal/domain/teams/**",
+        "internal/mcp/*.md",
         "internal/mcp/client*.go",
         "internal/mcp/context_bundle*.go",
         "internal/mcp/schema*.go",
@@ -471,9 +472,10 @@
     },
     {
       "name": "platform-http",
-      "description": "The server under every feature: the composition root (cmd/server's main, app, config and the core wire stages), the router, the handler deps and the HTTP plumbing (respond, errors, middleware, compression, rate limits, request log, security headers), health and meta, the database connection, baseline schema and migration ledger, env parsing and metrics, the wire contracts Go publishes, the release a deployment runs with its notes and feature gates, and the site administrator's page.",
+      "description": "The server under every feature: the composition root (cmd/server's main, app, config and the core wire stages), the router, the handler deps and the HTTP plumbing (respond, errors, middleware, compression, rate limits, request log, security headers), health and meta, the database connection, baseline schema and migration ledger, env parsing and metrics, the wire contracts Go publishes, the release a deployment runs with its notes and feature gates, the site administrator's page, and the guides (README.md and CLAUDE.md) of cmd/server, internal/api, internal/domain and internal/persistence/postgres.",
       "globs": [
         "RELEASE_NOTES.md",
+        "cmd/server/*.md",
         "cmd/server/app.go",
         "cmd/server/config.go",
         "cmd/server/http.go",
@@ -495,6 +497,7 @@
         "frontend/src/components/ReleaseUpdateBanner*",
         "frontend/src/views/PlatformAdmin*",
         "frontend/src/views/WhatsNew*",
+        "internal/api/*.md",
         "internal/api/admin_*.go",
         "internal/api/compression*.go",
         "internal/api/feature_*.go",
@@ -509,9 +512,11 @@
         "internal/api/routes*.go",
         "internal/api/security_headers*.go",
         "internal/api/testdata/**",
+        "internal/domain/*.md",
         "internal/domain/release/**",
         "internal/envparse/**",
         "internal/metrics/**",
+        "internal/persistence/postgres/*.md",
         "internal/persistence/postgres/connstring*.go",
         "internal/persistence/postgres/db*.go",
         "internal/persistence/postgres/ids*.go",
@@ -526,7 +531,7 @@
     },
     {
       "name": "frontend-shell",
-      "description": "The single-page app around the features: entry and routing (App.tsx), the API client barrel and its axios instance, state, hooks, the UI kit, navigation and project layout, theme and help, the landing page, public site and user manual, the test mock, the build configuration, the nginx image's runtime files and public assets, and the Playwright harness.",
+      "description": "The single-page app around the features: entry and routing (App.tsx), the API client barrel and its axios instance, state, hooks, the UI kit, navigation and project layout, theme and help, the landing page, public site and user manual, the test mock, the guides of frontend/src, frontend/src/api and e2e, the build configuration, the nginx image's runtime files and public assets, and the Playwright harness.",
       "globs": [
         "docs/plans/mobile-support.md",
         "e2e/*",
@@ -546,6 +551,7 @@
         "frontend/public/**",
         "frontend/security-headers.conf",
         "frontend/src/*",
+        "frontend/src/api/*.md",
         "frontend/src/api/baseURL*",
         "frontend/src/api/client*",
         "frontend/src/api/contentDisposition*",
