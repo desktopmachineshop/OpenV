@@ -290,7 +290,8 @@ func TestMatcherHourlyCap(t *testing.T) {
 // each payload value that is a string, a fmt.Stringer, a float64, an int,
 // an int64 or a bool (fmt %v, so 1.5e+06); any other value (an int32, a
 // []string, nil) and any other placeholder render empty. A payload key
-// named type, entity_id or actor overrides the event's own variable. When
+// named type, entity_id or actor does not override the event's own
+// variable (the regression test for bug 76 of issue #379: it did). When
 // the render is empty or only whitespace, the prompt is a fixed sentence
 // naming the automation (%q), the event type and the entity.
 func TestMatcherPromptVariables(t *testing.T) {
@@ -313,7 +314,8 @@ func TestMatcherPromptVariables(t *testing.T) {
 		{"every variable", everything, payload,
 			`Pump "watch"|artifact.created|art-1|user:u-1|proj-1|Pump spec|3|42|0.5|1.5e+06|true|stamp 7||||||||`},
 		{"payload keys named like the event's variables", "{{event.type}} {{event.entity_id}} {{event.actor}}",
-			map[string]interface{}{"type": "requirement", "entity_id": "req-9", "actor": 5}, "requirement req-9 5"},
+			map[string]interface{}{"type": "requirement", "entity_id": "req-9", "actor": 5},
+			"artifact.created art-1 user:u-1"},
 		{"an empty template", "", payload, fallback},
 		{"a template of whitespace", " \n\t", payload, fallback},
 		{"a render of whitespace", "{{event.missing}} {{org.id}}", payload, fallback},

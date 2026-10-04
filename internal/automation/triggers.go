@@ -146,14 +146,10 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 		return
 	}
 
-	// Lean-context rendering: identifiers and event metadata only.
-	vars := map[string]string{
-		"automation.name": a.Name,
-		"event.type":      e.EventType,
-		"event.entity_id": e.EntityID,
-		"event.actor":     e.Actor,
-		"project.id":      e.ProjectID,
-	}
+	// Lean-context rendering: identifiers and event metadata only. The
+	// payload's values go in first, so that the event's own variables,
+	// set after them, win over a payload key named type, entity_id or actor.
+	vars := map[string]string{}
 	for key, value := range e.Payload {
 		switch v := value.(type) {
 		case string:
@@ -164,6 +160,11 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 			vars["event."+key] = fmt.Sprintf("%v", v)
 		}
 	}
+	vars["automation.name"] = a.Name
+	vars["event.type"] = e.EventType
+	vars["event.entity_id"] = e.EntityID
+	vars["event.actor"] = e.Actor
+	vars["project.id"] = e.ProjectID
 
 	prompt := automations.RenderPrompt(a.PromptTemplate, vars)
 	if strings.TrimSpace(prompt) == "" {
