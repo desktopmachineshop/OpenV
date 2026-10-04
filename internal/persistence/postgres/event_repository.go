@@ -51,6 +51,9 @@ func (r *EventRepository) List(orgID, projectID, eventType, beforeID string, lim
 		LIMIT $5
 	`
 	rows, err := r.db.Query(query, orgID, projectID, eventType, beforeID, limit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

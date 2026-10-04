@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"reflect"
@@ -268,11 +269,10 @@ func TestWorkItemRepositoryLists(t *testing.T) {
 
 		list, err := repo.ListByProject(uuid.New().String())
 		rtWantNil(t, "the items of a project with none", list, err)
-		list, err = repo.ListByProject(malformed)
-		if list != nil {
-			t.Errorf("ListByProject of a malformed id listed %v", list)
+		for _, id := range malformedIDs {
+			list, err = repo.ListByProject(id)
+			rtWantNil(t, fmt.Sprintf("ListByProject of the malformed id %q", id), list, err)
 		}
-		rtWantRefused(t, "ListByProject of a malformed id", err)
 	})
 
 	t.Run("by note", func(t *testing.T) {
@@ -290,11 +290,18 @@ func TestWorkItemRepositoryLists(t *testing.T) {
 		rtWantNil(t, "the items of an empty list of notes", list, err)
 		list, err = repo.ListBySourceChatterIDs([]string{noteC})
 		rtWantNil(t, "the items of a note with none", list, err)
-		list, err = repo.ListBySourceChatterIDs([]string{noteA, malformed})
-		if list != nil {
-			t.Errorf("ListBySourceChatterIDs with a malformed id listed %v", list)
+		// A malformed id beside a note's is left out, as one that could
+		// match no row (#379 bug 139: Postgres's refusal failed the list).
+		alone, err := repo.ListBySourceChatterIDs([]string{noteA})
+		if err != nil || len(alone) == 0 {
+			t.Fatalf("the items of note A: %v, %v; want some", alone, err)
 		}
-		rtWantRefused(t, "ListBySourceChatterIDs with a malformed id", err)
+		for _, id := range malformedIDs {
+			list, err = repo.ListBySourceChatterIDs([]string{noteA, id})
+			if err != nil || !reflect.DeepEqual(list, alone) {
+				t.Errorf("ListBySourceChatterIDs beside the malformed id %q: %v, %v; want note A's items", id, rtItemTitles(list), err)
+			}
+		}
 	})
 
 	t.Run("max sort order", func(t *testing.T) {
@@ -390,11 +397,10 @@ func TestWorkItemRepositoryActivity(t *testing.T) {
 	rtWantNil(t, "the activity of an item with none", list, err)
 	list, err = repo.ListActivity(uuid.New().String())
 	rtWantNil(t, "the activity of an item no row has", list, err)
-	list, err = repo.ListActivity(malformed)
-	if list != nil {
-		t.Errorf("ListActivity of a malformed id listed %v", list)
+	for _, id := range malformedIDs {
+		list, err = repo.ListActivity(id)
+		rtWantNil(t, fmt.Sprintf("ListActivity of the malformed id %q", id), list, err)
 	}
-	rtWantRefused(t, "ListActivity of a malformed id", err)
 
 	rtWantPQ(t, "SaveActivity for an item no row has", repo.SaveActivity(&workitems.Activity{ID: uuid.New().String(),
 		WorkItemID: uuid.New().String(), Kind: workitems.KindComment, Actor: "system"}), "23503", "work_item_activity_work_item_id_fkey")

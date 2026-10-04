@@ -74,6 +74,9 @@ func (r *MemberRepository) ListByProject(projectID string) ([]*members.Member, e
 		WHERE pm.project_id = $1
 		ORDER BY lower(u.name) COLLATE "C", u.name COLLATE "C", lower(u.email) COLLATE "C", u.id
 	`, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +103,9 @@ func (r *MemberRepository) ListProjectIDsForUser(userID string) ([]string, error
 		JOIN org_team_members otm ON otm.org_team_id = pta.org_team_id
 		WHERE otm.user_id = $1
 	`, userID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -171,6 +177,9 @@ func (r *MemberRepository) ListTeamGrants(projectID string) ([]*members.TeamGran
 		WHERE pta.project_id = $1
 		ORDER BY lower(t.name) COLLATE "C", t.name COLLATE "C", t.id
 	`, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

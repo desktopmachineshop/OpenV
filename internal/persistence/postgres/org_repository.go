@@ -121,6 +121,9 @@ func (r *OrgRepository) ListOrgsForUser(userID string) ([]*orgs.Org, error) {
 		WHERE m.user_id = $1 AND o.deleted_at IS NULL
 		ORDER BY (o.org_type = 'personal') DESC, o.name
 	`, userID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -52,6 +52,9 @@ func (r *OrgRepository) ListTeams(orgID string) ([]*orgs.OrgTeam, error) {
 		SELECT id, org_id, name, description, created_by, created_at, updated_at
 		FROM org_teams WHERE org_id = $1 ORDER BY name
 	`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +108,9 @@ func (r *OrgRepository) ListTeamMembers(teamID string) ([]*orgs.Member, error) {
 		WHERE tm.org_team_id = $1
 		ORDER BY u.name, u.email
 	`, teamID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

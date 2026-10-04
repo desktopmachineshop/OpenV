@@ -103,6 +103,9 @@ func (r *AttachmentRepository) FindByArtifactID(artifactID string) ([]*attachmen
 		ORDER BY figure_num NULLS LAST, created_at
 	`
 	rows, err := r.db.Query(query, artifactID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find attachments: %w", err)
 	}
@@ -130,7 +133,7 @@ func (r *AttachmentRepository) FindByArtifactID(artifactID string) ([]*attachmen
 // from the returned map.
 func (r *AttachmentRepository) FindByArtifactIDs(artifactIDs []string) (map[string][]*attachments.Attachment, error) {
 	result := make(map[string][]*attachments.Attachment, len(artifactIDs))
-	if len(artifactIDs) == 0 {
+	if artifactIDs = uuidsOnly(artifactIDs); len(artifactIDs) == 0 {
 		return result, nil
 	}
 
@@ -176,6 +179,9 @@ func (r *AttachmentRepository) FindByProjectID(projectID string) ([]*attachments
 		ORDER BY art.sort_order, art.created_at, a.figure_num NULLS LAST, a.created_at
 	`
 	rows, err := r.db.Query(query, projectID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the project's attachments: %w", err)
 	}
@@ -403,6 +409,9 @@ func (r *AttachmentRepository) ListVersions(attachmentID string) ([]*attachments
 		WHERE attachment_id = $1
 		ORDER BY version DESC
 	`, attachmentID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to list figure versions: %w", err)
 	}

@@ -145,6 +145,9 @@ func (r *AttributeDefinitionRepository) ListByOrg(orgID string) ([]*attributes.D
 		WHERE org_id = $1 AND project_id IS NULL
 		ORDER BY applies_to_type, sort_order, key
 	`, orgID)
+	if malformedID(err) {
+		return []*attributes.Definition{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +162,9 @@ func (r *AttributeDefinitionRepository) ListByProject(projectID string) ([]*attr
 		WHERE project_id = $1
 		ORDER BY applies_to_type, sort_order, key
 	`, projectID)
+	if malformedID(err) {
+		return []*attributes.Definition{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

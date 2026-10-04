@@ -178,6 +178,9 @@ func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkI
 	`
 
 	rows, err := r.db.Query(query, projectID, pq.Array(workitems.Columns))
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +205,7 @@ func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkI
 // whole notes panel: the alternative is a lookup per note, which is what
 // makes a comment feed slow once it is long.
 func (r *WorkItemRepository) ListBySourceChatterIDs(chatterIDs []string) ([]*workitems.WorkItem, error) {
-	if len(chatterIDs) == 0 {
+	if chatterIDs = uuidsOnly(chatterIDs); len(chatterIDs) == 0 {
 		return nil, nil
 	}
 
@@ -278,6 +281,9 @@ func (r *WorkItemRepository) ListActivity(workItemID string) ([]*workitems.Activ
 	`
 
 	rows, err := r.db.Query(query, workItemID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

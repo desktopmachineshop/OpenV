@@ -60,6 +60,9 @@ func (r *ShareLinkRepository) Get(id string) (*sharelinks.Link, error) {
 // so an owner sees what was handed out.
 func (r *ShareLinkRepository) ListByProject(projectID string) ([]*sharelinks.Link, error) {
 	rows, err := r.db.Query(`SELECT `+shareLinkColumns+` FROM project_share_links WHERE project_id = $1 ORDER BY created_at DESC`, projectID)
+	if malformedID(err) {
+		return []*sharelinks.Link{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

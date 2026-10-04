@@ -183,6 +183,9 @@ func (rep *AgentRunRepository) ListChildren(parentRunID string) ([]*agentruns.Ru
 		WHERE r.parent_run_id = $1 ORDER BY r.created_at
 		LIMIT $2
 	`, parentRunID, listChildrenLimit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -475,6 +478,9 @@ func (rep *AgentRunRepository) ListLogs(runID string, afterSeq int) ([]agentruns
 		FROM agent_run_logs WHERE run_id = $1 AND seq > $2 ORDER BY seq
 		LIMIT $3
 	`, runID, afterSeq, listLogsPageLimit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
