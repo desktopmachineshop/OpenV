@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Workspace nearing budget\",\"body\":\"This month's agent spend has reached $212.50 of the $250.00 budget (80%).\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
+          "payload": "{\"title\":\"Workspace reached 80% of its budget\",\"body\":\"This month's agent runs have spent $212.50 of the $250.00 budget.\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Workspace nearing budget\",\"body\":\"This month's agent spend has reached $212.50 of the $250.00 budget (80%).\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
+          "payload": "{\"title\":\"Workspace reached 80% of its budget\",\"body\":\"This month's agent runs have spent $212.50 of the $250.00 budget.\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -34,7 +34,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ada",
-          "payload": "{\"title\":\"Workspace over budget\",\"body\":\"This month's agent spend has reached $263.46 of the $250.00 budget (100%).\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
+          "payload": "{\"title\":\"Workspace reached 100% of its budget\",\"body\":\"This month's agent runs have spent $263.46 of the $250.00 budget.\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -47,7 +47,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-dee",
-          "payload": "{\"title\":\"Workspace over budget\",\"body\":\"This month's agent spend has reached $263.46 of the $250.00 budget (100%).\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
+          "payload": "{\"title\":\"Workspace reached 100% of its budget\",\"body\":\"This month's agent runs have spent $263.46 of the $250.00 budget.\",\"url\":\"/org/settings?tab=usage\",\"tag\":\"budget_threshold:org-acme\"}"
         }
       ],
       "sent with the default allow-list": true,

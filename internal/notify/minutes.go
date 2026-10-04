@@ -130,5 +130,5 @@ func minutesMessage(threshold, used, allowance int) (string, string) {
 				"A workspace admin can raise the allowance from the Billing tab.", used, allowance)
 	}
 	return "Cloud runner minutes nearly used up",
-		fmt.Sprintf("This month's leased cloud runner time has reached %d of the %d minutes the workspace's plan allows (80%%).", used, allowance)
+		fmt.Sprintf("This month's leased cloud runner time has reached %d of the %d minutes the workspace's plan allows.", used, allowance)
 }

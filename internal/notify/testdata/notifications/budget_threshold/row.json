@@ -5,7 +5,7 @@
     {
       "delivery": "1 of 2",
       "row": {
-        "Body": "This month's agent spend has reached $212.50 of the $250.00 budget (80%).",
+        "Body": "This month's agent runs have spent $212.50 of the $250.00 budget.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -24,7 +24,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Workspace nearing budget",
+        "Title": "Workspace reached 80% of its budget",
         "Type": "budget_threshold",
         "UserID": "user-ada"
       },
@@ -33,7 +33,7 @@
     {
       "delivery": "2 of 2",
       "row": {
-        "Body": "This month's agent spend has reached $212.50 of the $250.00 budget (80%).",
+        "Body": "This month's agent runs have spent $212.50 of the $250.00 budget.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -52,7 +52,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Workspace nearing budget",
+        "Title": "Workspace reached 80% of its budget",
         "Type": "budget_threshold",
         "UserID": "user-dee"
       },
@@ -61,7 +61,7 @@
     {
       "delivery": "1 of 2",
       "row": {
-        "Body": "This month's agent spend has reached $263.46 of the $250.00 budget (100%).",
+        "Body": "This month's agent runs have spent $263.46 of the $250.00 budget.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -80,7 +80,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Workspace over budget",
+        "Title": "Workspace reached 100% of its budget",
         "Type": "budget_threshold",
         "UserID": "user-ada"
       },
@@ -89,7 +89,7 @@
     {
       "delivery": "2 of 2",
       "row": {
-        "Body": "This month's agent spend has reached $263.46 of the $250.00 budget (100%).",
+        "Body": "This month's agent runs have spent $263.46 of the $250.00 budget.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -108,7 +108,7 @@
         "ID": "<uuid>",
         "OrgID": "org-acme",
         "Read": false,
-        "Title": "Workspace over budget",
+        "Title": "Workspace reached 100% of its budget",
         "Type": "budget_threshold",
         "UserID": "user-dee"
       },

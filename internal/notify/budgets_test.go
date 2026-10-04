@@ -190,3 +190,35 @@ func TestBudgetAlertNoopCases(t *testing.T) {
 		}
 	})
 }
+
+// TestBudgetAlertStatesTheSpendNotTheThreshold locks in what an admin reads
+// (bug 65): the title names the threshold crossed, and the body the actual
+// month-to-date spend against the budget. The body once ended "(80%)" or
+// "(100%)", the threshold, which read as the share spent when 85% or 105%
+// had been.
+func TestBudgetAlertStatesTheSpendNotTheThreshold(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		spend       float64
+		title, body string
+	}{
+		{"past 80%", 85, "Workspace reached 80% of its budget",
+			"This month's agent runs have spent $85.00 of the $100.00 budget."},
+		{"past 100%", 105, "Workspace reached 100% of its budget",
+			"This month's agent runs have spent $105.00 of the $100.00 budget."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			orgSvc, spend, store := newBudgetFixture(budget(100))
+			spend.spend = tc.spend
+			NewBudgetMonitor(orgSvc, spend, store, nil).Handle(runFinished("org-1"))
+			if len(store.created) == 0 {
+				t.Fatal("no alert was stored")
+			}
+			for _, n := range store.created {
+				if n.Title != tc.title || n.Body != tc.body {
+					t.Errorf("an admin reads\n  %q\n  %q\nwant\n  %q\n  %q", n.Title, n.Body, tc.title, tc.body)
+				}
+			}
+		})
+	}
+}

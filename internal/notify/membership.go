@@ -122,12 +122,14 @@ func membershipRef(e domainevents.Event, subject string) map[string]interface{} 
 
 // accessMessage is what the affected person reads. It states the new state
 // rather than the transition, because "you are now an admin" is what they
-// need and "your role changed" is not.
+// need and "your role changed" is not. An accepted invitation has no case:
+// its joiner is the event's actor, whom delivery skips, so only the admins
+// hear of that join.
 func accessMessage(e domainevents.Event) (title, body string, ok bool) {
 	role := payloadString(e, "role")
 	to := payloadString(e, "to")
 	switch e.EventType {
-	case domainevents.OrgMemberAdded, domainevents.OrgInvitationAccepted:
+	case domainevents.OrgMemberAdded:
 		return "You joined a workspace",
 			fmt.Sprintf("You are now a member of this workspace with %s role.", roleWord(role)), true
 	case domainevents.OrgMemberRoleChanged:

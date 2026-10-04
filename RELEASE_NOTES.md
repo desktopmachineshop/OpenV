@@ -135,6 +135,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   ordinary line end, which no server can take for the end of the message.
   Names without such characters read exactly as before.
 
+- **A budget alert says which mark was passed and how much was spent.**
+  When a workspace's agent spend for the month passed 80% or 100% of its
+  budget, the alert its admins got ended "(80%)" or "(100%)", which read
+  as the share spent even when 85% or 105% had been. The title now names
+  the mark passed, as in "Workspace reached 80% of its budget", and the
+  text gives the month's spend against the budget, as in "This month's
+  agent runs have spent $212.50 of the $250.00 budget.", in the bell, in
+  phone alerts and in email. The alert that a workspace's cloud runner
+  minutes are nearly used up no longer ends "(80%)" either; it gives the
+  minutes used against the plan's allowance.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
