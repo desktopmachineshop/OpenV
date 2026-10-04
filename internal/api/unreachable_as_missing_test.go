@@ -340,8 +340,8 @@ func TestAnotherWorkspacesKeyOrRunAnswersAsForAnIDNoRowHas(t *testing.T) {
 // assignee or a persona of another workspace or project.
 func TestWhatTheCallerReachesElsewhereIsRefusedAsSuch(t *testing.T) {
 	h := unreachableFixture()
-	h.orgService.(*roleAnyOrgs).roles["org-1"]["stranger"] = orgs.RoleMember
-	h.memberService.(*fakeMemberService).roles["proj-1"] = map[string]string{"stranger": members.RoleViewer}
+	h.OrgService.(*roleAnyOrgs).roles["org-1"]["stranger"] = orgs.RoleMember
+	h.MemberService.(*fakeMemberService).roles["proj-1"] = map[string]string{"stranger": members.RoleViewer}
 	for _, tc := range []struct {
 		name    string
 		handler http.HandlerFunc
@@ -373,7 +373,7 @@ func TestAReaderStillGetsTheRoleRefusal(t *testing.T) {
 	h := unreachableFixture()
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"from_id":"art-1","to_id":"art-1","type":"relates-to"}`))
-	h.memberService.(*fakeMemberService).roles["proj-1"] = map[string]string{"reader": members.RoleViewer}
+	h.MemberService.(*fakeMemberService).roles["proj-1"] = map[string]string{"reader": members.RoleViewer}
 	h.CreateLink(w, r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "reader"})))
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("a viewer's link: %d %q, want the role's 403", w.Code, w.Body.String())
@@ -482,7 +482,7 @@ func (unknownUserMembers) SetRole(projectID, userID, role string) error {
 // (issue #379's decision 15: a malformed id is never a 500).
 func TestADownloadOfABaselineNoRowHasAnswers404(t *testing.T) {
 	h := unreachableFixture()
-	h.downloadService = missingBaselines{}
+	h.DownloadService = missingBaselines{}
 	for _, tc := range []struct {
 		name    string
 		handler http.HandlerFunc

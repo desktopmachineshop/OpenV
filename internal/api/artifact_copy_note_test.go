@@ -34,14 +34,14 @@ func (f *copyArtifactFake) CreateArtifact(a *artifacts.Artifact) error {
 func copyHandler(t *testing.T) (*Handler, *fakeChatterService) {
 	notes := &fakeChatterService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.artifactService = &copyArtifactFake{byID: map[string]*artifacts.Artifact{
+		h.ArtifactService = &copyArtifactFake{byID: map[string]*artifacts.Artifact{
 			"src":   {ID: "src", ProjectID: "p1", Ref: "REQ-12", Title: "Pump pressure", Version: 3},
 			"other": {ID: "other", ProjectID: "p2", Ref: "REQ-1", Title: "Secret", Version: 1},
 		}}
-		h.chatterService = notes
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}, "p2": {ID: "p2", OrgID: "o2"}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor"}}}
-		h.orgService = &fakeOrgService{}
+		h.ChatterService = notes
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}, "p2": {ID: "p2", OrgID: "o2"}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": "editor"}}}
+		h.OrgService = &fakeOrgService{}
 	})
 	return h, notes
 }
@@ -84,7 +84,7 @@ func TestCreateArtifactNotesWhereACopyCameFrom(t *testing.T) {
 			if e.Message != tc.note || e.EntryType != "copy" || !e.IsAutoEntry || e.AuthorName != "Ada" {
 				t.Errorf("note = %+v", e)
 			}
-			created := h.artifactService.(*copyArtifactFake).created
+			created := h.ArtifactService.(*copyArtifactFake).created
 			if len(created) != 1 || e.ArtifactID != created[0].ID {
 				t.Errorf("note is on %q, want the new artifact %v", e.ArtifactID, created)
 			}

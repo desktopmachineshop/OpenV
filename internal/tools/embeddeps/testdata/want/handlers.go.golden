@@ -1,0 +1,69 @@
+package api
+
+import (
+	"net/http"
+	"strings"
+)
+
+// Users is a stand-in service.
+type Users interface{ Name(id string) string }
+
+// Store is another.
+type Store interface{ Get(id string) string }
+
+// Billing stands in for a service NewHandler rewires.
+type Billing struct{ ReturnURL string }
+
+// DefaultReturnURL records the return origin.
+func (b *Billing) DefaultReturnURL(u string) { b.ReturnURL = u }
+
+// HandlerDeps carries every dependency.
+type HandlerDeps struct {
+	Store       Store
+	UserService Users
+	// FrontendURL is trimmed into a private field.
+	FrontendURL      string
+	SecureCookies    bool
+	CrossSiteCookies bool
+	BillingService   *Billing
+	BuildSHA         string
+}
+
+// Handler holds the dependencies.
+type Handler struct {
+	// HandlerDeps holds every dependency NewHandler was given, embedded so
+	// that a dependency is declared once, as a HandlerDeps field. The
+	// fields below are what NewHandler derives from it; a handler reads
+	// those, not the HandlerDeps fields they come from.
+	HandlerDeps
+
+	frontendURL   string // derived: trimmed
+	secureCookies bool
+	sameSite      http.SameSite
+
+	limiter *limiter // derived: built here
+}
+
+type limiter struct{ n int }
+
+// NewHandler creates a handler.
+func NewHandler(deps HandlerDeps) *Handler {
+	sameSite := http.SameSiteLaxMode
+	secure := deps.SecureCookies
+	if deps.CrossSiteCookies {
+		sameSite = http.SameSiteNoneMode
+		secure = true
+	}
+	h := &Handler{
+		frontendURL: strings.TrimRight(deps.FrontendURL, "/"),
+		// secureCookies is derived from two settings.
+		secureCookies: secure,
+		sameSite:      sameSite,
+		limiter:       &limiter{n: 3},
+	}
+	h.HandlerDeps = deps
+	if h.BillingService != nil {
+		h.BillingService.DefaultReturnURL(h.frontendURL)
+	}
+	return h
+}

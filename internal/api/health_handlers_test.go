@@ -25,7 +25,7 @@ func healthBody(t *testing.T, h *Handler) map[string]string {
 // is what lets the staging smoke gate tell this deployment from a stale one
 // (REQ-141).
 func TestHealthReportsBuildCommit(t *testing.T) {
-	body := healthBody(t, newTestHandler(t, func(h *Handler) { h.buildSHA = "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c" }))
+	body := healthBody(t, newTestHandler(t, func(h *Handler) { h.BuildSHA = "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c" }))
 	if body["status"] != "ok" {
 		t.Errorf("status = %q, want ok", body["status"])
 	}
@@ -53,7 +53,7 @@ func TestHealthOmitsUnknownCommit(t *testing.T) {
 // the API's /health never reaches a caller on that origin — this route is
 // the one the staging smoke gate polls.
 func TestPublicBuildReportsCommitUncached(t *testing.T) {
-	h := newTestHandler(t, func(h *Handler) { h.buildSHA = "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c" })
+	h := newTestHandler(t, func(h *Handler) { h.BuildSHA = "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c" })
 	w := httptest.NewRecorder()
 	h.GetPublicBuild(w, httptest.NewRequest(http.MethodGet, "/api/v1/public/build", nil))
 

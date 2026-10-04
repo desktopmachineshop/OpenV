@@ -57,7 +57,7 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Export project
-	data, filename, err := h.exportService.ExportProject(id, exportFormat)
+	data, filename, err := h.ExportService.ExportProject(id, exportFormat)
 	if err != nil {
 		if errors.Is(err, exports.ErrUnsupportedFormat) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -97,13 +97,13 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 	// #238). A malformed ReqIF or JSON is a client error (400), not a 500.
 	var projectID string
 	if isReqIFImport(r, data) {
-		projectID, err = h.exportService.ImportProjectReqIF(data, orgID)
+		projectID, err = h.ExportService.ImportProjectReqIF(data, orgID)
 		if err != nil {
 			writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("failed to import ReqIF: %v", err))
 			return
 		}
 	} else {
-		projectID, err = h.exportService.ImportProject(data, orgID)
+		projectID, err = h.ExportService.ImportProject(data, orgID)
 		if errors.Is(err, exports.ErrMalformedImport) {
 			writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("failed to import JSON: %v", err))
 			return
@@ -115,8 +115,8 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Creator becomes the project owner (mirrors CreateProject).
-	if user := CurrentUser(r); user != nil && h.memberService != nil {
-		if err := h.memberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
+	if user := CurrentUser(r); user != nil && h.MemberService != nil {
+		if err := h.MemberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
 			slog.Warn("api: failed to add creator as project owner", "project_id", projectID, "error", err)
 		}
 	}
@@ -174,10 +174,10 @@ func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 	switch format {
 	case "pdf":
 		contentType = "application/pdf"
-		data, filename, err = h.reportService.GenerateProjectReport(projectID, baselineID)
+		data, filename, err = h.ReportService.GenerateProjectReport(projectID, baselineID)
 	case "docx":
 		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-		data, filename, err = h.reportService.GenerateProjectReportDOCX(projectID, baselineID)
+		data, filename, err = h.ReportService.GenerateProjectReportDOCX(projectID, baselineID)
 	default:
 		respondError(w, r, http.StatusBadRequest, "unsupported report format", fmt.Errorf("unsupported report format: %q", format))
 		return

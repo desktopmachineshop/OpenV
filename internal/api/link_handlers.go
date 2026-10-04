@@ -50,7 +50,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 
 	// An endpoint in a project the caller cannot reach at all answers as one
 	// no row has, where the lookup would, before anything of it shows (I3).
-	fromArtifact, fromErr := h.artifactService.GetArtifact(req.FromID)
+	fromArtifact, fromErr := h.ArtifactService.GetArtifact(req.FromID)
 	fromIsRef := fromErr != nil && isProposalRun && h.pendingArtifactRef(proposalRunID, req.FromID) != nil
 	if fromErr != nil && !fromIsRef {
 		respondError(w, r, http.StatusBadRequest, "source artifact not found", fromErr)
@@ -60,7 +60,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toArtifact, toErr := h.artifactService.GetArtifact(req.ToID)
+	toArtifact, toErr := h.ArtifactService.GetArtifact(req.ToID)
 	toIsRef := toErr != nil && isProposalRun && h.pendingArtifactRef(proposalRunID, req.ToID) != nil
 	if toErr != nil && !toIsRef {
 		respondError(w, r, http.StatusBadRequest, "target artifact not found", toErr)
@@ -127,7 +127,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	link := links.NewLink(req)
-	if err := h.linkService.CreateLink(link); err != nil {
+	if err := h.LinkService.CreateLink(link); err != nil {
 		respondInternal(w, r, "failed to create link", err)
 		return
 	}
@@ -149,7 +149,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 // GetLink retrieves a link by ID
 func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	link, err := h.linkService.GetLink(id)
+	link, err := h.LinkService.GetLink(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
@@ -175,7 +175,7 @@ func (h *Handler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	links, err := h.linkService.GetAllLinks(projectID)
+	links, err := h.LinkService.GetAllLinks(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list links", err)
 		return
@@ -195,7 +195,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.linkService.GetLink(id)
+	existing, err := h.LinkService.GetLink(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
@@ -204,7 +204,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	link, err := h.linkService.UpdateLink(id, req)
+	link, err := h.LinkService.UpdateLink(id, req)
 	if err != nil {
 		respondInternal(w, r, "failed to update link", err)
 		return
@@ -233,7 +233,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	existing, err := h.linkService.GetLink(id)
+	existing, err := h.LinkService.GetLink(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
@@ -241,14 +241,14 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor, missing("link not found")) {
 		return
 	}
-	if run := CurrentRun(r); run != nil && h.agentService != nil {
-		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+	if run := CurrentRun(r); run != nil && h.AgentService != nil {
+		if agent, err := h.AgentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
 			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot clear a suspect link")
 			return
 		}
 	}
 
-	link, err := h.linkService.ConfirmLink(id)
+	link, err := h.LinkService.ConfirmLink(id)
 	if err != nil {
 		respondInternal(w, r, "failed to confirm link", err)
 		return
@@ -261,7 +261,7 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 // DeleteLink deletes a link
 func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	link, _ := h.linkService.GetLink(id)
+	link, _ := h.LinkService.GetLink(id)
 
 	projectID := ""
 	if link != nil {
@@ -274,7 +274,7 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.linkService.DeleteLink(id)
+	err := h.LinkService.DeleteLink(id)
 	if err != nil {
 		respondInternal(w, r, "failed to delete link", err)
 		return

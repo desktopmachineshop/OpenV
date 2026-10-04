@@ -27,7 +27,7 @@ func (h *Handler) ListAgents(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	list, err := h.agentService.List(ActiveOrg(r))
+	list, err := h.AgentService.List(ActiveOrg(r))
 	if err != nil {
 		respondInternal(w, r, "failed to list agents", err)
 		return
@@ -53,11 +53,11 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	// Friendly pre-check; the (org_id, slug) unique index is the real guard,
 	// so a concurrent create that slips past this still conflicts below.
-	if existing, _ := h.agentService.GetBySlug(ActiveOrg(r), def.Slug); existing != nil {
+	if existing, _ := h.AgentService.GetBySlug(ActiveOrg(r), def.Slug); existing != nil {
 		writeJSONError(w, http.StatusConflict, "an agent with this slug already exists")
 		return
 	}
-	agent, err := h.agentService.SaveDefinition(ActiveOrg(r), &def)
+	agent, err := h.AgentService.SaveDefinition(ActiveOrg(r), &def)
 	if err != nil {
 		if errors.Is(err, agents.ErrSlugExists) {
 			writeJSONError(w, http.StatusConflict, "an agent with this slug already exists")
@@ -74,7 +74,7 @@ func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	agent, err := h.agentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
+	agent, err := h.AgentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
 	if err != nil {
 		respondInternal(w, r, "failed to load agent", err)
 		return
@@ -109,7 +109,7 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	agent, err := h.agentService.SaveDefinition(ActiveOrg(r), &def)
+	agent, err := h.AgentService.SaveDefinition(ActiveOrg(r), &def)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -121,7 +121,7 @@ func (h *Handler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, ActiveOrg(r), orgs.RoleAdmin) {
 		return
 	}
-	if err := h.agentService.Delete(ActiveOrg(r), mux.Vars(r)["slug"]); err != nil {
+	if err := h.AgentService.Delete(ActiveOrg(r), mux.Vars(r)["slug"]); err != nil {
 		if errors.Is(err, agents.ErrNotFound) {
 			writeJSONError(w, http.StatusNotFound, "agent not found")
 			return
@@ -136,7 +136,7 @@ func (h *Handler) GetAgentRaw(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	content, err := h.agentService.RawFile(ActiveOrg(r), mux.Vars(r)["slug"])
+	content, err := h.AgentService.RawFile(ActiveOrg(r), mux.Vars(r)["slug"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "agent not found", err)
 		return
@@ -155,7 +155,7 @@ func (h *Handler) SaveAgentRaw(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	agent, err := h.agentService.SaveRawFile(ActiveOrg(r), mux.Vars(r)["slug"], req.Content)
+	agent, err := h.AgentService.SaveRawFile(ActiveOrg(r), mux.Vars(r)["slug"], req.Content)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -167,11 +167,11 @@ func (h *Handler) SyncAgents(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, ActiveOrg(r), orgs.RoleAdmin) {
 		return
 	}
-	if err := h.agentService.SyncFromDisk(ActiveOrg(r)); err != nil {
+	if err := h.AgentService.SyncFromDisk(ActiveOrg(r)); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	list, err := h.agentService.List(ActiveOrg(r))
+	list, err := h.AgentService.List(ActiveOrg(r))
 	if err != nil {
 		respondInternal(w, r, "failed to list agents", err)
 		return

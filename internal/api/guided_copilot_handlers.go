@@ -32,11 +32,11 @@ func (h *Handler) registerGuidedCopilotRoutes(router *mux.Router) {
 // session project's workspace — without one, copilot turns queue unanswered
 // and the chat panel should say "not connected" instead of "thinking".
 func (h *Handler) guidedRunnerOnline(session *guided.Session) bool {
-	project, err := h.projectService.GetProject(session.ProjectID)
+	project, err := h.ProjectService.GetProject(session.ProjectID)
 	if err != nil || project == nil {
 		return false
 	}
-	keys, err := h.workerKeyService.List(project.OrgID)
+	keys, err := h.WorkerKeyService.List(project.OrgID)
 	if err != nil {
 		return false
 	}
@@ -55,7 +55,7 @@ func (h *Handler) guidedTurnInFlight(session *guided.Session) bool {
 	if session == nil || session.AgentRunID == nil {
 		return false
 	}
-	run, err := h.runService.Get(*session.AgentRunID)
+	run, err := h.RunService.Get(*session.AgentRunID)
 	if err != nil || run == nil {
 		return false
 	}
@@ -77,7 +77,7 @@ func (h *Handler) ListGuidedChatMessages(w http.ResponseWriter, r *http.Request)
 	if session == nil {
 		return
 	}
-	transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	transcript, err := h.GuidedService.GetChatTranscript(session.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load chat transcript", err)
 		return
@@ -110,18 +110,18 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "message content is required")
 		return
 	}
-	message, err := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleUser, req.Content)
+	message, err := h.GuidedService.AppendChatMessage(session.ID, guided.ChatRoleUser, req.Content)
 	if err != nil {
 		respondInternal(w, r, "failed to append chat message", err)
 		return
 	}
-	h.sseHub.BroadcastSession("guided:"+session.ID, "message", message)
+	h.SSEHub.BroadcastSession("guided:"+session.ID, "message", message)
 
 	if err := h.launchGuidedTurn(CurrentUserID(r), launchParent(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
-		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
+		note, _ := h.GuidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
 			"The V&V Assistant is unavailable right now ("+err.Error()+"). Your message was saved — please try again shortly.")
 		if note != nil {
-			h.sseHub.BroadcastSession("guided:"+session.ID, "message", note)
+			h.SSEHub.BroadcastSession("guided:"+session.ID, "message", note)
 		}
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -157,7 +157,7 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 			"runner_online": runnerOnline,
 		})
 	}
-	transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	transcript, err := h.GuidedService.GetChatTranscript(session.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load chat transcript", err)
 		return
@@ -171,10 +171,10 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.launchGuidedTurn(CurrentUserID(r), launchParent(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
-		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
+		note, _ := h.GuidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
 			"The V&V Assistant is unavailable right now ("+err.Error()+"). You can keep filling in the wizard and try the chat again shortly.")
 		if note != nil {
-			h.sseHub.BroadcastSession("guided:"+session.ID, "message", note)
+			h.SSEHub.BroadcastSession("guided:"+session.ID, "message", note)
 		}
 		reply("unavailable")
 		return
@@ -232,7 +232,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 	if h.guidedTurnInFlight(session) {
 		// Park the newest nudge (overwriting any earlier one) for the running
 		// turn to answer when it finishes.
-		if err := h.guidedService.SetPendingNudge(session.ID, nudge); err != nil {
+		if err := h.GuidedService.SetPendingNudge(session.ID, nudge); err != nil {
 			slog.Warn("api: failed to park a wizard nudge", "session_id", session.ID, "error", err)
 			// Nothing is holding the nudge, so fall through and launch it here
 			// rather than promising a reply that nobody owes.
@@ -245,7 +245,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 			// one would wait for some later turn that may never come. Take it
 			// back — TakePendingNudge hands it out at most once, so this can
 			// never race the hook into two turns — and launch it here.
-			taken, err := h.guidedService.TakePendingNudge(session.ID)
+			taken, err := h.GuidedService.TakePendingNudge(session.ID)
 			if err != nil {
 				slog.Warn("api: failed to reclaim a wizard nudge parked as the turn finished", "session_id", session.ID, "error", err)
 				reply("pending")
@@ -272,7 +272,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 // a turn launched in the meantime (which will answer the nudge when it ends)
 // counts too; if it cannot be re-read, the session in hand is used.
 func (h *Handler) pendingNudgeStillOwed(session *guided.Session) bool {
-	fresh, err := h.guidedService.GetSession(session.ID)
+	fresh, err := h.GuidedService.GetSession(session.ID)
 	if err == nil && fresh != nil {
 		session = fresh
 	}
@@ -285,7 +285,7 @@ func (h *Handler) pendingNudgeStillOwed(session *guided.Session) bool {
 // no session-scoped authorization to do here: the nudge was authorized when
 // the editor sent it, and its state is the state they had entered then.
 func (h *Handler) LaunchGuidedNudge(sessionID string, nudge guided.PendingNudge, launchedBy *string) error {
-	session, err := h.guidedService.GetSession(sessionID)
+	session, err := h.GuidedService.GetSession(sessionID)
 	if err != nil {
 		return err
 	}
@@ -311,8 +311,8 @@ func (h *Handler) StreamGuidedChat(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		return
 	}
-	h.sseHub.ServeStream(w, r, "guided:"+session.ID, func(emit func(event string, data interface{})) error {
-		transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	h.SSEHub.ServeStream(w, r, "guided:"+session.ID, func(emit func(event string, data interface{})) error {
+		transcript, err := h.GuidedService.GetChatTranscript(session.ID)
 		if err != nil {
 			return err
 		}
@@ -330,22 +330,22 @@ func (h *Handler) StreamGuidedChat(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *guided.Session, step int, state map[string]interface{}, event, artifactID string) error {
 	// The copilot agent lives in the project's workspace.
 	orgID := ""
-	if project, err := h.projectService.GetProject(session.ProjectID); err == nil && project != nil {
+	if project, err := h.ProjectService.GetProject(session.ProjectID); err == nil && project != nil {
 		orgID = project.OrgID
 	}
 	if orgID == "" {
 		return fmt.Errorf("could not resolve workspace for guided session project %s", session.ProjectID)
 	}
-	agent, err := h.agentService.GetBySlug(orgID, "requirements-copilot")
+	agent, err := h.AgentService.GetBySlug(orgID, "requirements-copilot")
 	if err != nil || agent == nil {
 		return fmt.Errorf("requirements-copilot agent is not available in this workspace")
 	}
 
-	transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	transcript, err := h.GuidedService.GetChatTranscript(session.ID)
 	if err != nil {
 		return err
 	}
-	profile, _ := h.productService.GetProfile(session.ProjectID)
+	profile, _ := h.ProductService.GetProfile(session.ProjectID)
 
 	stepLabel := ""
 	if step >= 1 && step <= len(guidedStepLabels) {
@@ -357,7 +357,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 	// assistant simply answers without that context.
 	var focus *artifacts.Artifact
 	if artifactID != "" {
-		if a, err := h.artifactService.GetArtifact(artifactID); err == nil && a != nil && a.ProjectID == session.ProjectID {
+		if a, err := h.ArtifactService.GetArtifact(artifactID); err == nil && a != nil && a.ProjectID == session.ProjectID {
 			focus = a
 		}
 	}
@@ -367,7 +367,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 	// session added — a resumed definition sits over artifacts that already
 	// exist, which the assistant can only propose to change if it can see
 	// them. A listing failure costs the outline, not the turn.
-	list, err := h.artifactService.ListArtifacts(session.ProjectID, "")
+	list, err := h.ArtifactService.ListArtifacts(session.ProjectID, "")
 	if err != nil {
 		slog.Warn("api: could not list artifacts for the assistant's outline",
 			"project_id", session.ProjectID, "error", err)
@@ -381,7 +381,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 
 	sessionID := session.ID
 	projectID := session.ProjectID
-	run, _, err := h.runService.Launch(agentruns.LaunchRequest{
+	run, _, err := h.RunService.Launch(agentruns.LaunchRequest{
 		OrgID:           orgID,
 		AgentID:         agent.ID,
 		ProjectID:       &projectID,
@@ -394,7 +394,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 	if err != nil {
 		return err
 	}
-	if err := h.guidedService.AttachAgentRun(session.ID, run.ID); err != nil {
+	if err := h.GuidedService.AttachAgentRun(session.ID, run.ID); err != nil {
 		slog.Warn("api: failed to attach copilot run to guided session",
 			"run_id", run.ID, "session_id", session.ID, "error", err)
 	}

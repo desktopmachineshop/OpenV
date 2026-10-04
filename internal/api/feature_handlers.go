@@ -45,8 +45,8 @@ func (h *Handler) resolveFeatures(org *orgs.Org, userID string) featuresResponse
 	resp := featuresResponse{Channel: org.ReleaseChannel, Features: map[string]bool{}}
 	if org.ReleaseChannel == orgs.ChannelStable {
 		resp.StableRelease = org.StableRelease
-		if h.releaseService != nil {
-			if s := h.releaseService.CurrentStable(); s != nil && release.Newer(s.Version, org.StableRelease) {
+		if h.ReleaseService != nil {
+			if s := h.ReleaseService.CurrentStable(); s != nil && release.Newer(s.Version, org.StableRelease) {
 				resp.NextStableRelease = s.Version
 				if cutOn, err := time.Parse("2006-01-02", s.Since); err == nil {
 					at := orgs.UpgradeTimeFor(cutOn, org.UpgradeDay, org.UpgradeHour, org.UpgradeTimezone)
@@ -54,16 +54,16 @@ func (h *Handler) resolveFeatures(org *orgs.Org, userID string) featuresResponse
 				}
 			}
 		}
-		if on, err := h.orgService.MemberPreview(org.ID, userID); err == nil && on {
+		if on, err := h.OrgService.MemberPreview(org.ID, userID); err == nil && on {
 			resp.Preview = true
-			if h.releaseService != nil {
-				if s := h.releaseService.CurrentStable(); s != nil && release.Newer(s.Version, resp.StableRelease) {
+			if h.ReleaseService != nil {
+				if s := h.ReleaseService.CurrentStable(); s != nil && release.Newer(s.Version, resp.StableRelease) {
 					resp.StableRelease = s.Version
 				}
 			}
 		}
 	}
-	resp.Features = release.FeaturesFor(h.releaseService, org.ReleaseChannel, resp.StableRelease)
+	resp.Features = release.FeaturesFor(h.ReleaseService, org.ReleaseChannel, resp.StableRelease)
 	return resp
 }
 
@@ -76,7 +76,7 @@ func (h *Handler) featureEnabled(r *http.Request, orgID, key string) bool {
 	if user == nil {
 		return true
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil || org == nil {
 		return false
 	}
@@ -88,10 +88,10 @@ func (h *Handler) featureEnabled(r *http.Request, orgID, key string) bool {
 // launched (a hook re-firing a parked nudge) has no member to gate on and
 // sees everything, as workers do.
 func (h *Handler) memberFeatureEnabled(orgID string, userID *string, key string) bool {
-	if userID == nil || h.orgService == nil {
+	if userID == nil || h.OrgService == nil {
 		return true
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil || org == nil {
 		return false
 	}
@@ -102,10 +102,10 @@ func (h *Handler) memberFeatureEnabled(orgID string, userID *string, key string)
 // workspace's. A handler with no workspace service (a test, a stripped
 // deployment) has nothing to gate on and lets the feature through.
 func (h *Handler) projectFeatureEnabled(r *http.Request, projectID, key string) bool {
-	if h.orgService == nil || h.projectService == nil {
+	if h.OrgService == nil || h.ProjectService == nil {
 		return true
 	}
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil || project == nil {
 		return false
 	}
@@ -122,7 +122,7 @@ func (h *Handler) GetOrgFeatures(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil || org == nil {
 		writeJSONError(w, http.StatusNotFound, "workspace not found")
 		return
@@ -145,7 +145,7 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil || org == nil {
 		writeJSONError(w, http.StatusNotFound, "workspace not found")
 		return
@@ -154,7 +154,7 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, orgs.ErrChannelLocked.Error())
 		return
 	}
-	if err := h.orgService.SetMemberPreview(orgID, CurrentUser(r).ID, req.Enabled); err != nil {
+	if err := h.OrgService.SetMemberPreview(orgID, CurrentUser(r).ID, req.Enabled); err != nil {
 		if errors.Is(err, orgs.ErrNotMember) {
 			writeJSONError(w, http.StatusForbidden, err.Error())
 			return

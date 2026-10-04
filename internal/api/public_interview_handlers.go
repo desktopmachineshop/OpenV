@@ -41,7 +41,7 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 	if !h.allowInterviewRead(w, r) {
 		return
 	}
-	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
+	interview, invite, err := h.InterviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		respondInviteError(w, r, err)
 		return
@@ -49,10 +49,10 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 	// Read-only: a page view must not write. A first visit simply has no
 	// session yet (the UI shows the name prompt); the session is created by
 	// the first message (or the stream, which needs one for its channel).
-	session, _ := h.interviewService.FindActiveSession(invite.ID)
+	session, _ := h.InterviewService.FindActiveSession(invite.ID)
 	var transcript []*interviews.Message
 	if session != nil {
-		transcript, _ = h.interviewService.GetTranscript(session.ID)
+		transcript, _ = h.InterviewService.GetTranscript(session.ID)
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"interview_name": interview.Name,
@@ -64,7 +64,7 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 // PublicInterviewMessage records a participant message and enqueues an
 // interviewer turn run.
 func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request) {
-	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
+	interview, invite, err := h.InterviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		respondInviteError(w, r, err)
 		return
@@ -89,7 +89,7 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 			retryAfter)
 		return
 	}
-	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
+	session, err := h.InterviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
 	if err != nil {
 		// Unauthenticated endpoint: StartOrResumeSession only fails on
 		// storage errors, whose text must never reach the public. The real
@@ -97,20 +97,20 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 		respondInternal(w, r, "we could not start your interview session; please try again in a moment", err)
 		return
 	}
-	message, err := h.interviewService.AppendMessage(session.ID, interviews.RoleParticipant, req.Content)
+	message, err := h.InterviewService.AppendMessage(session.ID, interviews.RoleParticipant, req.Content)
 	if err != nil {
 		respondInternal(w, r, "failed to append message", err)
 		return
 	}
-	h.sseHub.BroadcastSession("interview:"+session.ID, "message", message)
+	h.SSEHub.BroadcastSession("interview:"+session.ID, "message", message)
 
 	if err := h.launchInterviewTurn(interview, session); err != nil {
 		// Surface but don't fail the message write; the participant sees
 		// a system note instead of silence.
-		note, _ := h.interviewService.AppendMessage(session.ID, interviews.RoleSystem,
+		note, _ := h.InterviewService.AppendMessage(session.ID, interviews.RoleSystem,
 			"The interviewer is unavailable right now. Your answer was saved — please check back shortly.")
 		if note != nil {
-			h.sseHub.BroadcastSession("interview:"+session.ID, "message", note)
+			h.SSEHub.BroadcastSession("interview:"+session.ID, "message", note)
 		}
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -124,17 +124,17 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	if interview.AgentID == nil {
 		return fmt.Errorf("interview has no interviewer agent")
 	}
-	transcript, err := h.interviewService.GetTranscript(session.ID)
+	transcript, err := h.InterviewService.GetTranscript(session.ID)
 	if err != nil {
 		return err
 	}
-	profile, _ := h.productService.GetProfile(interview.ProjectID)
+	profile, _ := h.ProductService.GetProfile(interview.ProjectID)
 
 	var b strings.Builder
 	b.WriteString("You are conducting a requirements-elicitation interview.\n\n")
 	b.WriteString("Interview brief: " + interview.Brief + "\n")
 	if interview.PersonaArtifactID != nil {
-		if persona, err := h.artifactService.GetArtifact(*interview.PersonaArtifactID); err == nil && persona != nil {
+		if persona, err := h.ArtifactService.GetArtifact(*interview.PersonaArtifactID); err == nil && persona != nil {
 			b.WriteString("Target persona: " + persona.Title + "\n")
 			if persona.Body != "" {
 				b.WriteString("Persona description: " + persona.Body + "\n")
@@ -160,7 +160,7 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 
 	// Interview turns belong to the interview's project's org.
 	orgID := ""
-	if project, err := h.projectService.GetProject(interview.ProjectID); err == nil && project != nil {
+	if project, err := h.ProjectService.GetProject(interview.ProjectID); err == nil && project != nil {
 		orgID = project.OrgID
 	}
 	if orgID == "" {
@@ -169,7 +169,7 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 
 	sessionID := session.ID
 	projectID := interview.ProjectID
-	_, _, err = h.runService.Launch(agentruns.LaunchRequest{
+	_, _, err = h.RunService.Launch(agentruns.LaunchRequest{
 		OrgID:              orgID,
 		AgentID:            *interview.AgentID,
 		ProjectID:          &projectID,
@@ -205,21 +205,21 @@ func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) 
 			retryAfter)
 		return
 	}
-	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
+	interview, invite, err := h.InterviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		respondInviteError(w, r, err)
 		return
 	}
 	// The SSE channel is keyed by session, so the stream genuinely needs
 	// one; StartOrResumeSession reuses the active session when it exists.
-	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	session, err := h.InterviewService.StartOrResumeSession(invite.ID, interview.ID, "")
 	if err != nil {
 		// Unauthenticated endpoint: storage-error text must never leak.
 		respondInternal(w, r, "we could not open your interview stream; please reload the page", err)
 		return
 	}
-	h.sseHub.ServeStream(w, r, "interview:"+session.ID, func(emit func(event string, data interface{})) error {
-		transcript, err := h.interviewService.GetTranscript(session.ID)
+	h.SSEHub.ServeStream(w, r, "interview:"+session.ID, func(emit func(event string, data interface{})) error {
+		transcript, err := h.InterviewService.GetTranscript(session.ID)
 		if err != nil {
 			return err
 		}
@@ -232,14 +232,14 @@ func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) 
 
 // PublicInterviewFinish ends the session and enqueues a summary turn.
 func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) {
-	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
+	interview, invite, err := h.InterviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		respondInviteError(w, r, err)
 		return
 	}
 	// Nothing to finish when no session was ever started — don't create an
 	// empty session just to complete it.
-	session, err := h.interviewService.FindActiveSession(invite.ID)
+	session, err := h.InterviewService.FindActiveSession(invite.ID)
 	if err != nil {
 		// Unauthenticated endpoint: only storage errors land here, and
 		// their text must never leak to the public.
@@ -250,7 +250,7 @@ func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if err := h.interviewService.CompleteSession(session.ID, ""); err != nil {
+	if err := h.InterviewService.CompleteSession(session.ID, ""); err != nil {
 		// The session vanishing between lookup and completion is a benign
 		// race with the domain sentinel's safe text; anything else is
 		// internal and stays out of the public response.

@@ -97,7 +97,7 @@ func (h *Handler) GetProjectQualityRules(w http.ResponseWriter, r *http.Request)
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	rules, err := h.settingsService.ProjectQualityRules(h.orgIDForProject(projectID), projectID)
+	rules, err := h.SettingsService.ProjectQualityRules(h.orgIDForProject(projectID), projectID)
 	if err != nil {
 		h.respondRulesError(w, r, err)
 		return
@@ -116,7 +116,7 @@ func (h *Handler) UpdateProjectQualityRules(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	rules, err := h.settingsService.SetProjectQualityRules(h.orgIDForProject(projectID), projectID, rs)
+	rules, err := h.SettingsService.SetProjectQualityRules(h.orgIDForProject(projectID), projectID, rs)
 	if err != nil {
 		h.respondRulesError(w, r, err)
 		return
@@ -131,7 +131,7 @@ func (h *Handler) GetWorkspaceQualityRules(w http.ResponseWriter, r *http.Reques
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	rules, err := h.settingsService.WorkspaceQualityRules(orgID)
+	rules, err := h.SettingsService.WorkspaceQualityRules(orgID)
 	if err != nil {
 		h.respondRulesError(w, r, err)
 		return
@@ -150,7 +150,7 @@ func (h *Handler) UpdateWorkspaceQualityRules(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	rules, err := h.settingsService.SetWorkspaceQualityRules(orgID, rs)
+	rules, err := h.SettingsService.SetWorkspaceQualityRules(orgID, rs)
 	if err != nil {
 		h.respondRulesError(w, r, err)
 		return
@@ -162,10 +162,10 @@ func (h *Handler) UpdateWorkspaceQualityRules(w http.ResponseWriter, r *http.Req
 // be loaded — the settings service then resolves the project level alone
 // rather than failing a read that is only advisory.
 func (h *Handler) orgIDForProject(projectID string) string {
-	if h.projectService == nil || projectID == "" {
+	if h.ProjectService == nil || projectID == "" {
 		return ""
 	}
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil || project == nil {
 		return ""
 	}
@@ -175,8 +175,8 @@ func (h *Handler) orgIDForProject(projectID string) string {
 // qualityRuleSetFor resolves the rule set the lint endpoints judge a project
 // against.
 func (h *Handler) qualityRuleSetFor(projectID string) quality.RuleSet {
-	if h.settingsService == nil {
+	if h.SettingsService == nil {
 		return quality.DefaultRuleSet()
 	}
-	return h.settingsService.EffectiveRuleSet(h.orgIDForProject(projectID), projectID)
+	return h.SettingsService.EffectiveRuleSet(h.orgIDForProject(projectID), projectID)
 }

@@ -25,7 +25,7 @@ func (h *Handler) ListAutomations(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	list, err := h.automationService.List(ActiveOrg(r), r.URL.Query().Get("project_id"))
+	list, err := h.AutomationService.List(ActiveOrg(r), r.URL.Query().Get("project_id"))
 	if err != nil {
 		respondInternal(w, r, "failed to list automations", err)
 		return
@@ -47,7 +47,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID, notFound{}) {
 		return
 	}
-	automation, err := h.automationService.Create(req)
+	automation, err := h.AutomationService.Create(req)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -60,7 +60,7 @@ func (h *Handler) GetAutomation(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	automation, err := h.automationService.Get(mux.Vars(r)["id"])
+	automation, err := h.AutomationService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
@@ -75,7 +75,7 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	automation, err := h.automationService.Get(mux.Vars(r)["id"])
+	automation, err := h.AutomationService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
@@ -88,7 +88,7 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.automationService.Update(automation.ID, req)
+	updated, err := h.AutomationService.Update(automation.ID, req)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -100,7 +100,7 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	automation, err := h.automationService.Get(mux.Vars(r)["id"])
+	automation, err := h.AutomationService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
@@ -108,7 +108,7 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID, missing("automation not found")) {
 		return
 	}
-	if err := h.automationService.Delete(automation.ID); err != nil {
+	if err := h.AutomationService.Delete(automation.ID); err != nil {
 		respondInternal(w, r, "failed to delete automation", err)
 		return
 	}
@@ -123,7 +123,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	automation, err := h.automationService.Get(mux.Vars(r)["id"])
+	automation, err := h.AutomationService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "automation not found", err)
 		return
@@ -131,7 +131,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID, missing("automation not found")) {
 		return
 	}
-	agentID, teamID, teamNodeID, err := scheduler.ResolveTarget(automation, h.teamService)
+	agentID, teamID, teamNodeID, err := scheduler.ResolveTarget(automation, h.TeamService)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

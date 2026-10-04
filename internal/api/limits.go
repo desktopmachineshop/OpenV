@@ -94,8 +94,8 @@ func (h *Handler) overPlan(org *orgs.Org) []string {
 			usage[orgs.LimitMaxMembers] = n
 		}
 	}
-	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxProjects); capped && h.projectService != nil {
-		if list, err := h.projectService.ListProjectsByOrg(org.ID); err == nil {
+	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxProjects); capped && h.ProjectService != nil {
+		if list, err := h.ProjectService.ListProjectsByOrg(org.ID); err == nil {
 			usage[orgs.LimitMaxProjects] = len(list)
 		}
 	}
@@ -197,12 +197,12 @@ func joinAnd(items []string) string {
 func (h *Handler) hostedMinutes(orgID string) (used, allowance int, capped bool) {
 	limits := h.effectiveLimits(orgID)
 	allowance, capped = orgs.Ceiling(limits, orgs.LimitHostedRunnerMinutesMonth)
-	if !capped || h.runnerSessionService == nil {
+	if !capped || h.RunnerSessionService == nil {
 		return 0, 0, false
 	}
 	now := time.Now().UTC()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	used, err := h.runnerSessionService.MinutesUsed(orgID, monthStart)
+	used, err := h.RunnerSessionService.MinutesUsed(orgID, monthStart)
 	if err != nil {
 		return 0, 0, false
 	}
@@ -264,10 +264,10 @@ func (h *Handler) effectiveLimits(orgID string) map[string]interface{} {
 // cannot be read. Callers that need more than the numbers — whether the
 // workspace is a personal one, say — use this rather than effectiveLimits.
 func (h *Handler) orgForLimits(orgID string) *orgs.Org {
-	if h.orgService == nil || orgID == "" {
+	if h.OrgService == nil || orgID == "" {
 		return nil
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		return nil
 	}
@@ -282,13 +282,13 @@ func (h *Handler) orgForLimits(orgID string) *orgs.Org {
 // sixth person to click their link rather than on the admin who caused it —
 // the error arriving for somebody who cannot act on it.
 func (h *Handler) countOrgSeats(orgID string) (int, error) {
-	members, err := h.orgService.ListMembers(orgID)
+	members, err := h.OrgService.ListMembers(orgID)
 	if err != nil {
 		return 0, err
 	}
 	seats := len(members)
-	if h.invitationService != nil {
-		pending, err := h.invitationService.ListPending(orgID)
+	if h.InvitationService != nil {
+		pending, err := h.InvitationService.ListPending(orgID)
 		if err != nil {
 			return 0, err
 		}
@@ -341,10 +341,10 @@ func (h *Handler) checkProjectCount(orgID string) error {
 	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxProjects); !capped {
 		return nil
 	}
-	if h.projectService == nil {
+	if h.ProjectService == nil {
 		return nil
 	}
-	list, err := h.projectService.ListProjectsByOrg(orgID)
+	list, err := h.ProjectService.ListProjectsByOrg(orgID)
 	if err != nil {
 		return nil
 	}
@@ -362,10 +362,10 @@ func (h *Handler) checkProjectCount(orgID string) error {
 // workspaces for everybody in it. A person with no personal workspace (a
 // service account, say) is not limited here.
 func (h *Handler) checkSharedWorkspaceCount(userID string) error {
-	if h.orgService == nil || userID == "" {
+	if h.OrgService == nil || userID == "" {
 		return nil
 	}
-	list, err := h.orgService.ListForUser(userID)
+	list, err := h.OrgService.ListForUser(userID)
 	if err != nil {
 		return nil
 	}
@@ -389,7 +389,7 @@ func (h *Handler) checkSharedWorkspaceCount(userID string) error {
 // buildLimitsResponse renders every catalogued limit for one workspace, with
 // usage where usage can be counted.
 func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -462,10 +462,10 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 		}
 		return seats, true
 	case orgs.LimitMaxProjects:
-		if h.projectService == nil {
+		if h.ProjectService == nil {
 			return 0, false
 		}
-		list, err := h.projectService.ListProjectsByOrg(org.ID)
+		list, err := h.ProjectService.ListProjectsByOrg(org.ID)
 		if err != nil {
 			return 0, false
 		}
@@ -476,7 +476,7 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 		if org.CreatedBy == nil {
 			return 0, false
 		}
-		list, err := h.orgService.ListForUser(*org.CreatedBy)
+		list, err := h.OrgService.ListForUser(*org.CreatedBy)
 		if err != nil {
 			return 0, false
 		}
@@ -488,20 +488,20 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 		}
 		return created, true
 	case orgs.LimitHostedRunnerMinutesMonth:
-		if h.runnerSessionService == nil {
+		if h.RunnerSessionService == nil {
 			return 0, false
 		}
 		now := time.Now().UTC()
-		used, err := h.runnerSessionService.MinutesUsed(org.ID, time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC))
+		used, err := h.RunnerSessionService.MinutesUsed(org.ID, time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC))
 		if err != nil {
 			return 0, false
 		}
 		return used, true
 	case orgs.LimitEvidenceStorageMB:
-		if h.evidenceService == nil {
+		if h.EvidenceService == nil {
 			return 0, false
 		}
-		bytes, err := h.evidenceService.StorageUsedByOrg(org.ID)
+		bytes, err := h.EvidenceService.StorageUsedByOrg(org.ID)
 		if err != nil {
 			return 0, false
 		}

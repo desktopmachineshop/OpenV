@@ -57,15 +57,15 @@ func TestImportCrewAuthz(t *testing.T) {
 	newFixture := func() (*Handler, *fakeCrewWriter) {
 		writer := &fakeCrewWriter{}
 		h := newTestHandler(t, func(h *Handler) {
-			h.teamService = writer
-			h.agentService = fakeAgentDir{}
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.TeamService = writer
+			h.AgentService = fakeAgentDir{}
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				project: {ID: project, OrgID: orgID},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"org-admin": orgs.RoleAdmin, "org-member": orgs.RoleMember, "editor": orgs.RoleMember, "viewer": orgs.RoleMember},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				project: {"editor": members.RoleEditor, "viewer": members.RoleViewer},
 			}}
 		})

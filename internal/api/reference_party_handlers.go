@@ -26,13 +26,13 @@ type partiesResponse struct {
 
 // effectiveParties resolves a project's parties with the workspace default.
 func (h *Handler) effectiveParties(projectID string) ([]settings.Party, error) {
-	stored, err := h.settingsService.ProjectParties(projectID)
+	stored, err := h.SettingsService.ProjectParties(projectID)
 	if err != nil {
 		return nil, err
 	}
 	workspace := ""
-	if project, err := h.projectService.GetProject(projectID); err == nil && project != nil && h.orgService != nil {
-		if org, err := h.orgService.Get(project.OrgID); err == nil && org != nil {
+	if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil && h.OrgService != nil {
+		if org, err := h.OrgService.Get(project.OrgID); err == nil && org != nil {
 			workspace = org.Name
 		}
 	}
@@ -71,7 +71,7 @@ func (h *Handler) UpdateProjectParties(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if _, err := h.settingsService.SetProjectParties(projectID, req.Parties); err != nil {
+	if _, err := h.SettingsService.SetProjectParties(projectID, req.Parties); err != nil {
 		if errors.Is(err, settings.ErrInvalidParties) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return

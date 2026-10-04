@@ -154,7 +154,7 @@ func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
 	for _, mode := range []bool{false, true} {
 		orgs.SetSelfHosted(mode)
 		h := NewHandler(HandlerDeps{})
-		h.orgService = &seatedOrgService{
+		h.OrgService = &seatedOrgService{
 			org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanBusiness},
 			members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
 		}
@@ -178,7 +178,7 @@ func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
 // permanently full bar as a problem.
 func TestThePersonalSeatReadsAsAFactNotAWarning(t *testing.T) {
 	h := NewHandler(HandlerDeps{})
-	h.orgService = &seatedOrgService{
+	h.OrgService = &seatedOrgService{
 		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanSingle},
 		members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
 	}
@@ -231,11 +231,11 @@ func TestSharedWorkspacesAreCountedByCreatorAgainstTheirOwnPlan(t *testing.T) {
 	theirs := &orgs.Org{ID: "b", OrgType: orgs.TypeCompany, CreatedBy: &them, BilledPlan: orgs.PlanBusiness}
 
 	h := NewHandler(HandlerDeps{})
-	h.orgService = &createdOrgService{list: []*orgs.Org{personal, theirs}}
+	h.OrgService = &createdOrgService{list: []*orgs.Org{personal, theirs}}
 	if err := h.checkSharedWorkspaceCount(me); err != nil {
 		t.Fatalf("an invitation used up my allowance: %v", err)
 	}
-	h.orgService = &createdOrgService{list: []*orgs.Org{personal, mine, theirs}}
+	h.OrgService = &createdOrgService{list: []*orgs.Org{personal, mine, theirs}}
 	err := h.checkSharedWorkspaceCount(me)
 	if err == nil {
 		t.Fatal("a second creation was allowed past a ceiling of one; membership in a Business workspace lifted it")
@@ -249,7 +249,7 @@ func TestSharedWorkspacesAreCountedByCreatorAgainstTheirOwnPlan(t *testing.T) {
 		t.Fatalf("a raised ceiling still refused: %v", err)
 	}
 	// Somebody with no personal workspace is not limited here.
-	h.orgService = &createdOrgService{list: []*orgs.Org{mine}}
+	h.OrgService = &createdOrgService{list: []*orgs.Org{mine}}
 	if err := h.checkSharedWorkspaceCount(me); err != nil {
 		t.Fatalf("no personal workspace: %v", err)
 	}

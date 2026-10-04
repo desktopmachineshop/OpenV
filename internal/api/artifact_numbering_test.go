@@ -33,11 +33,11 @@ func (f *numberingArtifactService) ListArtifactsPage(projectID, artifactType, ow
 
 func numberingHandler(t *testing.T, svc *numberingArtifactService) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.artifactService = svc
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ArtifactService = svc
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
 		}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"viewer": members.RoleViewer},
 		}}
 	})

@@ -99,7 +99,7 @@ func TestWorkspaceBillingRoutesAreAdminOnlyAnd404WithoutAProvider(t *testing.T) 
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin, "member": orgs.RoleMember}},
 	}}
 	h := NewHandler(HandlerDeps{})
-	h.orgService = svc
+	h.OrgService = svc
 	admin, member := &users.User{ID: "admin"}, &users.User{ID: "member"}
 
 	for name, call := range map[string]func(w http.ResponseWriter, r *http.Request){
@@ -135,7 +135,7 @@ func TestWorkspaceBillingStateReadsThePlansWithoutTheProvider(t *testing.T) {
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin}},
 	}}
 	h := NewHandler(HandlerDeps{BillingService: billing.New(&failingProvider{err: errors.New("never called")}, svc, nil, nil)})
-	h.orgService = svc
+	h.OrgService = svc
 
 	w := httptest.NewRecorder()
 	h.GetOrgBilling(w, billingReq(http.MethodGet, "/api/v1/orgs/org-1/billing", "org-1", &users.User{ID: "admin"}))
@@ -161,7 +161,7 @@ func TestRefreshIsA503ThatChangesNothingWhenTheProviderFails(t *testing.T) {
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin}},
 	}, subscriptionRef: "sub_1"}
 	h := NewHandler(HandlerDeps{BillingService: billing.New(&failingProvider{err: errors.New("timeout")}, svc, nil, nil)})
-	h.orgService = svc
+	h.OrgService = svc
 	admin := &users.User{ID: "admin"}
 
 	w := httptest.NewRecorder()
@@ -313,7 +313,7 @@ func purchaseHandler(t *testing.T, orgType string) (*Handler, *purchaseOrgFake, 
 		t.Fatal(err)
 	}
 	h := NewHandler(HandlerDeps{BillingService: b, FrontendURL: "https://app.example"})
-	h.orgService = svc
+	h.OrgService = svc
 	// The feature resolves through the org's channel: a nightly workspace
 	// sees every gate, which is what a Single-plan workspace is.
 	return h, svc, provider
@@ -485,7 +485,7 @@ func TestMembershipChangeSucceedsWhenTheProviderIsDown(t *testing.T) {
 	if len(provider.quantities) != 0 {
 		t.Fatalf("the handler waited on the provider: %v", provider.quantities)
 	}
-	if n := h.billing.FlushSeats(context.Background()); n != 1 {
+	if n := h.BillingService.FlushSeats(context.Background()); n != 1 {
 		t.Fatalf("queued %d workspaces, want 1", n)
 	}
 	// The drain tried — with the seat count the members panel reads — and

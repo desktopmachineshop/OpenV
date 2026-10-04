@@ -57,13 +57,13 @@ func (f *fakeVVService) ListRuns(projectID string) ([]*vv.TestRun, error) {
 func vvRoutesHandler(t *testing.T, byID map[string]*projects.Project, roles map[string]map[string]string,
 	exportSvc exports.Service, baselineSvc baselines.Service, vvSvc *fakeVVService) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: byID}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-		h.memberService = &fakeMemberService{roles: roles}
-		h.exportService = exportSvc
-		h.baselineService = baselineSvc
-		h.vvService = vvSvc
-		h.reportService = reports.NewService(exportSvc, baselineSvc)
+		h.ProjectService = &fakeProjectService{byID: byID}
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.MemberService = &fakeMemberService{roles: roles}
+		h.ExportService = exportSvc
+		h.BaselineService = baselineSvc
+		h.VVService = vvSvc
+		h.ReportService = reports.NewService(exportSvc, baselineSvc)
 	})
 }
 

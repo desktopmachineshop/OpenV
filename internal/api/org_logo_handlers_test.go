@@ -27,8 +27,8 @@ const logoOrgID = "org-logo"
 func logoFixture(t *testing.T) *Handler {
 	t.Helper()
 	return newTestHandler(t, func(h *Handler) {
-		h.uploadsDir = t.TempDir()
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+		h.UploadsDir = t.TempDir()
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 			logoOrgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
 		}}
 	})
@@ -100,8 +100,8 @@ func TestUploadOrgLogoStoresPNG(t *testing.T) {
 	if o := decodeOrg(t, w); !o.HasLogo {
 		t.Fatalf("has_logo = false, want true (body %q)", w.Body.String())
 	}
-	fake := h.orgService.(*fakeOrgService)
-	want := filepath.Join(h.uploadsDir, "org-logos", logoOrgID+".png")
+	fake := h.OrgService.(*fakeOrgService)
+	want := filepath.Join(h.UploadsDir, "org-logos", logoOrgID+".png")
 	if fake.logoPath != want || fake.logoMime != "image/png" {
 		t.Fatalf("stored (%q, %q), want (%q, image/png)", fake.logoPath, fake.logoMime, want)
 	}
@@ -119,7 +119,7 @@ func TestUploadOrgLogoReplacesOtherExtension(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("png upload status = %d (body %q)", w.Code, w.Body.String())
 	}
-	pngPath := h.orgService.(*fakeOrgService).logoPath
+	pngPath := h.OrgService.(*fakeOrgService).logoPath
 
 	gif := []byte("GIF89a\x01\x00\x01\x00\x00\x00\x00;")
 	w = httptest.NewRecorder()
@@ -130,7 +130,7 @@ func TestUploadOrgLogoReplacesOtherExtension(t *testing.T) {
 	if _, err := os.Stat(pngPath); !os.IsNotExist(err) {
 		t.Fatalf("previous png still on disk (stat err %v)", err)
 	}
-	if got := h.orgService.(*fakeOrgService).logoPath; filepath.Ext(got) != ".gif" {
+	if got := h.OrgService.(*fakeOrgService).logoPath; filepath.Ext(got) != ".gif" {
 		t.Fatalf("stored path %q, want .gif", got)
 	}
 }
@@ -147,7 +147,7 @@ func TestUploadOrgLogoRejectsNonImage(t *testing.T) {
 			if w.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body %q)", w.Code, w.Body.String())
 			}
-			if h.orgService.(*fakeOrgService).logoPath != "" {
+			if h.OrgService.(*fakeOrgService).logoPath != "" {
 				t.Fatalf("logo recorded for a rejected upload")
 			}
 		})
@@ -175,7 +175,7 @@ func TestUploadOrgLogoTooLarge(t *testing.T) {
 	if w.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status = %d, want 413 (body %q)", w.Code, w.Body.String())
 	}
-	if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos")); len(entries) != 0 {
+	if entries, _ := os.ReadDir(filepath.Join(h.UploadsDir, "org-logos")); len(entries) != 0 {
 		t.Fatalf("oversize upload left %d file(s) on disk", len(entries))
 	}
 }
@@ -200,7 +200,7 @@ func TestUploadOrgLogoRequiresAdmin(t *testing.T) {
 			if w.Code != tc.want {
 				t.Fatalf("status = %d, want %d (body %q)", w.Code, tc.want, w.Body.String())
 			}
-			if h.orgService.(*fakeOrgService).logoPath != "" {
+			if h.OrgService.(*fakeOrgService).logoPath != "" {
 				t.Fatalf("logo recorded for a refused caller")
 			}
 		})
@@ -262,7 +262,7 @@ func TestDeleteOrgLogoClears(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("upload status = %d (body %q)", w.Code, w.Body.String())
 	}
-	path := h.orgService.(*fakeOrgService).logoPath
+	path := h.OrgService.(*fakeOrgService).logoPath
 
 	w = httptest.NewRecorder()
 	h.DeleteOrgLogo(w, logoReqAs(httptest.NewRequest(http.MethodDelete, "/api/v1/orgs/"+logoOrgID+"/logo", nil), "member"))
@@ -281,7 +281,7 @@ func TestDeleteOrgLogoClears(t *testing.T) {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("logo file still on disk (stat err %v)", err)
 	}
-	if fake := h.orgService.(*fakeOrgService); fake.logoPath != "" || fake.logoMime != "" {
+	if fake := h.OrgService.(*fakeOrgService); fake.logoPath != "" || fake.logoMime != "" {
 		t.Fatalf("record not cleared: (%q, %q)", fake.logoPath, fake.logoMime)
 	}
 
@@ -337,10 +337,10 @@ func TestUploadOrgLogoBytesMustBeTheDeclaredType(t *testing.T) {
 				w.Body.String() != "{\"error\":\"File content does not match an image of the declared type\"}\n" {
 				t.Fatalf("status = %d (body %q), want the 400 for content that does not match", w.Code, w.Body.String())
 			}
-			if h.orgService.(*fakeOrgService).logoPath != "" {
+			if h.OrgService.(*fakeOrgService).logoPath != "" {
 				t.Fatalf("logo recorded for a refused upload")
 			}
-			if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos")); len(entries) != 0 {
+			if entries, _ := os.ReadDir(filepath.Join(h.UploadsDir, "org-logos")); len(entries) != 0 {
 				t.Fatalf("refused upload left %d file(s) on disk", len(entries))
 			}
 		})
@@ -366,7 +366,7 @@ func TestUploadOrgLogoBytesMustBeTheDeclaredType(t *testing.T) {
 // the record could not be saved, and left the file behind.
 func TestUploadOrgLogoUnknownWorkspace(t *testing.T) {
 	h := logoFixture(t)
-	fake := h.orgService.(*fakeOrgService)
+	fake := h.OrgService.(*fakeOrgService)
 	fake.missing = map[string]bool{logoOrgID: true}
 	r := logoUploadReq(t, "", "image/png", smallPNG(t))
 	r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true}))
@@ -375,7 +375,7 @@ func TestUploadOrgLogoUnknownWorkspace(t *testing.T) {
 	if w.Code != http.StatusNotFound || w.Body.String() != "{\"error\":\"workspace not found\"}\n" {
 		t.Fatalf("status = %d (body %q), want 404 workspace not found", w.Code, w.Body.String())
 	}
-	if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos")); len(entries) != 0 {
+	if entries, _ := os.ReadDir(filepath.Join(h.UploadsDir, "org-logos")); len(entries) != 0 {
 		t.Fatalf("an upload for a workspace that does not exist left %d file(s) on disk", len(entries))
 	}
 }
@@ -391,7 +391,7 @@ func TestUploadOrgLogoUnrecordedLeavesNoOrphan(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("png upload status = %d (body %q)", w.Code, w.Body.String())
 	}
-	fake := h.orgService.(*fakeOrgService)
+	fake := h.OrgService.(*fakeOrgService)
 	pngPath := fake.logoPath
 	fake.setLogoErr = errors.New("database unavailable")
 
@@ -455,7 +455,7 @@ func TestUploadOrgLogoConcurrentUploadLeavesNoOrphan(t *testing.T) {
 			wa.Code, wa.Body.String(), wb.Code, wb.Body.String())
 	}
 	want := logoOrgID + ".jpg"
-	recorded := filepath.Base(h.orgService.(*fakeOrgService).logoPath)
+	recorded := filepath.Base(h.OrgService.(*fakeOrgService).logoPath)
 	if names := logoFiles(h); len(names) != 1 || names[0] != want || recorded != want {
 		t.Fatalf("files %v and record %q after two uploads at once; want %s alone, on record", names, recorded, want)
 	}
@@ -463,7 +463,7 @@ func TestUploadOrgLogoConcurrentUploadLeavesNoOrphan(t *testing.T) {
 
 // logoFiles lists the file names under uploads/org-logos.
 func logoFiles(h *Handler) []string {
-	entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos"))
+	entries, _ := os.ReadDir(filepath.Join(h.UploadsDir, "org-logos"))
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
 		names = append(names, e.Name())

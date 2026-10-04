@@ -74,8 +74,8 @@ func newInterviewTestHandler(t *testing.T) (*Handler, *fakeInterviewService) {
 		invite:    &interviews.Invite{ID: "inv-1", InterviewID: "int-1"},
 	}
 	h := newTestHandler(t, func(h *Handler) {
-		h.interviewService = fake
-		h.sseHub = NewSSEHub()
+		h.InterviewService = fake
+		h.SSEHub = NewSSEHub()
 		h.interviewMsgLimiter = newRateLimiter(defaultInterviewMsgBurst, defaultInterviewMsgRefill)
 		h.interviewIPLimiter = newRateLimiter(defaultInterviewIPBurst, defaultInterviewIPRefill)
 		h.interviewStreamLimiter = newRateLimiter(defaultInterviewStreamBurst, defaultInterviewStreamRefill)

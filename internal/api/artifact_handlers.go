@@ -86,7 +86,7 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	artifact := artifacts.NewArtifact(req)
-	if err := h.artifactService.CreateArtifact(artifact); err != nil {
+	if err := h.ArtifactService.CreateArtifact(artifact); err != nil {
 		respondInternal(w, r, "failed to create artifact", err)
 		return
 	}
@@ -111,10 +111,10 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 // project's artifacts; anything else leaves the copy without a note rather
 // than failing the create, which has already happened.
 func (h *Handler) noteCopiedFrom(r *http.Request, copy *artifacts.Artifact, sourceID string) {
-	if sourceID == "" || h.chatterService == nil {
+	if sourceID == "" || h.ChatterService == nil {
 		return
 	}
-	source, err := h.artifactService.GetArtifact(sourceID)
+	source, err := h.ArtifactService.GetArtifact(sourceID)
 	if err != nil || source == nil {
 		return
 	}
@@ -148,11 +148,11 @@ var errAttributeDefinitionsUnavailable = errors.New("attribute definitions are t
 //     errAttributeDefinitionsUnavailable (mapped to a sanitized 500) rather than
 //     silently admitting an artifact that may be missing a required attribute.
 func (h *Handler) validateArtifactAttributes(projectID, artifactType string, attrs map[string]interface{}, enforceRequired bool) error {
-	if h.attributeService == nil || attrs == nil {
+	if h.AttributeService == nil || attrs == nil {
 		return nil
 	}
 	orgID := h.orgForProject(projectID)
-	defs, err := h.attributeService.EffectiveForProject(orgID, projectID)
+	defs, err := h.AttributeService.EffectiveForProject(orgID, projectID)
 	if err != nil {
 		if enforceRequired {
 			// Log the real error; the caller surfaces a sanitized message.
@@ -168,7 +168,7 @@ func (h *Handler) validateArtifactAttributes(projectID, artifactType string, att
 // GetArtifact retrieves an artifact by ID
 func (h *Handler) GetArtifact(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	artifact, err := h.artifactService.GetArtifact(id)
+	artifact, err := h.ArtifactService.GetArtifact(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "artifact not found", err)
 		return
@@ -221,7 +221,7 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	page, total, err := h.artifactService.ListArtifactsPage(projectID, artifactType, owner, limit, offset)
+	page, total, err := h.ArtifactService.ListArtifactsPage(projectID, artifactType, owner, limit, offset)
 	if err != nil {
 		respondInternal(w, r, "failed to list artifacts", err)
 		return
@@ -236,7 +236,7 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 	// then stamped onto the rows being served. Opt-in, because that is a
 	// second query the tree view needs and a plain paginated read does not.
 	if q.Get("doc_numbers") == "1" {
-		if all, err := h.artifactService.ListArtifacts(projectID, ""); err == nil {
+		if all, err := h.ArtifactService.ListArtifacts(projectID, ""); err == nil {
 			artifacts.ApplySectionNumbers(all, page)
 		} else {
 			// Numbering is a display aid; losing it must not fail the read.
@@ -262,7 +262,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	// Fetch the old artifact BEFORE updating to track changes. An id no
 	// artifact has, a malformed one among them, and one the caller cannot
 	// reach at all answer alike, as GetArtifact answers them (I3).
-	oldArtifact, err := h.artifactService.GetArtifact(id)
+	oldArtifact, err := h.ArtifactService.GetArtifact(id)
 	if err != nil {
 		respondArtifactLookup(w, r, err)
 		return
@@ -314,7 +314,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 
 		// Fetch link details BEFORE removing them (for chatter)
 		for _, linkID := range req.PendingLinkRemoves {
-			if link, err := h.linkService.GetLink(linkID); err == nil {
+			if link, err := h.LinkService.GetLink(linkID); err == nil {
 				removedLinks = append(removedLinks, link)
 			}
 		}
@@ -336,7 +336,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		seenLinkIDs := make(map[string]bool)
 		allLinks := make([]interface{}, 0)
 
-		incomingLinks, err := h.linkService.GetLinksTo(id)
+		incomingLinks, err := h.LinkService.GetLinksTo(id)
 		if err == nil {
 			for _, link := range incomingLinks {
 				if !seenLinkIDs[link.ID] {
@@ -346,7 +346,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		outgoingLinks, err := h.linkService.GetLinksFrom(id)
+		outgoingLinks, err := h.LinkService.GetLinksFrom(id)
 		if err == nil {
 			for _, link := range outgoingLinks {
 				if !seenLinkIDs[link.ID] {
@@ -372,7 +372,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	// Update the artifact ONCE with all changes including link snapshot
 	// This single update will create ONE new version
-	artifact, err := h.artifactService.UpdateArtifact(id, req)
+	artifact, err := h.ArtifactService.UpdateArtifact(id, req)
 	if err != nil {
 		respondInternal(w, r, "failed to update artifact", err)
 		return
@@ -381,7 +381,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	// Build a detailed change summary for chatter
 	chatterMessage := h.buildChangesSummary(oldArtifact, artifact, addedLinks, removedLinks)
 	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "version-change")
-	if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
+	if err := h.ChatterService.CreateEntry(chatterEntry); err != nil {
 		// Log but don't fail the request
 		slog.Warn("api: failed to create chatter entry for version change", "artifact_id", id, "error", err)
 	}
@@ -427,7 +427,7 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	artifact, err := h.artifactService.GetArtifact(id)
+	artifact, err := h.ArtifactService.GetArtifact(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "artifact not found", err)
 		return
@@ -436,15 +436,15 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, artifact.ProjectID, members.RoleEditor, missing("artifact not found")) {
 		return
 	}
-	if run := CurrentRun(r); run != nil && h.agentService != nil {
-		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+	if run := CurrentRun(r); run != nil && h.AgentService != nil {
+		if agent, err := h.AgentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
 			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot change artifact status")
 			return
 		}
 	}
 
 	from := artifacts.NormalizeStatus(artifact.Status)
-	updated, err := h.artifactService.ChangeStatus(id, req.Status)
+	updated, err := h.ArtifactService.ChangeStatus(id, req.Status)
 	if err != nil {
 		switch {
 		case errors.Is(err, artifacts.ErrInvalidStatus):
@@ -469,7 +469,7 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 	})
 
 	entry := chatter.NewChatterEntry(id, fmt.Sprintf("Status changed: %s → %s", from, updated.Status), true, "status-change")
-	if err := h.chatterService.CreateEntry(entry); err != nil {
+	if err := h.ChatterService.CreateEntry(entry); err != nil {
 		slog.Warn("api: failed to create chatter entry for status change", "artifact_id", id, "error", err)
 	}
 
@@ -489,7 +489,7 @@ func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.artifactService.DeleteArtifact(id)
+	err := h.ArtifactService.DeleteArtifact(id)
 	if err != nil {
 		respondInternal(w, r, "failed to delete artifact", err)
 		return

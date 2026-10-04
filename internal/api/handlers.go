@@ -159,64 +159,15 @@ type HandlerDeps struct {
 
 // Handler holds references to domain services
 type Handler struct {
-	artifactService   artifacts.Service
-	linkService       links.Service
-	projectService    projects.Service
-	attachmentService attachments.Service
-	exportService     exports.Service
-	downloadService   downloads.Service
-	baselineService   baselines.Service
-	reportService     reports.Service
-	templateService   templates.Service
-	chatterService    chatter.Service
-	attributeService  attributes.Service
-	// sharedProductService backs the cross-tenant community pool of demo
-	// products (see shared_product_handlers.go).
-	sharedProductService sharedproducts.Service
-	embeddingService     *embeddings.Service
-	uploadsDir           string
+	// HandlerDeps holds every dependency NewHandler was given, embedded so
+	// that a dependency is declared once, as a HandlerDeps field. The
+	// fields below are what NewHandler derives from it; a handler reads
+	// those, not the HandlerDeps fields they come from.
+	HandlerDeps
 
-	userService          users.Service
-	memberService        members.Service
-	productService       products.Service
-	vvService            vv.Service
-	evidenceService      evidence.Service
-	settingsService      settings.Service
-	releaseService       release.Service
-	deploymentKind       string
-	buildSHA             string
-	workItemService      workitems.Service
-	guidedService        guided.Service
-	interviewService     interviews.Service
-	shareLinkService     sharelinks.Service
-	frontendURL          string
-	agentService         agents.Service
-	runService           agentruns.Service
-	automationService    automations.Service
-	proposalService      proposals.Service
-	repoConnService      repoconns.Service
-	providerService      providers.Service
-	loginService         providers.LoginService
-	teamService          teams.Service
-	orgService           orgs.Service
-	orgTeamService       orgs.TeamService
-	workerKeyService     workerkeys.Service
-	hostedWorkerService  hostedworkers.Service
-	runnerSessionService runnersessions.Service
-	notificationService  notifications.Service
-	pushSubService       pushsubs.Service
-	vapid                notify.VAPIDConfig
-	provisioner          hosting.Provisioner
-	orgSeeder            func(orgID string) error
-	publicAPIURL         string
-	connectorDistDir     string
-	bus                  events.Bus
-	eventRepo            events.Repository
-	sseHub               *SSEHub
-	googleOAuth          *GoogleOAuthConfig
-	oidc                 *OIDCConfig
-	secureCookies        bool
-	cookieSameSite       http.SameSite
+	frontendURL    string
+	secureCookies  bool
+	cookieSameSite http.SameSite
 
 	// Rate limiters for the public (invite-token) interview endpoints; see
 	// ratelimit.go for defaults and environment overrides.
@@ -246,29 +197,10 @@ type Handler struct {
 	// ratelimit.go).
 	billingRefreshLimiter *rateLimiter
 	billingWriteLimiter   *rateLimiter
-	// billing is the subscription sync path; nil, or disabled, on a
-	// deployment with no billing provider, where every billing route
-	// answers 404 billing_unavailable.
-	billing *billing.Service
-	// minutesAlerts is nil-safe; see notify.MinutesMonitor.Check.
-	minutesAlerts *notify.MinutesMonitor
 	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
 	// mails an address the sender chose, so the endpoint is a mail relay
 	// (see ratelimit.go).
 	inviteLimiter *rateLimiter
-
-	// Sign-up email verification (see email_verification_handlers.go).
-	mailer            notify.Mailer
-	emailLinkBase     string
-	emailVerification users.EmailVerificationPolicy
-
-	// Workspace invitations and the registration policy (REQ-95; see
-	// invitation_handlers.go and registration_policy.go).
-	invitationService invitations.Service
-	registration      string
-	// sessionPolicy is the same policy the user service enforces; the handler
-	// holds it so the cookie it writes expires when the session does.
-	sessionPolicy users.SessionPolicy
 }
 
 // NewHandler creates a new API handler
@@ -280,59 +212,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		secureCookies = true
 	}
 	h := &Handler{
-		artifactService:        deps.ArtifactService,
-		linkService:            deps.LinkService,
-		projectService:         deps.ProjectService,
-		attachmentService:      deps.AttachmentService,
-		exportService:          deps.ExportService,
-		downloadService:        deps.DownloadService,
-		baselineService:        deps.BaselineService,
-		reportService:          deps.ReportService,
-		templateService:        deps.TemplateService,
-		chatterService:         deps.ChatterService,
-		attributeService:       deps.AttributeService,
-		sharedProductService:   deps.SharedProductService,
-		embeddingService:       deps.EmbeddingService,
-		uploadsDir:             deps.UploadsDir,
-		userService:            deps.UserService,
-		memberService:          deps.MemberService,
-		productService:         deps.ProductService,
-		settingsService:        deps.SettingsService,
-		releaseService:         deps.ReleaseService,
-		deploymentKind:         deps.DeploymentKind,
-		buildSHA:               deps.BuildSHA,
-		vvService:              deps.VVService,
-		evidenceService:        deps.EvidenceService,
-		workItemService:        deps.WorkItemService,
-		guidedService:          deps.GuidedService,
-		interviewService:       deps.InterviewService,
-		shareLinkService:       deps.ShareLinkService,
 		frontendURL:            strings.TrimRight(deps.FrontendURL, "/"),
-		agentService:           deps.AgentService,
-		runService:             deps.RunService,
-		automationService:      deps.AutomationService,
-		proposalService:        deps.ProposalService,
-		repoConnService:        deps.RepoConnService,
-		providerService:        deps.ProviderService,
-		loginService:           deps.LoginService,
-		teamService:            deps.TeamService,
-		orgService:             deps.OrgService,
-		orgTeamService:         deps.OrgTeamService,
-		workerKeyService:       deps.WorkerKeyService,
-		hostedWorkerService:    deps.HostedWorkerService,
-		runnerSessionService:   deps.RunnerSessionService,
-		notificationService:    deps.NotificationService,
-		pushSubService:         deps.PushSubService,
-		vapid:                  deps.VAPID,
-		provisioner:            deps.Provisioner,
-		orgSeeder:              deps.OrgSeeder,
-		publicAPIURL:           deps.PublicAPIURL,
-		connectorDistDir:       deps.ConnectorDistDir,
-		bus:                    deps.Bus,
-		eventRepo:              deps.EventRepo,
-		sseHub:                 deps.SSEHub,
-		googleOAuth:            deps.GoogleOAuth,
-		oidc:                   deps.OIDC,
 		secureCookies:          secureCookies,
 		cookieSameSite:         cookieSameSite,
 		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
@@ -347,21 +227,14 @@ func NewHandler(deps HandlerDeps) *Handler {
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
 		billingRefreshLimiter:  newRateLimiterFromEnv(envBillingRefreshBurst, envBillingRefreshRefill, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
 		billingWriteLimiter:    newRateLimiterFromEnv(envBillingWriteBurst, envBillingWriteRefill, defaultBillingWriteBurst, defaultBillingWriteRefill),
-		billing:                deps.BillingService,
-		minutesAlerts:          deps.MinutesAlerts,
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
-		mailer:                 deps.Mailer,
-		emailLinkBase:          deps.EmailLinkBase,
-		emailVerification:      deps.EmailVerification,
-		invitationService:      deps.InvitationService,
-		registration:           deps.Registration,
-		sessionPolicy:          deps.SessionPolicy,
 	}
-	if h.billing != nil {
+	h.HandlerDeps = deps
+	if h.BillingService != nil {
 		// Billed seats are the seat limit's own reading, and the return
 		// origin is the app's unless the operator named another.
-		h.billing.SetSeatCounter(h.countOrgSeats)
-		h.billing.DefaultReturnURL(h.frontendURL)
+		h.BillingService.SetSeatCounter(h.countOrgSeats)
+		h.BillingService.DefaultReturnURL(h.frontendURL)
 	}
 	readRequestSettingsAtBoot()
 	return h

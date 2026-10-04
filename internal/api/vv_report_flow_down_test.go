@@ -122,12 +122,12 @@ func flowDownDocsHandler(t *testing.T) (*Handler, *fakeExportService) {
 		"plane": {"viewer": members.RoleViewer},
 		"solo":  {"viewer": members.RoleViewer},
 	}, exportSvc, nil, vvSvc)
-	downloadSvc := downloads.NewService(exportSvc, h.reportService)
+	downloadSvc := downloads.NewService(exportSvc, h.ReportService)
 	downloadSvc.SetEvidenceSource(func(projectID string) (map[string]*vv.TestResult, []*vv.TestRun, error) {
 		latest, err := vvSvc.LatestResults(projectID)
 		return latest, nil, err
 	})
-	h.downloadService = downloadSvc
+	h.DownloadService = downloadSvc
 	return h, exportSvc
 }
 
@@ -215,7 +215,7 @@ func TestVVDocumentsApplyTheFlowDown(t *testing.T) {
 	t.Run("a narrowed document", func(t *testing.T) {
 		for _, query := range []string{"template=requirements-review&vv=1", "vv=1&types=requirement"} {
 			h, _ := flowDownDocsHandler(t)
-			latest := h.vvService.(*fakeVVService).latest
+			latest := h.VVService.(*fakeVVService).latest
 			latest["plane"]["tc-own"].Status = vv.ResultFail
 			latest["gear"]["tc-g-own"].Status = vv.ResultPass
 
@@ -292,7 +292,7 @@ func TestVVDocumentsApplyTheFlowDown(t *testing.T) {
 			t.Fatal(err)
 		}
 		exportSvc.byProject["solo"] = data
-		h.vvService.(*fakeVVService).latest["solo"] = map[string]*vv.TestResult{
+		h.VVService.(*fakeVVService).latest["solo"] = map[string]*vv.TestResult{
 			"s-tc": {TestCaseID: "s-tc", Status: vv.ResultPass},
 		}
 
@@ -414,8 +414,8 @@ func TestFlowDownCountsAChildProjectReachedTwice(t *testing.T) {
 	exportSvc.byProject["M"] = encode(exports.ProjectExport{ProjectID: "M", Artifacts: []*artifacts.Artifact{m1},
 		Links:           []*links.Link{link("m1", "refines", "l1"), link("l2", "refines", "m1")},
 		LinkedArtifacts: []*exports.LinkedArtifact{far(l1), far(l2)}})
-	h.projectService.(*fakeProjectService).byID["L"] = &projects.Project{ID: "L", OrgID: "org-1"}
-	h.memberService.(*fakeMemberService).roles["L"] = map[string]string{"viewer": members.RoleViewer}
+	h.ProjectService.(*fakeProjectService).byID["L"] = &projects.Project{ID: "L", OrgID: "org-1"}
+	h.MemberService.(*fakeMemberService).roles["L"] = map[string]string{"viewer": members.RoleViewer}
 	w = httptest.NewRecorder()
 	h.GetCoverage(w, flowDownDocsRequest("L", ""))
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"summary":{"uncovered":2}`) {

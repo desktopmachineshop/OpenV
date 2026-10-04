@@ -1,0 +1,9 @@
+embeddeps: internal/api: Handler embeds HandlerDeps
+promoted (4 fields NewHandler copied as they are):
+  store -> Store (5 selectors)
+  userService -> UserService (3 selectors)
+  billing -> BillingService (2 selectors)
+  buildSHA -> BuildSHA (3 selectors)
+kept private (4 fields NewHandler derives): frontendURL, secureCookies, sameSite, limiter
+13 selectors renamed; 3 files written: handlers.go, use.go, use_test.go
+NewHandler: h.HandlerDeps = deps after its literal

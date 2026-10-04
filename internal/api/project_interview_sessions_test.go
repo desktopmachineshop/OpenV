@@ -35,12 +35,12 @@ func (f *fakeProjectSessionLister) ListProjectSessions(projectID string, limit i
 
 func newProjectSessionsHandler(t *testing.T, fake *fakeProjectSessionLister) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.interviewService = fake
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.InterviewService = fake
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"viewer": members.RoleViewer},
 		}}
 	})

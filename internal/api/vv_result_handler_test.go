@@ -31,7 +31,7 @@ type fakeVVService struct {
 // vvHandler is a handler with only a V&V service, the one these handlers
 // reach before they answer.
 func vvHandler(t *testing.T, svc vv.Service) *Handler {
-	return newTestHandler(t, func(h *Handler) { h.vvService = svc })
+	return newTestHandler(t, func(h *Handler) { h.VVService = svc })
 }
 
 func (f *fakeVVService) GetRun(id string) (*vv.TestRun, error) {

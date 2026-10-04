@@ -35,7 +35,7 @@ const maxAvatarBytes = 2 * 1024 * 1024
 // one file per account under uploads/avatars, named by user id so an upload
 // replaces the previous picture of the same type in place.
 func (h *Handler) avatarPath(userID, ext string) string {
-	return filepath.Join(h.uploadsDir, "avatars", userID+ext)
+	return filepath.Join(h.UploadsDir, "avatars", userID+ext)
 }
 
 // avatarURL is the path clients fetch an uploaded picture from. It is
@@ -103,10 +103,10 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	// The previous picture, if it was stored under another extension, is
 	// now orphaned; drop it. The record is read before it is overwritten.
-	if prev, err := h.userService.GetByID(user.ID); err == nil && prev != nil && prev.AvatarPath != "" && prev.AvatarPath != dest {
+	if prev, err := h.UserService.GetByID(user.ID); err == nil && prev != nil && prev.AvatarPath != "" && prev.AvatarPath != dest {
 		_ = os.Remove(prev.AvatarPath)
 	}
-	updated, err := h.userService.SetAvatar(user.ID, dest, mimeType, avatarURL(user.ID, time.Now()))
+	updated, err := h.UserService.SetAvatar(user.ID, dest, mimeType, avatarURL(user.ID, time.Now()))
 	if err != nil {
 		respondInternal(w, r, "Failed to save picture", err)
 		return
@@ -127,7 +127,7 @@ func (h *Handler) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
 	if !h.requireUserVisible(w, r, id, absent) {
 		return
 	}
-	owner, err := h.userService.GetByID(id)
+	owner, err := h.UserService.GetByID(id)
 	if err != nil || owner == nil || owner.AvatarPath == "" {
 		absent.write(w)
 		return
@@ -160,7 +160,7 @@ func (h *Handler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	current, err := h.userService.GetByID(user.ID)
+	current, err := h.UserService.GetByID(user.ID)
 	if err != nil || current == nil {
 		respondInternal(w, r, "Failed to remove picture", err)
 		return
@@ -171,7 +171,7 @@ func (h *Handler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	updated, err := h.userService.ClearAvatar(user.ID)
+	updated, err := h.UserService.ClearAvatar(user.ID)
 	if err != nil {
 		respondInternal(w, r, "Failed to remove picture", err)
 		return

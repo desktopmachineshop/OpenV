@@ -51,7 +51,7 @@ func (h *Handler) artifactHistory(w http.ResponseWriter, r *http.Request, id str
 	if !history {
 		return nil, h.projectIDForArtifact(id), true
 	}
-	versions, err := h.artifactService.GetArtifactVersions(id)
+	versions, err := h.ArtifactService.GetArtifactVersions(id)
 	if err != nil {
 		respondInternal(w, r, "failed to load artifact versions", err)
 		return nil, "", false
@@ -78,7 +78,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 
 	// Fetch the current artifact BEFORE restoring (to track changes), and
 	// answer an id no artifact has as UpdateArtifact does.
-	oldArtifact, err := h.artifactService.GetArtifact(id)
+	oldArtifact, err := h.ArtifactService.GetArtifact(id)
 	if err != nil {
 		respondArtifactLookup(w, r, err)
 		return
@@ -88,7 +88,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	artifact, err := h.artifactService.RestoreArtifactVersion(id, req.Version)
+	artifact, err := h.ArtifactService.RestoreArtifactVersion(id, req.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, artifacts.ErrVersionNotFound):
@@ -105,7 +105,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 	restoredFromVersion := req.Version
 	chatterMessage := h.buildRestoreMessage(oldArtifact, artifact, restoredFromVersion)
 	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "restore")
-	if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
+	if err := h.ChatterService.CreateEntry(chatterEntry); err != nil {
 		// Log but don't fail the request
 		slog.Warn("api: failed to create chatter entry for restore", "artifact_id", id, "error", err)
 	}
@@ -167,12 +167,12 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 
 	// If no version specified, return current links from link table
 	if versionStr == "" {
-		outgoingLinks, err := h.linkService.GetLinksFrom(id)
+		outgoingLinks, err := h.LinkService.GetLinksFrom(id)
 		if err != nil {
 			respondInternal(w, r, "failed to load links", err)
 			return
 		}
-		incomingLinks, err := h.linkService.GetLinksTo(id)
+		incomingLinks, err := h.LinkService.GetLinksTo(id)
 		if err != nil {
 			respondInternal(w, r, "failed to load links", err)
 			return

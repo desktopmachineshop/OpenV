@@ -37,17 +37,17 @@ func draftReq(userID, projectID, body string) *http.Request {
 func newDraftFixture(t *testing.T) (*Handler, *fakeRunService) {
 	runSvc := &fakeRunService{}
 	return newTestHandler(t, func(h *Handler) {
-		h.runService = runSvc
-		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
+		h.RunService = runSvc
+		h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 			"tca": {ID: "tca", OrgID: "org-1", Slug: seeds.TestCaseAuthorSlug, Name: "Test Case Author", Provider: "claude-code"},
 		}}
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"proj-1": {ID: "proj-1", OrgID: "org-1"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"org-admin": orgs.RoleAdmin, "editor": orgs.RoleMember, "viewer": orgs.RoleMember},
 		}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"editor": members.RoleEditor, "viewer": members.RoleViewer},
 		}}
 	}), runSvc
@@ -161,7 +161,7 @@ func TestDraftTestCasesValidation(t *testing.T) {
 
 	t.Run("missing seeded agent answers 404", func(t *testing.T) {
 		h, runSvc := newDraftFixture(t)
-		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{}} // agent not seeded
+		h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{}} // agent not seeded
 		w := httptest.NewRecorder()
 		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
 		if w.Code != http.StatusNotFound {
@@ -188,7 +188,7 @@ func TestDraftTestCasesRefusesAProposalModeRun(t *testing.T) {
 	}
 	withAgents := func() (*Handler, *fakeRunService) {
 		h, runSvc := newDraftFixture(t)
-		catalog := h.agentService.(*fakeAgentService)
+		catalog := h.AgentService.(*fakeAgentService)
 		catalog.byID["agent-proposal"] = &agents.Agent{ID: "agent-proposal", OrgID: "org-1", Slug: "drafter", WriteMode: agents.WriteModeProposal}
 		catalog.byID["agent-direct"] = &agents.Agent{ID: "agent-direct", OrgID: "org-1", Slug: "helper", WriteMode: agents.WriteModeDirect}
 		return h, runSvc

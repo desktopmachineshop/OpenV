@@ -84,7 +84,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	// every project, figure references are only unique within one, and each
 	// version of a figure needs a file of its own. The figure's name is what
 	// the record carries and what a download is served as.
-	storedPath := filepath.Join(h.uploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
+	storedPath := filepath.Join(h.UploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
 	head, fileSize, ok := storeUpload(w, r, file, storedPath, limit)
 	if !ok {
 		return
@@ -98,7 +98,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	// The figure reference is built on the artifact's own reference, so the
 	// artifact is read before the number is drawn.
 	artifactRef := ""
-	if a, err := h.artifactService.GetArtifact(artifactID); err == nil && a != nil {
+	if a, err := h.ArtifactService.GetArtifact(artifactID); err == nil && a != nil {
 		artifactRef = a.Ref
 	}
 
@@ -121,7 +121,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		FileSize:         int(fileSize),
 	})
 
-	if err := h.attachmentService.CreateFigure(attachment, artifactRef); err != nil {
+	if err := h.AttachmentService.CreateFigure(attachment, artifactRef); err != nil {
 		// Clean up file if database save fails
 		_ = os.Remove(storedPath)
 		respondInternal(w, r, "Failed to save attachment metadata", err)
@@ -145,7 +145,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	attachment, err := h.attachmentService.GetAttachment(id)
+	attachment, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -166,7 +166,7 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 // A failure is logged rather than failing the figure change that succeeded;
 // change names it in the log ("upload", "change", "rename").
 func (h *Handler) versionArtifactForFigure(artifactID, attachmentID, change string) {
-	if _, err := h.artifactService.UpdateArtifact(artifactID, artifacts.UpdateArtifactRequest{}); err != nil {
+	if _, err := h.ArtifactService.UpdateArtifact(artifactID, artifacts.UpdateArtifactRequest{}); err != nil {
 		slog.Warn("api: failed to version artifact after a figure "+change,
 			"artifact_id", artifactID, "attachment_id", attachmentID, "error", err)
 	}
@@ -188,7 +188,7 @@ func (h *Handler) logFigureNote(r *http.Request, artifactID, message string) {
 func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	existing, err := h.attachmentService.GetAttachment(id)
+	existing, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || existing == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -224,7 +224,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 
 	// A new file, not a rewrite of the old one: the superseded version must
 	// stay readable.
-	storedPath := filepath.Join(h.uploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
+	storedPath := filepath.Join(h.UploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
 	head, fileSize, ok := storeUpload(w, r, file, storedPath, limit)
 	if !ok {
 		return
@@ -247,7 +247,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	}
 
 	previous := existing.Version
-	next, err := h.attachmentService.AddVersion(id, version)
+	next, err := h.AttachmentService.AddVersion(id, version)
 	if err != nil {
 		_ = os.Remove(storedPath)
 		respondInternal(w, r, "Failed to record the new figure version", err)
@@ -270,7 +270,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	h.logFigureNote(r, existing.ArtifactID, fmt.Sprintf(
 		"Figure %s updated from version %d to %d — %s.", label, previous, next, version.OriginalFilename))
 
-	updated, err := h.attachmentService.GetAttachment(id)
+	updated, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || updated == nil {
 		updated = existing
 	}
@@ -290,7 +290,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	existing, err := h.attachmentService.GetAttachment(id)
+	existing, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || existing == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -321,7 +321,7 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 	// Captured before the rename so the note names what the figure was
 	// called, whatever the service hands back afterwards.
 	was, previous := existing.Name(), existing.Version
-	next, err := h.attachmentService.RenameFigure(id, title, CurrentUserID(r))
+	next, err := h.AttachmentService.RenameFigure(id, title, CurrentUserID(r))
 	if errors.Is(err, attachments.ErrTitleTooLong) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -348,7 +348,7 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 	h.logFigureNote(r, existing.ArtifactID, fmt.Sprintf(
 		"Figure %s renamed (version %d to %d) — %q is now %q.", label, previous, next, was, now))
 
-	updated, err := h.attachmentService.GetAttachment(id)
+	updated, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || updated == nil {
 		updated = existing
 		updated.Title = title
@@ -362,7 +362,7 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	attachment, err := h.attachmentService.GetAttachment(id)
+	attachment, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -371,7 +371,7 @@ func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	versions, err := h.attachmentService.GetVersions(id)
+	versions, err := h.AttachmentService.GetVersions(id)
 	if err != nil {
 		respondInternal(w, r, "Failed to list figure versions", err)
 		return
@@ -395,7 +395,7 @@ func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	attachment, err := h.attachmentService.GetAttachment(id)
+	attachment, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -404,7 +404,7 @@ func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	restored, err := h.attachmentService.RestoreVersion(id, version, CurrentUserID(r))
+	restored, err := h.AttachmentService.RestoreVersion(id, version, CurrentUserID(r))
 	switch {
 	case errors.Is(err, attachments.ErrNoSuchVersion):
 		writeJSONError(w, http.StatusNotFound, fmt.Sprintf("This figure has no version %d", version))
@@ -429,7 +429,7 @@ func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Reques
 func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	attachment, err := h.attachmentService.GetAttachment(id)
+	attachment, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -451,7 +451,7 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if n != attachment.Version {
-			v, err := h.attachmentService.GetVersion(id, n)
+			v, err := h.AttachmentService.GetVersion(id, n)
 			if err != nil || v == nil {
 				writeJSONError(w, http.StatusNotFound, "That version of the figure was not found")
 				return
@@ -477,7 +477,7 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	attachment, err := h.attachmentService.GetAttachment(id)
+	attachment, err := h.AttachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
@@ -494,7 +494,7 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete database record
-	if err := h.attachmentService.DeleteAttachment(id); err != nil {
+	if err := h.AttachmentService.DeleteAttachment(id); err != nil {
 		respondInternal(w, r, "Failed to delete attachment", err)
 		return
 	}
@@ -517,7 +517,7 @@ func (h *Handler) ListProjectAttachments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	list, err := h.attachmentService.GetAttachmentsByProject(projectID)
+	list, err := h.AttachmentService.GetAttachmentsByProject(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list the project's attachments", err)
 		return
@@ -538,7 +538,7 @@ func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	attachmentList, err := h.attachmentService.GetAttachmentsByArtifact(artifactID)
+	attachmentList, err := h.AttachmentService.GetAttachmentsByArtifact(artifactID)
 	if err != nil {
 		respondInternal(w, r, "failed to list attachments", err)
 		return

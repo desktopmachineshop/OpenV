@@ -59,7 +59,7 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 
 	if workerOrg := WorkerOrg(r); workerOrg != "" {
 		// Another workspace's project is, to a worker key, one no row has.
-		project, err := h.projectService.GetProject(projectID)
+		project, err := h.ProjectService.GetProject(projectID)
 		if err != nil || project == nil || project.OrgID != workerOrg {
 			absent.write(w)
 			return false
@@ -91,8 +91,8 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 		// must for a worker key above: past the guard a handler reads,
 		// writes or deletes it, and one no row has would answer 500, 204
 		// for nothing, or 201 with rows no project owns.
-		if h.projectService != nil {
-			if project, err := h.projectService.GetProject(projectID); err != nil || project == nil {
+		if h.ProjectService != nil {
+			if project, err := h.ProjectService.GetProject(projectID); err != nil || project == nil {
 				absent.write(w)
 				return false
 			}
@@ -101,15 +101,15 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 	}
 
 	// Org admins of the project's org act as owners.
-	if h.orgService != nil {
-		if project, err := h.projectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
-			if role, err := h.orgService.RoleInOrg(project.OrgID, user.ID); err == nil && role == orgs.RoleAdmin {
+	if h.OrgService != nil {
+		if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
+			if role, err := h.OrgService.RoleInOrg(project.OrgID, user.ID); err == nil && role == orgs.RoleAdmin {
 				return true
 			}
 		}
 	}
 
-	role, err := h.memberService.EffectiveRole(projectID, user.ID)
+	role, err := h.MemberService.EffectiveRole(projectID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve project access", err)
 		return false
@@ -160,7 +160,7 @@ func (h *Handler) requireUserVisible(w http.ResponseWriter, r *http.Request, use
 	if caller.IsAdmin || caller.ID == userID {
 		return true
 	}
-	mine, err := h.orgService.ListForUser(caller.ID)
+	mine, err := h.OrgService.ListForUser(caller.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve account access", err)
 		return false
@@ -168,7 +168,7 @@ func (h *Handler) requireUserVisible(w http.ResponseWriter, r *http.Request, use
 	for _, org := range mine {
 		// RoleInOrg answers "" for an id no account has, a malformed one
 		// among them, as for an account that is no member.
-		role, err := h.orgService.RoleInOrg(org.ID, userID)
+		role, err := h.OrgService.RoleInOrg(org.ID, userID)
 		if err != nil {
 			respondInternal(w, r, "failed to resolve account access", err)
 			return false
@@ -238,12 +238,12 @@ func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgI
 		writeJSONError(w, http.StatusForbidden, "you do not have access to this project")
 		return false
 	}
-	if h.orgService != nil {
-		if role, err := h.orgService.RoleInOrg(orgID, holder); err == nil && role == orgs.RoleAdmin {
+	if h.OrgService != nil {
+		if role, err := h.OrgService.RoleInOrg(orgID, holder); err == nil && role == orgs.RoleAdmin {
 			return true
 		}
 	}
-	role, err := h.memberService.EffectiveRole(projectID, holder)
+	role, err := h.MemberService.EffectiveRole(projectID, holder)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve project access", err)
 		return false
@@ -266,15 +266,15 @@ func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgI
 // personal key never takes a run its holder could not see: the claim query
 // (AgentRunRepository.Claim) asks the same, and requireWorkerRun asks this.
 func (h *Handler) holderSeesRun(holder string, run *agentruns.Run) (bool, error) {
-	if h.orgService != nil {
-		if role, err := h.orgService.RoleInOrg(run.OrgID, holder); err == nil && role == orgs.RoleAdmin {
+	if h.OrgService != nil {
+		if role, err := h.OrgService.RoleInOrg(run.OrgID, holder); err == nil && role == orgs.RoleAdmin {
 			return true, nil
 		}
 	}
 	if run.ProjectID == nil || *run.ProjectID == "" {
 		return false, nil
 	}
-	role, err := h.memberService.EffectiveRole(*run.ProjectID, holder)
+	role, err := h.MemberService.EffectiveRole(*run.ProjectID, holder)
 	return role != "" && members.RoleAtLeast(role, members.RoleViewer), err
 }
 
@@ -322,15 +322,15 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		// exist (a deleted one still does, until it is purged): past the
 		// guard a handler reads or writes it, and one no row has would
 		// answer 500, 204 for nothing, or a foreign key's refusal.
-		if h.orgService != nil {
-			if _, err := h.orgService.Get(orgID); err != nil {
+		if h.OrgService != nil {
+			if _, err := h.OrgService.Get(orgID); err != nil {
 				absent.write(w)
 				return false
 			}
 		}
 		return true
 	}
-	role, err := h.orgService.RoleInOrg(orgID, user.ID)
+	role, err := h.OrgService.RoleInOrg(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve workspace access", err)
 		return false
@@ -393,10 +393,10 @@ func (h *Handler) isOrgAdmin(r *http.Request, orgID string) bool {
 	if user.IsAdmin {
 		return true
 	}
-	if orgID == "" || h.orgService == nil {
+	if orgID == "" || h.OrgService == nil {
 		return false
 	}
-	role, err := h.orgService.RoleInOrg(orgID, user.ID)
+	role, err := h.OrgService.RoleInOrg(orgID, user.ID)
 	return err == nil && role == orgs.RoleAdmin
 }
 
@@ -480,7 +480,7 @@ func (h *Handler) teamPin(team *teams.Team) string {
 	if team.ProjectID == nil || *team.ProjectID == "" {
 		return ""
 	}
-	project, err := h.projectService.GetProject(*team.ProjectID)
+	project, err := h.ProjectService.GetProject(*team.ProjectID)
 	if err != nil || project == nil || (team.OrgID != "" && project.OrgID != team.OrgID) {
 		return ""
 	}
@@ -501,7 +501,7 @@ func (h *Handler) requireAutomationWrite(w http.ResponseWriter, r *http.Request,
 
 // projectIDForArtifact resolves an artifact id to its project id ("" on failure).
 func (h *Handler) projectIDForArtifact(artifactID string) string {
-	artifact, err := h.artifactService.GetArtifact(artifactID)
+	artifact, err := h.ArtifactService.GetArtifact(artifactID)
 	if err != nil || artifact == nil {
 		return ""
 	}
@@ -516,7 +516,7 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 	if run == nil {
 		return false
 	}
-	agent, err := h.agentService.Get(run.AgentID)
+	agent, err := h.AgentService.Get(run.AgentID)
 	if err != nil || agent == nil {
 		respondInternal(w, r, "agent not found for run", err)
 		return true
@@ -532,7 +532,7 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 			_ = json.Unmarshal(raw, &payload)
 		}
 	}
-	proposal, err := h.proposalService.Propose(run.ID, projectID, op, targetID, payload)
+	proposal, err := h.ProposalService.Propose(run.ID, projectID, op, targetID, payload)
 	if err != nil {
 		if errors.Is(err, proposals.ErrUnsupportedOp) || errors.Is(err, proposals.ErrRunWriteCap) || errors.Is(err, proposals.ErrDuplicateRef) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -565,7 +565,7 @@ func (h *Handler) proposalRunID(r *http.Request) (string, bool) {
 	if run == nil {
 		return "", false
 	}
-	agent, err := h.agentService.Get(run.AgentID)
+	agent, err := h.AgentService.Get(run.AgentID)
 	if err != nil || agent == nil || agent.WriteMode != agents.WriteModeProposal {
 		return "", false
 	}
@@ -587,7 +587,7 @@ func (h *Handler) requireNoProposalRunLaunch(w http.ResponseWriter, r *http.Requ
 	if run == nil {
 		return true
 	}
-	agent, err := h.agentService.Get(run.AgentID)
+	agent, err := h.AgentService.Get(run.AgentID)
 	if err != nil || agent == nil {
 		respondInternal(w, r, "agent not found for run", err)
 		return false
@@ -657,7 +657,7 @@ func (h *Handler) pendingArtifactRef(runID, ref string) *proposals.Proposal {
 	if runID == "" || ref == "" {
 		return nil
 	}
-	list, err := h.proposalService.List("", "", "", runID)
+	list, err := h.ProposalService.List("", "", "", runID)
 	if err != nil {
 		return nil
 	}
@@ -693,7 +693,7 @@ func requireWorker(w http.ResponseWriter, r *http.Request) bool {
 // all answer 404 so a worker cannot probe whether a run exists. Returns nil
 // after writing the response when access is denied.
 func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
-	run, err := h.runService.Get(mux.Vars(r)["id"])
+	run, err := h.RunService.Get(mux.Vars(r)["id"])
 	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
 		writeJSONError(w, http.StatusNotFound, "agent run not found")
 		return nil
@@ -767,7 +767,7 @@ func requirePoolNode(w http.ResponseWriter, r *http.Request) bool {
 // runnerSessionsEnabled reports whether this deployment runs transient
 // runners at all (the service is only wired when a pool key is configured).
 func (h *Handler) runnerSessionsEnabled() bool {
-	return h.runnerSessionService != nil
+	return h.RunnerSessionService != nil
 }
 
 func (h *Handler) requireRunnerSessions(w http.ResponseWriter) bool {
@@ -779,7 +779,7 @@ func (h *Handler) requireRunnerSessions(w http.ResponseWriter) bool {
 }
 
 func (h *Handler) getGuidedSessionChecked(w http.ResponseWriter, r *http.Request, minRole string) *guided.Session {
-	session, err := h.guidedService.GetSession(mux.Vars(r)["id"])
+	session, err := h.GuidedService.GetSession(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "guided session not found", err)
 		return nil
