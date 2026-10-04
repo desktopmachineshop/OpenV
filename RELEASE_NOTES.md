@@ -27,6 +27,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A feature that failed to load comes back by itself.** OpenV asks which
+  features your workspace has when you open it or switch to it. When that
+  question failed, on a dropped connection for example, every feature that
+  depends on the answer, such as to-dos, share links and artifact owners,
+  stayed hidden until you switched workspace or reloaded the page. OpenV
+  now asks again a few times over the next twenty seconds, and once more
+  whenever you come back to the window or your connection returns, so they
+  reappear by themselves.
+
 - **The Runs pages no longer flash runs you have switched away from.** A
   project's Runs page, and Workspace runs, refresh their list every few
   seconds. Right after you switched workspace or project, or chose another
