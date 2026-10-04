@@ -1,7 +1,6 @@
 {
   "about": "Differences between the Go vocabularies (contracts/vocab.json) and their hand-written TypeScript copies that exist today (refactor plan S13; quirk Q6): side \"go\" is an item only Go has, \"ts\" one only the copy has, and \"both\" one whose field differs (with both values), or, as item \"(order)\", common items held in another order. frontend/src/arch/vocabParity.test.ts fails on a difference not listed here and on a listed one that no longer occurs, so the list only shrinks as drift is fixed. Fixing a drift or allowing a new one is a behavior change with a release note: regenerate with cd frontend && UPDATE_GOLDEN=1 npx vitest run src/arch/vocabParity.test.ts (only UPDATE_GOLDEN=1 writes; any other value compares).",
   "diffs": [
-    { "vocabulary": "link_rules", "copy": "linkTypeRules", "item": "refines", "side": "both", "field": "description", "go": "A requirement in a subsystem or supplier project refines a requirement of its parent project; the parent's verification rolls the refinements up", "ts": "A requirement in a subsystem or supplier project refines a requirement of its parent project" },
     { "vocabulary": "artifact_types", "copy": "SharedProjectView TYPE_LABELS", "item": "description", "side": "go" },
     { "vocabulary": "artifact_types", "copy": "SharedProjectView TYPE_LABELS", "item": "other", "side": "go" },
     { "vocabulary": "artifact_types", "copy": "SharedProjectView TYPE_LABELS", "item": "non-functional", "side": "ts" },

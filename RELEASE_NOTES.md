@@ -146,6 +146,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   minutes are nearly used up no longer ends "(80%)" either; it gives the
   minutes used against the plan's allowance.
 
+- **The refines link type's description is whole.** Hovering the refines
+  link type when adding a link showed "A requirement in a subsystem or
+  supplier project refines a requirement of its parent project" and
+  stopped there, leaving out what the link does for verification. It now
+  reads in full, as the server says it: "…; the parent's verification
+  rolls the refinements up".
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
