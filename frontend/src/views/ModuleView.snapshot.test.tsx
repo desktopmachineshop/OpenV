@@ -24,8 +24,10 @@ import { useAppStore } from '../state/store';
 //             same deep link leaves the Tree pane showing.
 //   baseline  desktop, with a baseline picked in the toolbar's baseline
 //             select (the one way in), then a tree row clicked.
-//   live      desktop, deep-linked, then another tree row clicked: the
-//             API calls the click makes, with no file snapshot.
+//   live      desktop, deep-linked, then another artifact selected: by a
+//             tree row click, a citation followed in the description, or
+//             a pasted copy. The API calls each makes, with no file
+//             snapshot.
 //
 // Each mode writes container.innerHTML, one tag per line so a diff reads, to
 // __snapshots__/ModuleView.<mode>.html, and asserts the ordered API calls the
@@ -202,6 +204,11 @@ const CANNED: Record<string, (...args: any[]) => unknown> = {
   'qualityAPI.artifact': (id: string) => score(id, 82, 'good', 1),
   'attachmentAPI.listByProject': () => [],
   'attachmentAPI.listByArtifact': () => [],
+  // A pasted copy: the server appends it to its parent's children.
+  'artifactAPI.create': (data: { parent_id: string | null; type: string; title: string; body: string }) => ({
+    ...art('req-5', 'REQ-5', data.parent_id, 4, data.type, data.title, 1, '2026-06-01T12:00:00Z'),
+    body: data.body,
+  }),
 };
 
 const deferred = () => {
@@ -213,7 +220,15 @@ const deferred = () => {
 };
 let baselineGate = deferred();
 
-recorder.respond = (name, args) => CANNED[name]?.(...args);
+const canned = (name: string, args: unknown[]) => CANNED[name]?.(...args);
+
+// The live tree with req-1's description replaced, for the citation tests.
+const describeReq1As = (body: string) => {
+  recorder.respond = (name, args) =>
+    name === 'artifactAPI.list' && args[0] === 'p1'
+      ? LIVE.map((a) => (a.id === 'req-1' ? { ...a, body } : a))
+      : canned(name, args);
+};
 
 // Filter presets the panel lists, as the browser would have kept them.
 const PRESETS = [
@@ -324,6 +339,7 @@ const controls = () =>
 
 beforeEach(() => {
   recorder.calls = [];
+  recorder.respond = canned;
   baselineGate = deferred();
   location = '';
   // Dates print through toLocale*String, which follows the machine's zone
@@ -530,5 +546,77 @@ describe('ModuleView characterization (S16a)', () => {
       'attachmentAPI.listByArtifact("req-4")',
     ]);
     expect(location).toBe('/projects/p1/requirements?artifact=req-4');
+  });
+
+  // A citation followed in the description selects what it cites, the way
+  // a tree row click does (#379, bug 134). It used to set the store and
+  // leave ?artifact= behind, so the sync effect put the old selection back:
+  // req-4 loaded, then req-1 again, and the URL never moved.
+  it('live: a citation click selects the cited artifact', async () => {
+    setViewport(1100, false);
+    describeReq1As('The pump shall start within 2 seconds, see #REQ-4.');
+    await mount('/projects/p1/requirements?artifact=req-1');
+    recorder.calls = [];
+    await click(container.querySelector('a[title="Go to REQ-4"]')!);
+
+    expect(recorder.calls).toEqual([
+      'artifactAPI.getVersions("req-4")',
+      'qualityAPI.artifact("req-4")',
+      'linkAPI.listForArtifact("req-4")',
+      'attachmentAPI.listByArtifact("req-4")',
+    ]);
+    expect(location).toBe('/projects/p1/requirements?artifact=req-4');
+    expect(useAppStore.getState().selectedArtifactId).toBe('req-4');
+  });
+
+  // A citation of a figure that is gone falls back to the artifact that
+  // held it, through the same URL-first selection.
+  it('live: a citation of a missing figure selects its artifact', async () => {
+    setViewport(1100, false);
+    describeReq1As('The pump shall start within 2 seconds, see #REQ-4-FIG-1.');
+    await mount('/projects/p1/requirements?artifact=req-1');
+    recorder.calls = [];
+    await click(container.querySelector('a[title="Open REQ-4-FIG-1"]')!);
+
+    expect(recorder.calls).toEqual([
+      'artifactAPI.getVersions("req-4")',
+      'qualityAPI.artifact("req-4")',
+      'linkAPI.listForArtifact("req-4")',
+      'attachmentAPI.listByArtifact("req-4")',
+    ]);
+    expect(location).toBe('/projects/p1/requirements?artifact=req-4');
+    expect(useAppStore.getState().selectedArtifactId).toBe('req-4');
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      'REQ-4-FIG-1 is no longer on REQ-4. Showing the artifact instead.'
+    );
+  });
+
+  // A pasted copy is selected (#379, bug 134), as a direct store write it
+  // was undone by the sync effect and the selection stayed on req-1.
+  it('live: a pasted copy is selected', async () => {
+    setViewport(1100, false);
+    await mount('/projects/p1/requirements?artifact=req-1');
+    const openMenu = async (ref: string) => {
+      await act(async () => {
+        byText('code', ref).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+      });
+      await flush();
+    };
+    await openMenu('REQ-2');
+    await click(byText('button', '📋 Copy'));
+    await openMenu('REQ-3');
+    recorder.calls = [];
+    await click(byText('button', '📥 Paste after'));
+
+    expect(recorder.calls).toEqual([
+      'artifactAPI.create({"project_id":"p1","parent_id":"hdg-1","type":"requirement","title":"The pump shall log faults (copy)","body":"The pump shall log faults.","attributes":{},"copied_from":"req-2"})',
+      'qualityAPI.project("p1")',
+      // A version 1 has no history, so its versions are not loaded.
+      'qualityAPI.artifact("req-5")',
+      'linkAPI.listForArtifact("req-5")',
+      'attachmentAPI.listByArtifact("req-5")',
+    ]);
+    expect(location).toBe('/projects/p1/requirements?artifact=req-5');
+    expect(useAppStore.getState().selectedArtifactId).toBe('req-5');
   });
 });
