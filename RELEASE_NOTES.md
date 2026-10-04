@@ -69,6 +69,32 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   break in a workspace's name no longer reaches the email's headers: the
   subject shows it as a space.
 
+- **An artifact in a baseline is read-only.** Reading an artifact in a
+  baseline still offered Edit, Delete, Submit for review and History, and
+  they acted on the live artifact, not on the baseline: Delete removed it
+  from the live project, a status change moved the live artifact along, and
+  Edit left the document pane blank. A baseline now shows its artifacts
+  without those buttons. To change an artifact, switch back to Live
+  Project.
+
+- **Project settings keep your quality-rule changes, and screen readers
+  can tell which tab is open.** An unsaved change on the Quality rules tab
+  was lost when you switched to another tab, and the rules loaded again on
+  every visit; the change is now still there when you come back, as on the
+  other tabs, and the rules load once. A screen reader now announces the
+  settings tabs as tabs and says which one is selected. The Add party and
+  Remove buttons under Reference parties looked like plain browser buttons;
+  they now match the other buttons in settings. And in a workspace that
+  does not have share links yet, project settings no longer load them.
+
+- **An assistant card added to the project from the guided wizard says it
+  was added.** When you added a card that creates an artifact in the
+  project from the V&V Assistant beside the guided wizard, the artifact was
+  created but the card said "The change could not be applied." and kept
+  its "+ Add to project" button, so a second click created a duplicate.
+  The card now shows "✓ Added to project", stays marked as added when you
+  come back to the wizard, and offers no second add.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

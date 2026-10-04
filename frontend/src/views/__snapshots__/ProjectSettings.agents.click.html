@@ -1,14 +1,15 @@
 <div style="padding: 24px; max-width: 900px; margin: 0px auto;">
 <h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
 <div class="tab-strip" role="tablist">
-<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
-<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
-<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
-<button style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Agents</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
-<button style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+<button role="tab" id="project-settings-tab-general" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
+<button role="tab" id="project-settings-tab-members" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
+<button role="tab" id="project-settings-tab-repos" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid transparent; border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
+<button role="tab" id="project-settings-tab-agents" aria-selected="true" aria-controls="project-settings-panel" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Agents</button>
+<button role="tab" id="project-settings-tab-attributes" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
+<button role="tab" id="project-settings-tab-quality" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
+<button role="tab" id="project-settings-tab-danger" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
 </div>
+<div role="tabpanel" id="project-settings-panel" aria-labelledby="project-settings-tab-agents">
 <div class="card">
 <h3>Agent authentication</h3>
 <p style="font-size: 13px; color: var(--text-muted);">How agent runs in this project authenticate with their AI provider. This only picks the credential and routing — sign-ins themselves live in each member's user settings (the user menu, bottom left).</p>
@@ -29,6 +30,7 @@
 <span style="color: var(--text-muted); font-size: 12px;">Overrides members' local sign-ins: runs use the workspace's API key (the provider's key environment variable, configured in Workspace settings → AI providers, set on the runner host). For now runs still execute through each member's OpenV connector.</span>
 </span>
 </label>
+</div>
 </div>
 </div>
 </div>

@@ -1,17 +1,21 @@
 import React from 'react';
-import { QualityRulesEditor } from '../../components/QualityRulesEditor';
+import { QualityRulesEditor, QualityRulesHeld } from '../../components/QualityRulesEditor';
+import { Setter } from './shared';
 
-// The Quality rules tab of project settings. The editor keeps its own draft,
-// so leaving the tab drops an unsaved change.
+// The Quality rules tab of project settings.
 // Props-only (refactor plan F6): the ProjectSettings shell owns the state, the
-// loads and the handlers, so a tab switch keeps unsaved input.
+// loads and the handlers, so a tab switch keeps unsaved input. The editor's
+// rules and draft are held there too, so leaving the tab keeps an unsaved
+// change and coming back does not load the rules again.
 interface QualityTabProps {
   projectId: string;
   canEditRules: boolean;
   flash: (msg: string) => void;
+  qualityRules: QualityRulesHeld;
+  setQualityRules: Setter<QualityRulesHeld>;
 }
 
-export const QualityTab: React.FC<QualityTabProps> = ({ projectId, canEditRules, flash }) => (
+export const QualityTab: React.FC<QualityTabProps> = ({ projectId, canEditRules, flash, qualityRules, setQualityRules }) => (
   <div className="card">
     <h3>Requirement quality rules</h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -26,6 +30,8 @@ export const QualityTab: React.FC<QualityTabProps> = ({ projectId, canEditRules,
         id={projectId}
         canEdit={canEditRules}
         onSaved={() => flash('Quality rules saved')}
+        held={qualityRules}
+        setHeld={setQualityRules}
       />
     )}
   </div>
