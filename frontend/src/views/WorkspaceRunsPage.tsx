@@ -31,7 +31,8 @@ const RUNS_POLL_LIMIT = 200;
  * catch-all route), so the link an email or a web push carries for such a
  * run lands where it did. So it does with no workspace to have gates, and
  * when the gates fail to load, which counts as the feature off (#379 bug
- * 174): a load still on its way keeps it waiting.
+ * 174): a load still on its way, or a timed retry of one still to come
+ * (#379 bug 179), keeps it waiting.
  */
 export const WorkspaceRunsPage: React.FC = () => {
   const gatesSettled = useAppStore((s) => s.features !== null || s.featuresFailed);

@@ -180,11 +180,12 @@ function App() {
         })
         .catch(() => {
           if (cancelled) return;
-          // Gates stay closed until a try succeeds; a page that waits for
-          // them stops waiting (featuresFailed).
-          setFeaturesFailed();
+          // Gates stay closed until a try succeeds. A page that waits for
+          // them waits through the timed retries, and stops waiting
+          // (featuresFailed) once none is left (#379 bug 179).
           failed = true;
           if (retries < GATE_RETRY_DELAYS_MS.length) timer = window.setTimeout(load, GATE_RETRY_DELAYS_MS[retries++]);
+          else setFeaturesFailed();
         });
     };
     const retryNow = () => {
