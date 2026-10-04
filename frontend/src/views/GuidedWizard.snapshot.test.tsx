@@ -50,8 +50,8 @@ import { useAppStore } from '../state/store';
 //              never cut).
 //   step-8     the drafts; a "New artifact" card (the notes panel's template,
 //              cut at 120) added to the project under a heading named by ref,
-//              which today reports that it could not be applied (see the call
-//              list). Commit. The notes panel's other templates, its "Medium"
+//              which then reads as added and is saved as applied (#379, bug
+//              109; see the call list). Commit. The notes panel's other templates, its "Medium"
 //              default severity among them, are not reachable from the wizard.
 //   committed  after Create baseline. Then Modify guided definition.
 //   reopened   the new session seeded from the committed answers.
@@ -706,12 +706,13 @@ describe('GuidedWizard characterization (S16b)', () => {
       save('gs-1', 8),
       listArtifacts,
       // step 8: the New artifact card reads the project, creates the artifact
-      // and refreshes the drafts. It then reports "The change could not be
-      // applied." (the step-8 snapshot): a project result of null, which means
-      // applied, meets `?? 'The change could not be applied.'`. So the card is
-      // not marked applied and nothing is saved. Pinned as it is.
+      // and refreshes the drafts. The card then reads "✓ Added to project"
+      // (the step-8 snapshot) and, like every applied card, is saved as
+      // applied; the saved session coming back reloads the step's drafts.
       listArtifacts,
       'artifactAPI.create({…})',
+      listArtifacts,
+      save('gs-1', 8),
       listArtifacts,
       'guidedAPI.commit("gs-1")',
       'baselineAPI.create("p1", "Initial requirements")',
@@ -727,7 +728,8 @@ describe('GuidedWizard characterization (S16b)', () => {
     // The answers the walk's last save stored, key by key and in key order
     // (I16): step_2_ids to step_5_ids but no step_6_ids, hazards without an
     // ids key, severity "moderate" for the card that said "Medium", the
-    // persona name with its trailing space, section_ids last.
+    // persona name with its trailing space, the step-8 project card among the
+    // applied ones, section_ids last.
     const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
     const saves = savedAnswers('gs-1');
     const final = saves[saves.length - 1];
@@ -784,7 +786,7 @@ describe('GuidedWizard characterization (S16b)', () => {
           selected: { 'art-13': false },
           created: { 'art-12': 'art-35', 'art-19': 'art-36', 'art-21': 'art-37', 'art-22': 'art-38' },
         },
-        copilot_applied: ['m-1:1', 'm-2:1', 'm-2:3', 'm-2:5', 'm-3:1', 'm-3:3', 'm-3:5', 'm-4:1', 'm-4:3', 'm-4:7', 'm-5:1', 'm-5:3', 'm-5:5', 'm-5:7', 'm-6:1', 'm-6:3', 'm-6:5'],
+        copilot_applied: ['m-1:1', 'm-2:1', 'm-2:3', 'm-2:5', 'm-3:1', 'm-3:3', 'm-3:5', 'm-4:1', 'm-4:3', 'm-4:7', 'm-5:1', 'm-5:3', 'm-5:5', 'm-5:7', 'm-6:1', 'm-6:3', 'm-6:5', 'm-8:1'],
         section_ids: {
           personas: 'art-3',
           needs: 'art-7',

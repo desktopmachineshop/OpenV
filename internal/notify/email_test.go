@@ -1,17 +1,21 @@
 package notify
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"mime"
 	"net/mail"
 	"net/smtp"
+	"net/textproto"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
+	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/release"
@@ -434,6 +438,195 @@ func TestStableReleaseEmailCarriesNoHeaderFromTheWorkspaceName(t *testing.T) {
 		subject, _ := new(mime.WordDecoder).DecodeHeader(m.Header.Get("Subject"))
 		if !strings.Contains(subject, "Acme Bcc: attacker@example.com") {
 			t.Errorf("subject %q does not name the workspace on one line", subject)
+		}
+	}
+}
+
+// TestMemberTextCannotReshapeTheEmail: text a member wrote (a display name,
+// an invited address, an artifact's title, a workspace's or an inviter's
+// name) goes into notification, invitation and verification emails, and a
+// line break or another control character in it must not reshape the
+// message. On the wire every line ends CRLF, so a server that also takes a
+// bare CR or LF for a line end reads the same lines, and none before the
+// end of the data is the lone dot that ends it; the headers are the
+// mailer's own, one each; and the body is one text/plain part. Read as a
+// mail client reads it, the message has the lines it has for an ordinary
+// name, with the member's text on its line and each run of control
+// characters in it one space. The text used to go in as written: its line
+// breaks became lines of the email, so a member's name could add a
+// paragraph to the admins' mail, and a CR went out bare, so "\r.\r" ended
+// the message early for such a server and the line after it was read as a
+// command of its own.
+func TestMemberTextCannotReshapeTheEmail(t *testing.T) {
+	const hostile = "Ben\r\n\r\nYour account is locked: unlock it at https://evil.example.test\r.\r" +
+		"MAIL FROM:<ceo@example.test>\r\nBcc: x@example.test\x00\x1b[2J\u2028--b\nContent-Type: text/html\u0085Okafor\t"
+	const flat = "Ben Your account is locked: unlock it at https://evil.example.test . " +
+		"MAIL FROM:<ceo@example.test> Bcc: x@example.test [2J --b Content-Type: text/html Okafor"
+
+	admins := func(text string, e domainevents.Event) []wireMail {
+		var sent []wireMail
+		dir := &fakeDir{byID: map[string]*users.User{"carol": optedIn("carol", "carol@example.test")}}
+		NewNotifier(&fakeStore{}, &fakeMembers{}, nil).
+			SetOrgService(&fakeOrgMembers{list: []*orgs.Member{orgMember("carol", orgs.RoleAdmin)}}).
+			SetUserNamer(UserNamerFunc(func(string) string { return text })).
+			SetEmailDispatcher(NewEmailDispatcher(capturingMailer(&sent), dir, "https://app.example.com", DefaultEmailTypes())).
+			Handle(e)
+		return sent
+	}
+	send := func(t *testing.T, subject, body string) []wireMail {
+		var sent []wireMail
+		if err := capturingMailer(&sent).Send("dee@example.test", subject, body); err != nil {
+			t.Fatalf("send: %v", err)
+		}
+		return sent
+	}
+	for _, tc := range []struct {
+		name, ordinary string
+		mail           func(t *testing.T, text string) []wireMail
+	}{
+		{"a display name, in the admins' email when its owner joins", "Ben Okafor", func(t *testing.T, text string) []wireMail {
+			return admins(text, membershipEvent(domainevents.OrgMemberAdded, "user:alice",
+				map[string]interface{}{"user_id": "bob", "role": orgs.RoleMember}))
+		}},
+		{"an invited address, in the admins' email about the invitation", "frank@example.test", func(t *testing.T, text string) []wireMail {
+			return admins("Alice", membershipEvent(domainevents.OrgInvitationSent, "user:alice",
+				map[string]interface{}{"email": text, "role": orgs.RoleAdmin}))
+		}},
+		{"an artifact's title, in its reviewers' email", "Brake pedal force", func(t *testing.T, text string) []wireMail {
+			var sent []wireMail
+			dir := &fakeDir{byID: map[string]*users.User{"carol": optedIn("carol", "carol@example.test")}}
+			NewNotifier(&fakeStore{}, &fakeMembers{list: []*members.Member{member("carol", members.RoleEditor, "Carol", "carol@example.test")}}, nil).
+				SetEmailDispatcher(NewEmailDispatcher(capturingMailer(&sent), dir, "https://app.example.com", DefaultEmailTypes())).
+				Handle(domainevents.New(domainevents.ArtifactStatusChanged, "p1", "a1", "user:alice",
+					map[string]interface{}{"to": artifacts.StatusInReview, "title": text}))
+			return sent
+		}},
+		{"a workspace's name, in its admins' stable release email", "Acme Rockets", func(t *testing.T, text string) []wireMail {
+			var sent []wireMail
+			dir := &fakeDir{byID: map[string]*users.User{"o1-admin": optedIn("o1-admin", "admin@example.test")}}
+			stable := stableOf("0.4.0", "2026-10-01", release.Category{Name: release.CategoryFixes, Notes: []string{"A fix"}})
+			s, _, _ := schedulerFixture(stable, []*orgs.Org{{ID: "o1", Name: text, StableRelease: "0.3.0"}})
+			s.SetEmailDispatcher(NewEmailDispatcher(capturingMailer(&sent), dir, "https://app.example.com",
+				[]string{notifications.TypeReleaseScheduled}))
+			s.now = func() time.Time { return time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC) }
+			s.Run()
+			return sent
+		}},
+		{"a workspace's and an inviter's name, in the invitation email", "Acme Rockets", func(t *testing.T, text string) []wireMail {
+			subject, body := RenderInvitationEmail(text, text, "https://app.example.com/login?invite=tok", 7*24*time.Hour)
+			return send(t, subject, body)
+		}},
+		{"a display name, in the verification email", "Ben Okafor", func(t *testing.T, text string) []wireMail {
+			subject, body := RenderVerificationEmail(text, "https://app.example.com/verify-email?token=tok", 24*time.Hour)
+			return send(t, subject, body)
+		}},
+		{"a display name, in the password reset email", "Ben Okafor", func(t *testing.T, text string) []wireMail {
+			subject, body := RenderPasswordResetEmail(text, "https://app.example.com/reset-password?token=tok", time.Hour)
+			return send(t, subject, body)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ordinary, got := tc.mail(t, tc.ordinary), tc.mail(t, hostile)
+			if len(ordinary) != 1 || len(got) != 1 {
+				t.Fatalf("sent %d emails for an ordinary text and %d for the hostile one, want 1 each", len(ordinary), len(got))
+			}
+			checkWireShape(t, got[0].msg)
+			wantSubject, wantBody := readMail(t, ordinary[0].msg)
+			gotSubject, gotBody := readMail(t, got[0].msg)
+			if want := strings.ReplaceAll(wantSubject, tc.ordinary, flat); gotSubject != want {
+				t.Errorf("the subject reads\n%q\nwant\n%q", gotSubject, want)
+			}
+			if want := strings.ReplaceAll(wantBody, tc.ordinary, flat); gotBody != want {
+				t.Errorf("the body reads\n%q\nwant\n%q", gotBody, want)
+			}
+		})
+	}
+}
+
+// checkWireShape checks a wire message is shaped by the mailer alone: CRLF
+// line ends only, so a server lenient about a bare CR or LF reads the lines
+// net/smtp sends, with the lone dot that ends the data only at the end;
+// exactly the mailer's headers, one each; and one text/plain part.
+func checkWireShape(t *testing.T, msg []byte) {
+	t.Helper()
+	for i, c := range msg {
+		if (c == '\r' && (i+1 == len(msg) || msg[i+1] != '\n')) || (c == '\n' && (i == 0 || msg[i-1] != '\r')) {
+			t.Errorf("a bare %q at byte %d of the message:\n%q", c, i, msg)
+			break
+		}
+	}
+	// net/smtp writes the message after DATA through a dot-stuffing writer,
+	// which ends it with the lone dot. Read by a server that also takes a
+	// bare CR or LF for a line end, only that last line may be the lone dot.
+	var data bytes.Buffer
+	dw := textproto.NewWriter(bufio.NewWriter(&data)).DotWriter()
+	if _, err := dw.Write(msg); err != nil {
+		t.Fatalf("write the data: %v", err)
+	}
+	if err := dw.Close(); err != nil {
+		t.Fatalf("end the data: %v", err)
+	}
+	lines := strings.Split(strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(data.String()), "\n")
+	for i, l := range lines[:len(lines)-2] { // the last two: the lone dot and what follows its line end
+		if l == "." {
+			t.Errorf("line %d of the data is a lone dot, which ends the message there:\n%q", i+1, data.String())
+		}
+	}
+
+	_, m := wireHeaders(t, msg)
+	var names []string
+	for name, values := range m.Header {
+		names = append(names, name)
+		if len(values) != 1 {
+			t.Errorf("%d %s headers, want 1", len(values), name)
+		}
+	}
+	sort.Strings(names)
+	if want := []string{"Content-Type", "From", "Mime-Version", "Subject", "To"}; strings.Join(names, ",") != strings.Join(want, ",") {
+		t.Errorf("headers %v, want exactly %v", names, want)
+	}
+	if mt, params, err := mime.ParseMediaType(m.Header.Get("Content-Type")); err != nil || mt != "text/plain" || params["charset"] != "UTF-8" {
+		t.Errorf("Content-Type %q (%v), want one text/plain part in UTF-8", m.Header.Get("Content-Type"), err)
+	}
+}
+
+// readMail returns a wire message's subject and body as a mail client shows
+// them: the subject's encoded words decoded, the body after the blank line.
+func readMail(t *testing.T, msg []byte) (subject, body string) {
+	t.Helper()
+	m, err := mail.ReadMessage(bytes.NewReader(msg))
+	if err != nil {
+		t.Fatalf("parse the message: %v\n%q", err, msg)
+	}
+	if subject, err = new(mime.WordDecoder).DecodeHeader(m.Header.Get("Subject")); err != nil {
+		t.Errorf("decode the subject: %v", err)
+	}
+	raw, err := io.ReadAll(m.Body)
+	if err != nil {
+		t.Fatalf("read the body: %v", err)
+	}
+	return subject, string(raw)
+}
+
+// TestBodyLineBreaksReachTheServerAsCRLF pins buildMessage's line ends on
+// their own: text that keeps its line breaks, such as a comment preview in a
+// mention email, can carry a bare CR, which must not reach the server bare,
+// where a lenient reader takes "\r.\r" for the dot that ends the message.
+func TestBodyLineBreaksReachTheServerAsCRLF(t *testing.T) {
+	msg := string(buildMessage("openv@example.com", "a@example.com", "Hi", "one\rtwo\r\n.\rthree\nfour"))
+	_, body, ok := strings.Cut(msg, "\r\n\r\n")
+	if !ok {
+		t.Fatalf("no blank line after the headers in %q", msg)
+	}
+	if want := "one\r\ntwo\r\n.\r\nthree\r\nfour"; body != want {
+		t.Errorf("body = %q, want %q", body, want)
+	}
+	for i := 0; i < len(msg); i++ {
+		if msg[i] == '\r' && (i+1 == len(msg) || msg[i+1] != '\n') {
+			t.Fatalf("bare CR at byte %d of %q", i, msg)
+		}
+		if msg[i] == '\n' && (i == 0 || msg[i-1] != '\r') {
+			t.Fatalf("bare LF at byte %d of %q", i, msg)
 		}
 	}
 }

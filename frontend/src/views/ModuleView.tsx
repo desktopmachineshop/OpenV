@@ -1471,8 +1471,11 @@ export const ModuleView: React.FC = () => {
               }}
               previewVersion={previewVersion}
               onPreviewChange={setPreviewVersion}
+              // A baseline's artifact shares its id with the live one, so
+              // its header acts on nothing.
+              readOnly={isBaselineView}
             />
-            <ArtifactDetails 
+            <ArtifactDetails
               artifact={selectedArtifact} 
               links={activeLinks} 
               linked={linkedArtifacts}

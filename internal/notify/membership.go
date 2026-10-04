@@ -99,7 +99,7 @@ func (n *Notifier) nameOf(userID string) string {
 	if userID == "" || n.userNamer == nil {
 		return "Someone"
 	}
-	if name := n.userNamer.GetUserName(userID); name != "" {
+	if name := memberText(n.userNamer.GetUserName(userID)); name != "" {
 		return name
 	}
 	return "Someone"
@@ -170,7 +170,7 @@ func adminMessage(e domainevents.Event, name string) (title, body string, ok boo
 	case domainevents.OrgInvitationSent:
 		return "An invitation was sent",
 			fmt.Sprintf("%s was invited to this workspace as %s.",
-				payloadString(e, "email"), roleWord(payloadString(e, "role"))), true
+				memberText(payloadString(e, "email")), roleWord(payloadString(e, "role"))), true
 	case domainevents.OrgMemberRoleChanged:
 		return "A workspace role changed",
 			fmt.Sprintf("%s is now %s in this workspace (was %s).",

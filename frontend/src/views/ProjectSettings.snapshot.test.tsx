@@ -36,7 +36,7 @@ import { useAppStore } from '../state/store';
 // its load is under way; a click opens it after). So each way has its own
 // file. Three more tests pin that an unknown ?tab= shows General, that a tab
 // switch keeps unsaved input and reloads nothing, and what a stable-channel
-// workspace (the gated sections off) sees. The store is the real one;
+// workspace (the gated sections off) sees and loads. The store is the real one;
 // children render for real; only the API client is replaced, by canned
 // answers.
 //
@@ -347,10 +347,11 @@ type TabKey = (typeof TABS)[number][0];
 
 const tabButton = (label: string) => byText<HTMLButtonElement>('[role="tablist"] > button', label);
 
-// The tablist as assistive technology meets it today: one role="tablist" strip
-// of plain buttons. No button has role="tab", aria-selected, aria-controls,
-// an id or a type, and no panel has role="tabpanel"; the open tab is marked
-// only by its style (an accent underline and weight 600).
+// The tablist as assistive technology meets it: one role="tablist" strip of
+// buttons with role="tab" (#379, bug 104). Each has an id and names the one
+// tab panel in aria-controls; aria-selected marks the open one, as its style
+// does (an accent underline and weight 600); the panel is labelled by it. No
+// tab has a type or a tabindex: the strip keeps the browser's Tab order.
 const tablist = () => {
   const strips = Array.from(container.querySelectorAll('[role="tablist"]'));
   return {
@@ -371,19 +372,28 @@ const tablist = () => {
         .filter((b) => b.style.fontWeight === '600')
         .map((b) => b.textContent)
     ),
-    ariaElsewhere: container.querySelectorAll('[role="tab"], [role="tabpanel"], [aria-selected], [aria-controls]').length,
+    panels: Array.from(container.querySelectorAll('[role="tabpanel"]')).map(
+      (p) => `${p.tagName.toLowerCase()} id=${p.id} aria-labelledby=${p.getAttribute('aria-labelledby')}`
+    ),
+    ariaElsewhere: container.querySelectorAll(
+      ':not([role="tablist"]) > [role="tab"], [aria-selected]:not([role="tab"]), [aria-controls]:not([role="tab"])'
+    ).length,
   };
 };
 
-const expectTablist = (selectedLabel: string) =>
+const expectTablist = (selectedLabel: string) => {
+  const selectedKey = TABS.find(([, label]) => label === selectedLabel)![0];
   expect(tablist()).toEqual({
     strips: ['div.tab-strip'],
     children: TABS.map(
-      ([, label]) => `button ${label} role=null aria-selected=null aria-controls=null id=null type=null tabindex=null`
+      ([key, label]) =>
+        `button ${label} role=tab aria-selected=${key === selectedKey} aria-controls=project-settings-panel id=project-settings-tab-${key} type=null tabindex=null`
     ),
     selected: [selectedLabel],
+    panels: [`div id=project-settings-panel aria-labelledby=project-settings-tab-${selectedKey}`],
     ariaElsewhere: 0,
   });
+};
 
 beforeEach(() => {
   recorder.calls = [];
@@ -443,16 +453,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// The eight loads of the mount effect, in the order it starts them, whatever
-// tab is open: members, repositories, team access, share links (made even
-// with share links gated off), the workspace's teams, the project, attribute
-// definitions and artifact types. Loading the project goes on, one call
-// after the other, to the workspace's projects and the project's parties.
-const LOAD = [
+// The seven loads of the mount effect, in the order it starts them, whatever
+// tab is open: members, repositories, team access, the workspace's teams, the
+// project, attribute definitions and artifact types; then share links, from
+// an effect of their own that asks only with share links on (#379, bug 106).
+// Loading the project goes on, one call after the other, to the workspace's
+// projects and the project's parties.
+const LOAD_GATED_OFF = [
   'membersAPI.list("p1")',
   'repoConnectionsAPI.list("p1")',
   'projectTeamAccessAPI.list("p1")',
-  'shareLinkAPI.list("p1")',
   'orgTeamsAPI.list("o1")',
   'projectAPI.get("p1")',
   'attributeDefinitionAPI.listByProject("p1")',
@@ -460,8 +470,9 @@ const LOAD = [
   'projectAPI.list()',
   'projectAPI.parties("p1")',
 ];
-// The quality tab's editor loads its rules each time it mounts, that is,
-// each time the tab is opened.
+const LOAD = [...LOAD_GATED_OFF.slice(0, 7), 'shareLinkAPI.list("p1")', ...LOAD_GATED_OFF.slice(7)];
+// The quality tab's editor loads its rules when the tab is first opened; the
+// page keeps them, and the editor's draft, from then on (#379, bug 105).
 const QUALITY = 'qualityRulesAPI.forProject("p1")';
 
 // What each tab's form controls hold once loaded, in document order.
@@ -554,7 +565,7 @@ describe('ProjectSettings characterization (S16c)', () => {
     expect(recorder.calls).toEqual(LOAD);
   });
 
-  it('a tab switch keeps unsaved input, except the quality editor, and reloads nothing else', async () => {
+  it('a tab switch keeps unsaved input and reloads nothing', async () => {
     await mount(['/projects/p1/settings?tab=general']);
     const inputs = (selector: string) => Array.from(container.querySelectorAll<HTMLInputElement>(selector));
     const selects = () => Array.from(container.querySelectorAll<HTMLSelectElement>('select'));
@@ -641,21 +652,22 @@ describe('ProjectSettings characterization (S16c)', () => {
       'checkbox=true',
     ]);
 
-    // The editor keeps its draft itself, so leaving the tab drops it: it
-    // mounts afresh, loads the rules again and shows them as saved.
+    // The page holds the editor's rules and draft, so the change is still
+    // there, unsaved, and the rules are not loaded again.
     await click(tabButton('Quality rules'));
-    expect(controls()).toEqual(CONTROLS.quality);
+    expect(controls()).toEqual(['radio=true', 'radio=false', 'select=off', 'select=info', 'select=warning']);
+    expect(byText<HTMLButtonElement>('button', 'Save rules').disabled).toBe(false);
 
-    expect(recorder.calls).toEqual([...LOAD, QUALITY, QUALITY]);
+    expect(recorder.calls).toEqual([...LOAD, QUALITY]);
     expect(location).toBe('/projects/p1/settings?tab=quality');
   });
 
-  it('stable channel: the gated sections stay hidden, the loads do not change', async () => {
+  it('stable channel: the gated sections stay hidden, share links are not asked for', async () => {
     useAppStore.setState({
       features: { channel: 'stable', stable_release: '1.0.0', preview: false, features: {} },
     });
     await mount(['/projects/p1/settings']);
-    expect(recorder.calls).toEqual(LOAD);
+    expect(recorder.calls).toEqual(LOAD_GATED_OFF);
     expectTablist('General');
     expect(controls()).toEqual([]);
     await snapshot('general.stable');
@@ -667,6 +679,6 @@ describe('ProjectSettings characterization (S16c)', () => {
       'Add member',
       'Teams',
     ]);
-    expect(recorder.calls).toEqual(LOAD);
+    expect(recorder.calls).toEqual(LOAD_GATED_OFF);
   });
 });
