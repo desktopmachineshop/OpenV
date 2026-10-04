@@ -239,6 +239,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   shows the plan actually used. `open_source`, which was ignored the same
   way, is now accepted.
 
+- **A failed Antigravity run points you to a Gemini API key only when it
+  failed to sign in.** The note about the keyring and setting a Gemini API
+  key was added whenever the CLI's error merely contained letters such as
+  "auth" or "login", so an error about an "author" field or a file named
+  `auth.go` was explained, and failed, as a sign-in problem, while
+  "invalid API key" or "HTTP 403" came with no explanation. The note now
+  appears exactly when the run fails as a sign-in problem, read by the
+  same whole-word rule as every other agent's failure.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
