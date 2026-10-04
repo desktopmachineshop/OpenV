@@ -231,6 +231,48 @@ func TestExecutePreservesTimeoutDetail(t *testing.T) {
 	}
 }
 
+// TestExecuteFailsANonZeroExitWithoutAnError is the regression test for #379
+// question 28: a CLI handle that reports a non-zero exit code, with no error
+// from its adapter's Wait, finished the run succeeded with the exit code
+// beside it. A CLI that exited non-zero failed: the run fails as
+// agent_error (not retried), saying so, and keeps what the run produced
+// (its exit code, any final text, its tokens) as every failed run does.
+func TestExecuteFailsANonZeroExitWithoutAnError(t *testing.T) {
+	rs := newRecordingServer()
+	defer rs.srv.Close()
+
+	h := &fakeHandle{
+		events: make(chan RunEvent),
+		waitCh: make(chan struct{}),
+		result: Result{ExitCode: 2, FinalText: "half an answer", TokensIn: 10, TokensOut: 3},
+	}
+	close(h.events)
+	close(h.waitCh)
+	w := newTestWorker(rs, &fakeAdapter{start: func(context.Context, RunSpec) (RunHandle, error) { return h, nil }})
+	w.workspaceBase = t.TempDir()
+
+	w.execute(context.Background(), testClaim())
+
+	if rs.hit("finish") != 1 {
+		t.Fatalf("finish hits = %d, want 1", rs.hit("finish"))
+	}
+	rs.mu.Lock()
+	body := rs.finishBody
+	rs.mu.Unlock()
+	if body.Status != agentruns.StatusFailed || body.ErrorClass != agentruns.ErrorClassAgentError {
+		t.Errorf("finish = status %q, class %q; want %q, %q", body.Status, body.ErrorClass,
+			agentruns.StatusFailed, agentruns.ErrorClassAgentError)
+	}
+	if want := "the agent CLI exited with code 2"; body.Error != want {
+		t.Errorf("error = %q, want %q", body.Error, want)
+	}
+	if body.ExitCode == nil || *body.ExitCode != 2 || body.FinalText != "half an answer" ||
+		body.TokensIn != 10 || body.TokensOut != 3 {
+		t.Errorf("finish dropped what the run produced: exit_code %v, final_text %q, tokens %d/%d",
+			body.ExitCode, body.FinalText, body.TokensIn, body.TokensOut)
+	}
+}
+
 func contains(s, sub string) bool {
 	for i := 0; i+len(sub) <= len(s); i++ {
 		if s[i:i+len(sub)] == sub {

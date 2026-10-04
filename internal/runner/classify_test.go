@@ -27,6 +27,7 @@ func TestClassifySite(t *testing.T) {
 		{"agent generic failure", siteAgentResult, errors.New("exit status 1: something broke"), agentruns.ErrorClassAgentError},
 		{"agent auth failure", siteAgentResult, errors.New("Error: 401 Unauthorized"), agentruns.ErrorClassAuth},
 		{"agent provider outage", siteAgentResult, errors.New("api error 529: overloaded_error"), agentruns.ErrorClassProviderUnavailable},
+		{"agent exits non-zero with no error", siteAgentExit, nil, agentruns.ErrorClassAgentError},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -53,6 +54,34 @@ func TestClassifyAgentError(t *testing.T) {
 		{"dial tcp: connection refused", agentruns.ErrorClassProviderUnavailable},
 		{"tool 'Bash' failed: file not found", agentruns.ErrorClassAgentError},
 		{"the model produced no answer", agentruns.ErrorClassAgentError},
+
+		// #379 question 26 (bug 56): a status code counts only as a whole
+		// number next to an HTTP word, or as the whole text; a word only as a
+		// whole word; and a rate limit or overload outranks a mention of an
+		// API key.
+		{"tool Read failed: wrote 403 lines", agentruns.ErrorClassAgentError},
+		{"processed 1500 files before the tool failed", agentruns.ErrorClassAgentError},
+		{"the network tool is disabled for this agent", agentruns.ErrorClassAgentError},
+		{"rate limit exceeded; check your API key", agentruns.ErrorClassProviderUnavailable},
+		{"401", agentruns.ErrorClassAuth},
+		{"HTTP 403", agentruns.ErrorClassAuth},
+		{"HTTP/1.1 403", agentruns.ErrorClassAuth},
+		{"upstream answered status 503", agentruns.ErrorClassProviderUnavailable},
+		{`{"status_code": 502}`, agentruns.ErrorClassProviderUnavailable},
+		{"API Error: 429", agentruns.ErrorClassProviderUnavailable},
+		{"error 4290 while parsing", agentruns.ErrorClassAgentError},
+		{"read 401 files", agentruns.ErrorClassAgentError},
+		{"api error 529: overloaded_error", agentruns.ErrorClassProviderUnavailable},
+		{"the forbiddenfruit tool failed", agentruns.ErrorClassAgentError},
+		{"Credentials file is missing", agentruns.ErrorClassAuth},
+		{"rpc error: code = Unauthenticated", agentruns.ErrorClassAuth},
+		{"dial tcp: connect: network is unreachable", agentruns.ErrorClassProviderUnavailable},
+		{"Network error while streaming the response", agentruns.ErrorClassProviderUnavailable},
+		{"quota exceeded; your API key has no credit left", agentruns.ErrorClassProviderUnavailable},
+		{"overloaded: retry later, API key accepted", agentruns.ErrorClassProviderUnavailable},
+		{"rate limit exceeded; invalid API key", agentruns.ErrorClassAuth},
+		{"rate limit exceeded; not logged in", agentruns.ErrorClassAuth},
+		{"503 Service Unavailable: check your API key", agentruns.ErrorClassAuth},
 	}
 	for _, tc := range cases {
 		var err error
@@ -62,6 +91,28 @@ func TestClassifyAgentError(t *testing.T) {
 		if got := classifyAgentError(err); got != tc.want {
 			t.Errorf("classifyAgentError(%q) = %q, want %q", tc.msg, got, tc.want)
 		}
+	}
+}
+
+// TestThrottleSignalsAreProviderSignals: a rate limit or overload outranks a
+// mention of an API key only because it is a provider signal itself; one
+// missing from providerSignals would turn that text into agent_error.
+func TestThrottleSignalsAreProviderSignals(t *testing.T) {
+	provider := map[string]bool{}
+	for _, s := range providerSignals {
+		provider[s] = true
+	}
+	for _, s := range throttleSignals {
+		if !provider[s] {
+			t.Errorf("throttle signal %q is not in providerSignals", s)
+		}
+	}
+	found := false
+	for _, s := range authSignals {
+		found = found || s == apiKeyMention
+	}
+	if !found {
+		t.Errorf("apiKeyMention %q is not in authSignals", apiKeyMention)
 	}
 }
 

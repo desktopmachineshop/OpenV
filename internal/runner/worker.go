@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -423,13 +424,13 @@ func (w *Worker) preflight(ctx context.Context, claim *ClaimResponse) (prep prep
 		return prep, false
 	}
 
-	var conns []*repoconns.RepoConnection
-	if run.ProjectID != nil && claim.Agent.RepoAccess {
-		var err error
-		conns, err = w.client.ListRepoConnections(*run.ProjectID, claim.RunToken)
-		if err != nil {
-			log.Printf("run %s: listing repo connections failed: %v", run.ID, err)
-		}
+	// A run that asked for repository access and cannot read its project's
+	// connections fails rather than run, and "succeed", in an empty
+	// workspace without the code it was meant to work on.
+	conns, err := w.repoConnections(claim)
+	if err != nil {
+		w.failRun(run.ID, "could not read the project's repository connections: "+err.Error(), siteWorkspacePrep, nil)
+		return prep, false
 	}
 	workDir, note, err := PrepareWorkspace(prepCtx, w.workspaceBase, run, claim.Agent, conns)
 	if prepCancelled.Load() {
@@ -459,6 +460,16 @@ func (w *Worker) preflight(ctx context.Context, claim *ClaimResponse) (prep prep
 		stopHeartbeat: stopHeartbeat,
 		cancelPrep:    cancelPrep,
 	}, true
+}
+
+// repoConnections reads the repository connections of the claimed run's
+// project, with the run's own token, when its agent has repository access;
+// a run without both reads none.
+func (w *Worker) repoConnections(claim *ClaimResponse) ([]*repoconns.RepoConnection, error) {
+	if claim.Run.ProjectID == nil || !claim.Agent.RepoAccess {
+		return nil, nil
+	}
+	return w.client.ListRepoConnections(*claim.Run.ProjectID, claim.RunToken)
 }
 
 // runEnv is the environment the run's CLI and its MCP server are given: the
@@ -581,6 +592,12 @@ func (w *Worker) finishRequestFor(ctx context.Context, runID string, cancelled b
 		// Classify from the CLI's failure text: an auth/provider problem the
 		// agent surfaced vs. a genuine agent error (see classifyAgentError).
 		req.ErrorClass = classifySite(siteAgentResult, waitErr)
+	case exitCode != 0:
+		// A CLI that exited non-zero failed, even when its adapter's Wait
+		// reported no error to go with it.
+		req.Status = agentruns.StatusFailed
+		req.Error = "the agent CLI exited with code " + strconv.Itoa(exitCode)
+		req.ErrorClass = classifySite(siteAgentExit, nil)
 	default:
 		req.Status = agentruns.StatusSucceeded
 	}
