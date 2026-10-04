@@ -1886,7 +1886,7 @@ class CeilingTest(RepoTest):
         self.assertNotIn("api/client.ts", files)  # F1 made it a barrel within budget
         self.assertEqual(files["views/Login.tsx"], 708 + 70)
         components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
-        self.assertEqual(len(components), 41)
+        self.assertEqual(len(components), 40)  # #379 bug 168 moved AgentRunsPage's table out, within budget
         self.assertEqual(components["ModuleView"], 1590 + 150)  # F7 moved the panes out
 
 
