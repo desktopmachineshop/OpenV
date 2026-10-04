@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { AgentRun, agentRunsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
@@ -7,7 +7,7 @@ import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { Navbar } from '../components/Navbar';
 import { ErrorBanner } from '../components/ui';
-import { RunDetailBeside, RunStatusFilter, RunTable } from '../components/agents/RunTable';
+import { RunDetailBeside, RunStatusFilter, RunTable, pollGuard } from '../components/agents/RunTable';
 import { WORKSPACE_RUNS_FEATURE } from '../components/agents/workspaceRuns';
 
 // As on a project's Runs page, the 5s poll lists at most this many runs.
@@ -23,13 +23,15 @@ const RUNS_POLL_LIMIT = 200;
  * Gated on workspace-runs: it waits for the gates, and without the feature
  * sends a member to the projects list, where /org/runs led before (the
  * catch-all route), so the link an email or a web push carries for such a
- * run lands where it did. So it does with no workspace to have gates.
+ * run lands where it did. So it does with no workspace to have gates, and
+ * when the gates fail to load, which counts as the feature off (#379 bug
+ * 174): a load still on its way keeps it waiting.
  */
 export const WorkspaceRunsPage: React.FC = () => {
-  const gatesLoaded = useAppStore((s) => s.features !== null);
+  const gatesSettled = useAppStore((s) => s.features !== null || s.featuresFailed);
   const noWorkspace = useAppStore((s) => s.orgsLoaded && !s.activeOrgId);
   const on = useFeature(WORKSPACE_RUNS_FEATURE);
-  if ((gatesLoaded && !on) || noWorkspace) return <Navigate to="/projects" replace />;
+  if ((gatesSettled && !on) || noWorkspace) return <Navigate to="/projects" replace />;
   return (
     <div className="app-shell" style={{ background: 'var(--bg-app)', display: 'flex', flexDirection: 'column' }}>
       <Navbar title="Workspace runs" showWorkspaceControls />
@@ -62,24 +64,33 @@ const WorkspaceRuns: React.FC = () => {
   const selectedRunId = searchParams.get('run');
   const { isPhone, isCompact } = useViewport();
 
-  const load = useCallback(() => {
+  useEffect(() => {
     if (!activeOrgId) return;
     const query: { project: 'none'; status?: string; limit: number } = { project: 'none', limit: RUNS_POLL_LIMIT };
     if (statusFilter !== 'all') query.status = statusFilter;
-    agentRunsAPI
-      .list(query)
-      .then((res) => {
-        setRuns(res.data || []);
-        setError('');
-      })
-      .catch((err) => setError(apiErrorMessage(err, 'Failed to load runs')));
-  }, [activeOrgId, statusFilter]);
-
-  useEffect(() => {
+    // A workspace switch, or another filter, starts a new poll: what the
+    // old one still has on its way is dropped (pollGuard).
+    const guard = pollGuard();
+    const load = () => {
+      const current = guard.next();
+      agentRunsAPI
+        .list(query)
+        .then((res) => {
+          if (!current()) return;
+          setRuns(res.data || []);
+          setError('');
+        })
+        .catch((err) => {
+          if (current()) setError(apiErrorMessage(err, 'Failed to load runs'));
+        });
+    };
     load();
     const timer = window.setInterval(load, 5000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+    return () => {
+      guard.close();
+      window.clearInterval(timer);
+    };
+  }, [activeOrgId, statusFilter]);
 
   // A notification lists a member's runs of every workspace, so its link
   // may name a run of another one: follow the run there, as a project's

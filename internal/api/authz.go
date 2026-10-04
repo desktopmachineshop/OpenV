@@ -141,7 +141,7 @@ func (h *Handler) requireProjectVisible(w http.ResponseWriter, r *http.Request, 
 // a member of it, or a platform admin? If not, it answers absent, as for
 // what the request names there when no row has it (I3).
 func (h *Handler) requireOrgVisible(w http.ResponseWriter, r *http.Request, orgID string, absent notFound) bool {
-	return h.orgAccess(w, r, orgID, orgs.RoleMember, absent)
+	return h.orgAccess(w, r, orgID, orgs.RoleMember, absent, notFound{})
 }
 
 // requireUserVisible asks, of an account a request names by id, whether the
@@ -203,7 +203,7 @@ func (h *Handler) requireTeamVisible(w http.ResponseWriter, r *http.Request, tea
 		if pin := h.teamPin(team); pin != "" && h.reachesProject(r, pin) {
 			return true
 		}
-		if h.orgAccess(discardResponse{}, r, team.OrgID, orgs.RoleMember, notFound{}) {
+		if h.orgAccess(discardResponse{}, r, team.OrgID, orgs.RoleMember, notFound{}, notFound{}) {
 			return true
 		}
 	}
@@ -290,15 +290,18 @@ func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID s
 // its own id: a caller who is no member of the resource's workspace gets
 // absent, the answer the handler gives an id no row has.
 func (h *Handler) requireOrgRoleFor(w http.ResponseWriter, r *http.Request, orgID string, minRole string, absent notFound) bool {
-	if !h.orgAccess(w, r, orgID, minRole, absent) {
+	if !h.orgAccess(w, r, orgID, minRole, absent, notFound{}) {
 		return false
 	}
 	return h.requireWritable(w, r, orgID)
 }
 
-func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string, minRole string, absent notFound) bool {
+// orgAccess is requireOrgRoleFor less the plan gate; a member below minRole
+// gets below (the zero notFound: the admin guard's 403).
+func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string, minRole string, absent, below notFound) bool {
 	lookedUp := absent != (notFound{})
 	absent = absent.or(unknownWorkspace)
+	below = below.or(notFound{http.StatusForbidden, "workspace admin access required"})
 	if orgID == "" {
 		absent.write(w)
 		return false
@@ -342,7 +345,7 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		return false
 	}
 	if minRole == orgs.RoleAdmin && role != orgs.RoleAdmin {
-		writeJSONError(w, http.StatusForbidden, "workspace admin access required")
+		below.write(w)
 		return false
 	}
 	return true
@@ -402,9 +405,9 @@ func (h *Handler) isOrgAdmin(r *http.Request, orgID string) bool {
 
 // requireRunAccess enforces access to an agent run: the user who launched it
 // always passes; project-scoped runs fall back to the project role ladder;
-// unscoped runs require workspace-admin rights on the run's org. A caller
-// with no access at all gets the 404 of a run no row has. Writes the error
-// response itself on failure.
+// unscoped runs require workspace-admin rights on the run's org. A caller who
+// may not read the run gets the 404 of a run no row has, a member who is no
+// admin at an unscoped run too (#379 bug 172). Writes its error response.
 func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *agentruns.Run, minRole string) bool {
 	if user := CurrentUser(r); user != nil && run.LaunchedBy != nil && *run.LaunchedBy == user.ID {
 		return true
@@ -413,7 +416,7 @@ func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *
 	if run.ProjectID != nil && *run.ProjectID != "" {
 		return h.requireProjectRoleFor(w, r, *run.ProjectID, minRole, absent)
 	}
-	return h.requireOrgRoleFor(w, r, run.OrgID, orgs.RoleAdmin, absent)
+	return h.orgAccess(w, r, run.OrgID, orgs.RoleAdmin, absent, absent) && h.requireWritable(w, r, run.OrgID)
 }
 
 // hasRunAccess reports whether the request would pass requireRunAccess.

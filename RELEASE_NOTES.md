@@ -27,6 +27,28 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **The Runs pages no longer flash runs you have switched away from.** A
+  project's Runs page, and Workspace runs, refresh their list every few
+  seconds. Right after you switched workspace or project, or chose another
+  status, a refresh for what you had left could arrive late and put its
+  runs back on the list for a few seconds, along with its warning that no
+  runner is online. An older refresh could also briefly replace a newer
+  one. A refresh that arrives late is now ignored.
+
+- **Each failed run keeps its own web push notification.** When two of
+  your agent runs failed, the second one's web push replaced the first
+  one's on your phone or computer, so you saw only one: for two runs of
+  one project, and for any two runs that belong to no project, in any of
+  your workspaces. Each run's failure now stays on screen beside the
+  others'.
+
+- **A run you cannot open is not found, whoever you are.** A run that
+  belongs to no project opens only for the member who launched it and for
+  the workspace's admins. Any other member of the workspace who followed a
+  link to it was told that workspace admin access was required, which
+  told them the run existed. They are now told the run is not found, as
+  someone outside the workspace is.
+
 - **Cancel always stops a run.** Cancelling a run at the moment its runner
   handed it back to the queue, as a runner shutting down does, could be
   lost: the run went back to waiting, and the next runner started it again.

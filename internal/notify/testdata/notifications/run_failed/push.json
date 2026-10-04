@@ -8,7 +8,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"Agent run failed\",\"body\":\"An agent run you launched finished with an error.\",\"url\":\"/projects/proj-apollo/agent-runs?run=run-42\",\"tag\":\"run_failed:proj-apollo\"}"
+          "payload": "{\"title\":\"Agent run failed\",\"body\":\"An agent run you launched finished with an error.\",\"url\":\"/projects/proj-apollo/agent-runs?run=run-42\",\"tag\":\"run_failed:run-42\"}"
         }
       ],
       "sent with the default allow-list": true,
@@ -21,7 +21,7 @@
       "sends": [
         {
           "endpoint": "https://push.example.test/user-ben",
-          "payload": "{\"title\":\"Agent run failed\",\"body\":\"An agent run you launched finished with an error.\",\"url\":\"/org/runs?run=run-44\",\"tag\":\"run_failed\"}"
+          "payload": "{\"title\":\"Agent run failed\",\"body\":\"An agent run you launched finished with an error.\",\"url\":\"/org/runs?run=run-44\",\"tag\":\"run_failed:run-44\"}"
         }
       ],
       "sent with the default allow-list": true,

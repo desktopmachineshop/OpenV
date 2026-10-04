@@ -273,8 +273,8 @@ func TestPushDispatcherFanOut(t *testing.T) {
 	if want := "/projects/proj-1/agent-runs?run=run-9"; got.URL != want {
 		t.Fatalf("url = %q, want %q", got.URL, want)
 	}
-	// Coalescing is scoped per type and project.
-	if want := notifications.TypeRunFailed + ":proj-1"; got.Tag != want {
+	// A run's notification coalesces with its run's alone (#379 bug 173).
+	if want := notifications.TypeRunFailed + ":run-9"; got.Tag != want {
 		t.Fatalf("tag = %q, want %q", got.Tag, want)
 	}
 
@@ -503,6 +503,48 @@ func TestPushTagFallsBackToWorkspace(t *testing.T) {
 	if pushTag(bare) != notifications.TypeRunFailed {
 		t.Fatalf("tag = %q, want the bare type", pushTag(bare))
 	}
+}
+
+// TestPushTagNamesItsRun pins #379 bug 173: a run's notification is tagged
+// with its run, so that one run's replace each other on a device and two
+// runs' never do, wherever the runs are. A run with no project was tagged
+// with its type alone, so the failures of two such runs, in any of the
+// member's workspaces, replaced each other, and two runs of one project
+// shared the project's tag. Other notifications keep their scope.
+func TestPushTagNamesItsRun(t *testing.T) {
+	runFailed := func(orgID, runID, projectID string) *notifications.Notification {
+		return notifications.New(orgID, "u-1", notifications.TypeRunFailed, "Agent run failed", "b",
+			map[string]interface{}{"kind": "run", "run_id": runID, "project_id": projectID})
+	}
+	for _, tc := range []struct {
+		name string
+		a, b *notifications.Notification
+	}{
+		{"two runs with no project, in two workspaces", runFailed("org-1", "run-1", ""), runFailed("org-2", "run-2", "")},
+		{"two runs with no project, in one workspace", runFailed("org-1", "run-1", ""), runFailed("org-1", "run-2", "")},
+		{"two runs of one project", runFailed("org-1", "run-1", "proj-1"), runFailed("org-1", "run-2", "proj-1")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if pushTag(tc.a) == pushTag(tc.b) {
+				t.Errorf("both tagged %q, want a tag of each run's own", pushTag(tc.a))
+			}
+		})
+	}
+
+	t.Run("one run's notifications share its tag", func(t *testing.T) {
+		first, again := runFailed("org-1", "run-1", ""), runFailed("org-1", "run-1", "")
+		if want := notifications.TypeRunFailed + ":run-1"; pushTag(first) != want || pushTag(again) != want {
+			t.Errorf("tags %q and %q, want both %q", pushTag(first), pushTag(again), want)
+		}
+	})
+
+	t.Run("a proposal keeps its project's tag", func(t *testing.T) {
+		proposal := notifications.New("org-1", "u-1", notifications.TypeProposalPending, "t", "b",
+			map[string]interface{}{"kind": "proposal", "proposal_id": "prop-1", "project_id": "proj-1", "run_id": "run-1"})
+		if want := notifications.TypeProposalPending + ":proj-1"; pushTag(proposal) != want {
+			t.Errorf("tag = %q, want %q", pushTag(proposal), want)
+		}
+	})
 }
 
 func contains(list []string, want string) bool {

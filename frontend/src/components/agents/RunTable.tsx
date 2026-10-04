@@ -18,6 +18,37 @@ const STATUS_FILTERS = [
   'cancelled',
 ];
 
+/**
+ * Guards a Runs page's poll (#379 bug 175). The page polls every 5 s, and
+ * polls anew when what it lists changes: another workspace or project,
+ * another status filter. An answer can land after that change, or after a
+ * later request's answer, and would put back a list the page has moved
+ * past. The poll's effect opens a guard and closes it on cleanup; each
+ * request takes the next number, and its answer is current while the guard
+ * is open and no later request has been answered, as SharedProductVotes
+ * numbers its reads. An answer slower than the poll still counts, so a
+ * server that takes longer than 5 s still updates the list.
+ */
+export const pollGuard = () => {
+  let open = true;
+  let sent = 0;
+  let shown = 0;
+  return {
+    /** Numbers a request; the function returned says, as its answer lands, whether to show it. */
+    next: () => {
+      const seq = ++sent;
+      return () => {
+        if (!open || seq < shown) return false;
+        shown = seq;
+        return true;
+      };
+    },
+    close: () => {
+      open = false;
+    },
+  };
+};
+
 const formatDuration = (run: AgentRun): string => {
   if (!run.started_at) return '—';
   const start = new Date(run.started_at).getTime();

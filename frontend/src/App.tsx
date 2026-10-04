@@ -104,6 +104,7 @@ function App() {
     setActiveOrgId,
     setOrgsLoaded,
     setFeatures,
+    setFeaturesFailed,
     emailVerificationRequired,
     setEmailVerificationRequired,
   } = useAppStore();
@@ -165,12 +166,14 @@ function App() {
         if (!cancelled) setFeatures(res.data);
       })
       .catch(() => {
-        // Gates stay closed until the next load; nothing else is affected.
+        // Gates stay closed until the next load; a page that waits for
+        // them stops waiting (featuresFailed).
+        if (!cancelled) setFeaturesFailed();
       });
     return () => {
       cancelled = true;
     };
-  }, [currentUser, walled, activeOrgId, setFeatures]);
+  }, [currentUser, walled, activeOrgId, setFeatures, setFeaturesFailed]);
 
   useEffect(() => {
     if (!currentUser || walled || !orgsLoaded) return;
