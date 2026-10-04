@@ -90,10 +90,11 @@ func (r *LinkRepository) FindByID(id string) (*links.Link, error) {
 	return link, nil
 }
 
-// FindByFromID retrieves all current links from an artifact (valid_to IS NULL)
+// FindByFromID retrieves all current links from an artifact (valid_to IS NULL),
+// each with its valid_from.
 func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 	query := `
-		SELECT id, from_id, to_id, type, suspect, attributes, version, created_at, updated_at
+		SELECT id, from_id, to_id, type, suspect, attributes, version, valid_from, created_at, updated_at
 		FROM links
 		WHERE from_id = $1 AND valid_to IS NULL
 		ORDER BY created_at DESC
@@ -118,6 +119,7 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
+			&link.ValidFrom,
 			&link.CreatedAt,
 			&link.UpdatedAt,
 		)
@@ -139,10 +141,11 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 	return linkList, rows.Err()
 }
 
-// FindByToID retrieves all current links to an artifact (valid_to IS NULL)
+// FindByToID retrieves all current links to an artifact (valid_to IS NULL),
+// each with its valid_from.
 func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 	query := `
-		SELECT id, from_id, to_id, type, suspect, attributes, version, created_at, updated_at
+		SELECT id, from_id, to_id, type, suspect, attributes, version, valid_from, created_at, updated_at
 		FROM links
 		WHERE to_id = $1 AND valid_to IS NULL
 		ORDER BY created_at DESC
@@ -167,6 +170,7 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
+			&link.ValidFrom,
 			&link.CreatedAt,
 			&link.UpdatedAt,
 		)
@@ -353,10 +357,12 @@ func (r *LinkRepository) Delete(id string) error {
 	return err
 }
 
-// FindByFromIDForVersion retrieves links from an artifact at a specific version
+// FindByFromIDForVersion retrieves links from an artifact at a specific
+// version, each with its validity: a link deleted since is among them, with
+// its valid_to.
 func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
+		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.valid_from, l.valid_to, l.created_at, l.updated_at
 		FROM links l
 		WHERE l.from_id = $1
 		AND EXISTS (
@@ -387,6 +393,8 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
+			&link.ValidFrom,
+			&link.ValidTo,
 			&link.CreatedAt,
 			&link.UpdatedAt,
 		)
@@ -409,10 +417,12 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 	return linkList, rows.Err()
 }
 
-// FindByToIDForVersion retrieves links to an artifact at a specific version
+// FindByToIDForVersion retrieves links to an artifact at a specific version,
+// each with its validity: a link deleted since is among them, with its
+// valid_to.
 func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
+		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.valid_from, l.valid_to, l.created_at, l.updated_at
 		FROM links l
 		WHERE l.to_id = $1
 		AND EXISTS (
@@ -443,6 +453,8 @@ func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*link
 			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
+			&link.ValidFrom,
+			&link.ValidTo,
 			&link.CreatedAt,
 			&link.UpdatedAt,
 		)

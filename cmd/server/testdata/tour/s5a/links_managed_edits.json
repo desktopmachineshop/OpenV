@@ -928,7 +928,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"},{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_satisfies>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"}]"
+        "[{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"},{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_satisfies>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 9>\",\"valid_to\":null,\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -942,7 +942,7 @@
             "rationale": "Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified."
           },
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
           "updated_at": "<time@step 7>"
@@ -955,7 +955,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -968,7 +968,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 9>",
           "valid_to": null,
           "created_at": "<time@step 9>",
           "updated_at": "<time@step 9>"
@@ -981,7 +981,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 8>",
           "valid_to": null,
           "created_at": "<time@step 8>",
           "updated_at": "<time@step 8>"
@@ -1010,7 +1010,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_satisfies>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_satisfies>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 9>\",\"valid_to\":null,\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1022,7 +1022,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -1035,7 +1035,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 9>",
           "valid_to": null,
           "created_at": "<time@step 9>",
           "updated_at": "<time@step 9>"
@@ -1048,7 +1048,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 8>",
           "valid_to": null,
           "created_at": "<time@step 8>",
           "updated_at": "<time@step 8>"
@@ -1063,7 +1063,7 @@
             "rationale": "Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified."
           },
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
           "updated_at": "<time@step 7>"
@@ -1120,7 +1120,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
+        "[{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1134,7 +1134,7 @@
             "rationale": "Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified."
           },
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
           "updated_at": "<time@step 7>"
@@ -1278,7 +1278,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Need one\",\"body\":\"Users need every answer traced.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"created_at\":\"<time@step 7>\",\"from_id\":\"<req>\",\"id\":\"<l_derives>\",\"suspect\":false,\"to_id\":\"<need>\",\"type\":\"derives-from\",\"updated_at\":\"<time@step 7>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 33>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 33>\"}"
+        "{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Need one\",\"body\":\"Users need every answer traced.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"created_at\":\"<time@step 7>\",\"from_id\":\"<req>\",\"id\":\"<l_derives>\",\"suspect\":false,\"to_id\":\"<need>\",\"type\":\"derives-from\",\"updated_at\":\"<time@step 7>\",\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 33>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 33>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1304,7 +1304,7 @@
               "to_id": "<need>",
               "type": "derives-from",
               "updated_at": "<time@step 7>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 7>",
               "valid_to": null,
               "version": 1
             }
@@ -1842,7 +1842,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 49>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1865,7 +1865,7 @@
               "suspect": false,
               "attributes": {},
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 49>",
               "valid_to": null,
               "created_at": "<time@step 49>",
               "updated_at": "<time@step 49>"
@@ -1964,7 +1964,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}]"
+        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1976,7 +1976,7 @@
           "suspect": false,
           "attributes": {},
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 49>",
           "valid_to": null,
           "created_at": "<time@step 49>",
           "updated_at": "<time@step 49>"
@@ -2000,7 +2000,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 49>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2024,7 +2024,7 @@
               "to_id": "<req>",
               "type": "satisfies",
               "updated_at": "<time@step 49>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 49>",
               "valid_to": null,
               "version": 1
             }
@@ -2078,7 +2078,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"}]"
+        "[{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2093,7 +2093,7 @@
             "witness": "\u003cqa\u003e \u0026 co"
           },
           "version": 2,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 8>",
           "valid_to": null,
           "created_at": "<time@step 8>",
           "updated_at": "<time@step 39>"
@@ -2193,7 +2193,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 57>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 57>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 57>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 57>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2217,7 +2217,7 @@
               "to_id": "<req>",
               "type": "satisfies",
               "updated_at": "<time@step 49>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 49>",
               "valid_to": null,
               "version": 1
             }
@@ -2284,7 +2284,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}]"
+        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2296,7 +2296,7 @@
           "suspect": false,
           "attributes": {},
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 49>",
           "valid_to": null,
           "created_at": "<time@step 49>",
           "updated_at": "<time@step 49>"
@@ -2327,7 +2327,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":6,\"valid_from\":\"<time@step 60>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 60>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":6,\"valid_from\":\"<time@step 60>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 60>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2351,7 +2351,7 @@
               "to_id": "<req>",
               "type": "satisfies",
               "updated_at": "<time@step 49>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 49>",
               "valid_to": null,
               "version": 1
             }
@@ -2480,7 +2480,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<creq>\",\"project_id\":\"<c>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Supplier req\",\"body\":\"The subsystem shall trace its part of every answer.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}],\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 62>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 62>\"}"
+        "{\"id\":\"<creq>\",\"project_id\":\"<c>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Supplier req\",\"body\":\"The subsystem shall trace its part of every answer.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}],\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 62>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 62>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2502,7 +2502,7 @@
               "suspect": false,
               "attributes": null,
               "version": 1,
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 16>",
               "valid_to": null,
               "created_at": "<time@step 16>",
               "updated_at": "<time@step 16>"
@@ -2547,7 +2547,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2559,7 +2559,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -2756,7 +2756,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2768,7 +2768,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -2781,7 +2781,7 @@
           "suspect": false,
           "attributes": null,
           "version": 3,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
           "updated_at": "<time@step 41>"

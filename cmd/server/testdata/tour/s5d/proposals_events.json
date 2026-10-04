@@ -24690,7 +24690,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer within 2 s, always\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@step 30>\",\"from_id\":\"<tc1.artifact>\",\"id\":\"<tc1.link>\",\"suspect\":false,\"to_id\":\"<r1>\",\"type\":\"verifies\",\"updated_at\":\"<time@step 30>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 80>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 80>\"}"
+        "{\"id\":\"<r1>\",\"project_id\":\"<p>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer within 2 s, always\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@step 30>\",\"from_id\":\"<tc1.artifact>\",\"id\":\"<tc1.link>\",\"suspect\":false,\"to_id\":\"<r1>\",\"type\":\"verifies\",\"updated_at\":\"<time@step 30>\",\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 80>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 80>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -24713,7 +24713,7 @@
               "to_id": "<r1>",
               "type": "verifies",
               "updated_at": "<time@step 30>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@step 30>",
               "valid_to": null,
               "version": 1
             }

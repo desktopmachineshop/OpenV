@@ -646,7 +646,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":3,\"valid_from\":\"<time@step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 18>\"}"
+        "{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":3,\"valid_from\":\"<time@step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 18>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -670,7 +670,7 @@
               "to_id": "<req1>",
               "type": "verifies",
               "updated_at": "<time@before step 1>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "version": 1
             }
@@ -720,7 +720,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 19>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 19>\"}"
+        "{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 19>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 19>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -744,7 +744,7 @@
               "to_id": "<req1>",
               "type": "verifies",
               "updated_at": "<time@before step 1>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "version": 1
             }
@@ -902,7 +902,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"moved\":[{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":4,\"valid_from\":\"<time@step 24>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}],\"already_in_review\":0,\"approved\":1,\"superseded\":0,\"out_of_scope\":4,\"types\":[\"requirement\"]}"
+        "{\"moved\":[{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":4,\"valid_from\":\"<time@step 24>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}],\"already_in_review\":0,\"approved\":1,\"superseded\":0,\"out_of_scope\":4,\"types\":[\"requirement\"]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -928,7 +928,7 @@
                   "to_id": "<req1>",
                   "type": "verifies",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_from": "<time@before step 1>",
                   "valid_to": null,
                   "version": 1
                 }
@@ -999,7 +999,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"moved\":[{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"}],\"already_in_review\":1,\"approved\":1,\"superseded\":0,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
+        "{\"moved\":[{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"}],\"already_in_review\":1,\"approved\":1,\"superseded\":0,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1062,7 +1062,7 @@
                   "to_id": "<req1>",
                   "type": "verifies",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_from": "<time@before step 1>",
                   "valid_to": null,
                   "version": 1
                 }
@@ -1340,7 +1340,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"in_review_artifacts\":[{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":4,\"valid_from\":\"<time@step 24>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}],\"suspect_links\":[{\"id\":\"<link>\",\"type\":\"verifies\",\"from_id\":\"<tc>\",\"from_title\":\"Check REQ-1 timing\",\"from_type\":\"test-case\",\"to_id\":\"<req1>\",\"to_title\":\"Answer in time\",\"to_type\":\"requirement\",\"updated_at\":\"<time@before step 1>\"}]}"
+        "{\"in_review_artifacts\":[{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":4,\"valid_from\":\"<time@step 24>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}],\"suspect_links\":[{\"id\":\"<link>\",\"type\":\"verifies\",\"from_id\":\"<tc>\",\"from_title\":\"Check REQ-1 timing\",\"from_type\":\"test-case\",\"to_id\":\"<req1>\",\"to_title\":\"Answer in time\",\"to_type\":\"requirement\",\"updated_at\":\"<time@before step 1>\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1385,7 +1385,7 @@
                   "to_id": "<req1>",
                   "type": "verifies",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_from": "<time@before step 1>",
                   "valid_to": null,
                   "version": 1
                 }
@@ -1456,7 +1456,7 @@
                   "to_id": "<req1>",
                   "type": "verifies",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_from": "<time@before step 1>",
                   "valid_to": null,
                   "version": 1
                 }
@@ -1510,7 +1510,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"approved\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"approved\"},\"version\":5,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
+        "{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"approved\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"approved\"},\"version\":5,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1534,7 +1534,7 @@
               "to_id": "<req1>",
               "type": "verifies",
               "updated_at": "<time@before step 1>",
-              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_from": "<time@before step 1>",
               "valid_to": null,
               "version": 1
             }
@@ -1580,7 +1580,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"in_review_artifacts\":[{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"}],\"suspect_links\":[]}"
+        "{\"in_review_artifacts\":[{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"}],\"suspect_links\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1625,7 +1625,7 @@
                   "to_id": "<req1>",
                   "type": "verifies",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_from": "<time@before step 1>",
                   "valid_to": null,
                   "version": 1
                 }
@@ -1704,7 +1704,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"moved\":[{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 3 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":7,\"valid_from\":\"<time@step 32>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 32>\"}],\"already_in_review\":4,\"approved\":0,\"superseded\":1,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
+        "{\"moved\":[{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 3 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":7,\"valid_from\":\"<time@step 32>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 32>\"}],\"already_in_review\":4,\"approved\":0,\"superseded\":1,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1730,7 +1730,7 @@
                   "to_id": "<req1>",
                   "type": "verifies",
                   "updated_at": "<time@before step 1>",
-                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_from": "<time@before step 1>",
                   "valid_to": null,
                   "version": 1
                 }
