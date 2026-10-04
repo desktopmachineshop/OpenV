@@ -256,6 +256,13 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 		return
 	}
 	if _, err := h.workItemService.Move(*run.WorkItemID, workitems.MoveRequest{Column: column, SortOrder: 0}, actor); err != nil {
+		// A card deleted since the run named it, on its own or with its
+		// project, has nothing to move and no activity to keep (#379 bug
+		// 149: each status change of such a run logged this ERROR).
+		if errors.Is(err, workitems.ErrNotFound) {
+			slog.Debug("orchestration: the run's card is gone", "run_id", run.ID, "work_item_id", *run.WorkItemID)
+			return
+		}
 		slog.Error("orchestration: failed to move card", "work_item_id", *run.WorkItemID, "error", err)
 	}
 
@@ -475,6 +482,11 @@ func (h *Hooks) deliverInterviewReply(run *agentruns.Run) {
 		reply = "(the interviewer had nothing further to add)"
 	}
 	message, err := h.interviewService.AppendMessage(*run.InterviewSessionID, interviews.RoleAssistant, reply)
+	if errors.Is(err, interviews.ErrSessionNotFound) {
+		// The session went with its interview or project: no one to answer.
+		slog.Debug("orchestration: the run's interview session is gone", "run_id", run.ID, "session_id", *run.InterviewSessionID)
+		return
+	}
 	if err != nil {
 		slog.Error("orchestration: failed to append interview reply", "session_id", *run.InterviewSessionID, "error", err)
 		return
@@ -509,6 +521,11 @@ func (h *Hooks) deliverGuidedReply(run *agentruns.Run) {
 		reply = "(the copilot had nothing further to add)"
 	}
 	message, err := h.guidedService.AppendChatMessage(*run.GuidedSessionID, guided.ChatRoleAssistant, reply)
+	if errors.Is(err, guided.ErrSessionNotFound) {
+		// The session went with its project: no one to answer.
+		slog.Debug("orchestration: the run's guided session is gone", "run_id", run.ID, "session_id", *run.GuidedSessionID)
+		return
+	}
 	if err != nil {
 		slog.Error("orchestration: failed to append guided copilot reply", "session_id", *run.GuidedSessionID, "error", err)
 		return

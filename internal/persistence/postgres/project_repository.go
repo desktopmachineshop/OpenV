@@ -188,8 +188,11 @@ func (r *ProjectRepository) Update(project *projects.Project) error {
 // It answers what the transaction cannot finish (projects.Removed): the
 // stored files of the figures and evidence files whose rows it deleted, for
 // the caller to remove once it has committed (#379 bug 136: they stayed on
-// disk), and the project's live agent runs, which it cancels (#379 bug 137:
-// they went on with no project), for the caller to announce.
+// disk), and the project's unfinished agent runs, which it cancels (#379 bug
+// 137: they went on with no project; bug 146: one awaiting approval waited
+// for ever, its proposals gone), for the caller to announce. Its runs stop
+// naming the rows it deletes with the project: its cards, sessions,
+// automations and crews (#379 bug 149).
 func (r *ProjectRepository) Delete(id string) (*projects.Removed, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -216,6 +219,9 @@ func (r *ProjectRepository) Delete(id string) (*projects.Removed, error) {
 	// the runs the cancel holds and, once it commits, finds them cancelled.
 	runs, err := cancelProjectRuns(tx, id)
 	if err != nil {
+		return nil, fmt.Errorf("failed to delete project: %w", err)
+	}
+	if err := clearProjectRunReferences(tx, id); err != nil {
 		return nil, fmt.Errorf("failed to delete project: %w", err)
 	}
 	files, err := deleteProjectFiles(tx, id)

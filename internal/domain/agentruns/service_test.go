@@ -89,15 +89,35 @@ func (f *fakeRunRepo) UpdateTerminal(run *Run) (bool, error) {
 	return true, nil
 }
 
+// ReleaseClaim mirrors the SQL: a run whose cancel was requested ends
+// cancelled, its worker kept; any other goes back to the queue.
 func (f *fakeRunRepo) ReleaseClaim(runID, workerID string) (bool, error) {
 	r, ok := f.runs[runID]
 	if !ok || r.Status != StatusClaimed || r.WorkerID != workerID {
 		return false, nil
 	}
+	r.RunTokenHash = ""
+	r.PartialText = ""
+	if r.CancelRequested {
+		now := time.Now()
+		r.Status = StatusCancelled
+		r.FinishedAt = &now
+		return true, nil
+	}
 	r.Status = StatusQueued
 	r.WorkerID = ""
 	r.HeartbeatAt = nil
-	r.RunTokenHash = ""
+	return true, nil
+}
+
+// UpdateTokenHash mirrors the SQL: only a run a worker holds whose cancel
+// was not requested takes a token.
+func (f *fakeRunRepo) UpdateTokenHash(runID, hash string) (bool, error) {
+	r, ok := f.runs[runID]
+	if !ok || (r.Status != StatusClaimed && r.Status != StatusRunning) || r.CancelRequested {
+		return false, nil
+	}
+	r.RunTokenHash = hash
 	return true, nil
 }
 

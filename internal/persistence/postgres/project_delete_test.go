@@ -505,10 +505,12 @@ func TestDeletingAProjectAnswersItsStoredFiles(t *testing.T) {
 // as a cancel does, and revokes their tokens (#379 bug 137: they went on
 // with no project, their token reaching nothing): a queued run is cancelled,
 // with its token revoked; a claimed or running run is asked to stop, its
-// worker kept, and its token revoked at once. A finished run, and one
-// awaiting approval, stay as they were. Each answered is in Removed's
-// CancelledRuns, and no run of another project, or of no project, is
-// touched: the next claims take those, never the cancelled one.
+// worker kept, and its token revoked at once. A run awaiting approval is
+// cancelled as a queued one is (bug 146: its proposals went with the
+// project, and it waited for ever). A finished run stays as it was. Each
+// answered is in Removed's CancelledRuns, and no run of another project, or
+// of no project, is touched: the next claims take those, never the
+// cancelled one.
 func TestDeletingAProjectCancelsItsLiveRuns(t *testing.T) {
 	db := rtDB(t)
 	repo := NewProjectRepository(db)
@@ -535,6 +537,7 @@ func TestDeletingAProjectCancelsItsLiveRuns(t *testing.T) {
 	for _, status := range []string{"succeeded", "failed", "cancelled", "timed_out", "awaiting_approval"} {
 		seed(status, doomedID, status, "worker-3")
 	}
+	awaiting := seeded["awaiting_approval"]
 	otherProject := seed("another project's", keptID, "queued", "")
 	noProject := seed("no project's", "", "queued", "")
 
@@ -544,10 +547,10 @@ func TestDeletingAProjectCancelsItsLiveRuns(t *testing.T) {
 	}
 	got := append([]string(nil), removed.CancelledRuns...)
 	sort.Strings(got)
-	want := []string{queued.id, claimed.id, running.id}
+	want := []string{queued.id, claimed.id, running.id, awaiting.id}
 	sort.Strings(want)
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Delete answered the cancelled runs %q, want the queued, claimed and running ones %q", got, want)
+		t.Errorf("Delete answered the cancelled runs %q, want the queued, claimed, running and awaiting ones %q", got, want)
 	}
 
 	for name, r := range seeded {
@@ -560,6 +563,10 @@ func TestDeletingAProjectCancelsItsLiveRuns(t *testing.T) {
 		wantStatus, wantToken, wantCancel, wantFinished := r.status, r.token, false, false
 		switch r {
 		case queued:
+			wantStatus, wantToken, wantCancel, wantFinished = "cancelled", "", true, true
+		case awaiting:
+			// Seeded with no finished_at, so the cancel's own is the one
+			// read; a finished run keeps whatever finished_at it had.
 			wantStatus, wantToken, wantCancel, wantFinished = "cancelled", "", true, true
 		case claimed, running:
 			wantToken, wantCancel = "", true

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   AgentDef,
   agentsAPI,
@@ -26,6 +26,7 @@ import {
   toForm,
 } from './AutomationsPageForm';
 import { ScopeField, WorkspaceScopePill } from './AutomationsPageScope';
+import { AutomationRunDetail } from './AutomationsPageRun';
 
 export const AutomationsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -46,6 +47,16 @@ export const AutomationsPage: React.FC = () => {
   const canChooseScope = useFeature('workspace-automations') && isAdmin;
   const navigate = useNavigate();
   const confirm = useConfirm();
+  // The run Run now started with no project, shown beside the list (?run=).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedRunId = searchParams.get('run');
+  const selectRun = (runId: string | null) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (runId) next.set('run', runId);
+      else next.delete('run');
+      return next;
+    });
 
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
@@ -126,8 +137,11 @@ export const AutomationsPage: React.FC = () => {
 
   const runNow = async (a: Automation) => {
     try {
-      const res = await automationsAPI.runNow(a.id);
-      navigate(`/projects/${projectId}/agent-runs?run=${res.data.id}`);
+      const run = (await automationsAPI.runNow(a.id)).data;
+      // A whole-workspace automation's run has no project, which no
+      // project's Runs page lists (#379 bug 141): it opens here instead.
+      if (run.project_id) navigate(`/projects/${run.project_id}/agent-runs?run=${run.id}`);
+      else selectRun(run.id);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to run automation');
     }
@@ -185,7 +199,8 @@ export const AutomationsPage: React.FC = () => {
 
       <ErrorBanner message={error} onDismiss={() => setError('')} />
 
-      <div className="table-container" style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 20 }}>
+      <div className="table-container" style={{ flex: 1, minWidth: 0 }}>
         <div className="table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -330,6 +345,10 @@ export const AutomationsPage: React.FC = () => {
           </tbody>
         </table>
         </div>
+      </div>
+      {selectedRunId && (
+        <AutomationRunDetail runId={selectedRunId} onSelectRun={selectRun} onClose={() => selectRun(null)} />
+      )}
       </div>
 
       {form && (

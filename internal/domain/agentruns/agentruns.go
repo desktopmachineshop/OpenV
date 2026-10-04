@@ -374,8 +374,9 @@ type Repository interface {
 	// ReleaseClaim conditionally returns a claimed run to the queue, but only
 	// while it is still claimed by workerID (claim handshake failed), and
 	// revokes its run token, so the departing worker's token stops
-	// authenticating at once (the next claim issues a fresh one); reports
-	// whether the release was applied.
+	// authenticating at once (the next claim issues a fresh one); a run
+	// whose cancel was requested ends cancelled instead. Reports whether the
+	// release was applied.
 	ReleaseClaim(runID, workerID string) (bool, error)
 	// CancelQueued conditionally cancels a run only while it is still queued
 	// (and revokes its token), so a concurrent worker claim is never stomped;
@@ -401,8 +402,10 @@ type Repository interface {
 	// other column (in particular status).
 	UpdateWorkItemID(runID, workItemID string) error
 	// UpdateTokenHash rotates a run's token hash without touching any other
-	// column (in particular status).
-	UpdateTokenHash(runID, hash string) error
+	// column (in particular status), but only while a worker holds the run
+	// and its cancel has not been requested, so a revoked token stays
+	// revoked; reports whether it was applied.
+	UpdateTokenHash(runID, hash string) (bool, error)
 	// FailStale marks claimed/running runs failed when their heartbeat is
 	// older than cutoff; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
@@ -463,12 +466,15 @@ type Service interface {
 	// ReleaseClaim returns a just-claimed run to the queue when the claim
 	// handshake fails after Claim (agent lookup or token mint), so the run is
 	// not stranded until the stale reaper. Only applies while the run is
-	// still claimed by workerID.
+	// still claimed by workerID. A run whose cancel was requested ends
+	// cancelled instead.
 	ReleaseClaim(runID, workerID string) error
 	// AttachWorkItem links a run to the kanban card tracking it.
 	AttachWorkItem(runID, workItemID string) error
 	// ReissueToken mints a fresh run token (returned raw; hash stored).
-	// Used at claim time to hand the worker a usable credential.
+	// Used at claim time to hand the worker a usable credential. A run whose
+	// cancel was requested, or that no worker holds, gets none:
+	// ErrInvalidTransition.
 	ReissueToken(runID string) (string, error)
 	MarkRunning(id string) error
 	// AppendLogs persists a log batch and, when partialText is non-empty, the
@@ -481,7 +487,8 @@ type Service interface {
 	// AnnounceCancelled tells the runs' subscribers of a cancel written
 	// outside this service, as RequestCancel tells them of its own: the
 	// runs a project's delete cancelled, or asked to stop, in its own
-	// transaction (projects.Removed). An id no run has is skipped.
+	// transaction (projects.Removed), one awaiting approval among them. An
+	// id no run has is skipped.
 	AnnounceCancelled(ids []string)
 	Heartbeat(id string) error
 	FailStale(maxSilence time.Duration) ([]string, error)

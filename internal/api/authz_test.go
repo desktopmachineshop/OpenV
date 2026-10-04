@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -322,6 +323,7 @@ func workerRunReq(body, orgID, userID, runID string) *http.Request {
 // Every other run answers the same 404 (OpenV REQ-27, REQ-16).
 func TestWorkerRunLifecycleScoping(t *testing.T) {
 	launcher := "user-1"
+	holder := "user-3"
 	project := "proj-1"
 	newRuns := func() map[string]*agentruns.Run {
 		return map[string]*agentruns.Run{
@@ -329,6 +331,13 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 			"run-foreign":   {ID: "run-foreign", OrgID: "org-2", Status: agentruns.StatusClaimed},
 			"run-unowned":   {ID: "run-unowned", OrgID: "org-1", Status: agentruns.StatusClaimed},
 			"run-unowned-p": {ID: "run-unowned-p", OrgID: "org-1", Status: agentruns.StatusClaimed, ProjectID: &project},
+			// An ownerless run user-3's runner claimed in a project since
+			// deleted: it has no project, and its cancel is requested.
+			"run-claimed-gone": {ID: "run-claimed-gone", OrgID: "org-1", Status: agentruns.StatusRunning, ClaimedBy: &holder,
+				CancelRequested: true},
+			// The same run once its runner reported it cancelled.
+			"run-claimed-done": {ID: "run-claimed-done", OrgID: "org-1", Status: agentruns.StatusCancelled, ClaimedBy: &holder,
+				CancelRequested: true},
 		}
 	}
 
@@ -363,6 +372,14 @@ func TestWorkerRunLifecycleScoping(t *testing.T) {
 		{"workspace admin's personal key on an ownerless run with no project passes", "run-unowned", "org-1",
 			"user-admin", 0},
 		{"workspace key on an ownerless run with no project passes", "run-unowned", "org-1", "", 0},
+		// #379 bug 147: a non-admin member's runner keeps the run it holds
+		// when the run's project is deleted, to read the cancel and report
+		// it; nobody else gains it, nor the runner once the run is over.
+		{"personal key on the live run its holder's runner claimed, its project gone, passes", "run-claimed-gone", "org-1",
+			"user-3", 0},
+		{"another member's personal key on that run gets 404", "run-claimed-gone", "org-1", "user-2", http.StatusNotFound},
+		{"personal key on the run its holder's runner claimed, once it is over, gets 404", "run-claimed-done", "org-1",
+			"user-3", http.StatusNotFound},
 	}
 
 	for _, ep := range endpoints {
@@ -828,6 +845,21 @@ func TestClaimHandshakeFailureReleasesRun(t *testing.T) {
 		}
 		if len(runSvc.released) != 1 {
 			t.Fatalf("released = %v, want exactly one release", runSvc.released)
+		}
+	})
+
+	// #379 bug 151: a run whose cancel was requested between the claim and
+	// the handshake (a project's delete revoked its token) gets no token.
+	// It is handed back, which ends it cancelled, and the worker is told
+	// there was nothing to claim, as no error of its own.
+	t.Run("a run asked to stop meanwhile is handed back and nothing is claimed", func(t *testing.T) {
+		h, runSvc := newClaim(true, fmt.Errorf("%w: the run's cancel was requested", agentruns.ErrInvalidTransition))
+		w := claim(t, h)
+		if w.Code != http.StatusNoContent || w.Body.Len() != 0 {
+			t.Fatalf("status = %d (body %q), want 204 and no body", w.Code, w.Body.String())
+		}
+		if len(runSvc.released) != 1 || runSvc.released[0] != [2]string{"run-1", "w-1"} {
+			t.Fatalf("released = %v, want the claimed run handed back for worker w-1", runSvc.released)
 		}
 	})
 

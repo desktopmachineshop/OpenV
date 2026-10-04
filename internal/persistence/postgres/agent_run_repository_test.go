@@ -311,8 +311,8 @@ func TestUpdateTokenHashRotation(t *testing.T) {
 	id := f.queueRun(t, runSpec{})
 	f.setRunState(t, id, agentruns.StatusRunning, "old-hash")
 
-	if err := f.repo.UpdateTokenHash(id, "new-hash"); err != nil {
-		t.Fatalf("UpdateTokenHash: %v", err)
+	if applied, err := f.repo.UpdateTokenHash(id, "new-hash"); err != nil || !applied {
+		t.Fatalf("UpdateTokenHash = %v, %v, want applied", applied, err)
 	}
 	if got, err := f.repo.FindByTokenHash("old-hash"); err != nil || got != nil {
 		t.Errorf("old hash still authenticates: %v, %v", got, err)
