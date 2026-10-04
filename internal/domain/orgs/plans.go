@@ -5,6 +5,8 @@
 
 package orgs
 
+import "slices"
+
 // Billing plans. Plan gates default resource limits (PlanDefaults); it is set
 // at org creation from the deployment's configured default and has no
 // self-serve upgrade path yet.
@@ -244,18 +246,24 @@ func MaxPlanUploadMB() int {
 // is what makes "no limits from us" true rather than merely advertised.
 var defaultPlan = PlanSingle
 
-// SetDefaultPlan installs the plan new workspaces are created on. An unknown
-// name is ignored rather than stored, so a typo cannot create workspaces on a
-// plan whose defaults nobody has written.
+// SetDefaultPlan installs the plan new workspaces are created on: any plan
+// ValidPlan accepts, the open-source plan included. An unknown name is
+// ignored rather than stored, so a typo cannot create workspaces on a plan
+// whose defaults nobody has written; cmd/server warns about one at boot and
+// installs the deployment's own default instead.
 func SetDefaultPlan(plan string) {
-	switch plan {
-	case PlanSingle, PlanBusinessLite, PlanBusiness, PlanEnterprise, PlanSelfHost, PlanFree, PlanTeam:
+	if ValidPlan(plan) {
 		defaultPlan = plan
 	}
 }
 
 // DefaultPlan is the plan new workspaces are created on.
 func DefaultPlan() string { return defaultPlan }
+
+// PlanNames is every plan ValidPlan accepts, in the order a list of them
+// is shown: the tiers, the self-host plan, the open-source plan and the
+// two legacy aliases.
+func PlanNames() []string { return slices.Clone(allPlans) }
 
 // ValidPlan reports whether name is a plan a workspace can be put on: the
 // tiers, the self-host plan, the open-source plan (REQ-154) and the two

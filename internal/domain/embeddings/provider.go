@@ -43,8 +43,9 @@ type HTTPProvider struct {
 //	OPENV_EMBEDDING_API_KEY   API key (read by the caller; blank => embeddings disabled)
 //	OPENV_EMBEDDING_BASE_URL  API base URL (default https://api.openai.com/v1)
 //	OPENV_EMBEDDING_MODEL     model id (default text-embedding-3-small)
-//	OPENV_EMBEDDING_PROVIDER  informational label only (e.g. "openai");
-//	                          the wire protocol is always OpenAI-compatible
+//
+// The wire protocol is always OpenAI-compatible; there is no provider
+// setting.
 func ProviderFromEnv(apiKey string) *HTTPProvider {
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENV_EMBEDDING_BASE_URL")), "/")
 	if baseURL == "" {

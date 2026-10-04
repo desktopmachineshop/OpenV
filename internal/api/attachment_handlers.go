@@ -571,19 +571,3 @@ func (h *Handler) mayAttachKind(r *http.Request, artifactID string, kind attachm
 	}
 	return h.projectFeatureEnabled(r, h.projectIDForArtifact(artifactID), release.FeatureAttachmentFormats)
 }
-
-// isImageMimeType checks if the mime type is a valid image type. Figures no
-// longer go through it — they use the attachments catalogue — but avatars and
-// workspace logos still do, and those must stay pictures.
-func isImageMimeType(mimeType string) bool {
-	validTypes := map[string]bool{
-		"image/jpeg":    true,
-		"image/png":     true,
-		"image/gif":     true,
-		"image/webp":    true,
-		"image/svg+xml": true,
-		"image/tiff":    true,
-		"image/bmp":     true,
-	}
-	return validTypes[mimeType]
-}

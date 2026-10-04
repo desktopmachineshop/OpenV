@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -53,11 +54,20 @@ func (a *app) config() {
 	// whole deployment without touching the database.
 	a.selfHosted = envBool("OPENV_SELF_HOSTED", false)
 	orgs.SetSelfHosted(a.selfHosted)
-	defaultPlan := envOr("OPENV_PLAN_DEFAULT", "")
-	if defaultPlan == "" {
-		defaultPlan = orgs.PlanSingle
-		if a.selfHosted {
-			defaultPlan = orgs.PlanSelfHost
+	// OPENV_PLAN_DEFAULT names the plan new workspaces are created on in
+	// place of the deployment's own default. A name that is not a plan
+	// keeps that default, with one warning naming the variable (#379,
+	// question 15's rule), and the boot log below shows the plan used.
+	defaultPlan := orgs.PlanSingle
+	if a.selfHosted {
+		defaultPlan = orgs.PlanSelfHost
+	}
+	if named := envOr("OPENV_PLAN_DEFAULT", ""); named != "" {
+		if orgs.ValidPlan(named) {
+			defaultPlan = named
+		} else {
+			slog.Warn("ignoring an unknown plan; the deployment's default plan applies",
+				"var", "OPENV_PLAN_DEFAULT", "want", "one of "+strings.Join(orgs.PlanNames(), ", "))
 		}
 	}
 	orgs.SetDefaultPlan(defaultPlan)

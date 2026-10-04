@@ -30,9 +30,10 @@ the Phase 3 consolidations that give quirks their names.
   (`internal/api/agent_definition_handlers.go`) and `CreateOrg`
   (`internal/api/org_core_handlers.go`); `internal/api` has 249 raw encodes
   (S1's `raw_json_encodes` ratchet). Below 1,400 bytes the server then
-  answers `text/plain`, and a gzipped body carries no type.
-  `ContentTypeMiddleware` (`internal/api/middleware_content_type.go`) sets no type
-  despite its name.
+  answers `text/plain`, and a gzipped body carries no type. No middleware
+  sets one: the router's `ContentTypeMiddleware`, which set none despite its
+  name and only answered an `OPTIONS` that CORS always answers first, was
+  removed (#379 question 41).
 - **Pinned by, named as:** S5 (S5a for the requirements core, S5b for V&V
   and the suite, S5c for identity and the workspace, S5d for agents and the
   worker wire, S5e per identity); `writeJSONBare` (X1) *(planned)*. Pain

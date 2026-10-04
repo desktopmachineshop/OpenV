@@ -16,5 +16,10 @@ cmd/openv-connector/payload/
 __pycache__/
 *.pyc
 
+# npm dependencies and the caches tools write beside them (vitest run from the
+# repository root keeps node_modules/.vite/ there), at any depth. No trailing
+# slash, so a worktree's symlinked frontend/node_modules is ignored too.
+node_modules
+
 # Runtime data the API writes when run from the checkout (DATA_DIR, default ./data): per-workspace agent files.
 /data/

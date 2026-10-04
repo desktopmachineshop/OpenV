@@ -145,7 +145,6 @@ func main()
     call conversion to int64
   call (*internal/domain/proposals.DefaultService).SetAppliers
   call (*internal/orchestration.Hooks).SetGuidedNudgeLauncher
-  call (*github.com/gorilla/mux.Router).Use
   call (*internal/api.Handler).RegisterRoutes
   call (*github.com/gorilla/mux.Router).Handle -> (*github.com/gorilla/mux.Route).Methods
   call (*internal/api.AuthMiddleware).SetPoolKey

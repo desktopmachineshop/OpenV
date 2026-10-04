@@ -197,6 +197,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   more in between. A click now loads the artifact once, live or in a
   baseline.
 
+- **Following a citation or pasting a copy in the requirements workspace
+  selects it.** Clicking a reference such as #REQ-12 in an artifact's
+  description or notes, or one to a figure that is no longer there, went
+  straight back to the artifact selected before instead of opening the
+  one it named. Paste before, Paste after and Duplicate in the tree's
+  right-click menu made the copy but left the selection where it was.
+  Each now selects the artifact it names, or the new copy, as a click in
+  the tree does, and the page's address follows it.
+
 - **An expired share link no longer offers Revoke.** In project settings,
   a share link past its expiry date already opens nothing, yet its row
   still had a Revoke button, while a revoked link's row had none. An
@@ -377,6 +386,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   another. Workspace membership and invitation events concern the whole
   workspace, so they fire only an automation that covers the whole
   workspace, not one made on a project's Automations page.
+
+- **A mistyped `OPENV_PLAN_DEFAULT` is warned about at boot.** For
+  operators: when `OPENV_PLAN_DEFAULT` named no plan, new workspaces were
+  quietly created on the `single` plan, even on a self-hosted deployment,
+  and the boot log still showed the mistyped name as the default plan. Such
+  a name now keeps the deployment's default, `self_host` with
+  `OPENV_SELF_HOSTED=true` and `single` otherwise; the boot log carries a
+  warning naming the variable, and its `workspace limits configured` line
+  shows the plan actually used. `open_source`, which was ignored the same
+  way, is now accepted.
+
+- **A failed Antigravity run points you to a Gemini API key only when it
+  failed to sign in.** The note about the keyring and setting a Gemini API
+  key was added whenever the CLI's error merely contained letters such as
+  "auth" or "login", so an error about an "author" field or a file named
+  `auth.go` was explained, and failed, as a sign-in problem, while
+  "invalid API key" or "HTTP 403" came with no explanation. The note now
+  appears exactly when the run fails as a sign-in problem, read by the
+  same whole-word rule as every other agent's failure.
 
 - **Deleting a project now deletes everything in it.** Deleting a project
   removed the project itself, its members, baselines and share links, but

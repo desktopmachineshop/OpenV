@@ -418,13 +418,24 @@ export const ModuleView: React.FC = () => {
     setPreviewVersion(null);
   }, [urlArtifactId, selectedArtifactId, setSelectedArtifactId]);
 
+  // Select an artifact (or none) by writing the ?artifact= param; the sync
+  // effect above moves the store selection to it, so the URL always reflects
+  // (and can restore) the current selection. Every path that changes the
+  // selection goes through here. A store write alone is undone by the sync
+  // effect, which puts the URL's selection back (#379, bug 134); writing
+  // the store as well loads the document twice, because the router updates
+  // the URL in a transition, after the store, and in between the effect
+  // sees the URL without the new selection and clears it (#379, bug 102).
+  const selectInUrl = (artifactId: string | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (artifactId) next.set('artifact', artifactId);
+      else next.delete('artifact');
+      return next;
+    });
+  };
+
   // Handle artifact selection with automatic exit from edit/preview modes.
-  // Writes the ?artifact= param, and the sync effect above moves the store
-  // selection to it, so the URL always reflects (and can restore) the
-  // current selection. The store is not written here as well: the router
-  // updates the URL in a transition, after the store, and in between the
-  // effect would see the URL without the new selection, clear it and set it
-  // again, mounting the document twice for one click (#379, bug 102).
   const handleSelectArtifact = (artifactId: string | null) => {
     if (artifactId && stacked) {
       setStackedPane('document');
@@ -441,12 +452,7 @@ export const ModuleView: React.FC = () => {
         setPreviewVersion(null);
       }
     }
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (artifactId) next.set('artifact', artifactId);
-      else next.delete('artifact');
-      return next;
-    });
+    selectInUrl(artifactId);
   };
 
   // Adding a figure takes the artifact to a new version server-side, as a new
@@ -904,7 +910,7 @@ export const ModuleView: React.FC = () => {
         ...artifacts.map((a) => updated.get(a.id) || a),
         updated.get(created.id) || created,
       ]);
-      setSelectedArtifactId(created.id);
+      selectInUrl(created.id);
       loadQuality();
       setError('');
     } catch (error: any) {
@@ -960,7 +966,7 @@ export const ModuleView: React.FC = () => {
       // the artifact that would hold it beats a dead end.
       const holder = artifacts.find((a) => a.ref === artifactRefOfFigure(ref));
       if (holder) {
-        setSelectedArtifactId(holder.id);
+        selectInUrl(holder.id);
         setIsEditing(false);
         setIsCreating(false);
         setError(`${ref} is no longer on ${holder.ref}. Showing the artifact instead.`);
@@ -971,7 +977,7 @@ export const ModuleView: React.FC = () => {
     }
     const target = artifacts.find((a) => a.ref === ref);
     if (target) {
-      setSelectedArtifactId(target.id);
+      selectInUrl(target.id);
       setIsEditing(false);
       setIsCreating(false);
       return;
