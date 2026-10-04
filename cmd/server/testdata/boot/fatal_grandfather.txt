@@ -32,7 +32,7 @@ exit status 1
 the server exited before it answered /health
 
 == the boot's database after the exit
-migrations ran before the exit: yes (the schema_migrations ledger runs from version 1 without a gap)
+migrations ran before the exit: all (the schema_migrations ledger records every registered migration)
 
 == outbound requests (the recording proxy, after exit)
 none: the server sent no request through HTTP_PROXY or HTTPS_PROXY

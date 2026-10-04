@@ -28,7 +28,7 @@ exit status 1
 the server exited before it answered /health
 
 == the boot's database after the exit
-migrations ran before the exit: no (the database has no tables)
+migrations ran before the exit: none (the database has no tables)
 
 == outbound requests (the recording proxy, after exit)
 none: the server sent no request through HTTP_PROXY or HTTPS_PROXY
