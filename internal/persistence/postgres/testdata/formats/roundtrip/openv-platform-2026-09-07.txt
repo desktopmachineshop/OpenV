@@ -61,6 +61,6 @@ links: 251 matched by ends and type, 0 in with an end outside the document, 0 in
   to_id: remapped to the new ids 251
   type: equal 251
   updated_at: the round trip's clock 251
-  valid_from: equal 251
+  valid_from: the round trip's clock 251
   valid_to: equal 251
   version: equal 251

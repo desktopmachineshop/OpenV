@@ -810,7 +810,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_satisfies>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_satisfies>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 9>\",\"valid_to\":null,\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":1,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -822,7 +822,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -835,7 +835,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 9>",
           "valid_to": null,
           "created_at": "<time@step 9>",
           "updated_at": "<time@step 9>"
@@ -848,7 +848,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 8>",
           "valid_to": null,
           "created_at": "<time@step 8>",
           "updated_at": "<time@step 8>"
@@ -863,7 +863,7 @@
             "rationale": "Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified."
           },
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
           "updated_at": "<time@step 7>"
@@ -892,7 +892,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -904,7 +904,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -2831,7 +2831,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2843,7 +2843,7 @@
           "suspect": false,
           "attributes": null,
           "version": 1,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 16>",
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
@@ -2856,7 +2856,7 @@
           "suspect": false,
           "attributes": null,
           "version": 3,
-          "valid_from": "0001-01-01T00:00:00Z",
+          "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
           "updated_at": "<time@step 41>"

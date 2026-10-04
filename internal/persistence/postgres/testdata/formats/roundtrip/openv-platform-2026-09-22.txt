@@ -63,6 +63,6 @@ links: 500 matched by ends and type, 0 in with an end outside the document, 0 in
   to_id: remapped to the new ids 500
   type: equal 500
   updated_at: the round trip's clock 500
-  valid_from: equal 500
+  valid_from: the round trip's clock 500
   valid_to: equal 500
   version: equal 500

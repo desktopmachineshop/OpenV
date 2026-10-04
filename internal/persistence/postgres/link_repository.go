@@ -192,10 +192,12 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 // two of its artifacts and those crossing to another project from either
 // end. A flow-down link (a child requirement refining a parent one) is
 // written from the child, and the parent's export, baseline, coverage and
-// map must see it too, so the join is on both ends (REQ-145).
+// map must see it too, so the join is on both ends (REQ-145). Each link
+// carries its valid_from, which the export writes; valid_to is NULL for
+// every link it lists.
 func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	query := `
-		SELECT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
+		SELECT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.valid_from, l.created_at, l.updated_at
 		FROM links l
 		INNER JOIN artifacts fa ON l.from_id = fa.id AND fa.valid_to IS NULL
 		INNER JOIN artifacts ta ON l.to_id = ta.id AND ta.valid_to IS NULL
@@ -222,6 +224,7 @@ func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
+			&link.ValidFrom,
 			&link.CreatedAt,
 			&link.UpdatedAt,
 		)
