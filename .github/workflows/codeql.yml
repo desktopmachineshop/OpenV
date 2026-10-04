@@ -71,7 +71,7 @@ jobs:
           - language: go
             build-mode: autobuild
           # TypeScript is read from source — nothing to build, and building
-          # the CRA bundle would only slow the scan down.
+          # the Vite bundle would only slow the scan down.
           - language: javascript-typescript
             build-mode: none
 

@@ -1,162 +1,322 @@
 # OpenV Architecture
 
-## High-Level System Design
+How the code is laid out today and how a request, a run and a deployment
+move through it. The package graph below is the one `go list` and the
+architecture tests see (`internal/archtest`, whose `ratchets.json` freezes
+every import edge); the areas are those of the area index,
+[`areas.json`](areas.json). Where this page and the code disagree, the code
+wins: the archtest, the route goldens and the boot goldens are what a pull
+request is held to. How the code is changing, and why, is the refactor plan,
+[`plans/codebase-refactor.md`](plans/codebase-refactor.md).
+
+## System at a glance
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    Frontend (React/TS)                   │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │ Module View │ Editor │ Suite (agents/crews/kanban) │ │
-│  └─────────────────────────────────────────────────────┘ │
-└──────────────────────┬───────────────────────────────────┘
-                       │ HTTP/REST (session cookie + X-Org-ID)
-┌──────────────────────▼───────────────────────────────────┐
-│               API Layer (REST Gateway)                   │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │ Routes │ Auth middleware │ Org/project RBAC │ CORS  │ │
-│  │ Request logging (slog) │ Prometheus │ Rate limiting │ │
-│  └─────────────────────────────────────────────────────┘ │
-└──────────────────────┬───────────────────────────────────┘
-                       │ Domain Services (org-scoped)
-┌──────────────────────▼───────────────────────────────────┐
-│          Core Domain Services (Go)                       │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Artifacts │ Links │ V&V │ Orgs/RBAC │ Agent suite  │ │
-│  │ (temporal versioning, proposals, event bus)        │ │
-│  └────────────────────────────────────────────────────┘ │
-└──────────────────────┬───────────────────────────────────┘
-                       │ Repository Pattern
-┌──────────────────────▼───────────────────────────────────┐
-│       Persistence Layer (Repository Pattern)             │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │ PostgreSQL Repositories │ Local filesystem uploads  │ │
-│  └─────────────────────────────────────────────────────┘ │
-└──────────────────────┬───────────────────────────────────┘
-                       │ SQL (numbered migration ledger)
-┌──────────────────────▼───────────────────────────────────┐
-│                  Data Layer                              │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │  PostgreSQL Database │ UPLOADS_DIR (attachments)  │  │
-│  └───────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
+ Browser ── React SPA (frontend/, served by nginx; /api/ proxied to the API)
+    │  HTTP, session cookie + X-Org-ID     ▲ SSE: notifications, run logs,
+    ▼                                      │ guided chat, interviews
+ cmd/server ── one gorilla/mux router, one middleware chain
+    │          internal/api: area handler files, authz, respond/httperr
+    ▼
+ internal/domain/* ── services and their repository interfaces
+    ▼
+ internal/persistence/postgres ── repositories, numbered migrations
+    ▼
+ PostgreSQL (pg_trgm, optional pgvector)   UPLOADS_DIR (attachment files)
 
-        ▲ Agent runs are rows in the agent_runs queue. The server
-        │ never calls model providers itself: a host-side worker
-        └─ (cmd/agentd) polls the queue over HTTP and runs the
-           operator's vendor CLI. See "Multi-agent suite" below.
+ Agent work: a run is a row in agent_runs. The server never calls a model
+ provider. A runner, cmd/agentd (internal/runner), polls the queue over
+ HTTP with a runner key, runs the operator's vendor CLI (Claude Code, Codex,
+ Gemini, Antigravity) and hands it cmd/openv-mcp, whose tools (internal/mcp)
+ call the API back with the run's token. Runners run on a member's machine
+ (the Agent Connector, cmd/openv-connector), in a hosted container the API
+ provisions over Docker (internal/hosting), or as a leased node of the
+ transient pool.
 ```
 
-## Layered Architecture
+## Programs
 
-### 1. Frontend Layer (React + TypeScript)
-**Responsibility**: User interface, state management, client-side logic
+| Package | Program | What it is |
+|---|---|---|
+| `cmd/server` | API server | The HTTP API, background loops and the release announcer, in one process. |
+| `cmd/agentd` | runner | Polls for runs and runs the vendor CLIs; also a pool node (`-pool-key`). |
+| `cmd/openv-mcp` | MCP server | The tools an agent calls, over stdio; authenticates with a run token or a runner key. |
+| `cmd/openv-connector` | Agent Connector | A member's one-file runner: pairs with the app and starts `agentd`. |
+| `cmd/openv-vapid` | key tool | Makes a web push VAPID key pair. |
+| `.` (`release_notes.go`) | – | Embeds `RELEASE_NOTES.md`, which the server announces. |
 
-**Components:**
-- **Views**: Page-level components (ModuleView, Dashboard, etc.)
-- **Components**: Reusable UI components (ArtifactEditor, LinkPanel, etc.)
-- **State**: Zustand store for application state
-- **API Client**: Axios-based HTTP client for backend communication
+Every environment variable these read is in [env-vars.md](env-vars.md).
 
-**Design Pattern**: Functional components with React Hooks
+## Areas
 
-```
-Frontend/
-├── src/
-│   ├── components/        # Reusable UI components
-│   ├── views/             # Page-level views
-│   ├── state/             # Zustand stores
-│   ├── api/               # HTTP client
-│   └── App.tsx            # Root component
-```
+The area index gives every tracked file one of twelve areas, a slice of the
+product through every layer; `go run ./internal/tools/areas which <path>`
+answers for a path, and `internal/tools/areas` and
+`frontend/src/arch/areas.test.ts` keep the index complete.
 
-### 2. API Layer (REST Gateway)
-**Responsibility**: Request routing, middleware, input validation, response formatting
+| Area | Holds |
+|---|---|
+| `requirements-core` | projects, artifacts, links and link rules, attributes, quality rules, reference parties, product profile, notes and mentions, the board, search and duplicates |
+| `verification` | verification methods, test runs and results, coverage and gaps, the matrix, change impact, evidence bundles |
+| `documents` | exports and imports, downloads, PDF, Word and V&V reports, baselines and their comparison, templates, attachments and figures |
+| `tenancy-identity` | accounts, sign-in, sessions, verification and resets, workspaces, members, people-teams, invitations, plan limits, project access, `authz.go` |
+| `agent-suite` | agents, runs and orchestration, crews, automations, proposals, providers, repository connections, the guided wizard, interviews, the AI map, the MCP server's core |
+| `runner-fleet` | the runner and its worker protocol, runner keys, hosted runners, the transient pool, the Agent Connector |
+| `events-notifications` | the event bus and domain events, the activity log, the SSE hub, notifications by app, mail and web push, announcements |
+| `community` | share links, the open-source showcase, the community pool of demo products |
+| `billing` | the billing service, its Stripe client, prices, checkout, seats, reconciliation |
+| `platform-http` | the composition root, the router, handler deps, HTTP plumbing, health, the database connection and migration ledger, env parsing, metrics, the release and feature gates |
+| `frontend-shell` | `App.tsx`, the API client barrel, state, hooks, the UI kit, navigation, the public site and manual, the test mock, the build and nginx files |
+| `tooling` | scripts, CI and release workflows, Dockerfiles, the refactor tools and architecture guards, repository docs |
 
-**Characteristics:**
-- No business logic
-- Thin adapter between frontend and domain
-- Content negotiation (JSON)
-- CORS restricted to the configured frontend origin (`CORS_ORIGIN`), with credentials
-- HTTP middleware: authentication (`authmiddleware.go`), org/project RBAC
-  (`authz.go`), request logging (`slog`), Prometheus metrics, sanitized error
-  responses (`httperr.go`), and per-IP/per-invite rate limiting on the public
-  interview endpoints
+## Backend packages
 
-```go
-// Example handler structure
-type Handler struct {
-    artifactService artifacts.Service
-    linkService     links.Service
-}
+75 packages: the five programs, the root package, 43 domain packages, the
+API, the persistence layer, 11 service packages, the runner and the MCP
+package, and the tools and guards
+(`internal/tools/*`, `internal/archtest`, `internal/vocabparity`), which
+ship nothing. Their production imports are 233 edges, every one listed in
+`internal/archtest/ratchets.json` (`import_edges`), so a new one is a
+decision made in review.
 
-func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
-    // Parse request -> call service -> format response
-}
-```
-
-### 3. Domain Services (Business Logic)
-**Responsibility**: Core business rules, orchestration, validation
-
-**Services:**
-- **Artifacts Service**: CRUD operations, versioning logic
-- **Links Service**: Traceability link management
-- **V&V Service** (future): Coverage calculation, test result correlation
-
-**Characteristics:**
-- Pure Go, no HTTP knowledge
-- Dependency injection
-- Interface-based design for testability
-
-```go
-type Service interface {
-    CreateArtifact(artifact *Artifact) error
-    GetArtifact(id string) (*Artifact, error)
-    UpdateArtifact(id string, req UpdateArtifactRequest) (*Artifact, error)
-    DeleteArtifact(id string) error
-    ListArtifacts(projectID string, artifactType string) ([]*Artifact, error)
-}
+```mermaid
+flowchart TD
+  server[cmd/server] --> api[internal/api]
+  server --> pg[internal/persistence/postgres]
+  server --> svc["services: events, notify, scheduler, automation,<br/>orchestration, billing, hosting, metrics, seeds, envparse"]
+  server --> dom["internal/domain/* (43)"]
+  api --> dom
+  api --> svc
+  pg --> dom
+  svc --> dom
+  agentd[cmd/agentd] --> runner[internal/runner]
+  runner --> mcp[internal/mcp]
+  runner --> dom
+  mcpbin[cmd/openv-mcp] --> mcp
+  mcp --> dom
 ```
 
-### 4. Persistence Layer (Repository Pattern)
-**Responsibility**: Data access abstraction, query execution
+The layering (K7), which `internal/archtest` enforces on every pull request:
 
-**Repositories:**
-- **ArtifactRepository**: SQL queries for artifacts
-- **LinkRepository**: SQL queries for links
-- **ProjectRepository** (future): Project management
+- a package under `internal/domain` imports only other domain packages
+  (and the types-only leaves, of which there are none yet), so no domain
+  rule depends on the API, the database code or the composition root;
+- `internal/persistence/postgres` imports only the domain;
+- `internal/api` never imports the persistence layer;
+- the client programs link as little of the domain as they can: `agentd`
+  links eight domain packages, `openv-mcp` one (`artifacts`), and the
+  connector and the VAPID tool none (`client_domain_deps`).
 
-**Characteristics:**
-- Encapsulates database implementation details
-- Returns domain models, not raw SQL results
-- Supports schema evolution
-- Easy to mock for testing
+A domain package declares what it needs as an interface, a port, and
+`cmd/server` wires the implementation (as `artifacts` does with
+`LinkSuspector`, which `links` implements).
 
-```go
-type Repository interface {
-    Save(artifact *Artifact) error
-    FindByID(id string) (*Artifact, error)
-    FindByProjectID(projectID string) ([]*Artifact, error)
-    Update(artifact *Artifact) error
-    Delete(id string) error
-}
+| Layer | Packages | Role |
+|---|---|---|
+| Composition root | `cmd/server` | builds everything, in a fixed order, and serves |
+| API | `internal/api` | routes, middleware, authorization, request and response shapes |
+| Domain | `internal/domain/*` | entities, rules, `Service` and `Repository` interfaces, mostly a `DefaultService` each |
+| Persistence | `internal/persistence/postgres` | one repository per aggregate, the schema and its migrations |
+| Services | `internal/events` (the bus), `notify` (mail, push, announcements, the stable scheduler), `scheduler` (cron automations), `automation` (event triggers), `orchestration` (crew hooks), `billing` and `billing/stripe`, `hosting` (Docker provisioner), `metrics`, `seeds`, `envparse` (how a setting is read) | the work that is not a request |
+| Agent execution | `internal/runner`, `internal/mcp` | the runner's adapters, pool and worker client; the MCP tool table and its API client |
+
+### Composition root: `cmd/server`
+
+`main()` (`main.go`, about 60 lines) creates one `app` (`app.go`), whose
+fields are the values more than one stage shares, and calls the stages in a
+fixed order, then serves until a signal and drains for up to 15 seconds.
+Each stage is a method in a `wire_*.go` file and wires one concern:
+
+| Stage | File | Wires |
+|---|---|---|
+| `signals`, `config` | `wire_config.go` | the signal context; the database URL, port and directories, `WORKER_API_KEY`, the plan and limit settings |
+| `connect`, `storage` | `wire_storage.go` | the pool (whose close `main` defers); `MigrateAndBackfill` under the boot lock; every repository and the event bus |
+| `core` | `wire_core.go` | artifacts, links, embeddings, projects, attachments, baselines, chatter, exports, reports, downloads, templates |
+| `workspace`, `runners` | `wire_workspace.go` | users, members, workspaces and the tiers, invitations, runner keys, hosted runners, the transient pool; the legacy key |
+| `projects` | `wire_projects.go` | attributes, V&V and evidence, work items, the product profile, project settings, guided sessions, interviews, share links, the community pool |
+| `agents` | `wire_agents.go` | agents, runs and their retry policy, automations, repository connections, providers and their sign-ins, crews, proposals |
+| `realtime` | `wire_realtime.go` | the metrics collector, the SSE hub and the orchestration hooks, subscribed to runs and the bus |
+| `notify`, `release` | `wire_notify.go` | mail, sign-up verification, the session and registration policies, notifications, web push, the minutes monitor; the running release, its announcer and the stable scheduler |
+| `jobs` | `wire_jobs.go` | the budget guard, trigger matcher, scheduler, workspace purge and reaper loops |
+| `sso` | `wire_sso.go` | Google and OIDC sign-in |
+| `billing`, `handlers`, `server` | `wire_http.go` | billing; `api.NewHandler` with every dependency, the proposal appliers; the HTTP server |
+
+Beside them: `config.go` holds the env getters, `http.go` builds the
+middleware chain (`buildHTTPHandler`) and the server, `jobs.go` the reaper,
+purge and hosted-runner reconcile loops, `lookups.go` the closures that join
+two domains (a project's workspace, the budget guard), and `logging.go` the
+log setup. `cmd/server/testdata/boot_steps.txt` (S4) pins the order of
+every call `main()` makes; new wiring goes in the stage that owns its
+concern.
+
+### API layer: `internal/api`
+
+- `handlers.go` holds only the dependencies: `HandlerDeps`, `Handler` and
+  `NewHandler`, which builds the rate limiters and reads the per-request
+  settings once at boot.
+- `routes.go` is `RegisterRoutes`, the ordered list of registrar calls.
+  gorilla/mux serves the first route that matches, so that order is the
+  contract, pinned by `testdata/route_handlers.txt`; `agent_handlers.go`,
+  `org_handlers.go` and `suite_handlers.go` hold only the ordered
+  sub-registrar lists of their surfaces.
+- 70 area files, `<area>_handlers.go`, each with its `register<Area>Routes`
+  and its handlers: 19 for requirements-core, 17 for agent-suite (with
+  `proposal_appliers.go`, `ai_map.go` and the guided outline), 19 for
+  tenancy-identity (with `authz.go`, `authmiddleware.go`, `cookies.go`,
+  `limits.go` and `registration_policy.go`), 8 for documents, 7 for
+  runner-fleet, and the rest for verification, events, community and
+  billing. `go run ./internal/tools/areas which <file>` names a file's area.
+- Shared homes (K3), so a helper is found where its kind lives:
+  `respond.go` (JSON out), `httperr.go` (error writers; internals go to the
+  log, a fixed message to the client), `authz.go` (every `require*` guard),
+  `limits.go` (the plan read-only gate and counts), `publish.go` (domain
+  events), `sse.go` (the SSE hub), and the `middleware_*.go`,
+  `compression.go`, `ratelimit.go`, `requestlog.go` and
+  `security_headers.go` plumbing.
+
+The route inventory, `testdata/routes.txt`, lists every method and path
+(341); `docs/api-spec.md` documents them, and an archtest ratchet counts the
+ones it does not.
+
+### Domain: `internal/domain/*`
+
+One package per concept, most with an entity, a `Service` interface, a
+`DefaultService` and a `Repository` interface that the persistence layer
+implements. Packages that grew several concerns split them into narrow
+interfaces (`orgs.Service` is `Workspaces`, `Membership`, `BillingStore`,
+`ChannelSettings` and `Alerts`). The busiest dependencies inside the
+domain: `artifacts` (nine other domain packages import it), `exports` (the project
+snapshot that reports, baselines, templates, downloads, quality and V&V
+read),
+`events` and `agentruns`.
+
+### Persistence: `internal/persistence/postgres`
+
+A repository file per aggregate (`<thing>_repository.go`, the workspace's
+split by concern), `db.go` and the frozen `schema_*.go` baseline, and the
+migration ledger: `migrations.go` registers every numbered migration in
+order, and each lives in its own `migration_NNNN_<name>.go`. The `app`'s
+`storage` stage runs `MigrateAndBackfill` before anything reads the
+database. [data-model.md](data-model.md) describes the tables; the S3
+goldens under `testdata/` (`schema/`, `freeze/`, `purge/`) are the exact
+schema, ledger and purge catalogue, checked against a real server.
+
+### Agent execution: `cmd/agentd`, `internal/runner`, `internal/mcp`
+
+`internal/runner` holds one adapter per vendor CLI (`claudecode.go`,
+`codexcli.go`, `geminicli.go`, `antigravity.go`) with its detection probe
+and sign-in flows, the worker loop and API client, the pool node
+(`pool.go`), and `childEnv`, through which every process it starts gets its
+environment, less the runner's own credentials. `internal/mcp` is the tool
+table (`Tools()` in `tools.go`, built from one constructor per area in the
+`tools_<area>.go` files and filtered by `OPENV_MCP_TOOLS`) and the client
+that calls the API; `openv-mcp` serves it over stdio, the runner configures it for
+each run, and `internal/seeds` reads its tool names for the default agents.
+The API's side of the wire is `worker_protocol_handlers.go` and the runner
+key, session and status handler files.
+
+## Frontend: `frontend/src`
+
+- `App.tsx` is the router; `views/` holds the pages, with the module view's
+  panes in `views/moduleView/` and the project settings' tabs in
+  `views/projectSettings/`; `components/` holds the rest of the UI, the
+  guided wizard's modules in `components/wizard/`.
+- `api/client.ts` is a barrel: it re-exports the area modules `api/<area>.ts`
+  and their types `api/types/<area>.ts`; `api/http.ts` holds the one axios
+  instance and its two interceptors (the active workspace header; the
+  sign-in and verify-email redirects). Code outside `src/api` imports only
+  `api/client` (K12).
+- `state/` holds the zustand store and the active-workspace storage;
+  `hooks/` the shared hooks (`useFeature` reads the feature gates).
+- `test/mockApi.ts` is the auto-stubbing mock of the client that view tests
+  use (F2): every method of every `*API` object becomes a `vi.fn`, and an
+  override naming a method the client lacks throws.
+- `arch/` holds the frontend's architecture tests: the area index, the
+  client's surface and routes, CSS order and size budgets, deep links, SSE
+  listeners, error chains and vocabulary parity with Go.
+
+## Request path
+
+```
+SecurityHeaders → BodyLimit → CORS → Compression → RequestLog → metrics
+  → Auth → router (ContentTypeMiddleware) → handler
 ```
 
-### 5. Data Layer (Database)
-**Responsibility**: Persistent storage, transactions
+`buildHTTPHandler` (`cmd/server/http.go`) builds that chain, outermost
+first, and `http_test.go` pins it. `AuthMiddleware` resolves the caller (a
+session, a run token, a runner key or the pool key) and the active
+workspace before the router sees the request, so an unknown protected path
+answers 401. A handler then decodes the body, asks its guard in `authz.go`
+(`requireProjectRole`, `requireOrgRole` and the rest; a write also takes the
+plan gate, `requireWritable`), calls a domain service, and answers through
+`respond.go` or `httperr.go`. The service validates, writes through its
+repository, and the handler publishes a domain event (`publish.go`): the
+bus persists it and hands it to its subscribers, the notifier, the budget
+monitor, the automation trigger matcher and the orchestration hooks.
 
-**Technologies:**
-- **PostgreSQL**: Primary relational database
-- **JSONB**: Flexible attribute storage
-- **Trigram search** (`pg_trgm`): index-assisted cross-project artifact search,
-  with a sequential-scan fallback when the extension is unavailable. A query
-  that names a stable ref ("REQ-30") is matched against `artifacts.ref` as
-  well and ranked first, served by the unique `(project_id, ref)` index rather
-  than a trigram one
-- **Local filesystem** (`UPLOADS_DIR`): file attachments (S3/MinIO remains a
-  future option)
+Errors: a repository returns the domain's sentinel errors (`ErrNotFound`
+and its kin); a handler maps them to a status, and `respondError` and
+`respondInternal` log the error and answer a fixed public message, so SQL
+text and paths never reach a client.
 
-The schema is owned by `internal/persistence/postgres/`. See
-[data-model.md](data-model.md) for the full table reference.
+## State
+
+- **Backend.** No application cache: each request reads the database. Two
+  things live in the process: the event bus with the SSE hub
+  (`internal/events`, `internal/api/sse.go`) and the rate limiters' token
+  buckets (`internal/api/ratelimit.go`). Both assume a single API instance.
+- **Frontend.** Server data is fetched per view through the API client; the
+  zustand store (`state/store.ts`) holds what crosses views, such as the
+  signed-in user and the active workspace, which is also kept in local
+  storage for the `X-Org-ID` header.
+
+## Testing
+
+- **Go.** `go test . ./cmd/... ./internal/...`; the Postgres tests run when
+  `OPENV_TEST_DATABASE_URL` names a server and skip otherwise. API tests
+  build their handler with `newTestHandler(t, opts...)` and the shared fakes
+  in `internal/api/testkit_test.go`. Goldens pin what must not change: the
+  routes and their guards (`internal/api/testdata/`), the schema and stored
+  data (`internal/persistence/postgres/testdata/`), the boot and its order
+  (`cmd/server/testdata/boot*`), an end-to-end API tour per area
+  (`cmd/server/testdata/tour/`) and the env var inventory
+  (`internal/archtest/testdata/`).
+- **Architecture.** `internal/archtest` (import edges, layering, size
+  budgets, bans and count ratchets; see its README) and `frontend/src/arch`.
+- **Frontend.** vitest with `test/mockApi.ts`; `tsc`, eslint, the build and
+  the bundle check.
+- **End to end.** Playwright specs under `e2e/tests/`.
+
+`make check-fast` runs the gates for what a branch changed, `make check`
+all of them; `CONTRIBUTING.md` says what a pull request needs.
+
+## Deployment topology
+
+### Development (Docker Compose)
+```
+Your Machine
+├── Frontend (React dev server, port 3000)
+├── API (Go, port 8080)
+└── PostgreSQL (port 5432)
+```
+
+### Production (Docker Compose overlay)
+Production runs the same stack with `docker-compose.prod.yml` layered on top
+(`make prod-up`): the frontend is a static nginx build, healthchecks and
+memory limits are added, secrets come from `.env`, and Postgres stops
+publishing its port. Full runbook, backup and restore included, in
+[operations.md](operations.md); the hosted service runs on Railway
+([railway.md](railway.md)).
+```
+Host
+├── Frontend (nginx static build, host port 80, /api/ proxied to the API)
+├── API (Go, port 8080, X-Forwarded-For aware behind a proxy)
+├── PostgreSQL (internal only)
+└── (optional) agentd worker(s), a transient runner pool, hosted-runner
+    containers
+```
+Put a reverse proxy (Caddy, Traefik, nginx) in front for TLS. Kubernetes and
+Helm remain a roadmap item.
 
 ---
 
@@ -229,7 +389,6 @@ another, the containment lives outside the org scoping:
 
 Anything else that ever needs to be shared across tenants should copy this
 shape rather than dropping the `org_id` filter.
-
 ---
 
 ## Observability
@@ -245,196 +404,21 @@ shape rather than dropping the `org_id` filter.
   per-project/user/agent labels.
 - **Error responses** are sanitized (`httperr.go`): internals reach the log,
   not the client.
-
 ---
 
 ## Schema migration ledger
 
-At startup `cmd/server/main.go` calls `postgres.MigrateAndBackfill`
+At startup the composition root's `storage` stage
+(`cmd/server/wire_storage.go`) calls `postgres.MigrateAndBackfill`
 (`migrations.go`), which advances the database through a numbered migration
-ledger (`schema_migrations` table) under a boot advisory lock. Migration 0001 —
-the frozen "baseline" — wraps the legacy idempotent init chain and re-runs on
-every boot; every schema change since is an append-only numbered migration
-(0002+) applied exactly once inside its own transaction (DDL and ledger row
-commit together). New schema changes are **never** added to `InitSchema` or the
-`schema_*.go` files — only appended to the registry in `migrations.go`.
-
----
-
-## Dependency Injection
-
-All services are constructed with their dependencies explicitly injected:
-
-```go
-// In main.go
-artifactRepo := postgres.NewArtifactRepository(db)
-artifactService := artifacts.NewDefaultService(artifactRepo)
-handler := api.NewHandler(artifactService, linkService)
-```
-
-**Benefits:**
-- Explicit dependencies
-- Easy to test (inject mocks)
-- No global state
-- Clear initialization order
-
----
-
-## Request Flow
-
-### Create Artifact Flow
-```
-1. Frontend sends POST /api/v1/artifacts
-2. API Handler parses request body
-3. Handler validates input
-4. Handler calls artifactService.CreateArtifact()
-5. Service validates business rules
-6. Service calls artifactRepo.Save()
-7. Repository executes INSERT INTO artifacts
-8. PostgreSQL returns success
-9. Handler formats response and returns 201
-10. Frontend receives artifact with generated ID
-```
-
-### Module View Load Flow
-```
-1. User enters project ID and loads page
-2. Frontend calls artifactAPI.list(projectId)
-3. API sends GET /api/v1/artifacts?project_id=xxx
-4. Handler parses query params
-5. Handler calls artifactService.ListArtifacts()
-6. Service calls artifactRepo.FindByProjectID()
-7. Repository executes SELECT ... WHERE project_id = $1
-8. PostgreSQL returns rows
-9. Repository unmarshals JSON attributes
-10. Service returns []*Artifact
-11. Handler returns JSON array (200 OK)
-12. Frontend receives artifacts and renders grid
-```
-
----
-
-## Error Handling
-
-### Layered Error Propagation
-```
-Database Error
-    ↓
-Repository wraps and logs
-    ↓
-Service handles or propagates
-    ↓
-Handler returns HTTP error
-    ↓
-Frontend displays to user
-```
-
-### Example Error Path
-```go
-// Repository
-if err := rows.Scan(...); err != nil {
-    log.Printf("Error scanning artifact: %v", err)
-    return nil, err
-}
-
-// Service
-artifacts, err := s.repo.FindByProjectID(projectID)
-if err != nil {
-    return nil, fmt.Errorf("failed to find artifacts: %w", err)
-}
-
-// Handler
-artifacts, err := h.artifactService.ListArtifacts(projectID, "")
-if err != nil {
-    http.Error(w, err.Error(), http.StatusInternalServerError)
-    return
-}
-```
-
----
-
-## State Management
-
-### Frontend State (Zustand)
-```typescript
-interface AppState {
-    projectId: string
-    artifacts: Artifact[]
-    links: Link[]
-    selectedArtifactId: string | null
-    // ... getters and setters
-}
-```
-
-### Backend In-Memory State
-- No application-level caching; each request queries the database
-- Database provides consistency guarantees
-- One in-process component keeps live state: the event bus + SSE hub
-  (`internal/events`, `internal/api/sse.go`) fans domain events out to
-  connected clients. This is the single-instance assumption today (the
-  interview rate limiter's token buckets are also in-process; see
-  `docs/operations.md`)
-
----
-
-## Deployment Topology
-
-### Development (Docker Compose)
-```
-Your Machine
-├── Frontend (React dev server, port 3000)
-├── API (Go, port 8080)
-└── PostgreSQL (port 5432)
-```
-
-### Production (Docker Compose overlay)
-Production runs the same stack with `docker-compose.prod.yml` layered on top
-(`make prod-up`): the frontend is a static nginx build, healthchecks and
-memory limits are added, secrets come from `.env`, and Postgres stops
-publishing its port. Full runbook — including backup/restore — in
-[operations.md](operations.md).
-```
-Host
-├── Frontend (nginx static build, host port 80)
-├── API (Go, port 8080, X-Forwarded-For aware behind a proxy)
-├── PostgreSQL (internal only)
-└── (optional) agentd worker(s), a transient runner pool, hosted-runner
-    containers
-```
-Put a reverse proxy (Caddy, Traefik, nginx) in front for TLS. Kubernetes/Helm
-remains a roadmap item.
-
----
-
-## Testing Strategy
-
-### Unit Tests (Services)
-- Mock repositories
-- Test business logic isolation
-- Fast, reliable, no external dependencies
-
-```go
-func TestCreateArtifact(t *testing.T) {
-    mockRepo := &MockArtifactRepository{}
-    service := artifacts.NewDefaultService(mockRepo)
-    
-    artifact := &Artifact{...}
-    err := service.CreateArtifact(artifact)
-    
-    assert.NoError(t, err)
-    assert.True(t, mockRepo.SaveCalled)
-}
-```
-
-### Integration Tests (Repository)
-- Real PostgreSQL in container
-- Test SQL queries and schema
-- Slower but more realistic
-
-### E2E Tests (API)
-- Full stack in Docker
-- Test complete workflows
-- Validate frontend + backend integration
+ledger (`schema_migrations` table) under a boot advisory lock. Migration
+0001, the frozen "baseline", wraps the legacy idempotent init chain and
+re-runs on every boot; every schema change since is an append-only numbered
+migration (0002 on), in a file of its own (`migration_NNNN_<name>.go`),
+applied exactly once inside its own transaction (DDL and ledger row commit
+together). New schema changes are **never** added to `InitSchema` or the
+`schema_*.go` files: a new migration file, appended to the registry in
+`migrations.go`.
 
 ---
 
@@ -511,7 +495,8 @@ Every API request authenticates as one of four principals; only `/health`,
   leaked invite token cannot become unbounded provider spend; and the
   credential endpoints — every sign-in attempt per client address, failed
   sign-ins per account, registrations per address, and SSO starts and
-  callbacks per address (`OPENV_AUTH_*`, `OPENV_REGISTER_*`, `OPENV_SSO_*`).
+  callbacks per address (`OPENV_AUTH_*`, `OPENV_REGISTER_*`, `OPENV_SSO_*`;
+  every bucket and its default is in [env-vars.md](env-vars.md)).
   Behind a proxy, set `OPENV_CLIENT_IP_HEADER` (e.g. `CF-Connecting-IP`) or
   `OPENV_TRUSTED_PROXY_HOPS=<n>` so limits key on the real client IP; the hop
   count reads `X-Forwarded-For` from the right, so a client-prepended entry
@@ -548,29 +533,6 @@ Every API request authenticates as one of four principals; only `/health`,
 - SSO/SAML beyond Google OIDC
 - Multi-region / multi-instance isolation (today's deployment assumes a single
   API instance for the in-process event bus and rate limiter)
-
----
-
-## Extensibility Points
-
-### Adding New Services
-1. Define interface in `internal/domain/{service}`
-2. Implement default service
-3. Inject into handler
-4. Add API endpoints
-
-### Adding New Repositories
-1. Define interface in service package
-2. Implement for PostgreSQL
-3. Add to dependency injection
-
-### Plugin System (Future)
-- JavaScript/WASM sandbox
-- Custom artifact types
-- Custom link types
-- Custom validation rules
-- Import/export formats
-
 ---
 
 ## Multi-agent suite
@@ -581,8 +543,10 @@ AI-assisted requirements work. The moving parts:
 ### Event bus
 A lightweight in-process bus (`internal/events`) persists domain events
 (artifact changes, test results, work-item moves, chatter) and fans them out to
-subscribers: the SSE hub for live UI updates, orchestration hooks, and the
-automation trigger matcher.
+its subscribers: the notifier (`internal/notify`, which stores a notification
+and pushes it to the recipient's SSE stream, mail and devices), the budget
+monitor, the orchestration hooks and the automation trigger matcher. Live
+run updates reach the SSE hub through the run service's own subscribers.
 
 ### agent_runs as a queue + host worker topology
 Agent work is expressed as rows in `agent_runs` (status, priority, prompt,
@@ -602,7 +566,9 @@ through these tools at run time, so authorization is enforced per call.
 ### Proposal review
 Agents with `write_mode: proposal` (the default) never write directly. Each
 intended write becomes a proposal row; approved proposals are applied through
-the real domain services via appliers wired in `cmd/server/main.go`, so
+the real domain services via the handler's appliers
+(`internal/api/proposal_appliers.go`), which the composition root's
+`handlers` stage hands the proposal service (`cmd/server/wire_http.go`), so
 validation and eventing behave exactly as for human edits.
 
 ### Crews (agent org charts)

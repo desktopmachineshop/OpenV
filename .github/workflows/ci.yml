@@ -344,7 +344,7 @@ jobs:
         run: npm ci
 
       # --omit=dev keeps the gate on what ships to a browser; build-time-only
-      # advisories (react-scripts and its tree) are noise here and are not
+      # advisories (the build and test tooling's tree) are noise here and are not
       # allowed to fail a PR. --audit-level=high sets the failure threshold
       # REQ-98 names.
       - name: npm audit (production dependencies)
@@ -454,8 +454,8 @@ jobs:
       - name: Wait for the API
         run: timeout 180 bash -c 'until curl -fsS http://localhost:8080/health >/dev/null; do sleep 2; done'
 
-      # The dev-compose frontend is the CRA dev server; it serves only after
-      # the first compile, which dominates the wait.
+      # The dev-compose frontend is the Vite dev server (`npm start`); its
+      # first answer waits for Vite to pre-bundle the dependencies.
       - name: Wait for the frontend
         run: timeout 420 bash -c 'until curl -fsS http://localhost:3000 >/dev/null; do sleep 3; done'
 

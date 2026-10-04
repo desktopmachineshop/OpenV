@@ -1300,7 +1300,7 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 | DELETE | `/api/v1/crew-edges/{id}` | Remove edge | editor / org admin |
 
 **Deprecated aliases** (same handlers, kept for compatibility — see
-`internal/api/agent_handlers.go`): `/api/v1/teams`, `/api/v1/teams/{id}`,
+`registerCrewRoutes` in `internal/api/crew_handlers.go`): `/api/v1/teams`, `/api/v1/teams/{id}`,
 `/api/v1/teams/{id}/clone|nodes|runs|edges`, `/api/v1/team-nodes/{id}`,
 `/api/v1/team-edges/{id}`. New integrations should use the `/crews` forms.
 

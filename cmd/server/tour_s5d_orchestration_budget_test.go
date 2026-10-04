@@ -40,7 +40,9 @@ import (
 //     answered by the poll (403 for a user, 404 for a run token), which the
 //     area's /metrics check proves by counting each under
 //     /api/v1/agent-runs/delegate/{id}, not {id}/tree, {id}/logs or
-//     {id}/stream (agent_handlers.go:49-55, registration order);
+//     {id}/stream (registration order: registerAgentRoutes, in
+//     agent_handlers.go, calls registerWorkerDispatchRoutes before
+//     registerAgentRunReadRoutes);
 //   - the child claimed before an older plain run (priority 10 beats 0),
 //     with priority, parent_run_id and team_node_id and no launched_by in its
 //     claim bytes; its finish, which the parent's poll then shows; the

@@ -24,9 +24,10 @@ var decodeAliasTypes = []string{}
 // decodes the rule cannot see: those in a helper or outside internal/api.
 // An error assigned from a call by that name counts as the decode's error.
 // The sites known today that return an exports.ProjectExport decode error
-// to a handler are Handler.projectExport (suite_handlers.go), the export
-// service's ImportProject and ImportProjectWithOverrides (handlers.go), and
-// the report service's GenerateProjectReport, GenerateProjectReportDOCX and
+// to a handler are Handler.projectExport (project_snapshot.go), the export
+// service's ImportProject and ImportProjectWithOverrides (which
+// ImportProject in project_io_handlers.go and CreateProjectFromTemplate in
+// template_handlers.go call), and the report service's GenerateProjectReport, GenerateProjectReportDOCX and
 // GenerateVVReport; P1 adds those six names with the ProjectExport entry,
 // after checking for others, and X14 adds snapshot's Load. The scan follows
 // an error only through later statements of the list it was assigned in, so

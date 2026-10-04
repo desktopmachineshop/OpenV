@@ -6,9 +6,9 @@ Public demo: https://openv-frontend-production.up.railway.app/
 
 ## Features
 
-### MVP (v0.1.0)
+### Requirements and V&V
 - **Artifact Management**: Create, read, update, and delete requirements, test cases, hazards, and design items
-- **Traceability**: Link artifacts with typed relationships (verifies, satisfies, mitigates, implements, etc.)
+- **Traceability**: Link artifacts with typed relationships (verifies, satisfies, mitigates, decomposes-to, refines and more; see [docs/link-type-rules.md](docs/link-type-rules.md))
 - **Module View**: Interactive grid view of artifacts with sorting and filtering
 - **Artifact Editor**: Rich form-based editor with versioning
 - **RESTful API**: Full-featured REST API for all operations
@@ -30,7 +30,7 @@ subscription (Claude Code / Codex / Gemini) running on your machine:
 Setup guide: [docs/agents.md](docs/agents.md)
 
 ### What's next
-- Web Push notifications and phone-side runner control (see `docs/plans/mobile-support.md`)
+- Phone-side runner control (see `docs/plans/mobile-support.md`; Web Push notifications have shipped)
 - GitHub issues and pull requests tied to requirements and verification evidence
 - Plugin system for custom rules and integrations
 - Helm charts for Kubernetes
@@ -60,7 +60,7 @@ state, and a JSON export restores into a self-hosted OpenV.
 ### Prerequisites
 - Docker & Docker Compose
 - Node.js 20+ (for local development without Docker)
-- Go 1.21+ (for backend development)
+- Go 1.25+ (for backend development)
 - PostgreSQL 15+ (for local development)
 
 ### Running with Docker Compose
@@ -121,25 +121,36 @@ npm start
 
 ## Project Structure
 
+The map of the code, package by package, is
+[docs/architecture.md](docs/architecture.md); every file belongs to one
+area of [docs/areas.json](docs/areas.json).
+
 ```
 openv/
 ├── cmd/
-│   └── server/              # Main server entry point
+│   ├── server/              # API server: main() and its wire_*.go stages
+│   ├── agentd/              # Runner (agent worker)
+│   ├── openv-mcp/           # MCP server the runner hands each agent
+│   ├── openv-connector/     # Agent Connector (a member's one-file runner)
+│   └── openv-vapid/         # Web push key tool
 ├── internal/
-│   ├── api/                 # REST API handlers
-│   ├── domain/              # Domain models and logic
-│   │   ├── artifacts/       # Requirement/test case entities
-│   │   └── links/           # Traceability links
-│   └── persistence/
-│       └── postgres/        # Database repositories
+│   ├── api/                 # REST API: routes.go, one *_handlers.go per area
+│   ├── domain/              # Domain models, services and rules
+│   │   ├── artifacts/       # Requirements, test cases, hazards, ...
+│   │   └── links/           # Traceability links and their rules
+│   ├── persistence/
+│   │   └── postgres/        # Repositories, one file per migration
+│   ├── runner/, mcp/        # Agent execution
+│   └── archtest/            # Architecture tests and ratchets
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # Reusable React components
 │   │   ├── views/           # Page-level components
-│   │   ├── state/           # Zustand stores
-│   │   ├── api/             # API client
+│   │   ├── state/           # Zustand store
+│   │   ├── api/             # API client (client.ts is the barrel)
 │   │   └── App.tsx          # Main App component
 │   └── package.json
+├── e2e/                     # Playwright end-to-end tests
 ├── docs/                    # Documentation (deployment: docs/operations.md)
 ├── Dockerfile.api           # API server image
 ├── Dockerfile.worker        # Agent worker image
@@ -149,6 +160,9 @@ openv/
 ```
 
 ## API Endpoints
+
+The full reference, every route with who may call it, is
+[docs/api-spec.md](docs/api-spec.md). A few of the core ones:
 
 ### Artifacts
 - `POST /api/v1/artifacts` - Create artifact
@@ -174,7 +188,7 @@ openv/
 {
   "id": "uuid",
   "project_id": "uuid",
-  "type": "requirement|test-case|hazard|design-item",
+  "type": "requirement|user-need|persona|test-case|hazard|design-item|heading|description|other",
   "title": "string",
   "body": "markdown",
   "attributes": {},
@@ -192,7 +206,7 @@ openv/
   "id": "uuid",
   "from_id": "uuid",
   "to_id": "uuid",
-  "type": "verifies|satisfies|mitigates|implements|depends-on",
+  "type": "verifies|satisfies|mitigates|decomposes-to|refines|derives-from|validates|impacts|relates-to",
   "attributes": {},
   "version": 1,
   "created_at": "2024-01-01T00:00:00Z",
@@ -202,7 +216,7 @@ openv/
 
 ## Example Workflow
 
-1. **Create a Project** - Use any UUID as your project ID (can generate one at uuidgenerator.net)
+1. **Create a Project** - From the projects page, in your workspace
 
 2. **Add Requirements** - Create artifacts of type "requirement"
 
@@ -215,19 +229,19 @@ openv/
 ## Development
 
 ### Adding New Artifact Types
-Modify the artifact type enum in:
-- Backend: `internal/domain/artifacts/artifact.go`
-- Frontend: `frontend/src/components/ArtifactEditor.tsx`
+The catalogue is `internal/domain/artifacts/types.go`; the frontend reads it
+from `GET /api/v1/meta/artifact-types`.
 
 ### Adding New Link Types
-Modify the link type enum in:
-- Backend: `internal/domain/links/link.go`
-- Frontend: `frontend/src/components/LinkPanel.tsx`
+The rule table is `internal/domain/links/validation.go`, mirrored by hand in
+`frontend/src/config/linkTypeRules.ts` and
+[docs/link-type-rules.md](docs/link-type-rules.md); a parity test
+(`contracts/vocab.json`) fails when the frontend's copy drifts.
 
 ### Running Tests
 ```bash
-# Backend tests
-go test ./...
+# Backend tests (not ./...: frontend/node_modules holds a Go package)
+go test . ./cmd/... ./internal/...
 
 # Frontend tests
 cd frontend
@@ -237,6 +251,9 @@ npm test
 ## Configuration
 
 ### Environment Variables
+
+Every variable the backend reads, with its default, is in
+[docs/env-vars.md](docs/env-vars.md). The ones local development needs:
 
 **Backend**
 - `DB_HOST` - PostgreSQL host (default: localhost)
@@ -259,7 +276,8 @@ npm test
 - [x] Workspaces, teams, per-project access, Google and OIDC sign-in
 - [x] Multi-agent suite: runners, proposals, crews, automations, interviews
 - [x] Phone-friendly shell
-- [ ] Web Push and runner control from a phone
+- [x] Web Push notifications
+- [ ] Runner control from a phone
 - [ ] GitHub issues and PRs tied to requirements and evidence
 - [ ] Plugin system
 - [ ] Helm charts
