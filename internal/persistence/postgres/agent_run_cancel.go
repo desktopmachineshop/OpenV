@@ -88,6 +88,21 @@ func (rep *AgentRunRepository) RequestCancel(id string) (bool, error) {
 // the live runs were read be claimed before the queued ones were, and escape
 // both.
 func cancelProjectRuns(tx *sql.Tx, projectID string) ([]string, error) {
+	// Every unfinished run of the project is locked before the writes
+	// below, each of which matches on the run's status (#379 bug 169).
+	// Without the lock, a worker handing a claimed run back between the
+	// queued write and the live one moved it to the queue too late for the
+	// first and too early for the second: the run escaped the delete. Now
+	// a release either commits before the lock, and the queued write
+	// cancels the run, or waits for the delete and then finds the cancel
+	// requested, which ends the run cancelled (bug 148).
+	if _, err := tx.Exec(`
+		SELECT id FROM agent_runs
+		WHERE project_id = $1 AND status IN ('queued', 'claimed', 'running', 'awaiting_approval')
+		ORDER BY id FOR UPDATE
+	`, projectID); err != nil {
+		return nil, err
+	}
 	var ids []string
 	for _, stmt := range []string{
 		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'queued' RETURNING id`,

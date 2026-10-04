@@ -21,6 +21,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   run that then failed in a way that is normally retried was started again
   automatically. The cancel is now kept, and the run is not retried.
 
+- **Deleting a project stops every one of its runs.** A run its runner
+  handed back to the queue at the moment its project was deleted, as a
+  runner shutting down does, escaped the delete: it waited in the queue
+  with no project, and the next runner started it. It is now cancelled
+  with the project's other runs.
+
 - **A run you cancelled shows as cancelled when its runner goes quiet.**
   When a run's runner stopped responding after you asked the run to stop,
   the run was failed as "worker lost", and you were told "Agent run failed"
