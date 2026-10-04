@@ -1,8 +1,10 @@
 package automation
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"time"
 
@@ -58,17 +60,50 @@ func (m *TriggerMatcher) matches(a *automations.Automation, e domainevents.Event
 	if a.ProjectID != nil && *a.ProjectID != "" && *a.ProjectID != e.ProjectID {
 		return false
 	}
-	// Event filter: flat equality against payload values (string compare).
+	// Event filter: flat equality against payload values.
 	for key, want := range a.EventFilter {
 		got, ok := e.Payload[key]
-		if !ok {
-			return false
-		}
-		if fmt.Sprintf("%v", got) != fmt.Sprintf("%v", want) {
+		if !ok || !filterValueMatches(got, want) {
 			return false
 		}
 	}
 	return true
+}
+
+// filterValueMatches reports whether a payload value matches an event
+// filter's. Two numbers match when they are equal as numbers: a filter's
+// number comes from JSON as a float64 and a publisher's as a Go integer, so
+// comparing their text would miss a filter's 1000000, which prints as
+// 1e+06, against the int 1000000. Any other pair, and two numbers that are
+// not equal as numbers, match when they print alike (fmt %v), so strings,
+// bools, null and lists compare as text, a number matches its string, and a
+// float32 matches the filter number it prints as.
+func filterValueMatches(got, want interface{}) bool {
+	if g, ok := asNumber(got); ok {
+		if w, ok := asNumber(want); ok && g == w {
+			return true
+		}
+	}
+	return fmt.Sprintf("%v", got) == fmt.Sprintf("%v", want)
+}
+
+// asNumber is v as a float64, JSON's number, when v is a Go integer or float
+// of any size (a named type too) or a json.Number.
+func asNumber(v interface{}) (float64, bool) {
+	if n, ok := v.(json.Number); ok {
+		f, err := n.Float64()
+		return f, err == nil
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(rv.Int()), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return float64(rv.Uint()), true
+	case reflect.Float32, reflect.Float64:
+		return rv.Float(), true
+	}
+	return 0, false
 }
 
 func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.Event) bool {

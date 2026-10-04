@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -23,14 +24,17 @@ import (
 // to the window of the call.
 
 // TestMatcherEventFilters pins the event filter: every key must be in the
-// event's payload, and its value must print (fmt %v) as the filter's does,
-// so a filter compares strings. Filters come from jsonb, so a number is a
-// float64, while publishers send Go values (string, int, bool and []string,
-// S6's event_payload_types.txt): an integral filter number matches an int
-// below a million, and from a million on it prints as 1e+06 and never
-// matches; a number, a bool and their strings match each other; a null
-// matches a nil value but not a missing key; and a list matches a []string
-// with the same items. A filter that does not match consults no guard.
+// event's payload, and its value must equal the filter's. Filters come from
+// jsonb, so a number is a float64, while publishers send Go values (string,
+// int, bool and []string, S6's event_payload_types.txt). A filter number and
+// a payload number of any Go integer or float type match when they are equal
+// as numbers, so from a million on too, where the filter's prints as 1e+06
+// (the regression test for bug 75 of issue #379: it compared fmt %v text, so
+// such a filter never matched an int). Any other pair matches when both print
+// (fmt %v) alike, as before: a number, a bool and their strings match each
+// other; a null matches a nil value but not a missing key; and a list matches
+// a []string with the same items. A filter that does not match consults no
+// guard.
 func TestMatcherEventFilters(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -51,8 +55,19 @@ func TestMatcherEventFilters(t *testing.T) {
 		{"a number against an equal float", `{"version":2}`, map[string]interface{}{"version": 2.0}, true},
 		{"a number against its string", `{"version":2}`, map[string]interface{}{"version": "2"}, true},
 		{"999999 against the int", `{"version":999999}`, map[string]interface{}{"version": 999999}, true},
-		{"a million against the int", `{"version":1000000}`, map[string]interface{}{"version": 1000000}, false},
+		{"a million against the int", `{"version":1000000}`, map[string]interface{}{"version": 1000000}, true},
+		{"a million against another int", `{"version":1000000}`, map[string]interface{}{"version": 1000001}, false},
+		{"1e6 against the int", `{"version":1e6}`, map[string]interface{}{"version": 1000000}, true},
+		{"a million and a half against an int64", `{"size":1500000}`, map[string]interface{}{"size": int64(1500000)}, true},
+		{"a large negative number against the int", `{"delta":-2500000}`, map[string]interface{}{"delta": -2500000}, true},
+		{"ten million against a uint", `{"count":10000000}`, map[string]interface{}{"count": uint(10000000)}, true},
+		{"a large number against an int32", `{"count":20000000}`, map[string]interface{}{"count": int32(20000000)}, true},
+		{"a large number against an equal float", `{"ratio":2500000}`, map[string]interface{}{"ratio": 2500000.0}, true},
+		{"a large fraction against the int below it", `{"version":1000000.5}`, map[string]interface{}{"version": 1000000}, false},
+		{"a million against a json.Number", `{"version":1000000}`, map[string]interface{}{"version": json.Number("1000000")}, true},
 		{"a million against 1e+06", `{"version":1000000}`, map[string]interface{}{"version": "1e+06"}, true},
+		{"a million against its digits", `{"version":1000000}`, map[string]interface{}{"version": "1000000"}, false},
+		{"a fraction against a float32 that prints alike", `{"ratio":0.1}`, map[string]interface{}{"ratio": float32(0.1)}, true},
 		{"true against true", `{"review_round":true}`, map[string]interface{}{"review_round": true}, true},
 		{"true against false", `{"review_round":true}`, map[string]interface{}{"review_round": false}, false},
 		{"false against false", `{"review_round":false}`, map[string]interface{}{"review_round": false}, true},

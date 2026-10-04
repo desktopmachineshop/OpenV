@@ -636,8 +636,8 @@ the scheduler switches it off, `enabled` false and `next_run_at` NULL, and
 logs why), the prompt (`Scheduled run of
 automation: <name>` when the template renders empty), the target, and
 `ResolveTarget`, which all three paths call. In `internal/automation`, the
-trigger matcher's tests pin the event filter (each value compared as `fmt`
-prints it, so a filter's number matches an int below a million), the
+trigger matcher's tests pin the event filter (two numbers compared as
+numbers, any other pair as `fmt` prints it), the
 guards in their order (an event caused by one of the automation's own
 runs, actor `agent:<run>`, then the cooldown, then the hourly cap), the
 prompt variables, the run launched and the `last_run_at` stamp, and that
