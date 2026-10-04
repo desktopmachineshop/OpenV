@@ -133,6 +133,36 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   registered those agents again, under a workspace that no longer exists.
   Purging a workspace now removes its agents' files too.
 
+- **Run now on a whole-workspace automation shows the run it started.** On
+  a project's Automations page, Run now on an automation for the whole
+  workspace opened the project's Runs page, whose list leaves the run out:
+  it belongs to no project. The run now opens beside the automations, with
+  its status, log, answer, Cancel and Retry, and stays open on a reload.
+
+- **Deleting a project ends its runs that await approval.** A run of the
+  deleted project that was waiting for its proposals to be reviewed waited
+  for ever, its proposals gone with the project. It is now cancelled with
+  the project's other unfinished runs. The project's runs also stop
+  pointing at its cards, sessions, automations and crews, and the server no
+  longer logs a "failed to move card" error for them.
+
+- **A member's own runner stops a run whose project is deleted.** When a
+  project was deleted while the personal runner of a member who is not a
+  workspace admin was working on one of its runs, the runner lost sight of
+  the run: it never learned the run was cancelled, kept working until the
+  run was failed as "worker lost", and an automatic retry could then start
+  it again outside any project. The runner now stops the run and reports it
+  cancelled, and a run someone asked to stop is never retried
+  automatically.
+
+- **A cancelled run stays cancelled.** A run whose cancel was requested went
+  back to the queue, and was started again by the next runner, when its
+  runner shut down before stopping it or could not start it; it now ends
+  cancelled, and runs left in the queue this way are cancelled by this
+  update. A run claimed by a runner a moment before its project was deleted
+  could still be given a working run token; it now gets none, and is
+  cancelled.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features

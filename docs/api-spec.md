@@ -102,7 +102,10 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
   that a member's own personal key launched is not taken by that member's
   runner unless the member is a workspace admin. The run lifecycle calls
   (start, logs, finish, release) answer a personal key `404` on any other
-  run.
+  run, except the one its runner claimed, which it reaches while the run is
+  claimed or running, whoever can see it meanwhile: a run whose project is
+  deleted has no project, and the runner of a member who is no workspace
+  admin still reads its cancel and reports it cancelled.
 - **Session keys** — a personal key bound to a transient runner lease
   (`worker_keys.session_id` set), minted when a member leases a pool node and
   revoked when the lease ends. It routes like any personal key; it is kept
@@ -359,7 +362,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can); an agent run's token, its own project alone | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
 | PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `400` for a parent in another workspace, the project itself or one of its descendants, and `400` `parent project not found` for one no row has or the caller cannot reach) | editor |
-| DELETE | `/api/v1/projects/{id}` | Delete project and, in one transaction, all that belongs to it alone: every version of its artifacts with their chatter, attachment records and links (those to and from other projects' artifacts too), work items, crews, test runs, baselines, evidence, interviews, guided sessions, project attribute definitions, automations, proposals, share links, members and team grants. Its agent runs stay, with no project, for the workspace's usage; a queued one is cancelled and a claimed or running one asked to stop, as `POST /api/v1/agent-runs/{id}/cancel` does, and each one's run token is refused from then on. Its activity-log events stay; its child projects are detached to the top level. Once the delete has committed, the stored files of its attachments (every version) and evidence are removed from the uploads directory; one that cannot be removed is logged and does not fail the delete | owner |
+| DELETE | `/api/v1/projects/{id}` | Delete project and, in one transaction, all that belongs to it alone: every version of its artifacts with their chatter, attachment records and links (those to and from other projects' artifacts too), work items, crews, test runs, baselines, evidence, interviews, guided sessions, project attribute definitions, automations, proposals, share links, members and team grants. Its agent runs stay, with no project, for the workspace's usage; a queued one is cancelled and a claimed or running one asked to stop, as `POST /api/v1/agent-runs/{id}/cancel` does, one awaiting approval is cancelled (its proposals go with the project), and each one's run token is refused from then on. They stop naming what the delete removes (the card, guided or interview session, automation, crew and crew node of the project); what they name outside it stays. Its activity-log events stay; its child projects are detached to the top level. Once the delete has committed, the stored files of its attachments (every version) and evidence are removed from the uploads directory; one that cannot be removed is logged and does not fail the delete | owner |
 | GET | `/api/v1/projects/{id}/children` | The projects filed under this one | viewer |
 | GET | `/api/v1/projects/{id}/linked-artifacts` | The far end of every link crossing out of the project: `[{id, project_id, project_name, ref, type, title, status}]`, so a parent requirement a local one refines, or the child requirements refining a local one, can be named without rights on those projects | viewer |
 | GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
@@ -1223,7 +1226,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/agent-runs` | List runs (project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own) | user |
-| POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run (a personal key: its owner's, and the ownerless ones its owner could see) | worker |
+| POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run (a personal key: its owner's, and the ownerless ones its owner could see), never one whose cancel was requested. `204` when there is none, and when the run claimed was asked to stop before its token was issued (a project's delete, say): it is handed back, which ends it cancelled | worker |
 | POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
@@ -1244,14 +1247,16 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/retry` | Re-enqueue a failed, cancelled or timed-out run as a new one (`retried_from_run_id`); `409` otherwise. Refused `403` for a proposal-mode agent run, `401` for any other run token | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
-| POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. `204` also when nothing was released | worker |
+| POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. A run whose cancel was requested is not queued again: it ends `cancelled`. `204` also when nothing was released | worker |
 
 A run that finishes with proposals pending review waits in
 `awaiting_approval` until its last proposal is reviewed, then succeeds, or
 fails when an approved proposal could not be applied: its `error` is then
 `one or more approved proposals failed to apply` and its `error_class`
 `agent_error`, which is never retried automatically; a member may still
-retry it (REQ-79, REQ-84).
+retry it (REQ-79, REQ-84). Deleting its project cancels it instead, its
+proposals gone with the project. A run whose cancel was requested is never
+retried automatically either, however it ends.
 
 When a crew run succeeds (for one awaiting approval, once it is finalised),
 each `hands-off-to` and `reviews` edge of its crew node starts what it leads

@@ -68,10 +68,12 @@ var ErrNotFound = errors.New("project not found")
 // transaction cannot finish itself (#379 bugs 136 and 137): the stored files
 // of its figures, every version of each, and of its evidence bundles, which
 // the caller removes from the upload store once the delete has committed;
-// and its agent runs that were queued, claimed or running, which the delete
-// cancelled as a cancel does (a queued run cancelled, a claimed or running
-// one asked to stop) and whose run tokens it revoked, and which the caller
-// announces to the runs' subscribers as a cancel announces its run.
+// and its agent runs that were queued, claimed, running or awaiting
+// approval, which the delete cancelled as a cancel does (a queued run
+// cancelled, a claimed or running one asked to stop) or, awaiting approval,
+// cancelled as a queued one is (bug 146), whose run tokens it revoked, and
+// which the caller announces to the runs' subscribers as a cancel announces
+// its run.
 type Removed struct {
 	Files         []string
 	CancelledRuns []string

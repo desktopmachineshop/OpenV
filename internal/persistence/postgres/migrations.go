@@ -112,4 +112,5 @@ var migrations = []Migration{
 	{Version: 55, Name: "figure_counters_without_artifact", Run: m0055FigureCountersWithoutArtifact},
 	{Version: 56, Name: "boot_tasks", Run: m0056BootTasks},
 	{Version: 57, Name: "drop_attachment_test_result", Run: m0057DropAttachmentTestResult},
+	{Version: 58, Name: "cancel_requeued_cancelled_runs", Run: m0058CancelRequeuedCancelledRuns},
 }

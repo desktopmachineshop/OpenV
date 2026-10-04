@@ -197,7 +197,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Use the cooldown and max-runs-per-hour safety valves to keep triggered automations from running away.',
       'Scheduled and triggered runs are ownerless — a hosted runner keeps them moving when nobody is online.',
       'Keep prompt templates lean; the agent fetches artifact content itself at run time.',
-      'Run now launches immediately and jumps you to the Runs page focused on the new run.',
+      "Run now launches immediately and jumps you to the Runs page focused on the new run; a whole-workspace automation's run, which no project's Runs page lists, opens beside the automations.",
     ],
     chapter: { slug: 'automations', title: 'Automations' },
   },

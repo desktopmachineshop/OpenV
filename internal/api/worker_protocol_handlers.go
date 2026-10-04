@@ -95,6 +95,15 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, err := h.RunService.ReissueToken(run.ID)
+	if errors.Is(err, agentruns.ErrInvalidTransition) {
+		// The run was asked to stop between the claim and now (a project's
+		// delete revoked its token, #379 bug 151), or is no longer held: it
+		// gets no token. Handed back, a run asked to stop ends cancelled;
+		// the worker has nothing to run.
+		h.releaseFailedClaim(run.ID, req.WorkerID)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	if err != nil {
 		h.releaseFailedClaim(run.ID, req.WorkerID)
 		respondInternal(w, r, "failed to issue run token", err)

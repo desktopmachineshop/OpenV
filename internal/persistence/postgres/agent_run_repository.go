@@ -214,7 +214,9 @@ func collectRuns(rows *sql.Rows) ([]*agentruns.Run, error) {
 // runners skip runs still reserved for a personal runner (until
 // hosted_after) and, when excludeRepoAccess is set, runs whose agent needs
 // repo access. The claim records the personal runner's user as claimed_by
-// (NULL for a workspace key), whose local paths the run's token reads.
+// (NULL for a workspace key), whose local paths the run's token reads. A
+// run whose cancel was requested is never claimed (#379 bug 148: one the
+// old ReleaseClaim put back in the queue was started again).
 func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*agentruns.Run, error) {
 	row := rep.db.QueryRow(`
 		UPDATE agent_runs SET status = 'claimed', worker_id = $1, heartbeat_at = NOW(),
@@ -223,6 +225,7 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 			SELECT r.id FROM agent_runs r
 			JOIN agents a ON a.id = r.agent_id
 			WHERE r.status = 'queued'
+			  AND NOT r.cancel_requested
 			  AND r.org_id = $4::uuid
 			  AND a.provider = ANY($2)
 			  AND r.priority >= $3
@@ -278,21 +281,46 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 // started, no longer act for the run, and the next claim issues a new token.
 // claimed_by is cleared too: no runner holds the run until the next claim
 // names its own.
+//
+// A run whose cancel was requested is not put back in the queue: it ends
+// cancelled, as its worker reporting it cancelled would have ended it, and
+// keeps the worker that held it, as a finished run does (#379 bug 148: it
+// went back to the queue, and the next claim started it again). The run's
+// row is locked from the read of its flag to the write, so no cancel lands
+// between them.
 func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
-	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'queued', worker_id = '', claimed_by = NULL, heartbeat_at = NULL, started_at = NULL, partial_text = '', run_token_hash = ''
-		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
-	`, runID, workerID)
+	tx, err := rep.db.Begin()
 	if err != nil {
 		return false, err
 	}
-	n, err := res.RowsAffected()
-	return n > 0, err
+	defer tx.Rollback()
+	var cancelRequested bool
+	err = tx.QueryRow(`
+		SELECT cancel_requested FROM agent_runs
+		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
+		FOR UPDATE
+	`, runID, workerID).Scan(&cancelRequested)
+	if noRow(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	release := `UPDATE agent_runs SET status = 'queued', worker_id = '', claimed_by = NULL, heartbeat_at = NULL, started_at = NULL, partial_text = '', run_token_hash = '' WHERE id = $1`
+	if cancelRequested {
+		release = `UPDATE agent_runs SET ` + cancelQueuedRun + `, partial_text = '' WHERE id = $1`
+	}
+	if _, err := tx.Exec(release, runID); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
 // cancelQueuedRun is what cancelling a queued run writes: the run is
 // cancelled at once and its token revoked. CancelQueued and a project's
-// delete (cancelProjectRuns) write it alike.
+// delete (cancelProjectRuns) write it alike; so do the delete for a run
+// awaiting approval, and ReleaseClaim for a run whose cancel was requested,
+// neither of which any worker will report.
 const cancelQueuedRun = `status = 'cancelled', cancel_requested = TRUE, finished_at = NOW(), run_token_hash = ''`
 
 // requestLiveRunCancel is what asking a claimed or running run to stop
@@ -335,8 +363,10 @@ func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
 // running run is asked to stop, as SetCancelRequested writes it, and its
 // token is revoked at once besides, since the project it acted in is gone.
 // The worker reports to the server with its own key, not the run's token,
-// so it still reads the flag and reports the run cancelled. It answers the
-// ids of the runs it cancelled or asked to stop, for the caller to announce
+// so it still reads the flag and reports the run cancelled. A run awaiting
+// approval is cancelled as a queued one is (#379 bug 146): its proposals go
+// with the project, so no review could ever finalise it. It answers the ids
+// of the runs it cancelled or asked to stop, for the caller to announce
 // once the transaction has committed.
 //
 // The queued runs go first. A claim takes a queued run with FOR UPDATE SKIP
@@ -351,6 +381,7 @@ func cancelProjectRuns(tx *sql.Tx, projectID string) ([]string, error) {
 	for _, stmt := range []string{
 		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'queued' RETURNING id`,
 		`UPDATE agent_runs SET ` + requestLiveRunCancel + `, run_token_hash = '' WHERE project_id = $1 AND status IN ('claimed', 'running') RETURNING id`,
+		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'awaiting_approval' RETURNING id`,
 	} {
 		rows, err := tx.Query(stmt, projectID)
 		if err != nil {
@@ -402,10 +433,24 @@ func (rep *AgentRunRepository) UpdateWorkItemID(runID, workItemID string) error 
 	return err
 }
 
-// UpdateTokenHash rotates a run's token hash.
-func (rep *AgentRunRepository) UpdateTokenHash(runID, hash string) error {
-	_, err := rep.db.Exec(`UPDATE agent_runs SET run_token_hash = $2 WHERE id = $1`, runID, hash)
-	return err
+// UpdateTokenHash rotates a run's token hash, but only while a worker holds
+// the run (claimed or running) and its cancel has not been requested;
+// reports whether it was applied. A finish, a release and a project's
+// delete revoke the token, and a run asked to stop gets no new one, so a
+// revoked token stays revoked: the claim handshake's reissue,
+// unconditional before, wrote a working token over a delete that revoked
+// it a moment after the claim (#379 bug 151). Run against a delete under
+// way, it waits for the run's row and then finds the cancel.
+func (rep *AgentRunRepository) UpdateTokenHash(runID, hash string) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET run_token_hash = $2
+		WHERE id = $1 AND status IN ('claimed', 'running') AND NOT cancel_requested
+	`, runID, hash)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
 }
 
 // MarkRunning conditionally transitions a run from claimed to running,
