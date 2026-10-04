@@ -111,11 +111,15 @@ func main()
   call internal/scheduler.New -> (*internal/scheduler.Scheduler).Start
   go
     call (*internal/domain/orgs.DefaultService).PurgeExpired
+    for
+      call (*internal/domain/agents.FileService).RemoveOrg
     defer (*time.Ticker).Stop
     for
       select
         case
           call (*internal/domain/orgs.DefaultService).PurgeExpired
+          for
+            call (*internal/domain/agents.FileService).RemoveOrg
   go
     defer (*time.Ticker).Stop
     for

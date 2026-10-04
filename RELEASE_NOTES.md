@@ -75,6 +75,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   it. OpenV now runs every database connection in UTC, whatever the
   database's own setting.
 
+- **A purged workspace's agents are removed from the server.** When a
+  deleted workspace's grace period ended and OpenV purged it, the files
+  defining its agents stayed in the server's agents directory
+  (`AGENTS_DIR`), those deleted to its trash included, and every restart
+  registered those agents again, under a workspace that no longer exists.
+  Purging a workspace now removes its agents' files too.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features
