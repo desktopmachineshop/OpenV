@@ -466,6 +466,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   file the server cannot remove is noted in its log, and the workspace is
   purged all the same.
 
+- **A figure added as its project is deleted no longer stays behind.** A
+  figure whose upload finished while its project was being deleted, or
+  just after, was stored all the same, with no project to show it in, and
+  its file stayed on the server. The upload now waits for the delete and
+  then answers "project not found", as for any deleted project, and its
+  file is removed. A figure that was stored first is deleted with the
+  project.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

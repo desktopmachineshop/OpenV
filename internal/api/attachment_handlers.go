@@ -122,9 +122,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err := h.AttachmentService.CreateFigure(attachment, artifactRef); err != nil {
-		// Clean up file if database save fails
-		_ = os.Remove(storedPath)
-		respondInternal(w, r, "Failed to save attachment metadata", err)
+		figureNotSaved(w, r, storedPath, err)
 		return
 	}
 
@@ -139,6 +137,19 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(attachment)
+}
+
+// figureNotSaved answers an upload whose figure could not be saved, once
+// its stored file is removed: an upload whose project went while the file
+// came in (#379 bug 152) as an upload to an artifact no row has, 404
+// "project not found", and any other failure 500.
+func figureNotSaved(w http.ResponseWriter, r *http.Request, storedPath string, err error) {
+	_ = os.Remove(storedPath)
+	if errors.Is(err, attachments.ErrNoArtifact) {
+		unknownProject.write(w)
+		return
+	}
+	respondInternal(w, r, "Failed to save attachment metadata", err)
 }
 
 // GetAttachmentMeta retrieves attachment metadata

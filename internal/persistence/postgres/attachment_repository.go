@@ -248,14 +248,44 @@ func (r *AttachmentRepository) Delete(id string) ([]string, error) {
 // reference: there is nothing to build one from, and inventing a bare "FIG-1"
 // would collide the moment the artifact got its ref.
 func (r *AttachmentRepository) SaveWithFigureRef(attachment *attachments.Attachment, artifactRef string) error {
-	if attachment.Version < 1 {
-		attachment.Version = 1
-	}
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin figure transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := saveFigure(tx, attachment, artifactRef); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// saveFigure is SaveWithFigureRef's body, in tx.
+//
+// It first holds the row of the artifact's project (FOR KEY SHARE, which
+// only a delete's FOR UPDATE waits for), so the figure, its counter and its
+// first version go in only while the project stands (#379 bug 152: a figure
+// uploaded while its project was being deleted, or once it was, could leave
+// an orphan row, counter and file, since nothing ties a figure to its
+// project but the artifact's id). A project being deleted holds its row,
+// so the figure waits for the delete and then finds no project:
+// attachments.ErrNoArtifact, and nothing is stored. A figure that holds the
+// row first is in before the delete reads the project's figures, and goes
+// with them, its file answered.
+func saveFigure(tx *sql.Tx, attachment *attachments.Attachment, artifactRef string) error {
+	if attachment.Version < 1 {
+		attachment.Version = 1
+	}
+	var project string
+	if err := tx.QueryRow(`
+		SELECT p.id FROM projects p
+		WHERE p.id = (SELECT a.project_id FROM artifacts a WHERE a.id = $1 LIMIT 1)
+		FOR KEY SHARE
+	`, attachment.ArtifactID).Scan(&project); err != nil {
+		if noRow(err) {
+			return attachments.ErrNoArtifact
+		}
+		return fmt.Errorf("failed to read the figure's project: %w", err)
+	}
 
 	if artifactRef != "" {
 		var num int
@@ -297,8 +327,7 @@ func (r *AttachmentRepository) SaveWithFigureRef(attachment *attachments.Attachm
 	); err != nil {
 		return fmt.Errorf("failed to record the figure's first version: %w", err)
 	}
-
-	return tx.Commit()
+	return nil
 }
 
 // AddVersion supersedes a figure's file, keeping the figure reference and the

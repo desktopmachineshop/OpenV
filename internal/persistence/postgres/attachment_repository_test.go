@@ -110,7 +110,7 @@ func TestFigureNumbersAreNeverReissued(t *testing.T) {
 	initTestSchema(t, db)
 
 	repo := NewAttachmentRepository(db)
-	artifactID := uuid.New().String()
+	artifactID := seedFigureArtifact(t, db)
 
 	figure := func(name string) *attachments.Attachment {
 		return attachments.NewAttachment(attachments.CreateAttachmentRequest{
@@ -152,7 +152,7 @@ func TestFigureNumbersAreNeverReissued(t *testing.T) {
 
 	// A different artifact numbers from its own one.
 	other := attachments.NewAttachment(attachments.CreateAttachmentRequest{
-		ArtifactID:       uuid.New().String(),
+		ArtifactID:       seedFigureArtifact(t, db),
 		Filename:         "x.png",
 		OriginalFilename: "x.png",
 		MimeType:         "image/png",
@@ -177,7 +177,7 @@ func TestFigureVersionsSupersedeAndKeepHistory(t *testing.T) {
 
 	repo := NewAttachmentRepository(db)
 	fig := attachments.NewAttachment(attachments.CreateAttachmentRequest{
-		ArtifactID:       uuid.New().String(),
+		ArtifactID:       seedFigureArtifact(t, db),
 		Filename:         "first.png",
 		OriginalFilename: "first.png",
 		MimeType:         "image/png",
@@ -263,7 +263,7 @@ func TestRestoreVersion(t *testing.T) {
 	initTestSchema(t, db)
 
 	repo := NewAttachmentRepository(db)
-	artifactID := uuid.New().String()
+	artifactID := seedFigureArtifact(t, db)
 
 	att := attachments.NewAttachment(attachments.CreateAttachmentRequest{
 		ArtifactID:       artifactID,
@@ -360,7 +360,7 @@ func TestRestoreVersionRefusals(t *testing.T) {
 
 	repo := NewAttachmentRepository(db)
 	att := attachments.NewAttachment(attachments.CreateAttachmentRequest{
-		ArtifactID:       uuid.New().String(),
+		ArtifactID:       seedFigureArtifact(t, db),
 		Filename:         "only.png",
 		OriginalFilename: "only.png",
 		MimeType:         "image/png",
