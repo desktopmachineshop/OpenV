@@ -173,12 +173,10 @@ func (m *BudgetMonitor) alertAdmins(orgID, month string, threshold int, spend, b
 	}
 }
 
-// budgetMessage renders the title/body for a threshold alert.
+// budgetMessage renders the title/body for a threshold alert. The title names
+// the threshold crossed; the body the actual spend against the budget, which
+// is rarely the threshold itself. Money reads as the usage tab shows it.
 func budgetMessage(threshold int, spend, budget float64) (string, string) {
-	if threshold >= budgetThresholdOver {
-		return "Workspace over budget",
-			fmt.Sprintf("This month's agent spend has reached $%.2f of the $%.2f budget (100%%).", spend, budget)
-	}
-	return "Workspace nearing budget",
-		fmt.Sprintf("This month's agent spend has reached $%.2f of the $%.2f budget (80%%).", spend, budget)
+	return fmt.Sprintf("Workspace reached %d%% of its budget", threshold),
+		fmt.Sprintf("This month's agent runs have spent $%.2f of the $%.2f budget.", spend, budget)
 }
