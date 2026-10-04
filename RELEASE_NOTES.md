@@ -27,6 +27,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **The Runs pages no longer flash runs you have switched away from.** A
+  project's Runs page, and Workspace runs, refresh their list every few
+  seconds. Right after you switched workspace or project, or chose another
+  status, a refresh for what you had left could arrive late and put its
+  runs back on the list for a few seconds, along with its warning that no
+  runner is online. An older refresh could also briefly replace a newer
+  one. A refresh that arrives late is now ignored.
+
 - **Each failed run keeps its own web push notification.** When two of
   your agent runs failed, the second one's web push replaced the first
   one's on your phone or computer, so you saw only one: for two runs of

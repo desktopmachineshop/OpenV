@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgentRun, WorkerStatus, agentRunsAPI, workerStatusAPI } from '../api/client';
 import { useAppStore } from '../state/store';
-import { RunDetailBeside, RunStatusFilter, RunTable } from '../components/agents/RunTable';
+import { RunDetailBeside, RunStatusFilter, RunTable, pollGuard } from '../components/agents/RunTable';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
 import { ErrorBanner } from '../components/ui';
@@ -34,37 +34,49 @@ export const AgentRunsPage: React.FC = () => {
   // detail. A compact viewport opens that detail as a sheet over the list.
   const { isPhone, isCompact } = useViewport();
 
-  const load = useCallback(() => {
+  useEffect(() => {
     if (!projectId) return;
     const query: { project_id: string; status?: string; limit: number } = {
       project_id: projectId,
       limit: RUNS_POLL_LIMIT,
     };
     if (statusFilter !== 'all') query.status = statusFilter;
-    agentRunsAPI
-      .list(query)
-      .then((res) => {
-        setRuns(res.data || []);
-        setError('');
-      })
-      .catch((err: any) =>
-        setError(err.response?.data?.error || err.message || 'Failed to load runs')
-      );
-    if (activeOrgId) {
-      workerStatusAPI
-        .get(activeOrgId)
-        .then((res) => setWorkerStatus(res.data))
-        .catch(() => {
-          // Banner data is best-effort; keep the last known status on error.
+    // A switch of project or workspace, or another filter, starts a new
+    // poll: what the old one still has on its way is dropped (pollGuard).
+    const runsGuard = pollGuard();
+    const statusGuard = pollGuard();
+    const load = () => {
+      const runsCurrent = runsGuard.next();
+      agentRunsAPI
+        .list(query)
+        .then((res) => {
+          if (!runsCurrent()) return;
+          setRuns(res.data || []);
+          setError('');
+        })
+        .catch((err: any) => {
+          if (runsCurrent()) setError(err.response?.data?.error || err.message || 'Failed to load runs');
         });
-    }
-  }, [projectId, statusFilter, activeOrgId]);
-
-  useEffect(() => {
+      if (activeOrgId) {
+        const statusCurrent = statusGuard.next();
+        workerStatusAPI
+          .get(activeOrgId)
+          .then((res) => {
+            if (statusCurrent()) setWorkerStatus(res.data);
+          })
+          .catch(() => {
+            // Banner data is best-effort; keep the last known status on error.
+          });
+      }
+    };
     load();
     const timer = window.setInterval(load, 5000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+    return () => {
+      runsGuard.close();
+      statusGuard.close();
+      window.clearInterval(timer);
+    };
+  }, [projectId, statusFilter, activeOrgId]);
 
   // Auto-prompt the Agent Connector the first time runs are queued with no
   // runner online (covers every launch path — they all land on this page).

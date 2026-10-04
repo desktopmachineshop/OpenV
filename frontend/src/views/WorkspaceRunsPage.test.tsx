@@ -195,6 +195,28 @@ describe('the workspace Runs page', () => {
     expect(list).toHaveBeenLastCalledWith({ project: 'none', limit: 200, status: 'failed' });
   });
 
+  it('drops a late answer for the workspace it left (#379 bug 175)', async () => {
+    const answers: Array<(runs: AgentRun[]) => void> = [];
+    const later = () =>
+      new Promise<{ data: AgentRun[] }>((resolve) => {
+        answers.push((runs) => resolve({ data: runs }));
+      }) as any;
+    list.mockImplementationOnce(later).mockImplementationOnce(later);
+    await mount('/org/runs', gates(true));
+    await act(async () => {
+      useAppStore.setState({ activeOrgId: 'o2' });
+    });
+    await flush();
+    expect(answers).toHaveLength(2);
+
+    await act(async () => answers[1]([elsewhere]));
+    await flush();
+    expect(rows()).toEqual(['🤖 Auditor']);
+    await act(async () => answers[0](listed));
+    await flush();
+    expect(rows()).toEqual(['🤖 Auditor']);
+  });
+
   it("follows a linked run to its workspace, the member's other one", async () => {
     await mount('/org/runs?run=run-b', gates(true));
     expect(vi.mocked(agentRunsAPI.get)).toHaveBeenCalledWith('run-b');

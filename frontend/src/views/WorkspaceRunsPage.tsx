@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { AgentRun, agentRunsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
@@ -7,7 +7,7 @@ import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { Navbar } from '../components/Navbar';
 import { ErrorBanner } from '../components/ui';
-import { RunDetailBeside, RunStatusFilter, RunTable } from '../components/agents/RunTable';
+import { RunDetailBeside, RunStatusFilter, RunTable, pollGuard } from '../components/agents/RunTable';
 import { WORKSPACE_RUNS_FEATURE } from '../components/agents/workspaceRuns';
 
 // As on a project's Runs page, the 5s poll lists at most this many runs.
@@ -64,24 +64,33 @@ const WorkspaceRuns: React.FC = () => {
   const selectedRunId = searchParams.get('run');
   const { isPhone, isCompact } = useViewport();
 
-  const load = useCallback(() => {
+  useEffect(() => {
     if (!activeOrgId) return;
     const query: { project: 'none'; status?: string; limit: number } = { project: 'none', limit: RUNS_POLL_LIMIT };
     if (statusFilter !== 'all') query.status = statusFilter;
-    agentRunsAPI
-      .list(query)
-      .then((res) => {
-        setRuns(res.data || []);
-        setError('');
-      })
-      .catch((err) => setError(apiErrorMessage(err, 'Failed to load runs')));
-  }, [activeOrgId, statusFilter]);
-
-  useEffect(() => {
+    // A workspace switch, or another filter, starts a new poll: what the
+    // old one still has on its way is dropped (pollGuard).
+    const guard = pollGuard();
+    const load = () => {
+      const current = guard.next();
+      agentRunsAPI
+        .list(query)
+        .then((res) => {
+          if (!current()) return;
+          setRuns(res.data || []);
+          setError('');
+        })
+        .catch((err) => {
+          if (current()) setError(apiErrorMessage(err, 'Failed to load runs'));
+        });
+    };
     load();
     const timer = window.setInterval(load, 5000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+    return () => {
+      guard.close();
+      window.clearInterval(timer);
+    };
+  }, [activeOrgId, statusFilter]);
 
   // A notification lists a member's runs of every workspace, so its link
   // may name a run of another one: follow the run there, as a project's
