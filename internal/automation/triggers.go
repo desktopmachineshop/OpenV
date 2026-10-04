@@ -2,6 +2,7 @@ package automation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -106,14 +107,25 @@ func asNumber(v interface{}) (float64, bool) {
 	return 0, false
 }
 
+// passesGuards applies the loop guard, the cooldown and the hourly cap, in
+// that order. A guard whose lookup fails holds the automation back (fail
+// closed) and logs why: it cannot tell whether firing would loop or run
+// over the cap. A run no row has is no failure: it is not this
+// automation's own.
 func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.Event) bool {
 	// Self-trigger loop guard: skip events produced by this automation's own runs.
 	if strings.HasPrefix(e.Actor, "agent:") {
 		runID := strings.TrimPrefix(e.Actor, "agent:")
-		if run, err := m.runService.Get(runID); err == nil && run != nil {
-			if run.AutomationID != nil && *run.AutomationID == a.ID {
-				return false
-			}
+		run, err := m.runService.Get(runID)
+		if err != nil && !errors.Is(err, agentruns.ErrNotFound) {
+			slog.Warn("triggers: automation skipped: self-trigger check failed",
+				slog.String("automation_id", a.ID),
+				slog.String("run_id", runID),
+				slog.Any("error", err))
+			return false
+		}
+		if err == nil && run != nil && run.AutomationID != nil && *run.AutomationID == a.ID {
+			return false
 		}
 	}
 
@@ -127,7 +139,13 @@ func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.
 	// Hourly rate cap.
 	if a.MaxRunsPerHour > 0 {
 		count, err := m.runService.CountRunsSince(a.ID, time.Now().Add(-time.Hour))
-		if err == nil && count >= a.MaxRunsPerHour {
+		if err != nil {
+			slog.Warn("triggers: automation skipped: hourly run count failed",
+				slog.String("automation_id", a.ID),
+				slog.Any("error", err))
+			return false
+		}
+		if count >= a.MaxRunsPerHour {
 			slog.Info("triggers: automation hit max_runs_per_hour",
 				slog.String("automation_id", a.ID),
 				slog.Int("max_runs_per_hour", a.MaxRunsPerHour))

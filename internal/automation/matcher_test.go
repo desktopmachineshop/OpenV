@@ -108,10 +108,13 @@ func TestMatcherEventFilters(t *testing.T) {
 // TestMatcherSelfTriggerSkip pins the loop guard, the first guard: an
 // automation does not fire on an event whose actor is agent:<run> when that
 // run is the automation's own (its automation_id; run-now's runs carry it
-// too). It looks the run up only for an agent: actor, and a run it cannot
-// find, one of another automation or one of none does not hold it back. The
-// skip is per automation: another automation fires on the same event. A
-// skipped automation asks no further guard and is not stamped.
+// too). It looks the run up only for an agent: actor, and a run no row has
+// (agentruns.ErrNotFound), one of another automation or one of none does
+// not hold it back. A lookup that fails otherwise holds it back and logs
+// one line, since the guard cannot tell (fail closed: the regression test
+// for bug 78 of issue #379, decided under Q36; it fired). The skip is per
+// automation: another automation fires on the same event. A skipped
+// automation asks no further guard and is not stamped.
 func TestMatcherSelfTriggerSkip(t *testing.T) {
 	runsByID := map[string]*agentruns.Run{
 		"run-own":     {ID: "run-own", OrgID: "org-1", AutomationID: strp("au-1")},
@@ -153,6 +156,28 @@ func TestMatcherSelfTriggerSkip(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("a lookup that fails", func(t *testing.T) {
+		logs := captureSlog(t)
+		a := onArtifacts("au-1", "Self")
+		a.MaxRunsPerHour = 10
+		repo := newMatcherRepo(a)
+		runs := newMatcherRuns()
+		runs.byID, runs.getErr = runsByID, errors.New("connection refused")
+		NewTriggerMatcher(repo, runs, matcherTeams{}).handle(artifactEvent("agent:run-sibling", nil))
+		if n := len(runs.requests()); n != 0 {
+			t.Errorf("launched %d runs, want none: a loop guard that cannot tell holds the automation back", n)
+		}
+		if len(runs.countsAsked()) != 0 || len(repo.marksMade()) != 0 {
+			t.Errorf("the skipped automation asked the hourly count %v and was stamped %v", runs.countsAsked(),
+				repo.marksMade())
+		}
+		want := []string{`level=WARN msg="triggers: automation skipped: self-trigger check failed" ` +
+			`automation_id=au-1 run_id=run-sibling error="connection refused"`}
+		if got := logs.lines(); !equalLines(got, want) {
+			t.Errorf("logged %q, want %q", got, want)
+		}
+	})
 
 	t.Run("the skip is per automation", func(t *testing.T) {
 		captureSlog(t)
@@ -234,10 +259,13 @@ func TestMatcherCooldown(t *testing.T) {
 // max_runs_per_hour above 0 asks the run service how many runs it has had
 // since an hour before now (agentruns' CountRunsSince, by automation id),
 // and does not fire once that count reaches the cap, logging one line at
-// Info; a cap of 0 or below asks nothing, and a count the service cannot
-// give does not hold it back.
+// Info; a cap of 0 or below asks nothing. A count the service cannot give
+// holds it back too, logging one line at Warn (fail closed: the regression
+// test for bug 78 of issue #379, decided under Q36; it fired).
 func TestMatcherHourlyCap(t *testing.T) {
 	const capped = `level=INFO msg="triggers: automation hit max_runs_per_hour" automation_id=au-1 max_runs_per_hour=3`
+	const uncounted = `level=WARN msg="triggers: automation skipped: hourly run count failed" automation_id=au-1 ` +
+		`error=timeout`
 	cases := []struct {
 		name    string
 		cap     int
@@ -250,7 +278,8 @@ func TestMatcherHourlyCap(t *testing.T) {
 		{name: "below the cap", cap: 3, count: 2, fires: true, counted: true},
 		{name: "at the cap", cap: 3, count: 3, counted: true, logs: []string{capped}},
 		{name: "over the cap", cap: 3, count: 7, counted: true, logs: []string{capped}},
-		{name: "a count that fails", cap: 3, count: 9, err: errors.New("timeout"), fires: true, counted: true},
+		{name: "a count that fails", cap: 3, count: 0, err: errors.New("timeout"), counted: true,
+			logs: []string{uncounted}},
 		{name: "no cap", cap: 0, count: 99, fires: true},
 		{name: "a negative cap", cap: -1, count: 99, fires: true},
 	}

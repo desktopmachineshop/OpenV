@@ -639,19 +639,20 @@ renders empty or only whitespace, as in all three paths), the target, and
 trigger matcher's tests pin the event filter (two numbers compared as
 numbers, any other pair as `fmt` prints it), the guards in their order (an
 event caused by one of the automation's own runs, actor `agent:<run>`,
-then the cooldown, then the hourly cap), the prompt variables, the run
-launched and the `last_run_at` stamp, and that `Start` subscribes to the
-event bus. `TestRunNowCopy` in `internal/api` pins run-now's copy (`Manual
-run of automation: <name>`, the caller as launcher, no guard and no
-stamp), and `TestSchedulersShareTheRealClaim` in
-`internal/persistence/postgres` races two real schedulers on the real
-claim when `OPENV_TEST_DATABASE_URL` is set (both CI legs run it). There
-is no golden: a change to any of this fails an expectation in these tests,
-which the pull request then changes with it. The scheduler and matcher
-read the clock themselves, so the tests check each time they stamp against
-the window of the call. These test files are guard code (`GUARD_CODE` row
-S11 in `scripts/refactor/refactor_guard.py`): a refactor pull request may
-change them only in a class C or T commit.
+then the cooldown, then the hourly cap; a guard whose lookup fails holds
+the automation back), the prompt variables, the run launched and the
+`last_run_at` stamp, and that `Start` subscribes to the event bus.
+`TestRunNowCopy` in `internal/api` pins run-now's copy (`Manual run of
+automation: <name>`, the caller as launcher, no guard and no stamp), and
+`TestSchedulersShareTheRealClaim` in `internal/persistence/postgres` races
+two real schedulers on the real claim when `OPENV_TEST_DATABASE_URL` is
+set (both CI legs run it). There is no golden: a change to any of this
+fails an expectation in these tests, which the pull request then changes
+with it. The scheduler and matcher read the clock themselves, so the tests
+check each time they stamp against the window of the call. These test
+files are guard code (`GUARD_CODE` row S11 in
+`scripts/refactor/refactor_guard.py`): a refactor pull request may change
+them only in a class C or T commit.
 
 Five repositories in `internal/persistence/postgres` have Postgres round
 trips of their own (refactor plan step S15b, OpenV REQ-23): the team
