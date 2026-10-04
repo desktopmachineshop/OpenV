@@ -1,7 +1,13 @@
 # Data Model Overview
 
+> **Partial.** Written at `200cf4f`, this overview leaves out some of the
+> schema's 65 tables; the complete schema is the S3 golden
+> [`internal/persistence/postgres/testdata/schema/migrate_and_backfill.txt`](../internal/persistence/postgres/testdata/schema/migrate_and_backfill.txt),
+> which `TestSchemaGolden` checks against a real server.
+
 The schema is owned by `internal/persistence/postgres/`. At API startup
-`cmd/server/main.go` calls `postgres.MigrateAndBackfill` (`migrations.go`),
+the composition root's `storage` stage (`cmd/server/wire_storage.go`)
+calls `postgres.MigrateAndBackfill` (`migrations.go`),
 which runs `postgres.Migrate` — bringing the database to the current version
 through a numbered migration ledger (see "Schema migrations" below) — and
 then the idempotent org backfill (`BackfillOrgs`). Migration 0001 — the frozen
@@ -24,9 +30,9 @@ unapplied numbered migrations (0002+) in ascending order. Each numbered
 migration runs exactly once: its DDL and its ledger row commit in the same
 transaction (so a failed migration leaves neither behind), and concurrent
 booting replicas are serialized by a `pg_advisory_xact_lock`. The baseline
-is frozen — new schema changes are appended to the registry in
-`migrations.go` as numbered migrations, never added to `InitSchema` or the
-`schema_*.go` files.
+is frozen — a new schema change is a numbered migration in a file of its
+own (`migration_NNNN_<name>.go`), named on one line of the registry in
+`migrations.go`, never added to `InitSchema` or the `schema_*.go` files.
 
 ## Core requirements data (`db.go`)
 

@@ -27,6 +27,10 @@ type ratchets struct {
 	Counts             map[string]int      `json:"counts"`
 	EnvReads           map[string]int      `json:"env_reads"`
 	HelperHomes        []string            `json:"helper_homes"`
+	// APISpecUndocumentedRoutes is a top-level ceiling of its own, not a
+	// counts entry: D1 added it with its rule, which the Refactor guard
+	// allows only for a new top-level key.
+	APISpecUndocumentedRoutes int `json:"api_spec_undocumented_routes"`
 }
 
 func readRatchets(path string) (*ratchets, error) {

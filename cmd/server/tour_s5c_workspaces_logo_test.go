@@ -12,7 +12,7 @@ import (
 
 // TestTourS5cWorkspacesLogo is the S5c tour's workspaces area (refactor plan
 // §6.4 S5c, before M9, which moves these handlers out of org_handlers.go
-// into org_ and org_logo_handlers.go, and before X8 and X12, which read the
+// into org_core_ and org_logo_handlers.go, and before X8 and X12, which read the
 // effective limits and plan gates it pins; invariants I3 (a guard's answer
 // before a lookup's, and a workspace the caller is not in answered as one no
 // row has), I4, I8 (the logo's Cache-Control and

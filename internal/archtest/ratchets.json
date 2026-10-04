@@ -415,5 +415,6 @@
     "internal/api:maxEvidenceBytes",
     "internal/api:uploadIsRasterImage",
     "internal/api:writeAddOrInviteOutcome"
-  ]
+  ],
+  "api_spec_undocumented_routes": 36
 }

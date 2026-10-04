@@ -59,7 +59,7 @@ export const DATA_PROMISE =
   'Your data is never behind the paywall. Export and import stay available on every plan, whatever its state, and a JSON export restores into a self-hosted OpenV.';
 
 /** Single User (free plan) limits in force. Mirrors the free plan in
- *  internal/domain/orgs/limits.go; change both together. */
+ *  internal/domain/orgs/plans.go; change both together. */
 export const HOSTED_LIMITS: string[] = [
   'One shared workspace you create, with one other person; leased cloud runners for 300 minutes a month.',
   'Hosted runner: 2 GB memory, 1 CPU.',
@@ -195,7 +195,7 @@ export const ALPHA_NOTE =
   'Workspaces created during the alpha keep every tier’s features, free, with no member limits — that does not change when tiers turn on. Workspaces created after that are on the tiers below. Export never depends on a plan.';
 
 /** What each paid tier raises the free limits to. Quotes the plans in
- *  internal/domain/orgs/limits.go; change both together.
+ *  internal/domain/orgs/plans.go; change both together.
  *
  *  Business is stated rather than left as "everything in Business Lite":
  *  the two tiers used to have byte-identical runner limits, so a reader

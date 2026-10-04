@@ -1,0 +1,693 @@
+{
+  "about": "What each environment variable the Go code reads does, for docs/env-vars.md (refactor plan step D1). go run ./internal/tools/envdoc renders it with the names and constant defaults of internal/archtest/testdata/env_vars.txt (S8's inventory). Keys are variable names; area is an area of docs/areas.json; read_by names the program (server, agentd, openv-mcp); default is given only where the inventory has no single constant default, or its constant is the empty string that a later step replaces; text says what the variable does, in Markdown, without a bare pipe.",
+  "vars": {
+    "AGENTS_DIR": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "default": "`$OPENV_DATA_DIR/agents` (`./data/agents`)",
+      "text": "Directory of the file-backed agent definitions; the boot backfill also reads it."
+    },
+    "AGENT_CHILD_CONCURRENCY": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "text": "Extra run slots a runner keeps for child and interview runs, a whole number above 0; `-child-concurrency=0` on the command line reserves none."
+    },
+    "AGENT_CONCURRENCY": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "text": "How many normal runs a runner executes at once (`-concurrency`)."
+    },
+    "AGENT_WORKSPACE_RETENTION": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "text": "How long a finished run's workspace is kept before cleanup, a positive Go duration (`-workspace-retention`)."
+    },
+    "ANTHROPIC_API_KEY": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "When set in the runner's environment, Claude Code counts as signed in (API key mode) without an interactive sign-in. Passed on to the CLI exactly as set."
+    },
+    "CLOUD_SHELL": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "One of the Gemini CLI's auth-mode variables: when it is set, a Gemini run is not switched to the runner's OAuth sign-in (`GOOGLE_GENAI_USE_GCA`)."
+    },
+    "CODEX_HOME": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "`$HOME/.codex`",
+      "text": "Where the Codex CLI keeps its sign-in; the runner looks for `auth.json` there to tell whether Codex is signed in."
+    },
+    "CONNECTOR_DIST_DIR": {
+      "area": "runner-fleet",
+      "read_by": "server",
+      "text": "Directory holding the Agent Connector downloads that `/api/v1/public/connector/download` serves (`make connector-dist` writes them)."
+    },
+    "CORS_ORIGIN": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "The one browser origin the API answers with credentials (the frontend's). A wildcard or an empty value stops the server at start-up."
+    },
+    "CROSS_SITE_COOKIES": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "`true` when the frontend and the API are on different sites: session cookies become `SameSite=None; Secure; Partitioned` (no Safari or iOS sign-in) and responses carry HSTS."
+    },
+    "DATABASE_URL": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "none: the `DB_*` settings",
+      "text": "A `postgres://` or `postgresql://` connection URL; when set it wins over the `DB_*` settings. A credential, used exactly as set; one that does not parse stops the server without printing it."
+    },
+    "DB_HOST": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Database host, when `DATABASE_URL` is unset."
+    },
+    "DB_NAME": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Database name, when `DATABASE_URL` is unset."
+    },
+    "DB_PASSWORD": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Database password, when `DATABASE_URL` is unset. A credential: reaches the database exactly as set."
+    },
+    "DB_PORT": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Database port, when `DATABASE_URL` is unset."
+    },
+    "DB_USER": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Database role, when `DATABASE_URL` is unset."
+    },
+    "FRONTEND_URL": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "`$PUBLIC_URL`, then `http://localhost:3000`, for links; `http://localhost:3000` for the sign-in redirects",
+      "text": "Where the app is served: links in mail, share and open-source pages, Stripe's return pages, and where Google and OIDC sign-in land. The two fallback chains differ (contract quirk Q12)."
+    },
+    "GEMINI_API_KEY": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "When set in the runner's environment, the Gemini CLI and Antigravity count as signed in (API key mode), and a Gemini run keeps this auth mode rather than the runner's OAuth sign-in."
+    },
+    "GEMINI_CLI_USE_COMPUTE_ADC": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "One of the Gemini CLI's auth-mode variables: when set, a Gemini run is not switched to the runner's OAuth sign-in."
+    },
+    "GOOGLE_API_KEY": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "When set in the runner's environment, the Gemini CLI counts as signed in (API key mode), and a Gemini run keeps this auth mode."
+    },
+    "GOOGLE_CLIENT_ID": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Turns on Sign in with Google; the callback is `$PUBLIC_URL/api/v1/auth/google/callback`."
+    },
+    "GOOGLE_CLIENT_SECRET": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Google sign-in's client secret. A credential, used exactly as set."
+    },
+    "GOOGLE_GEMINI_BASE_URL": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "One of the Gemini CLI's auth-mode variables: when set, a Gemini run is not switched to the runner's OAuth sign-in."
+    },
+    "GOOGLE_GENAI_USE_GCA": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "The Gemini CLI's OAuth auth mode. A run adds it itself unless this or another auth-mode variable is already set, in the run's own environment or the runner's."
+    },
+    "GOOGLE_GENAI_USE_VERTEXAI": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "One of the Gemini CLI's auth-mode variables: when set, a Gemini run is not switched to the runner's OAuth sign-in."
+    },
+    "HOME": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "set by the system",
+      "text": "A pool node remembers its own `HOME` at start and points `HOME` at a fresh directory under `RUNNER_SESSION_ROOT` for each lease (`os.Setenv`), so a member's sign-ins never outlive the lease. The runner's default `-workspaces` (`~/.openv/workspaces`) and the provider probes also start from it."
+    },
+    "HOSTED_RUNNERS": {
+      "area": "runner-fleet",
+      "read_by": "server",
+      "text": "`off` turns hosted runners off. Otherwise they are on whenever the Docker daemon answers, and off, with a log line, when it does not."
+    },
+    "HOSTED_RUNNER_PIDS_LIMIT": {
+      "area": "runner-fleet",
+      "read_by": "server",
+      "default": "`1024`",
+      "text": "Task cap (threads, not processes) of each hosted runner container; `0` or less means no cap. Read again for each runner the API provisions."
+    },
+    "OPENAI_API_KEY": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "none",
+      "text": "When set in the runner's environment, the Codex CLI counts as signed in (API key mode). Passed on to the CLI exactly as set."
+    },
+    "OPENV_API_TOKEN": {
+      "area": "agent-suite",
+      "read_by": "openv-mcp",
+      "default": "none",
+      "text": "A workspace runner key for `openv-mcp` when it is not started for a platform run (an agent maintaining a requirements project, a developer's CLI). `OPENV_RUN_TOKEN` wins where both are set. The runner keeps it from every process it starts."
+    },
+    "OPENV_API_URL": {
+      "area": "runner-fleet",
+      "read_by": "agentd, openv-mcp",
+      "default": "`http://localhost:8080`",
+      "text": "The API base URL a runner (`-api`) and `openv-mcp` call, as seen from where they run."
+    },
+    "OPENV_AUTH_ACCOUNT_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Failed sign-ins one account may make at once before `429`."
+    },
+    "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Failed sign-ins per account per hour, steady state."
+    },
+    "OPENV_AUTH_IP_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Sign-in attempts one client address may make at once; email verification and password reset spend the same bucket (contract quirk Q18)."
+    },
+    "OPENV_AUTH_IP_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Sign-in attempts per client address per hour, steady state."
+    },
+    "OPENV_BILLING_GRANDFATHER_BEFORE": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "none: the tiers are off",
+      "text": "An RFC 3339 date-time that turns the plan tiers on: workspaces created before it keep the alpha terms, written into their limits once at boot. Ignored on a self-hosted deployment; a value that does not parse stops the server."
+    },
+    "OPENV_BILLING_MAX_SEATS": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "`500`",
+      "text": "The seat count above which a seat push to Stripe is refused. Anything but a whole number above 0 stops the server."
+    },
+    "OPENV_BILLING_PORTAL_CONFIG": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "the Stripe account's default",
+      "text": "Stripe customer portal configuration id."
+    },
+    "OPENV_BILLING_RECONCILE_MINUTES": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "`5`",
+      "text": "How often subscriptions are re-read from Stripe, in whole minutes above 0; anything else stops the server."
+    },
+    "OPENV_BILLING_REFRESH_BURST": {
+      "area": "billing",
+      "read_by": "server",
+      "text": "Billing refreshes (a re-read of the workspace's subscription) one workspace may make at once."
+    },
+    "OPENV_BILLING_REFRESH_REFILL_PER_HOUR": {
+      "area": "billing",
+      "read_by": "server",
+      "text": "Billing refreshes per workspace per hour, steady state."
+    },
+    "OPENV_BILLING_RETURN_URL": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "`FRONTEND_URL`'s link chain",
+      "text": "The app origin Stripe's checkout and portal pages send people back to, trailing slash trimmed."
+    },
+    "OPENV_BILLING_TRIAL_DAYS": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "`14`",
+      "text": "A first-time buyer's trial in whole days; `0` turns trials off, and anything that is not a whole number stops the server."
+    },
+    "OPENV_BILLING_WRITE_BURST": {
+      "area": "billing",
+      "read_by": "server",
+      "text": "Checkouts, plan changes and portal sessions one workspace may start at once."
+    },
+    "OPENV_BILLING_WRITE_REFILL_PER_HOUR": {
+      "area": "billing",
+      "read_by": "server",
+      "text": "Checkouts, plan changes and portal sessions per workspace per hour, steady state."
+    },
+    "OPENV_BUDGET_ENFORCE": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "`true` refuses new run launches once a workspace has spent its monthly budget (warn-only otherwise); a failed budget lookup lets the launch through."
+    },
+    "OPENV_BUILD_SHA": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "`$RAILWAY_GIT_COMMIT_SHA`",
+      "text": "The commit `/health` reports, for platforms that do not set `RAILWAY_GIT_COMMIT_SHA`; with neither, `/health` leaves the commit out."
+    },
+    "OPENV_CLIENT_IP_HEADER": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "none",
+      "text": "A header the proxy in front sets to the real client address (`CF-Connecting-IP`), which the rate limits then key on. Read on each request that needs it."
+    },
+    "OPENV_DATA_DIR": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "The server's data directory; only `AGENTS_DIR`'s default is under it."
+    },
+    "OPENV_DEPLOYMENT": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "`shared` or `dedicated`: a dedicated instance polls the release feed daily and warns its admins before its support window closes."
+    },
+    "OPENV_EMAIL_NOTIFICATION_TYPES": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "`run_failed`, `proposal_pending`, `review_requested`, `budget_threshold`, `hosted_minutes`, `access_changed`, `membership_changed`",
+      "text": "Comma-separated notification types that are also emailed, once SMTP is configured."
+    },
+    "OPENV_EMAIL_VERIFICATION": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "default": "none: required whenever `OPENV_SMTP_HOST` is set",
+      "text": "`off` lets password accounts in without confirming their address even where the server can send mail."
+    },
+    "OPENV_EMBEDDING_API_KEY": {
+      "area": "requirements-core",
+      "read_by": "server",
+      "text": "Turns on semantic-search embeddings: artifacts are embedded on create and update, and the reindex endpoint backfills a project. A credential, used exactly as set; a key of only spaces leaves embeddings off."
+    },
+    "OPENV_EMBEDDING_BASE_URL": {
+      "area": "requirements-core",
+      "read_by": "server",
+      "default": "`https://api.openai.com/v1`",
+      "text": "Base URL of the OpenAI-compatible embeddings API."
+    },
+    "OPENV_EMBEDDING_MODEL": {
+      "area": "requirements-core",
+      "read_by": "server",
+      "default": "`text-embedding-3-small`",
+      "text": "Embedding model id."
+    },
+    "OPENV_HOSTED": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "text": "`true` runs `agentd` as a hosted runner (`-hosted`): token mode, with no CLI sign-in and no repository-access runs."
+    },
+    "OPENV_INTERVIEW_IP_BURST": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Interview intro page loads one client address may make at once on the public interview endpoints."
+    },
+    "OPENV_INTERVIEW_IP_REFILL_PER_HOUR": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Interview intro page loads per client address per hour, steady state."
+    },
+    "OPENV_INTERVIEW_MSG_BURST": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Messages one interview invite may send at once; each one starts a priority agent run."
+    },
+    "OPENV_INTERVIEW_MSG_REFILL_PER_HOUR": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Messages per interview invite per hour, steady state."
+    },
+    "OPENV_INTERVIEW_STREAM_BURST": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Interview event-stream connects one client address may make at once (a bucket of its own, since browsers reconnect often)."
+    },
+    "OPENV_INTERVIEW_STREAM_REFILL_PER_HOUR": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Interview event-stream connects per client address per hour, steady state."
+    },
+    "OPENV_INVITE_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Workspace invitations one inviting account may send at once."
+    },
+    "OPENV_INVITE_PREVIEW_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Invite-link previews one client address may make at once; share-link lookups and accepts spend the same bucket (contract quirk Q18)."
+    },
+    "OPENV_INVITE_PREVIEW_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Invite-link previews per client address per hour, steady state."
+    },
+    "OPENV_INVITE_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Workspace invitations per inviting account per hour, steady state."
+    },
+    "OPENV_LIMITS": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "A JSON object of workspace limit values that overrides any limit across the deployment, such as `{\"max_upload_mb\": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server."
+    },
+    "OPENV_LOG_LEVEL": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "`info`",
+      "text": "`debug`, `info`, `warn` or `error`; anything else keeps `info` and says so once."
+    },
+    "OPENV_MAX_BODY_MB": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Cap on any request body, in MB. File uploads are bounded by their own caps instead."
+    },
+    "OPENV_MAX_EVIDENCE_MB": {
+      "area": "verification",
+      "read_by": "server",
+      "default": "`200`",
+      "text": "Cap on one uploaded evidence file, in MB. Read on each upload."
+    },
+    "OPENV_MAX_UPLOAD_MB": {
+      "area": "documents",
+      "read_by": "server",
+      "default": "none: the workspace plan's `max_upload_mb`",
+      "text": "Cap on one figure upload, in MB, overriding every workspace's plan limit. Read on each upload."
+    },
+    "OPENV_MCP_TOOLS": {
+      "area": "agent-suite",
+      "read_by": "server, agentd, openv-mcp",
+      "default": "unset: every tool",
+      "text": "Comma-separated MCP tools `openv-mcp` serves; set but empty serves none. The runner sets it for each run from the agent's allowed tools."
+    },
+    "OPENV_METRICS_TOKEN": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "When set, `/metrics` requires `Authorization: Bearer <token>`; unset, it is open, so firewall it. A credential, used exactly as set."
+    },
+    "OPENV_OIDC_CLIENT_ID": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "OIDC single sign-on's client id."
+    },
+    "OPENV_OIDC_CLIENT_SECRET": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "OIDC single sign-on's client secret. A credential, used exactly as set."
+    },
+    "OPENV_OIDC_ISSUER": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured."
+    },
+    "OPENV_OIDC_NAME": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "The provider's name on the sign-in button."
+    },
+    "OPENV_OIDC_REDIRECT_URL": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "default": "`$PUBLIC_URL/api/v1/auth/oidc/callback`",
+      "text": "The OIDC callback URL registered with the provider."
+    },
+    "OPENV_OIDC_SCOPES": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "default": "`openid email profile`",
+      "text": "Space-separated scopes to ask the provider for."
+    },
+    "OPENV_PASSWORD_RESET_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Password reset mails one address may be sent at once."
+    },
+    "OPENV_PASSWORD_RESET_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Password reset mails per address per hour, steady state."
+    },
+    "OPENV_PLAN_DEFAULT": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "default": "`single`, or `self_host` with `OPENV_SELF_HOSTED`",
+      "text": "The plan new workspaces are created on: `single`, `business_lite`, `business`, `enterprise`, `self_host` or the legacy `free` and `team`. Any other name is ignored and leaves `single`, on a self-hosted deployment too."
+    },
+    "OPENV_PUSH_ENDPOINT_HOSTS": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none: the built-in push services only",
+      "text": "Comma-separated extra hosts (`*.example.com` for subdomains) a web push subscription's endpoint may name, besides the built-in list. Read on each subscribe."
+    },
+    "OPENV_PUSH_NOTIFICATION_TYPES": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "the same types as `OPENV_EMAIL_NOTIFICATION_TYPES`' default",
+      "text": "Comma-separated notification types that are also pushed to subscribed devices, once VAPID keys are set."
+    },
+    "OPENV_REGISTER_IP_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Registrations one client address may make at once."
+    },
+    "OPENV_REGISTER_IP_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Registrations per client address per hour, steady state."
+    },
+    "OPENV_REGISTRATION": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "default": "`open`",
+      "text": "`closed` lets new accounts in only through an invitation link issued to the address being registered, or single sign-on. Any other value keeps it open, with a warning."
+    },
+    "OPENV_RELEASE_FEED_URL": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "The release feed a dedicated instance (`OPENV_DEPLOYMENT=dedicated`) polls."
+    },
+    "OPENV_RUN_AUTO_RETRY": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "`false` turns off the automatic retry of a run that failed for a retryable reason (provider unavailable, timeout, worker error)."
+    },
+    "OPENV_RUN_MAX_ATTEMPTS": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "Attempts a run's retry chain may make, the first included; `1` turns retries off."
+    },
+    "OPENV_RUN_TOKEN": {
+      "area": "agent-suite",
+      "read_by": "openv-mcp",
+      "default": "none",
+      "text": "The token minted for one agent run, which the runner hands `openv-mcp`; the tools then reach only what that run may."
+    },
+    "OPENV_SELF_HOSTED": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "`true` for a deployment somebody runs themselves: new workspaces start on the `self_host` plan, with every limit unlimited, a refusal never says to upgrade, and the plan tiers stay off."
+    },
+    "OPENV_SESSION_IDLE": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "How long a session may go unused, a Go duration; it can be shortened, never lengthened past the default."
+    },
+    "OPENV_SESSION_MAX_AGE": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "A session's absolute lifetime from sign-in, a Go duration; it can be shortened, never lengthened past the default. The cookie's own expiry follows it."
+    },
+    "OPENV_SHARED_PRODUCT_DAILY_LIMIT": {
+      "area": "community",
+      "read_by": "server",
+      "text": "Demo products one workspace may add to the community pool per day."
+    },
+    "OPENV_SHARED_PRODUCT_POOL_LIMIT": {
+      "area": "community",
+      "read_by": "server",
+      "text": "The most products the community pool holds."
+    },
+    "OPENV_SMTP_FROM": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "`OPENV_SMTP_USER`",
+      "text": "The From address of mail the server sends."
+    },
+    "OPENV_SMTP_HOST": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none: no mail",
+      "text": "SMTP server. Setting it turns on email notifications, invitation and password reset mail, and sign-up email verification."
+    },
+    "OPENV_SMTP_PASSWORD": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none",
+      "text": "SMTP password. A credential, used exactly as set."
+    },
+    "OPENV_SMTP_PORT": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "text": "SMTP port."
+    },
+    "OPENV_SMTP_USER": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none: no SMTP authentication",
+      "text": "SMTP user for PLAIN authentication. A credential, used exactly as set."
+    },
+    "OPENV_SSO_IP_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Single sign-on starts and callbacks one client address may make at once."
+    },
+    "OPENV_SSO_IP_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Single sign-on starts and callbacks per client address per hour, steady state."
+    },
+    "OPENV_STRIPE_API_VERSION": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "the Stripe account's default",
+      "text": "Pins the `Stripe-Version` header of every Stripe request."
+    },
+    "OPENV_STRIPE_PRICES": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "none",
+      "text": "The price map: a JSON array of `{price, plan, interval}` naming which Stripe price sells which plan. A malformed map stops the server."
+    },
+    "OPENV_TRUSTED_PROXY_HOPS": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "none",
+      "text": "How many proxies sit in front of the API; the client address is then read from `X-Forwarded-For`, counting from the right. Read on each request that needs it."
+    },
+    "OPENV_TRUST_PROXY": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "`false`",
+      "text": "`true` trusts one proxy hop, as `OPENV_TRUSTED_PROXY_HOPS=1` does (the older form)."
+    },
+    "OPENV_VAPID_PRIVATE_KEY": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none",
+      "text": "Web push's VAPID private key, which signs requests to the push services. A credential, used exactly as set."
+    },
+    "OPENV_VAPID_PUBLIC_KEY": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none: web push off",
+      "text": "Web push's VAPID public key, handed to browsers. `go run ./cmd/openv-vapid` makes a key pair."
+    },
+    "OPENV_VAPID_SUBJECT": {
+      "area": "events-notifications",
+      "read_by": "server",
+      "default": "none",
+      "text": "The operator contact push services see, a `mailto:` or `https:` URI; anything else leaves web push off."
+    },
+    "OPENV_VERIFY_RESEND_BURST": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Verification mails (resend or change of address) one account may ask for at once."
+    },
+    "OPENV_VERIFY_RESEND_REFILL_PER_HOUR": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "Verification mails per account per hour, steady state."
+    },
+    "PORT": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "The port the API listens on."
+    },
+    "PUBLIC_URL": {
+      "area": "platform-http",
+      "read_by": "server",
+      "default": "`http://localhost:$PORT`; `http://localhost:3000` where it stands in for `FRONTEND_URL`",
+      "text": "Where browsers and runners reach the API: the base of the Google and OIDC callbacks, the URL a paired Agent Connector calls, and of share preview images. Behind the frontend's proxy, that is the frontend origin."
+    },
+    "RAILWAY_GIT_COMMIT_SHA": {
+      "area": "platform-http",
+      "read_by": "server",
+      "text": "Set by Railway: the commit `/health` reports unless `OPENV_BUILD_SHA` overrides it."
+    },
+    "RUNNER_API_URL": {
+      "area": "runner-fleet",
+      "read_by": "server",
+      "text": "The API base URL as a hosted runner container sees it."
+    },
+    "RUNNER_IMAGE": {
+      "area": "runner-fleet",
+      "read_by": "server",
+      "text": "The image hosted runner containers are created from."
+    },
+    "RUNNER_NETWORK": {
+      "area": "runner-fleet",
+      "read_by": "server",
+      "default": "none: Docker's default bridge",
+      "text": "The Docker network hosted runner containers join; it must reach the API at `RUNNER_API_URL`."
+    },
+    "RUNNER_NODE_NAME": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "the host name",
+      "text": "A pool node's stable name across restarts (`-node-name`), so a restarted node reclaims its own row."
+    },
+    "RUNNER_POOL": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "`default`",
+      "text": "The pool a pool node joins (`-pool`)."
+    },
+    "RUNNER_POOL_KEY": {
+      "area": "runner-fleet",
+      "read_by": "server, agentd",
+      "text": "The transient runner pool's shared key. On the API, setting it turns cloud runner leases on; on `agentd` (`-pool-key`), it runs the process as a pool node. A credential, used exactly as set, and kept from every process the runner starts."
+    },
+    "RUNNER_SESSION_ROOT": {
+      "area": "runner-fleet",
+      "read_by": "agentd",
+      "default": "under `-workspaces`",
+      "text": "Parent directory of a pool node's per-lease `HOME` directories (`-session-root`), wiped at start-up and after every lease."
+    },
+    "SECURE_COOKIES": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "`true` marks the session cookie `Secure` and adds HSTS to every response: set it once the deployment is reached over HTTPS only."
+    },
+    "STRIPE_SECRET_KEY": {
+      "area": "billing",
+      "read_by": "server",
+      "default": "none: billing off",
+      "text": "Turns billing on with this Stripe secret key. A credential, used exactly as set; a key of only spaces leaves billing off."
+    },
+    "UPLOADS_DIR": {
+      "area": "documents",
+      "read_by": "server",
+      "default": "`./uploads` (the report renderer's own read has none: contract quirk Q12)",
+      "text": "Where attachment and figure files are stored; created at start-up."
+    },
+    "WORKER_API_KEY": {
+      "area": "runner-fleet",
+      "read_by": "server, agentd",
+      "text": "The legacy shared runner key. The API registers it as the workspace key `env-bootstrap` of the first account's personal workspace, and revoking that key stops it; `agentd` (`-worker-key`) signs in with it. A credential, used exactly as set, and kept from every process the runner starts."
+    }
+  }
+}
