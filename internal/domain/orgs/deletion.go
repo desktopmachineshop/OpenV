@@ -60,25 +60,37 @@ func (s *DefaultService) ListDeletedForUser(userID string) ([]*Org, error) {
 	return s.repo.ListDeletedOrgsForUser(userID)
 }
 
+// Purged is what PurgeExpired hard-deleted: the workspaces, and the stored
+// files of their figures (every version), evidence files and logos, which
+// the caller removes from the upload store, each purge having committed
+// (#379 bug 143: they stayed on disk).
+type Purged struct {
+	IDs   []string
+	Files []string
+}
+
 // PurgeExpired hard-deletes every workspace soft-deleted more than
 // DeletionGraceDays ago. Purges are independent: one failure doesn't stop the
-// rest, and the ids actually purged are returned alongside the first error.
-func (s *DefaultService) PurgeExpired(now time.Time) ([]string, error) {
+// rest, and what the purges that succeeded took is answered alongside the
+// first error.
+func (s *DefaultService) PurgeExpired(now time.Time) (Purged, error) {
 	cutoff := now.Add(-DeletionGraceDays * 24 * time.Hour)
 	ids, err := s.repo.ListExpiredDeletedOrgIDs(cutoff)
 	if err != nil {
-		return nil, err
+		return Purged{}, err
 	}
-	var purged []string
+	var purged Purged
 	var firstErr error
 	for _, id := range ids {
-		if err := s.repo.PurgeOrg(id); err != nil {
+		files, err := s.repo.PurgeOrg(id)
+		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("purge org %s: %w", id, err)
 			}
 			continue
 		}
-		purged = append(purged, id)
+		purged.IDs = append(purged.IDs, id)
+		purged.Files = append(purged.Files, files...)
 	}
 	return purged, firstErr
 }

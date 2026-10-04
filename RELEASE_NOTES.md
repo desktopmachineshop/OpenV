@@ -38,6 +38,51 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   needs to be unique only within its project, as the artifact reference it
   is built on is. Figures already added keep their references.
 
+- **Deleting a figure removes every version of its file.** Deleting a
+  figure removed only the file of its current version, and the files of
+  its earlier versions stayed stored on the server. The file also went
+  before the figure did, so a delete that failed left a figure whose image
+  could no longer be opened. The figure is now deleted first, and then the
+  file of every version of it is removed. A delete that fails removes
+  nothing, and a file the server cannot remove is noted in its log while
+  the figure is deleted all the same.
+
+- **Purging a deleted workspace removes its files.** When a deleted
+  workspace's 30 days ran out and it was purged, every file uploaded to it
+  stayed stored on the server: its figures with every earlier version, its
+  evidence files and its logo. They are now removed with the workspace. A
+  file the server cannot remove is noted in its log, and the workspace is
+  purged all the same.
+
+- **A figure added as its project is deleted no longer stays behind.** A
+  figure whose upload finished while its project was being deleted, or
+  just after, was stored all the same, with no project to show it in, and
+  its file stayed on the server. The upload now waits for the delete and
+  then answers "project not found", as for any deleted project, and its
+  file is removed. A figure that was stored first is deleted with the
+  project.
+
+- **Files left behind by earlier deletes are cleared once.** The figure
+  and evidence files of projects deleted, workspaces purged and figure
+  versions deleted before this update stayed stored on the server, though
+  nothing in OpenV could reach them any more. The first time the server
+  starts after this update, it removes them, once. It removes only files it
+  can be sure are its own uploads that nothing refers to, last changed more
+  than an hour before it started; when it cannot be sure, for example
+  because the files it knows of are not in the uploads folder, it removes
+  nothing. If you run OpenV yourself, each file removed is noted in the
+  server's log, under "upload sweep", with a summary at the end. Some
+  records earlier purges left, which numbered the figures of artifacts
+  that no longer exist, are removed too.
+
+- **A figure no longer has an unused place for a test result.** The
+  stored record of every figure had room to name a test result, for test
+  evidence, that OpenV never filled in: test evidence has its own bundles,
+  which a result cites. It is removed when this update is installed. If
+  you run OpenV yourself and filled it in outside OpenV, the server does
+  not start after the update, and its log says how many figures name a
+  test result and how to clear them.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features

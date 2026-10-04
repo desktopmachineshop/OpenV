@@ -34,6 +34,16 @@ is frozen — a new schema change is a numbered migration in a file of its
 own (`migration_NNNN_<name>.go`), named on one line of the registry in
 `migrations.go`, never added to `InitSchema` or the `schema_*.go` files.
 
+### boot_tasks
+The tasks a boot runs once per database, after the migrations (migration
+0056): `name` (primary key), `ran_at`, `outcome` (what the task did, in a
+sentence). `postgres.RunBootTaskOnce` runs a task under the boot advisory
+lock unless its row exists, and writes the row once the task has run to an
+outcome; a task that fails is not recorded and runs at the next boot. The
+one task is `sweep_unreferenced_uploads`, which removes the stored files no
+row names from `UPLOADS_DIR` (`cmd/server/upload_sweep.go`; see "Stored
+files no row names" in `docs/operations.md`).
+
 ## Core requirements data (`db.go`)
 
 ### projects
@@ -69,16 +79,22 @@ Maps each link to the specific artifact **versions** it was created against
 baselines can reconstruct exact link states.
 
 ### attachments
-Uploaded files: `artifact_id` (nullable) **or** `test_result_id` (test
-evidence), `filename`, `original_filename`, `title` (the name a member gave
-the figure; `''` when none), `mime_type`, `file_path` (under
-`UPLOADS_DIR`), `file_size`, `figure_ref`, `figure_num`, `version`.
+Uploaded files, each a figure of an artifact: `artifact_id` (nullable in
+the schema, set on every row), `filename`, `original_filename`, `title`
+(the name a member gave the figure; `''` when none), `mime_type`,
+`file_path` (under `UPLOADS_DIR`), `file_size`, `figure_ref`, `figure_num`,
+`version`. The `test_result_id` column the 0001 baseline added for evidence
+on a test result was never written and is dropped by migration 0057; test
+evidence is `evidence_bundles` and `evidence_files`, cited from a result
+through `evidence_citations`.
 
 ### attachment_versions
 One row per version of a figure — a new image, or a new title over the
 same image — with the file fields and `title` as they stood at that
 version, `created_by` and `created_at`. The attachment row holds the
-current version; superseded files stay on disk.
+current version; superseded files stay on disk while the figure does.
+Deleting the figure (or its project, or purging its workspace) deletes
+every version and then removes every version's file.
 
 ### chatter
 Per-artifact activity feed: `artifact_id`, `message`, `is_auto_entry`
@@ -340,7 +356,8 @@ agent run recorded the result, so reviewers can tell agent evidence from
 human evidence). Test cases carry an `execution_method` attribute
 (`automated` — the default — | `manual` | `physical`); only automated cases
 may have agent-recorded results (`internal/domain/vv`). Evidence files
-attach via `attachments.test_result_id`.
+belong to an evidence bundle, which a result cites through
+`evidence_citations`.
 
 ### work_items / work_item_activity
 Kanban cards: `project_id`, `title`, `description`, `board_column`

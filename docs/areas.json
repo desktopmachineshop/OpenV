@@ -484,6 +484,7 @@
         "cmd/server/lookups.go",
         "cmd/server/main.go",
         "cmd/server/testdata/**",
+        "cmd/server/upload_sweep.go",
         "cmd/server/wire_config.go",
         "cmd/server/wire_http.go",
         "cmd/server/wire_jobs.go",

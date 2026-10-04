@@ -178,26 +178,28 @@ func InitSuiteSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create suite schema: %w", err)
 	}
 
-	// Evidence attachments may belong to a test result instead of an artifact.
+	// An attachment's artifact_id has been nullable since the baseline added
+	// attachments.test_result_id beside it, in this block, for evidence
+	// attached to a test result. Nothing ever wrote that column; migration
+	// 0057 drops it (#379 bug 150), so the baseline, which runs before the
+	// numbered migrations on every boot, no longer adds it, or each boot
+	// would put it back. It still makes artifact_id nullable where it is not,
+	// once, as the block did, so a new database's schema is an upgraded
+	// one's.
 	alterSQL := `
 	DO $$
 	BEGIN
-		IF NOT EXISTS (
+		IF EXISTS (
 			SELECT 1 FROM information_schema.columns
-			WHERE table_name='attachments' AND column_name='test_result_id'
+			WHERE table_name='attachments' AND column_name='artifact_id' AND is_nullable='NO'
 		) THEN
-			ALTER TABLE attachments ADD COLUMN test_result_id UUID;
 			ALTER TABLE attachments ALTER COLUMN artifact_id DROP NOT NULL;
 		END IF;
 	END $$;
 	`
 
 	if _, err := db.Exec(alterSQL); err != nil {
-		return fmt.Errorf("failed to extend attachments for test evidence: %w", err)
-	}
-
-	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_attachments_test_result_id ON attachments(test_result_id);`); err != nil {
-		return fmt.Errorf("failed to add attachments test_result_id index: %w", err)
+		return fmt.Errorf("failed to make attachments.artifact_id nullable: %w", err)
 	}
 
 	// Interviews may be linked (many to one) to a persona artifact.

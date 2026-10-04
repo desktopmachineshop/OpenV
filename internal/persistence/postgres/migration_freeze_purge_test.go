@@ -83,15 +83,18 @@ func TestPurgeCatalog(t *testing.T) {
 			t.Fatalf("create a stand-in artifact_embeddings: %v", err)
 		}
 	}
-	withTable := rec.run(t, org, func() error { return repo.PurgeOrg(org) })
+	purge := func() error { _, err := repo.PurgeOrg(org); return err }
+	withTable := rec.run(t, org, purge)
 	if _, err := db.Exec(`DROP TABLE artifact_embeddings`); err != nil {
 		t.Fatalf("drop artifact_embeddings: %v", err)
 	}
-	withoutTable := rec.run(t, org, func() error { return repo.PurgeOrg(org) })
+	withoutTable := rec.run(t, org, purge)
 
 	// How a purge reaches each table.
 	deleted := map[string]bool{}
-	deleteFrom := regexp.MustCompile(`^(?:autocommit )?exec DELETE FROM ([A-Za-z_][A-Za-z0-9_]*)\b`)
+	// A DELETE ... RETURNING, which answers the stored files of the rows it
+	// deletes (#379 bug 143), is sent as a query.
+	deleteFrom := regexp.MustCompile(`^(?:autocommit )?(?:exec|query) DELETE FROM ([A-Za-z_][A-Za-z0-9_]*)\b`)
 	for _, line := range withTable {
 		if m := deleteFrom.FindStringSubmatch(line); m != nil {
 			deleted[m[1]] = true

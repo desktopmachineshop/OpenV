@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	eventbus "github.com/openv/requirements-platform/internal/events"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
@@ -19,6 +21,7 @@ func (a *app) connect() func() error {
 // storage migrates the database and builds the repositories and the event
 // bus.
 func (a *app) storage() {
+	began := time.Now()
 	// Schema migration plus the idempotent org backfill, serialized across
 	// concurrently booting processes by one session-level advisory lock. The
 	// backfill stays outside the numbered ledger because it guards itself
@@ -26,6 +29,11 @@ func (a *app) storage() {
 	if err := postgres.MigrateAndBackfill(a.db, a.agentsDir); err != nil {
 		fatal("failed to migrate database", err)
 	}
+	// Once per database, after the migrations: the stored files no row
+	// names, which deletes and purges before #379's bugs 136, 143 and 145
+	// were fixed left behind, are removed (#379 question 48). It fails
+	// safe, under the same advisory lock, and never fails the boot.
+	sweepUnreferencedUploads(a.db, a.uploadsDir, began)
 
 	// Repositories.
 	a.artifactRepo = postgres.NewArtifactRepository(a.db)
