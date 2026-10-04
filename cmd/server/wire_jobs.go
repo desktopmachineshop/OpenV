@@ -26,6 +26,6 @@ func (a *app) jobs() {
 
 	// Workspace purge: hard-delete workspaces whose soft-delete grace period
 	// (orgs.DeletionGraceDays) has expired — once at boot, then daily.
-	go runPurgeLoop(a.ctx, a.orgService)
+	go runPurgeLoop(a.ctx, a.orgService, a.agentService)
 	go runReaper(a.ctx, a.runService, a.userRepo, a.invitationService, a.runnerSessionService, a.sessionPolicy)
 }

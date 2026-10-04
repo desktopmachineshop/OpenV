@@ -76,7 +76,7 @@ func (s *DefaultService) Create(orgID, containerName string, workerKeyID, create
 	if strings.TrimSpace(containerName) == "" {
 		return nil, errors.New("container_name is required")
 	}
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 155)
 	w := &HostedWorker{
 		ID:            uuid.New().String(),
 		OrgID:         orgID,
@@ -109,7 +109,7 @@ func (s *DefaultService) SetStatus(id, status, detail string) (*HostedWorker, er
 	}
 	w.Status = status
 	w.Detail = detail
-	w.UpdatedAt = time.Now()
+	w.UpdatedAt = time.Now().UTC()
 	if err := s.repo.Update(w); err != nil {
 		return nil, err
 	}

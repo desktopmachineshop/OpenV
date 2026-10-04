@@ -25,7 +25,9 @@ func (s *DefaultService) DeleteOrg(id string) (*Org, error) {
 	if org.DeletedAt != nil {
 		return org, nil
 	}
-	now := time.Now()
+	// deleted_at is a TIMESTAMP holding a UTC wall clock, which the purge
+	// compares with its cutoff (#379 bug 155).
+	now := time.Now().UTC()
 	if err := s.repo.SoftDeleteOrg(id, now); err != nil {
 		return nil, err
 	}
@@ -72,9 +74,11 @@ type Purged struct {
 // PurgeExpired hard-deletes every workspace soft-deleted more than
 // DeletionGraceDays ago. Purges are independent: one failure doesn't stop the
 // rest, and what the purges that succeeded took is answered alongside the
-// first error.
+// first error. The purge loop hands in its own time.Now(); deleted_at is a
+// TIMESTAMP holding a UTC wall clock, so the cutoff is taken in UTC (#379
+// bug 155).
 func (s *DefaultService) PurgeExpired(now time.Time) (Purged, error) {
-	cutoff := now.Add(-DeletionGraceDays * 24 * time.Hour)
+	cutoff := now.UTC().Add(-DeletionGraceDays * 24 * time.Hour)
 	ids, err := s.repo.ListExpiredDeletedOrgIDs(cutoff)
 	if err != nil {
 		return Purged{}, err

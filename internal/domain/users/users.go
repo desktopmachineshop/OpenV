@@ -281,7 +281,7 @@ func (s *DefaultService) Register(email, password, name string) (*User, error) {
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 154)
 	user := &User{
 		ID:                 uuid.New().String(),
 		Email:              email,
@@ -348,7 +348,7 @@ func (s *DefaultService) SetAdmin(id string, isAdmin bool) (*User, error) {
 		}
 	}
 	u.IsAdmin = isAdmin
-	u.UpdatedAt = time.Now()
+	u.UpdatedAt = time.Now().UTC()
 	if err := s.repo.UpdateUser(u); err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (s *DefaultService) SetDefaultOrg(userID, orgID string) error {
 // SetAvatar records an uploaded profile picture. The write touches only the
 // avatar columns, so it can never carry a stale copy of the rest of the row.
 func (s *DefaultService) SetAvatar(userID, path, mime, url string) (*User, error) {
-	if err := s.repo.SetAvatar(userID, path, mime, url, time.Now()); err != nil {
+	if err := s.repo.SetAvatar(userID, path, mime, url, time.Now().UTC()); err != nil {
 		return nil, err
 	}
 	return s.repo.FindUserByID(userID)

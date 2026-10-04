@@ -52,33 +52,6 @@ func NewAttachmentRepository(db *sql.DB) attachments.Repository {
 	return &AttachmentRepository{db: db}
 }
 
-// Save persists an attachment
-func (r *AttachmentRepository) Save(attachment *attachments.Attachment) error {
-	query := `
-		INSERT INTO attachments (id, artifact_id, filename, original_filename, title, mime_type, file_path, file_size, version, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`
-	if attachment.Version < 1 {
-		attachment.Version = 1
-	}
-	_, err := r.db.Exec(query,
-		attachment.ID,
-		attachment.ArtifactID,
-		attachment.Filename,
-		attachment.OriginalFilename,
-		attachment.Title,
-		attachment.MimeType,
-		attachment.FilePath,
-		attachment.FileSize,
-		attachment.Version,
-		attachment.CreatedAt,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to save attachment: %w", err)
-	}
-	return nil
-}
-
 // FindByID retrieves an attachment by ID
 func (r *AttachmentRepository) FindByID(id string) (*attachments.Attachment, error) {
 	query := `SELECT ` + figureColumns + ` FROM attachments WHERE id = $1`

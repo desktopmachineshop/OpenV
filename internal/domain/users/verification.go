@@ -77,7 +77,7 @@ func (s *DefaultService) IssueEmailVerification(userID, email string) (string, s
 	if err != nil {
 		return "", "", err
 	}
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 154)
 	v := &EmailVerification{
 		ID:        uuid.New().String(),
 		UserID:    user.ID,
@@ -98,7 +98,9 @@ func (s *DefaultService) ConfirmEmailVerification(token string) (*User, error) {
 	if token == "" {
 		return nil, ErrVerificationInvalid
 	}
-	user, err := s.repo.ConsumeEmailVerification(HashToken(token), time.Now())
+	// Compared with expires_at, a TIMESTAMP holding a UTC wall clock: a local
+	// now moved the link's deadline by the server's offset (#379 bug 154).
+	user, err := s.repo.ConsumeEmailVerification(HashToken(token), time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +123,7 @@ func (s *DefaultService) MarkEmailVerified(userID string) (*User, error) {
 	if user.EmailVerified {
 		return user, nil
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	if err := s.repo.MarkEmailVerified(user.ID, now); err != nil {
 		return nil, err
 	}
