@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { mockApi } from './test/mockApi';
 import App from './App';
 import { useAppStore } from './state/store';
-import { orgsAPI, type OrgFeatures } from './api/client';
+import { orgsAPI, type AgentRun, type OrgFeatures } from './api/client';
 
 // The Workspace runs page waits for the workspace's feature gates, which App
 // loads, and without workspace-runs sends a member to the projects list. A
@@ -12,6 +12,9 @@ import { orgsAPI, type OrgFeatures } from './api/client';
 // elsewhere: the page leaves for the projects list instead of saying
 // "Loading…" for good, while a load still on its way keeps it waiting
 // (#379 bug 174).
+//
+// A link to a run of the member's other workspace switches the workspace,
+// which loads its gates anew, and the run stays open there (#379 bug 177).
 
 const ok = (data: unknown) => Promise.resolve({ data });
 
@@ -40,11 +43,28 @@ vi.mock('./api/client', async (orig) =>
       config: () => ok({ email_verification_required: false }),
     },
     orgsAPI: {
-      list: () => ok({ orgs: [{ id: 'acme', name: 'Acme', type: 'company', role: 'member' }], active_org: 'acme' }),
+      list: () =>
+        ok({
+          orgs: [
+            { id: 'acme', name: 'Acme', type: 'company', role: 'member' },
+            { id: 'bigco', name: 'Bigco', type: 'company', role: 'member' },
+          ],
+          active_org: 'acme',
+        }),
       features: () => gatesLoad.promise,
+    },
+    agentRunsAPI: {
+      list: () => ok([]),
+      get: (id) => ok({ id, org_id: 'bigco', project_id: null, status: 'failed' } as Partial<AgentRun>),
     },
   })
 );
+
+// The detail panel is RunDetailPanel's own; here it shows which run is open.
+vi.mock('./components/agents/RunDetailPanel', async (orig) => ({
+  ...(await orig<typeof import('./components/agents/RunDetailPanel')>()),
+  RunDetailPanel: ({ runId }: { runId: string }) => <aside aria-label="Run detail">{runId}</aside>,
+}));
 
 // The page's title says it is the one on screen, and not the route's
 // Suspense fallback, which says "Loading…" too.
@@ -58,7 +78,7 @@ let root: Root;
 
 const Where: React.FC = () => {
   const location = useLocation();
-  return <output data-testid="where">{location.pathname}</output>;
+  return <output data-testid="where">{location.pathname + location.search}</output>;
 };
 const where = () => container.querySelector('[data-testid="where"]')?.textContent;
 const heading = () => container.querySelector('h1')?.textContent;
@@ -69,10 +89,10 @@ const settle = async () => {
   });
 };
 
-const boot = async () => {
+const boot = async (at = '/org/runs') => {
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/org/runs']}>
+      <MemoryRouter initialEntries={[at]}>
         <App />
         <Where />
       </MemoryRouter>
@@ -126,5 +146,21 @@ describe('the Workspace runs page when the gates fail to load', () => {
     await settle();
     expect(where()).toBe('/org/runs');
     expect(container.textContent).toContain('The runs that belong to no project');
+  });
+});
+
+describe("a link to a run of the member's other workspace", () => {
+  it('switches to that workspace, loads its gates, and keeps the run open (#379 bug 177)', async () => {
+    await boot('/org/runs?run=run-b');
+    await act(async () => {
+      gatesLoad.resolve({
+        data: { channel: 'nightly', stable_release: '', preview: false, features: { 'workspace-runs': true } },
+      });
+    });
+    await settle();
+    expect(useAppStore.getState().activeOrgId).toBe('bigco');
+    expect(vi.mocked(orgsAPI.features)).toHaveBeenLastCalledWith('bigco');
+    expect(where()).toBe('/org/runs?run=run-b');
+    expect(container.querySelector('[aria-label="Run detail"]')?.textContent).toBe('run-b');
   });
 });

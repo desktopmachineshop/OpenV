@@ -7,7 +7,13 @@ import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { Navbar } from '../components/Navbar';
 import { ErrorBanner } from '../components/ui';
-import { RunDetailBeside, RunStatusFilter, RunTable, pollGuard } from '../components/agents/RunTable';
+import {
+  RunDetailBeside,
+  RunStatusFilter,
+  RunTable,
+  pollGuard,
+  useCloseRunOnSwitch,
+} from '../components/agents/RunTable';
 import { WORKSPACE_RUNS_FEATURE } from '../components/agents/workspaceRuns';
 
 // As on a project's Runs page, the 5s poll lists at most this many runs.
@@ -58,10 +64,17 @@ const WorkspaceRuns: React.FC = () => {
     Boolean(s.currentUser?.is_admin || s.orgs.find((o) => o.id === s.activeOrgId)?.role === 'admin')
   );
   const [searchParams, setSearchParams] = useSearchParams();
-  const [runs, setRuns] = useState<AgentRun[]>([]);
+  // The last answer and the workspace it is of: the list shows it while that
+  // workspace is the active one, and says it is loading until then, so a
+  // switch empties it until the new workspace's answer (#379 bug 177), and
+  // useCloseRunOnSwitch closes the old workspace's run. Another status
+  // filter keeps it while its answer loads.
+  const [listed, setListed] = useState<{ orgId: string; runs: AgentRun[] } | null>(null);
+  const runs = listed?.orgId === activeOrgId ? listed.runs : null;
   const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState('');
   const selectedRunId = searchParams.get('run');
+  const followRun = useCloseRunOnSwitch(activeOrgId);
   const { isPhone, isCompact } = useViewport();
 
   useEffect(() => {
@@ -77,7 +90,7 @@ const WorkspaceRuns: React.FC = () => {
         .list(query)
         .then((res) => {
           if (!current()) return;
-          setRuns(res.data || []);
+          setListed({ orgId: activeOrgId, runs: res.data || [] });
           setError('');
         })
         .catch((err) => {
@@ -94,7 +107,8 @@ const WorkspaceRuns: React.FC = () => {
 
   // A notification lists a member's runs of every workspace, so its link
   // may name a run of another one: follow the run there, as a project's
-  // pages follow their project, so that it is listed where it is shown.
+  // pages follow their project, so that it is listed where it is shown, and
+  // keep it open there (followRun).
   useEffect(() => {
     if (!selectedRunId || orgs.length === 0) return;
     let cancelled = false;
@@ -103,6 +117,7 @@ const WorkspaceRuns: React.FC = () => {
       .then((res) => {
         const org = res.data.org_id;
         if (!cancelled && org && org !== activeOrgId && orgs.some((o) => o.id === org)) {
+          followRun(selectedRunId, org);
           setActiveOrgId(org, { clearProjects: false });
         }
       })
@@ -112,7 +127,7 @@ const WorkspaceRuns: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedRunId, orgs, activeOrgId, setActiveOrgId]);
+  }, [selectedRunId, orgs, activeOrgId, setActiveOrgId, followRun]);
 
   const selectRun = (runId: string | null) => {
     setSearchParams((prev) => {

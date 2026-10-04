@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AgentRun } from '../../api/client';
 import { Sheet } from '../ui';
 import { RunDetailPanel, runStatusColor, ErrorClassChip } from './RunDetailPanel';
@@ -49,6 +50,37 @@ export const pollGuard = () => {
   };
 };
 
+/**
+ * Closes the run open beside a Runs page's list (?run=) when what the page
+ * lists switches under it, to another project or workspace (scope): the run
+ * is the old one's (#379 bug 177). Not a run the switch came with, as a link
+ * to another project's run brings its own, nor one the page follows to
+ * where it belongs: the page calls the function returned with the run and
+ * the scope it is about to switch to. Another status filter is no switch.
+ */
+export const useCloseRunOnSwitch = (scope: string): ((runId: string, scope: string) => void) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const runId = searchParams.get('run');
+  // The open run and the scope it belongs to, as far as the page knows.
+  const open = useRef({ runId, scope });
+  useEffect(() => {
+    const was = open.current;
+    open.current = { runId, scope };
+    if (!runId || runId !== was.runId || scope === was.scope) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('run');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [runId, scope, setSearchParams]);
+  return useCallback((followed: string, to: string) => {
+    open.current = { runId: followed, scope: to };
+  }, []);
+};
+
 const formatDuration = (run: AgentRun): string => {
   if (!run.started_at) return '—';
   const start = new Date(run.started_at).getTime();
@@ -81,7 +113,8 @@ const cell: React.CSSProperties = { padding: '9px 12px', borderBottom: '1px soli
 const bodyCell: React.CSSProperties = { ...cell, color: 'var(--text-body)' };
 
 interface RunTableProps {
-  runs: AgentRun[];
+  /** null while the page waits for its first answer, or the first after a switch. */
+  runs: AgentRun[] | null;
   selectedRunId: string | null;
   onSelect: (runId: string) => void;
   /** A phone shows the three columns that identify a run; the rest is in the detail. */
@@ -122,7 +155,7 @@ export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelec
           </tr>
         </thead>
         <tbody>
-          {runs.map((run) => (
+          {runs?.map((run) => (
             <tr
               key={run.id}
               onClick={() => onSelect(run.id)}
@@ -187,10 +220,10 @@ export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelec
               )}
             </tr>
           ))}
-          {runs.length === 0 && (
+          {!runs?.length && (
             <tr>
               <td colSpan={columns.length} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
-                {emptyText}
+                {runs ? emptyText : 'Loading runs…'}
               </td>
             </tr>
           )}

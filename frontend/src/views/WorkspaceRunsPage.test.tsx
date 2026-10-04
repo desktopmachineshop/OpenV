@@ -10,7 +10,10 @@ import { agentRunsAPI, type AgentRun, type Org, type OrgFeatures } from '../api/
 // page listed, with the run detail beside them, selected by ?run=. It lists
 // what the server answers for project=none, which is what the member may
 // open; it waits for the gates, and without workspace-runs sends a member
-// to the projects list, where /org/runs led before.
+// to the projects list, where /org/runs led before. A workspace switch
+// empties the list until the new workspace's answer and closes the old
+// workspace's run, but not the run of a link the page follows to its
+// workspace (#379 bug 177).
 
 const ok = (data: unknown) => Promise.resolve({ data });
 
@@ -36,7 +39,8 @@ const elsewhere = run('run-b', 'Auditor', 'o2');
 vi.mock('../api/client', async (orig) =>
   mockApi(await orig(), {
     agentRunsAPI: {
-      list: () => ok(listed),
+      // The active workspace's runs, as the X-Org-ID header names it.
+      list: () => ok(useAppStore.getState().activeOrgId === 'o2' ? [elsewhere] : listed),
       get: (id: string) => ok(id === elsewhere.id ? elsewhere : listed.find((r) => r.id === id) || listed[0]),
     },
     notificationsAPI: { list: () => ok({ notifications: [], unread_count: 0 }) },
@@ -222,6 +226,82 @@ describe('the workspace Runs page', () => {
     expect(vi.mocked(agentRunsAPI.get)).toHaveBeenCalledWith('run-b');
     expect(useAppStore.getState().activeOrgId).toBe('o2');
     expect(where()).toBe('/org/runs?run=run-b');
+    // Open there, beside that workspace's runs (#379 bug 177).
+    expect(detail()?.textContent).toContain('run-b');
+    expect(rows()).toEqual(['🤖 Auditor']);
+  });
+});
+
+describe('the workspace Runs page on a switch (#379 bug 177)', () => {
+  // The next list request waits for the answer the test gives it.
+  const later = () => {
+    let answer!: (runs: AgentRun[]) => void;
+    list.mockImplementationOnce(
+      () =>
+        new Promise<{ data: AgentRun[] }>((resolve) => {
+          answer = (runs) => resolve({ data: runs });
+        }) as any
+    );
+    return (runs: AgentRun[]) => act(async () => answer(runs));
+  };
+
+  const switchTo = async (orgId: string) => {
+    await act(async () => {
+      useAppStore.setState({ activeOrgId: orgId });
+    });
+    await flush();
+  };
+
+  it('says it is loading until its first answer', async () => {
+    const answer = later();
+    await mount('/org/runs', gates(true));
+    expect(rows()).toEqual(['Loading runs…']);
+    await answer([]);
+    await flush();
+    expect(rows()).toEqual(['No runs without a project yet.']);
+  });
+
+  it("empties the list on a workspace switch until the new workspace's answer", async () => {
+    await mount('/org/runs', gates(true));
+    expect(rows()).toEqual(['🤖 Welcomer', '🤖 Inventor']);
+
+    const answer = later();
+    await switchTo('o2');
+    expect(rows()).toEqual(['Loading runs…']);
+    await answer([elsewhere]);
+    await flush();
+    expect(rows()).toEqual(['🤖 Auditor']);
+  });
+
+  it("closes the old workspace's run on a switch, and does not follow it back", async () => {
+    await mount('/org/runs?run=run-new', gates(true));
+    expect(detail()?.textContent).toContain('run-new');
+
+    await switchTo('o2');
+    expect(detail()).toBeNull();
+    expect(where()).toBe('/org/runs');
+    expect(useAppStore.getState().activeOrgId).toBe('o2');
+    expect(rows()).toEqual(['🤖 Auditor']);
+  });
+
+  it('keeps the list and the run open while another status filter loads', async () => {
+    await mount('/org/runs?run=run-new', gates(true));
+    const answer = later();
+    const select = container.querySelector('select') as HTMLSelectElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setter.call(select, 'failed');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await flush();
+    expect(list).toHaveBeenLastCalledWith({ project: 'none', limit: 200, status: 'failed' });
+    expect(rows()).toEqual(['🤖 Welcomer', '🤖 Inventor']);
+    expect(detail()?.textContent).toContain('run-new');
+
+    await answer([]);
+    await flush();
+    expect(rows()).toEqual(['No runs without a project yet.']);
+    expect(detail()?.textContent).toContain('run-new');
   });
 });
 

@@ -27,6 +27,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A project's Runs page no longer shows another project's runs while it
+  loads.** When you went from one project's Runs page to another's, from
+  a notification for example, the first project's runs stayed on the list
+  until the second project's arrived, and a Runs page still loading said
+  there were no runs yet. The list now says it is loading until the
+  project's own runs arrive.
+
 - **A feature that failed to load comes back by itself.** OpenV asks which
   features your workspace has when you open it or switch to it. When that
   question failed, on a dropped connection for example, every feature that
