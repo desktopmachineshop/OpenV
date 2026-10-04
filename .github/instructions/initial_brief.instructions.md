@@ -1,3 +1,30 @@
+---
+name: "Retired: historical bootstrap brief"
+---
+
+> **Retired: this is the historical bootstrap brief, not current guidance.
+> Do not follow it.**
+>
+> It describes the product as first planned: a single-tenant, local-first
+> tool with a plugin sandbox, and multi-tenant SaaS as a non-goal. OpenV is
+> not that product, and its data model, deployment, repository layout and
+> roadmap below are out of date. For what to do instead:
+>
+> - **`CLAUDE.md`**: where the requirements live (the live OpenV project is
+>   the source of truth for what the platform must do), deployment and
+>   release notes, and the area guides.
+> - **`docs/architecture.md`**: the architecture as it is today, from the
+>   package graph, the architecture tests and the area index.
+> - **`CONTRIBUTING.md`**: release notes, refactor pull requests and the
+>   checks CI runs.
+>
+> The rules of §3, §4 and §8 that still hold are in the scoped instruction
+> files beside this one: `go.instructions.md` (Go under `cmd/` and
+> `internal/`) and `frontend.instructions.md` (TypeScript under
+> `frontend/src/`). The front matter above has no `applyTo` and no
+> `description`, so neither Copilot nor VS Code attaches this file to a
+> change on its own. The text below is kept unchanged so its history stays
+> readable.
 
 
 ---
