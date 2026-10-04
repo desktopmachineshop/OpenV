@@ -45,6 +45,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   east of UTC, a workspace created at 09:00 UTC showed as created at 11:00.
   They now record every time in UTC, as on OpenV's hosted service.
 
+- **Used and expired email verification and password reset links are
+  cleaned up.** OpenV kept every email verification link and password
+  reset link it had sent, once used or expired, for good. The server now
+  deletes each within a minute of its being used or expiring. A link still
+  waiting to be used is kept.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes
