@@ -692,8 +692,8 @@
         },
         {
           "type": "user-need",
-          "title": "As Pat the Planner , I need to see who started a job so that I can follow up on near misses",
-          "body": "As Pat the Planner , I need to see who started a job so that I can follow up on near misses",
+          "title": "As Pat the Planner, I need to see who started a job so that I can follow up on near misses",
+          "body": "As Pat the Planner, I need to see who started a job so that I can follow up on near misses",
           "links": [
             {
               "type": "relates-to",
@@ -704,8 +704,8 @@
         },
         {
           "type": "user-need",
-          "title": "As Pat the Planner , I need a weekly list of machines due for service so that downtime is planned, not forced",
-          "body": "As Pat the Planner , I need a weekly list of machines due for service so that downtime is planned, not forced",
+          "title": "As Pat the Planner, I need a weekly list of machines due for service so that downtime is planned, not forced",
+          "body": "As Pat the Planner, I need a weekly list of machines due for service so that downtime is planned, not forced",
           "links": [
             {
               "type": "relates-to",
@@ -2903,7 +2903,7 @@
         {
           "type": "hazard",
           "title": "Coolant mist hides the spindle state lamp",
-          "body": "**Category:** Operational\n\n**Potential harm:** Operator misreads machine state \n\n**Severity:** moderate",
+          "body": "**Category:** Operational\n\n**Potential harm:** Operator misreads machine state\n\n**Severity:** moderate",
           "attributes": {
             "severity": "moderate",
             "category": "Operational"

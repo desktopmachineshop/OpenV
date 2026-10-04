@@ -103,8 +103,9 @@ func (r *matcherRepo) marksMade() []matcherMark {
 	return append([]matcherMark(nil), r.marks...)
 }
 
-// matcherRuns records the launches, answers Get from byID (and records each
-// id asked for) and CountRunsSince from counts (and records each call).
+// matcherRuns records the launches, answers Get from byID, or with getErr
+// when it is set (and records each id asked for), and CountRunsSince from
+// counts (and records each call).
 type matcherRuns struct {
 	agentruns.Service
 
@@ -112,6 +113,7 @@ type matcherRuns struct {
 	launched  []agentruns.LaunchRequest
 	launchErr error
 	byID      map[string]*agentruns.Run
+	getErr    error
 	gets      []string
 	counts    map[string]int
 	countErr  error
@@ -154,6 +156,9 @@ func (f *matcherRuns) Get(id string) (*agentruns.Run, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.gets = append(f.gets, id)
+	if f.getErr != nil {
+		return nil, f.getErr
+	}
 	if run, ok := f.byID[id]; ok {
 		return run, nil
 	}

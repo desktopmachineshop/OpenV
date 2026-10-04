@@ -12,7 +12,7 @@ import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { ErrorBanner } from '../components/ui';
-import { QualityRulesEditor } from '../components/QualityRulesEditor';
+import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
 
 type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage' | 'limits' | 'billing';
@@ -53,6 +53,9 @@ export const OrgSettings: React.FC = () => {
     );
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // The Quality rules tab's rules and unsaved draft, held here so leaving the
+  // tab keeps the draft and coming back does not load the rules again.
+  const [qualityRules, setQualityRules] = useState<QualityRulesHeld>(emptyQualityRulesHeld);
 
   // General tab
   const [nameDraft, setNameDraft] = useState('');
@@ -589,6 +592,8 @@ export const OrgSettings: React.FC = () => {
               id={org.id}
               canEdit={isAdmin}
               onSaved={() => flash('Quality rules saved')}
+              held={qualityRules}
+              setHeld={setQualityRules}
             />
             {!isAdmin && (
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12, marginBottom: 0 }}>

@@ -8,9 +8,9 @@ import type { HazardEntry, NeedEntry, NfrEntry, PersonaEntry, ReqEntry } from '.
  * The guided wizard writes an artifact from an entry in its form when the
  * person presses Next (GuidedWizard). The notes panel writes one straight from
  * a suggestion card, beside a project that already exists (planSuggestion in
- * suggestionDrafts.ts). The two differ in places, such as which fields are
- * trimmed and which titles are cut, and the difference is kept (refactor plan
- * Q16); both live here so it is in one place.
+ * suggestionDrafts.ts). Both trim every field they write; they differ in
+ * places, such as which titles are cut, and that difference is kept
+ * (refactor plan Q16); both live here so it is in one place.
  */
 
 /** An artifact's title and body. */
@@ -25,11 +25,12 @@ export interface ArtifactText {
 
 export const wizardPersonaText = (p: PersonaEntry): ArtifactText => ({
   title: p.name.trim(),
-  body: `**Role:** ${p.role}\n\n**Goals:**\n${p.goals}\n\n**Pain points:**\n${p.pains}`,
+  body: `**Role:** ${p.role.trim()}\n\n**Goals:**\n${p.goals.trim()}\n\n**Pain points:**\n${p.pains.trim()}`,
 });
 
 export const wizardNeedText = (n: NeedEntry, persona: PersonaEntry | undefined): ArtifactText => {
-  const personaName = persona?.name || 'a user';
+  // The persona as its own artifact is titled: trimmed.
+  const personaName = persona?.name.trim() || 'a user';
   const sentence = `As ${personaName}, I need ${n.capability.trim()} so that ${n.outcome.trim() || '…'}`;
   return {
     title: sentence.length > 120 ? `${sentence.slice(0, 117)}…` : sentence,
@@ -49,7 +50,7 @@ export const wizardNfrText = (n: NfrEntry): ArtifactText => ({
 
 export const wizardHazardText = (h: HazardEntry): ArtifactText => ({
   title: h.hazard.trim(),
-  body: `**Category:** ${h.category}\n\n**Potential harm:** ${h.harm}\n\n**Severity:** ${h.severity}`,
+  body: `**Category:** ${h.category}\n\n**Potential harm:** ${h.harm.trim()}\n\n**Severity:** ${h.severity}`,
 });
 
 /** A verification stub for a requirement the wizard materialized. */

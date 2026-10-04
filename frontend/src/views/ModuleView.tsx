@@ -419,8 +419,12 @@ export const ModuleView: React.FC = () => {
   }, [urlArtifactId, selectedArtifactId, setSelectedArtifactId]);
 
   // Handle artifact selection with automatic exit from edit/preview modes.
-  // Updates the store and the ?artifact= param together so the URL always
-  // reflects (and can restore) the current selection.
+  // Writes the ?artifact= param, and the sync effect above moves the store
+  // selection to it, so the URL always reflects (and can restore) the
+  // current selection. The store is not written here as well: the router
+  // updates the URL in a transition, after the store, and in between the
+  // effect would see the URL without the new selection, clear it and set it
+  // again, mounting the document twice for one click (#379, bug 102).
   const handleSelectArtifact = (artifactId: string | null) => {
     if (artifactId && stacked) {
       setStackedPane('document');
@@ -437,8 +441,6 @@ export const ModuleView: React.FC = () => {
         setPreviewVersion(null);
       }
     }
-    // Set the new selected artifact
-    setSelectedArtifactId(artifactId);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (artifactId) next.set('artifact', artifactId);

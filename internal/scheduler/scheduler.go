@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -43,7 +44,8 @@ func (s *Scheduler) Start(ctx context.Context) {
 }
 
 // catchUp handles automations whose next_run_at passed while the API was
-// down: catch_up=true gets exactly one run; otherwise just advance the clock.
+// down: catch_up=true gets exactly one run; otherwise just advance the clock
+// (last_run_at stays as it was, since nothing ran).
 // Both paths go through the atomic claim so a multi-replica deployment never
 // double-fires (or double-advances) a due automation.
 func (s *Scheduler) catchUp() {
@@ -75,9 +77,11 @@ func (s *Scheduler) tick() {
 }
 
 // fire atomically claims the automation for this replica and, only if the
-// claim is won, enqueues exactly one run. Claiming advances next_run_at in the
-// same statement, so a peer replica that lost the race for this row simply
-// finds it no longer due and never fires it too.
+// claim is won, enqueues exactly one run, then stamps last_run_at. Claiming
+// advances next_run_at in the same statement, so a peer replica that lost the
+// race for this row simply finds it no longer due and never fires it too. An
+// occurrence that launches nothing (no target, a refused launch) is skipped,
+// not retried, and leaves last_run_at as it was.
 func (s *Scheduler) fire(a *automations.Automation) {
 	if !s.claim(a) {
 		return
@@ -93,7 +97,7 @@ func (s *Scheduler) fire(a *automations.Automation) {
 	prompt := automations.RenderPrompt(a.PromptTemplate, map[string]string{
 		"automation.name": a.Name,
 	})
-	if prompt == "" {
+	if strings.TrimSpace(prompt) == "" {
 		prompt = "Scheduled run of automation: " + a.Name
 	}
 
@@ -109,30 +113,54 @@ func (s *Scheduler) fire(a *automations.Automation) {
 	}
 	if _, _, err := s.runService.Launch(req); err != nil {
 		log.Printf("scheduler: failed to launch run for automation %s: %v", a.ID, err)
+		return
+	}
+	// Only now has the occurrence run: the claim advanced next_run_at but
+	// left last_run_at, so an occurrence that launched nothing is not shown
+	// as run.
+	if err := s.repo.StampLastRun(a.ID, time.Now()); err != nil {
+		log.Printf("scheduler: failed to stamp last_run_at for automation %s: %v", a.ID, err)
 	}
 }
 
 // claim atomically claims the automation for this replica, advancing its
-// next_run_at to the next cron occurrence (an invalid cron disables it by
-// advancing to NULL). It reports whether THIS replica won the claim; only the
-// winner should fire. A lost claim means a peer replica already took the row.
+// next_run_at to the cron's next occurrence, and reports whether THIS
+// replica won the claim; only the winner should fire. A lost claim means a
+// peer replica already took the row, and a claim the repository answers
+// with an error never fires, whatever else the answer says. An automation
+// whose cron expression no longer parses is not claimed but switched off
+// (switchOff), so it never fires.
 func (s *Scheduler) claim(a *automations.Automation) bool {
 	now := time.Now()
 	next, err := automations.NextAfter(a.CronExpr, now)
 	if err != nil {
-		log.Printf("scheduler: automation %s has invalid cron %q: %v", a.ID, a.CronExpr, err)
-		claimed, cerr := s.repo.ClaimDueScheduled(a.ID, now, nil)
-		if cerr != nil {
-			log.Printf("scheduler: failed to claim %s: %v", a.ID, cerr)
-		}
-		return claimed
+		s.switchOff(a, now, err)
+		return false
 	}
-	claimed, err := s.repo.ClaimDueScheduled(a.ID, now, &next)
+	claimed, err := s.repo.ClaimDueScheduled(a.ID, now, next)
 	if err != nil {
 		log.Printf("scheduler: failed to claim %s: %v", a.ID, err)
 		return false
 	}
 	return claimed
+}
+
+// switchOff switches off a due automation whose cron expression no longer
+// parses (why), setting enabled to false and next_run_at to NULL, so that an
+// admin sees it off instead of enabled and never due, and logs why. Create
+// and update refuse such an expression, so only a row written another way
+// holds one. Like a claim, the switch-off is one atomic step that only one
+// replica wins; a lost one is silent, and one that fails is retried on the
+// next tick, since the row is still due.
+func (s *Scheduler) switchOff(a *automations.Automation, now time.Time, why error) {
+	switched, err := s.repo.SwitchOffScheduled(a.ID, now)
+	if err != nil {
+		log.Printf("scheduler: failed to switch off automation %s (%s): %v", a.Name, a.ID, err)
+		return
+	}
+	if switched {
+		log.Printf("scheduler: switched off automation %s (%s): %v", a.Name, a.ID, why)
+	}
 }
 
 // ResolveTarget resolves an automation's agent target. Team automations

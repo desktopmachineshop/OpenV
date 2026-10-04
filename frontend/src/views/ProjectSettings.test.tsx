@@ -193,6 +193,42 @@ describe('ProjectSettings', () => {
     expect(vi.mocked(shareLinkAPI.list)).toHaveBeenCalledWith('p1');
   });
 
+  // Bug 108: an expired link opens nothing, as a revoked one does, so it is
+  // not offered for revoking either; an open one is, expiry date or not.
+  it('offers Revoke only for a share link that still opens', async () => {
+    const link = (id: string, label: string, extra: Record<string, string>) => ({
+      id,
+      project_id: 'p1',
+      role: 'public',
+      label,
+      created_at: '2026-01-01T09:00:00Z',
+      ...extra,
+    });
+    vi.mocked(shareLinkAPI.list).mockResolvedValueOnce({
+      data: [
+        link('sl-1', 'Open', {}),
+        link('sl-2', 'Expiring later', { expires_at: '2999-01-01T00:00:00Z' }),
+        link('sl-3', 'Expired', { expires_at: '2020-01-01T00:00:00Z' }),
+        link('sl-4', 'Revoked', { revoked_at: '2026-02-01T09:00:00Z' }),
+      ],
+    } as any);
+    await mount('/projects/p1/settings?tab=members');
+
+    const rows = Array.from(container.querySelectorAll('tr')).filter((tr) =>
+      ['Open', 'Expiring later', 'Expired', 'Revoked'].includes((tr.querySelector('td')?.textContent ?? '').trim())
+    );
+    const offered = rows.map((tr) => [
+      (tr.querySelector('td')?.textContent ?? '').trim(),
+      Array.from(tr.querySelectorAll('button')).some((b) => (b.textContent ?? '').trim() === 'Revoke'),
+    ]);
+    expect(offered).toEqual([
+      ['Open', true],
+      ['Expiring later', true],
+      ['Expired', false],
+      ['Revoked', false],
+    ]);
+  });
+
   // Bug 107: the Reference parties buttons named classes no stylesheet
   // defines, so they drew as bare browser buttons.
   it('draws the Reference parties buttons with classes the stylesheet defines', async () => {

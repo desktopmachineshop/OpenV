@@ -3922,7 +3922,7 @@
     },
     {
       "n": 95,
-      "title": "run the automation of two unknown placeholders and a space: the prompt is that space, since only an empty rendering falls back",
+      "title": "run the automation of two unknown placeholders and a space: a rendering of only whitespace falls back too",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/automations/{id}/run-now",
@@ -3937,7 +3937,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:17>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.space>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\" \",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 95>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<uuid:17>\",\"org_id\":\"<w>\",\"agent_id\":\"<auto.agent>\",\"automation_id\":\"<a.space>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Manual run of automation: Tour Space\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 95>\",\"agent_content_hash\":\"<hex64:12>\",\"agent_name\":\"Tour Auto \\u0026 Co\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3948,7 +3948,7 @@
         "status": "queued",
         "cancel_requested": false,
         "priority": 0,
-        "prompt": " ",
+        "prompt": "Manual run of automation: Tour Space",
         "final_text": "",
         "error": "",
         "attempt_count": 1,

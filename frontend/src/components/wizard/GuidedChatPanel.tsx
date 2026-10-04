@@ -315,6 +315,14 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   // Which suggestions were applied lives in `applied` (persisted by the
   // wizard in the session answers) — NOT local state, so a remount cannot
   // re-arm Apply buttons and duplicate entries.
+  //
+  // A card on its way there is pending from the click on, so a second click
+  // before the first one's answer (a double-click, an Apply all) does nothing
+  // instead of applying it again (#379, bug 119). The ref is what a click
+  // reads, since it changes before React renders; the state disables the
+  // button.
+  const applyingRef = useRef<Set<string>>(new Set());
+  const [applying, setApplying] = useState<ReadonlySet<string>>(() => new Set());
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -574,11 +582,28 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     }
   };
 
+  // Apply the cards not already on their way, marking them pending first.
+  // Null when there is nothing left to apply.
+  const applyOnce = async (
+    items: { suggestion: CopilotSuggestion; key: string }[]
+  ): Promise<(string | null)[] | null> => {
+    const fresh = items.filter((i) => !applyingRef.current.has(i.key));
+    if (!onApplySuggestions || fresh.length === 0) return null;
+    fresh.forEach((i) => applyingRef.current.add(i.key));
+    setApplying(new Set(applyingRef.current));
+    try {
+      return await onApplySuggestions(fresh);
+    } finally {
+      fresh.forEach((i) => applyingRef.current.delete(i.key));
+      setApplying(new Set(applyingRef.current));
+    }
+  };
+
   // Apply every not-yet-applied suggestion of one reply in a single batch.
   // The wizard records and persists which keys applied successfully.
   const applyAll = async (pending: { suggestion: CopilotSuggestion; key: string }[]) => {
-    if (!onApplySuggestions) return;
-    const results = await onApplySuggestions(pending);
+    const results = await applyOnce(pending);
+    if (!results) return;
     const errors = results.filter((r): r is string => r !== null);
     setSendError(
       errors.length > 0
@@ -669,9 +694,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
           <button
             className="button-secondary"
             style={{ padding: '5px 10px', fontSize: 12 }}
+            disabled={applying.has(key)}
             onClick={async () => {
-              const reason = (await onApplySuggestions([{ suggestion: s, key }]))[0];
-              setSendError(reason === null ? '' : reason);
+              const results = await applyOnce([{ suggestion: s, key }]);
+              if (results) setSendError(results[0] === null ? '' : results[0]);
             }}
           >
             {buttonLabel}
