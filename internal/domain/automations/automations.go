@@ -176,7 +176,9 @@ func (s *DefaultService) Create(req CreateAutomationRequest) (*Automation, error
 		return nil, fmt.Errorf("invalid kind %q", req.Kind)
 	}
 
-	now := time.Now()
+	// TIMESTAMP columns keep the wall clock they are sent, so every time
+	// stamped here is UTC (#379 bug 133), and a schedule is read in UTC.
+	now := time.Now().UTC()
 	a := &Automation{
 		ID:              uuid.New().String(),
 		OrgID:           req.OrgID,
@@ -263,6 +265,7 @@ func (s *DefaultService) Update(id string, req UpdateAutomationRequest) (*Automa
 		return nil, errors.New("automation not found")
 	}
 
+	now := time.Now().UTC() // as in Create
 	recompute := false
 	if req.Name != nil {
 		if *req.Name == "" {
@@ -321,7 +324,7 @@ func (s *DefaultService) Update(id string, req UpdateAutomationRequest) (*Automa
 	case KindScheduled:
 		if recompute {
 			if a.Enabled {
-				next, err := NextAfter(a.CronExpr, time.Now())
+				next, err := NextAfter(a.CronExpr, now)
 				if err != nil {
 					return nil, err
 				}
@@ -336,7 +339,7 @@ func (s *DefaultService) Update(id string, req UpdateAutomationRequest) (*Automa
 		}
 	}
 
-	a.UpdatedAt = time.Now()
+	a.UpdatedAt = now
 	if err := s.repo.Update(a); err != nil {
 		return nil, err
 	}

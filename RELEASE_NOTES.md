@@ -378,6 +378,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   workspace, so they fire only an automation that covers the whole
   workspace, not one made on a project's Automations page.
 
+- **Automations keep time on a server whose clock is not set to UTC.** On
+  an OpenV server running in another time zone, as a self-hosted one can,
+  automations recorded their times shifted by the zone's offset: the
+  Automations table showed the next and last runs hours off, a scheduled
+  automation ran hours before or after the next run it showed, and a
+  triggered automation's cooldown and runs-per-hour limit counted from the
+  wrong moment, so it could be held back for hours after a run or run past
+  its limit. Automations now record every time in UTC, and a schedule is
+  read in UTC on every server, as it always was on OpenV's hosted service.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

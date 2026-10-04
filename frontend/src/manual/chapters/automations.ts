@@ -10,7 +10,7 @@ Automations launch agent (or crew) runs without anyone clicking a button. Open
 | Kind | When it runs |
 | --- | --- |
 | manual | Only when you click **Run now** |
-| scheduled | On a cron schedule (presets: Hourly, Daily at 9am, Every 15 minutes — or any cron expression) |
+| scheduled | On a cron schedule, read in UTC (presets: Hourly, Daily at 9am, Every 15 minutes — or any cron expression) |
 | triggered | When a matching event happens in the project |
 
 ## Trigger events
