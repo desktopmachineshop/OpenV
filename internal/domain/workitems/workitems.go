@@ -204,7 +204,7 @@ func (s *DefaultService) Create(req CreateWorkItemRequest, createdBy *string, ac
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	item := &WorkItem{
 		ID:           uuid.New().String(),
 		ProjectID:    req.ProjectID,
@@ -297,7 +297,7 @@ func (s *DefaultService) Update(id string, req UpdateWorkItemRequest, actor stri
 		item.ArtifactIDs = req.ArtifactIDs
 	}
 	item.DueDate = req.DueDate
-	item.UpdatedAt = time.Now()
+	item.UpdatedAt = time.Now().UTC()
 
 	if err := s.repo.Update(item); err != nil {
 		return nil, err
@@ -323,7 +323,7 @@ func (s *DefaultService) Move(id string, req MoveRequest, actor string) (*WorkIt
 
 	item.Column = req.Column
 	item.SortOrder = req.SortOrder
-	item.UpdatedAt = time.Now()
+	item.UpdatedAt = time.Now().UTC()
 
 	if err := s.repo.Update(item); err != nil {
 		return nil, err
@@ -387,7 +387,7 @@ func newActivity(workItemID, kind, content, actor string, payload map[string]int
 		Actor:      actor,
 		Content:    content,
 		Payload:    payload,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}
 }
 

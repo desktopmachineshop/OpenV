@@ -124,7 +124,7 @@ func (s *DefaultService) AddMember(projectID, userID, role string) error {
 	if !ValidRole(role) {
 		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
-	return s.repo.Upsert(&Member{ProjectID: projectID, UserID: userID, Role: role, CreatedAt: time.Now()})
+	return s.repo.Upsert(&Member{ProjectID: projectID, UserID: userID, Role: role, CreatedAt: time.Now().UTC()})
 }
 
 // RemoveMember removes a membership.
@@ -179,7 +179,7 @@ func (s *DefaultService) GrantTeam(projectID, orgTeamID, role string) error {
 	if !ValidRole(role) {
 		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
-	return s.repo.UpsertTeamGrant(&TeamGrant{ProjectID: projectID, OrgTeamID: orgTeamID, Role: role, CreatedAt: time.Now()})
+	return s.repo.UpsertTeamGrant(&TeamGrant{ProjectID: projectID, OrgTeamID: orgTeamID, Role: role, CreatedAt: time.Now().UTC()})
 }
 
 // RevokeTeam removes a team's project grant.

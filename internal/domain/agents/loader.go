@@ -394,7 +394,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns: the wall clock sent is read as UTC (#379 bug 93)
 	hash := contentHash(content)
 	if existing != nil {
 		existing.Name = def.Name
