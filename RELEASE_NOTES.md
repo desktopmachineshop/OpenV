@@ -68,9 +68,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   local time instead of UTC, and the checks comparing them were off by the
   zone's offset. East of UTC, a run reserved for its launcher's own runner
   went to a workspace runner at once, an automatic retry ran without
-  waiting, a runner that stopped was noticed hours late, and a cloud runner
-  lease counted its whole length against the workspace's minutes as soon
-  as it started. West of UTC, a run could be failed as "worker lost"
+  waiting, a runner that stopped right after claiming a run was noticed
+  hours late, and a cloud runner lease counted its whole length against
+  the workspace's minutes as soon as it started. West of UTC, a run could be failed as "worker lost"
   moments after a runner claimed it, while the runner was still preparing
   it. OpenV now runs every database connection in UTC, whatever the
   database's own setting.
