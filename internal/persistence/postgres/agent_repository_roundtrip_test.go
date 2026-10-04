@@ -29,15 +29,18 @@ func rtAgentNames(list []*agents.Agent) []string {
 
 // An agent reads back every field as saved: its times as TIMESTAMP columns
 // keep them (the wall clock, to the microsecond, in lib/pq's zone at offset
-// 0), no synced_at as NULL that reads back nil, an empty workspace as NULL
-// that reads back "", and no tools or config as [] and {} that read back as
-// an empty list and map. Update rewrites everything but the workspace, the
-// slug and created_at, and an id no row has is no error. A second agent with
-// a slug its workspace has is agents.ErrSlugExists; a second with an id an
-// agent has is Postgres's refusal; and agents with no workspace may share a
-// slug. An agent no row has, and a malformed id, read as no agent and no
-// error (not agents.ErrNotFound), by id or by slug. Delete takes the crew
-// nodes that place the agent.
+// 0), no synced_at as NULL that reads back nil, and no tools or config as []
+// and {} that read back as an empty list and map. Update rewrites everything
+// but the workspace, the slug and created_at, and an id no row has is no
+// error. A second agent with a slug its workspace has is
+// agents.ErrSlugExists; a second with an id an agent has is Postgres's
+// refusal; and an agent with no workspace is agents.ErrWorkspaceRequired,
+// with nothing stored (#379 bug 89: it was stored with a NULL workspace, so
+// no List or FindBySlug found it, and two such agents could share a slug).
+// An agent no row has, and a malformed id, read as no agent and no error
+// (not agents.ErrNotFound), by id or by slug, and an empty workspace finds
+// none, not even an agent a database from before workspaces left with none.
+// Delete takes the crew nodes that place the agent.
 func TestAgentRepositoryRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewAgentRepository(db)
@@ -67,16 +70,15 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 	}
 	rtWantSame(t, "an agent", rtAgentSansTimes(got), rtAgentSansTimes(saved))
 
-	bare := &agents.Agent{ID: uuid.New().String(), Slug: "bare", Name: "Bare", Provider: "codex",
+	bare := &agents.Agent{ID: uuid.New().String(), OrgID: otherOrg, Slug: "bare", Name: "Bare", Provider: "codex",
 		CreatedAt: rtAt(2), UpdatedAt: rtAt(2)}
 	if err := repo.Save(bare); err != nil {
 		t.Fatalf("Save with nothing optional: %v", err)
 	}
 	var tools, config string
-	var orgNull bool
-	if err := db.QueryRow(`SELECT allowed_tools::text, config::text, org_id IS NULL FROM agents WHERE id = $1`, bare.ID).
-		Scan(&tools, &config, &orgNull); err != nil || tools != "[]" || config != "{}" || !orgNull {
-		t.Errorf("no tools, config or workspace stored as %q %q, NULL %v (%v); want [] {} and NULL", tools, config, orgNull, err)
+	if err := db.QueryRow(`SELECT allowed_tools::text, config::text FROM agents WHERE id = $1`, bare.ID).
+		Scan(&tools, &config); err != nil || tools != "[]" || config != "{}" {
+		t.Errorf("no tools or config stored as %q %q (%v); want [] and {}", tools, config, err)
 	}
 	if got, err := repo.FindByID(bare.ID); err != nil || got == nil {
 		t.Errorf("FindByID(bare): %v, %v", got, err)
@@ -133,8 +135,16 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 			Provider: "claude"}); err != nil {
 			t.Errorf("Save of a slug another workspace has: %v, want it stored", err)
 		}
-		if err := repo.Save(&agents.Agent{ID: uuid.New().String(), Slug: bare.Slug, Name: "Bare twin", Provider: "codex"}); err != nil {
-			t.Errorf("Save of a slug an agent with no workspace has, with none: %v, want it stored (NULLs are distinct)", err)
+		for i := 0; i < 2; i++ {
+			// Twice with one slug: neither is stored, so neither can share it.
+			id := uuid.New().String()
+			if err := repo.Save(&agents.Agent{ID: id, Slug: "no-workspace", Name: "No workspace", Provider: "codex",
+				CreatedAt: rtAt(3), UpdatedAt: rtAt(3)}); err != agents.ErrWorkspaceRequired {
+				t.Errorf("Save of an agent with no workspace: %v, want agents.ErrWorkspaceRequired", err)
+			}
+			if found, err := repo.FindByID(id); found != nil || err != nil {
+				t.Errorf("an agent with no workspace was stored: %v, %v", found, err)
+			}
 		}
 		rtWantRefused(t, "Save in a malformed workspace", repo.Save(&agents.Agent{ID: uuid.New().String(), OrgID: malformed,
 			Slug: "x", Name: "x", Provider: "claude"}))
@@ -155,11 +165,14 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 		if found, err := repo.FindBySlug(otherOrg, saved.Slug); err != nil || found == nil || found.Name != "Elsewhere" {
 			t.Errorf("FindBySlug in another workspace: %v, %v; want that workspace's agent", found, err)
 		}
+		// A row from before workspaces, which no Save writes any more.
+		rtSeed(t, db, `INSERT INTO agents (id, slug, name, provider) VALUES ($1, 'legacy', 'Legacy', 'claude')`, uuid.New().String())
 		for _, c := range []struct{ org, slug string }{
 			{orgID, "no-such-slug"},
 			{orgID, bare.Slug},
 			{uuid.New().String(), saved.Slug},
-			{"", bare.Slug}, // an empty workspace matches no agent, not those with none
+			{"", saved.Slug},
+			{"", "legacy"}, // an empty workspace matches no agent, not those with none
 			{malformed, saved.Slug},
 			{"\xff", saved.Slug},
 		} {
@@ -213,7 +226,6 @@ func TestAgentRepositoryList(t *testing.T) {
 		{orgID, "Bravo"},
 		{orgID, "Delta"},
 		{otherOrg, "Aardvark"},
-		{"", "Aaron"},
 	} {
 		// Stamped newest first, so that created_at's order is not the name's.
 		if err := repo.Save(&agents.Agent{ID: uuid.New().String(), OrgID: c.org, Slug: uuid.New().String(), Name: c.name,
@@ -221,6 +233,9 @@ func TestAgentRepositoryList(t *testing.T) {
 			t.Fatalf("Save %q: %v", c.name, err)
 		}
 	}
+	// An agent with no workspace, which no Save writes any more (a database
+	// from before workspaces could hold one until the boot backfill).
+	rtSeed(t, db, `INSERT INTO agents (id, slug, name, provider) VALUES ($1, 'aaron', 'Aaron', 'claude')`, uuid.New().String())
 	list, err := repo.List(orgID)
 	if err != nil {
 		t.Fatalf("List: %v", err)
