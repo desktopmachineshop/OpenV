@@ -56,3 +56,22 @@ func TestMinutesAlertsAdminsOncePerThreshold(t *testing.T) {
 	var none *MinutesMonitor
 	none.Check("org-1")
 }
+
+// TestMinutesAlertStatesTheUseNotTheThreshold is bug 65's rule applied to
+// cloud runner minutes (bug 128): the 80% alert once ended "(80%)", which
+// read as the share used when 85% had been. The body gives the minutes used
+// against the allowance and nothing else.
+func TestMinutesAlertStatesTheUseNotTheThreshold(t *testing.T) {
+	base, _, store := newBudgetFixture(nil)
+	base.org.Limits = map[string]interface{}{orgs.LimitHostedRunnerMinutesMonth: 100}
+	NewMinutesMonitor(&fakeMinutesOrgs{fakeBudgetOrgs: base}, &fakeMinutes{used: 85}, store, nil).Check("org-1")
+	if len(store.created) == 0 {
+		t.Fatal("no alert was stored")
+	}
+	want := "This month's leased cloud runner time has reached 85 of the 100 minutes the workspace's plan allows."
+	for _, n := range store.created {
+		if n.Body != want {
+			t.Errorf("an admin reads\n  %q\nwant\n  %q", n.Body, want)
+		}
+	}
+}

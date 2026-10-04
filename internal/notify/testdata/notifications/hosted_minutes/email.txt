@@ -17,7 +17,7 @@ Content-Type: text/plain; charset=UTF-8
 
 Cloud runner minutes nearly used up
 
-This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).
+This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows.
 
 Open it in OpenV:
 https://openv.example.test/org/settings?tab=billing
@@ -38,7 +38,7 @@ Content-Type: text/plain; charset=UTF-8
 
 Cloud runner minutes nearly used up
 
-This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).
+This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows.
 
 Open it in OpenV:
 https://openv.example.test/org/settings?tab=billing

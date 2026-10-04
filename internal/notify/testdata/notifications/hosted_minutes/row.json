@@ -5,7 +5,7 @@
     {
       "delivery": "1 of 2",
       "row": {
-        "Body": "This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).",
+        "Body": "This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {
@@ -33,7 +33,7 @@
     {
       "delivery": "2 of 2",
       "row": {
-        "Body": "This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).",
+        "Body": "This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows.",
         "ClearedAt": null,
         "CreatedAt": "<time.Now() when the row was built>",
         "EntityRef": {

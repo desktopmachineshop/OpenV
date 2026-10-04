@@ -7,13 +7,13 @@
 === a lease takes the month's cloud runner minutes past 80% of the allowance | delivery 1 of 2 | to user-ada
 (stream notify:user-ada)
 event: notification
-data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"hosted_minutes","title":"Cloud runner minutes nearly used up","body":"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ada","type":"hosted_minutes","title":"Cloud runner minutes nearly used up","body":"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows.","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === a lease takes the month's cloud runner minutes past 80% of the allowance | delivery 2 of 2 | to user-dee
 (stream notify:user-dee)
 event: notification
-data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"hosted_minutes","title":"Cloud runner minutes nearly used up","body":"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows (80%).","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-dee","type":"hosted_minutes","title":"Cloud runner minutes nearly used up","body":"This month's leased cloud runner time has reached 510 of the 600 minutes the workspace's plan allows.","entity_ref":{"kind":"org_limits","month":"2026-10","org_id":"org-acme","threshold":80},"read":false,"flagged":false,"created_at":"<created_at>"}
 
 
 === a lease uses up the month's cloud runner minutes | delivery 1 of 2 | to user-ada

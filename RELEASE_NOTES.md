@@ -142,7 +142,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   the mark passed, as in "Workspace reached 80% of its budget", and the
   text gives the month's spend against the budget, as in "This month's
   agent runs have spent $212.50 of the $250.00 budget.", in the bell, in
-  phone alerts and in email.
+  phone alerts and in email. The alert that a workspace's cloud runner
+  minutes are nearly used up no longer ends "(80%)" either; it gives the
+  minutes used against the plan's allowance.
 
 ## 0.15.1 — 2026-09-30
 
