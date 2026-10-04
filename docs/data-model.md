@@ -41,8 +41,10 @@ sentence). `postgres.RunBootTaskOnce` runs a task under the boot advisory
 lock unless its row exists, and writes the row once the task has run to an
 outcome; a task that fails is not recorded and runs at the next boot. The
 one task is `sweep_unreferenced_uploads`, which removes the stored files no
-row names from `UPLOADS_DIR` (`cmd/server/upload_sweep.go`; see "Stored
-files no row names" in `docs/operations.md`).
+row names from `UPLOADS_DIR`, and the logos and profile pictures of
+workspaces and accounts that have no row from its `org-logos/` and
+`avatars/` (`cmd/server/upload_sweep.go`; see "Stored files no row names" in
+`docs/operations.md`). `OPENV_UPLOAD_SWEEP=off` skips it and writes no row.
 
 ## Core requirements data (`db.go`)
 

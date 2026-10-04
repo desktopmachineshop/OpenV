@@ -12,16 +12,15 @@
 # by <...>; the Date header dropped; a no-vector server's warning taken out;
 # the recording proxy's address shown as <recording proxy port>.
 
-== profile cross_site_cookies: the frontend is on another site than the API
-CROSS_SITE_COOKIES=true
+== profile upload_sweep_off: the boot's sweep of the stored files no row names turned off, for an uploads directory another deployment shares
 HTTPS_PROXY=http://127.0.0.1:<recording proxy port>
 HTTP_PROXY=http://127.0.0.1:<recording proxy port>
+OPENV_UPLOAD_SWEEP=off
 
 == boot log, in order
 level=INFO msg="using DATABASE_URL (Railway.app mode)"
 level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
-level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
-level=INFO msg="upload sweep: done" dir=<tmp>/uploads removed=0 logos_removed=0 avatars_removed=0 bytes=0 failed=0 kept_recent=0 named=0
+level=INFO msg="upload sweep: off (OPENV_UPLOAD_SWEEP=off); nothing swept or recorded"
 level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
 level=INFO msg="transient runners disabled (set RUNNER_POOL_KEY to enable)"
 level=INFO msg="Hosted runners disabled (HOSTED_RUNNERS=off)"
@@ -46,7 +45,6 @@ header Content-Length: 16
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"status\":\"ok\"}\n"
@@ -59,7 +57,6 @@ header Content-Length: 14
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"commit\":\"\"}\n"
@@ -76,7 +73,6 @@ header Access-Control-Max-Age: 3600
 header Content-Length: 0
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header Vary: Origin
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
@@ -88,7 +84,6 @@ status 200 OK
 header Content-Length: 0
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body empty
@@ -100,7 +95,6 @@ header Content-Length: 36
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"authentication required\"}\n"
@@ -112,7 +106,6 @@ header Content-Length: 36
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"authentication required\"}\n"
@@ -124,7 +117,6 @@ header Content-Length: 19
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/plain; charset=utf-8
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "404 page not found\n"
@@ -135,7 +127,6 @@ status 405 Method Not Allowed
 header Content-Length: 0
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body empty
@@ -147,7 +138,6 @@ header Content-Length: 0
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Location: /api/v1/public/build
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body empty
@@ -159,8 +149,7 @@ header Content-Length: <not recorded>
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/plain; charset=utf-8
 header Referrer-Policy: strict-origin-when-cross-origin
-header Set-Cookie: openv_session=<token>; Path=/; Expires=<expires>; Max-Age=2592000; HttpOnly; Secure; SameSite=None; Partitioned
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
+header Set-Cookie: openv_session=<token>; Path=/; Expires=<expires>; Max-Age=2592000; HttpOnly; SameSite=Lax
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (the new account; S5c pins it)
@@ -181,7 +170,6 @@ header Content-Length: <not recorded>
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (the new project; S5a pins it)
@@ -194,7 +182,6 @@ header Content-Length: 38
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"invalid email or password\"}\n"
@@ -208,7 +195,6 @@ header Content-Length: 33
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"invalid request body\"}\n"
@@ -221,7 +207,6 @@ header Content-Length: 30
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"project not found\"}\n"
@@ -233,7 +218,6 @@ header Content-Length: 49
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"File is larger than the upload limit\"}\n"
@@ -245,7 +229,6 @@ header Content-Length: 1399
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body 1399 bytes, sha256 d045a5b4f5b158fe, beginning "{\"error\":\"unsupported export format: aaaaaaaaaaaaaaaaaaaaaaa"
@@ -259,7 +242,6 @@ header Content-Length: <not recorded>
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header Vary: Accept-Encoding
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
@@ -275,7 +257,6 @@ header Connection: keep-alive
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/event-stream
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Accel-Buffering: no
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
@@ -289,7 +270,6 @@ transfer-encoding chunked
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (Prometheus text)
@@ -315,7 +295,6 @@ transfer-encoding chunked
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (Prometheus text)
@@ -325,7 +304,6 @@ transfer-encoding chunked
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (Prometheus text)
@@ -339,7 +317,6 @@ header Content-Length: <not recorded>
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/plain; charset=utf-8
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (the account's workspaces; S5c pins them)
@@ -371,7 +348,6 @@ header Content-Length: 53
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"billing_enabled\":false,\"currencies\":[],\"plans\":[]}\n"
@@ -383,7 +359,6 @@ header Content-Length: 85
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"billing is not available on this deployment\",\"code\":\"billing_unavailable\"}\n"
@@ -395,7 +370,6 @@ header Content-Length: 85
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"billing is not available on this deployment\",\"code\":\"billing_unavailable\"}\n"
@@ -407,7 +381,6 @@ header Content-Length: 85
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"billing is not available on this deployment\",\"code\":\"billing_unavailable\"}\n"
@@ -419,7 +392,6 @@ header Content-Length: 85
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"billing is not available on this deployment\",\"code\":\"billing_unavailable\"}\n"
@@ -431,7 +403,6 @@ header Content-Length: 85
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body "{\"error\":\"billing is not available on this deployment\",\"code\":\"billing_unavailable\"}\n"
@@ -451,7 +422,6 @@ header Connection: keep-alive
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: text/event-stream
 header Referrer-Policy: strict-origin-when-cross-origin
-header Strict-Transport-Security: max-age=31536000; includeSubDomains
 header X-Accel-Buffering: no
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY

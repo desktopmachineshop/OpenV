@@ -584,6 +584,11 @@
       "default": "`false`",
       "text": "`true` trusts one proxy hop, as `OPENV_TRUSTED_PROXY_HOPS=1` does (the older form)."
     },
+    "OPENV_UPLOAD_SWEEP": {
+      "area": "documents",
+      "read_by": "server",
+      "text": "`off` skips the boot's once-per-database sweep of the stored files no record names, in `UPLOADS_DIR` and its `org-logos/` and `avatars/`, and records nothing, so the first boot without the setting sweeps. Set it on any deployment that shares its uploads directory with another. Takes `on` or `off` in any case, or `true`, `false`, `1` or `0`."
+    },
     "OPENV_VAPID_PRIVATE_KEY": {
       "area": "events-notifications",
       "read_by": "server",

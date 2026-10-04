@@ -24,12 +24,15 @@ OPENV_RUN_MAX_ATTEMPTS=0
 OPENV_SHARED_PRODUCT_DAILY_LIMIT=20 a day
 OPENV_TRUSTED_PROXY_HOPS=two
 OPENV_TRUST_PROXY=on
+OPENV_UPLOAD_SWEEP=no
 SECURE_COOKIES=yes
 
 == boot log, in order
 level=INFO msg="using DATABASE_URL (Railway.app mode)"
+level=WARN msg="ignoring a malformed setting; its default applies" var=OPENV_UPLOAD_SWEEP want="on or off, or true or false (any case), or 1 or 0"
 level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
 level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
+level=INFO msg="upload sweep: done" dir=<tmp>/uploads removed=0 logos_removed=0 avatars_removed=0 bytes=0 failed=0 kept_recent=0 named=0
 level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
 level=INFO msg="transient runners disabled (set RUNNER_POOL_KEY to enable)"
 level=INFO msg="Hosted runners disabled (HOSTED_RUNNERS=off)"

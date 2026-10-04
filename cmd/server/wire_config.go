@@ -40,6 +40,10 @@ func (a *app) config() {
 
 	a.port = envOr("PORT", "8080")
 	a.uploadsDir = envOr("UPLOADS_DIR", "./uploads")
+	// OPENV_UPLOAD_SWEEP=off skips the boot's once-only sweep of the stored
+	// files no row names (stage storage), on a deployment whose uploads
+	// directory another one shares (#379 question 55).
+	a.uploadSweep = envSwitch(uploadSweepSetting, true)
 	dataDir := envOr("OPENV_DATA_DIR", "./data")
 	a.agentsDir = envOr("AGENTS_DIR", dataDir+"/agents")
 	// WORKER_API_KEY is a legacy single-key fallback; workers should use

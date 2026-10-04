@@ -170,6 +170,41 @@ func TestBoolTakesTrueFalseInAnyCaseAndOneZero(t *testing.T) {
 	}
 }
 
+// A switch takes on or off in any case as well as a boolean's spellings
+// (OPENV_UPLOAD_SWEEP=off, #379 question 55); anything else keeps the
+// default with the one warning.
+func TestSwitchTakesOnOffAsWellAsABoolean(t *testing.T) {
+	cases := []struct {
+		raw   string
+		def   bool
+		want  bool
+		warns bool
+	}{
+		{"", true, true, false},
+		{"  ", false, false, false},
+		{"off", true, false, false},
+		{" OFF ", true, false, false},
+		{"Off", true, false, false},
+		{"on", false, true, false},
+		{"ON", false, true, false},
+		{"false", true, false, false},
+		{"0", true, false, false},
+		{"true", false, true, false},
+		{"1", false, true, false},
+		{"no", true, true, true},
+		{"of", true, true, true},
+		{"disabled", true, true, true},
+		{"o n", false, false, true},
+	}
+	for _, c := range cases {
+		log := captureLog(t)
+		if got := Switch("OPENV_TEST_SWITCH", c.raw, c.def); got != c.want {
+			t.Errorf("Switch(%q, default %v) = %v, want %v", c.raw, c.def, got, c.want)
+		}
+		checkWarning(t, log.String(), c.raw, "OPENV_TEST_SWITCH", c.warns)
+	}
+}
+
 func TestTextIsTrimmed(t *testing.T) {
 	for raw, want := range map[string]string{"": "def", "   ": "def", "x": "x", " x ": "x", "a b": "a b", "\tx\n": "x"} {
 		if got := Text(raw, "def"); got != want {

@@ -4,9 +4,9 @@ import "testing"
 
 // TestEnvParse writes cmd/server's sections of
 // internal/archtest/testdata/env_parse.txt (refactor plan S8, invariant
-// I13): what envOr, envInt, envBool and envSecret return for each input,
-// called with the probe as the name and a sentinel fallback, which a row
-// shows as default. The server's other reads parse inline; env_vars.txt
+// I13): what envOr, envInt, envBool, envSwitch and envSecret return for each
+// input, called with the probe as the name and a sentinel fallback, which a
+// row shows as default. The server's other reads parse inline; env_vars.txt
 // lists them.
 func TestEnvParse(t *testing.T) {
 	checkEnvParse(t, "cmd/server", map[string][]string{
@@ -18,6 +18,9 @@ func TestEnvParse(t *testing.T) {
 		}),
 		"cmd/server:envBool(key)": envParseRows(t, nil, func() string {
 			return envParseBool(envBool(envParseProbe, false), envBool(envParseProbe, true))
+		}),
+		"cmd/server:envSwitch(key)": envParseRows(t, []string{"off", " OFF ", "on", "On"}, func() string {
+			return envParseBool(envSwitch(envParseProbe, false), envSwitch(envParseProbe, true))
 		}),
 		"cmd/server:envSecret(key)": envParseRows(t, []string{"key\n", " key"}, func() string {
 			return envParseResult(envSecret(envParseProbe, "fallback"), "fallback")
