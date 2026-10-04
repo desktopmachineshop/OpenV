@@ -607,3 +607,26 @@ func readMail(t *testing.T, msg []byte) (subject, body string) {
 	}
 	return subject, string(raw)
 }
+
+// TestBodyLineBreaksReachTheServerAsCRLF pins buildMessage's line ends on
+// their own: text that keeps its line breaks, such as a comment preview in a
+// mention email, can carry a bare CR, which must not reach the server bare,
+// where a lenient reader takes "\r.\r" for the dot that ends the message.
+func TestBodyLineBreaksReachTheServerAsCRLF(t *testing.T) {
+	msg := string(buildMessage("openv@example.com", "a@example.com", "Hi", "one\rtwo\r\n.\rthree\nfour"))
+	_, body, ok := strings.Cut(msg, "\r\n\r\n")
+	if !ok {
+		t.Fatalf("no blank line after the headers in %q", msg)
+	}
+	if want := "one\r\ntwo\r\n.\r\nthree\r\nfour"; body != want {
+		t.Errorf("body = %q, want %q", body, want)
+	}
+	for i := 0; i < len(msg); i++ {
+		if msg[i] == '\r' && (i+1 == len(msg) || msg[i+1] != '\n') {
+			t.Fatalf("bare CR at byte %d of %q", i, msg)
+		}
+		if msg[i] == '\n' && (i == 0 || msg[i-1] != '\r') {
+			t.Fatalf("bare LF at byte %d of %q", i, msg)
+		}
+	}
+}
