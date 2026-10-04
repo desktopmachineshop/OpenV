@@ -37,7 +37,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		writeRateLimited(w, "Too many attempts from this address; try again later.", retryAfter)
 		return
 	}
-	user, err := h.userService.ConfirmEmailVerification(req.Token)
+	user, err := h.UserService.ConfirmEmailVerification(req.Token)
 	switch {
 	case errors.Is(err, users.ErrEmailTaken):
 		writeJSONError(w, http.StatusConflict, err.Error())
@@ -101,7 +101,7 @@ func (h *Handler) sendVerificationFor(w http.ResponseWriter, r *http.Request, em
 		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
-	if !h.emailVerification.Required {
+	if !h.EmailVerification.Required {
 		writeJSONError(w, http.StatusBadRequest, "email verification is not required on this server")
 		return
 	}
@@ -147,22 +147,22 @@ func (h *Handler) sendVerificationAsync(user *users.User, email string) {
 // bounds the send at notify.VerificationSendTimeout and reports its failure;
 // otherwise the send is left to finish (and log) on its own.
 func (h *Handler) issueAndSend(user *users.User, email string, wait bool) (string, error) {
-	token, sentTo, err := h.userService.IssueEmailVerification(user.ID, email)
+	token, sentTo, err := h.UserService.IssueEmailVerification(user.ID, email)
 	if err != nil {
 		return "", err
 	}
-	link := notify.VerificationLink(h.emailLinkBase, token)
+	link := notify.VerificationLink(h.EmailLinkBase, token)
 	subject, body := notify.RenderVerificationEmail(user.Name, link, users.EmailVerificationTTL)
-	if h.mailer == nil || !h.mailer.Enabled() {
+	if h.Mailer == nil || !h.Mailer.Enabled() {
 		return "", errVerificationSend
 	}
 	if !wait {
-		if err := h.mailer.Send(sentTo, subject, body); err != nil {
+		if err := h.Mailer.Send(sentTo, subject, body); err != nil {
 			return "", errors.Join(errVerificationSend, err)
 		}
 		return sentTo, nil
 	}
-	if err := notify.SendWithTimeout(h.mailer, sentTo, subject, body, notify.VerificationSendTimeout); err != nil {
+	if err := notify.SendWithTimeout(h.Mailer, sentTo, subject, body, notify.VerificationSendTimeout); err != nil {
 		return "", errors.Join(errVerificationSend, err)
 	}
 	return sentTo, nil

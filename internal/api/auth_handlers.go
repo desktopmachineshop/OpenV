@@ -69,16 +69,16 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 // seeded with default agents/crew. Failures are non-fatal (retried on next
 // login via the middleware's personal-org fallback).
 func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
-	if h.orgService == nil {
+	if h.OrgService == nil {
 		return
 	}
-	org, created, err := h.orgService.EnsurePersonalOrg(userID, displayName)
+	org, created, err := h.OrgService.EnsurePersonalOrg(userID, displayName)
 	if err != nil {
 		slog.Warn("failed to provision personal workspace", slog.String("user_id", userID), slog.Any("error", err))
 		return
 	}
-	if created && h.orgSeeder != nil {
-		if err := h.orgSeeder(org.ID); err != nil {
+	if created && h.OrgSeeder != nil {
+		if err := h.OrgSeeder(org.ID); err != nil {
 			slog.Warn("failed to seed personal workspace", slog.String("org_id", org.ID), slog.Any("error", err))
 		}
 	}
@@ -87,20 +87,20 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 // AuthConfig tells the login page which sign-in methods are available.
 func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{
-		"google_enabled":     h.googleOAuth != nil && h.googleOAuth.ClientID != "",
-		"oidc_enabled":       h.oidc.Enabled(),
+		"google_enabled":     h.GoogleOAuth != nil && h.GoogleOAuth.ClientID != "",
+		"oidc_enabled":       h.OIDC.Enabled(),
 		"oidc_provider_name": "",
 		// Tells the SPA whether an unverified account meets the wall, so it
 		// never walls anyone on a deployment that cannot send the link.
-		"email_verification_required": h.emailVerification.Required,
+		"email_verification_required": h.EmailVerification.Required,
 		// Whether the sign-in page can offer an emailed password reset
 		// (REQ-158); without a mailer a platform admin mints the link.
-		"password_reset_email": h.mailer != nil && h.mailer.Enabled(),
+		"password_reset_email": h.Mailer != nil && h.Mailer.Enabled(),
 		// Whether the page should offer a sign-up form at all (REQ-95).
 		"registration": h.registrationPolicy(),
 	}
-	if h.oidc.Enabled() {
-		resp["oidc_provider_name"] = h.oidc.displayName()
+	if h.OIDC.Enabled() {
+		resp["oidc_provider_name"] = h.OIDC.displayName()
 	}
 	json.NewEncoder(w).Encode(resp)
 }
@@ -122,7 +122,7 @@ func (h *Handler) AuthPolicy(w http.ResponseWriter, r *http.Request) {
 // registrationPolicy reports the deployment's policy, defaulting to open so
 // a handler constructed without one (tests) behaves as it always did.
 func (h *Handler) registrationPolicy() string {
-	if h.registration == RegistrationClosed {
+	if h.Registration == RegistrationClosed {
 		return RegistrationClosed
 	}
 	return RegistrationOpen
@@ -162,12 +162,12 @@ func (h *Handler) registrationAllowed(email, inviteToken string) (bool, *invitat
 	if inviteToken == "" {
 		return open, nil, ""
 	}
-	if h.invitationService == nil {
+	if h.InvitationService == nil {
 		return open, nil, InviteOutcomeInvalid
 	}
 	// A lookup failure is treated as "no invitation": on a closed deployment
 	// the safe answer to an unanswerable question is no.
-	inv, err := h.invitationService.Lookup(inviteToken)
+	inv, err := h.InvitationService.Lookup(inviteToken)
 	if err != nil || inv == nil {
 		return open, nil, InviteOutcomeInvalid
 	}
@@ -214,7 +214,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		writeJSONErrorCode(w, http.StatusForbidden, "registration is closed", ErrCodeRegistrationClosed)
 		return
 	}
-	user, err := h.userService.Register(req.Email, req.Password, req.Name)
+	user, err := h.UserService.Register(req.Email, req.Password, req.Name)
 	if err != nil {
 		// A password under the minimum carries the code a password change
 		// and a reset give it (#379's bug 20, OpenV REQ-18); sign-in's
@@ -236,7 +236,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		outcome = h.acceptResolvedInvitation(invite, user)
 		user = h.verifiedByInvitation(user, outcome)
 	}
-	_, token, err := h.userService.Login(req.Email, req.Password)
+	_, token, err := h.UserService.Login(req.Email, req.Password)
 	if err != nil {
 		respondInternal(w, r, "failed to sign in after registration", err)
 		return
@@ -244,7 +244,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	h.setSessionCookie(w, token)
 	// The link goes out in the background: registration never waits on SMTP,
 	// and the wall's Resend covers a mail that did not arrive.
-	if h.emailVerification.Required && !user.EmailVerified {
+	if h.EmailVerification.Required && !user.EmailVerified {
 		h.sendVerificationAsync(user, user.Email)
 	}
 	json.NewEncoder(w).Encode(registerResponse{User: user, Invitation: outcome})
@@ -268,7 +268,7 @@ func (h *Handler) verifiedByInvitation(user *users.User, outcome string) *users.
 	if outcome != InviteOutcomeAccepted && outcome != InviteOutcomeAlreadyMember {
 		return user
 	}
-	verified, err := h.userService.MarkEmailVerified(user.ID)
+	verified, err := h.UserService.MarkEmailVerified(user.ID)
 	if err != nil {
 		slog.Warn("invitation: could not mark an invited address verified",
 			slog.String("user_id", user.ID), slog.Any("error", err))
@@ -300,7 +300,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		writeRateLimited(w, "Too many failed sign-in attempts for this account; try again later.", retryAfter)
 		return
 	}
-	user, token, err := h.userService.Login(req.Email, req.Password)
+	user, token, err := h.UserService.Login(req.Email, req.Password)
 	if err != nil {
 		h.authAccountLimiter.penalize(account)
 		writeJSONError(w, http.StatusUnauthorized, err.Error())
@@ -331,7 +331,7 @@ func (h *Handler) throttleSSO(w http.ResponseWriter, r *http.Request) bool {
 // Logout invalidates the current session.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(SessionCookieName); err == nil {
-		_ = h.userService.Logout(cookie.Value)
+		_ = h.UserService.Logout(cookie.Value)
 	}
 	h.clearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
@@ -346,7 +346,7 @@ func (h *Handler) sessionUser(r *http.Request) *users.User {
 	if err != nil || cookie.Value == "" {
 		return nil
 	}
-	user, err := h.userService.GetBySessionToken(cookie.Value)
+	user, err := h.UserService.GetBySessionToken(cookie.Value)
 	if err != nil {
 		return nil
 	}
@@ -365,7 +365,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 
 // GoogleLogin redirects to Google's consent screen.
 func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	if h.googleOAuth == nil || h.googleOAuth.ClientID == "" {
+	if h.GoogleOAuth == nil || h.GoogleOAuth.ClientID == "" {
 		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
 		return
 	}
@@ -387,12 +387,12 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		Partitioned: h.partitionedCookies(),
 		MaxAge:      600,
 	})
-	http.Redirect(w, r, h.googleOAuth.oauthConfig().AuthCodeURL(state), http.StatusFound)
+	http.Redirect(w, r, h.GoogleOAuth.oauthConfig().AuthCodeURL(state), http.StatusFound)
 }
 
 // GoogleCallback completes the OIDC code flow.
 func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
-	if h.googleOAuth == nil || h.googleOAuth.ClientID == "" {
+	if h.GoogleOAuth == nil || h.GoogleOAuth.ClientID == "" {
 		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
 		return
 	}
@@ -412,7 +412,7 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	conf := h.googleOAuth.oauthConfig()
+	conf := h.GoogleOAuth.oauthConfig()
 	oauthToken, err := conf.Exchange(ctx, code)
 	if err != nil {
 		respondError(w, r, http.StatusBadGateway, "google token exchange failed", err)
@@ -442,7 +442,7 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	googleUser, token, err := h.userService.LoginWithGoogle(info.Email, info.Name, info.Picture)
+	googleUser, token, err := h.UserService.LoginWithGoogle(info.Email, info.Name, info.Picture)
 	if err != nil {
 		// An email already registered via a different sign-in method is a
 		// client-visible 409, not a 500 (issue #242): we refuse to auto-link.
@@ -461,7 +461,7 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	h.acceptInvitationsForProviderVerifiedEmail(googleUser.ID, googleUser.Email)
 	h.setSessionCookie(w, token)
 
-	dest := h.googleOAuth.FrontendURL
+	dest := h.GoogleOAuth.FrontendURL
 	if dest == "" {
 		dest = "/"
 	}
@@ -477,7 +477,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	out := []map[string]string{}
 	if orgID := ActiveOrg(r); orgID != "" {
-		list, err := h.orgService.ListMembers(orgID)
+		list, err := h.OrgService.ListMembers(orgID)
 		if err != nil {
 			respondInternal(w, r, "failed to list workspace members", err)
 			return
@@ -500,7 +500,7 @@ func (h *Handler) ListProjectMembers(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	list, err := h.memberService.ListMembers(projectID)
+	list, err := h.MemberService.ListMembers(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list project members", err)
 		return
@@ -522,7 +522,7 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	user, err := h.userService.FindByEmail(req.Email)
+	user, err := h.UserService.FindByEmail(req.Email)
 	if err != nil {
 		respondInternal(w, r, "failed to look up user", err)
 		return
@@ -531,7 +531,7 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "no user with that email — they must sign up first")
 		return
 	}
-	if err := h.memberService.AddMember(projectID, user.ID, req.Role); err != nil {
+	if err := h.MemberService.AddMember(projectID, user.ID, req.Role); err != nil {
 		if errors.Is(err, members.ErrInvalidRole) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		} else {
@@ -560,8 +560,8 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	previous, _ := h.memberService.RoleFor(projectID, vars["userId"])
-	if err := h.memberService.SetRole(projectID, vars["userId"], req.Role); err != nil {
+	previous, _ := h.MemberService.RoleFor(projectID, vars["userId"])
+	if err := h.MemberService.SetRole(projectID, vars["userId"], req.Role); err != nil {
 		switch {
 		case errors.Is(err, members.ErrInvalidRole):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -589,7 +589,7 @@ func (h *Handler) RemoveProjectMember(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleOwner) {
 		return
 	}
-	if err := h.memberService.RemoveMember(projectID, vars["userId"]); err != nil {
+	if err := h.MemberService.RemoveMember(projectID, vars["userId"]); err != nil {
 		respondInternal(w, r, "failed to remove member", err)
 		return
 	}

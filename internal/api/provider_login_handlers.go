@@ -49,7 +49,7 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, ActiveOrg(r), minRole) {
 		return
 	}
-	login, err := h.loginService.StartLogin(ActiveOrg(r), req.Provider, req.Target, CurrentUserID(r))
+	login, err := h.LoginService.StartLogin(ActiveOrg(r), req.Provider, req.Target, CurrentUserID(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -63,7 +63,7 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 // to their requester (org admins excepted). Writes the error response on
 // failure.
 func (h *Handler) userLoginChecked(w http.ResponseWriter, r *http.Request) *providers.LoginRequest {
-	login, err := h.loginService.Get(mux.Vars(r)["id"])
+	login, err := h.LoginService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "login request not found", err)
 		return nil
@@ -127,7 +127,7 @@ func (h *Handler) SubmitProviderLoginCode(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	login, err := h.loginService.SubmitCode(mux.Vars(r)["id"], req.Code)
+	login, err := h.LoginService.SubmitCode(mux.Vars(r)["id"], req.Code)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -144,7 +144,7 @@ func (h *Handler) CancelProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if h.userLoginWriteChecked(w, r) == nil {
 		return
 	}
-	login, err := h.loginService.Cancel(mux.Vars(r)["id"])
+	login, err := h.LoginService.Cancel(mux.Vars(r)["id"])
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -159,7 +159,7 @@ func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return
 	}
-	login, err := h.loginService.Claim(WorkerOrg(r), WorkerUser(r))
+	login, err := h.LoginService.Claim(WorkerOrg(r), WorkerUser(r))
 	if err != nil {
 		respondInternal(w, r, "failed to claim login request", err)
 		return
@@ -177,7 +177,7 @@ func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 // workerLoginChecked loads a login request and verifies it belongs to the
 // worker's org. Writes the error response on failure.
 func (h *Handler) workerLoginChecked(w http.ResponseWriter, r *http.Request) *providers.LoginRequest {
-	login, err := h.loginService.Get(mux.Vars(r)["id"])
+	login, err := h.LoginService.Get(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "login request not found", err)
 		return nil
@@ -209,7 +209,7 @@ func (h *Handler) ProgressProviderLogin(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	login, err := h.loginService.Progress(mux.Vars(r)["id"], req.Status, req.AuthURL, req.Detail, req.PasteKind)
+	login, err := h.LoginService.Progress(mux.Vars(r)["id"], req.Status, req.AuthURL, req.Detail, req.PasteKind)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

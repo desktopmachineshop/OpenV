@@ -22,7 +22,7 @@ func (h *Handler) ListProjectTeamAccess(w http.ResponseWriter, r *http.Request) 
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	list, err := h.memberService.ListTeamGrants(projectID)
+	list, err := h.MemberService.ListTeamGrants(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list team grants", err)
 		return
@@ -45,12 +45,12 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// The team must live in the project's org.
-	team, err := h.orgTeamService.GetTeam(req.OrgTeamID)
+	team, err := h.OrgTeamService.GetTeam(req.OrgTeamID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "team not found")
 		return
 	}
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil || project == nil {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return
@@ -68,7 +68,7 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		h.writeLimitError(w, err)
 		return
 	}
-	if err := h.memberService.GrantTeam(projectID, req.OrgTeamID, req.Role); err != nil {
+	if err := h.MemberService.GrantTeam(projectID, req.OrgTeamID, req.Role); err != nil {
 		if errors.Is(err, members.ErrInvalidRole) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		} else {
@@ -84,7 +84,7 @@ func (h *Handler) RevokeProjectTeamAccess(w http.ResponseWriter, r *http.Request
 	if !h.requireProjectRole(w, r, vars["id"], members.RoleOwner) {
 		return
 	}
-	if err := h.memberService.RevokeTeam(vars["id"], vars["teamId"]); err != nil {
+	if err := h.MemberService.RevokeTeam(vars["id"], vars["teamId"]); err != nil {
 		respondInternal(w, r, "failed to revoke team grant", err)
 		return
 	}

@@ -73,7 +73,7 @@ func exportRequest(t *testing.T, format string) *http.Request {
 func TestExportProjectUnsupportedFormatReturns400(t *testing.T) {
 	for _, format := range []string{"xml", "docx", "pdf"} {
 		fake := &fakeExportService{}
-		h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+		h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 		w := httptest.NewRecorder()
 		h.ExportProject(w, exportRequest(t, format))
@@ -92,7 +92,7 @@ func TestExportProjectUnsupportedFormatReturns400(t *testing.T) {
 
 func TestExportProjectJSONHeaders(t *testing.T) {
 	fake := &fakeExportService{data: []byte(`{"ok":true}`), filename: "project_Demo_20260101_000000.json"}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ExportProject(w, exportRequest(t, "")) // default format is json
@@ -117,7 +117,7 @@ func TestExportProjectJSONHeaders(t *testing.T) {
 
 func TestExportProjectCSVHeaders(t *testing.T) {
 	fake := &fakeExportService{data: []byte("id,type\n"), filename: "project_My Project_20260101_000000.csv"}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ExportProject(w, exportRequest(t, "csv"))
@@ -139,7 +139,7 @@ func TestExportProjectCSVHeaders(t *testing.T) {
 
 func TestExportProjectExcelHeaders(t *testing.T) {
 	fake := &fakeExportService{data: []byte("PK\x03\x04"), filename: "project_Demo_20260101_000000.xlsx"}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ExportProject(w, exportRequest(t, "excel"))
@@ -162,7 +162,7 @@ func TestExportProjectExcelHeaders(t *testing.T) {
 
 func TestExportProjectReqIFHeaders(t *testing.T) {
 	fake := &fakeExportService{data: []byte(`<?xml version="1.0"?><REQ-IF/>`), filename: "project_Demo_20260101_000000.reqif"}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ExportProject(w, exportRequest(t, "reqif"))
@@ -186,7 +186,7 @@ func TestExportProjectDomainUnsupportedErrorReturns400(t *testing.T) {
 	// Defense in depth: if the service itself reports an unsupported format,
 	// the handler still answers 400, not 500.
 	fake := &fakeExportService{err: fmt.Errorf("wrapped: %w", exports.ErrUnsupportedFormat)}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ExportProject(w, exportRequest(t, "csv"))
@@ -198,7 +198,7 @@ func TestExportProjectDomainUnsupportedErrorReturns400(t *testing.T) {
 
 func TestExportProjectServiceErrorReturns500(t *testing.T) {
 	fake := &fakeExportService{err: fmt.Errorf("database is on fire")}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ExportProject(w, exportRequest(t, "json"))
@@ -248,7 +248,7 @@ func importRequest(t *testing.T, body, query string, authed bool) *http.Request 
 
 func TestImportProjectRequiresAuth(t *testing.T) {
 	fake := &fakeImportService{}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	// No user in context -> unauthenticated.
@@ -264,7 +264,7 @@ func TestImportProjectRequiresAuth(t *testing.T) {
 
 func TestImportProjectRoutesJSON(t *testing.T) {
 	fake := &fakeImportService{}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ImportProject(w, importRequest(t, `{"artifacts":[]}`, "", true))
@@ -279,7 +279,7 @@ func TestImportProjectRoutesJSON(t *testing.T) {
 
 func TestImportProjectRoutesReqIFByFormat(t *testing.T) {
 	fake := &fakeImportService{}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ImportProject(w, importRequest(t, `<?xml version="1.0"?><REQ-IF/>`, "format=reqif", true))
@@ -294,7 +294,7 @@ func TestImportProjectRoutesReqIFByFormat(t *testing.T) {
 
 func TestImportProjectRoutesReqIFBySniff(t *testing.T) {
 	fake := &fakeImportService{}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	// No format hint: sniffed from the <REQ-IF root.
@@ -310,7 +310,7 @@ func TestImportProjectRoutesReqIFBySniff(t *testing.T) {
 
 func TestImportProjectReqIFMalformedReturns400(t *testing.T) {
 	fake := &fakeImportService{reqifErr: fmt.Errorf("malformed ReqIF: unexpected EOF")}
-	h := newTestHandler(t, func(h *Handler) { h.exportService = fake })
+	h := newTestHandler(t, func(h *Handler) { h.ExportService = fake })
 
 	w := httptest.NewRecorder()
 	h.ImportProject(w, importRequest(t, `<REQ-IF>broken`, "format=reqif", true))

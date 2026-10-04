@@ -35,19 +35,19 @@ func (h *Handler) AdminListWorkspaces(w http.ResponseWriter, r *http.Request) {
 	if h.requirePlatformAdmin(w, r) == nil {
 		return
 	}
-	ids, err := h.orgService.ListAll()
+	ids, err := h.OrgService.ListAll()
 	if err != nil {
 		respondInternal(w, r, "failed to list workspaces", err)
 		return
 	}
 	out := make([]adminWorkspace, 0, len(ids))
 	for _, id := range ids {
-		org, err := h.orgService.Get(id)
+		org, err := h.OrgService.Get(id)
 		if err != nil || org == nil {
 			continue
 		}
 		row := adminWorkspace{Org: org}
-		if members, err := h.orgService.ListMembers(id); err == nil {
+		if members, err := h.OrgService.ListMembers(id); err == nil {
 			row.Members = len(members)
 		}
 		out = append(out, row)
@@ -76,7 +76,7 @@ func (h *Handler) AdminListUsers(w http.ResponseWriter, r *http.Request) {
 	if h.requirePlatformAdmin(w, r) == nil {
 		return
 	}
-	list, err := h.userService.ListUsers()
+	list, err := h.UserService.ListUsers()
 	if err != nil {
 		respondInternal(w, r, "failed to list users", err)
 		return
@@ -115,7 +115,7 @@ func (h *Handler) AdminSetUserAdmin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "you cannot remove your own platform-admin standing; ask another platform admin")
 		return
 	}
-	u, err := h.userService.SetAdmin(id, req.IsAdmin)
+	u, err := h.UserService.SetAdmin(id, req.IsAdmin)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):

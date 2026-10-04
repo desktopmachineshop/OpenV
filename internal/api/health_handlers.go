@@ -25,8 +25,8 @@ func (h *Handler) registerHealthRoutes(router *mux.Router) {
 // minutes for the dedicated instances that poll it.
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	body := map[string]string{"status": "ok"}
-	if h.buildSHA != "" {
-		body["commit"] = h.buildSHA
+	if h.BuildSHA != "" {
+		body["commit"] = h.BuildSHA
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(body)

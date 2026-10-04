@@ -168,14 +168,14 @@ func payloadString(payload map[string]interface{}, key string) string {
 }
 
 func (n *eventNamer) userName(id string) string {
-	if id == "" || n.h.userService == nil {
+	if id == "" || n.h.UserService == nil {
 		return ""
 	}
 	if name, ok := n.users[id]; ok {
 		return name
 	}
 	name := ""
-	if u, err := n.h.userService.GetByID(id); err == nil && u != nil {
+	if u, err := n.h.UserService.GetByID(id); err == nil && u != nil {
 		name = strings.TrimSpace(u.Name)
 		if name == "" {
 			name = u.Email
@@ -188,14 +188,14 @@ func (n *eventNamer) userName(id string) string {
 // artifactLabel renders an artifact as "REQ-12 Positioner shall …", falling
 // back to whichever half is known.
 func (n *eventNamer) artifactLabel(id string) string {
-	if id == "" || n.h.artifactService == nil {
+	if id == "" || n.h.ArtifactService == nil {
 		return ""
 	}
 	if label, ok := n.artifacts[id]; ok {
 		return label
 	}
 	label := ""
-	if a, err := n.h.artifactService.GetArtifact(id); err == nil && a != nil {
+	if a, err := n.h.ArtifactService.GetArtifact(id); err == nil && a != nil {
 		label = strings.TrimSpace(a.Title)
 		switch {
 		case a.Ref == "":
@@ -210,14 +210,14 @@ func (n *eventNamer) artifactLabel(id string) string {
 }
 
 func (n *eventNamer) baselineName(id string) string {
-	if id == "" || n.h.baselineService == nil {
+	if id == "" || n.h.BaselineService == nil {
 		return ""
 	}
 	if name, ok := n.baselines[id]; ok {
 		return name
 	}
 	name := ""
-	if b, err := n.h.baselineService.GetBaseline(id); err == nil && b != nil {
+	if b, err := n.h.BaselineService.GetBaseline(id); err == nil && b != nil {
 		name = b.Name
 	}
 	n.baselines[id] = name
@@ -225,14 +225,14 @@ func (n *eventNamer) baselineName(id string) string {
 }
 
 func (n *eventNamer) workItemTitle(id string) string {
-	if id == "" || n.h.workItemService == nil {
+	if id == "" || n.h.WorkItemService == nil {
 		return ""
 	}
 	if title, ok := n.workItems[id]; ok {
 		return title
 	}
 	title := ""
-	if item, err := n.h.workItemService.Get(id); err == nil && item != nil {
+	if item, err := n.h.WorkItemService.Get(id); err == nil && item != nil {
 		title = item.Title
 	}
 	n.workItems[id] = title
@@ -241,14 +241,14 @@ func (n *eventNamer) workItemTitle(id string) string {
 
 // runAgentName names the agent behind a run ID.
 func (n *eventNamer) runAgentName(runID string) string {
-	if runID == "" || n.h.runService == nil {
+	if runID == "" || n.h.RunService == nil {
 		return ""
 	}
 	if name, ok := n.runs[runID]; ok {
 		return name
 	}
 	name := ""
-	if run, err := n.h.runService.Get(runID); err == nil && run != nil {
+	if run, err := n.h.RunService.Get(runID); err == nil && run != nil {
 		name = n.agentName(run.AgentID)
 	}
 	n.runs[runID] = name
@@ -256,14 +256,14 @@ func (n *eventNamer) runAgentName(runID string) string {
 }
 
 func (n *eventNamer) agentName(agentID string) string {
-	if agentID == "" || n.h.agentService == nil {
+	if agentID == "" || n.h.AgentService == nil {
 		return ""
 	}
 	if name, ok := n.agents[agentID]; ok {
 		return name
 	}
 	name := ""
-	if a, err := n.h.agentService.Get(agentID); err == nil && a != nil {
+	if a, err := n.h.AgentService.Get(agentID); err == nil && a != nil {
 		name = a.Name
 		if name == "" {
 			name = a.Slug

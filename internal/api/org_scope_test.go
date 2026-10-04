@@ -22,15 +22,15 @@ func TestListProjectsFailsClosedOnEmptyActiveOrg(t *testing.T) {
 	const orgID = "org-1"
 	newHandler := func() *Handler {
 		return newTestHandler(t, func(h *Handler) {
-			h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+			h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 				"proj-1":     {ID: "proj-1", OrgID: orgID, Name: "Alpha"},
 				"proj-2":     {ID: "proj-2", OrgID: orgID, Name: "Beta"},
 				"proj-other": {ID: "proj-other", OrgID: "org-2", Name: "Elsewhere"},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{}}
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{}}
 		})
 	}
 
@@ -88,13 +88,13 @@ func TestGlobalSearchFailsClosedOnEmptyActiveOrg(t *testing.T) {
 		{ArtifactID: "art-1", ProjectID: "proj-1", Title: "Login"},
 	}}
 	h := newTestHandler(t, func(h *Handler) {
-		h.artifactService = artifactSvc
-		h.projectService = &searchProjectService{list: []*projects.Project{
+		h.ArtifactService = artifactSvc
+		h.ProjectService = &searchProjectService{list: []*projects.Project{
 			{ID: "proj-1", OrgID: "org-1", Name: "Alpha"},
 			{ID: "proj-other", OrgID: "org-2", Name: "Elsewhere"},
 		}}
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{}}
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{}}
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/search?q=login", nil)
@@ -126,9 +126,9 @@ func TestGlobalSearchFailsClosedOnEmptyActiveOrg(t *testing.T) {
 func TestListAgentRunsFailsClosedOnEmptyActiveOrg(t *testing.T) {
 	runSvc := &fakeRunService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.runService = runSvc
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+		h.RunService = runSvc
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 			"proj-1": {"member": members.RoleViewer},
 		}}
 	})

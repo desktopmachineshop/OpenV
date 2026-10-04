@@ -25,7 +25,7 @@ func (h *Handler) GetMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := CurrentUser(r)
-	key, err := h.workerKeyService.PersonalKey(orgID, user.ID)
+	key, err := h.WorkerKeyService.PersonalKey(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load personal runner key", err)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) CreateMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 	if user.Name != "" {
 		name = user.Name + "'s runner"
 	}
-	key, plaintext, err := h.workerKeyService.Create(orgID, name, &userID, &userID)
+	key, plaintext, err := h.WorkerKeyService.Create(orgID, name, &userID, &userID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -69,7 +69,7 @@ func (h *Handler) RevokeMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := CurrentUser(r)
-	key, err := h.workerKeyService.PersonalKey(orgID, user.ID)
+	key, err := h.WorkerKeyService.PersonalKey(orgID, user.ID)
 	if err != nil {
 		respondInternal(w, r, "failed to load personal runner key", err)
 		return
@@ -78,7 +78,7 @@ func (h *Handler) RevokeMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if err := h.workerKeyService.Revoke(orgID, key.ID); err != nil {
+	if err := h.WorkerKeyService.Revoke(orgID, key.ID); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}

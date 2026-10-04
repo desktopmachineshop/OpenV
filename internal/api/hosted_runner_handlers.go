@@ -47,7 +47,7 @@ func hostedContainerName(orgID string) string {
 }
 
 func (h *Handler) hostedRunnersEnabled() bool {
-	return h.provisioner != nil && h.provisioner.Enabled()
+	return h.Provisioner != nil && h.Provisioner.Enabled()
 }
 
 // keyOnline reports whether a worker key has polled recently.
@@ -55,7 +55,7 @@ func (h *Handler) keyOnline(orgID string, keyID *string) bool {
 	if keyID == nil {
 		return false
 	}
-	key, err := h.workerKeyService.Get(orgID, *keyID)
+	key, err := h.WorkerKeyService.Get(orgID, *keyID)
 	if err != nil || key == nil || key.Revoked {
 		return false
 	}
@@ -69,7 +69,7 @@ func (h *Handler) GetHostedRunner(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
-	record, err := h.hostedWorkerService.Get(orgID)
+	record, err := h.HostedWorkerService.Get(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to load hosted runner", err)
 		return
@@ -78,7 +78,7 @@ func (h *Handler) GetHostedRunner(w http.ResponseWriter, r *http.Request) {
 	online := false
 	if record != nil {
 		if h.hostedRunnersEnabled() {
-			if state, err := h.provisioner.ContainerState(record.ContainerName); err == nil {
+			if state, err := h.Provisioner.ContainerState(record.ContainerName); err == nil {
 				containerState = state
 			}
 		}
@@ -115,7 +115,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	existing, err := h.hostedWorkerService.Get(orgID)
+	existing, err := h.HostedWorkerService.Get(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to load hosted runner", err)
 		return
@@ -127,7 +127,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 
 	// The container is capped at the org's effective limits (explicit
 	// org limits merged over its plan's defaults).
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to load workspace", err)
 		return
@@ -136,7 +136,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 
 	// Mint a workspace worker key for the container (plaintext shown to the
 	// container env only).
-	key, plaintext, err := h.workerKeyService.Create(orgID, hostedRunnerKeyName, CurrentUserID(r), nil)
+	key, plaintext, err := h.WorkerKeyService.Create(orgID, hostedRunnerKeyName, CurrentUserID(r), nil)
 	if err != nil {
 		respondInternal(w, r, "failed to create worker key", err)
 		return
@@ -150,18 +150,18 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	keyID := key.ID
-	record, err := h.hostedWorkerService.Create(orgID, hostedContainerName(orgID), &keyID, CurrentUserID(r))
+	record, err := h.HostedWorkerService.Create(orgID, hostedContainerName(orgID), &keyID, CurrentUserID(r))
 	if err != nil {
-		_ = h.workerKeyService.Revoke(orgID, key.ID)
+		_ = h.WorkerKeyService.Revoke(orgID, key.ID)
 		respondInternal(w, r, "failed to create hosted runner", err)
 		return
 	}
 
 	status, detail := hostedworkers.StatusRunning, ""
-	if err := h.provisioner.Provision(orgID, record.ContainerName, plaintext, extraEnv, limits); err != nil {
+	if err := h.Provisioner.Provision(orgID, record.ContainerName, plaintext, extraEnv, limits); err != nil {
 		status, detail = hostedworkers.StatusError, err.Error()
 	}
-	record, err = h.hostedWorkerService.SetStatus(record.ID, status, detail)
+	record, err = h.HostedWorkerService.SetStatus(record.ID, status, detail)
 	if err != nil {
 		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
@@ -177,7 +177,7 @@ func (h *Handler) hostedRunnerChecked(w http.ResponseWriter, r *http.Request, or
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return nil
 	}
-	record, err := h.hostedWorkerService.Get(orgID)
+	record, err := h.HostedWorkerService.Get(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to load hosted runner", err)
 		return nil
@@ -196,11 +196,11 @@ func (h *Handler) StartHostedRunner(w http.ResponseWriter, r *http.Request) {
 	if record == nil {
 		return
 	}
-	if err := h.provisioner.Start(record.ContainerName); err != nil {
+	if err := h.Provisioner.Start(record.ContainerName); err != nil {
 		respondInternal(w, r, "failed to start hosted runner", err)
 		return
 	}
-	updated, err := h.hostedWorkerService.SetStatus(record.ID, hostedworkers.StatusRunning, "")
+	updated, err := h.HostedWorkerService.SetStatus(record.ID, hostedworkers.StatusRunning, "")
 	if err != nil {
 		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
@@ -215,11 +215,11 @@ func (h *Handler) StopHostedRunner(w http.ResponseWriter, r *http.Request) {
 	if record == nil {
 		return
 	}
-	if err := h.provisioner.Stop(record.ContainerName); err != nil {
+	if err := h.Provisioner.Stop(record.ContainerName); err != nil {
 		respondInternal(w, r, "failed to stop hosted runner", err)
 		return
 	}
-	updated, err := h.hostedWorkerService.SetStatus(record.ID, hostedworkers.StatusStopped, "")
+	updated, err := h.HostedWorkerService.SetStatus(record.ID, hostedworkers.StatusStopped, "")
 	if err != nil {
 		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
@@ -238,15 +238,15 @@ func (h *Handler) DeleteHostedRunner(w http.ResponseWriter, r *http.Request) {
 	}
 	purge := r.URL.Query().Get("purge") == "true"
 	if h.hostedRunnersEnabled() {
-		if err := h.provisioner.Remove(record.ContainerName, purge, orgID); err != nil {
+		if err := h.Provisioner.Remove(record.ContainerName, purge, orgID); err != nil {
 			respondInternal(w, r, "failed to remove hosted runner", err)
 			return
 		}
 	}
 	if record.WorkerKeyID != nil {
-		_ = h.workerKeyService.Revoke(orgID, *record.WorkerKeyID)
+		_ = h.WorkerKeyService.Revoke(orgID, *record.WorkerKeyID)
 	}
-	if err := h.hostedWorkerService.Delete(record.ID); err != nil {
+	if err := h.HostedWorkerService.Delete(record.ID); err != nil {
 		respondInternal(w, r, "failed to delete hosted runner", err)
 		return
 	}

@@ -23,7 +23,7 @@ func (h *Handler) ListOrgTeams(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	list, err := h.orgTeamService.ListTeams(orgID)
+	list, err := h.OrgTeamService.ListTeams(orgID)
 	if err != nil {
 		respondInternal(w, r, "failed to list teams", err)
 		return
@@ -48,7 +48,7 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	team, err := h.orgTeamService.CreateTeam(orgID, req.Name, req.Description, CurrentUserID(r))
+	team, err := h.OrgTeamService.CreateTeam(orgID, req.Name, req.Description, CurrentUserID(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -59,7 +59,7 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 
 // orgTeamChecked loads a people-team and enforces the caller's org role.
 func (h *Handler) orgTeamChecked(w http.ResponseWriter, r *http.Request, minRole string) *orgs.OrgTeam {
-	team, err := h.orgTeamService.GetTeam(mux.Vars(r)["id"])
+	team, err := h.OrgTeamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return nil
@@ -83,7 +83,7 @@ func (h *Handler) UpdateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	updated, err := h.orgTeamService.UpdateTeam(team.ID, req.Name, req.Description)
+	updated, err := h.OrgTeamService.UpdateTeam(team.ID, req.Name, req.Description)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -96,7 +96,7 @@ func (h *Handler) DeleteOrgTeam(w http.ResponseWriter, r *http.Request) {
 	if team == nil {
 		return
 	}
-	if err := h.orgTeamService.DeleteTeam(team.ID); err != nil {
+	if err := h.OrgTeamService.DeleteTeam(team.ID); err != nil {
 		respondInternal(w, r, "failed to delete team", err)
 		return
 	}
@@ -108,7 +108,7 @@ func (h *Handler) AddOrgTeamMember(w http.ResponseWriter, r *http.Request) {
 	if team == nil {
 		return
 	}
-	if err := h.orgTeamService.AddTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
+	if err := h.OrgTeamService.AddTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -120,7 +120,7 @@ func (h *Handler) RemoveOrgTeamMember(w http.ResponseWriter, r *http.Request) {
 	if team == nil {
 		return
 	}
-	if err := h.orgTeamService.RemoveTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
+	if err := h.OrgTeamService.RemoveTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
 		respondInternal(w, r, "failed to remove team member", err)
 		return
 	}

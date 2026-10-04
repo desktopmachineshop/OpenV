@@ -37,8 +37,8 @@ func featureFixture(t *testing.T, plan, stableRelease string) (*Handler, *fakeOr
 		previews:      map[string]bool{},
 	}
 	return newTestHandler(t, func(h *Handler) {
-		h.orgService = svc
-		h.releaseService = staticRelease{notes: notes}
+		h.OrgService = svc
+		h.ReleaseService = staticRelease{notes: notes}
 	}), svc
 }
 

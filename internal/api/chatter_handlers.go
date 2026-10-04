@@ -58,7 +58,7 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 			entry.AuthorName = user.Email
 		}
 	}
-	if err := h.chatterService.CreateEntry(entry); err != nil {
+	if err := h.ChatterService.CreateEntry(entry); err != nil {
 		respondInternal(w, r, "failed to create chatter entry", err)
 		return
 	}
@@ -87,7 +87,7 @@ func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := h.chatterService.GetEntriesByArtifactID(artifactID)
+	entries, err := h.ChatterService.GetEntriesByArtifactID(artifactID)
 	if err != nil {
 		respondInternal(w, r, "failed to load chatter entries", err)
 		return
@@ -114,9 +114,9 @@ func (h *Handler) decorateChatterEntries(projectID string, entries []*chatter.Ch
 	// One membership read serves both halves: who the notes name, and what
 	// to call the person a to-do is assigned to.
 	var list []*members.Member
-	if projectID != "" && h.memberService != nil {
+	if projectID != "" && h.MemberService != nil {
 		var err error
-		if list, err = h.memberService.ListMembers(projectID); err != nil {
+		if list, err = h.MemberService.ListMembers(projectID); err != nil {
 			slog.Error("chatter: failed to list members for mentions",
 				"project_id", projectID, "error", err)
 			list = nil
@@ -135,14 +135,14 @@ func (h *Handler) decorateChatterEntries(projectID string, entries []*chatter.Ch
 		}
 	}
 
-	if h.workItemService == nil {
+	if h.WorkItemService == nil {
 		return
 	}
 	ids := make([]string, 0, len(entries))
 	for _, e := range entries {
 		ids = append(ids, e.ID)
 	}
-	items, err := h.workItemService.ListBySourceChatterIDs(ids)
+	items, err := h.WorkItemService.ListBySourceChatterIDs(ids)
 	if err != nil {
 		slog.Error("chatter: failed to load to-dos raised from notes",
 			"project_id", projectID, "error", err)

@@ -24,7 +24,7 @@ func updateOrgReq(userID, orgID, body string) *http.Request {
 func budgetFixture(t *testing.T) *Handler {
 	const orgID = "org-1"
 	return newTestHandler(t, func(h *Handler) {
-		h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+		h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 			orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
 		}}
 	})
@@ -54,7 +54,7 @@ func TestUpdateOrgBudgetAuthz(t *testing.T) {
 			if w.Code != tc.wantCode {
 				t.Fatalf("status = %d, want %d (body %q)", w.Code, tc.wantCode, w.Body.String())
 			}
-			fake := h.orgService.(*fakeOrgService)
+			fake := h.OrgService.(*fakeOrgService)
 			if got := len(fake.budgetCalls) > 0; got != tc.wantCalled {
 				t.Fatalf("SetMonthlyBudget called = %v, want %v", got, tc.wantCalled)
 			}
@@ -80,7 +80,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 		}
-		fake := h.orgService.(*fakeOrgService)
+		fake := h.OrgService.(*fakeOrgService)
 		if len(fake.budgetCalls) != 1 || fake.budgetCalls[0] != nil {
 			t.Fatalf("budgetCalls = %v, want a single nil (clear)", fake.budgetCalls)
 		}
@@ -93,7 +93,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 		}
-		fake := h.orgService.(*fakeOrgService)
+		fake := h.OrgService.(*fakeOrgService)
 		if len(fake.budgetCalls) != 0 {
 			t.Fatalf("SetMonthlyBudget called on a rename-only update: %v", fake.budgetCalls)
 		}
@@ -109,7 +109,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d, want 400 (body %q)", w.Code, w.Body.String())
 		}
-		fake := h.orgService.(*fakeOrgService)
+		fake := h.OrgService.(*fakeOrgService)
 		if len(fake.budgetCalls) != 0 {
 			t.Fatalf("SetMonthlyBudget called on invalid input: %v", fake.budgetCalls)
 		}
@@ -117,7 +117,7 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 
 	t.Run("a negative budget surfaces the validation error as 400", func(t *testing.T) {
 		h := budgetFixture(t)
-		h.orgService.(*fakeOrgService).budgetErr = orgs.ErrInvalidBudget
+		h.OrgService.(*fakeOrgService).budgetErr = orgs.ErrInvalidBudget
 		w := httptest.NewRecorder()
 		h.UpdateOrg(w, updateOrgReq("admin", orgID, `{"monthly_budget_usd": -5}`))
 		if w.Code != http.StatusBadRequest {
@@ -160,7 +160,7 @@ func TestUpdateOrgRefusedRequestChangesNothing(t *testing.T) {
 				enforceTiers(t)
 			}
 			h := budgetFixture(t)
-			fake := h.orgService.(*fakeOrgService)
+			fake := h.OrgService.(*fakeOrgService)
 			fake.plan = orgs.PlanSingle
 			w := httptest.NewRecorder()
 			h.UpdateOrg(w, updateOrgReq("admin", orgID, tc.body))
@@ -178,7 +178,7 @@ func TestUpdateOrgRefusedRequestChangesNothing(t *testing.T) {
 	// The same parts, each valid on a plan that may choose its channel, are
 	// all written, in one request.
 	h := budgetFixture(t)
-	fake := h.orgService.(*fakeOrgService)
+	fake := h.OrgService.(*fakeOrgService)
 	fake.plan = orgs.PlanBusiness
 	w := httptest.NewRecorder()
 	h.UpdateOrg(w, updateOrgReq("admin", orgID,

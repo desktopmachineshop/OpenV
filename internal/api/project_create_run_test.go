@@ -56,7 +56,7 @@ func TestRunTokensCreateNoProject(t *testing.T) {
 		for _, tc := range runs {
 			t.Run(route.name+" by "+tc.name, func(t *testing.T) {
 				h, _ := copyHandler(t)
-				store := h.projectService.(*fakeProjectService)
+				store := h.ProjectService.(*fakeProjectService)
 				w := httptest.NewRecorder()
 				route.create(h, w, request(route.body, func(ctx context.Context) context.Context {
 					return context.WithValue(ctx, ctxRun, tc.run)
@@ -73,7 +73,7 @@ func TestRunTokensCreateNoProject(t *testing.T) {
 
 	t.Run("a person creates a project and owns it", func(t *testing.T) {
 		h, _ := copyHandler(t)
-		store := h.projectService.(*fakeProjectService)
+		store := h.ProjectService.(*fakeProjectService)
 		w := httptest.NewRecorder()
 		h.CreateProject(w, request(`{"name":"Mine"}`, func(ctx context.Context) context.Context {
 			ctx = context.WithValue(ctx, ctxUser, &users.User{ID: "u1"})
@@ -86,7 +86,7 @@ func TestRunTokensCreateNoProject(t *testing.T) {
 		if created.OrgID != "o1" {
 			t.Fatalf("project created in %q, want the active workspace o1", created.OrgID)
 		}
-		if role, _ := h.memberService.EffectiveRole(created.ID, "u1"); role != members.RoleOwner {
+		if role, _ := h.MemberService.EffectiveRole(created.ID, "u1"); role != members.RoleOwner {
 			t.Fatalf("creator's role = %q, want %q", role, members.RoleOwner)
 		}
 	})

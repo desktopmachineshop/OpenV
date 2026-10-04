@@ -208,8 +208,8 @@ func (m *memUserRepo) SetPasswordHash(userID, hash string, at time.Time) error {
 func newOIDCTestHandler(t *testing.T, cfg *OIDCConfig) (*Handler, *memUserRepo) {
 	repo := newMemUserRepo()
 	return newTestHandler(t, func(h *Handler) {
-		h.userService = users.NewDefaultService(repo)
-		h.oidc = cfg
+		h.UserService = users.NewDefaultService(repo)
+		h.OIDC = cfg
 	}), repo
 }
 
@@ -310,7 +310,7 @@ func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 		t.Errorf("name = %q", created.Name)
 	}
 	// Session cookie resolves back to the same user.
-	got, err := h.userService.GetBySessionToken(sessionCookie.Value)
+	got, err := h.UserService.GetBySessionToken(sessionCookie.Value)
 	if err != nil || got == nil || got.ID != created.ID {
 		t.Errorf("session does not resolve to created user: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 			h, repo := newOIDCTestHandler(t, cfg)
 			invites := newFakeInviteService()
 			invites.invite("org-1", "verify@example.com", orgs.RoleAdmin)
-			h.invitationService = invites
+			h.InvitationService = invites
 
 			const nonce = "the-nonce"
 			claims := map[string]any{
@@ -408,7 +408,7 @@ func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	h, repo := newOIDCTestHandler(t, cfg)
 
 	// Pre-existing password account with the same email.
-	existing, err := h.userService.Register("collide@example.com", "hunter2pw", "Pw User")
+	existing, err := h.UserService.Register("collide@example.com", "hunter2pw", "Pw User")
 	if err != nil {
 		t.Fatalf("seed password account: %v", err)
 	}

@@ -32,8 +32,8 @@ func TestGetOrgUsageAccess(t *testing.T) {
 	newFixture := func() (*Handler, *fakeRunService) {
 		runSvc := &fakeRunService{}
 		h := newTestHandler(t, func(h *Handler) {
-			h.runService = runSvc
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.RunService = runSvc
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
 			}}
 		})
@@ -80,8 +80,8 @@ func TestGetOrgUsageWindow(t *testing.T) {
 			ByDay:   []agentruns.DailyUsage{{Day: "2026-08-01", Runs: 2, TokensIn: 10, TokensOut: 5, CostUSD: 0.25}},
 		}}
 		h := newTestHandler(t, func(h *Handler) {
-			h.runService = runSvc
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.RunService = runSvc
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"member": orgs.RoleMember},
 			}}
 		})

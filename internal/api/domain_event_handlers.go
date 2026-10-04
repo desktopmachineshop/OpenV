@@ -56,7 +56,7 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	list, err := h.eventRepo.List(h.listOrg(r, projectID), projectID, q.Get("event_type"), before, limit)
+	list, err := h.EventRepo.List(h.listOrg(r, projectID), projectID, q.Get("event_type"), before, limit)
 	if err != nil {
 		respondInternal(w, r, "failed to list events", err)
 		return
@@ -74,8 +74,8 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 	if projectID == "" && !h.isOrgAdmin(r, ActiveOrg(r)) {
 		user := CurrentUser(r)
 		allowed := map[string]bool{}
-		if h.memberService != nil {
-			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+		if h.MemberService != nil {
+			ids, err := h.MemberService.ProjectIDsForUser(user.ID)
 			if err != nil {
 				respondInternal(w, r, "failed to resolve project memberships", err)
 				return

@@ -21,11 +21,11 @@ func (h *Handler) assigneeCrewChecked(w http.ResponseWriter, r *http.Request, pr
 		return true
 	}
 	absent := missing("team not found")
-	if h.teamService == nil {
+	if h.TeamService == nil {
 		absent.write(w)
 		return false
 	}
-	graph, err := h.teamService.GetTeam(*assigneeID)
+	graph, err := h.TeamService.GetTeam(*assigneeID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return false
@@ -33,7 +33,7 @@ func (h *Handler) assigneeCrewChecked(w http.ResponseWriter, r *http.Request, pr
 	if !h.requireTeamVisible(w, r, graph.Team, absent) {
 		return false
 	}
-	project, err := h.projectService.GetProject(projectID)
+	project, err := h.ProjectService.GetProject(projectID)
 	if err != nil || project == nil {
 		respondError(w, r, http.StatusNotFound, "project not found", err)
 		return false

@@ -74,17 +74,17 @@ func TestGlobalSearchModes(t *testing.T) {
 			{ArtifactID: "art-1", ProjectID: "proj-1", Type: "requirement", Title: "Login flow", Snippet: "the login flow shall"},
 		}}
 		h := newTestHandler(t, func(h *Handler) {
-			h.artifactService = artifactSvc
-			h.embeddingService = embedSvc
-			h.projectService = &searchProjectService{list: []*projects.Project{
+			h.ArtifactService = artifactSvc
+			h.EmbeddingService = embedSvc
+			h.ProjectService = &searchProjectService{list: []*projects.Project{
 				{ID: "proj-1", OrgID: orgID, Name: "Alpha"},
 				{ID: "proj-2", OrgID: orgID, Name: "Beta"},
 				{ID: "proj-other-org", OrgID: "org-2", Name: "Elsewhere"},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{}}
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{}}
 		})
 		return h, artifactSvc
 	}
@@ -216,13 +216,13 @@ func TestGlobalSearchModes(t *testing.T) {
 		}
 
 		h, _ := newHandler(enabledSvc)
-		h.orgService = onOldStable
+		h.OrgService = onOldStable
 		if mode, _ := do(t, h, "?q=REQ-30&mode=semantic"); mode != "semantic" {
 			t.Errorf("mode_used = %q, want semantic — the ref routing is gated", mode)
 		}
 
 		h, artifactSvc := newHandler(enabledSvc)
-		h.orgService = onOldStable
+		h.OrgService = onOldStable
 		do(t, h, "?q=REQ-30")
 		if artifactSvc.gotOpts.MatchRefs {
 			t.Error("keyword search asked to match refs for a workspace without the feature")
@@ -281,15 +281,15 @@ func TestGlobalSearchProviderErrorFallsBack(t *testing.T) {
 		// path").
 		svc := embeddings.NewService(errEmbedProvider{}, &fakeEmbedStore{}, nil)
 		return newTestHandler(t, func(h *Handler) {
-			h.artifactService = artifactSvc
-			h.embeddingService = svc
-			h.projectService = &searchProjectService{list: []*projects.Project{
+			h.ArtifactService = artifactSvc
+			h.EmbeddingService = svc
+			h.ProjectService = &searchProjectService{list: []*projects.Project{
 				{ID: "proj-1", OrgID: orgID, Name: "Alpha"},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{}}
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{}}
 		})
 	}
 
@@ -407,16 +407,16 @@ func TestGlobalSearchScoping(t *testing.T) {
 			{ArtifactID: "art-3", ProjectID: "proj-other-org", Type: "requirement", Title: "Login theme", Snippet: ""},
 		}}
 		h := newTestHandler(t, func(h *Handler) {
-			h.artifactService = artifactSvc
-			h.projectService = &searchProjectService{list: []*projects.Project{
+			h.ArtifactService = artifactSvc
+			h.ProjectService = &searchProjectService{list: []*projects.Project{
 				{ID: "proj-1", OrgID: orgID, Name: "Alpha"},
 				{ID: "proj-2", OrgID: orgID, Name: "Beta"},
 				{ID: "proj-other-org", OrgID: "org-2", Name: "Elsewhere"},
 			}}
-			h.orgService = &fakeOrgService{roles: map[string]map[string]string{
+			h.OrgService = &fakeOrgService{roles: map[string]map[string]string{
 				orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
 			}}
-			h.memberService = &fakeMemberService{roles: map[string]map[string]string{
+			h.MemberService = &fakeMemberService{roles: map[string]map[string]string{
 				"proj-1": {"member": members.RoleViewer},
 			}}
 		})

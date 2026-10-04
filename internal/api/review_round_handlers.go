@@ -47,8 +47,8 @@ func (h *Handler) StartProjectReview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, featureGateMessage)
 		return
 	}
-	if run := CurrentRun(r); run != nil && h.agentService != nil {
-		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+	if run := CurrentRun(r); run != nil && h.AgentService != nil {
+		if agent, err := h.AgentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
 			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot start a project review")
 			return
 		}
@@ -66,7 +66,7 @@ func (h *Handler) StartProjectReview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := h.artifactService.StartProjectReview(projectID, artifacts.ReviewRoundRequest{Types: req.Types})
+	result, err := h.ArtifactService.StartProjectReview(projectID, artifacts.ReviewRoundRequest{Types: req.Types})
 	if err != nil {
 		switch {
 		case errors.Is(err, artifacts.ErrInvalidType):
@@ -92,7 +92,7 @@ func (h *Handler) StartProjectReview(w http.ResponseWriter, r *http.Request) {
 			"review_round":  true,
 		})
 		entry := chatter.NewChatterEntry(a.ID, fmt.Sprintf("Status changed: %s → %s (project review)", artifacts.StatusDraft, a.Status), true, "status-change")
-		if err := h.chatterService.CreateEntry(entry); err != nil {
+		if err := h.ChatterService.CreateEntry(entry); err != nil {
 			slog.Warn("api: failed to create chatter entry for review round", "artifact_id", a.ID, "error", err)
 		}
 	}

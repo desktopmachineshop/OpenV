@@ -274,7 +274,7 @@ func TestProposalModeRunsLaunchNoRuns(t *testing.T) {
 				if len(chat.messages) != 0 {
 					t.Fatalf("a proposal-mode run's chat message was kept: %q", chat.messages)
 				}
-				if iv := h.interviewService.(*launchInterviews); len(iv.created)+len(iv.invites) != 0 {
+				if iv := h.InterviewService.(*launchInterviews); len(iv.created)+len(iv.invites) != 0 {
 					t.Fatalf("a proposal-mode run created interviews %q and invites %q", iv.created, iv.invites)
 				}
 			})
@@ -298,7 +298,7 @@ func TestARunsLaunchRecordsItsParent(t *testing.T) {
 			h, runs, _ := launchFixture()
 			w := launchAs(route, h, asRunOf("agent-direct", &project))
 			if route.arms {
-				iv := h.interviewService.(*launchInterviews)
+				iv := h.InterviewService.(*launchInterviews)
 				if w.Code != http.StatusCreated || len(iv.created)+len(iv.invites) != 1 || len(runs.launchReqs) != 0 {
 					t.Fatalf("status = %d, %d interviews, %d invites, %d launches: want 201, one made and no launch (body %q)",
 						w.Code, len(iv.created), len(iv.invites), len(runs.launchReqs), w.Body.String())
@@ -325,7 +325,7 @@ func TestARunsLaunchRecordsItsParent(t *testing.T) {
 
 	t.Run("POST /api/v1/projects/{id}/draft-test-cases", func(t *testing.T) {
 		h, runs := newDraftFixture(t)
-		h.agentService.(*fakeAgentService).byID["agent-direct"] = &agents.Agent{ID: "agent-direct", OrgID: "org-1",
+		h.AgentService.(*fakeAgentService).byID["agent-direct"] = &agents.Agent{ID: "agent-direct", OrgID: "org-1",
 			Slug: "helper", WriteMode: agents.WriteModeDirect}
 		pid := "proj-1"
 		r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"requirement_ids":["`+draftReqUUID1+`"]}`))
@@ -396,7 +396,7 @@ func TestALaunchWithNoProjectAsksTheWorkspace(t *testing.T) {
 			enforceTiers(t)
 			h, runs, _ := launchFixture()
 			// Three members on the free tier's two seats: read-only.
-			h.orgService.(*fakeOrgService).roles["org-1"]["third"] = orgs.RoleMember
+			h.OrgService.(*fakeOrgService).roles["org-1"]["third"] = orgs.RoleMember
 			w := launchAs(noProject, h, tc.as)
 			if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), `"code":"plan_read_only"`) {
 				t.Fatalf("status = %d, body %q: want 403 plan_read_only", w.Code, w.Body.String())
@@ -448,10 +448,10 @@ func TestARunTreeShowsOnlyRunsItsReaderCanOpen(t *testing.T) {
 		t.Run(tc.reader, func(t *testing.T) {
 			h, runs, _ := launchFixture()
 			runs.byID["run-root"] = tree[0]
-			h.runService = treeRuns{fakeRunService: runs, tree: tree}
-			h.orgService.(*fakeOrgService).roles["org-1"]["viewer"] = orgs.RoleMember
-			h.orgService.(*fakeOrgService).roles["org-1"]["wsadmin"] = orgs.RoleAdmin
-			h.memberService.(*fakeMemberService).roles[project]["viewer"] = members.RoleViewer
+			h.RunService = treeRuns{fakeRunService: runs, tree: tree}
+			h.OrgService.(*fakeOrgService).roles["org-1"]["viewer"] = orgs.RoleMember
+			h.OrgService.(*fakeOrgService).roles["org-1"]["wsadmin"] = orgs.RoleAdmin
+			h.MemberService.(*fakeMemberService).roles[project]["viewer"] = members.RoleViewer
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", nil)

@@ -48,14 +48,14 @@ func seats(n int) []*orgs.Member {
 func TestTheSecondInviteIsRefusedOnAFreeSharedWorkspace(t *testing.T) {
 	enforceTiers(t)
 	h := NewHandler(HandlerDeps{})
-	h.orgService = &seatedOrgService{
+	h.OrgService = &seatedOrgService{
 		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle},
 		members: seats(1),
 	}
 	if err := h.checkOrgSeats("org-1", 1); err != nil {
 		t.Fatalf("the first invite was refused: %v", err)
 	}
-	h.orgService.(*seatedOrgService).members = seats(2)
+	h.OrgService.(*seatedOrgService).members = seats(2)
 	err := h.checkOrgSeats("org-1", 1)
 	if err == nil {
 		t.Fatal("the second invite was allowed on a two-seat tier")
@@ -64,8 +64,8 @@ func TestTheSecondInviteIsRefusedOnAFreeSharedWorkspace(t *testing.T) {
 		t.Fatalf("the refusal does not name the Billing tab: %v", err)
 	}
 	// Business bills per seat and caps nothing.
-	h.orgService.(*seatedOrgService).org.BilledPlan = orgs.PlanBusiness
-	h.orgService.(*seatedOrgService).members = seats(40)
+	h.OrgService.(*seatedOrgService).org.BilledPlan = orgs.PlanBusiness
+	h.OrgService.(*seatedOrgService).members = seats(40)
 	if err := h.checkOrgSeats("org-1", 1); err != nil {
 		t.Fatalf("Business refused a seat: %v", err)
 	}
@@ -77,9 +77,9 @@ func TestTheHostedClaimIsRefusedForAFreeWorkspaceWhileAConnectorClaimSucceeds(t 
 	enforceTiers(t)
 	run := &agentruns.Run{ID: "run-1", OrgID: "org-1", AgentID: "agent-1", Status: agentruns.StatusClaimed, WorkerID: "w-1"}
 	h := newTestHandler(t, func(h *Handler) {
-		h.runService = &fakeRunService{claimRun: run}
-		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Agent", Provider: "claude"}}}
-		h.orgService = &seatedOrgService{org: &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle}}
+		h.RunService = &fakeRunService{claimRun: run}
+		h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Agent", Provider: "claude"}}}
+		h.OrgService = &seatedOrgService{org: &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle}}
 	})
 	claim := func(body string) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/agent-runs/claim", strings.NewReader(body))
@@ -101,7 +101,7 @@ func TestTheHostedClaimIsRefusedForAFreeWorkspaceWhileAConnectorClaimSucceeds(t 
 		t.Fatalf("connector claim on free: %d %s", w.Code, w.Body.String())
 	}
 	// Lite includes it.
-	h.orgService.(*seatedOrgService).org.BilledPlan = orgs.PlanBusinessLite
+	h.OrgService.(*seatedOrgService).org.BilledPlan = orgs.PlanBusinessLite
 	if w := claim(`{"worker_id":"w-1","hosted":true}`); w.Code != http.StatusOK {
 		t.Fatalf("hosted claim on Lite: %d %s", w.Code, w.Body.String())
 	}
@@ -111,7 +111,7 @@ func TestCreatingATeamIsRefusedBelowBusiness(t *testing.T) {
 	enforceTiers(t)
 	h := NewHandler(HandlerDeps{})
 	svc := &seatedOrgService{org: &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanBusinessLite}, members: seats(1)}
-	h.orgService = svc
+	h.OrgService = svc
 
 	w := httptest.NewRecorder()
 	h.CreateOrgTeam(w, platformAdmin(http.MethodPost, "/api/v1/orgs/org-1/teams", "org-1"))
@@ -138,11 +138,11 @@ func TestCreatingATeamIsRefusedBelowBusiness(t *testing.T) {
 func TestAnOverPlanWorkspaceIsReadOnlyButTrimsAndExports(t *testing.T) {
 	enforceTiers(t)
 	h := NewHandler(HandlerDeps{})
-	h.orgService = &seatedOrgService{
+	h.OrgService = &seatedOrgService{
 		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle},
 		members: seats(3), // one more than the free tier seats
 	}
-	h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "org-1"}}}
+	h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "org-1"}}}
 
 	// An artifact edit: a write scoped to the project.
 	w := httptest.NewRecorder()
@@ -183,7 +183,7 @@ func TestAnOverPlanWorkspaceIsReadOnlyButTrimsAndExports(t *testing.T) {
 	}
 
 	// Trimmed back under plan: writable again, and the panel says so.
-	h.orgService.(*seatedOrgService).members = seats(2)
+	h.OrgService.(*seatedOrgService).members = seats(2)
 	w = httptest.NewRecorder()
 	if !h.requireProjectRole(w, platformAdmin(http.MethodPost, "/api/v1/projects/p1/artifacts", "p1"), "p1", members.RoleEditor) {
 		t.Fatalf("still read-only after trimming: %s", w.Body.String())
@@ -192,7 +192,7 @@ func TestAnOverPlanWorkspaceIsReadOnlyButTrimsAndExports(t *testing.T) {
 	if err != nil || resp.ReadOnly || len(resp.OverPlan) != 0 {
 		t.Fatalf("limits after trimming: %+v %v", resp, err)
 	}
-	h.orgService.(*seatedOrgService).members = seats(3)
+	h.OrgService.(*seatedOrgService).members = seats(3)
 	resp, _ = h.buildLimitsResponse("org-1")
 	if !resp.ReadOnly || len(resp.OverPlan) != 1 {
 		t.Fatalf("limits while over plan: read_only=%v over=%v", resp.ReadOnly, resp.OverPlan)
@@ -222,11 +222,11 @@ func TestASelfHostedReadOnlyRefusalNamesTheSettingNotTheBillingTab(t *testing.T)
 	orgs.SetDeploymentLimits(map[string]interface{}{orgs.LimitMaxProjects: 1})
 	t.Cleanup(func() { orgs.SetSelfHosted(false); orgs.SetDeploymentLimits(nil) })
 	h := NewHandler(HandlerDeps{})
-	h.orgService = &seatedOrgService{
+	h.OrgService = &seatedOrgService{
 		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle},
 		members: seats(1),
 	}
-	h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+	h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 		"p1": {ID: "p1", OrgID: "org-1"},
 		"p2": {ID: "p2", OrgID: "org-1"},
 	}}
@@ -264,8 +264,8 @@ func TestALeaseIsCutToTheMonthsAllowanceAndRefusedAtIt(t *testing.T) {
 	orgs.SetDeploymentLimits(map[string]interface{}{orgs.LimitHostedRunnerMinutesMonth: 100})
 	svc := &fakeRunnerSessions{minutesUsed: 90, session: &runnersessions.Session{ID: "s1", OrgID: "org-1", UserID: "user-1", Status: runnersessions.StatusActive}}
 	h := newTestHandler(t, func(h *Handler) {
-		h.runnerSessionService = svc
-		h.orgService = memberOrgService()
+		h.RunnerSessionService = svc
+		h.OrgService = memberOrgService()
 	})
 
 	w := httptest.NewRecorder()

@@ -69,7 +69,7 @@ func (h *Handler) ListShareLinks(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleOwner) {
 		return
 	}
-	list, err := h.shareLinkService.List(projectID)
+	list, err := h.ShareLinkService.List(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to list share links", err)
 		return
@@ -102,7 +102,7 @@ func (h *Handler) CreateShareLink(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	link, token, err := h.shareLinkService.Create(projectID, req.Role, req.Label, CurrentUserID(r), req.ExpiresAt)
+	link, token, err := h.ShareLinkService.Create(projectID, req.Role, req.Label, CurrentUserID(r), req.ExpiresAt)
 	if err != nil {
 		if errors.Is(err, sharelinks.ErrInvalidRole) || errors.Is(err, sharelinks.ErrInvalidExpiry) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -118,7 +118,7 @@ func (h *Handler) CreateShareLink(w http.ResponseWriter, r *http.Request) {
 
 // RevokeShareLink stops a link opening anything (owner of its project).
 func (h *Handler) RevokeShareLink(w http.ResponseWriter, r *http.Request) {
-	link, err := h.shareLinkService.Get(mux.Vars(r)["id"])
+	link, err := h.ShareLinkService.Get(mux.Vars(r)["id"])
 	if err != nil || link == nil {
 		respondError(w, r, http.StatusNotFound, "share link not found", err)
 		return
@@ -126,7 +126,7 @@ func (h *Handler) RevokeShareLink(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, link.ProjectID, members.RoleOwner, missing("share link not found")) {
 		return
 	}
-	if err := h.shareLinkService.Revoke(link.ID); err != nil {
+	if err := h.ShareLinkService.Revoke(link.ID); err != nil {
 		respondInternal(w, r, "failed to revoke share link", err)
 		return
 	}
@@ -155,8 +155,8 @@ type sharedProject struct {
 
 func (h *Handler) describeProject(project *projects.Project) (view sharedProject) {
 	view.Project.ID, view.Project.Name, view.Project.Description = project.ID, project.Name, project.Description
-	if h.orgService != nil && project.OrgID != "" {
-		if org, err := h.orgService.Get(project.OrgID); err == nil && org != nil {
+	if h.OrgService != nil && project.OrgID != "" {
+		if org, err := h.OrgService.Get(project.OrgID); err == nil && org != nil {
 			view.Workspace = org.Name
 		}
 	}
@@ -211,12 +211,12 @@ func (h *Handler) resolveShare(w http.ResponseWriter, r *http.Request) (*shareli
 	if !h.allowPublicShare(w, r) {
 		return nil, nil
 	}
-	link, err := h.shareLinkService.Resolve(mux.Vars(r)["token"])
+	link, err := h.ShareLinkService.Resolve(mux.Vars(r)["token"])
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "this link does not open anything: it may have been revoked or expired")
 		return nil, nil
 	}
-	project, err := h.projectService.GetProject(link.ProjectID)
+	project, err := h.ProjectService.GetProject(link.ProjectID)
 	if err != nil || project == nil {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return nil, nil
@@ -235,7 +235,7 @@ func (h *Handler) OpenShareLink(w http.ResponseWriter, r *http.Request) {
 	view := h.describeProject(project)
 	view.Role = link.Role
 	if link.Role == sharelinks.RolePublic {
-		snapshot, err := h.exportService.PrepareExport(project.ID, false)
+		snapshot, err := h.ExportService.PrepareExport(project.ID, false)
 		if err != nil {
 			respondInternal(w, r, "failed to read project", err)
 			return
@@ -267,7 +267,7 @@ func (h *Handler) AcceptShareLink(w http.ResponseWriter, r *http.Request) {
 	if !h.allowPublicShare(w, r) {
 		return
 	}
-	link, err := h.shareLinkService.Resolve(req.Token)
+	link, err := h.ShareLinkService.Resolve(req.Token)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "this link does not open anything: it may have been revoked or expired")
 		return
@@ -276,14 +276,14 @@ func (h *Handler) AcceptShareLink(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "this link opens without an account")
 		return
 	}
-	project, err := h.projectService.GetProject(link.ProjectID)
+	project, err := h.ProjectService.GetProject(link.ProjectID)
 	if err != nil || project == nil {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return
 	}
-	role, _ := h.memberService.EffectiveRole(project.ID, user.ID)
+	role, _ := h.MemberService.EffectiveRole(project.ID, user.ID)
 	if role == "" || !members.RoleAtLeast(role, members.RoleReviewer) {
-		if err := h.memberService.AddMember(project.ID, user.ID, members.RoleReviewer); err != nil {
+		if err := h.MemberService.AddMember(project.ID, user.ID, members.RoleReviewer); err != nil {
 			respondInternal(w, r, "failed to grant review access", err)
 			return
 		}
@@ -323,8 +323,8 @@ func previewPage(title, description, pageURL, imageURL, appURL string) string {
 }
 
 func (h *Handler) publicAPIBase(r *http.Request) string {
-	if h.publicAPIURL != "" {
-		return strings.TrimRight(h.publicAPIURL, "/")
+	if h.PublicAPIURL != "" {
+		return strings.TrimRight(h.PublicAPIURL, "/")
 	}
 	scheme := "https"
 	if r.TLS == nil && !strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
@@ -384,7 +384,7 @@ func (h *Handler) ShareLinkPreview(w http.ResponseWriter, r *http.Request) {
 		eyebrow = "Shared for review"
 	}
 	var lines []string
-	if snapshot, err := h.exportService.PrepareExport(project.ID, false); err == nil {
+	if snapshot, err := h.ExportService.PrepareExport(project.ID, false); err == nil {
 		if l := countsLine(artifactCounts(snapshot)); l != "" {
 			lines = append(lines, l)
 		}
@@ -422,16 +422,16 @@ type openSourceEntry struct {
 
 // openSourceOrgs lists the workspaces on the open-source plan.
 func (h *Handler) openSourceOrgs() ([]*orgs.Org, error) {
-	if h.orgService == nil {
+	if h.OrgService == nil {
 		return nil, nil
 	}
-	ids, err := h.orgService.ListAll()
+	ids, err := h.OrgService.ListAll()
 	if err != nil {
 		return nil, err
 	}
 	var out []*orgs.Org
 	for _, id := range ids {
-		org, err := h.orgService.Get(id)
+		org, err := h.OrgService.Get(id)
 		if err != nil || org == nil || org.BilledPlan != orgs.PlanOpenSource {
 			continue
 		}
@@ -446,7 +446,7 @@ func (h *Handler) openSourceOrgs() ([]*orgs.Org, error) {
 // list carries no snapshots, so the newest is loaded by id: one snapshot
 // read per project, however many baselines it has.
 func (h *Handler) latestSnapshot(projectID string) (id, name string, at time.Time, snapshot *exports.ProjectExport) {
-	list, err := h.baselineService.ListBaselines(projectID)
+	list, err := h.BaselineService.ListBaselines(projectID)
 	if err != nil {
 		slog.Error("open source: failed to list a project's baselines; it is not published", "project_id", projectID, "error", err)
 		return "", "", time.Time{}, nil
@@ -461,7 +461,7 @@ func (h *Handler) latestSnapshot(projectID string) (id, name string, at time.Tim
 		}
 	}
 	var data exports.ProjectExport
-	full, err := h.baselineService.GetProjectBaseline(projectID, latest.ID)
+	full, err := h.BaselineService.GetProjectBaseline(projectID, latest.ID)
 	if err == nil {
 		err = json.Unmarshal(full.Snapshot, &data)
 	}
@@ -495,7 +495,7 @@ func (h *Handler) ListOpenSourceProjects(w http.ResponseWriter, r *http.Request)
 	}
 	out := []openSourceEntry{}
 	for _, org := range orgList {
-		list, err := h.projectService.ListProjectsByOrg(org.ID)
+		list, err := h.ProjectService.ListProjectsByOrg(org.ID)
 		if err != nil {
 			continue
 		}
@@ -525,12 +525,12 @@ func (h *Handler) ListOpenSourceProjects(w http.ResponseWriter, r *http.Request)
 // a private workspace, and not this project's to publish; and its attribute
 // definitions, which are the workspace's as well.
 func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*projects.Project, *orgs.Org, sharedProject) {
-	project, err := h.projectService.GetProject(mux.Vars(r)["id"])
-	if err != nil || project == nil || project.OrgID == "" || h.orgService == nil {
+	project, err := h.ProjectService.GetProject(mux.Vars(r)["id"])
+	if err != nil || project == nil || project.OrgID == "" || h.OrgService == nil {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return nil, nil, sharedProject{}
 	}
-	org, err := h.orgService.Get(project.OrgID)
+	org, err := h.OrgService.Get(project.OrgID)
 	if err != nil || org == nil || org.BilledPlan != orgs.PlanOpenSource {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return nil, nil, sharedProject{}

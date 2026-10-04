@@ -57,9 +57,9 @@ func avatarFixture(t *testing.T) (*Handler, *fakeAvatarUsers) {
 		"w2": {"u3": "admin"},
 	}}
 	return newTestHandler(t, func(h *Handler) {
-		h.uploadsDir = t.TempDir()
-		h.userService = svc
-		h.orgService = workspaces
+		h.UploadsDir = t.TempDir()
+		h.UserService = svc
+		h.OrgService = workspaces
 	}), svc
 }
 
@@ -118,7 +118,7 @@ func TestUploadAvatarStoresPNG(t *testing.T) {
 	if !strings.HasPrefix(u.AvatarURL, "/api/v1/users/u1/avatar?v=") {
 		t.Fatalf("avatar_url = %q, want the API path with a version", u.AvatarURL)
 	}
-	want := filepath.Join(h.uploadsDir, "avatars", "u1.png")
+	want := filepath.Join(h.UploadsDir, "avatars", "u1.png")
 	if svc.byID["u1"].AvatarPath != want || svc.byID["u1"].AvatarMime != "image/png" {
 		t.Fatalf("stored (%q, %q), want (%q, image/png)", svc.byID["u1"].AvatarPath, svc.byID["u1"].AvatarMime, want)
 	}
@@ -319,7 +319,7 @@ func TestUploadAvatarBytesMustBeTheDeclaredType(t *testing.T) {
 			if svc.byID["u2"].AvatarPath != "" {
 				t.Fatalf("picture recorded for a refused upload")
 			}
-			if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "avatars")); len(entries) != 0 {
+			if entries, _ := os.ReadDir(filepath.Join(h.UploadsDir, "avatars")); len(entries) != 0 {
 				t.Fatalf("refused upload left %d file(s) on disk", len(entries))
 			}
 		})

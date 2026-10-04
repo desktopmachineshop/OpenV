@@ -53,7 +53,7 @@ func uploadIsRasterImage(declared string, data []byte) bool {
 // one file per workspace under uploads/org-logos, named by org id so an
 // upload replaces the previous logo of the same type in place.
 func (h *Handler) orgLogoPath(orgID, ext string) string {
-	return filepath.Join(h.uploadsDir, "org-logos", orgID+ext)
+	return filepath.Join(h.UploadsDir, "org-logos", orgID+ext)
 }
 
 // UploadOrgLogo stores a workspace logo (admin). The multipart field "file"
@@ -68,7 +68,7 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 	// The workspace is looked up before anything is read or written: it
 	// names the logo this upload replaces, and a file written for a
 	// workspace that does not exist would stay on disk with no record of it.
-	prev, err := h.orgService.Get(orgID)
+	prev, err := h.OrgService.Get(orgID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
@@ -120,10 +120,10 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 	// The logo this one replaces is the one on record now, not when the
 	// request arrived: another upload may have recorded its own while this
 	// body was being received.
-	if cur, err := h.orgService.Get(orgID); err == nil {
+	if cur, err := h.OrgService.Get(orgID); err == nil {
 		prev = cur
 	}
-	org, err := h.orgService.SetLogo(orgID, dest, mimeType)
+	org, err := h.OrgService.SetLogo(orgID, dest, mimeType)
 	if err != nil {
 		// Unrecorded, the new file is an orphan unless it replaced the
 		// recorded logo in place.
@@ -150,7 +150,7 @@ func (h *Handler) GetOrgLogo(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
@@ -184,7 +184,7 @@ func (h *Handler) DeleteOrgLogo(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
-	org, err := h.orgService.Get(orgID)
+	org, err := h.OrgService.Get(orgID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
@@ -195,7 +195,7 @@ func (h *Handler) DeleteOrgLogo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	org, err = h.orgService.ClearLogo(orgID)
+	org, err = h.OrgService.ClearLogo(orgID)
 	if err != nil {
 		respondInternal(w, r, "Failed to remove logo", err)
 		return

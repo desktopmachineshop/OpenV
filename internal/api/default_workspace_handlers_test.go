@@ -74,8 +74,8 @@ func defaultWorkspaceReq(method, body string, user *users.User) *http.Request {
 func TestDefaultWorkspaceRequiresUser(t *testing.T) {
 	svc := &fakeUserPrefService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.orgService = defaultOrgsFixture()
+		h.UserService = svc
+		h.OrgService = defaultOrgsFixture()
 	})
 	for _, tc := range []struct {
 		name string
@@ -101,8 +101,8 @@ func TestDefaultWorkspaceRequiresUser(t *testing.T) {
 func TestSetDefaultWorkspaceStoresAMembersChoice(t *testing.T) {
 	svc := &fakeUserPrefService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.orgService = defaultOrgsFixture()
+		h.UserService = svc
+		h.OrgService = defaultOrgsFixture()
 	})
 	user := &users.User{ID: "u-1"}
 
@@ -133,8 +133,8 @@ func TestSetDefaultWorkspaceStoresAMembersChoice(t *testing.T) {
 func TestSetDefaultWorkspaceRefusesAWorkspaceTheMemberIsNotIn(t *testing.T) {
 	svc := &fakeUserPrefService{defaultOrg: "keep"}
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.orgService = defaultOrgsFixture()
+		h.UserService = svc
+		h.OrgService = defaultOrgsFixture()
 	})
 	for _, id := range []string{"acme", "nowhere"} {
 		w := httptest.NewRecorder()
@@ -155,8 +155,8 @@ func TestSetDefaultWorkspacePersonalMeansNone(t *testing.T) {
 	for _, body := range []string{`{"org_id":""}`, `{"org_id":"personal"}`} {
 		svc := &fakeUserPrefService{defaultOrg: "acme"}
 		h := newTestHandler(t, func(h *Handler) {
-			h.userService = svc
-			h.orgService = defaultOrgsFixture()
+			h.UserService = svc
+			h.OrgService = defaultOrgsFixture()
 		})
 		w := httptest.NewRecorder()
 		h.SetDefaultWorkspace(w, defaultWorkspaceReq(http.MethodPut, body, &users.User{ID: "u-1"}))
@@ -171,8 +171,8 @@ func TestSetDefaultWorkspacePersonalMeansNone(t *testing.T) {
 func TestSetDefaultWorkspaceIsGatedByTheWorkspacesChannel(t *testing.T) {
 	svc := &fakeUserPrefService{}
 	h := newTestHandler(t, func(h *Handler) {
-		h.userService = svc
-		h.orgService = defaultOrgsFixture()
+		h.UserService = svc
+		h.OrgService = defaultOrgsFixture()
 	})
 	w := httptest.NewRecorder()
 	h.SetDefaultWorkspace(w, defaultWorkspaceReq(http.MethodPut, `{"org_id":"bigco"}`, &users.User{ID: "u-1"}))

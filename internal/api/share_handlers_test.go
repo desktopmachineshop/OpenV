@@ -137,20 +137,20 @@ func shareHandler(t *testing.T) (*Handler, *shareMemberFake) {
 	member := &shareMemberFake{}
 	h := newTestHandler(t, func(h *Handler) {
 		h.frontendURL = "https://app.example"
-		h.publicAPIURL = "https://app.example"
+		h.PublicAPIURL = "https://app.example"
 		h.invitePreviewLimiter = newRateLimiter(100, 1)
-		h.shareLinkService = &shareLinkFake{byToken: map[string]*sharelinks.Link{
+		h.ShareLinkService = &shareLinkFake{byToken: map[string]*sharelinks.Link{
 			"pub": {ID: "l1", ProjectID: "p1", Role: sharelinks.RolePublic, Label: "Customer"},
 			"rev": {ID: "l2", ProjectID: "p1", Role: sharelinks.RoleReviewer, Label: "Reviewers"},
 		}}
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 			"p1": {ID: "p1", OrgID: "o1", Name: "OpenV Platform", Description: "The requirements of OpenV itself."},
 		}}
-		h.orgService = &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanOpenSource}, ids: []string{"o1"}}
-		h.exportService = &shareExportFake{export: shareExport()}
-		h.memberService = member
-		h.userService = &shareUserFake{user: &users.User{ID: "u1", Email: "r@example.com"}}
-		h.baselineService = baselines.NewService(&shareBaselineRepo{})
+		h.OrgService = &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanOpenSource}, ids: []string{"o1"}}
+		h.ExportService = &shareExportFake{export: shareExport()}
+		h.MemberService = member
+		h.UserService = &shareUserFake{user: &users.User{ID: "u1", Email: "r@example.com"}}
+		h.BaselineService = baselines.NewService(&shareBaselineRepo{})
 	})
 	return h, member
 }
@@ -348,13 +348,13 @@ func TestOpenSourceListingTakesBaselinedProjectsOfOpenSourceWorkspaces(t *testin
 		Label: "Supplier margin", DataType: attributes.DataTypeText}}
 	review, _ := json.Marshal(reviewed)
 	now := time.Now()
-	h.baselineService = baselines.NewService(&shareBaselineRepo{rows: []*baselines.Baseline{
+	h.BaselineService = baselines.NewService(&shareBaselineRepo{rows: []*baselines.Baseline{
 		{ID: "b1", ProjectID: "p1", Name: "Kick-off", Snapshot: kickoff, CreatedAt: now.Add(-time.Hour)},
 		{ID: "b2", ProjectID: "p1", Name: "Design review", Snapshot: review, CreatedAt: now},
 	}})
 	// Since then the project was renamed and described anew: live work,
 	// which stays private until the next baseline like the rest.
-	h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+	h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 		"p1": {ID: "p1", OrgID: "o1", Name: "Renamed Platform", Description: "A roadmap drafted since the review."},
 	}}
 	// published fails a body that carries the live name or description, or
@@ -407,7 +407,7 @@ func TestOpenSourceListingTakesBaselinedProjectsOfOpenSourceWorkspaces(t *testin
 	if w := open(h.OpenSourceProjectPreview, "/preview.png"); w.Code != http.StatusOK || w.Header().Get("Content-Type") != "image/png" || !bytes.Equal(w.Body.Bytes(), card) {
 		t.Errorf("preview: status = %d type = %s, want the card of the baseline's name and description", w.Code, w.Header().Get("Content-Type"))
 	}
-	h.orgService = &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"o1"}}
+	h.OrgService = &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"o1"}}
 	if got := list(); len(got) != 0 {
 		t.Errorf("business workspace listed %d", len(got))
 	}
@@ -460,7 +460,7 @@ func TestOpenSourceLogsABaselineItCannotRead(t *testing.T) {
 	} {
 		buf.Reset()
 		h, _ := shareHandler(t)
-		h.baselineService = baselines.NewService(tc.repo)
+		h.BaselineService = baselines.NewService(tc.repo)
 		w := httptest.NewRecorder()
 		h.ListOpenSourceProjects(w, httptest.NewRequest(http.MethodGet, "/api/v1/public/open-source/projects", nil))
 		if w.Code != http.StatusOK || strings.TrimSpace(w.Body.String()) != "[]" {
@@ -484,9 +484,9 @@ func TestOpenSourceLogsABaselineItCannotRead(t *testing.T) {
 // The reviewer role passes the viewer gate and fails the editor gate.
 func TestReviewerRoleOnTheLadder(t *testing.T) {
 	h := newTestHandler(t, func(h *Handler) {
-		h.projectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}}
-		h.memberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": members.RoleReviewer}}}
-		h.orgService = &fakeOrgService{}
+		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{"p1": {ID: "p1", OrgID: "o1"}}}
+		h.MemberService = &fakeMemberService{roles: map[string]map[string]string{"p1": {"u1": members.RoleReviewer}}}
+		h.OrgService = &fakeOrgService{}
 	})
 	r := httptest.NewRequest(http.MethodGet, "/x", nil)
 	r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "u1"}))
@@ -534,8 +534,8 @@ func (f *shareLinkRepoFake) ListByProject(projectID string) ([]*sharelinks.Link,
 func TestCreateShareLinkRefusesAnExpiryItCouldNotList(t *testing.T) {
 	repo := &shareLinkRepoFake{}
 	h, member := shareHandler(t)
-	h.shareLinkService = sharelinks.NewService(repo)
-	h.orgService = nil // no feature gate or plan limit to pass
+	h.ShareLinkService = sharelinks.NewService(repo)
+	h.OrgService = nil // no feature gate or plan limit to pass
 	member.roles = map[string]map[string]string{"p1": {"u1": members.RoleOwner}}
 	call := func(method, body string, handle http.HandlerFunc) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, "/api/v1/projects/p1/share-links", strings.NewReader(body))

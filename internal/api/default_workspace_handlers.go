@@ -61,7 +61,7 @@ func (h *Handler) SetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 	orgID := strings.TrimSpace(req.OrgID)
 	if orgID != "" {
-		org, err := h.orgService.Get(orgID)
+		org, err := h.OrgService.Get(orgID)
 		if err != nil || org == nil {
 			if err != nil && !errors.Is(err, orgs.ErrNotFound) {
 				respondInternal(w, r, "failed to load workspace", err)
@@ -70,7 +70,7 @@ func (h *Handler) SetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusNotFound, "workspace not found")
 			return
 		}
-		if ok, err := h.orgService.IsMember(orgID, user.ID); err != nil || !ok {
+		if ok, err := h.OrgService.IsMember(orgID, user.ID); err != nil || !ok {
 			// Not a member: the same answer as an unknown workspace, so
 			// the endpoint cannot be used to probe which workspaces exist.
 			writeJSONError(w, http.StatusNotFound, "workspace not found")
@@ -86,7 +86,7 @@ func (h *Handler) SetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if err := h.userService.SetDefaultOrg(user.ID, orgID); err != nil {
+	if err := h.UserService.SetDefaultOrg(user.ID, orgID); err != nil {
 		respondInternal(w, r, "failed to save the default workspace", err)
 		return
 	}

@@ -69,8 +69,8 @@ func (h *Handler) uploadLimitBytes(orgID string) int64 {
 	if mb, ok := envUploadMB(); ok {
 		return mb * bytesPerMB
 	}
-	if h.orgService != nil && orgID != "" {
-		if org, err := h.orgService.Get(orgID); err == nil && org != nil {
+	if h.OrgService != nil && orgID != "" {
+		if org, err := h.OrgService.Get(orgID); err == nil && org != nil {
 			if mb, ok := orgs.LimitFloat(org.EffectiveLimits(), orgs.LimitMaxUploadMB); ok {
 				if mb <= 0 {
 					return maxUploadCeilingMB * bytesPerMB

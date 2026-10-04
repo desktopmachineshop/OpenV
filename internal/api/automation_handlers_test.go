@@ -38,7 +38,7 @@ func TestCreateAutomationStampsTheCaller(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := &fakeAutomationService{}
-			h := newTestHandler(t, func(h *Handler) { h.automationService = svc })
+			h := newTestHandler(t, func(h *Handler) { h.AutomationService = svc })
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/automations", strings.NewReader(tc.body))
 			ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "alice", IsAdmin: true})
 			r = r.WithContext(context.WithValue(ctx, ctxActiveOrg, "org-1"))

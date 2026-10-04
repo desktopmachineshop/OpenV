@@ -13,7 +13,7 @@ import (
 // (baselines.ErrNotFound), so IDs cannot be probed across projects.
 func (h *Handler) projectExport(projectID, baselineID string) (*exports.ProjectExport, error) {
 	if baselineID != "" && baselineID != "live" {
-		baseline, err := h.baselineService.GetProjectBaseline(projectID, baselineID)
+		baseline, err := h.BaselineService.GetProjectBaseline(projectID, baselineID)
 		if err != nil {
 			return nil, err
 		}
@@ -23,7 +23,7 @@ func (h *Handler) projectExport(projectID, baselineID string) (*exports.ProjectE
 		}
 		return &data, nil
 	}
-	raw, _, err := h.exportService.ExportProject(projectID, exports.FormatJSON)
+	raw, _, err := h.ExportService.ExportProject(projectID, exports.FormatJSON)
 	if err != nil {
 		return nil, err
 	}

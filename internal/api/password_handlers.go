@@ -49,7 +49,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(SessionCookieName); err == nil {
 		keep = cookie.Value
 	}
-	err := h.userService.ChangePassword(user.ID, req.CurrentPassword, req.NewPassword, keep)
+	err := h.UserService.ChangePassword(user.ID, req.CurrentPassword, req.NewPassword, keep)
 	switch {
 	case errors.Is(err, users.ErrNoPassword):
 		writeJSONErrorCode(w, http.StatusConflict, err.Error(), ErrCodeNoPassword)

@@ -8,13 +8,20 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/events"
+	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/proposals"
+	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // newTestHandler builds the Handler a test drives: a zero Handler with each
@@ -36,6 +43,56 @@ func newTestHandler(t testing.TB, opts ...func(*Handler)) *Handler {
 	}
 	return h
 }
+
+// Options and a reader the guard tests use (S5's run_stream_replay_test.go,
+// S6's event_payload_drives_test.go, S9's formats_fixture_test.go and
+// proposal_payloads_test.go, which only class C and T commits may edit), so
+// that they never name a Handler field: M14's scripted rename of the fields
+// NewHandler copies from HandlerDeps is a class R commit, and edits these
+// instead. Any test may use them like any other option.
+
+func withProjectService(s projects.Service) func(*Handler) {
+	return func(h *Handler) { h.ProjectService = s }
+}
+
+func withExportService(s exports.Service) func(*Handler) {
+	return func(h *Handler) { h.ExportService = s }
+}
+
+func withBaselineService(s baselines.Service) func(*Handler) {
+	return func(h *Handler) { h.BaselineService = s }
+}
+
+func withReportService(s reports.Service) func(*Handler) {
+	return func(h *Handler) { h.ReportService = s }
+}
+
+func withDownloadService(s downloads.Service) func(*Handler) {
+	return func(h *Handler) { h.DownloadService = s }
+}
+
+func withTeamService(s teams.Service) func(*Handler) {
+	return func(h *Handler) { h.TeamService = s }
+}
+
+func withAgentService(s agents.Service) func(*Handler) {
+	return func(h *Handler) { h.AgentService = s }
+}
+
+func withProposalService(s proposals.Service) func(*Handler) {
+	return func(h *Handler) { h.ProposalService = s }
+}
+
+func withRunService(s agentruns.Service) func(*Handler) {
+	return func(h *Handler) { h.RunService = s }
+}
+
+func withSSEHub(hub *SSEHub) func(*Handler) {
+	return func(h *Handler) { h.SSEHub = hub }
+}
+
+// runServiceOf is the run service h holds.
+func runServiceOf(h *Handler) agentruns.Service { return h.RunService }
 
 // --- shared fakes. Each embeds the interface it stands in for and leaves it
 // nil, so it implements only the methods tests call: any other method

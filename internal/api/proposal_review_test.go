@@ -21,9 +21,9 @@ import (
 // in those projects.
 func proposalTestHandler(t *testing.T, svc *fakeProposalService, byID map[string]*projects.Project, roles map[string]map[string]string) *Handler {
 	return newTestHandler(t, func(h *Handler) {
-		h.proposalService = svc
-		h.projectService = &fakeProjectService{byID: byID}
-		h.memberService = &fakeMemberService{roles: roles}
+		h.ProposalService = svc
+		h.ProjectService = &fakeProjectService{byID: byID}
+		h.MemberService = &fakeMemberService{roles: roles}
 	})
 }
 
