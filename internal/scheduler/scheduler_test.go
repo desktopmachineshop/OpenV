@@ -25,9 +25,10 @@ import (
 // listens, invariant I17). An automation whose next_run_at passed while the
 // server was down, however many occurrences ago, gets exactly one run when
 // it has catch_up, and none when it has not; either way its row is claimed,
-// so next_run_at moves to the cron's next occurrence after now and
-// last_run_at to now. One not yet due is not touched. Then nothing is due:
-// a tick right after fires nothing.
+// so next_run_at moves to the cron's next occurrence after now, but only the
+// one that ran has last_run_at stamped, after its launch (bug 74 of issue
+// #379: the claim stamped the skipped one too). One not yet due is not
+// touched. Then nothing is due: a tick right after fires nothing.
 func TestSchedulerCatchUp(t *testing.T) {
 	logs := captureLog(t)
 	cron := quietCron(t)
@@ -65,18 +66,24 @@ func TestSchedulerCatchUp(t *testing.T) {
 		if !c.won {
 			t.Errorf("the claim of %s was lost, want won", c.id)
 		}
-		within(t, c.id+"'s claim time", c.lastRun, before, after)
-		if c.nextRun == nil || !c.nextRun.Equal(nextAfter(t, cron, c.lastRun)) {
+		within(t, c.id+"'s claim time", c.at, before, after)
+		if c.nextRun == nil || !c.nextRun.Equal(nextAfter(t, cron, c.at)) {
 			t.Errorf("%s's claim advanced next_run_at to %s, want the cron's next occurrence after the claim, %s",
-				c.id, timeOrDash(c.nextRun), nextAfter(t, cron, c.lastRun).Format(time.RFC3339Nano))
+				c.id, timeOrDash(c.nextRun), nextAfter(t, cron, c.at).Format(time.RFC3339Nano))
 		}
 	}
 	for _, id := range []string{"au-catch", "au-skip"} {
-		a := repo.stored(t, id)
-		if a.NextRunAt == nil || !a.NextRunAt.After(after) || a.LastRunAt == nil {
-			t.Errorf("%s after catch-up: next_run_at %s, last_run_at %s, want a next run to come and the claim's time",
-				id, timeOrDash(a.NextRunAt), timeOrDash(a.LastRunAt))
+		if a := repo.stored(t, id); a.NextRunAt == nil || !a.NextRunAt.After(after) {
+			t.Errorf("%s after catch-up: next_run_at %s, want a next run to come", id, timeOrDash(a.NextRunAt))
 		}
+	}
+	stamps := repo.stampsMade()
+	if len(stamps) != 1 || stamps[0].id != "au-catch" {
+		t.Fatalf("stamped last_run_at %v, want au-catch's alone: au-skip ran nothing", stamps)
+	}
+	within(t, "au-catch's last_run_at", stamps[0].at, claims[0].at, after)
+	if a := repo.stored(t, "au-skip"); a.LastRunAt != nil {
+		t.Errorf("au-skip's last_run_at = %s, want unset: its missed run was skipped", timeOrDash(a.LastRunAt))
 	}
 	if a := repo.stored(t, "au-later"); !a.NextRunAt.Equal(later) || a.LastRunAt != nil {
 		t.Errorf("the automation not yet due was changed: next_run_at %s, last_run_at %s",
@@ -89,6 +96,9 @@ func TestSchedulerCatchUp(t *testing.T) {
 	}
 	if n := len(repo.claimsMade()); n != 2 {
 		t.Errorf("a tick right after catch-up made %d more claims, want none", n-2)
+	}
+	if n := len(repo.stampsMade()); n != 1 {
+		t.Errorf("a tick right after catch-up made %d more stamps, want none", n-1)
 	}
 	if got := logs.lines(); len(got) != 0 {
 		t.Errorf("catch-up logged %q, want nothing", got)
@@ -212,12 +222,14 @@ func TestSchedulerPrompt(t *testing.T) {
 
 // TestSchedulerTargets pins whom a scheduled run goes to, and what happens
 // when there is no one: a crew's run goes to its entry node's agent with the
-// crew and node named; a crew with no entry node, one whose entry node is
-// gone, one no row has and an automation with no target each launch
-// nothing, log one line, and stay claimed (next_run_at advanced and
-// last_run_at stamped, though no run followed), so the occurrence is
-// skipped, not retried. A launch the run service refuses is logged and
-// skipped the same way.
+// crew and node named, and last_run_at is stamped after the launch; a crew
+// with no entry node, one whose entry node is gone, one no row has and an
+// automation with no target each launch nothing, log one line, and stay
+// claimed (next_run_at advanced), so the occurrence is skipped, not retried,
+// but leave last_run_at unset, since nothing ran (bug 74 of issue #379,
+// decided under Q35: the claim stamped it before the target was resolved). A
+// launch the run service refuses is logged and skipped the same way. A
+// stamp the repository refuses is logged; the run stands.
 func TestSchedulerTargets(t *testing.T) {
 	cron := quietCron(t)
 	crew := func(id string) *automations.Automation {
@@ -277,9 +289,14 @@ func TestSchedulerTargets(t *testing.T) {
 			if got := logs.lines(); !equalLines(got, wantLog) {
 				t.Errorf("logged %q, want %q", got, wantLog)
 			}
-			if a := repo.stored(t, tc.a.ID); a.NextRunAt == nil || !a.NextRunAt.After(time.Now()) || a.LastRunAt == nil {
-				t.Errorf("next_run_at = %s, last_run_at = %s: want both set by the claim, which comes first, "+
-					"whether or not a run follows", timeOrDash(a.NextRunAt), timeOrDash(a.LastRunAt))
+			a := repo.stored(t, tc.a.ID)
+			if a.NextRunAt == nil || !a.NextRunAt.After(time.Now()) {
+				t.Errorf("next_run_at = %s: want it advanced by the claim, which comes first, whether or not a run "+
+					"follows", timeOrDash(a.NextRunAt))
+			}
+			if launched := tc.launch != ""; (a.LastRunAt != nil) != launched || len(repo.stampsMade()) > 1 {
+				t.Errorf("last_run_at = %s after stamps %v: want it stamped only when a run was launched (%v)",
+					timeOrDash(a.LastRunAt), repo.stampsMade(), launched)
 			}
 		})
 	}
@@ -295,12 +312,34 @@ func TestSchedulerTargets(t *testing.T) {
 		if n := len(runs.requests()); n != 1 {
 			t.Errorf("launch attempts = %d, want 1 (the occurrence is skipped, not retried)", n)
 		}
-		if a := repo.stored(t, "au-1"); a.LastRunAt == nil {
-			t.Error("last_run_at is unset, want the claim's stamp though no run was launched")
+		if a := repo.stored(t, "au-1"); a.LastRunAt != nil || a.NextRunAt == nil || !a.NextRunAt.After(time.Now()) {
+			t.Errorf("last_run_at = %s, next_run_at = %s: want unset, no run was launched, and advanced",
+				timeOrDash(a.LastRunAt), timeOrDash(a.NextRunAt))
 		}
 		want := []string{"scheduler: failed to launch run for automation au-1: this workspace has reached its monthly budget"}
 		if got := logs.lines(); !equalLines(got, want) {
 			t.Errorf("logged %q, want %q", got, want)
+		}
+	})
+
+	t.Run("a stamp refused is logged", func(t *testing.T) {
+		logs := captureLog(t)
+		repo := newSchedRepo(scheduled("au-1", "Unstamped", cron, time.Now().Add(-time.Minute)))
+		repo.stampErr = errors.New("deadlock detected")
+		runs := newSchedRuns()
+		s := New(repo, runs, crewGraphs())
+		s.tick()
+		s.tick()
+		want := []string{wantLaunch("au-1", "Scheduled run of automation: Unstamped")}
+		if got := launchLines(runs.requests()); !equalLines(got, want) {
+			t.Errorf("launched\n  %q\nwant the one run\n  %q", got, want)
+		}
+		if stamps := repo.stampsMade(); len(stamps) != 1 {
+			t.Errorf("stamps = %v, want one attempt", stamps)
+		}
+		wantLog := []string{"scheduler: failed to stamp last_run_at for automation au-1: deadlock detected"}
+		if got := logs.lines(); !equalLines(got, wantLog) {
+			t.Errorf("logged %q, want %q", got, wantLog)
 		}
 	})
 }
@@ -470,7 +509,7 @@ func TestSchedulerSwitchesOffAnInvalidCron(t *testing.T) {
 			if len(offs) != 1 || offs[0].id != "au-bad" || !offs[0].won {
 				t.Fatalf("switch-offs = %v, want one of au-bad, won", offs)
 			}
-			within(t, "the switch-off's time", offs[0].lastRun, before, after)
+			within(t, "the switch-off's time", offs[0].at, before, after)
 			stored := repo.stored(t, "au-bad")
 			if stored.Enabled || stored.NextRunAt != nil || stored.LastRunAt != nil {
 				t.Errorf("after the switch-off: enabled %v, next_run_at %s, last_run_at %s; want switched off, "+

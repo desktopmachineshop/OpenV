@@ -70,7 +70,7 @@ func TestClaimDueScheduledIsExactlyOnce(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			<-start
-			results[i], errs[i] = f.repo.ClaimDueScheduled(id, time.Now(), &next)
+			results[i], errs[i] = f.repo.ClaimDueScheduled(id, time.Now(), next)
 		}(i)
 	}
 	close(start)
@@ -92,7 +92,7 @@ func TestClaimDueScheduledIsExactlyOnce(t *testing.T) {
 	}
 
 	// A follow-up claim now finds the row advanced out of the due window.
-	if won, err := f.repo.ClaimDueScheduled(id, time.Now(), &next); err != nil || won {
+	if won, err := f.repo.ClaimDueScheduled(id, time.Now(), next); err != nil || won {
 		t.Fatalf("re-claim after advance = %v, %v, want false, nil", won, err)
 	}
 }
@@ -113,7 +113,7 @@ func TestClaimDueScheduledPartitionsTheDueSet(t *testing.T) {
 	claimAll := func(out map[string]bool, mu *sync.Mutex) func() {
 		return func() {
 			for _, id := range ids {
-				won, err := f.repo.ClaimDueScheduled(id, time.Now(), &next)
+				won, err := f.repo.ClaimDueScheduled(id, time.Now(), next)
 				if err != nil {
 					t.Errorf("claim %s: %v", id, err)
 					continue
@@ -164,8 +164,52 @@ func TestClaimDueScheduledSkipsNotDue(t *testing.T) {
 	id := f.seedDue(t, future) // not actually due
 
 	next := time.Now().Add(2 * time.Hour)
-	if won, err := f.repo.ClaimDueScheduled(id, time.Now(), &next); err != nil || won {
+	if won, err := f.repo.ClaimDueScheduled(id, time.Now(), next); err != nil || won {
 		t.Fatalf("claim of a not-yet-due automation = %v, %v, want false, nil", won, err)
+	}
+}
+
+// TestClaimDueScheduledLeavesLastRunAt pins the split of bug 74 (issue #379,
+// decided under Q35): the claim advances next_run_at and leaves last_run_at
+// as it was, and StampLastRun, which the scheduler calls once a run has
+// launched, sets last_run_at and nothing else, so an occurrence that
+// launched nothing is not shown as run, and a schedule edited between the
+// claim and the stamp keeps its new next_run_at.
+func TestClaimDueScheduledLeavesLastRunAt(t *testing.T) {
+	f := newAutomationFixture(t)
+	id := f.seedDue(t, time.Now().Add(-time.Minute))
+
+	// UTC, since the column is a TIMESTAMP without a zone: it keeps the wall
+	// clock it is given and reads back as UTC.
+	next := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
+	if won, err := f.repo.ClaimDueScheduled(id, time.Now(), next); err != nil || !won {
+		t.Fatalf("claim = %v, %v, want true, nil", won, err)
+	}
+	a, err := f.repo.FindByID(id)
+	if err != nil || a == nil {
+		t.Fatalf("FindByID: %v, %v", a, err)
+	}
+	if a.LastRunAt != nil || a.NextRunAt == nil || !a.NextRunAt.Equal(next) {
+		t.Fatalf("after the claim: last_run_at %v, next_run_at %v; want NULL and %v", a.LastRunAt, a.NextRunAt, next)
+	}
+
+	edited := next.Add(24 * time.Hour)
+	a.NextRunAt = &edited
+	if err := f.repo.Update(a); err != nil {
+		t.Fatal(err)
+	}
+	launched := time.Now().UTC().Add(-time.Second).Truncate(time.Second)
+	if err := f.repo.StampLastRun(id, launched); err != nil {
+		t.Fatalf("StampLastRun: %v", err)
+	}
+	a, err = f.repo.FindByID(id)
+	if err != nil || a == nil {
+		t.Fatalf("FindByID: %v, %v", a, err)
+	}
+	if a.LastRunAt == nil || !a.LastRunAt.Equal(launched) || a.NextRunAt == nil || !a.NextRunAt.Equal(edited) ||
+		!a.Enabled {
+		t.Errorf("after the stamp: last_run_at %v, next_run_at %v, enabled %v; want %v, the edited %v, enabled",
+			a.LastRunAt, a.NextRunAt, a.Enabled, launched, edited)
 	}
 }
 

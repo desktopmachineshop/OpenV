@@ -220,9 +220,12 @@ func (r *AutomationRepository) ListDueScheduled(now time.Time) ([]*automations.A
 // ClaimDueScheduled atomically claims a due scheduled automation for the
 // caller and advances its schedule in a single statement: it locks the row
 // (SKIP LOCKED so a peer replica's concurrent claim never blocks) only while
-// it is still enabled, scheduled, and due as of lastRun, then advances
-// next_run_at to nextRun (NULL disables the automation, e.g. on an invalid
-// cron) and stamps last_run_at. It reports whether the caller won the claim.
+// it is still enabled, scheduled, and due as of now, then advances
+// next_run_at to nextRun. It reports whether the caller won the claim. It
+// does not touch last_run_at: the winner stamps that with StampLastRun once a
+// run has actually launched, so an occurrence that launched nothing (no
+// target, a refused launch, a missed run skipped at catch-up) is not shown
+// as run, though it is still skipped, not retried.
 //
 // A false return means another replica already advanced the row (its
 // next_run_at is now in the future, so the due predicate no longer matches) or
@@ -230,21 +233,29 @@ func (r *AutomationRepository) ListDueScheduled(now time.Time) ([]*automations.A
 // claim and the advance are the same statement, two concurrent callers
 // partition the due set with zero overlap, so replicated schedulers never
 // double-fire an automation. Mirrors AgentRunRepository.Claim.
-func (r *AutomationRepository) ClaimDueScheduled(id string, lastRun time.Time, nextRun *time.Time) (bool, error) {
+func (r *AutomationRepository) ClaimDueScheduled(id string, now time.Time, nextRun time.Time) (bool, error) {
 	res, err := r.db.Exec(`
-		UPDATE automations SET next_run_at = $3, last_run_at = $2, updated_at = NOW()
+		UPDATE automations SET next_run_at = $3, updated_at = NOW()
 		WHERE id = (
 			SELECT id FROM automations
 			WHERE id = $1 AND enabled AND kind = 'scheduled'
 			  AND next_run_at IS NOT NULL AND next_run_at <= $2
 			FOR UPDATE SKIP LOCKED
 		)
-	`, id, lastRun, nextRun)
+	`, id, now, nextRun)
 	if err != nil {
 		return false, err
 	}
 	n, err := res.RowsAffected()
 	return n > 0, err
+}
+
+// StampLastRun records when a run of the automation was launched, and
+// changes nothing else, so a schedule an admin edited after the claim keeps
+// its new next_run_at.
+func (r *AutomationRepository) StampLastRun(id string, at time.Time) error {
+	_, err := r.db.Exec(`UPDATE automations SET last_run_at = $2, updated_at = NOW() WHERE id = $1`, id, at)
+	return err
 }
 
 // SwitchOffScheduled atomically switches off a due scheduled automation, as

@@ -627,7 +627,8 @@ lives (refactor plan step S11, OpenV REQ-24). In `internal/scheduler`,
 against a stand-in repository that models the claim SQL, the scheduler's
 tests pin catch-up at start (done before `Start` returns: an automation
 that fell due while the server was down gets one run with `catch_up` and
-none without, and its row is claimed either way), a tick, the claim a
+none without, and its row is claimed either way, though `last_run_at` is
+stamped only once a run has launched), a tick, the claim a
 replica must win before it fires (two schedulers racing for one due
 automation launch one run, and a claim answered with an error launches
 none), a cron expression that does not parse (the automation never fires:

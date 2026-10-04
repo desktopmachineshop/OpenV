@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -13,17 +14,22 @@ import (
 	"github.com/openv/requirements-platform/internal/scheduler"
 )
 
-// schedulerClaimRuns records the runs the schedulers launch.
+// schedulerClaimRuns records the runs the schedulers launch, and refuses
+// each with launchErr when it is set.
 type schedulerClaimRuns struct {
 	agentruns.Service
-	mu       sync.Mutex
-	launched []agentruns.LaunchRequest
+	mu        sync.Mutex
+	launched  []agentruns.LaunchRequest
+	launchErr error
 }
 
 func (f *schedulerClaimRuns) Launch(req agentruns.LaunchRequest) (*agentruns.Run, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.launched = append(f.launched, req)
+	if f.launchErr != nil {
+		return nil, "", f.launchErr
+	}
 	return &agentruns.Run{ID: uuid.New().String(), OrgID: req.OrgID, AgentID: req.AgentID}, "token", nil
 }
 
@@ -63,7 +69,12 @@ func (r *racingRepo) ListDueScheduled(now time.Time) ([]*automations.Automation,
 // scheduler uses it. Two schedulers starting together, both reading the same
 // due automation at catch-up, race for it: one claim is won, one lost, and
 // exactly one run is launched; the row's next_run_at moves to the cron's
-// next occurrence. An automation whose cron expression does not parse is
+// next occurrence and its last_run_at is stamped. An occurrence that launches
+// nothing, because the launch is refused or because catch-up skips an
+// automation without catch_up, still advances next_run_at, so it is skipped,
+// not retried, but leaves last_run_at as it was (bug 74 of issue #379,
+// decided under Q35: the claim stamped it before anything launched). An
+// automation whose cron expression does not parse is
 // never fired: it is switched off (enabled false, next_run_at NULL; bug 72 of
 // issue #379, which fired it once and left it enabled but never due), and
 // stays so across a restart. internal/scheduler's own tests pin the rest
@@ -77,18 +88,36 @@ func TestSchedulersShareTheRealClaim(t *testing.T) {
 		agentID); err != nil {
 		t.Fatal(err)
 	}
-	seed := func(t *testing.T, name, cron string) string {
+	// quiet is a cron with no occurrence in the next hour, so an advanced
+	// row is not due again however close to an occurrence the test runs.
+	quiet := "0 0 1 1 *"
+	if next, _ := automations.NextAfter(quiet, time.Now()); time.Until(next) < time.Hour {
+		quiet = "0 0 1 7 *"
+	}
+	seedWith := func(t *testing.T, name, cron string, catchUp bool) string {
 		t.Helper()
 		id := uuid.New().String()
 		next := time.Now().Add(-time.Hour)
 		a := &automations.Automation{ID: id, OrgID: orgID, Name: name, AgentID: &agentID,
-			Kind: automations.KindScheduled, Enabled: true, CronExpr: cron, CatchUp: true, NextRunAt: &next,
+			Kind: automations.KindScheduled, Enabled: true, CronExpr: cron, CatchUp: catchUp, NextRunAt: &next,
 			EventFilter: map[string]interface{}{}, CooldownSeconds: 60, MaxRunsPerHour: 10,
 			CreatedAt: time.Now(), UpdatedAt: time.Now()}
 		if err := repo.Save(a); err != nil {
 			t.Fatalf("seed %s: %v", name, err)
 		}
 		return id
+	}
+	seed := func(t *testing.T, name, cron string) string {
+		t.Helper()
+		return seedWith(t, name, cron, true)
+	}
+	stored := func(t *testing.T, id string) *automations.Automation {
+		t.Helper()
+		a, err := repo.FindByID(id)
+		if err != nil || a == nil {
+			t.Fatalf("FindByID: %v, %v", a, err)
+		}
+		return a
 	}
 	start := func(t *testing.T, r automations.Repository, runs ...*schedulerClaimRuns) {
 		t.Helper()
@@ -119,13 +148,8 @@ func TestSchedulersShareTheRealClaim(t *testing.T) {
 	}
 
 	t.Run("two schedulers racing at catch-up", func(t *testing.T) {
-		// A cron with no occurrence in the next hour, so the winner's
-		// advance leaves the row not due for the loser's claim however
-		// close to an occurrence the test runs.
-		cron := "0 0 1 1 *"
-		if next, _ := automations.NextAfter(cron, time.Now()); time.Until(next) < time.Hour {
-			cron = "0 0 1 7 *"
-		}
+		// The winner's advance leaves the row not due for the loser's claim.
+		cron := quiet
 		id := seed(t, "Raced", cron)
 		racing := &racingRepo{AutomationRepository: repo}
 		racing.barrier.Add(2)
@@ -155,6 +179,43 @@ func TestSchedulersShareTheRealClaim(t *testing.T) {
 			t.Error("the raced automation is still due")
 		}
 	})
+
+	for _, tc := range []struct {
+		name    string
+		catchUp bool
+		refuse  bool
+	}{
+		{name: "a refused launch leaves last_run_at", catchUp: true, refuse: true},
+		{name: "a missed run skipped at catch-up leaves last_run_at"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			id := seedWith(t, "Unlaunched", quiet, tc.catchUp)
+			runs := &schedulerClaimRuns{}
+			if tc.refuse {
+				runs.launchErr = errors.New("this workspace has reached its monthly budget")
+			}
+			start(t, repo, runs)
+			attempts := 0
+			if tc.refuse {
+				attempts = 1
+			}
+			if n := len(runs.requests()); n != attempts {
+				t.Fatalf("launch attempts = %d, want %d", n, attempts)
+			}
+			a := stored(t, id)
+			if a.NextRunAt == nil || !a.Enabled || due(t, id, time.Now()) {
+				t.Errorf("next_run_at %v, enabled %v: want the occurrence claimed, next_run_at advanced", a.NextRunAt,
+					a.Enabled)
+			}
+			if a.LastRunAt != nil {
+				t.Errorf("last_run_at = %v, want NULL: no run was launched", a.LastRunAt)
+			}
+			start(t, repo, runs) // a restart: the skipped occurrence is not retried
+			if n := len(runs.requests()); n != attempts {
+				t.Errorf("a restart made %d more launch attempts, want none", n-attempts)
+			}
+		})
+	}
 
 	t.Run("an invalid cron is switched off", func(t *testing.T) {
 		id := seed(t, "Broken", "every day at noon")
