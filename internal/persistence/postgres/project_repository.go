@@ -12,8 +12,10 @@ type ProjectRepository struct {
 	db *sql.DB
 }
 
-// cols is the column list every read shares.
-const cols = "SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at"
+// cols is the column list every read shares. The description column takes
+// NULL, which no write here stores; it reads as "" rather than failing the
+// scan, and with it every list the row falls in (#379 bug 87).
+const cols = "SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at"
 
 // NewProjectRepository creates a new project repository
 func NewProjectRepository(db *sql.DB) projects.Repository {
@@ -35,7 +37,7 @@ func (r *ProjectRepository) Create(project *projects.Project) error {
 
 // GetByID retrieves a project by ID
 func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects WHERE id = $1`
+	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects WHERE id = $1`
 	row := r.db.QueryRow(query, id)
 
 	project := &projects.Project{}
@@ -52,7 +54,7 @@ func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 
 // GetAll retrieves all projects
 func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects ORDER BY created_at DESC`
+	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects ORDER BY created_at DESC`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
@@ -81,7 +83,7 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 // resolved active workspace gets an empty list instead of every tenant's
 // projects. Mirrors EventRepository.List's org predicate.
 func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at
+	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at
 		FROM projects WHERE org_id = NULLIF($1, '')::uuid ORDER BY created_at DESC`
 	rows, err := r.db.Query(query, orgID)
 	if err != nil {

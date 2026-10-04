@@ -210,7 +210,7 @@ func (s *FileService) GetBySlug(orgID, slug string) (*Agent, error) {
 // SaveDefinition writes the definition to its markdown file and syncs the registry.
 func (s *FileService) SaveDefinition(orgID string, def *Definition) (*Agent, error) {
 	if orgID == "" {
-		return nil, errors.New("organization id is required")
+		return nil, ErrWorkspaceRequired
 	}
 	content, err := SerializeFile(def)
 	if err != nil {
@@ -245,7 +245,7 @@ func (s *FileService) RawFile(orgID, slug string) (string, error) {
 // SaveRawFile validates and writes raw markdown content for a slug.
 func (s *FileService) SaveRawFile(orgID, slug string, content string) (*Agent, error) {
 	if orgID == "" {
-		return nil, errors.New("organization id is required")
+		return nil, ErrWorkspaceRequired
 	}
 	def, err := ParseFile(content)
 	if err != nil {
@@ -299,7 +299,7 @@ func (s *FileService) Delete(orgID, slug string) error {
 // in the result. A missing org directory is not an error (nothing to sync).
 func (s *FileService) SyncFromDisk(orgID string) error {
 	if orgID == "" {
-		return errors.New("organization id is required")
+		return ErrWorkspaceRequired
 	}
 	entries, err := os.ReadDir(s.orgDir(orgID))
 	if err != nil {
@@ -394,7 +394,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC() // TIMESTAMP columns: the wall clock sent is read as UTC (#379 bug 93)
 	hash := contentHash(content)
 	if existing != nil {
 		existing.Name = def.Name

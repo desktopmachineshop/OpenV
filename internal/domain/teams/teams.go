@@ -278,7 +278,7 @@ func (s *DefaultService) CreateTeam(orgID, name, description string, projectID *
 	if name == "" {
 		return nil, errors.New("name is required")
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	t := &Team{
 		ID:          uuid.New().String(),
 		OrgID:       orgID,
@@ -357,7 +357,7 @@ func (s *DefaultService) UpdateTeam(id string, name, description, entryNodeID *s
 			t.EntryNodeID = &v
 		}
 	}
-	t.UpdatedAt = time.Now()
+	t.UpdatedAt = time.Now().UTC()
 	if err := s.repo.UpdateTeam(t); err != nil {
 		return nil, err
 	}
@@ -407,7 +407,7 @@ func (s *DefaultService) AddNode(teamID string, spec NodeSpec) (*Node, error) {
 		Label:      spec.Label,
 		Department: spec.Department,
 		Position:   position,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}
 	if err := s.repo.SaveNode(n); err != nil {
 		return nil, err
@@ -519,7 +519,7 @@ func (s *DefaultService) AddEdge(teamID, fromNodeID, toNodeID, edgeType string, 
 		ToNodeID:   toNodeID,
 		EdgeType:   edgeType,
 		Config:     config,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}
 
 	nodes, err := s.repo.ListNodesByTeam(teamID)
@@ -654,7 +654,7 @@ func (s *DefaultService) CloneTeam(id, newName string, projectID *string) (*Team
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	clone := &Team{
 		ID:          uuid.New().String(),
 		OrgID:       graph.Team.OrgID, // clones stay in the source team's org

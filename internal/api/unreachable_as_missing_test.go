@@ -475,6 +475,53 @@ func (unknownUserMembers) SetRole(projectID, userID, role string) error {
 	return members.ErrUnknownUser
 }
 
+// A membership write the store answers with members.ErrUnknownProject, a
+// project gone between the guard and the write, answers the project's 404
+// "project not found", as the guard answers a project no row has, where it
+// answered 500 (#379 bug 90). Adding a member and setting a role alike.
+func TestAMembershipInAProjectNoRowHasAnswers404(t *testing.T) {
+	h := NewHandler(HandlerDeps{
+		ProjectService: &fakeProjectService{byID: map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}},
+		OrgService:     &fakeOrgService{roles: map[string]map[string]string{"org-1": {"owner": orgs.RoleAdmin}}},
+		MemberService:  unknownProjectMembers{},
+		UserService:    oneUser{},
+	})
+	for _, tc := range []struct {
+		name, body string
+		handler    http.HandlerFunc
+	}{
+		{"adding a member", `{"email":"dana@example.com","role":"viewer"}`, h.AddProjectMember},
+		{"setting a role", `{"role":"viewer"}`, h.UpdateProjectMember},
+	} {
+		r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body))
+		r = mux.SetURLVars(r, map[string]string{"id": "proj-1", "userId": "user-1"})
+		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "owner"})
+		w := httptest.NewRecorder()
+		tc.handler(w, r.WithContext(context.WithValue(ctx, ctxActiveOrg, "org-1")))
+		if w.Code != http.StatusNotFound || strings.TrimSpace(w.Body.String()) != `{"error":"project not found"}` {
+			t.Errorf("%s in a project no row has: %d %q, want 404 project not found", tc.name, w.Code, w.Body.String())
+		}
+	}
+}
+
+// unknownProjectMembers is a membership store that knows no project.
+type unknownProjectMembers struct{ members.Service }
+
+func (unknownProjectMembers) RoleFor(projectID, userID string) (string, error) { return "", nil }
+func (unknownProjectMembers) AddMember(projectID, userID, role string) error {
+	return members.ErrUnknownProject
+}
+func (unknownProjectMembers) SetRole(projectID, userID, role string) error {
+	return members.ErrUnknownProject
+}
+
+// oneUser is an account store that finds an account for any email.
+type oneUser struct{ users.Service }
+
+func (oneUser) FindByEmail(email string) (*users.User, error) {
+	return &users.User{ID: "user-1", Email: email}, nil
+}
+
 // A download or its options naming a baseline no row has, by a well-formed
 // id or a malformed one (the baseline service answers both, and another
 // project's, baselines.ErrNotFound), answers 404 "baseline not found", as

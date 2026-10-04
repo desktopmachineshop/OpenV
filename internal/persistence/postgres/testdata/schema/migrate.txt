@@ -108,11 +108,11 @@ table agent_team_edges rows 0
   column edge_type character varying(32) NOT NULL
   column config jsonb NOT NULL DEFAULT '{}'::jsonb
   column created_at timestamp without time zone NOT NULL DEFAULT now()
-  constraint agent_team_edges_from_node_id_fkey FOREIGN KEY (from_node_id) REFERENCES agent_team_nodes(id) ON DELETE CASCADE
+  constraint agent_team_edges_from_node_id_fkey FOREIGN KEY (team_id, from_node_id) REFERENCES agent_team_nodes(team_id, id) ON DELETE CASCADE
   constraint agent_team_edges_pkey PRIMARY KEY (id)
   constraint agent_team_edges_team_id_fkey FOREIGN KEY (team_id) REFERENCES agent_teams(id) ON DELETE CASCADE
   constraint agent_team_edges_team_id_from_node_id_to_node_id_edge_type_key UNIQUE (team_id, from_node_id, to_node_id, edge_type)
-  constraint agent_team_edges_to_node_id_fkey FOREIGN KEY (to_node_id) REFERENCES agent_team_nodes(id) ON DELETE CASCADE
+  constraint agent_team_edges_to_node_id_fkey FOREIGN KEY (team_id, to_node_id) REFERENCES agent_team_nodes(team_id, id) ON DELETE CASCADE
   index agent_team_edges_pkey CREATE UNIQUE INDEX agent_team_edges_pkey ON public.agent_team_edges USING btree (id)
   index agent_team_edges_team_id_from_node_id_to_node_id_edge_type_key CREATE UNIQUE INDEX agent_team_edges_team_id_from_node_id_to_node_id_edge_type_key ON public.agent_team_edges USING btree (team_id, from_node_id, to_node_id, edge_type)
   index idx_agent_team_edges_from CREATE INDEX idx_agent_team_edges_from ON public.agent_team_edges USING btree (from_node_id, edge_type)
@@ -130,9 +130,11 @@ table agent_team_nodes rows 0
   constraint agent_team_nodes_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
   constraint agent_team_nodes_pkey PRIMARY KEY (id)
   constraint agent_team_nodes_team_id_fkey FOREIGN KEY (team_id) REFERENCES agent_teams(id) ON DELETE CASCADE
+  constraint agent_team_nodes_team_id_id_key UNIQUE (team_id, id)
   constraint agent_team_nodes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   constraint chk_crew_node_identity CHECK (((((node_type)::text = 'agent'::text) AND (agent_id IS NOT NULL) AND (user_id IS NULL)) OR (((node_type)::text = 'human'::text) AND (user_id IS NOT NULL) AND (agent_id IS NULL))))
   index agent_team_nodes_pkey CREATE UNIQUE INDEX agent_team_nodes_pkey ON public.agent_team_nodes USING btree (id)
+  index agent_team_nodes_team_id_id_key CREATE UNIQUE INDEX agent_team_nodes_team_id_id_key ON public.agent_team_nodes USING btree (team_id, id)
   index idx_agent_team_nodes_agent CREATE INDEX idx_agent_team_nodes_agent ON public.agent_team_nodes USING btree (agent_id)
   index idx_agent_team_nodes_team CREATE INDEX idx_agent_team_nodes_team ON public.agent_team_nodes USING btree (team_id)
 table agent_teams rows 0
@@ -145,8 +147,10 @@ table agent_teams rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   column org_id uuid
+  constraint agent_teams_entry_node_id_fkey FOREIGN KEY (entry_node_id) REFERENCES agent_team_nodes(id) ON DELETE SET NULL
   constraint agent_teams_pkey PRIMARY KEY (id)
   index agent_teams_pkey CREATE UNIQUE INDEX agent_teams_pkey ON public.agent_teams USING btree (id)
+  index idx_agent_teams_entry_node CREATE INDEX idx_agent_teams_entry_node ON public.agent_teams USING btree (entry_node_id) WHERE (entry_node_id IS NOT NULL)
 table agents rows 0
   column id uuid NOT NULL
   column slug character varying(128) NOT NULL
@@ -834,7 +838,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 51
+table schema_migrations rows 52
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1070,3 +1074,4 @@ ledger 0048 agent_runs_claimed_by
 ledger 0049 test_results_history
 ledger 0050 timestamptz_client_times
 ledger 0051 timestamptz_share_link_expiry
+ledger 0052 crew_node_references

@@ -16,15 +16,24 @@ func NewMemberRepository(db *sql.DB) *MemberRepository {
 	return &MemberRepository{db: db}
 }
 
-// Upsert inserts or updates a membership. An account no row has, or an id
-// that is not a UUID, is members.ErrUnknownUser.
+// Upsert inserts or updates a membership. A project no row has, or a
+// project id that is not a UUID, is members.ErrUnknownProject; an account no
+// row has, or an account id that is not a UUID, is members.ErrUnknownUser.
+// The project is asked first, so a malformed project id is never taken for
+// the account's (#379 bug 90).
 func (r *MemberRepository) Upsert(m *members.Member) error {
+	if !isUUID(m.ProjectID) {
+		return members.ErrUnknownProject
+	}
 	_, err := r.db.Exec(`
 		INSERT INTO project_members (project_id, user_id, role, created_at)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role
 	`, m.ProjectID, m.UserID, m.Role, m.CreatedAt)
-	if malformedID(err) || foreignKeyViolation(err, "project_members_user_id_fkey") {
+	switch {
+	case foreignKeyViolation(err, "project_members_project_id_fkey"):
+		return members.ErrUnknownProject
+	case malformedID(err) || foreignKeyViolation(err, "project_members_user_id_fkey"):
 		return members.ErrUnknownUser
 	}
 	return err
@@ -52,14 +61,18 @@ func (r *MemberRepository) Find(projectID, userID string) (*members.Member, erro
 	return m, nil
 }
 
-// ListByProject returns members with display info joined from users.
+// ListByProject returns members with display info joined from users, by
+// name case-insensitively and alike under any database collation (the name
+// in small letters compared byte by byte, COLLATE "C", then the name itself
+// so compared), then by email in small letters, which users holds unique
+// (#379 bug 94).
 func (r *MemberRepository) ListByProject(projectID string) ([]*members.Member, error) {
 	rows, err := r.db.Query(`
 		SELECT pm.project_id, pm.user_id, pm.role, pm.created_at, u.name, u.email, u.avatar_url
 		FROM project_members pm
 		JOIN users u ON u.id = pm.user_id
 		WHERE pm.project_id = $1
-		ORDER BY u.name, u.email
+		ORDER BY lower(u.name) COLLATE "C", u.name COLLATE "C", lower(u.email) COLLATE "C", u.id
 	`, projectID)
 	if err != nil {
 		return nil, err
@@ -147,14 +160,16 @@ func (r *MemberRepository) RemoveTeamGrant(projectID, orgTeamID string) error {
 	return matchedNone(err)
 }
 
-// ListTeamGrants returns a project's team grants with team names.
+// ListTeamGrants returns a project's team grants with team names, by name
+// as ListByProject orders its members, and teams of one name by id (#379
+// bug 94).
 func (r *MemberRepository) ListTeamGrants(projectID string) ([]*members.TeamGrant, error) {
 	rows, err := r.db.Query(`
 		SELECT pta.project_id, pta.org_team_id, pta.role, pta.created_at, t.name
 		FROM project_team_access pta
 		JOIN org_teams t ON t.id = pta.org_team_id
 		WHERE pta.project_id = $1
-		ORDER BY t.name
+		ORDER BY lower(t.name) COLLATE "C", t.name COLLATE "C", t.id
 	`, projectID)
 	if err != nil {
 		return nil, err

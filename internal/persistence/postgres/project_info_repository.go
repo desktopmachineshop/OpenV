@@ -22,7 +22,7 @@ func (r *ProjectInfoRepository) FindByID(id string) (*exports.ProjectInfo, error
 	project := &exports.ProjectInfo{}
 
 	query := `
-		SELECT id, name, description
+		SELECT id, name, COALESCE(description, '')
 		FROM projects
 		WHERE id = $1
 	`

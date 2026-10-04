@@ -532,9 +532,13 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.MemberService.AddMember(projectID, user.ID, req.Role); err != nil {
-		if errors.Is(err, members.ErrInvalidRole) {
+		switch {
+		case errors.Is(err, members.ErrInvalidRole):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
-		} else {
+		case errors.Is(err, members.ErrUnknownProject):
+			// A project gone since the guard: its 404 (bug 90).
+			unknownProject.write(w)
+		default:
 			respondInternal(w, r, "failed to add member", err)
 		}
 		return
@@ -569,6 +573,9 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 			// An account no row has, or an id that is not one: the 404 of any
 			// lookup of an account (bug 15).
 			writeJSONError(w, http.StatusNotFound, err.Error())
+		case errors.Is(err, members.ErrUnknownProject):
+			// A project gone since the guard: its 404 (bug 90).
+			unknownProject.write(w)
 		default:
 			respondInternal(w, r, "failed to update member role", err)
 		}
