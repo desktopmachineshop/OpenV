@@ -213,6 +213,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   it writes and in the need sentences it shows while you work, as the
   V&V Assistant's cards already did.
 
+- **A double-click on an assistant card adds it once.** A card from the
+  V&V Assistant, beside the guided wizard or in the notes panel, counted
+  as added only once the first click had finished, so a quick second
+  click, or Apply all pressed while a card was still being added, added
+  it again: a card that creates an artifact created two. A card's button
+  is now set aside from the first click until it finishes, and a second
+  click does nothing.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
