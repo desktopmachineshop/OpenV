@@ -181,6 +181,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   be picked out on their own. The filter now offers every kind of event a
   project's activity can hold.
 
+- **The platform admin page names a workspace's legacy plan.** A
+  workspace still on one of the first plan names, free or team, showed
+  its plan in the admin page's plan picker as a bare "free" or "team"
+  entry with no value behind it. It now reads "Free (legacy Single User)"
+  or "Team (legacy Business)", selected, and those two are offered only
+  to the workspace already on one: every other workspace's picker lists
+  the current plans as before.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

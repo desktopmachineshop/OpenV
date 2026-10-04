@@ -12,13 +12,19 @@ export const releaseAPI = {
   current: () => client.get<ReleaseInfo>('/api/v1/release'),
 };
 
-export const PLANS: { value: string; label: string }[] = [
+// Every plan a workspace can be on (Go's orgs plans). `legacy` marks free
+// and team, the names that shipped first for Single User and Business: rows
+// in the wild still carry them, so a workspace on one is shown by name, but
+// none is offered as a plan to move a workspace onto.
+export const PLANS: { value: string; label: string; legacy?: boolean }[] = [
   { value: 'single', label: 'Single User' },
   { value: 'business_lite', label: 'Business Lite' },
   { value: 'business', label: 'Business' },
   { value: 'enterprise', label: 'Enterprise' },
   { value: 'open_source', label: 'Open source' },
   { value: 'self_host', label: 'Self-hosted' },
+  { value: 'free', label: 'Free (legacy Single User)', legacy: true },
+  { value: 'team', label: 'Team (legacy Business)', legacy: true },
 ];
 
 export const adminAPI = {
