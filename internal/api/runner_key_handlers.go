@@ -34,7 +34,7 @@ func (h *Handler) GetMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{"key_record": nil, "online": false})
 		return
 	}
-	online := key.LastUsedAt != nil && time.Since(*key.LastUsedAt) < 30*time.Second
+	online := key.LastUsedAt != nil && time.Since(*key.LastUsedAt) < workerOnlineWindow
 	json.NewEncoder(w).Encode(map[string]interface{}{"key_record": key, "online": online})
 }
 
