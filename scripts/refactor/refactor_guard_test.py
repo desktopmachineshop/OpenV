@@ -43,6 +43,7 @@ RATCHETS = {
     "file_lines": {"internal/api/handlers.go": 3519},
     "counts": {"raw_json_encodes": 249},
     "side_effect_vars": ["internal/domain/quality:placeholderRe"],
+    "func_lines": {"internal/runner:Worker.handleLogin": 155, "internal/runner:Worker.run": 120},
 }
 
 ESLINT = """// boundaries
@@ -1543,6 +1544,36 @@ class RatchetTest(RepoTest):
         files["internal/domain/snapshot/snapshot.go"] = "package snapshot\n"
         self.commit("sneaky", files, trailers("B"))
         self.assertFailsWith(self.guard("refactor"), "(2) ratchets", "internal/domain/snapshot")
+
+    def test_a_ceiling_moves_with_its_method_to_a_new_receiver(self):
+        def change(r):
+            del r["func_lines"]["internal/runner:Worker.handleLogin"]
+            r["func_lines"]["internal/runner:loginBroker.handleLogin"] = 155
+        self.commit("M15b", self.ratchets(change), trailers("B"))
+        self.assertPasses(self.guard("refactor", "no-release-notes"))
+
+    def test_a_carried_ceiling_cannot_rise(self):
+        def change(r):
+            del r["func_lines"]["internal/runner:Worker.handleLogin"]
+            r["func_lines"]["internal/runner:loginBroker.handleLogin"] = 156
+        self.commit("raised", self.ratchets(change), trailers("B"))
+        self.assertFailsWith(self.guard("refactor", "no-release-notes"), "(2) ratchets",
+                             "func_lines.internal/runner:loginBroker.handleLogin (156)")
+
+    def test_a_ceiling_is_not_copied_or_carried_to_another_name(self):
+        def change(r):
+            # The old key stays: a copy, not a move.
+            r["func_lines"]["internal/runner:loginBroker.handleLogin"] = 155
+            # The old key goes, but to a method of another name.
+            del r["func_lines"]["internal/runner:Worker.run"]
+            r["func_lines"]["internal/runner:Worker.runOnce"] = 120
+            # A method of the same name in another package.
+            r["func_lines"]["internal/api:loginBroker.run"] = 120
+        self.commit("sneaky", self.ratchets(change), trailers("B"))
+        g = self.guard("refactor", "no-release-notes")
+        self.assertFailsWith(g, "(2) ratchets", "func_lines.internal/runner:loginBroker.handleLogin")
+        self.assertFailsWith(g, "(2) ratchets", "func_lines.internal/runner:Worker.runOnce")
+        self.assertFailsWith(g, "(2) ratchets", "func_lines.internal/api:loginBroker.run")
 
     def test_restoring_the_base_value_within_the_pull_request(self):
         self.commit("lower", self.ratchets(lambda r: r["counts"].update(raw_json_encodes=200)), trailers("B"))
