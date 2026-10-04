@@ -109,4 +109,7 @@ var migrations = []Migration{
 	{Version: 52, Name: "crew_node_references", Run: m0052CrewNodeReferences},
 	{Version: 53, Name: "project_owned_rows", Run: m0053ProjectOwnedRows},
 	{Version: 54, Name: "figure_refs_per_project", Run: m0054FigureRefsPerProject},
+	{Version: 55, Name: "figure_counters_without_artifact", Run: m0055FigureCountersWithoutArtifact},
+	{Version: 56, Name: "boot_tasks", Run: m0056BootTasks},
+	{Version: 57, Name: "drop_attachment_test_result", Run: m0057DropAttachmentTestResult},
 }

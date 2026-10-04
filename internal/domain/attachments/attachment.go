@@ -179,6 +179,11 @@ var ErrNoSuchVersion = errors.New("no such figure version")
 // showing. Writing it again would add a version that changed nothing.
 var ErrAlreadyCurrent = errors.New("that version is already current")
 
+// ErrNoArtifact reports a figure saved onto an artifact whose project no row
+// has: the project was deleted, or was being deleted, while the figure was
+// uploaded (#379 bug 152).
+var ErrNoArtifact = errors.New("the figure's artifact has no project")
+
 // CreateAttachmentRequest is the payload for creating an attachment
 type CreateAttachmentRequest struct {
 	ArtifactID       string
@@ -220,12 +225,19 @@ type Repository interface {
 	// the order a reader meets them. Cross-artifact figure references need
 	// the project's figures without knowing which artifact holds each.
 	FindByProjectID(projectID string) ([]*Attachment, error)
-	Delete(id string) error
+	// Delete deletes a figure with every version of it, in one transaction,
+	// and answers the stored files of the rows it deleted, each once: every
+	// version's and the current one's, for the caller to remove once the
+	// delete has committed (#379 bug 145). A figure no row has deletes
+	// nothing and answers no file.
+	Delete(id string) ([]string, error)
 
 	// SaveWithFigureRef stores a new attachment, minting its figure number
 	// from the artifact's counter and recording it as version 1. artifactRef
 	// is the artifact's stable reference; when it is empty the attachment is
-	// stored without a figure reference rather than inventing one.
+	// stored without a figure reference rather than inventing one. An
+	// artifact whose project is gone, or goes while it waits for the
+	// project's delete, is ErrNoArtifact, and nothing is stored.
 	SaveWithFigureRef(attachment *Attachment, artifactRef string) error
 	// AddVersion replaces the figure's current file with a new version and
 	// records it, returning the version number written.
@@ -255,9 +267,14 @@ type Service interface {
 	// GetAttachmentsByProject returns every attachment in a project as one
 	// list (see Repository.FindByProjectID).
 	GetAttachmentsByProject(projectID string) ([]*Attachment, error)
-	DeleteAttachment(id string) error
+	// DeleteAttachment deletes a figure with every version of it and answers
+	// their stored files, which the caller removes once it has (see
+	// Repository.Delete).
+	DeleteAttachment(id string) ([]string, error)
 
-	// CreateFigure stores a new figure on an artifact, allocating its number.
+	// CreateFigure stores a new figure on an artifact, allocating its number;
+	// ErrNoArtifact when the artifact's project is gone (see
+	// Repository.SaveWithFigureRef).
 	CreateFigure(attachment *Attachment, artifactRef string) error
 	// AddVersion supersedes a figure's file with a new version, returning the
 	// version number written.
@@ -309,8 +326,9 @@ func (s *DefaultService) GetAttachmentsByProject(projectID string) ([]*Attachmen
 	return s.repository.FindByProjectID(projectID)
 }
 
-// DeleteAttachment deletes an attachment
-func (s *DefaultService) DeleteAttachment(id string) error {
+// DeleteAttachment deletes a figure with every version of it and answers
+// their stored files.
+func (s *DefaultService) DeleteAttachment(id string) ([]string, error) {
 	return s.repository.Delete(id)
 }
 

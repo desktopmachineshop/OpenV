@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"sort"
 
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
@@ -256,36 +255,17 @@ func deleteProjectFiles(tx *sql.Tx, id string) ([]string, error) {
 	if _, err := tx.Exec(`SELECT id FROM evidence_bundles WHERE project_id = $1 FOR UPDATE`, id); err != nil {
 		return nil, err
 	}
-	seen := map[string]bool{}
-	var files []string
+	var files storedFiles
 	for _, stmt := range []string{
 		`DELETE FROM attachment_versions WHERE attachment_id IN (SELECT id FROM attachments WHERE artifact_id IN (` + projectArtifacts + `)) RETURNING file_path`,
 		`DELETE FROM attachments WHERE artifact_id IN (` + projectArtifacts + `) RETURNING file_path`,
 		`DELETE FROM evidence_files WHERE bundle_id IN (SELECT id FROM evidence_bundles WHERE project_id = $1) RETURNING file_path`,
 	} {
-		rows, err := tx.Query(stmt, id)
-		if err != nil {
+		if err := files.collect(tx, stmt, id); err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var path string
-			if err := rows.Scan(&path); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			if path != "" && !seen[path] {
-				seen[path] = true
-				files = append(files, path)
-			}
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		rows.Close()
 	}
-	sort.Strings(files)
-	return files, nil
+	return files.sorted(), nil
 }
 
 // projectArtifacts selects the ids of a project's artifacts, the project id

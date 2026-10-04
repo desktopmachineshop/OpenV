@@ -177,10 +177,11 @@ func TestTheWorkspaceRecordsStampTimesInUTC(t *testing.T) {
 				kept, purged := deleted(grace-time.Minute), deleted(grace+time.Minute)
 				keptUTC, purgedUTC := deletedInUTC(grace-time.Minute), deletedInUTC(grace+time.Minute)
 				// The purge loop hands in its own time.Now().
-				ids, err := orgService.PurgeExpired(time.Now())
+				result, err := orgService.PurgeExpired(time.Now())
 				if err != nil {
 					t.Fatal(err)
 				}
+				ids := result.IDs
 				sort.Strings(ids)
 				want := []string{purged, purgedUTC}
 				sort.Strings(want)

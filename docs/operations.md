@@ -666,6 +666,34 @@ Notes:
   20480) rather than relying on the per-file cap alone. One campaign's captures can otherwise fill the
   volume and take the deployment down with it. Evidence is included in the
   volume backup along with figures.
+- **Stored files no row names.** Deleting a figure, a project or a workspace
+  removes its files from `UPLOADS_DIR` once the delete has committed (a file
+  that will not go is logged as `failed to remove a deleted record's stored
+  file`, or `api: failed to remove a deleted record's stored file`, and the
+  delete stands). Before that, deleted projects, purged workspaces and
+  deleted figures' earlier versions left their files behind. The first boot
+  of a release that has the sweep (`boot_tasks`, migration 0056) sweeps
+  them, **once per database**: after the migrations, under the boot lock
+  (so of two API processes booting at once, one sweeps), it removes each
+  regular file directly in `UPLOADS_DIR` that is named as the server names
+  a stored upload (`<uuid>_<name>` or `evidence-<uuid>`), last changed more
+  than an hour before the boot, and whose uuid no row names, wherever the
+  row's path says the directory was. It never touches a subdirectory (so
+  the logos of workspaces purged earlier stay in `org-logos/`), a symlink
+  or a file named otherwise. It removes nothing, and says why, when the
+  database names no figure or evidence file at all (a new database beside
+  another's uploads),
+  or when more than one in ten of those it names are missing from the
+  directory (`UPLOADS_DIR` points somewhere else); and nothing, without
+  recording the sweep, when it cannot read every path, so the next boot
+  tries again. It logs each file it removes (`upload sweep: removed a
+  stored file no row names`, with `path` and `bytes`) and a summary
+  (`upload sweep: done`, with `removed`, `bytes`, `failed`, `kept_recent`);
+  a file it cannot remove is logged and kept, and the boot never fails
+  because of it. The sweep assumes `UPLOADS_DIR` belongs to this one
+  database: do not point two deployments at the same directory. The record
+  is the `sweep_unreferenced_uploads` row of `boot_tasks`, with what the
+  sweep did; deleting that row runs the sweep again at the next boot.
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it
   anyone can read the API's request and runtime statistics.
 - If you switch an existing deployment from the dev Postgres password, the
@@ -819,6 +847,9 @@ API again. The Postgres container must be running. Restoring a backup from an
 older schema version onto a newer server is fine at the Postgres level, but
 the API re-applies its schema migrations (`postgres.Migrate`) on top at
 startup.
+A database restored from a backup taken before the upload sweep shipped has
+no record of it (see **Stored files no row names** above), so the first boot
+after the restore sweeps the restored uploads against the restored rows.
 
 ## Scheduled backups
 
