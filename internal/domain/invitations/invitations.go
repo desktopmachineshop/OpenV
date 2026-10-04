@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/tokens"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -256,7 +257,7 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 		return nil, "", orgs.ErrPersonalOrgMembers
 	}
 	now := time.Now().UTC() // created_at is a TIMESTAMP holding a UTC wall clock (#379 bug 155)
-	token, err := users.NewToken()
+	token, err := tokens.NewToken()
 	if err != nil {
 		return nil, "", err
 	}
@@ -265,7 +266,7 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 		OrgID:     orgID,
 		Email:     email,
 		Role:      role,
-		TokenHash: users.HashToken(token),
+		TokenHash: tokens.HashToken(token),
 		InvitedBy: invitedBy,
 		ExpiresAt: now.Add(s.ttl),
 		CreatedAt: now,
@@ -324,7 +325,7 @@ func (s *DefaultService) Lookup(token string) (*Invitation, error) {
 	if token == "" {
 		return nil, ErrInvalidToken
 	}
-	inv, err := s.repo.FindByTokenHash(users.HashToken(token))
+	inv, err := s.repo.FindByTokenHash(tokens.HashToken(token))
 	if err != nil {
 		return nil, err
 	}

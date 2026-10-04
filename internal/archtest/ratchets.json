@@ -129,7 +129,7 @@
     "internal/domain/agentruns": [
       "internal/domain/agents",
       "internal/domain/events",
-      "internal/domain/users"
+      "internal/domain/tokens"
     ],
     "internal/domain/agents": [
       "internal/domain/providers"
@@ -167,8 +167,12 @@
       "internal/domain/links",
       "internal/domain/products"
     ],
+    "internal/domain/interviews": [
+      "internal/domain/tokens"
+    ],
     "internal/domain/invitations": [
       "internal/domain/orgs",
+      "internal/domain/tokens",
       "internal/domain/users"
     ],
     "internal/domain/mentions": [
@@ -192,13 +196,16 @@
       "internal/domain/quality"
     ],
     "internal/domain/sharelinks": [
-      "internal/domain/users"
+      "internal/domain/tokens"
     ],
     "internal/domain/templates": [
       "internal/domain/artifacts",
       "internal/domain/attachments",
       "internal/domain/exports",
       "internal/domain/links"
+    ],
+    "internal/domain/users": [
+      "internal/domain/tokens"
     ],
     "internal/domain/vv": [
       "internal/domain/artifacts",
@@ -207,7 +214,7 @@
       "internal/domain/exports"
     ],
     "internal/domain/workerkeys": [
-      "internal/domain/users"
+      "internal/domain/tokens"
     ],
     "internal/domain/workitems": [
       "internal/domain/events"
@@ -315,7 +322,7 @@
       "internal/domain/providers",
       "internal/domain/repoconns",
       "internal/domain/runnersessions",
-      "internal/domain/users"
+      "internal/domain/tokens"
     ],
     "cmd/openv-connector": [],
     "cmd/openv-mcp": [

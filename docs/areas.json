@@ -316,6 +316,7 @@
         "internal/domain/invitations/**",
         "internal/domain/members/**",
         "internal/domain/orgs/**",
+        "internal/domain/tokens/**",
         "internal/domain/users/**",
         "internal/persistence/postgres/invitation_*.go",
         "internal/persistence/postgres/member_*.go",
