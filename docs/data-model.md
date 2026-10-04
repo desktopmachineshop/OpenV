@@ -79,10 +79,14 @@ Maps each link to the specific artifact **versions** it was created against
 baselines can reconstruct exact link states.
 
 ### attachments
-Uploaded files: `artifact_id` (nullable) **or** `test_result_id` (test
-evidence), `filename`, `original_filename`, `title` (the name a member gave
-the figure; `''` when none), `mime_type`, `file_path` (under
-`UPLOADS_DIR`), `file_size`, `figure_ref`, `figure_num`, `version`.
+Uploaded files, each a figure of an artifact: `artifact_id` (nullable in
+the schema, set on every row), `filename`, `original_filename`, `title`
+(the name a member gave the figure; `''` when none), `mime_type`,
+`file_path` (under `UPLOADS_DIR`), `file_size`, `figure_ref`, `figure_num`,
+`version`. The `test_result_id` column the 0001 baseline added for evidence
+on a test result was never written and is dropped by migration 0057; test
+evidence is `evidence_bundles` and `evidence_files`, cited from a result
+through `evidence_citations`.
 
 ### attachment_versions
 One row per version of a figure — a new image, or a new title over the
@@ -352,7 +356,8 @@ agent run recorded the result, so reviewers can tell agent evidence from
 human evidence). Test cases carry an `execution_method` attribute
 (`automated` — the default — | `manual` | `physical`); only automated cases
 may have agent-recorded results (`internal/domain/vv`). Evidence files
-attach via `attachments.test_result_id`.
+belong to an evidence bundle, which a result cites through
+`evidence_citations`.
 
 ### work_items / work_item_activity
 Kanban cards: `project_id`, `title`, `description`, `board_column`

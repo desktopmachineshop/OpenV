@@ -487,6 +487,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   nothing. If you run OpenV yourself, each file removed is noted in the
   server's log, under "upload sweep", with a summary at the end.
 
+- **A figure no longer has an unused place for a test result.** The
+  stored record of every figure had room to name a test result, for test
+  evidence, that OpenV never filled in: test evidence has its own bundles,
+  which a result cites. It is removed when this update is installed. If
+  you run OpenV yourself and filled it in outside OpenV, the server does
+  not start after the update, and its log says how many figures name a
+  test result and how to clear them.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

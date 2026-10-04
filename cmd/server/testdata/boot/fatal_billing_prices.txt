@@ -41,7 +41,7 @@ exit status 1
 the server exited before it answered /health
 
 == the boot's database after the exit
-migrations ran before the exit: in part (the schema_migrations ledger holds 55 versions, 1 to 56)
+migrations ran before the exit: in part (the schema_migrations ledger holds 56 versions, 1 to 57)
 
 == outbound requests (the recording proxy, after exit)
 none: the server sent no request through HTTP_PROXY or HTTPS_PROXY

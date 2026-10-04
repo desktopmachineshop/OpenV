@@ -262,7 +262,6 @@ table attachments rows 0
   column file_path character varying(1024) NOT NULL
   column file_size integer NOT NULL
   column created_at timestamp without time zone NOT NULL DEFAULT now()
-  column test_result_id uuid
   column figure_ref character varying(64)
   column figure_num integer
   column version integer NOT NULL DEFAULT 1
@@ -272,7 +271,6 @@ table attachments rows 0
   index attachments_pkey CREATE UNIQUE INDEX attachments_pkey ON public.attachments USING btree (id)
   index idx_attachments_artifact_id CREATE INDEX idx_attachments_artifact_id ON public.attachments USING btree (artifact_id)
   index idx_attachments_figure_ref CREATE UNIQUE INDEX idx_attachments_figure_ref ON public.attachments USING btree (figure_ref) WHERE (figure_ref IS NOT NULL)
-  index idx_attachments_test_result_id CREATE INDEX idx_attachments_test_result_id ON public.attachments USING btree (test_result_id)
 table attribute_definitions rows 0
   column id uuid NOT NULL
   column org_id uuid
@@ -855,7 +853,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 55
+table schema_migrations rows 56
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1097,3 +1095,4 @@ ledger 0052 crew_node_references
 ledger 0053 project_owned_rows
 ledger 0055 figure_counters_without_artifact
 ledger 0056 boot_tasks
+ledger 0057 drop_attachment_test_result
