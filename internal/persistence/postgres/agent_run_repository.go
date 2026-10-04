@@ -318,7 +318,9 @@ func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error
 
 // cancelQueuedRun is what cancelling a queued run writes: the run is
 // cancelled at once and its token revoked. CancelQueued and a project's
-// delete (cancelProjectRuns) write it alike.
+// delete (cancelProjectRuns) write it alike; so do the delete for a run
+// awaiting approval, and ReleaseClaim for a run whose cancel was requested,
+// neither of which any worker will report.
 const cancelQueuedRun = `status = 'cancelled', cancel_requested = TRUE, finished_at = NOW(), run_token_hash = ''`
 
 // requestLiveRunCancel is what asking a claimed or running run to stop
@@ -361,8 +363,10 @@ func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
 // running run is asked to stop, as SetCancelRequested writes it, and its
 // token is revoked at once besides, since the project it acted in is gone.
 // The worker reports to the server with its own key, not the run's token,
-// so it still reads the flag and reports the run cancelled. It answers the
-// ids of the runs it cancelled or asked to stop, for the caller to announce
+// so it still reads the flag and reports the run cancelled. A run awaiting
+// approval is cancelled as a queued one is (#379 bug 146): its proposals go
+// with the project, so no review could ever finalise it. It answers the ids
+// of the runs it cancelled or asked to stop, for the caller to announce
 // once the transaction has committed.
 //
 // The queued runs go first. A claim takes a queued run with FOR UPDATE SKIP
@@ -377,6 +381,7 @@ func cancelProjectRuns(tx *sql.Tx, projectID string) ([]string, error) {
 	for _, stmt := range []string{
 		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'queued' RETURNING id`,
 		`UPDATE agent_runs SET ` + requestLiveRunCancel + `, run_token_hash = '' WHERE project_id = $1 AND status IN ('claimed', 'running') RETURNING id`,
+		`UPDATE agent_runs SET ` + cancelQueuedRun + ` WHERE project_id = $1 AND status = 'awaiting_approval' RETURNING id`,
 	} {
 		rows, err := tx.Query(stmt, projectID)
 		if err != nil {

@@ -494,8 +494,8 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 }
 
 // AnnounceCancelled announces runs cancelled outside this service, each in
-// the state the cancel left it: a queued run cancelled, a claimed or running
-// one still live with its cancel requested. RequestCancel announces both the
+// the state the cancel left it: a queued run, or one awaiting approval,
+// cancelled; a claimed or running one still live with its cancel requested. RequestCancel announces both the
 // same way, and publishes no RunFinished for either: a cancelled queued run
 // never had a worker to finish it, and a live one finishes when its worker
 // reports it cancelled.

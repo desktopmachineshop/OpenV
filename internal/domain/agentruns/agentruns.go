@@ -487,7 +487,8 @@ type Service interface {
 	// AnnounceCancelled tells the runs' subscribers of a cancel written
 	// outside this service, as RequestCancel tells them of its own: the
 	// runs a project's delete cancelled, or asked to stop, in its own
-	// transaction (projects.Removed). An id no run has is skipped.
+	// transaction (projects.Removed), one awaiting approval among them. An
+	// id no run has is skipped.
 	AnnounceCancelled(ids []string)
 	Heartbeat(id string) error
 	FailStale(maxSilence time.Duration) ([]string, error)

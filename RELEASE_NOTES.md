@@ -38,6 +38,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   needs to be unique only within its project, as the artifact reference it
   is built on is. Figures already added keep their references.
 
+- **Deleting a project ends its runs that await approval.** A run of the
+  deleted project that was waiting for its proposals to be reviewed waited
+  for ever, its proposals gone with the project. It is now cancelled with
+  the project's other unfinished runs. The project's runs also stop
+  pointing at its cards, sessions, automations and crews, and the server no
+  longer logs a "failed to move card" error for them.
+
 - **A cancelled run stays cancelled.** A run whose cancel was requested went
   back to the queue, and was started again by the next runner, when its
   runner shut down before stopping it or could not start it; it now ends
