@@ -171,9 +171,10 @@ func runNowLaunchLine(req agentruns.LaunchRequest) string {
 // the crew and node named), the automation, the caller as launcher, no
 // trigger event and no parent (a person's request); and its prompt, the
 // template rendered with automation.name as its one variable, or "Manual
-// run of automation: <name>" when that renders to the empty string, a
-// render of only whitespace kept as it is (as the scheduler's copy does;
-// the matcher's trims). Run-now checks no guard: a disabled automation, one
+// run of automation: <name>" when that renders to the empty string or only
+// whitespace, as the scheduler's and the matcher's copies do (the regression
+// test for bug 77 of issue #379: run-now and the scheduler kept a render of
+// only whitespace as the prompt). Run-now checks no guard: a disabled automation, one
 // in its cooldown and one at its hourly cap each run all the same, and none
 // is stamped (the run service is asked no count, and the automation service
 // has no stamp). It answers 201 with the run. A target it cannot resolve
@@ -193,7 +194,7 @@ func TestRunNowCopy(t *testing.T) {
 		{"au-plain", "editor", run("au-plain", "agent-helper", "Manual run of automation: Nightly", p, nil, nil, "editor")},
 		{"au-template", "editor", run("au-template", "agent-helper", "Run Templated on ", p, nil, nil, "editor")},
 		{"au-unknown", "editor", run("au-unknown", "agent-helper", "Manual run of automation: Unknown", p, nil, nil, "editor")},
-		{"au-space", "editor", run("au-space", "agent-helper", " ", p, nil, nil, "editor")},
+		{"au-space", "editor", run("au-space", "agent-helper", "Manual run of automation: Spaced", p, nil, nil, "editor")},
 		{"au-crew", "editor", run("au-crew", "agent-entry", "Manual run of automation: Crew", p, str("crew-1"),
 			str("node-entry"), "editor")},
 		{"au-disabled", "editor", run("au-disabled", "agent-helper", "Manual run of automation: Disabled", p, nil, nil, "editor")},

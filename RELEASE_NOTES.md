@@ -325,6 +325,59 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   "failed to update member role", as if the server had failed. It now
   answers "project not found", as opening a deleted project does.
 
+- **A scheduled automation whose schedule can no longer be read is
+  switched off instead of silently stopping.** An automation holding a cron
+  expression OpenV can no longer read ran at most once more and then never
+  again, while the Automations table still showed it switched on. Such an
+  automation is now switched off without running, so the table shows it
+  off: correct its schedule and switch it back on. OpenV already refuses
+  such a schedule when an automation is saved, so only older automations
+  can hold one.
+
+- **An automation's last run shows only runs that were launched.** A
+  scheduled automation's last run moved to its scheduled time even when no
+  run started: when its agent or crew could not be found, when the launch
+  was refused (over the workspace's budget, for instance), or when a run
+  missed while OpenV was down was skipped. Last run now changes only when a
+  run is actually launched. A missed or failed occurrence is still not
+  retried; the next one runs as usual.
+
+- **An event filter on a number of a million or more matches.** A
+  triggered automation whose event filter compared a number in the event,
+  such as an artifact's version, with a number of 1,000,000 or more never
+  fired, because the two were compared as text and the filter's number read
+  as "1e+06". Numbers are now compared as numbers. This affected filters
+  written through the API with a number as the value; a filter set in the
+  app holds text and already matched.
+
+- **A blank prompt falls back to the standard one on every kind of run.**
+  When an automation's prompt template came out blank, a triggered run
+  started with OpenV's standard prompt, but a scheduled run or **Run now**
+  started with the blank prompt itself if the template came out as nothing
+  but spaces or line breaks, as a template of placeholders that do not
+  apply can. All three now start with the standard prompt ("Scheduled run
+  of automation: …", "Manual run of automation: …") whenever the template
+  comes out blank.
+
+- **A triggered automation holds back when its loop guard or hourly cap
+  cannot be checked.** Before it fires, a triggered automation checks that
+  the event was not caused by one of its own runs and that it has not
+  reached its runs-per-hour limit. When OpenV could not make either check,
+  during a brief database outage for instance, the automation fired
+  anyway, so it could set itself off again or run past its limit. It now
+  skips that event, and the skip is logged.
+
+- **More events can trigger an automation.** A triggered automation's
+  event list offered 10 of OpenV's event types; it now offers all of them,
+  adding an artifact's status change and restore, a deleted baseline, a
+  review round started, a new comment, a work item's update, crew
+  hand-offs skipped, an agent's proposal, and changes to project and
+  workspace membership and invitations. An automation saved on one of these
+  events through the API now also opens with its own event shown, not
+  another. Workspace membership and invitation events concern the whole
+  workspace, so they fire only an automation that covers the whole
+  workspace, not one made on a project's Automations page.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

@@ -17,12 +17,23 @@ Automations launch agent (or crew) runs without anyone clicking a button. Open
 
 Triggered automations listen to the project event bus. Available events:
 
-- artifact.created / artifact.updated / artifact.deleted
-- link.created / link.deleted
-- baseline.captured
+- artifact.created / artifact.updated / artifact.deleted /
+  artifact.status_changed / artifact.restored
+- link.created / link.updated / link.deleted
+- baseline.captured / baseline.deleted
+- project.review_round_started
+- chatter.created
 - testrun.recorded
-- workitem.created / workitem.moved
-- agentrun.finished
+- workitem.created / workitem.moved / workitem.updated
+- agentrun.finished / agentrun.successors_skipped
+- proposal.created
+- project.member_added / project.member_role_changed / project.member_removed
+- org.member_added / org.member_role_changed / org.member_removed /
+  org.invitation_sent / org.invitation_accepted
+
+The org.* events belong to the workspace, not to a project, so they fire only
+automations that cover the whole workspace; an automation made on a project's
+Automations page covers that project alone.
 
 **Filters** narrow the match with key/value pairs on the event payload (for
 example only artifacts of a certain type). Two safety valves keep triggered
@@ -43,7 +54,9 @@ automations from running away:
 
 Automations are created **enabled**; toggle them on/off from the table at any
 time. The table also shows each automation's last run and (for scheduled ones)
-the next run time.
+the next run time. If a scheduled automation's cron expression can no longer
+be read, it is not run: it is switched off, so correct its schedule and switch
+it back on.
 
 ## Running and reviewing
 

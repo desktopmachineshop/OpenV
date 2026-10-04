@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -139,7 +140,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 	prompt := automations.RenderPrompt(automation.PromptTemplate, map[string]string{
 		"automation.name": automation.Name,
 	})
-	if prompt == "" {
+	if strings.TrimSpace(prompt) == "" {
 		prompt = "Manual run of automation: " + automation.Name
 	}
 	automationID := automation.ID

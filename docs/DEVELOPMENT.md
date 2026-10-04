@@ -627,29 +627,32 @@ lives (refactor plan step S11, OpenV REQ-24). In `internal/scheduler`,
 against a stand-in repository that models the claim SQL, the scheduler's
 tests pin catch-up at start (done before `Start` returns: an automation
 that fell due while the server was down gets one run with `catch_up` and
-none without, and its row is claimed either way), a tick, the claim a
-replica must win before it fires (two schedulers racing for one due
-automation launch one run), a cron expression that does not parse (the
-automation fires once and its `next_run_at` becomes NULL, so it is never
-due again, though it stays enabled), the prompt (`Scheduled run of
-automation: <name>` when the template renders empty), the target, and
+none without, and its row is claimed either way, though `last_run_at` is
+stamped only once a run has launched), a tick, the claim a replica must
+win before it fires (two schedulers racing for one due automation launch
+one run, and a claim answered with an error launches none), a cron
+expression that does not parse (the automation never fires: the scheduler
+switches it off, `enabled` false and `next_run_at` NULL, and logs why),
+the prompt (`Scheduled run of automation: <name>` when the template
+renders empty or only whitespace, as in all three paths), the target, and
 `ResolveTarget`, which all three paths call. In `internal/automation`, the
-trigger matcher's tests pin the event filter (each value compared as `fmt`
-prints it, so a filter's number matches an int below a million), the
-guards in their order (an event caused by one of the automation's own
-runs, actor `agent:<run>`, then the cooldown, then the hourly cap), the
-prompt variables, the run launched and the `last_run_at` stamp, and that
-`Start` subscribes to the event bus. `TestRunNowCopy` in `internal/api`
-pins run-now's copy (`Manual run of automation: <name>`, the caller as
-launcher, no guard and no stamp), and `TestSchedulersShareTheRealClaim`
-in `internal/persistence/postgres` races two real schedulers on the real
-claim when `OPENV_TEST_DATABASE_URL` is set (both CI legs run it). There
-is no golden: a change to any of this fails an expectation in these tests,
-which the pull request then changes with it. The scheduler and matcher
-read the clock themselves, so the tests check each time they stamp against
-the window of the call. These test files are guard code (`GUARD_CODE` row
-S11 in `scripts/refactor/refactor_guard.py`): a refactor pull request may
-change them only in a class C or T commit.
+trigger matcher's tests pin the event filter (two numbers compared as
+numbers, any other pair as `fmt` prints it), the guards in their order (an
+event caused by one of the automation's own runs, actor `agent:<run>`,
+then the cooldown, then the hourly cap; a guard whose lookup fails holds
+the automation back), the prompt variables, the run launched and the
+`last_run_at` stamp, and that `Start` subscribes to the event bus.
+`TestRunNowCopy` in `internal/api` pins run-now's copy (`Manual run of
+automation: <name>`, the caller as launcher, no guard and no stamp), and
+`TestSchedulersShareTheRealClaim` in `internal/persistence/postgres` races
+two real schedulers on the real claim when `OPENV_TEST_DATABASE_URL` is
+set (both CI legs run it). There is no golden: a change to any of this
+fails an expectation in these tests, which the pull request then changes
+with it. The scheduler and matcher read the clock themselves, so the tests
+check each time they stamp against the window of the call. These test
+files are guard code (`GUARD_CODE` row S11 in
+`scripts/refactor/refactor_guard.py`): a refactor pull request may change
+them only in a class C or T commit.
 
 Five repositories in `internal/persistence/postgres` have Postgres round
 trips of their own (refactor plan step S15b, OpenV REQ-23): the team

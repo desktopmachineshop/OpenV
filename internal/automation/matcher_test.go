@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -23,14 +24,17 @@ import (
 // to the window of the call.
 
 // TestMatcherEventFilters pins the event filter: every key must be in the
-// event's payload, and its value must print (fmt %v) as the filter's does,
-// so a filter compares strings. Filters come from jsonb, so a number is a
-// float64, while publishers send Go values (string, int, bool and []string,
-// S6's event_payload_types.txt): an integral filter number matches an int
-// below a million, and from a million on it prints as 1e+06 and never
-// matches; a number, a bool and their strings match each other; a null
-// matches a nil value but not a missing key; and a list matches a []string
-// with the same items. A filter that does not match consults no guard.
+// event's payload, and its value must equal the filter's. Filters come from
+// jsonb, so a number is a float64, while publishers send Go values (string,
+// int, bool and []string, S6's event_payload_types.txt). A filter number and
+// a payload number of any Go integer or float type match when they are equal
+// as numbers, so from a million on too, where the filter's prints as 1e+06
+// (the regression test for bug 75 of issue #379: it compared fmt %v text, so
+// such a filter never matched an int). Any other pair matches when both print
+// (fmt %v) alike, as before: a number, a bool and their strings match each
+// other; a null matches a nil value but not a missing key; and a list matches
+// a []string with the same items. A filter that does not match consults no
+// guard.
 func TestMatcherEventFilters(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -51,8 +55,19 @@ func TestMatcherEventFilters(t *testing.T) {
 		{"a number against an equal float", `{"version":2}`, map[string]interface{}{"version": 2.0}, true},
 		{"a number against its string", `{"version":2}`, map[string]interface{}{"version": "2"}, true},
 		{"999999 against the int", `{"version":999999}`, map[string]interface{}{"version": 999999}, true},
-		{"a million against the int", `{"version":1000000}`, map[string]interface{}{"version": 1000000}, false},
+		{"a million against the int", `{"version":1000000}`, map[string]interface{}{"version": 1000000}, true},
+		{"a million against another int", `{"version":1000000}`, map[string]interface{}{"version": 1000001}, false},
+		{"1e6 against the int", `{"version":1e6}`, map[string]interface{}{"version": 1000000}, true},
+		{"a million and a half against an int64", `{"size":1500000}`, map[string]interface{}{"size": int64(1500000)}, true},
+		{"a large negative number against the int", `{"delta":-2500000}`, map[string]interface{}{"delta": -2500000}, true},
+		{"ten million against a uint", `{"count":10000000}`, map[string]interface{}{"count": uint(10000000)}, true},
+		{"a large number against an int32", `{"count":20000000}`, map[string]interface{}{"count": int32(20000000)}, true},
+		{"a large number against an equal float", `{"ratio":2500000}`, map[string]interface{}{"ratio": 2500000.0}, true},
+		{"a large fraction against the int below it", `{"version":1000000.5}`, map[string]interface{}{"version": 1000000}, false},
+		{"a million against a json.Number", `{"version":1000000}`, map[string]interface{}{"version": json.Number("1000000")}, true},
 		{"a million against 1e+06", `{"version":1000000}`, map[string]interface{}{"version": "1e+06"}, true},
+		{"a million against its digits", `{"version":1000000}`, map[string]interface{}{"version": "1000000"}, false},
+		{"a fraction against a float32 that prints alike", `{"ratio":0.1}`, map[string]interface{}{"ratio": float32(0.1)}, true},
 		{"true against true", `{"review_round":true}`, map[string]interface{}{"review_round": true}, true},
 		{"true against false", `{"review_round":true}`, map[string]interface{}{"review_round": false}, false},
 		{"false against false", `{"review_round":false}`, map[string]interface{}{"review_round": false}, true},
@@ -93,10 +108,13 @@ func TestMatcherEventFilters(t *testing.T) {
 // TestMatcherSelfTriggerSkip pins the loop guard, the first guard: an
 // automation does not fire on an event whose actor is agent:<run> when that
 // run is the automation's own (its automation_id; run-now's runs carry it
-// too). It looks the run up only for an agent: actor, and a run it cannot
-// find, one of another automation or one of none does not hold it back. The
-// skip is per automation: another automation fires on the same event. A
-// skipped automation asks no further guard and is not stamped.
+// too). It looks the run up only for an agent: actor, and a run no row has
+// (agentruns.ErrNotFound), one of another automation or one of none does
+// not hold it back. A lookup that fails otherwise holds it back and logs
+// one line, since the guard cannot tell (fail closed: the regression test
+// for bug 78 of issue #379, decided under Q36; it fired). The skip is per
+// automation: another automation fires on the same event. A skipped
+// automation asks no further guard and is not stamped.
 func TestMatcherSelfTriggerSkip(t *testing.T) {
 	runsByID := map[string]*agentruns.Run{
 		"run-own":     {ID: "run-own", OrgID: "org-1", AutomationID: strp("au-1")},
@@ -138,6 +156,28 @@ func TestMatcherSelfTriggerSkip(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("a lookup that fails", func(t *testing.T) {
+		logs := captureSlog(t)
+		a := onArtifacts("au-1", "Self")
+		a.MaxRunsPerHour = 10
+		repo := newMatcherRepo(a)
+		runs := newMatcherRuns()
+		runs.byID, runs.getErr = runsByID, errors.New("connection refused")
+		NewTriggerMatcher(repo, runs, matcherTeams{}).handle(artifactEvent("agent:run-sibling", nil))
+		if n := len(runs.requests()); n != 0 {
+			t.Errorf("launched %d runs, want none: a loop guard that cannot tell holds the automation back", n)
+		}
+		if len(runs.countsAsked()) != 0 || len(repo.marksMade()) != 0 {
+			t.Errorf("the skipped automation asked the hourly count %v and was stamped %v", runs.countsAsked(),
+				repo.marksMade())
+		}
+		want := []string{`level=WARN msg="triggers: automation skipped: self-trigger check failed" ` +
+			`automation_id=au-1 run_id=run-sibling error="connection refused"`}
+		if got := logs.lines(); !equalLines(got, want) {
+			t.Errorf("logged %q, want %q", got, want)
+		}
+	})
 
 	t.Run("the skip is per automation", func(t *testing.T) {
 		captureSlog(t)
@@ -219,10 +259,13 @@ func TestMatcherCooldown(t *testing.T) {
 // max_runs_per_hour above 0 asks the run service how many runs it has had
 // since an hour before now (agentruns' CountRunsSince, by automation id),
 // and does not fire once that count reaches the cap, logging one line at
-// Info; a cap of 0 or below asks nothing, and a count the service cannot
-// give does not hold it back.
+// Info; a cap of 0 or below asks nothing. A count the service cannot give
+// holds it back too, logging one line at Warn (fail closed: the regression
+// test for bug 78 of issue #379, decided under Q36; it fired).
 func TestMatcherHourlyCap(t *testing.T) {
 	const capped = `level=INFO msg="triggers: automation hit max_runs_per_hour" automation_id=au-1 max_runs_per_hour=3`
+	const uncounted = `level=WARN msg="triggers: automation skipped: hourly run count failed" automation_id=au-1 ` +
+		`error=timeout`
 	cases := []struct {
 		name    string
 		cap     int
@@ -235,7 +278,8 @@ func TestMatcherHourlyCap(t *testing.T) {
 		{name: "below the cap", cap: 3, count: 2, fires: true, counted: true},
 		{name: "at the cap", cap: 3, count: 3, counted: true, logs: []string{capped}},
 		{name: "over the cap", cap: 3, count: 7, counted: true, logs: []string{capped}},
-		{name: "a count that fails", cap: 3, count: 9, err: errors.New("timeout"), fires: true, counted: true},
+		{name: "a count that fails", cap: 3, count: 0, err: errors.New("timeout"), counted: true,
+			logs: []string{uncounted}},
 		{name: "no cap", cap: 0, count: 99, fires: true},
 		{name: "a negative cap", cap: -1, count: 99, fires: true},
 	}
@@ -275,7 +319,8 @@ func TestMatcherHourlyCap(t *testing.T) {
 // each payload value that is a string, a fmt.Stringer, a float64, an int,
 // an int64 or a bool (fmt %v, so 1.5e+06); any other value (an int32, a
 // []string, nil) and any other placeholder render empty. A payload key
-// named type, entity_id or actor overrides the event's own variable. When
+// named type, entity_id or actor does not override the event's own
+// variable (the regression test for bug 76 of issue #379: it did). When
 // the render is empty or only whitespace, the prompt is a fixed sentence
 // naming the automation (%q), the event type and the entity.
 func TestMatcherPromptVariables(t *testing.T) {
@@ -298,7 +343,8 @@ func TestMatcherPromptVariables(t *testing.T) {
 		{"every variable", everything, payload,
 			`Pump "watch"|artifact.created|art-1|user:u-1|proj-1|Pump spec|3|42|0.5|1.5e+06|true|stamp 7||||||||`},
 		{"payload keys named like the event's variables", "{{event.type}} {{event.entity_id}} {{event.actor}}",
-			map[string]interface{}{"type": "requirement", "entity_id": "req-9", "actor": 5}, "requirement req-9 5"},
+			map[string]interface{}{"type": "requirement", "entity_id": "req-9", "actor": 5},
+			"artifact.created art-1 user:u-1"},
 		{"an empty template", "", payload, fallback},
 		{"a template of whitespace", " \n\t", payload, fallback},
 		{"a render of whitespace", "{{event.missing}} {{org.id}}", payload, fallback},
