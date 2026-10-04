@@ -2,10 +2,12 @@ package api
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -321,10 +323,15 @@ func TestClientIPTrustProxyIsABoolean(t *testing.T) {
 // mistyped hop count, which leaves every client behind the proxy on the
 // proxy's own rate-limit bucket, could go unreported for as long as nobody
 // signed in. The requests that read it again add no second warning.
+// bootSettingRuns numbers the runs of
+// TestNewHandlerNamesAMalformedPerRequestSettingAtBoot in this process.
+var bootSettingRuns atomic.Int64
+
 func TestNewHandlerNamesAMalformedPerRequestSettingAtBoot(t *testing.T) {
-	// Values no other test sets: internal/envparse warns once per variable
-	// and value for the life of the process.
-	const tag = " (TestNewHandlerNamesAMalformedPerRequestSettingAtBoot)"
+	// Values no other test, and no earlier run of this one (go test
+	// -count=2), sets: internal/envparse warns once per variable and value
+	// for the life of the process.
+	tag := fmt.Sprintf(" (TestNewHandlerNamesAMalformedPerRequestSettingAtBoot, run %d)", bootSettingRuns.Add(1))
 	malformed := map[string]string{
 		envTrustedHops:   "two" + tag,
 		envTrustProxy:    "yes" + tag,
