@@ -60,6 +60,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   on such a server is purged up to that offset early (west of UTC) or late
   (east of UTC).
 
+- **Agent runs keep time when the database is not set to UTC.** On a
+  self-hosted OpenV server whose PostgreSQL server, database or database
+  user is set to another time zone, or whose host sets `PGTZ`, the times
+  the database recorded itself, such as when an agent run was claimed,
+  cancelled or failed, or when a record was created, were that zone's
+  local time instead of UTC, and the checks comparing them were off by the
+  zone's offset. East of UTC, a run reserved for its launcher's own runner
+  went to a workspace runner at once, an automatic retry ran without
+  waiting, a runner that stopped was noticed hours late, and a cloud runner
+  lease counted its whole length against the workspace's minutes as soon
+  as it started. West of UTC, a run could be failed as "worker lost"
+  moments after a runner claimed it, while the runner was still preparing
+  it. OpenV now runs every database connection in UTC, whatever the
+  database's own setting.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features
