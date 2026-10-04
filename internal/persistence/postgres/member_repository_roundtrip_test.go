@@ -32,9 +32,10 @@ func rtSeedPeopleTeam(t *testing.T, db *sql.DB, id, orgID, name string, userIDs 
 // keeps it (the wall clock, to the microsecond, in lib/pq's zone at offset
 // 0), and Find joins no account, so the display fields stay empty. Upsert of
 // a membership the project has rewrites the role alone, keeping created_at,
-// and stores a role no one defined. An account no row has, a malformed
-// account id and a malformed project id are members.ErrUnknownUser; a
-// well-formed project no row has is the foreign key's refusal. A membership
+// and stores a role no one defined. An account no row has and a malformed
+// account id are members.ErrUnknownUser; a project no row has and a
+// malformed project id are members.ErrUnknownProject (#379 bug 90: the one
+// was the foreign key's refusal, the other "user not found"). A membership
 // no row has, and a malformed id, read as no membership and no error, and
 // Remove of either is no error.
 func TestMemberRepositoryRoundTrip(t *testing.T) {
@@ -85,15 +86,25 @@ func TestMemberRepositoryRoundTrip(t *testing.T) {
 				t.Errorf("Upsert of the account %q: %v, want members.ErrUnknownUser", id, err)
 			}
 		}
-		for _, id := range malformedIDs {
+		for _, id := range append([]string{uuid.New().String()}, malformedIDs...) {
 			if err := repo.Upsert(&members.Member{ProjectID: id, UserID: userID, Role: members.RoleViewer,
-				CreatedAt: rtAt(0)}); err != members.ErrUnknownUser {
-				t.Errorf("Upsert in the malformed project %q: %v, want members.ErrUnknownUser", id, err)
+				CreatedAt: rtAt(0)}); err != members.ErrUnknownProject {
+				t.Errorf("Upsert in the project %q, which no row has: %v, want members.ErrUnknownProject", id, err)
 			}
 		}
-		err := repo.Upsert(&members.Member{ProjectID: uuid.New().String(), UserID: userID, Role: members.RoleViewer,
-			CreatedAt: rtAt(0)})
-		rtWantPQ(t, "Upsert in a project no row has", err, "23503", "project_members_project_id_fkey")
+		for _, id := range malformedIDs {
+			// A malformed project is the project's not-found whatever the
+			// account (a well-formed one no row has, beside an account no row
+			// has, is whichever foreign key Postgres checks first).
+			if err := repo.Upsert(&members.Member{ProjectID: id, UserID: malformed, Role: members.RoleViewer,
+				CreatedAt: rtAt(0)}); err != members.ErrUnknownProject {
+				t.Errorf("Upsert of a malformed account in the malformed project %q: %v, want members.ErrUnknownProject", id, err)
+			}
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM project_members`).Scan(&n); err != nil || n != 1 {
+			t.Errorf("memberships after the refused upserts: %d (%v), want the one", n, err)
+		}
 	})
 
 	t.Run("not found", func(t *testing.T) {

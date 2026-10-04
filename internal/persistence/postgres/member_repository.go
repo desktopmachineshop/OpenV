@@ -16,15 +16,24 @@ func NewMemberRepository(db *sql.DB) *MemberRepository {
 	return &MemberRepository{db: db}
 }
 
-// Upsert inserts or updates a membership. An account no row has, or an id
-// that is not a UUID, is members.ErrUnknownUser.
+// Upsert inserts or updates a membership. A project no row has, or a
+// project id that is not a UUID, is members.ErrUnknownProject; an account no
+// row has, or an account id that is not a UUID, is members.ErrUnknownUser.
+// The project is asked first, so a malformed project id is never taken for
+// the account's (#379 bug 90).
 func (r *MemberRepository) Upsert(m *members.Member) error {
+	if !isUUID(m.ProjectID) {
+		return members.ErrUnknownProject
+	}
 	_, err := r.db.Exec(`
 		INSERT INTO project_members (project_id, user_id, role, created_at)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role
 	`, m.ProjectID, m.UserID, m.Role, m.CreatedAt)
-	if malformedID(err) || foreignKeyViolation(err, "project_members_user_id_fkey") {
+	switch {
+	case foreignKeyViolation(err, "project_members_project_id_fkey"):
+		return members.ErrUnknownProject
+	case malformedID(err) || foreignKeyViolation(err, "project_members_user_id_fkey"):
 		return members.ErrUnknownUser
 	}
 	return err
