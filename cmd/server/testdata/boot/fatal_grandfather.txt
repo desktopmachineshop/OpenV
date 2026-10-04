@@ -20,6 +20,7 @@ OPENV_BILLING_GRANDFATHER_BEFORE=2026-01-01
 level=INFO msg="using DATABASE_URL (Railway.app mode)"
 level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
 level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
+level=INFO msg="upload sweep: done" dir=<tmp>/uploads removed=0 logos_removed=0 avatars_removed=0 bytes=0 failed=0 kept_recent=0 named=0
 level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
 level=ERROR msg="OPENV_BILLING_GRANDFATHER_BEFORE must be an RFC 3339 date-time" error="parsing time \"2026-01-01\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"\" as \"T\""
 

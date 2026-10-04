@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // captureSweepLog sends slog's default logger to a buffer for the test.
@@ -21,13 +23,18 @@ func captureSweepLog(t *testing.T) *bytes.Buffer {
 }
 
 // OPENV_UPLOAD_SWEEP=off skips the sweep (#379 question 55): no file goes,
-// boot_tasks records nothing, and the log says the sweep is off. The first
-// boot without the setting then sweeps, once.
+// in the uploads directory, org-logos/ or avatars/, boot_tasks records
+// nothing, and the log says the sweep is off. The first boot without the
+// setting then sweeps, once.
 func TestTheUploadSweepOffRemovesAndRecordsNothing(t *testing.T) {
 	f := newSweepFixture(t)
 	log := captureSweepLog(t)
 	f.figure(f.file(storedName("named.png"), 2*time.Hour))
 	orphans := []string{f.file(storedName("orphan.png"), 2*time.Hour), f.file(evidenceName(), 2*time.Hour)}
+	for _, d := range imageDirs {
+		f.owned(d.name, d.owner)
+		orphans = append(orphans, f.image(d.name, uuid.New().String()+".png", 2*time.Hour))
+	}
 
 	sweepUnreferencedUploads(f.db, f.dir, f.began, false)
 	f.wantKept("a file no row names, with the sweep off,", orphans...)
@@ -43,7 +50,7 @@ func TestTheUploadSweepOffRemovesAndRecordsNothing(t *testing.T) {
 	if _, ok := f.recorded(); !ok {
 		t.Error("the sweep was not recorded once it ran")
 	}
-	later := f.file(storedName("after the sweep.png"), 2*time.Hour)
+	later := f.image("org-logos", uuid.New().String()+".png", 2*time.Hour)
 	f.sweep()
-	f.wantKept("a file no row names, left after the sweep ran,", later)
+	f.wantKept("a logo no row owns, left after the sweep ran,", later)
 }

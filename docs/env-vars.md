@@ -80,7 +80,7 @@ buckets live in the API process, so they assume a single API instance.
 | Variable | Read by | Default | What it does |
 |---|---|---|---|
 | `OPENV_MAX_UPLOAD_MB` | server | none: the workspace plan's `max_upload_mb` | Cap on one figure upload, in MB, overriding every workspace's plan limit. Read on each upload. |
-| `OPENV_UPLOAD_SWEEP` | server | `true` | `off` skips the boot's once-per-database sweep of the stored files no record names in `UPLOADS_DIR`, and records nothing, so the first boot without the setting sweeps. Set it on any deployment that shares its uploads directory with another. Takes `on` or `off` in any case, or `true`, `false`, `1` or `0`. |
+| `OPENV_UPLOAD_SWEEP` | server | `true` | `off` skips the boot's once-per-database sweep of the stored files no record names, in `UPLOADS_DIR` and its `org-logos/` and `avatars/`, and records nothing, so the first boot without the setting sweeps. Set it on any deployment that shares its uploads directory with another. Takes `on` or `off` in any case, or `true`, `false`, `1` or `0`. |
 | `UPLOADS_DIR` | server | `./uploads` (the report renderer's own read has none: contract quirk Q12) | Where attachment and figure files are stored; created at start-up. |
 
 ### tenancy-identity

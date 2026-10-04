@@ -33,7 +33,8 @@ import (
 //     recorded (question 55);
 //   - at the boot after, as on the first boot after this update on a
 //     database from before it, the sweep removes the stored files no row
-//     names and keeps the rest (question 48); and the purge, at start,
+//     names, a logo no workspace has and a picture no account has, and
+//     keeps the rest (questions 48 and 56); and the purge, at start,
 //     removes the files of the workspace it purges, its figures with every
 //     version, its evidence and its logo (bug 143: they all stayed);
 //   - the boot after that sweeps no more: a file no row names is kept.
@@ -228,10 +229,20 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 		t.Fatalf("stored before the purge: %q, want four files (two versions of a figure, an evidence file, the logo)", workspaceFiles)
 	}
 
-	// Question 48: what deletes before this update left behind, on a
-	// database the sweep has not yet run on (the first boot after the
+	// The account's own profile picture, which stays.
+	var me struct {
+		ID string `json:"id"`
+	}
+	upload("/api/v1/me/avatar", "me.png", "image/png", picture(60), nil, &me)
+	avatar := "avatars/" + me.ID + ".png"
+
+	// Questions 48 and 56: what deletes before this update left behind, on
+	// a database the sweep has not yet run on (the first boot after the
 	// update on a database from before it), and what is not the server's.
-	orphans := []string{plant(uuid.New().String() + "_deleted project.png"), plant("evidence-" + uuid.New().String())}
+	orphans := []string{
+		plant(uuid.New().String() + "_deleted project.png"), plant("evidence-" + uuid.New().String()),
+		plant("org-logos/" + uuid.New().String() + ".png"), plant("avatars/" + uuid.New().String() + ".webp"),
+	}
 	notOurs := plant("operator notes.txt")
 	exec(`DELETE FROM boot_tasks`)
 
@@ -252,7 +263,7 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 	// Bug 143: the workspace was deleted 31 days ago.
 	exec(`UPDATE organizations SET deleted_at = NOW() - INTERVAL '31 days' WHERE id = $1`, workspaces.ActiveOrg)
 	reboot(nil)
-	want := []string{notOurs}
+	want := []string{avatar, notOurs}
 	deadline := time.Now().Add(15 * time.Second)
 	for got := stored(); len(got) > len(want) && time.Now().Before(deadline); got = stored() {
 		time.Sleep(100 * time.Millisecond) // the purge runs in a goroutine at start
@@ -267,7 +278,10 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 			t.Errorf("the boot log does not name %s as removed by the sweep:\n%s", name, log)
 		}
 	}
-	for _, line := range []string{`msg="upload sweep: done"`, " removed=2 bytes=22 "} {
+	for _, line := range []string{
+		`msg="upload sweep: removed a logo no workspace has"`, `msg="upload sweep: removed a profile picture no account has"`,
+		`msg="upload sweep: done"`, " removed=2 logos_removed=1 avatars_removed=1 bytes=44 ",
+	} {
 		if !strings.Contains(log, line) {
 			t.Errorf("the boot log does not hold %s:\n%s", line, log)
 		}
@@ -279,7 +293,7 @@ func TestStoredFilesLeaveWithTheirRows(t *testing.T) {
 	// The sweep ran once: a file no row names, left after it, stays.
 	later := plant(uuid.New().String() + "_after the sweep.png")
 	reboot(nil)
-	if got := stored(); len(got) != 2 || !strings.Contains(strings.Join(got, "\n"), later) {
+	if got := stored(); len(got) != 3 || !strings.Contains(strings.Join(got, "\n"), later) {
 		t.Errorf("stored after the next boot: %q, want %q kept beside %q", got, later, want)
 	}
 	if strings.Contains(string(s.stderr.Bytes()), "upload sweep") {

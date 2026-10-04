@@ -31,9 +31,10 @@ func (a *app) storage() {
 	}
 	// Once per database, after the migrations: the stored files no row
 	// names, which deletes and purges before #379's bugs 136, 143 and 145
-	// were fixed left behind, are removed (#379 question 48), unless
-	// OPENV_UPLOAD_SWEEP is off (question 55). It fails safe, under the
-	// same advisory lock, and never fails the boot.
+	// were fixed left behind, are removed (#379 question 48), logos and
+	// profile pictures included (question 56), unless OPENV_UPLOAD_SWEEP is
+	// off (question 55). It fails safe, under the same advisory lock, and
+	// never fails the boot.
 	sweepUnreferencedUploads(a.db, a.uploadsDir, began, a.uploadSweep)
 
 	// Repositories.

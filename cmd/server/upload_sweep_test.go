@@ -187,9 +187,14 @@ func TestTheUploadSweepRemovesOnlyStoredFilesNoRowNames(t *testing.T) {
 		f.file("evidence-"+uuid.New().String()+".log", old),
 	}
 	ourDir, emptyDir := filepath.Join(f.dir, storedName("a directory.png")), filepath.Join(f.dir, storedName("an empty directory.png"))
-	inSubdirectories := []string{
+	// The logos and pictures have rules of their own
+	// (upload_sweep_images_test.go): here the database names none, so
+	// neither directory is swept.
+	images := []string{
 		f.file(filepath.Join("org-logos", f.org+".png"), old),
 		f.file(filepath.Join("avatars", uuid.New().String()+".png"), old),
+	}
+	inSubdirectories := []string{
 		f.file(filepath.Join(filepath.Base(ourDir), storedName("inside.png")), old),
 		ourDir, emptyDir,
 	}
@@ -224,6 +229,7 @@ func TestTheUploadSweepRemovesOnlyStoredFilesNoRowNames(t *testing.T) {
 	f.wantKept("a stored file changed within the hour", recent, future)
 	f.wantKept("a file not named as a stored upload", notOurs...)
 	f.wantKept("a directory, or a file in one,", inSubdirectories...)
+	f.wantKept("a logo or picture, the database naming none,", images...)
 	f.wantKept("a symlink, or what it points at,", link, outside)
 	outcome, ok := f.recorded()
 	if !ok || !strings.HasPrefix(outcome, "removed 3 stored files (36 bytes) no row names from ") {
@@ -307,7 +313,7 @@ func TestTheUploadSweepRemovesNothingWhenTheDatabaseNamesNoFile(t *testing.T) {
 	f.sweep()
 	f.wantKept("a stored file, when the database names none,", orphans...)
 	if outcome, ok := f.recorded(); !ok || !strings.HasPrefix(outcome, "nothing removed: the database names no figure or evidence file") ||
-		!strings.HasSuffix(outcome, "its 2 stored files are kept") {
+		!strings.Contains(outcome, "its 2 stored files are kept;") {
 		t.Errorf("the sweep's record: %q, %v; want it recorded as removing nothing of two files", outcome, ok)
 	}
 }
@@ -322,14 +328,14 @@ func TestTheUploadSweepChecksAFileAgainBeforeRemovingIt(t *testing.T) {
 	stubborn := f.file(storedName("stubborn.png"), 2*time.Hour)
 	// The listing's answer stays, but the file is no longer one to remove
 	// by the time the sweep comes to it: it is checked again first.
-	outcome, err := sweepUploads(f.dir, f.began.Add(-uploadSweepMargin), func() ([]string, error) {
+	outcome, err := sweepUploads(f.dir, f.began.Add(-uploadSweepMargin), func() (postgres.StoredFileNames, error) {
 		if err := os.Remove(stubborn); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Mkdir(stubborn, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		return postgres.StoredFileReferences(f.db)
+		return postgres.ReadStoredFileNames(f.db)
 	})
 	if err != nil {
 		t.Fatalf("sweepUploads: %v", err)

@@ -27,7 +27,7 @@ long form. `go run ./internal/tools/areas which <path>` names a file's area.
 |---|---|
 | `*_repository*.go` | one repository per domain `Repository` interface, built by `New<Name>Repository(db)`; a large one is split by concern (`org_repository_*.go`) |
 | `db.go`, `connstring.go` | `Connect` and the connection string (`DATABASE_URL`, else the quoted `DB_*` parts) |
-| `db_stored_files.go`, `db_boot_tasks.go` | the stored files a delete answers (`storedFiles`) and every path the database names (`StoredFileReferences`); `RunBootTaskOnce`, a boot's once-per-database task under the boot lock (`boot_tasks`) |
+| `db_stored_files.go`, `db_boot_tasks.go` | the stored files a delete answers (`storedFiles`) and every path, workspace and account the database names (`ReadStoredFileNames`); `RunBootTaskOnce`, a boot's once-per-database task under the boot lock (`boot_tasks`) |
 | `schema_*.go` and `InitSchema` in `db.go` | migration 0001, the baseline re-run on every boot; frozen |
 | `migrations.go` | the `Migration` type and `migrations`, the explicit, ordered registry: one line per version |
 | `migration_00*_*.go` | one numbered migration each: `func m00NN<Name>(tx *sql.Tx) error` |

@@ -65,18 +65,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Files left behind by earlier deletes are cleared once.** The figure
   and evidence files of projects deleted, workspaces purged and figure
   versions deleted before this update stayed stored on the server, though
-  nothing in OpenV could reach them any more. The first time the server
-  starts after this update, it removes them, once. It removes only files it
-  can be sure are its own uploads that nothing refers to, last changed more
-  than an hour before it started; when it cannot be sure, for example
-  because the files it knows of are not in the uploads folder, it removes
-  nothing. If you run OpenV yourself, each file removed is noted in the
-  server's log, under "upload sweep", with a summary at the end; and if
-  your uploads folder is shared with another OpenV server, set
-  `OPENV_UPLOAD_SWEEP=off` before you update, so that this server leaves
-  the other's files alone. With it off, nothing is swept, and the first
-  start without it sweeps. Some records earlier purges left, which
-  numbered the figures of artifacts that no longer exist, are removed too.
+  nothing in OpenV could reach them any more, and so did the logo of every
+  workspace purged before it. The first time the server starts after this
+  update, it removes them, once, and with them any profile picture whose
+  account is gone. It removes only files it can be sure are its own
+  uploads that nothing refers to, last changed more than an hour before it
+  started; when it cannot be sure, for example because the files it knows
+  of are not in the uploads folder, it removes nothing there. A deleted
+  workspace still in its 30 days keeps its logo. If you run OpenV
+  yourself, each file removed is noted in the server's log, under "upload
+  sweep", with a summary at the end; and if your uploads folder is shared
+  with another OpenV server, set `OPENV_UPLOAD_SWEEP=off` before you
+  update, so that this server leaves the other's files alone. With it off,
+  nothing is swept, and the first start without it sweeps. Some records
+  earlier purges left, which numbered the figures of artifacts that no
+  longer exist, are removed too.
 
 - **A figure no longer has an unused place for a test result.** The
   stored record of every figure had room to name a test result, for test

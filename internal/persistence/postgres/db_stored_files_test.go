@@ -7,16 +7,22 @@ import (
 	"github.com/google/uuid"
 )
 
-// StoredFileReferences answers every stored file a row names, each once and
+// ReadStoredFileNames answers every stored file a row names, each once and
 // sorted: a figure's current file and every version's, an evidence file, a
-// workspace logo and a profile picture, under the path the row holds; and an
-// error, with no path, when it cannot read them all (#379 question 48).
-func TestStoredFileReferencesNamesEveryStoredFile(t *testing.T) {
+// workspace logo and a profile picture, under the path the row holds (#379
+// question 48); and every workspace, a soft-deleted one's included, and
+// every account, by id, with its logo or picture (question 56). When it
+// cannot read them all it answers the error and nothing else.
+func TestReadStoredFileNamesNamesEveryStoredFileAndOwner(t *testing.T) {
 	db := rtDB(t)
 	org, user, project, artifact, attachment, bundle := uuid.New().String(), uuid.New().String(), uuid.New().String(),
 		uuid.New().String(), uuid.New().String(), uuid.New().String()
+	deletedOrg, plainUser := uuid.New().String(), uuid.New().String()
 	rtSeedOrg(t, db, org)
+	rtSeedOrg(t, db, deletedOrg)
+	rtSeed(t, db, `UPDATE organizations SET deleted_at = NOW() WHERE id = $1`, deletedOrg)
 	rtSeedUser(t, db, user, "pic@example.com", "Pic", "")
+	rtSeedUser(t, db, plainUser, "plain@example.com", "Plain", "")
 	rtSeed(t, db, `UPDATE organizations SET logo_path = '/u/org-logos/o.png' WHERE id = $1`, org)
 	rtSeed(t, db, `UPDATE users SET avatar_path = 'uploads/avatars/u.png' WHERE id = $1`, user)
 	rtSeed(t, db, `INSERT INTO projects (id, org_id, name) VALUES ($1, $2, 'P')`, project, org)
@@ -31,17 +37,33 @@ func TestStoredFileReferencesNamesEveryStoredFile(t *testing.T) {
 	rtSeed(t, db, `INSERT INTO evidence_files (id, bundle_id, filename, file_path, created_at) VALUES ($1, $2, 'b.log', '/u/evidence-1', NOW())`,
 		uuid.New().String(), bundle)
 
-	got, err := StoredFileReferences(db)
+	got, err := ReadStoredFileNames(db)
 	if err != nil {
-		t.Fatalf("StoredFileReferences: %v", err)
+		t.Fatalf("ReadStoredFileNames: %v", err)
 	}
 	want := []string{"/u/evidence-1", "/u/org-logos/o.png", "/u/v2_f.png", "uploads/avatars/u.png", "uploads/v1_f.png"}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("StoredFileReferences = %q, want %q", got, want)
+	if !reflect.DeepEqual(got.Paths, want) {
+		t.Errorf("ReadStoredFileNames paths = %q, want %q", got.Paths, want)
+	}
+	byID := func(owners []ImageOwner) map[string]string {
+		m := map[string]string{}
+		for _, o := range owners {
+			m[o.ID] = o.Path
+		}
+		return m
+	}
+	if w := byID(got.Workspaces); len(w) != 2 || w[org] != "/u/org-logos/o.png" || w[deletedOrg] != "" {
+		t.Errorf("ReadStoredFileNames workspaces = %v, want %s with its logo and the soft-deleted %s", got.Workspaces, org, deletedOrg)
+	}
+	if a := byID(got.Accounts); len(a) != 2 || a[user] != "uploads/avatars/u.png" || a[plainUser] != "" {
+		t.Errorf("ReadStoredFileNames accounts = %v, want %s with its picture and %s with none", got.Accounts, user, plainUser)
 	}
 
-	rtSeed(t, db, `ALTER TABLE attachment_versions RENAME TO attachment_versions_away`)
-	if got, err := StoredFileReferences(db); err == nil || got != nil {
-		t.Errorf("StoredFileReferences with a table it cannot read = %q, %v; want no path and the error", got, err)
+	for _, table := range []string{"attachment_versions", "users"} {
+		rtSeed(t, db, `ALTER TABLE `+table+` RENAME TO `+table+`_away`)
+		if got, err := ReadStoredFileNames(db); err == nil || got.Paths != nil || got.Workspaces != nil || got.Accounts != nil {
+			t.Errorf("ReadStoredFileNames with %s unreadable = %+v, %v; want nothing and the error", table, got, err)
+		}
+		rtSeed(t, db, `ALTER TABLE `+table+`_away RENAME TO `+table)
 	}
 }
