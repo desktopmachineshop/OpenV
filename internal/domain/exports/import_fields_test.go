@@ -30,15 +30,16 @@ import (
 //
 //   - carried: changing the field in the imported document changes what the
 //     import writes, and the line names what it reaches (the new project, its
-//     product profile, an artifact or a link, by JSON key);
+//     product profile, an artifact, a link or an attribute definition, by
+//     JSON key);
 //   - dropped: the import writes exactly the same with the field changed.
 //
 // The class is not declared by hand: TestImportFields measures it. It builds
 // one document with every field set (a field a later change adds is filled
 // by reflection, so it needs no edit here), imports it into recording fakes
-// over the real artifact service, then, field by field, imports the same
-// document with that one field changed and compares what was written, ids the
-// import mints and times it stamps aside. A field added to ProjectExport, or
+// under the real artifact and attribute services, then, field by field,
+// imports the same document with that one field changed and compares what
+// was written, ids the import mints and times it stamps aside. A field added to ProjectExport, or
 // to a type it reaches, is therefore a new line the golden lacks: the test
 // fails, naming the field and what the import does with it, until the golden
 // is regenerated, where the import mapper (createProjectFromExport and
@@ -341,6 +342,11 @@ var importFieldsVariants = map[string]func(doc *ProjectExport){
 	"artifacts[].ref":           func(doc *ProjectExport) { doc.Artifacts[1].Ref = "REQ-9" },
 	"artifacts[].status":        func(doc *ProjectExport) { doc.Artifacts[1].Status = "in_review" },
 	"attachments[].artifact_id": func(doc *ProjectExport) { doc.Attachments[0].ArtifactID = "a3" },
+	// A definition's key, data type and type take other valid values, so
+	// what changes is the definition written rather than whether it is.
+	"attribute_definitions[].key":             func(doc *ProjectExport) { doc.AttributeDefs[0].Key = "hazard_level" },
+	"attribute_definitions[].data_type":       func(doc *ProjectExport) { doc.AttributeDefs[0].DataType = "text" },
+	"attribute_definitions[].applies_to_type": func(doc *ProjectExport) { doc.AttributeDefs[0].AppliesToType = "test-case" },
 }
 
 // renameArtifact gives an artifact another id and follows it everywhere the
@@ -481,12 +487,30 @@ func (s *fieldsProductService) UpdateProfile(_ string, req products.UpdateProfil
 	return &products.ProductProfile{}, nil
 }
 
+// fieldsAttributeRepo stores what the real attribute service saves; the
+// workspace has no definitions of its own.
+type fieldsAttributeRepo struct {
+	attributes.Repository
+	created []*attributes.Definition
+}
+
+func (r *fieldsAttributeRepo) Create(d *attributes.Definition) error {
+	r.created = append(r.created, d)
+	return nil
+}
+
+func (r *fieldsAttributeRepo) ListByOrg(string) ([]*attributes.Definition, error) { return nil, nil }
+func (r *fieldsAttributeRepo) ListByProject(string) ([]*attributes.Definition, error) {
+	return nil, nil
+}
+
 // importWrites is everything one import wrote, in the order it wrote it.
 type importWrites struct {
-	Project   []*projects.Project             `json:"project"`
-	Profile   []products.UpdateProfileRequest `json:"profile"`
-	Artifacts []*artifacts.Artifact           `json:"artifact"`
-	Links     []*links.Link                   `json:"link"`
+	Project     []*projects.Project             `json:"project"`
+	Profile     []products.UpdateProfileRequest `json:"profile"`
+	Artifacts   []*artifacts.Artifact           `json:"artifact"`
+	Links       []*links.Link                   `json:"link"`
+	Definitions []*attributes.Definition        `json:"definition"`
 }
 
 var (
@@ -510,15 +534,17 @@ func importDocument(t *testing.T, doc *ProjectExport) map[string]interface{} {
 	linkSvc := &fieldsLinkService{}
 	projSvc := &fieldsProjectService{}
 	prodSvc := &fieldsProductService{}
+	attrRepo := &fieldsAttributeRepo{}
 	svc := NewService(artifacts.NewDefaultService(repo), linkSvc, nil, nil, projSvc)
 	svc.SetProductService(prodSvc)
+	svc.SetAttributeService(attributes.NewDefaultService(attrRepo, artifacts.ValidType))
 	before := time.Now()
 	if _, err := svc.ImportProject(raw, "org-import"); err != nil {
 		t.Fatalf("ImportProject: %v", err)
 	}
 	after := time.Now()
 	written, err := json.Marshal(importWrites{Project: projSvc.created, Profile: prodSvc.updates,
-		Artifacts: repo.saved, Links: linkSvc.created})
+		Artifacts: repo.saved, Links: linkSvc.created, Definitions: attrRepo.created})
 	if err != nil {
 		t.Fatalf("marshal what the import wrote: %v", err)
 	}
@@ -531,6 +557,9 @@ func importDocument(t *testing.T, doc *ProjectExport) map[string]interface{} {
 	}
 	for i, l := range linkSvc.created {
 		ids[l.ID] = fmt.Sprintf("<link %d>", i+1)
+	}
+	for i, d := range attrRepo.created {
+		ids[d.ID] = fmt.Sprintf("<definition %d>", i+1)
 	}
 	text := importFieldsUUID.ReplaceAllStringFunc(string(written), func(id string) string {
 		if _, ok := ids[id]; !ok {
@@ -554,10 +583,11 @@ func importDocument(t *testing.T, doc *ProjectExport) map[string]interface{} {
 
 // reached lists the written keys whose values differ between two imports:
 // project.name, artifact.title, artifact.attributes.links_snapshot,
-// link.type. A written list that changed length is named by itself.
+// link.type, definition.label. A written list that changed length is named
+// by itself.
 func reached(base, varied map[string]interface{}) []string {
 	set := map[string]bool{}
-	for _, kind := range []string{"project", "profile", "artifact", "link"} {
+	for _, kind := range []string{"project", "profile", "artifact", "link", "definition"} {
 		b, _ := base[kind].([]interface{})
 		v, _ := varied[kind].([]interface{})
 		if len(b) != len(v) {
@@ -633,8 +663,9 @@ const importFieldsHeader = `# Every field reachable from exports.ProjectExport, 
 # it, and what the JSON import (POST /api/v1/projects/import, ImportProject:
 # a new project, refs kept) does with it (refactor plan S9, invariant I15).
 # "carried to" names what changing the field changes in what the import
-# writes: the project, its product profile, an artifact or a link, by JSON
-# key. "dropped" means the import writes the same whatever the field holds.
+# writes: the project, its product profile, an artifact, a link or an
+# attribute definition, by JSON key. "dropped" means the import writes the
+# same whatever the field holds.
 # Measured, not declared: TestImportFields imports a document with the one
 # field changed and compares the writes, minted ids and stamped times aside.
 # An id is renamed with its references, a relation moved to another artifact,

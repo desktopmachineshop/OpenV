@@ -59,7 +59,7 @@ links: 500 matched by ends and type, 0 in with an end outside the document, 0 in
   created_at: the round trip's clock 500
   from_id: remapped to the new ids 500
   id: a new id 500
-  suspect: equal 375, set to false 125
+  suspect: equal 500
   to_id: remapped to the new ids 500
   type: equal 500
   updated_at: the round trip's clock 500

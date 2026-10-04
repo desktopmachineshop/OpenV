@@ -57,7 +57,7 @@ links: 251 matched by ends and type, 0 in with an end outside the document, 0 in
   created_at: the round trip's clock 251
   from_id: remapped to the new ids 251
   id: a new id 251
-  suspect: equal 206, set to false 45
+  suspect: equal 251
   to_id: remapped to the new ids 251
   type: equal 251
   updated_at: the round trip's clock 251

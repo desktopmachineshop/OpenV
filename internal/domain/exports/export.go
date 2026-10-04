@@ -63,8 +63,9 @@ type ProjectExport struct {
 	// AttributeDefs carries the org/project attribute definitions effective for
 	// the project (Definitions). The ReqIF export and download load them to
 	// type enum attributes as ReqIF enumerations, and a baseline's snapshot
-	// keeps them (Snapshot, REQ-5); the live JSON, CSV and Excel exports leave
-	// it nil. A snapshot captured before baselines kept them has none.
+	// keeps them (Snapshot, REQ-5), which an import of it restores as the new
+	// project's own; the live JSON, CSV and Excel exports leave it nil. A
+	// snapshot captured before baselines kept them has none.
 	AttributeDefs []*attributes.Definition `json:"attribute_definitions,omitempty"`
 	// LinkedArtifacts describes the far end of every link that crosses into
 	// another project (REQ-145): enough to name a parent requirement a local
@@ -561,8 +562,8 @@ func (s *DefaultService) ImportProjectReqIF(data []byte, orgID string) (string, 
 
 // createProjectFromExport creates a new project owned by orgID and populates it
 // from a fully-parsed ProjectExport. It is the shared tail of the JSON and
-// ReqIF import paths: project creation, optional product-profile restore, and
-// the single-pass artifact/link import.
+// ReqIF import paths: project creation, optional product-profile and
+// attribute-definition restore, and the single-pass artifact/link import.
 func (s *DefaultService) createProjectFromExport(importData *ProjectExport, orgID string) (string, error) {
 	// Create a new project with the imported name and description
 	newProject := projects.NewProject(projects.CreateProjectRequest{
@@ -591,6 +592,12 @@ func (s *DefaultService) createProjectFromExport(importData *ProjectExport, orgI
 		}); err != nil {
 			slog.Warn("import: failed to restore product profile", slog.Any("error", err))
 		}
+	}
+
+	// Restore the attribute definitions the document records (a baseline's
+	// snapshot keeps them, REQ-5) before the artifacts they type.
+	if len(importData.AttributeDefs) > 0 && s.attributeService != nil {
+		s.restoreDefinitions(projectID, orgID, importData.AttributeDefs)
 	}
 
 	if _, err := s.importArtifactsAndLinks(projectID, importData, false, true); err != nil {
@@ -674,10 +681,14 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 			continue
 		}
 		newLink := links.NewLink(links.CreateLinkRequest{
-			FromID: newFromID,
-			ToID:   newToID,
-			Type:   link.Type,
+			FromID:     newFromID,
+			ToID:       newToID,
+			Type:       link.Type,
+			Attributes: link.Attributes,
 		})
+		// A link the document records as suspect still awaits its
+		// confirmation (issue #131).
+		newLink.Suspect = link.Suspect
 		newLinks = append(newLinks, newLink)
 		addToSnapshot(newFromID, newLink)
 		addToSnapshot(newToID, newLink)
@@ -688,6 +699,15 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 	// queries). parent_id has no FK, so insert order is free.
 	createdIDs := make([]string, 0, total)
 	for i, artifact := range importData.Artifacts {
+		// The status column is the review state; Attributes["status"] only
+		// mirrors it, and seeds it (in NewArtifact) for a document exported
+		// before the column existed.
+		if artifact.Status != "" {
+			if artifact.Attributes == nil {
+				artifact.Attributes = map[string]interface{}{}
+			}
+			artifact.Attributes["status"] = artifact.Status
+		}
 		if markDraft {
 			if artifact.Attributes == nil {
 				artifact.Attributes = map[string]interface{}{}
