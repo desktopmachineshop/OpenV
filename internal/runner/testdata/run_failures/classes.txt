@@ -26,6 +26,7 @@ siteAgentPolicy, no error -> agent_error
 "401" -> auth
 "403" -> auth
 "api key" -> auth
+"api keys" -> auth
 "authenticated" -> auth
 "authentication" -> auth
 "credential" -> auth
@@ -57,16 +58,23 @@ siteAgentPolicy, no error -> agent_error
 "internal server error" -> provider_unavailable
 "network error" -> provider_unavailable
 "network is unreachable" -> provider_unavailable
+"network timeout" -> provider_unavailable
+"network unreachable" -> provider_unavailable
 "no route to host" -> provider_unavailable
 "overload" -> provider_unavailable
 "overloaded" -> provider_unavailable
 "quota" -> provider_unavailable
+"quotas" -> provider_unavailable
 "rate limit" -> provider_unavailable
+"rate limited" -> provider_unavailable
+"rate limits" -> provider_unavailable
+"rate-limited" -> provider_unavailable
 "rate_limit" -> provider_unavailable
 "server error" -> provider_unavailable
 "service unavailable" -> provider_unavailable
 "temporarily unavailable" -> provider_unavailable
 "usage limit" -> provider_unavailable
+"usage limits" -> provider_unavailable
 
 ## rate-limit and overload signals, outranking a mention of an API key (throttleSignals)
 "429" -> provider_unavailable
@@ -74,9 +82,14 @@ siteAgentPolicy, no error -> agent_error
 "overload" -> provider_unavailable
 "overloaded" -> provider_unavailable
 "quota" -> provider_unavailable
+"quotas" -> provider_unavailable
 "rate limit" -> provider_unavailable
+"rate limited" -> provider_unavailable
+"rate limits" -> provider_unavailable
+"rate-limited" -> provider_unavailable
 "rate_limit" -> provider_unavailable
 "usage limit" -> provider_unavailable
+"usage limits" -> provider_unavailable
 
 ## failure texts (classifyAgentError: lower-cased, then a whole-word match)
 "" -> ""

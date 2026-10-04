@@ -97,7 +97,7 @@ func classifySite(site finishSite, waitErr error) string {
 var authSignals = []string{
 	"401", "403", "unauthorized", "forbidden",
 	"authentication", "authenticated", "unauthenticated", "invalid api key", "invalid_api_key",
-	apiKeyMention, "not logged in", "please log in", "please login",
+	apiKeyMention, apiKeysMention, "not logged in", "please log in", "please login",
 	"login required", "sign in", "credential", "credentials", "permission denied",
 }
 
@@ -107,21 +107,29 @@ var authSignals = []string{
 // which a retry can outlast, not a key to fix.
 const apiKeyMention = "api key"
 
+// apiKeysMention is apiKeyMention's plural, which whole-word matching would
+// otherwise miss: "check your API keys".
+const apiKeysMention = "api keys"
+
 // providerSignals mark a transient provider-side failure surfaced through the
 // CLI (rate limit, overload, upstream 5xx, network) — retryable.
 var providerSignals = []string{
 	"429", "rate limit", "rate_limit", "overloaded", "overload",
 	"usage limit", "quota", "capacity",
+	// Inflected forms that whole-word matching would otherwise miss.
+	"rate limited", "rate-limited", "rate limits", "usage limits", "quotas",
 	"500", "502", "503", "504", "bad gateway", "gateway timeout",
 	"service unavailable", "server error", "internal server error",
 	"temporarily unavailable", "connection refused", "connection reset",
 	"econnrefused", "no route to host", "network error", "network is unreachable",
+	"network timeout", "network unreachable",
 }
 
 // throttleSignals are the providerSignals that say the provider is rate
 // limiting or overloaded; one of them outranks an apiKeyMention.
 var throttleSignals = []string{
 	"429", "rate limit", "rate_limit", "overloaded", "overload", "usage limit", "quota", "capacity",
+	"rate limited", "rate-limited", "rate limits", "usage limits", "quotas",
 }
 
 // classifyAgentError inspects the error a provider CLI surfaced on a non-zero
@@ -138,7 +146,7 @@ func classifyAgentError(err error) string {
 	msg := strings.ToLower(err.Error())
 	throttled := containsAnySignal(msg, throttleSignals)
 	for _, s := range authSignals {
-		if s == apiKeyMention && throttled {
+		if (s == apiKeyMention || s == apiKeysMention) && throttled {
 			continue
 		}
 		if containsSignal(msg, s) {

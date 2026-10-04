@@ -81,6 +81,14 @@ func TestClassifyAgentError(t *testing.T) {
 		{"overloaded: retry later, API key accepted", agentruns.ErrorClassProviderUnavailable},
 		{"rate limit exceeded; invalid API key", agentruns.ErrorClassAuth},
 		{"rate limit exceeded; not logged in", agentruns.ErrorClassAuth},
+		// Inflected forms the substring match used to catch keep their class.
+		{"you are being rate limited, slow down", agentruns.ErrorClassProviderUnavailable},
+		{"request was rate-limited by the provider", agentruns.ErrorClassProviderUnavailable},
+		{"rate limits reached; check your API keys", agentruns.ErrorClassProviderUnavailable},
+		{"all quotas used for today", agentruns.ErrorClassProviderUnavailable},
+		{"usage limits reached for this plan", agentruns.ErrorClassProviderUnavailable},
+		{"no API keys configured for this provider", agentruns.ErrorClassAuth},
+		{"network timeout talking to the model", agentruns.ErrorClassProviderUnavailable},
 		{"503 Service Unavailable: check your API key", agentruns.ErrorClassAuth},
 	}
 	for _, tc := range cases {
