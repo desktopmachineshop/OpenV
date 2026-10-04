@@ -38,11 +38,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   UTC.** On an OpenV server running in another time zone, as a self-hosted
   one can, a workspace's and a people team's creation and update times, a
   product profile's, a template's, each version of a figure, each entry of
-  the activity feed and when a device was registered for push
-  notifications were recorded shifted by the zone's offset, and showed
-  hours off: two hours east of UTC, a workspace created at 09:00 UTC showed
-  as created at 11:00. They now record every time in UTC, as on OpenV's
-  hosted service.
+  the activity feed, when a device was registered for push notifications
+  and when it last received or failed one, and when each release was
+  announced and each stable release turned on for a workspace, were
+  recorded shifted by the zone's offset, and showed hours off: two hours
+  east of UTC, a workspace created at 09:00 UTC showed as created at 11:00.
+  They now record every time in UTC, as on OpenV's hosted service.
 
 ## 0.16.1 — 2026-10-04
 

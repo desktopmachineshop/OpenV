@@ -185,7 +185,8 @@ func upgradeWithin(remaining time.Duration) string {
 }
 
 func (w *SupportWindowWatcher) warn(feed *ReleaseFeed, own string, closes time.Time, key, title, body string) {
-	won, err := w.claims.ClaimReleaseAnnouncement(key, w.now())
+	// announced_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162).
+	won, err := w.claims.ClaimReleaseAnnouncement(key, w.now().UTC())
 	if err != nil || !won {
 		return
 	}

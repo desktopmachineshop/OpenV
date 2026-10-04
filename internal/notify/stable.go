@@ -100,7 +100,9 @@ func (s *StableScheduler) Run() {
 		slog.Error("release: failed to list stable-channel workspaces", "error", err)
 		return
 	}
-	now := s.now()
+	// Each step's claim stamps now in a TIMESTAMP holding a UTC wall clock;
+	// the comparisons with turnOn are of instants (#379 bug 162).
+	now := s.now().UTC()
 	for _, org := range list {
 		if !release.Newer(stable.Version, org.StableRelease) {
 			continue

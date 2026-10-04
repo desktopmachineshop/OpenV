@@ -75,7 +75,8 @@ func (a *ReleaseAnnouncer) Announce(rel *release.Release) int {
 	if rel == nil || rel.Version == "" {
 		return 0
 	}
-	won, err := a.claims.ClaimReleaseAnnouncement(rel.Version, a.now())
+	// announced_at is a TIMESTAMP holding a UTC wall clock (#379 bug 162).
+	won, err := a.claims.ClaimReleaseAnnouncement(rel.Version, a.now().UTC())
 	if err != nil {
 		slog.Error("release: failed to claim announcement", "version", rel.Version, "error", err)
 		return 0
