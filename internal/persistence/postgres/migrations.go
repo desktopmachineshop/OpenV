@@ -108,4 +108,5 @@ var migrations = []Migration{
 	{Version: 51, Name: "timestamptz_share_link_expiry", Run: m0051TimestamptzShareLinkExpiry},
 	{Version: 52, Name: "crew_node_references", Run: m0052CrewNodeReferences},
 	{Version: 53, Name: "project_owned_rows", Run: m0053ProjectOwnedRows},
+	{Version: 55, Name: "figure_counters_without_artifact", Run: m0055FigureCountersWithoutArtifact},
 }

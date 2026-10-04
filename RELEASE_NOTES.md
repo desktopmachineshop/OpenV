@@ -433,7 +433,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   and an artifact in another workspace, the record of which version of the
   other artifact the link was made against. Neither was shown anywhere, but
   both stayed on the server. They now go with the workspace when it is
-  purged.
+  purged, and the figure counters earlier purges left are removed when this
+  update is installed.
 
 - **Deleting a project removes the files uploaded to it.** Deleting a
   project took everything in it out of the workspace, but the files
