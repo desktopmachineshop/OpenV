@@ -58,7 +58,6 @@ const FILE_CEILINGS = {
 // Each component over COMPONENT_BUDGET when this test landed: its lines then plus headroom.
 const COMPONENT_CEILINGS = {
   'AgentEditor': 405,
-  'AgentRunsPage': 359,
   'ArtifactDetails': 664,
   'ArtifactEditor': 551,
   'ArtifactHeader': 445,

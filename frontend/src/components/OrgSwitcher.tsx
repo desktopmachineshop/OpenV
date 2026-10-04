@@ -3,7 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
+import { useFeature } from '../hooks/useFeature';
 import { CreateOrgModal } from './CreateOrgModal';
+import { WORKSPACE_RUNS_FEATURE, WORKSPACE_RUNS_PATH } from './agents/workspaceRuns';
 
 interface OrgSwitcherProps {
   /** 'dark' fits the sidebar (var(--text)); 'light' fits white page headers. */
@@ -11,7 +13,9 @@ interface OrgSwitcherProps {
 }
 
 // Workspace switcher dropdown: shows the active org and lets the user switch
-// workspaces, open workspace settings or create a company workspace.
+// workspaces, open the workspace's pages (its runs with no project, once it
+// has the workspace Runs page, and its settings) or create a company
+// workspace.
 export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,6 +24,7 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
   const [showCreate, setShowCreate] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const { isPhone } = useViewport();
+  const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
   // Where the trigger sits when the menu opens: on a phone the menu is
   // fixed to the screen (full width) instead of hanging off the trigger,
   // so a long workspace name can never push it past the right edge.
@@ -47,7 +52,11 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
     setActiveOrgId(orgId);
     // Already on workspace settings: stay there for the new workspace
     // (OrgSettings itself bounces to /projects if the org isn't available).
-    if (location.pathname !== '/org/settings') {
+    // On the workspace's runs, stay for the new one's, closing the run open,
+    // which is the old one's.
+    if (location.pathname === WORKSPACE_RUNS_PATH) {
+      navigate(WORKSPACE_RUNS_PATH);
+    } else if (location.pathname !== '/org/settings') {
       navigate('/projects');
     }
   };
@@ -166,6 +175,18 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             </button>
           ))}
           <div style={{ borderTop: '1px solid var(--border-soft)', margin: '4px 0' }} />
+          {workspaceRuns && (
+            <button
+              style={menuItemStyle}
+              onClick={() => {
+                setOpen(false);
+                navigate(WORKSPACE_RUNS_PATH);
+              }}
+            >
+              <span style={{ width: 14 }} />
+              Workspace runs
+            </button>
+          )}
           <button
             style={menuItemStyle}
             onClick={() => {

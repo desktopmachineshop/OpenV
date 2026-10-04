@@ -87,7 +87,9 @@ it back on.
 
 - **Run now** launches immediately and jumps you to the Runs page focused on
   the new run. A whole-workspace automation's run belongs to no project, so
-  no project's Runs page lists it: it opens beside the automations instead.
+  no project's Runs page lists it: it opens beside the automations instead,
+  and **Workspace runs** (in the workspace menu) lists it with the
+  automation's scheduled and event runs (see *Runs & runners*).
 - Scheduled and event-triggered runs are **ownerless**: the workspace's
   hosted and workspace runners can claim them, and so can the personal runner
   of any member with a role in the automation's project, or of a workspace

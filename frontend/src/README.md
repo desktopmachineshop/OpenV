@@ -18,7 +18,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 | verification | `components/EvidencePicker*`, `utils/evidence*`, `views/EvidenceView*`, `views/ImpactView*`, `views/TestRunView*`, `views/TraceabilityMatrix*`, `views/VVDashboard*`, `views/testRunCitations*`, `views/vvGapLabels*` |
 | documents | `components/Attachment*`, `components/DownloadWizard*`, `components/Image*`, `components/StlPreview*`, `components/attachment*`, `utils/baselines*`, `utils/downloadSelection*`, `views/BaselineCompare*` |
 | tenancy-identity | `components/Avatar*`, `components/CreateOrgModal*`, `components/OrgSwitcher*`, `components/User*`, `components/org/OrgLimits*`, `components/org/OrgMembers*`, `components/org/OrgTeams*`, `components/org/OrgUsage*`, `utils/activeOrg*`, `views/Login*`, `views/OrgSettings*`, `views/ResetPassword*`, `views/VerifyEmail*` |
-| agent-suite | `components/ChatMarkdown*`, `components/agents/**`, `components/crews/**`, `components/org/OrgProviders*`, `components/wizard/**`, `views/Agent*`, `views/AutomationsPage*`, `views/CrewBuilder*`, `views/GuidedWizard*`, `views/Interview*` |
+| agent-suite | `components/ChatMarkdown*`, `components/agents/**`, `components/crews/**`, `components/org/OrgProviders*`, `components/wizard/**`, `views/Agent*`, `views/AutomationsPage*`, `views/CrewBuilder*`, `views/GuidedWizard*`, `views/Interview*`, `views/WorkspaceRuns*` |
 | runner-fleet | `components/RunnerConnectPrompt*`, `components/org/*Runner*`, `components/org/WorkerKeys*` |
 | events-notifications | `components/NotificationBell*`, `push/**`, `views/ActivityLog*` |
 | community | `components/SharedProductVotes*`, `utils/randomProduct*`, `views/SharedProjectView*` |

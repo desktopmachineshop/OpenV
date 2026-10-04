@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgentRun, WorkerStatus, agentRunsAPI, workerStatusAPI } from '../api/client';
 import { useAppStore } from '../state/store';
-import { RunDetailPanel, runStatusColor, ErrorClassChip } from '../components/agents/RunDetailPanel';
+import { RunDetailBeside, RunStatusFilter, RunTable } from '../components/agents/RunTable';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
-import { ErrorBanner, Sheet } from '../components/ui';
+import { ErrorBanner } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
@@ -13,28 +13,6 @@ import { useViewport } from '../hooks/useViewport';
 // server also clamps the limit. UI follow-up: paginate / infinite-scroll the
 // run list and drop this hard cap.
 const RUNS_POLL_LIMIT = 200;
-
-const STATUS_FILTERS = [
-  'all',
-  'queued',
-  'running',
-  'awaiting_approval',
-  'succeeded',
-  'failed',
-  'timed_out',
-  'cancelled',
-];
-
-const formatDuration = (run: AgentRun): string => {
-  if (!run.started_at) return '—';
-  const start = new Date(run.started_at).getTime();
-  const end = run.finished_at ? new Date(run.finished_at).getTime() : Date.now();
-  const secs = Math.max(0, Math.round((end - start) / 1000));
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ${secs % 60}s`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-};
 
 export const AgentRunsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -55,9 +33,6 @@ export const AgentRunsPage: React.FC = () => {
   // A phone shows the three columns that identify a run; the rest is in the
   // detail. A compact viewport opens that detail as a sheet over the list.
   const { isPhone, isCompact } = useViewport();
-  const columns = isPhone
-    ? ['Agent', 'Status', 'Started']
-    : ['Agent', 'Status', 'Started', 'Duration', 'Tokens', 'Cost'];
 
   const load = useCallback(() => {
     if (!projectId) return;
@@ -117,9 +92,6 @@ export const AgentRunsPage: React.FC = () => {
 
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <style>
-        {`@keyframes ovPulseRun { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }`}
-      </style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Runs</h2>
         <button
@@ -138,18 +110,7 @@ export const AgentRunsPage: React.FC = () => {
           Pending approvals ({pendingCount})
         </button>
         <div style={{ flex: 1 }} />
-        <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Status</label>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ width: 180, padding: '6px 10px' }}
-        >
-          {STATUS_FILTERS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
@@ -227,137 +188,22 @@ export const AgentRunsPage: React.FC = () => {
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-          <div className="table-container">
-            <div className="table-scroll">
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr>
-                  {columns.map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        textAlign: 'left',
-                        borderBottom: '2px solid var(--neutral-soft)',
-                        padding: '10px 12px',
-                        color: 'var(--text-muted)',
-                        fontWeight: 600,
-                        background: 'var(--surface)',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => (
-                  <tr
-                    key={run.id}
-                    onClick={() => selectRun(run.id)}
-                    title={run.worker_id ? `executed by ${run.worker_id}` : undefined}
-                    style={{
-                      cursor: 'pointer',
-                      background: selectedRunId === run.id ? 'var(--tint-blue)' : 'var(--surface)',
-                    }}
-                  >
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                      🤖 {run.agent_name || run.agent_id}
-                      {run.team_id && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>(crew)</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '2px 10px',
-                          borderRadius: 12,
-                          background: runStatusColor(run.status),
-                          color: '#fff',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          animation:
-                            run.status === 'running'
-                              ? 'ovPulseRun 1.4s ease-in-out infinite'
-                              : undefined,
-                        }}
-                      >
-                        {run.status}
-                      </span>
-                      <ErrorClassChip errorClass={run.error_class} />
-                      {run.status === 'queued' &&
-                        run.preferred_user_id &&
-                        run.hosted_after &&
-                        new Date(run.hosted_after).getTime() > Date.now() && (
-                          <span
-                            title="This run waits briefly for the launcher's personal runner before hosted or workspace runners claim it."
-                            style={{
-                              display: 'inline-block',
-                              marginLeft: 6,
-                              padding: '2px 8px',
-                              borderRadius: 12,
-                              background: 'var(--tint-purple)',
-                              color: 'var(--purple)',
-                              fontSize: 12,
-                              fontWeight: 600,
-                            }}
-                          >
-                            reserved for launcher's runner
-                          </span>
-                        )}
-                    </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
-                    </td>
-                    {!isPhone && (
-                      <>
-                        <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                          {formatDuration(run)}
-                        </td>
-                        <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                          {run.tokens_in + run.tokens_out > 0
-                            ? (run.tokens_in + run.tokens_out).toLocaleString()
-                            : '—'}
-                        </td>
-                        <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                          {run.cost_usd != null ? `$${run.cost_usd.toFixed(4)}` : '—'}
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-                {runs.length === 0 && (
-                  <tr>
-                    <td colSpan={columns.length} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
-                      No runs yet. Launch an agent from the Agents page or the board.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            </div>
-          </div>
+          <RunTable
+            runs={runs}
+            selectedRunId={selectedRunId}
+            onSelect={selectRun}
+            isPhone={isPhone}
+            emptyText="No runs yet. Launch an agent from the Agents page or the board."
+          />
         </div>
 
-        {selectedRunId && isCompact && (
-          <Sheet label="Run detail" onClose={() => selectRun(null)}>
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <RunDetailPanel
-                runId={selectedRunId}
-                onSelectRun={(id) => selectRun(id)}
-                onClose={() => selectRun(null)}
-              />
-            </div>
-          </Sheet>
-        )}
-        {selectedRunId && !isCompact && (
-          <div style={{ width: 460, flexShrink: 0, minHeight: 0 }}>
-            <RunDetailPanel
-              runId={selectedRunId}
-              onSelectRun={(id) => selectRun(id)}
-              onClose={() => selectRun(null)}
-            />
-          </div>
+        {selectedRunId && (
+          <RunDetailBeside
+            runId={selectedRunId}
+            isCompact={isCompact}
+            onSelectRun={(id) => selectRun(id)}
+            onClose={() => selectRun(null)}
+          />
         )}
       </div>
     </div>

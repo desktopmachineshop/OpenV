@@ -2,8 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PANEL_NOTIFICATIONS, PANEL_PARAM } from '../appShortcuts';
 import { AppNotification, NotificationView, notificationsAPI } from '../api/client';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { useConfirm } from './ui';
+import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
+import { pathForNotification } from './NotificationBellPaths';
 
 interface NotificationBellProps {
   /**
@@ -26,40 +29,6 @@ const timeAgo = (iso: string): string => {
   return `${Math.floor(seconds / 86400)}d`;
 };
 
-// pathForNotification maps entity_ref to an app route. Unknown kinds fall
-// back to the project overview (or the projects list without a project).
-const pathForNotification = (n: AppNotification): string => {
-  const ref = n.entity_ref || {};
-  // Workspace alerts are not project-scoped: the budget's opens the usage
-  // tab, and the cloud runner minutes' the Billing tab its text points at.
-  if (ref.kind === 'org_usage') return '/org/settings?tab=usage';
-  if (ref.kind === 'org_limits') return '/org/settings?tab=billing';
-  // A platform release is not scoped to anything: it opens the notes.
-  if (ref.kind === 'release') return '/whats-new';
-  // A dedicated instance leaving its support window is a workspace matter.
-  if (ref.kind === 'support_window') return '/org/settings';
-  // Membership and privilege changes land on the people list they are about:
-  // the workspace's members tab, or the project's own.
-  if (ref.kind === 'membership') return '/org/settings?tab=members';
-  if (ref.kind === 'project_membership' && ref.project_id) {
-    return `/projects/${ref.project_id}/settings?tab=members`;
-  }
-  const projectId = ref.project_id;
-  if (!projectId) return '/projects';
-  switch (ref.kind) {
-    case 'run':
-    case 'proposal':
-      // Proposals are reviewed from the runs view (run detail panel).
-      return `/projects/${projectId}/agent-runs${ref.run_id ? `?run=${ref.run_id}` : ''}`;
-    case 'interview':
-      return `/projects/${projectId}/interviews`;
-    case 'artifact':
-      return `/projects/${projectId}/requirements`;
-    default:
-      return `/projects/${projectId}`;
-  }
-};
-
 // NotificationBell: unread badge + dropdown inbox, fed by the REST list and
 // kept live by the per-user SSE stream (EventSource reconnects on its own).
 export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'light' }) => {
@@ -68,6 +37,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   const viewport = useViewport();
   const compact = viewport.isCompact;
   const navigate = useNavigate();
+  // Where a run with no project opens (pathForNotification).
+  const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
   const dark = variant === 'dark';
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -258,7 +229,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   const openItem = (n: AppNotification) => {
     markRead(n);
     setOpen(false);
-    navigate(pathForNotification(n));
+    navigate(pathForNotification(n, workspaceRuns));
   };
 
   const toggle = () => {

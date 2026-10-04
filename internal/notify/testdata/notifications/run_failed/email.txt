@@ -25,3 +25,24 @@ https://openv.example.test/projects/proj-apollo/agent-runs?run=run-42
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
 -------- end
+
+======== agentrun.finished, failed, a run with no project launched by a member | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Agent run failed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Agent run failed
+
+An agent run you launched finished with an error.
+
+Open it in OpenV:
+https://openv.example.test/org/runs?run=run-44
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

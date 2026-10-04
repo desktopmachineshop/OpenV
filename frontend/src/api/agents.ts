@@ -46,8 +46,15 @@ export const agentsAPI = {
 };
 
 export const agentRunsAPI = {
-  list: (params: { agent_id?: string; project_id?: string; status?: string; parent_id?: string; limit?: number }) =>
-    client.get<AgentRun[]>('/api/v1/agent-runs', { params }),
+  // project: 'none' lists the runs with no project (the workspace Runs page).
+  list: (params: {
+    agent_id?: string;
+    project_id?: string;
+    project?: 'none';
+    status?: string;
+    parent_id?: string;
+    limit?: number;
+  }) => client.get<AgentRun[]>('/api/v1/agent-runs', { params }),
   get: (id: string) => client.get<AgentRun>(`/api/v1/agent-runs/${id}`),
   tree: (id: string) => client.get<AgentRun[]>(`/api/v1/agent-runs/${id}/tree`),
   logs: (id: string, afterSeq = 0) =>

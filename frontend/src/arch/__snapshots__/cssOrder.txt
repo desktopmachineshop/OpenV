@@ -15,7 +15,7 @@
   3  components/HelpSidebar.css
   4  components/ProjectList.css
 
-## Lazy modules (19), by path, and the stylesheets each adds, in cascade order
+## Lazy modules (20), by path, and the stylesheets each adds, in cascade order
   site/Customers.tsx  (none)
   site/Demos.tsx  (none)
   site/Faq.tsx  (none)
@@ -41,6 +41,7 @@
     ag-grid-community/styles/ag-grid.css
     ag-grid-community/styles/ag-theme-quartz.css
   views/WhatsNew.tsx  (none)
+  views/WorkspaceRunsPage.tsx  (none)
 
 ## Stylesheets under src that no reachable module loads (1)
   components/ImageUploadInput.css

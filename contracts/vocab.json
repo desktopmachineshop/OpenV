@@ -196,7 +196,8 @@
     "review-queue-decisions",
     "artifact-stepping",
     "workspace-billing",
-    "workspace-automations"
+    "workspace-automations",
+    "workspace-runs"
   ],
   "event_types": [
     "artifact.created",

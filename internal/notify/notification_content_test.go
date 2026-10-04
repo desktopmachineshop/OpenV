@@ -403,6 +403,10 @@ func ncScenarios() []ncScenario {
 			ch.handle(ncEvent(domainevents.RunFinished, "agent:run-42", "run-42",
 				map[string]interface{}{"agent_id": "agent-1", "launched_by": "user-ben", "status": "failed"}))
 		}},
+		{"agentrun.finished, failed, a run with no project launched by a member", func(t *testing.T, ch *ncChannels) {
+			ch.handle(domainevents.Event{EventType: domainevents.RunFinished, OrgID: ncOrg, EntityID: "run-44",
+				Actor: "agent:run-44", Payload: map[string]interface{}{"agent_id": "agent-1", "launched_by": "user-ben", "status": "failed"}})
+		}},
 		{"artifact.status_changed to in_review by its owner, titled with quotes", func(t *testing.T, ch *ncChannels) {
 			ch.handle(ncEvent(domainevents.ArtifactStatusChanged, "user:user-ada", "art-9",
 				map[string]interface{}{"artifact_type": "requirement", "from": "draft", "to": "in_review",

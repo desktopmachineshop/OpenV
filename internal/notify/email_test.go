@@ -152,7 +152,7 @@ func TestNilDispatcherSafe(t *testing.T) {
 // TestEmailAndPushLinkWhereTheBellOpens pins, for every notification type
 // and each entity kind it carries, the page the email's link and the web
 // push's url open: the page the bell opens for the same notification
-// (pathForNotification in frontend/src/components/NotificationBell.tsx, whose
+// (pathForNotification in frontend/src/components/NotificationBellPaths.ts, whose
 // own table is in NotificationBell.test.tsx). They used to part ways for
 // workspace and project membership, releases and the support window, which
 // email and push sent to the projects list or the project's overview, and
@@ -168,6 +168,9 @@ func TestEmailAndPushLinkWhereTheBellOpens(t *testing.T) {
 		{notifications.TypeProposalPending, ref{"kind": "proposal", "proposal_id": "prop-7", "project_id": "p1", "run_id": "r1"}, "/projects/p1/agent-runs?run=r1"},
 		{notifications.TypeProposalPending, ref{"kind": "proposal", "proposal_id": "prop-8", "project_id": "p1", "run_id": ""}, "/projects/p1/agent-runs"},
 		{notifications.TypeRunFailed, ref{"kind": "run", "project_id": "p1", "run_id": "r1"}, "/projects/p1/agent-runs?run=r1"},
+		// A run with no project opens on the workspace Runs page (#379 bug
+		// 168); it opened the projects list, where no page lists it.
+		{notifications.TypeRunFailed, ref{"kind": "run", "project_id": "", "run_id": "r2"}, "/org/runs?run=r2"},
 		{notifications.TypeInterviewCompleted, ref{"kind": "interview", "project_id": "p1", "session_id": "s1"}, "/projects/p1/interviews"},
 		{notifications.TypeMention, ref{"kind": "artifact", "project_id": "p1", "artifact_id": "a1", "chatter_id": "c1"}, "/projects/p1/requirements"},
 		{notifications.TypeReviewRequested, ref{"kind": "artifact", "project_id": "p1", "artifact_id": "a1"}, "/projects/p1/requirements"},
@@ -180,9 +183,11 @@ func TestEmailAndPushLinkWhereTheBellOpens(t *testing.T) {
 		{notifications.TypeReleasePublished, ref{"kind": "release", "version": "0.15.0", "org_id": "o1"}, "/whats-new"},
 		{notifications.TypeReleaseScheduled, ref{"kind": "release", "version": "0.15.0", "org_id": "o1"}, "/whats-new"},
 		{notifications.TypeReleaseSupportWindow, ref{"kind": "support_window", "running": "0.14.0", "available": "0.15.0", "closes": "2026-11-30"}, "/org/settings"},
-		// The fallbacks: a project-scoped kind with no project, a kind the
-		// mapping does not know, and no entity reference at all.
+		// The fallbacks: a project-scoped kind with no project (a run with
+		// no id either), a kind the mapping does not know, and no entity
+		// reference at all.
 		{notifications.TypeRunFailed, ref{"kind": "run"}, "/projects"},
+		{notifications.TypeProposalPending, ref{"kind": "proposal", "proposal_id": "prop-9", "run_id": "r2"}, "/projects"},
 		{notifications.TypeAccessChanged, ref{"kind": "project_membership", "org_id": "o1", "user_id": "u1"}, "/projects"},
 		{"some_future_type", ref{"kind": "something_new", "project_id": "p1"}, "/projects/p1"},
 		{"some_future_type", nil, "/projects"},

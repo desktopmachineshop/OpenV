@@ -1,14 +1,15 @@
-# Where the bell (pathForNotification, NotificationBell.tsx) and the email and web push
+# Where the bell (pathForNotification, NotificationBellPaths.ts) and the email and web push
 # (notificationPath, internal/notify/email.go) send a member, for every notification the Go
 # goldens under internal/notify/testdata/notifications deliver: refactor plan step S10.
 # They open the same page (quirk Q7, fixed under R7 for #379's bugs 58 and 59).
 # Regenerate: npx vitest run src/components/NotificationBell.paths.test.tsx -u
-# 12 types; 14 distinct links; 0 differ.
+# 12 types; 15 distinct links; 0 differ.
 
 type                    entity_ref.kind     bell                                         email and push
 proposal_pending        proposal            /projects/proj-apollo/agent-runs?run=run-42  /projects/proj-apollo/agent-runs?run=run-42  same
 proposal_pending        proposal            /projects/proj-apollo/agent-runs             /projects/proj-apollo/agent-runs             same
 run_failed              run                 /projects/proj-apollo/agent-runs?run=run-42  /projects/proj-apollo/agent-runs?run=run-42  same
+run_failed              run                 /org/runs?run=run-44                         /org/runs?run=run-44                         same
 interview_completed     interview           /projects/proj-apollo/interviews             /projects/proj-apollo/interviews             same
 mention                 artifact            /projects/proj-apollo/requirements           /projects/proj-apollo/requirements           same
 review_requested        artifact            /projects/proj-apollo/requirements           /projects/proj-apollo/requirements           same

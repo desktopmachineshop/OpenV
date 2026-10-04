@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 47
-  rendering a lazy() component: 24
+<Route> elements: 48
+  rendering a lazy() component: 25
   rendering an eagerly imported component: 18
   redirects only: 5
 index routes: 1
@@ -40,6 +40,7 @@ index routes: 1
   ImpactView          ./views/ImpactView#ImpactView
   ActivityLog         ./views/ActivityLog#ActivityLog
   BaselineCompare     ./views/BaselineCompare#BaselineCompare
+  WorkspaceRunsPage   ./views/WorkspaceRunsPage#WorkspaceRunsPage
   HowItWorks          ./site/HowItWorks#HowItWorks
   Demos               ./site/Demos#Demos
   Faq                 ./site/Faq#Faq
@@ -69,6 +70,7 @@ index routes: 1
   *                                redirect to="/verify-email" replace  when walled
   /projects                        <ProjectList>  [eager ./components/ProjectList#ProjectList]  when !walled
   /org/settings                    <OrgSettings>  [eager ./views/OrgSettings#OrgSettings]  when !walled
+  /org/runs                        <WorkspaceRunsPage>  [lazy ./views/WorkspaceRunsPage#WorkspaceRunsPage]  when !walled
   /manual                          <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
   /manual/:chapterSlug             <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
   /whats-new                       <WhatsNew>  [lazy ./views/WhatsNew#WhatsNew]  when !walled
@@ -118,6 +120,7 @@ index routes: 1
   /*                                                  when walled
   /projects                                           when !walled
   /org/settings                                       when !walled
+  /org/runs                                           when !walled
   /manual                                             when !walled
   /manual/:chapterSlug                                when !walled
   /whats-new                                          when !walled

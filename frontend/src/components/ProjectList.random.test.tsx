@@ -22,8 +22,10 @@ vi.mock('react-router-dom', () => ({
   useSearchParams: () => [new URLSearchParams(), () => {}],
 }));
 
-vi.mock('../state/store', () => ({
-  useAppStore: () => ({
+// The store answers a selector too (useFeature reads the gates through one);
+// no gate is open.
+vi.mock('../state/store', () => {
+  const state = {
     projectId: null,
     setProjectId: vi.fn(),
     projects: [],
@@ -33,8 +35,10 @@ vi.mock('../state/store', () => ({
     removeProject: vi.fn(),
     orgs: [{ id: 'org1', name: 'Sam Space', type: 'company' }],
     activeOrgId: 'org1',
-  }),
-}));
+    features: null,
+  };
+  return { useAppStore: (select?: (s: typeof state) => unknown) => (select ? select(state) : state) };
+});
 
 // The chrome around the form is not what this test is about.
 vi.mock('./Navbar', () => ({ Navbar: () => null }));

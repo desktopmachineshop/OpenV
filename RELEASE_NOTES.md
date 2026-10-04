@@ -9,6 +9,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **See the agent runs that belong to no project.** Some runs belong to
+  no project: the scheduled and event runs of a whole-workspace
+  automation, the products an agent invents from the projects list, and
+  the runs of a project that has since been deleted. No page listed them,
+  so a run like that could not be found again. The workspace menu, beside
+  *Workspace settings*, now opens *Workspace runs*: the workspace's runs
+  that belong to no project, newest first. Choose one to follow it beside
+  the list, with its log, its answer, Cancel and Retry, as on a project's
+  Runs page; the address keeps it open when the page is reloaded.
+  Workspace admins see every such run, and other members the ones they
+  launched. A notification that such a run failed, in the bell, by email
+  or as a web push, now opens it there instead of the projects list, and
+  an invention that is taking long on the projects list links to its run.
+
 ### Bug fixes
 
 - **Cancel always stops a run.** Cancelling a run at the moment its runner

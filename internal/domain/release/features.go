@@ -51,6 +51,7 @@ var Registry = []Feature{
 	{Key: FeatureArtifactStepping, ShippedIn: "0.14.0", Summary: "Step from one artifact to the next in document order: the ‹ / › controls and the position, J and K on a keyboard, and a sideways swipe on a phone"},
 	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
 	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
+	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
 }
 
 // Feature keys the code gates on.
@@ -130,6 +131,19 @@ const (
 	// as the API already lists them to every member: a gate on reading would
 	// hide what an admin on another channel, or a preview, has made.
 	FeatureWorkspaceAutomations = "workspace-automations"
+	// FeatureWorkspaceRuns is the workspace Runs page (/org/runs): the runs
+	// with no project (a whole-workspace automation's, an invented
+	// product's, and those a project's delete left behind) beside the run
+	// detail. It gates the PAGE and the ways in: the route, which without
+	// it sends a member to the projects list as any unknown address did,
+	// the workspace menu's entry, and the bell's and the invent message's
+	// links to such a run. The listing behind it, GET /agent-runs with
+	// project=none, is not gated: it narrows a listing every member already
+	// had to runs they could already open. Nor is the link an email or a
+	// web push carries for such a run: it opens the page, which before the
+	// feature is on sends the member on to the projects list, where the
+	// link went before.
+	FeatureWorkspaceRuns = "workspace-runs"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

@@ -701,6 +701,7 @@ a notification, chosen by its `entity_ref.kind`:
 | `entity_ref.kind` | Opens |
 |---|---|
 | `run`, `proposal` | `/projects/<project_id>/agent-runs?run=<run_id>` (no `?run=` without a run id) |
+| `run` with no `project_id` | `/org/runs?run=<run_id>`, the workspace Runs page (`/projects` without a run id). The bell opens it once the workspace has the `workspace-runs` feature, and the projects list before; the page itself sends a member there before the feature is on |
 | `interview` | `/projects/<project_id>/interviews` |
 | `artifact` | `/projects/<project_id>/requirements` |
 | `project_membership` | `/projects/<project_id>/settings?tab=members` |
@@ -1225,7 +1226,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/agent-runs` | List runs (project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own) | user |
+| GET | `/api/v1/agent-runs` | List runs, newest first (project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own). `project=none` keeps the workspace-wide listing's runs that have no project (a whole-workspace automation's, one launched outside any project, one its project's delete left behind), for the workspace Runs page: an org admin gets them all, a member the ones they launched, as `GET /agent-runs/{id}` lets each read them. `400` for any other `project` value, or `project=none` beside `project_id` | user |
 | POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run (a personal key: its owner's, and the ownerless ones its owner could see), never one whose cancel was requested. `204` when there is none, and when the run claimed was asked to stop before its token was issued (a project's delete, say): it is handed back, which ends it cancelled | worker |
 | POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |

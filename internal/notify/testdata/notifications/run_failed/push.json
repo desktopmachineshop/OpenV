@@ -14,6 +14,19 @@
       "sent with the default allow-list": true,
       "sent with the override": false,
       "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "agentrun.finished, failed, a run with no project launched by a member",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Agent run failed\",\"body\":\"An agent run you launched finished with an error.\",\"url\":\"/org/runs?run=run-44\",\"tag\":\"run_failed\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
     }
   ],
   "pushed by default": true,
