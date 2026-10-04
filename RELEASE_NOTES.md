@@ -165,13 +165,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   description as you typed it, as the app does, with its paragraphs and
   line breaks.
 
-- **Each link in a project export says when it was made.** In a JSON
-  export of a project, the project's link list, the links an artifact
-  shows and the record of its links each artifact version keeps, which
-  its history shows, every link's `valid_from` read
-  0001-01-01T00:00:00Z. It now reads the time the link was made.
-  Baselines and artifact versions captured from now on keep the right
-  time; those captured before keep what they were captured with.
+- **Links say when they were made.** A link's `valid_from` read
+  0001-01-01T00:00:00Z in a project's JSON export, in the links an artifact
+  shows and in the record of links each artifact version keeps for its
+  history. It now reads the time the link was made. Baselines and artifact
+  versions captured from now on keep the right time; earlier ones keep what
+  they were captured with.
 
 - **A ReqIF document says when each requirement last changed.** Every
   `LAST-CHANGE` in a ReqIF export or download was the time of the export,
