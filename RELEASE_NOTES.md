@@ -38,6 +38,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   needs to be unique only within its project, as the artifact reference it
   is built on is. Figures already added keep their references.
 
+- **Run now on a whole-workspace automation shows the run it started.** On
+  a project's Automations page, Run now on an automation for the whole
+  workspace opened the project's Runs page, whose list leaves the run out:
+  it belongs to no project. The run now opens beside the automations, with
+  its status, log, answer, Cancel and Retry, and stays open on a reload.
+
 - **Deleting a project ends its runs that await approval.** A run of the
   deleted project that was waiting for its proposals to be reviewed waited
   for ever, its proposals gone with the project. It is now cancelled with
