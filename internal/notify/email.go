@@ -310,7 +310,7 @@ func deepLink(n *notifications.Notification, linkBase string) string {
 
 // notificationPath is the one place the email link and the web push url are
 // built: the page the bell opens for the same notification
-// (pathForNotification in frontend/src/components/NotificationBell.tsx), case
+// (pathForNotification in frontend/src/components/NotificationBellPaths.ts), case
 // for case, so all three land in the same place.
 func notificationPath(ref map[string]interface{}) string {
 	kind := refString(ref, "kind")
@@ -335,6 +335,15 @@ func notificationPath(ref map[string]interface{}) string {
 	}
 	projectID := refString(ref, "project_id")
 	if projectID == "" {
+		// A run with no project (a whole-workspace automation's, one
+		// launched outside any project, or one its project's delete left
+		// behind) is listed on the workspace Runs page, which opens it.
+		// Where that page is not on yet (a stable-channel workspace before
+		// the release that has it), the page sends a member to the
+		// projects list, where this link went before.
+		if runID := refString(ref, "run_id"); kind == "run" && runID != "" {
+			return fmt.Sprintf("/org/runs?run=%s", runID)
+		}
 		return "/projects"
 	}
 	switch kind {

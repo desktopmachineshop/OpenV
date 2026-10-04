@@ -701,6 +701,7 @@ a notification, chosen by its `entity_ref.kind`:
 | `entity_ref.kind` | Opens |
 |---|---|
 | `run`, `proposal` | `/projects/<project_id>/agent-runs?run=<run_id>` (no `?run=` without a run id) |
+| `run` with no `project_id` | `/org/runs?run=<run_id>`, the workspace Runs page (`/projects` without a run id). The bell opens it once the workspace has the `workspace-runs` feature, and the projects list before; the page itself sends a member there before the feature is on |
 | `interview` | `/projects/<project_id>/interviews` |
 | `artifact` | `/projects/<project_id>/requirements` |
 | `project_membership` | `/projects/<project_id>/settings?tab=members` |

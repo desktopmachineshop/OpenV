@@ -9,7 +9,7 @@
 // clicked; the Go link is the push payload's url (notificationPath in
 // internal/notify/email.go), which the email's "Open it in OpenV" link must
 // equal once its base is stripped. The table pins pathForNotification
-// (NotificationBell.tsx) for every notification type beside
+// (NotificationBellPaths.ts) for every notification type beside
 // notificationPath. They drifted apart (Q7) until the R7 fix for #379's bugs
 // 58 and 59 sent every link to the page the bell opens, so the test now
 // also fails when one differs. X4b later replaces the mirrored cases with a
@@ -27,6 +27,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { mockApi } from '../test/mockApi';
 import { NotificationBell } from './NotificationBell';
 import { notificationsAPI } from '../api/client';
+import { useAppStore } from '../state/store';
 
 vi.mock('../api/client', async (orig) =>
   mockApi(await orig(), {
@@ -59,6 +60,16 @@ class FakeEventSource {
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 const api = vi.mocked(notificationsAPI);
+
+// The bell of a workspace with every gated page its links open: the Go link
+// to a run with no project is not gated, and before a workspace has the
+// workspace Runs page that page sends a member to the projects list, where
+// the bell then goes (NotificationBell.test.tsx, "where a row opens").
+beforeEach(() => {
+  useAppStore.setState({
+    features: { channel: 'nightly', stable_release: '', preview: false, features: { 'workspace-runs': true } },
+  });
+});
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const GOLDENS = 'internal/notify/testdata/notifications';
@@ -231,7 +242,7 @@ describe("the bell's deep link for every notification type", () => {
     // under R7 for #379's bugs 58 and 59).
     expect(unique.filter((r) => r[4] !== 'same').map((r) => `${r[0]} ${r[1]}: bell ${r[2]}, email and push ${r[3]}`)).toEqual([]);
     const text = [
-      '# Where the bell (pathForNotification, NotificationBell.tsx) and the email and web push',
+      '# Where the bell (pathForNotification, NotificationBellPaths.ts) and the email and web push',
       '# (notificationPath, internal/notify/email.go) send a member, for every notification the Go',
       '# goldens under internal/notify/testdata/notifications deliver: refactor plan step S10.',
       '# They open the same page (quirk Q7, fixed under R7 for #379\'s bugs 58 and 59).',

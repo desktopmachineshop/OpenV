@@ -3,6 +3,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { mockApi } from '../test/mockApi';
 import { NotificationBell } from './NotificationBell';
 import { notificationsAPI } from '../api/client';
+import { useAppStore } from '../state/store';
 
 // The notification panel: three views, the flag that survives a clear, the
 // two bulk actions, and paging through the history.
@@ -261,15 +262,43 @@ describe('paging the history', () => {
   });
 });
 
+// The gates of a workspace with or without the workspace Runs page.
+const withWorkspaceRuns = (on: boolean) =>
+  useAppStore.setState({
+    features: { channel: on ? 'nightly' : 'stable', stable_release: '', preview: false, features: { 'workspace-runs': on } },
+  });
+
+// Where the bell navigates when its one row, of this type and ref, is clicked.
+const opens = async (type: string, ref: Record<string, unknown> | undefined): Promise<unknown> => {
+  const row = notification('n-link', { type, title: `A ${type} row`, entity_ref: ref });
+  api.list.mockResolvedValue({ data: { notifications: [row], unread_count: 1 } } as any);
+  await render();
+  await openPanel();
+  const title = Array.from(container.querySelectorAll('div')).find(
+    (el) => el.children.length === 0 && el.textContent === row.title
+  );
+  expect(title).toBeTruthy();
+  await click(title as HTMLElement);
+  expect(mockNavigate).toHaveBeenCalledTimes(1);
+  return mockNavigate.mock.calls[0][0];
+};
+
 describe('where a row opens', () => {
   // The same table as TestEmailAndPushLinkWhereTheBellOpens
   // (internal/notify/email_test.go): the email link and the web push url go
-  // where the bell does. The cloud runner minutes alert, which points at the
-  // Billing tab, opened the projects list (#379, bug 59).
+  // where the bell does, in a workspace with the workspace Runs page. The
+  // cloud runner minutes alert, which points at the Billing tab, opened the
+  // projects list (#379, bug 59).
+  beforeEach(() => withWorkspaceRuns(true));
+  afterEach(() => useAppStore.setState({ features: null }));
+
   const cases: [string, Record<string, unknown> | undefined, string][] = [
     ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-7', project_id: 'p1', run_id: 'r1' }, '/projects/p1/agent-runs?run=r1'],
     ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-8', project_id: 'p1', run_id: '' }, '/projects/p1/agent-runs'],
     ['run_failed', { kind: 'run', project_id: 'p1', run_id: 'r1' }, '/projects/p1/agent-runs?run=r1'],
+    // A run with no project opens on the workspace Runs page (#379 bug
+    // 168); it opened the projects list, where no page lists it.
+    ['run_failed', { kind: 'run', project_id: '', run_id: 'r2' }, '/org/runs?run=r2'],
     ['interview_completed', { kind: 'interview', project_id: 'p1', session_id: 's1' }, '/projects/p1/interviews'],
     ['mention', { kind: 'artifact', project_id: 'p1', artifact_id: 'a1', chatter_id: 'c1' }, '/projects/p1/requirements'],
     ['review_requested', { kind: 'artifact', project_id: 'p1', artifact_id: 'a1' }, '/projects/p1/requirements'],
@@ -283,22 +312,36 @@ describe('where a row opens', () => {
     ['release_scheduled', { kind: 'release', version: '0.15.0', org_id: 'o1' }, '/whats-new'],
     ['release_support_window', { kind: 'support_window', running: '0.14.0', available: '0.15.0', closes: '2026-11-30' }, '/org/settings'],
     ['run_failed', { kind: 'run' }, '/projects'],
+    ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-9', run_id: 'r2' }, '/projects'],
     ['access_changed', { kind: 'project_membership', org_id: 'o1', user_id: 'u1' }, '/projects'],
     ['some_future_type', { kind: 'something_new', project_id: 'p1' }, '/projects/p1'],
     ['some_future_type', undefined, '/projects'],
   ];
 
   it.each(cases)('%s %j opens %s', async (type, ref, want) => {
-    const row = notification('n-link', { type, title: `A ${type} row`, entity_ref: ref });
-    api.list.mockResolvedValue({ data: { notifications: [row], unread_count: 1 } } as any);
-    await render();
-    await openPanel();
-    const title = Array.from(container.querySelectorAll('div')).find(
-      (el) => el.children.length === 0 && el.textContent === row.title
-    );
-    expect(title).toBeTruthy();
-    await click(title as HTMLElement);
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith(want);
+    expect(await opens(type, ref)).toBe(want);
+  });
+});
+
+describe('a run with no project, where the workspace has no workspace Runs page', () => {
+  // The workspace-runs gate: until the workspace has the page, the bell
+  // opens the projects list for such a run, as before; the email's link
+  // and the push's reach it there through the page, which sends a member
+  // to the projects list without the feature (WorkspaceRunsPage.test.tsx).
+  afterEach(() => useAppStore.setState({ features: null }));
+
+  it('opens the projects list on a stable-channel workspace without it', async () => {
+    withWorkspaceRuns(false);
+    expect(await opens('run_failed', { kind: 'run', project_id: '', run_id: 'r2' })).toBe('/projects');
+  });
+
+  it('opens the projects list while the gates load', async () => {
+    useAppStore.setState({ features: null });
+    expect(await opens('run_failed', { kind: 'run', project_id: '', run_id: 'r2' })).toBe('/projects');
+  });
+
+  it("leaves a project's run where it was", async () => {
+    withWorkspaceRuns(false);
+    expect(await opens('run_failed', { kind: 'run', project_id: 'p1', run_id: 'r1' })).toBe('/projects/p1/agent-runs?run=r1');
   });
 });

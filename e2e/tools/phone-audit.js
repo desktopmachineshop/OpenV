@@ -186,7 +186,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -457,6 +457,9 @@ const SCREENS = [
   } },
   { tag: 'whats-new', path: '/whats-new' },
   { tag: 'org-settings', path: '/org/settings' },
+  // The workspace's runs with no project, and one open: a sheet on a phone.
+  { tag: 'org-runs', path: '/org/runs' },
+  { tag: 'org-runs-detail', path: '/org/runs?run=r3' },
   { tag: 'org-members', path: '/org/settings?tab=members' },
   { tag: 'org-limits', path: '/org/settings?tab=limits' },
   // The tab strip is buttons in a role=tablist, not role=tab elements, so

@@ -25,6 +25,7 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   public   /white-papers
   session  /projects
   session  /org/settings
+  session  /org/runs
   public   /manual
   public   /manual/:chapterSlug
   session  /whats-new

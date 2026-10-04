@@ -27,6 +27,32 @@
         "UserID": "user-ben"
       },
       "scenario": "agentrun.finished, failed, launched by a member"
+    },
+    {
+      "delivery": "1 of 1",
+      "row": {
+        "Body": "An agent run you launched finished with an error.",
+        "ClearedAt": null,
+        "CreatedAt": "<time.Now() when the row was built>",
+        "EntityRef": {
+          "kind": "run",
+          "project_id": "",
+          "run_id": "run-44"
+        },
+        "EntityRef Go types": {
+          "kind": "string",
+          "project_id": "string",
+          "run_id": "string"
+        },
+        "Flagged": false,
+        "ID": "<uuid>",
+        "OrgID": "org-acme",
+        "Read": false,
+        "Title": "Agent run failed",
+        "Type": "run_failed",
+        "UserID": "user-ben"
+      },
+      "scenario": "agentrun.finished, failed, a run with no project launched by a member"
     }
   ],
   "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",

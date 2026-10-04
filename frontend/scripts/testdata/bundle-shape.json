@@ -35,6 +35,7 @@
     "src/views/SharedProjectView.tsx": "dynamic entry",
     "src/views/TestRunView.tsx": "dynamic entry",
     "src/views/TraceabilityMatrix.tsx": "dynamic entry",
-    "src/views/WhatsNew.tsx": "dynamic entry"
+    "src/views/WhatsNew.tsx": "dynamic entry",
+    "src/views/WorkspaceRunsPage.tsx": "dynamic entry"
   }
 }

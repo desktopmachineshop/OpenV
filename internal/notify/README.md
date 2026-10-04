@@ -66,7 +66,7 @@ The notification and event types themselves are domain packages
 2. Give it a deep link on both sides, with a row in each side's table:
    `notificationPath` (`email.go`, `TestEmailAndPushLinkWhereTheBellOpens`)
    and the bell's `pathForNotification`
-   (`frontend/src/components/NotificationBell.tsx`).
+   (`frontend/src/components/NotificationBellPaths.ts`).
 3. Add a scenario to `ncScenarios` (`notification_content_test.go`), then
    regenerate the Go goldens and, after them, the bell's:
    `UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'`

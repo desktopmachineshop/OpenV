@@ -67,6 +67,10 @@ const ActivityLog = lazy(() =>
 const BaselineCompare = lazy(() =>
   import('./views/BaselineCompare').then((m) => ({ default: m.BaselineCompare }))
 );
+// The workspace's runs with no project, a low-traffic view.
+const WorkspaceRunsPage = lazy(() =>
+  import('./views/WorkspaceRunsPage').then((m) => ({ default: m.WorkspaceRunsPage }))
+);
 // ReviewQueue is a focused reviewer view, split out of the main bundle.
 const HowItWorks = lazy(() => import('./site/HowItWorks').then((m) => ({ default: m.HowItWorks })));
 const Demos = lazy(() => import('./site/Demos').then((m) => ({ default: m.Demos })));
@@ -216,6 +220,9 @@ function App() {
           <>
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/org/settings" element={<OrgSettings />} />
+        {/* Gated on workspace-runs by the page itself, which waits for the
+            gates and sends a member to /projects without it. */}
+        <Route path="/org/runs" element={<WorkspaceRunsPage />} />
         <Route path="/manual" element={<ManualView />} />
         <Route path="/manual/:chapterSlug" element={<ManualView />} />
         <Route path="/whats-new" element={<WhatsNew />} />

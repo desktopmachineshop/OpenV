@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShortcutTarget,
   SHORTCUT_PARAM,
@@ -46,7 +46,13 @@ import { HelpSidebar } from './HelpSidebar';
 import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
 import { SegmentedControl, useConfirm, usePrompt } from './ui';
+import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
+import { useFeature } from '../hooks/useFeature';
 import './ProjectList.css';
+
+// What an invention that outlasts its wait says where the workspace has the
+// workspace Runs page, followed by a link to its run there.
+const SLOW_INVENTION = 'The invention run is taking unusually long.';
 
 export const ProjectList: React.FC = () => {
   const navigate = useNavigate();
@@ -89,6 +95,10 @@ export const ProjectList: React.FC = () => {
   const [runnerOnline, setRunnerOnline] = useState<boolean | null>(null);
   const [inventing, setInventing] = useState<boolean>(false);
   const [inventError, setInventError] = useState<string>('');
+  // An invention outlasting its wait goes on running, with no project: its
+  // run is followed on the workspace Runs page, once the workspace has it.
+  const [slowInventionRun, setSlowInventionRun] = useState<string | null>(null);
+  const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something
   // new rather than re-treading the same joke.
@@ -254,7 +264,12 @@ export const ProjectList: React.FC = () => {
         return null;
       }
       if (Date.now() > deadline) {
-        setInventError('The invention run is taking unusually long — check Runs for progress.');
+        if (workspaceRuns) {
+          setInventError(SLOW_INVENTION);
+          setSlowInventionRun(launched.data.id);
+        } else {
+          setInventError('The invention run is taking unusually long — check Runs for progress.');
+        }
         return null;
       }
     }
@@ -263,6 +278,7 @@ export const ProjectList: React.FC = () => {
   const inventProduct = async () => {
     setInventing(true);
     setInventError('');
+    setSlowInventionRun(null);
     try {
       const agents = (await agentsAPI.list()).data || [];
       const agent =
@@ -919,6 +935,12 @@ export const ProjectList: React.FC = () => {
                   >
                     {inventError ||
                       'No agent is connected, so “Invent with agent” is unavailable — the built-in concepts still work. Connect one from Workspace settings → Runners.'}
+                    {inventError === SLOW_INVENTION && slowInventionRun && (
+                      <>
+                        {' '}
+                        <Link to={workspaceRunPath(slowInventionRun)}>Follow it in Workspace runs</Link>
+                      </>
+                    )}
                   </div>
                 )}
 

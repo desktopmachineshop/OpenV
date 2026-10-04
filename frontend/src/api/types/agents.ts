@@ -25,6 +25,7 @@ export interface AgentDef {
 
 export interface AgentRun {
   id: string;
+  org_id?: string;
   agent_id: string;
   agent_name?: string;
   agent_provider?: string;

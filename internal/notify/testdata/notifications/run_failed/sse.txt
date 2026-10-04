@@ -9,3 +9,9 @@
 event: notification
 data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"run_failed","title":"Agent run failed","body":"An agent run you launched finished with an error.","entity_ref":{"kind":"run","project_id":"proj-apollo","run_id":"run-42"},"read":false,"flagged":false,"created_at":"<created_at>"}
 
+
+=== agentrun.finished, failed, a run with no project launched by a member | delivery 1 of 1 | to user-ben
+(stream notify:user-ben)
+event: notification
+data: {"id":"<id>","org_id":"org-acme","user_id":"user-ben","type":"run_failed","title":"Agent run failed","body":"An agent run you launched finished with an error.","entity_ref":{"kind":"run","project_id":"","run_id":"run-44"},"read":false,"flagged":false,"created_at":"<created_at>"}
+

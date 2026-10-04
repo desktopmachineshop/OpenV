@@ -20,6 +20,25 @@ cancelled
 - A queued run may show **"reserved for launcher's runner"** — it's waiting
   briefly for the launcher's personal runner before other runners may claim it.
 
+## Runs with no project: Workspace runs
+
+Some runs belong to no project: the scheduled and event runs of a
+whole-workspace automation (and its **Run now**), the products an agent
+invents from the projects list, and the runs of a project that has since
+been deleted. No project's Runs page lists them; **Workspace runs** does.
+Open it from the workspace menu (the workspace's name, top left), beside
+**Workspace settings**.
+
+- It lists the workspace's runs with no project, newest first, with the same
+  columns, **Status** filter and detail panel as a project's Runs page:
+  click a run to follow it, cancel it or retry it.
+- The address names the run that is open (\`?run=\`), so a reload or a
+  shared link opens it again.
+- A **workspace admin** sees every such run; any other member sees the ones
+  they launched.
+- A notification that such a run failed, in the bell, by email or as a web
+  push, opens it here.
+
 ## Pending approvals (proposal review)
 
 Agents with *proposal* write mode don't change your project directly — each

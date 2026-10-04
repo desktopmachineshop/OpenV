@@ -1,5 +1,5 @@
 {
-  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8, and the five notification links the R7 fix for #379's bugs 58 and 59 added. `source` is where each was built at d11dee8 (those five: where that fix builds them) (file:line, for reading and failure messages only); the guard checks that the non-test Go files under that file's directory (subdirectories included, testdata excluded) still contain `goLiteral` exactly as many times as this fixture lists it, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
+  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8, the five notification links the R7 fix for #379's bugs 58 and 59 added, and the link to a run with no project that #379's bug 168 added. `source` is where each was built at d11dee8 (those six: where their fix builds them) (file:line, for reading and failure messages only); the guard checks that the non-test Go files under that file's directory (subdirectories included, testdata excluded) still contain `goLiteral` exactly as many times as this fixture lists it, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
   "links": [
     {
       "url": "/login?invite=TOKEN",
@@ -54,6 +54,12 @@
       "what": "notification email and push: no project in the entity ref",
       "source": "internal/notify/email.go:261",
       "goLiteral": "return \"/projects\""
+    },
+    {
+      "url": "/org/runs?run=RUN",
+      "what": "notification email and push: run with no project, on the workspace Runs page",
+      "source": "internal/notify/email.go:345",
+      "goLiteral": "\"/org/runs?run=%s\""
     },
     {
       "url": "/projects/PROJECT/agent-runs?run=RUN",

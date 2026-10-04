@@ -344,6 +344,7 @@
         "frontend/src/views/CrewBuilder*",
         "frontend/src/views/GuidedWizard*",
         "frontend/src/views/Interview*",
+        "frontend/src/views/WorkspaceRuns*",
         "internal/api/agent_*.go",
         "internal/api/ai_map*.go",
         "internal/api/automation_*.go",

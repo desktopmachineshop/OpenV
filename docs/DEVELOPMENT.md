@@ -551,7 +551,7 @@ A new notification type needs a scenario in `ncScenarios`
 (`notification_content_test.go`): until it has one and its goldens, that
 test and `TestEveryNotificationTypeHasAContentGolden` in
 `internal/domain/notifications` fail. The bell builds its own deep links
-(`pathForNotification` in `NotificationBell.tsx`), and the email and push
+(`pathForNotification` in `NotificationBellPaths.ts`), and the email and push
 links open the same page (`notificationPath` in `internal/notify/email.go`
 mirrors it case for case; quirk Q7, resolved), so a new entity kind is
 added on both sides, with a row in each side's table
