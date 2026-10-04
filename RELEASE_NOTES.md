@@ -38,6 +38,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   needs to be unique only within its project, as the artifact reference it
   is built on is. Figures already added keep their references.
 
+- **A cancelled run stays cancelled.** A run whose cancel was requested went
+  back to the queue, and was started again by the next runner, when its
+  runner shut down before stopping it or could not start it; it now ends
+  cancelled, and runs left in the queue this way are cancelled by this
+  update. A run claimed by a runner a moment before its project was deleted
+  could still be given a working run token; it now gets none, and is
+  cancelled.
+
 ## 0.16.0 — 2026-10-04
 
 ### New features

@@ -162,6 +162,10 @@ func (s *DefaultService) Claim(workerID string, orgID string, workerUserID strin
 // state another actor moved the run into meanwhile. It revokes the run's
 // token: the worker handing the run back, and the agent it started, no
 // longer act for it, and the next claim issues a fresh token.
+//
+// A run whose cancel was requested is not queued again but ends cancelled
+// (#379 bug 148), as its worker reporting it cancelled would have ended it,
+// and like that report it publishes RunFinished.
 func (s *DefaultService) ReleaseClaim(runID, workerID string) error {
 	released, err := s.repo.ReleaseClaim(runID, workerID)
 	if err != nil {
@@ -172,11 +176,18 @@ func (s *DefaultService) ReleaseClaim(runID, workerID string) error {
 	}
 	if run, err := s.Get(runID); err == nil {
 		s.notifyStatus(run)
+		if run.Status == StatusCancelled {
+			s.publishRunFinished(run)
+		}
 	}
 	return nil
 }
 
-// ReissueToken mints a fresh token for a run and stores its hash.
+// ReissueToken mints a fresh token for a run a worker holds and stores its
+// hash. A run whose cancel was requested, or that no worker holds any more,
+// gets none: ErrInvalidTransition, and the run keeps its token revoked
+// (#379 bug 151: a project's delete revoked the token of a run claimed a
+// moment before, and the claim's reissue then wrote a working one).
 func (s *DefaultService) ReissueToken(runID string) (string, error) {
 	run, err := s.Get(runID)
 	if err != nil {
@@ -187,8 +198,12 @@ func (s *DefaultService) ReissueToken(runID string) (string, error) {
 		return "", err
 	}
 	run.RunTokenHash = users.HashToken(token)
-	if err := s.repo.UpdateTokenHash(run.ID, run.RunTokenHash); err != nil {
+	issued, err := s.repo.UpdateTokenHash(run.ID, run.RunTokenHash)
+	if err != nil {
 		return "", err
+	}
+	if !issued {
+		return "", fmt.Errorf("%w: no token for a run asked to stop or no longer held", ErrInvalidTransition)
 	}
 	return token, nil
 }
@@ -406,6 +421,12 @@ func (s *DefaultService) maybeAutoRetry(run *Run) {
 	// queue and then has its result discarded because nothing is listening for
 	// it. Only top-level, user-launched runs auto-retry.
 	if run.ParentRunID != nil || run.InterviewSessionID != nil || run.AutomationID != nil || run.GuidedSessionID != nil {
+		return
+	}
+	// A run asked to stop is not started again, however it ended: someone
+	// cancelled it, or a project's delete did, after which a retry ran with
+	// no project (#379 bug 147).
+	if run.CancelRequested {
 		return
 	}
 	if !IsRetryableClass(run.ErrorClass) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -828,6 +829,21 @@ func TestClaimHandshakeFailureReleasesRun(t *testing.T) {
 		}
 		if len(runSvc.released) != 1 {
 			t.Fatalf("released = %v, want exactly one release", runSvc.released)
+		}
+	})
+
+	// #379 bug 151: a run whose cancel was requested between the claim and
+	// the handshake (a project's delete revoked its token) gets no token.
+	// It is handed back, which ends it cancelled, and the worker is told
+	// there was nothing to claim, as no error of its own.
+	t.Run("a run asked to stop meanwhile is handed back and nothing is claimed", func(t *testing.T) {
+		h, runSvc := newClaim(true, fmt.Errorf("%w: the run's cancel was requested", agentruns.ErrInvalidTransition))
+		w := claim(t, h)
+		if w.Code != http.StatusNoContent || w.Body.Len() != 0 {
+			t.Fatalf("status = %d (body %q), want 204 and no body", w.Code, w.Body.String())
+		}
+		if len(runSvc.released) != 1 || runSvc.released[0] != [2]string{"run-1", "w-1"} {
+			t.Fatalf("released = %v, want the claimed run handed back for worker w-1", runSvc.released)
 		}
 	})
 

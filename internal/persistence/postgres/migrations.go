@@ -109,4 +109,5 @@ var migrations = []Migration{
 	{Version: 52, Name: "crew_node_references", Run: m0052CrewNodeReferences},
 	{Version: 53, Name: "project_owned_rows", Run: m0053ProjectOwnedRows},
 	{Version: 54, Name: "figure_refs_per_project", Run: m0054FigureRefsPerProject},
+	{Version: 58, Name: "cancel_requeued_cancelled_runs", Run: m0058CancelRequeuedCancelledRuns},
 }
