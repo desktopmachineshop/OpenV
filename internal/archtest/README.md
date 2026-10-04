@@ -263,16 +263,27 @@ pure calls only: the functions and conversions in `pureFuncs`
 `sync.OnceValue` and others), any function of a standard package in
 `purePackages` (`strings`, `strconv`, `bytes` and others), the builtins in
 `pureBuiltins` (`append`, `make` and others), type conversions (including
-to a type of this module), and methods on a value one of those just built.
-A function literal's body is not inspected, since it runs only when called;
-an immediately invoked one is. Anything else, such as a call to a function
-of the module, a third-party constructor, `time.Now`, `os.Getenv` or
-`log.New`, makes the variable side-effecting. The 5 at `d11dee8` are
-grandfathered in `side_effect_vars`, keyed `package:var`: `quality`'s
-`vagueQuantifierRe`, `placeholderRe` and `conventionPatterns` (built by its
-own `wordListRegexp`), `reports:linkTypeLabels` (`buildLinkTypeLabels()`)
-and `reports/doc:parser` (`goldmark.New`). All five are pure in fact; the
-rule cannot see inside the functions they call.
+to a type of this module), and methods on a value a pure standard-library
+function (`pureFuncs`, `purePackages`) just built. A method on a
+conversion's or a builtin's result is not pure: that value may be of this
+module's type, whose methods are its own code (`someType(nil).load()`,
+`(*someType)(nil).load()`, `new(someType).load()`). A function literal's
+body is not inspected while the literal is only kept, as a value, through a
+conversion (`http.HandlerFunc`) or by the `sync.Once` wrappers
+(`funcStorers`), or by a builtin such as `append`, since it runs only when
+called. An immediately invoked literal is impure, and a literal passed to a
+pure call that may run it, such as an iterator `maps.Collect` runs, has its
+body held to the same rule, calls of its own parameters (the iterator's
+`yield`) counting as pure. Anything else, such as a call to a function of
+the module, a third-party constructor, `time.Now`, `os.Getenv` or
+`log.New`, makes the variable side-effecting. `TestPackageVarRules` proves
+the rule on a fixture, the two forms #379's bug 97 found slipping past it
+among them. The 5 at `d11dee8` are grandfathered in `side_effect_vars`,
+keyed `package:var`: `quality`'s `vagueQuantifierRe`, `placeholderRe` and
+`conventionPatterns` (built by its own `wordListRegexp`),
+`reports:linkTypeLabels` (`buildLinkTypeLabels()`) and `reports/doc:parser`
+(`goldmark.New`). All five are pure in fact; the rule cannot see inside the
+functions they call.
 
 **Why.** Package initialisation runs before `main` and in every test
 binary. An environment read, file or network access, clock read or global

@@ -239,7 +239,7 @@ key, session and status handler files.
 
 ```
 SecurityHeaders → BodyLimit → CORS → Compression → RequestLog → metrics
-  → Auth → router (ContentTypeMiddleware) → handler
+  → Auth → router → handler
 ```
 
 `buildHTTPHandler` (`cmd/server/http.go`) builds that chain, outermost

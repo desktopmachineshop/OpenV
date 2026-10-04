@@ -103,7 +103,10 @@ Each line: the guard, what it pins, and the command that runs it.
 - **S15a** `TestRunFailureClassesGolden`, `TestRunFailureTaxonomyGolden`,
   and the slot, sign-in and lease tests: `testdata/run_failures/`.
   `go test ./internal/runner -count=1` (about 80 s; `-short` skips the
-  tests that wait on the worker's ticks)
+  tests that wait on the worker's ticks). CI's backend job runs them under
+  the race detector, which alone catches a lost lock on what the runner's
+  goroutines share, such as the providers a sign-in adds and the claim loop
+  reads (#379 bug 125): `go test -race -count=1 ./internal/runner/...`
 - **S8** `TestCLI` and `TestEnvParse` in the binaries: `cmd/*/testdata/cli/**`
   and the parse table (I13, I14).
   `go test -count=1 -run '^(TestCLI|TestEnvParse)$' ./cmd/agentd ./cmd/openv-mcp ./cmd/openv-connector`

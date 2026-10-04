@@ -16,16 +16,16 @@ import (
 
 // A successful sign-in adds the provider to the providers the next claim
 // reports (refactor plan step S15a). Every sign-in flow ends in
-// Worker.redetect, which re-runs the adapter's Detect, reports it, and adds
-// the provider to the list the claim loop sends (Worker.addProvider,
-// snapshotProviders in tryClaim). Refactor step M15b moves the sign-in
-// methods to a loginBroker; these tests drive only Worker.Run, a stand-in
-// API and stand-in vendor CLIs, so they hold across that move, for each of
-// the four flows: the piped one (codex on a personal runner), the console
-// one (claude on a personal runner), the pseudo-terminal one (claude on a
-// headless runner) and the loopback one (codex on a headless runner). They
-// wait on the worker's 3-second sign-in and 2-second claim ticks, so they
-// skip under -short.
+// loginBroker.redetect (Worker.redetect until refactor step M15b), which
+// re-runs the adapter's Detect, reports it, and adds the provider to the
+// list the claim loop sends (Worker.addProvider, snapshotProviders in
+// tryClaim). M15b moved the sign-in methods to the loginBroker; these tests
+// drive only Worker.Run, a stand-in API and stand-in vendor CLIs, so they
+// held across that move, for each of the four flows: the piped one (codex
+// on a personal runner), the console one (claude on a personal runner), the
+// pseudo-terminal one (claude on a headless runner) and the loopback one
+// (codex on a headless runner). They wait on the worker's 3-second sign-in
+// and 2-second claim ticks, so they skip under -short.
 
 const (
 	standInCodex = `case "$1" in

@@ -41,9 +41,8 @@ func buildHTTPHandler(
 	runnerPoolKey string,
 	emailVerification users.EmailVerificationPolicy,
 ) (http.Handler, error) {
-	// Router + middleware.
+	// The one router, with every route.
 	router := mux.NewRouter()
-	router.Use(api.ContentTypeMiddleware)
 	handler.RegisterRoutes(router)
 
 	// Prometheus scrape endpoint. Unauthenticated by default (firewall it to an

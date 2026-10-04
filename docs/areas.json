@@ -618,7 +618,6 @@
         "go.sum",
         "internal/archtest/**",
         "internal/tools/**",
-        "node_modules/**",
         "scripts/**"
       ]
     }
