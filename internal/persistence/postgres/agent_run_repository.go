@@ -448,9 +448,11 @@ func (rep *AgentRunRepository) AppendLogs(runID string, entries []agentruns.LogE
 		if err != nil {
 			return err
 		}
-		createdAt := e.CreatedAt
+		// created_at is a naive TIMESTAMP, as in Save: a time a worker sent
+		// with an offset, and the server's own now, go in as UTC wall clocks.
+		createdAt := e.CreatedAt.UTC()
 		if createdAt.IsZero() {
-			createdAt = time.Now()
+			createdAt = time.Now().UTC()
 		}
 		if _, err := stmt.Exec(runID, e.Seq, e.Kind, payload, createdAt); err != nil {
 			return err
@@ -505,8 +507,9 @@ func (rep *AgentRunRepository) AppendNote(runID string, e agentruns.LogEntry) (a
 	if err != nil {
 		return e, err
 	}
+	e.CreatedAt = e.CreatedAt.UTC()
 	if e.CreatedAt.IsZero() {
-		e.CreatedAt = time.Now()
+		e.CreatedAt = time.Now().UTC()
 	}
 	tx, err := rep.db.Begin()
 	if err != nil {

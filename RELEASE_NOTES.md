@@ -426,6 +426,23 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   delete project", as if the server had failed. It now answers "project not
   found", as opening a deleted project does.
 
+- **Agent runs and runners keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, agent runs, cloud runner leases and runner keys recorded their
+  times shifted by the zone's offset, and acted on the shifted times. East
+  of UTC, a run could be failed as "worker lost" while its runner was still
+  preparing it, an automatic retry, and a run reserved for its launcher's
+  own runner, were held back for hours, and a runner that had stopped still
+  showed as online for hours. West of UTC, a run reserved for its
+  launcher's own runner went to a workspace runner at once, an automatic
+  retry ran without waiting, a runner that stopped right after claiming a
+  run was noticed hours late, a runner polling right then showed as
+  offline, the cloud runner pool showed no runner available, and a cloud
+  runner lease counted its whole length against the workspace's minutes as
+  soon as it started. Either way, a run's start, finish and log times, and
+  a cloud runner's time left, showed hours off. They now record every time
+  in UTC, as on OpenV's hosted service.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates

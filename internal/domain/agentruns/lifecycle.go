@@ -69,7 +69,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		AttemptCount:       req.AttemptCount,
 		MaxAttempts:        req.MaxAttempts,
 		NextAttemptAt:      req.NextAttemptAt,
-		CreatedAt:          time.Now(),
+		CreatedAt:          time.Now().UTC(),
 		// Reproducibility snapshot (issue #216): pin the agent identity as it is
 		// right now. A later edit to the agent definition (or a retry, which is a
 		// fresh Launch) does not rewrite an existing run's snapshot.
@@ -99,7 +99,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 			}
 		}
 		run.PreferredUserID = req.LaunchedBy
-		hostedAfter := time.Now().Add(time.Duration(grace) * time.Second)
+		hostedAfter := time.Now().UTC().Add(time.Duration(grace) * time.Second)
 		run.HostedAfter = &hostedAfter
 	}
 
@@ -198,7 +198,7 @@ func (s *DefaultService) ReissueToken(runID string) (string, error) {
 // already moved — the stale reaper failing it, a cancel — is never
 // resurrected to running from a stale read.
 func (s *DefaultService) MarkRunning(id string) error {
-	applied, err := s.repo.MarkRunning(id, time.Now())
+	applied, err := s.repo.MarkRunning(id, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (s *DefaultService) AppendLogs(runID string, entries []LogEntry, partialTex
 		}
 		partialStored = applied
 	}
-	if _, err := s.repo.Heartbeat(runID, time.Now()); err != nil {
+	if _, err := s.repo.Heartbeat(runID, time.Now().UTC()); err != nil {
 		return nil, err
 	}
 	run, err := s.Get(runID)
@@ -301,7 +301,7 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 		return nil, finishRefusal(run.Status, req.Status)
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	run.Status = req.Status
 	run.FinishedAt = &now
 	run.ExitCode = req.ExitCode
@@ -414,7 +414,7 @@ func (s *DefaultService) maybeAutoRetry(run *Run) {
 	if run.AttemptCount >= run.MaxAttempts {
 		return
 	}
-	next := time.Now().Add(retryBackoff(run.AttemptCount + 1))
+	next := time.Now().UTC().Add(retryBackoff(run.AttemptCount + 1))
 	_, _, _ = s.Launch(LaunchRequest{
 		OrgID:            run.OrgID,
 		AgentID:          run.AgentID,
@@ -475,13 +475,13 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 // Heartbeat refreshes a run's liveness timestamp. A heartbeat for a run that
 // is no longer live (already terminal) is silently dropped.
 func (s *DefaultService) Heartbeat(id string) error {
-	_, err := s.repo.Heartbeat(id, time.Now())
+	_, err := s.repo.Heartbeat(id, time.Now().UTC())
 	return err
 }
 
 // FailStale fails runs whose worker went silent.
 func (s *DefaultService) FailStale(maxSilence time.Duration) ([]string, error) {
-	ids, err := s.repo.FailStale(time.Now().Add(-maxSilence))
+	ids, err := s.repo.FailStale(time.Now().UTC().Add(-maxSilence))
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +544,7 @@ func (s *DefaultService) FinalizeIfResolved(runID string) (*Run, error) {
 		}
 		run.ErrorClass = ErrorClassAgentError
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	applied, err := s.repo.FinalizeApproval(runID, status, run.Error, run.ErrorClass, now)
 	if err != nil {
 		return nil, err
