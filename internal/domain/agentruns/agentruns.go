@@ -378,16 +378,18 @@ type Repository interface {
 	// whose cancel was requested ends cancelled instead. Reports whether the
 	// release was applied.
 	ReleaseClaim(runID, workerID string) (bool, error)
-	// CancelQueued conditionally cancels a run only while it is still queued
-	// (and revokes its token), so a concurrent worker claim is never stomped;
-	// reports whether the cancel was applied.
-	CancelQueued(id string) (bool, error)
-	// SetCancelRequested flags a claimed/running run for cooperative
-	// cancellation; reports whether the flag was applied.
-	SetCancelRequested(id string) (bool, error)
+	// RequestCancel cancels a run as its status when the write lands asks,
+	// whatever a concurrent claim or release made of it since the caller
+	// read it: a queued run is cancelled at once and its token revoked; a
+	// claimed or running run has its cancel requested, for its worker to
+	// stop it. A run in any other status is left as it is. Reports whether
+	// it wrote.
+	RequestCancel(id string) (bool, error)
 	// UpdateTerminal writes a run's terminal result fields and revokes its run
 	// token, but only while a worker still holds the run (claimed or
-	// running); reports whether the transition was applied.
+	// running); reports whether the transition was applied. A cancel
+	// requested since r was read is kept, never cleared, and once applied
+	// r.CancelRequested is the flag as stored.
 	UpdateTerminal(r *Run) (bool, error)
 	// MarkRunning conditionally transitions a run from claimed to running,
 	// stamping started_at/heartbeat_at, so a run another actor moved on
@@ -407,7 +409,8 @@ type Repository interface {
 	// revoked; reports whether it was applied.
 	UpdateTokenHash(runID, hash string) (bool, error)
 	// FailStale marks claimed/running runs failed when their heartbeat is
-	// older than cutoff; returns the affected run IDs.
+	// older than cutoff, or cancelled, with no error, when their cancel was
+	// requested; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
 	AppendLogs(runID string, entries []LogEntry) error
 	// UpdatePartialText stores the assistant text a live run has written so
@@ -491,6 +494,8 @@ type Service interface {
 	// id no run has is skipped.
 	AnnounceCancelled(ids []string)
 	Heartbeat(id string) error
+	// FailStale ends the runs whose worker has been silent for maxSilence:
+	// failed as worker lost, or cancelled when their cancel was requested.
 	FailStale(maxSilence time.Duration) ([]string, error)
 	// FinalizeIfResolved completes an awaiting_approval run once every proposal
 	// it produced has been reviewed, publishing RunFinished on the transition.
