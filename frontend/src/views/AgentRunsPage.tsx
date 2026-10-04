@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgentRun, WorkerStatus, agentRunsAPI, workerStatusAPI } from '../api/client';
 import { useAppStore } from '../state/store';
-import { RunDetailBeside, RunStatusFilter, RunTable, pollGuard } from '../components/agents/RunTable';
+import {
+  RunDetailBeside,
+  RunStatusFilter,
+  RunTable,
+  pollGuard,
+  useCloseRunOnSwitch,
+} from '../components/agents/RunTable';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
 import { ErrorBanner } from '../components/ui';
@@ -21,7 +27,15 @@ export const AgentRunsPage: React.FC = () => {
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [runs, setRuns] = useState<AgentRun[]>([]);
+  // The last answer and the project it is of: the list shows it while that
+  // project is on screen, and says it is loading until then, so a switch of
+  // project empties it until the new project's answer (#379 bug 177), and
+  // useCloseRunOnSwitch closes the old project's run. Another status filter
+  // keeps it while its answer loads. A workspace switch that keeps the
+  // project, as ProjectLayout makes to follow a link into another
+  // workspace's project, is no switch here.
+  const [listed, setListed] = useState<{ projectId: string; runs: AgentRun[] } | null>(null);
+  const runs = listed?.projectId === projectId ? listed.runs : null;
   const [workerStatus, setWorkerStatus] = useState<WorkerStatus | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [pendingCount, setPendingCount] = useState(0);
@@ -30,6 +44,7 @@ export const AgentRunsPage: React.FC = () => {
   const [error, setError] = useState('');
 
   const selectedRunId = searchParams.get('run');
+  useCloseRunOnSwitch(projectId);
   // A phone shows the three columns that identify a run; the rest is in the
   // detail. A compact viewport opens that detail as a sheet over the list.
   const { isPhone, isCompact } = useViewport();
@@ -51,7 +66,7 @@ export const AgentRunsPage: React.FC = () => {
         .list(query)
         .then((res) => {
           if (!runsCurrent()) return;
-          setRuns(res.data || []);
+          setListed({ projectId, runs: res.data || [] });
           setError('');
         })
         .catch((err: any) => {

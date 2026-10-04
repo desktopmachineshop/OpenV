@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
-import { MemoryRouter, Route, Routes, useNavigate, type NavigateFunction } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from 'react-router-dom';
 import { mockApi } from '../test/mockApi';
 import { AgentRunsPage } from './AgentRunsPage';
 import { useAppStore } from '../state/store';
@@ -12,6 +12,12 @@ import type { AgentRun, WorkerStatus } from '../api/client';
 // filter the page has left is dropped, the runner banner's too, and so is a
 // poll's answer that lands after a later poll's. One slower than the poll
 // still counts while no later one has landed.
+//
+// A switch of project empties the list, which says it is loading until the
+// new project's answer, and closes the old project's run (#379 bug 177); a
+// run the switch comes with stays open. Another status filter keeps the
+// list while its answer loads, and so does a workspace switch that keeps the
+// project, as ProjectLayout makes to follow a link into another workspace.
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -53,6 +59,11 @@ vi.mock('../api/client', async (orig) =>
 vi.mock('../components/agents/ProposalReviewPanel', () => ({ ProposalReviewPanel: () => null }));
 vi.mock('../components/RunnerConnectPrompt', () => ({ RunnerConnectPrompt: () => null }));
 vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
+// The detail panel is RunDetailPanel's own; here it shows which run is open.
+vi.mock('../components/agents/RunDetailPanel', async (orig) => ({
+  ...(await orig<typeof import('../components/agents/RunDetailPanel')>()),
+  RunDetailPanel: ({ runId }: { runId: string }) => <aside aria-label="Run detail">{runId}</aside>,
+}));
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -83,7 +94,8 @@ let navigate: NavigateFunction;
 
 const Navigator: React.FC = () => {
   navigate = useNavigate();
-  return null;
+  const location = useLocation();
+  return <output data-testid="where">{location.pathname + location.search}</output>;
 };
 
 const settle = async () => {
@@ -99,10 +111,10 @@ const answer = async <T,>(request: { answer: Deferred<{ data: T }> }, data: T) =
   await settle();
 };
 
-const mount = async () => {
+const mount = async (at = '/projects/p1/agent-runs') => {
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/projects/p1/agent-runs']}>
+      <MemoryRouter initialEntries={[at]}>
         <Routes>
           <Route path="/projects/:projectId/agent-runs" element={<AgentRunsPage />} />
         </Routes>
@@ -115,6 +127,23 @@ const mount = async () => {
 
 const rows = () => Array.from(container.querySelectorAll('tbody tr')).map((tr) => tr.querySelector('td')?.textContent);
 const banner = () => container.textContent?.includes('queued but') ?? false;
+const detail = () => container.querySelector('[aria-label="Run detail"]')?.textContent ?? null;
+const where = () => container.querySelector('[data-testid="where"]')?.textContent;
+const go = async (to: string) => {
+  await act(async () => {
+    navigate(to);
+  });
+  await settle();
+};
+const filter = async (status: string) => {
+  const select = container.querySelector('select') as HTMLSelectElement;
+  const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
+  await act(async () => {
+    setter.call(select, status);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await settle();
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -208,5 +237,83 @@ describe("a project's Runs page drops an answer that is no longer current", () =
     expect(rows()).toEqual(['🤖 Older']);
     await answer(lists[1], [run('run-new', 'Newer')]);
     expect(rows()).toEqual(['🤖 Newer']);
+  });
+});
+
+describe("a project's Runs page on a switch (#379 bug 177)", () => {
+  it('says it is loading until its first answer', async () => {
+    await mount();
+    expect(rows()).toEqual(['Loading runs…']);
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+    expect(rows()).toEqual(['🤖 Alpha']);
+  });
+
+  it("empties the list on a project switch until the new project's answer", async () => {
+    await mount();
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+    expect(rows()).toEqual(['🤖 Alpha']);
+
+    await go('/projects/p2/agent-runs');
+    expect(lists.map((l) => l.query.project_id)).toEqual(['p1', 'p2']);
+    expect(rows()).toEqual(['Loading runs…']);
+    await answer(lists[1], []);
+    expect(rows()).toEqual(['No runs yet. Launch an agent from the Agents page or the board.']);
+  });
+
+  it("closes the old project's run on a project switch", async () => {
+    await mount('/projects/p1/agent-runs?run=run-p1');
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+    expect(detail()).toBe('run-p1');
+
+    // A switch that keeps the address's query, ?run= with it.
+    await go('/projects/p2/agent-runs?run=run-p1');
+    expect(detail()).toBeNull();
+    expect(where()).toBe('/projects/p2/agent-runs');
+    expect(rows()).toEqual(['Loading runs…']);
+
+    // The close replaced the switch's entry: back is the old project, its run open.
+    await act(async () => {
+      navigate(-1);
+    });
+    await settle();
+    expect(where()).toBe('/projects/p1/agent-runs?run=run-p1');
+    expect(detail()).toBe('run-p1');
+  });
+
+  it('keeps open the run a project switch comes with, as a link to it does', async () => {
+    await mount('/projects/p1/agent-runs?run=run-p1');
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+
+    await go('/projects/p2/agent-runs?run=run-p2');
+    expect(detail()).toBe('run-p2');
+    expect(where()).toBe('/projects/p2/agent-runs?run=run-p2');
+  });
+
+  it('keeps the list and the run open while another status filter loads', async () => {
+    await mount('/projects/p1/agent-runs?run=run-f');
+    await answer(lists[0], [run('run-q', 'Queuer'), { ...run('run-f', 'Failer'), status: 'failed' }]);
+
+    await filter('failed');
+    expect(lists.map((l) => l.query.status)).toEqual([undefined, 'failed']);
+    expect(rows()).toEqual(['🤖 Queuer', '🤖 Failer']);
+    expect(detail()).toBe('run-f');
+    await answer(lists[1], [{ ...run('run-f', 'Failer'), status: 'failed' }]);
+    expect(rows()).toEqual(['🤖 Failer']);
+    expect(detail()).toBe('run-f');
+  });
+
+  it('keeps the list and the run open on a workspace switch that keeps the project', async () => {
+    await mount('/projects/p1/agent-runs?run=run-p1');
+    await answer(lists[0], [run('run-p1', 'Alpha')]);
+
+    // ProjectLayout following a link into another workspace's project.
+    await act(async () => {
+      useAppStore.setState({ activeOrgId: 'o2' });
+    });
+    await settle();
+    expect(lists).toHaveLength(2);
+    expect(rows()).toEqual(['🤖 Alpha']);
+    expect(detail()).toBe('run-p1');
+    expect(where()).toBe('/projects/p1/agent-runs?run=run-p1');
   });
 });

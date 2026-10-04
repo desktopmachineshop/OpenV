@@ -87,6 +87,11 @@ const ReviewQueue = lazy(() =>
   import('./views/ReviewQueue').then((m) => ({ default: m.ReviewQueue }))
 );
 
+// How long App waits before each new try of a gate load that failed; after
+// the last, only the window's focus or the browser coming back online tries
+// again.
+const GATE_RETRY_DELAYS_MS = [2000, 5000, 15000];
+
 function RouteFallback() {
   return (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
@@ -155,23 +160,47 @@ function App() {
   }, [currentUser, walled, setOrgs, setActiveOrgId, setOrgsLoaded]);
 
   // Feature gates follow the active workspace (REQ-137). Cleared first so a
-  // switch never shows one workspace's gates against another's screens.
+  // switch never shows one workspace's gates against another's screens. A
+  // load that fails is tried again after each of GATE_RETRY_DELAYS_MS, and
+  // once more whenever the window regains focus or the browser comes back
+  // online after a failed try (#379 bug 176). A switch cancels what is
+  // pending, so the old workspace's answer never lands.
   useEffect(() => {
     if (!currentUser || walled || !activeOrgId) return;
     let cancelled = false;
+    let failed = false;
+    let retries = 0;
+    let timer: number | undefined;
+    const load = () => {
+      failed = false;
+      orgsAPI
+        .features(activeOrgId)
+        .then((res) => {
+          if (!cancelled) setFeatures(res.data);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          // Gates stay closed until a try succeeds; a page that waits for
+          // them stops waiting (featuresFailed).
+          setFeaturesFailed();
+          failed = true;
+          if (retries < GATE_RETRY_DELAYS_MS.length) timer = window.setTimeout(load, GATE_RETRY_DELAYS_MS[retries++]);
+        });
+    };
+    const retryNow = () => {
+      if (!failed) return;
+      window.clearTimeout(timer);
+      load();
+    };
     setFeatures(null);
-    orgsAPI
-      .features(activeOrgId)
-      .then((res) => {
-        if (!cancelled) setFeatures(res.data);
-      })
-      .catch(() => {
-        // Gates stay closed until the next load; a page that waits for
-        // them stops waiting (featuresFailed).
-        if (!cancelled) setFeaturesFailed();
-      });
+    load();
+    window.addEventListener('focus', retryNow);
+    window.addEventListener('online', retryNow);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', retryNow);
+      window.removeEventListener('online', retryNow);
     };
   }, [currentUser, walled, activeOrgId, setFeatures, setFeaturesFailed]);
 
