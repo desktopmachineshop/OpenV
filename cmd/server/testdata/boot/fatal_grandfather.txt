@@ -19,6 +19,7 @@ OPENV_BILLING_GRANDFATHER_BEFORE=2026-01-01
 == boot log, in order (lines logged from boot goroutines left out)
 level=INFO msg="using DATABASE_URL (Railway.app mode)"
 level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
+level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
 level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
 level=ERROR msg="OPENV_BILLING_GRANDFATHER_BEFORE must be an RFC 3339 date-time" error="parsing time \"2026-01-01\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"\" as \"T\""
 
@@ -30,7 +31,7 @@ exit status 1
 the server exited before it answered /health
 
 == the boot's database after the exit
-migrations ran before the exit: yes (the schema_migrations ledger runs from version 1 without a gap)
+migrations ran before the exit: in part (the schema_migrations ledger holds 55 versions, 1 to 56)
 
 == outbound requests (the recording proxy, after exit)
 none: the server sent no request through HTTP_PROXY or HTTPS_PROXY

@@ -34,6 +34,16 @@ is frozen — a new schema change is a numbered migration in a file of its
 own (`migration_NNNN_<name>.go`), named on one line of the registry in
 `migrations.go`, never added to `InitSchema` or the `schema_*.go` files.
 
+### boot_tasks
+The tasks a boot runs once per database, after the migrations (migration
+0056): `name` (primary key), `ran_at`, `outcome` (what the task did, in a
+sentence). `postgres.RunBootTaskOnce` runs a task under the boot advisory
+lock unless its row exists, and writes the row once the task has run to an
+outcome; a task that fails is not recorded and runs at the next boot. The
+one task is `sweep_unreferenced_uploads`, which removes the stored files no
+row names from `UPLOADS_DIR` (`cmd/server/upload_sweep.go`; see "Stored
+files no row names" in `docs/operations.md`).
+
 ## Core requirements data (`db.go`)
 
 ### projects

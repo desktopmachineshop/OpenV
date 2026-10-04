@@ -15,6 +15,7 @@ OPENV_METRICS_TOKEN=boot-harness-metrics-token
 == boot log, in order
 level=INFO msg="using DATABASE_URL (Railway.app mode)"
 level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
+level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
 level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
 level=INFO msg="transient runners disabled (set RUNNER_POOL_KEY to enable)"
 level=INFO msg="Hosted runners disabled (HOSTED_RUNNERS=off)"

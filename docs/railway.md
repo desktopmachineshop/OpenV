@@ -558,6 +558,10 @@ window closes, and once more when it has.
   deployments that do not want the feature.
 - **One volume per service**: `/data` holds both agent definitions
   (`$OPENV_DATA_DIR/agents`) and uploads (`UPLOADS_DIR=/data/uploads`).
+  The first boot of a release with the upload sweep goes through
+  `UPLOADS_DIR` once for the files that earlier deletes left behind; its
+  log lines start `upload sweep:` (see "Stored files no row names" in
+  [operations.md](operations.md)).
 - **Connector downloads** are baked into the API image (`Dockerfile.api`
   builds a single self-contained executable per OS — agentd and openv-mcp
   embedded — into `./dist`, the `CONNECTOR_DIST_DIR` default), so the

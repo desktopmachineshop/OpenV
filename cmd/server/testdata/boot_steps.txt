@@ -47,6 +47,7 @@ func main()
   call internal/persistence/postgres.MigrateAndBackfill
   if
     call os.Exit
+  call internal/persistence/postgres.RunBootTaskOnce
   call (*internal/domain/links.DefaultService).SetArtifactService
   call (*internal/domain/artifacts.DefaultService).SetLinkSuspector
   call (*internal/domain/artifacts.DefaultService).SetEmbeddingIndexer

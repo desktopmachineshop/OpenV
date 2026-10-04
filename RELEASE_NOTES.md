@@ -441,8 +441,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   uploaded to it, its figures with every earlier version and its evidence
   files, stayed stored on the server. They are now removed as the project
   is deleted. A file the server cannot remove is noted in its log, and the
-  project is deleted all the same. Files of projects deleted before this
-  update stay where they are.
+  project is deleted all the same. The files that projects deleted before
+  this update left behind are removed once, when the server first starts
+  after it.
 
 - **Deleting a project stops its agent runs.** An agent run waiting in a
   deleted project's queue still started, with no project to work in, and
@@ -474,6 +475,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   then answers "project not found", as for any deleted project, and its
   file is removed. A figure that was stored first is deleted with the
   project.
+
+- **Files left behind by earlier deletes are cleared once.** The figure
+  and evidence files of projects deleted, workspaces purged and figure
+  versions deleted before this update stayed stored on the server, though
+  nothing in OpenV could reach them any more. The first time the server
+  starts after this update, it removes them, once. It removes only files it
+  can be sure are its own uploads that nothing refers to, last changed more
+  than an hour before it started; when it cannot be sure, for example
+  because the files it knows of are not in the uploads folder, it removes
+  nothing. If you run OpenV yourself, each file removed is noted in the
+  server's log, under "upload sweep", with a summary at the end.
 
 ## 0.15.1 — 2026-09-30
 
