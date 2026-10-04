@@ -145,7 +145,7 @@ func (s *DefaultService) CreatePairing(orgID, userID string) (string, time.Time,
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	expires := time.Now().Add(PairingTTL)
+	expires := time.Now().UTC().Add(PairingTTL)
 	if err := s.pairings.SavePairing(uuid.New().String(), orgID, userID, users.HashToken(code), expires); err != nil {
 		return "", time.Time{}, err
 	}
@@ -157,7 +157,7 @@ func (s *DefaultService) ExchangePairing(code, userName string) (*Key, string, e
 	if s.pairings == nil {
 		return nil, "", errors.New("pairing is not configured")
 	}
-	orgID, userID, err := s.pairings.ConsumePairing(users.HashToken(code), time.Now())
+	orgID, userID, err := s.pairings.ConsumePairing(users.HashToken(code), time.Now().UTC())
 	if err != nil {
 		return nil, "", err
 	}
@@ -194,7 +194,7 @@ func (s *DefaultService) Create(orgID, name string, createdBy *string, userID *s
 		Name:      name,
 		KeyHash:   users.HashToken(token),
 		CreatedBy: createdBy,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 	if err := s.repo.Save(key); err != nil {
 		return nil, "", err
@@ -226,7 +226,7 @@ func (s *DefaultService) MintSessionKey(orgID, userID, sessionID, name string) (
 		KeyHash:   users.HashToken(token),
 		CreatedBy: &userID,
 		SessionID: &sessionID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 	if err := s.repo.Save(key); err != nil {
 		return "", "", err
@@ -285,7 +285,7 @@ func (s *DefaultService) Resolve(token string) (Resolved, error) {
 	if key.Revoked {
 		return Resolved{}, ErrRevoked
 	}
-	_ = s.repo.Touch(key.ID, time.Now())
+	_ = s.repo.Touch(key.ID, time.Now().UTC())
 	resolved := Resolved{OrgID: key.OrgID, KeyID: key.ID}
 	if key.UserID != nil {
 		resolved.UserID = *key.UserID
@@ -298,7 +298,9 @@ func (s *DefaultService) Resolve(token string) (Resolved, error) {
 
 // HasOnlinePersonalRunner reports recent activity on the user's personal key.
 func (s *DefaultService) HasOnlinePersonalRunner(orgID, userID string, since time.Time) (bool, error) {
-	return s.repo.HasOnlinePersonalKey(orgID, userID, since)
+	// last_used_at is a TIMESTAMP holding a UTC wall clock (Resolve), which
+	// the query compares with since's wall clock: the caller's is local.
+	return s.repo.HasOnlinePersonalKey(orgID, userID, since.UTC())
 }
 
 // EnsureBootstrapKey upserts the env-configured key for an org. A key row
@@ -322,7 +324,7 @@ func (s *DefaultService) EnsureBootstrapKey(orgID, plaintext, name string) error
 		OrgID:     orgID,
 		Name:      name,
 		KeyHash:   hash,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 	return s.repo.Save(key)
 }

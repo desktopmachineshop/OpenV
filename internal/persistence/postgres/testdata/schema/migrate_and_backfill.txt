@@ -269,8 +269,8 @@ table attachments rows 0
   column title character varying(255) NOT NULL DEFAULT ''::character varying
   constraint attachments_pkey PRIMARY KEY (id)
   index attachments_pkey CREATE UNIQUE INDEX attachments_pkey ON public.attachments USING btree (id)
+  index idx_attachments_artifact_figure_ref CREATE UNIQUE INDEX idx_attachments_artifact_figure_ref ON public.attachments USING btree (artifact_id, figure_ref) WHERE (figure_ref IS NOT NULL)
   index idx_attachments_artifact_id CREATE INDEX idx_attachments_artifact_id ON public.attachments USING btree (artifact_id)
-  index idx_attachments_figure_ref CREATE UNIQUE INDEX idx_attachments_figure_ref ON public.attachments USING btree (figure_ref) WHERE (figure_ref IS NOT NULL)
 table attribute_definitions rows 0
   column id uuid NOT NULL
   column org_id uuid
@@ -853,7 +853,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 56
+table schema_migrations rows 57
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1093,6 +1093,7 @@ ledger 0050 timestamptz_client_times
 ledger 0051 timestamptz_share_link_expiry
 ledger 0052 crew_node_references
 ledger 0053 project_owned_rows
+ledger 0054 figure_refs_per_project
 ledger 0055 figure_counters_without_artifact
 ledger 0056 boot_tasks
 ledger 0057 drop_attachment_test_result

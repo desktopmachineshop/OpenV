@@ -11,6 +11,33 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Agent runs and runners keep time on a server whose clock is not set to
+  UTC.** On an OpenV server running in another time zone, as a self-hosted
+  one can, agent runs, cloud runner leases and runner keys recorded their
+  times shifted by the zone's offset, and acted on the shifted times. East
+  of UTC, a run could be failed as "worker lost" while its runner was still
+  preparing it, an automatic retry, and a run reserved for its launcher's
+  own runner, were held back for hours, and a runner that had stopped still
+  showed as online for hours. West of UTC, a run reserved for its
+  launcher's own runner went to a workspace runner at once, an automatic
+  retry ran without waiting, a runner that stopped right after claiming a
+  run was noticed hours late, a runner polling right then showed as
+  offline, the cloud runner pool showed no runner available, and a cloud
+  runner lease counted its whole length against the workspace's minutes as
+  soon as it started. Either way, a run's start, finish and log times, and
+  a cloud runner's time left, showed hours off. They now record every time
+  in UTC, as on OpenV's hosted service.
+
+- **Every project can add figures to its artifacts.** A figure takes its
+  reference from its artifact, as REQ-1-FIG-1 does from REQ-1, and each
+  project numbers its own artifacts from REQ-1, but a figure reference
+  could be used only once on the whole server. Once any project, in any
+  workspace, had a REQ-1-FIG-1, adding the first figure to another
+  project's REQ-1 failed with "Failed to save attachment metadata", and so
+  on for every reference already taken elsewhere. A figure reference now
+  needs to be unique only within its project, as the artifact reference it
+  is built on is. Figures already added keep their references.
+
 - **Deleting a figure removes every version of its file.** Deleting a
   figure removed only the file of its current version, and the files of
   its earlier versions stayed stored on the server. The file also went

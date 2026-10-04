@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -15,7 +17,15 @@ import (
 // with them, and the log names each once, never printing it. Only an unset
 // or empty variable falls back, so DB_PASSWORD's default applies to nothing
 // else.
+//
+// internal/envparse names a variable once per value for the life of the
+// process, so each run of the test (go test -count=2) sets values no earlier
+// run set.
 func TestEnvSecretKeepsACredentialExactlyAsSet(t *testing.T) {
+	run := envSecretRuns.Add(1)
+	workerKey := fmt.Sprintf("wk-do-not-log-%d\n", run)
+	password := fmt.Sprintf(" pw-do-not-log-%d", run)
+	spaces := strings.Repeat(" ", 2+int(run))
 	var log bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&log, &slog.HandlerOptions{
@@ -28,22 +38,22 @@ func TestEnvSecretKeepsACredentialExactlyAsSet(t *testing.T) {
 	})))
 	t.Cleanup(func() { slog.SetDefault(prev) })
 
-	t.Setenv("WORKER_API_KEY", "wk-do-not-log\n")
-	t.Setenv("DB_PASSWORD", " pw-do-not-log")
+	t.Setenv("WORKER_API_KEY", workerKey)
+	t.Setenv("DB_PASSWORD", password)
 	for range 2 {
-		if got := envSecret("WORKER_API_KEY", ""); got != "wk-do-not-log\n" {
+		if got := envSecret("WORKER_API_KEY", ""); got != workerKey {
 			t.Errorf("WORKER_API_KEY read as %q, want it exactly as set", got)
 		}
 	}
-	if got := envSecret("DB_PASSWORD", "postgres"); got != " pw-do-not-log" {
+	if got := envSecret("DB_PASSWORD", "postgres"); got != password {
 		t.Errorf("DB_PASSWORD read as %q, want it exactly as set", got)
 	}
 	t.Setenv("DB_PASSWORD", "")
 	if got := envSecret("DB_PASSWORD", "postgres"); got != "postgres" {
 		t.Errorf("an empty DB_PASSWORD read as %q, want the default", got)
 	}
-	t.Setenv("DB_PASSWORD", "   ")
-	if got := envSecret("DB_PASSWORD", "postgres"); got != "   " {
+	t.Setenv("DB_PASSWORD", spaces)
+	if got := envSecret("DB_PASSWORD", "postgres"); got != spaces {
 		t.Errorf("a DB_PASSWORD of spaces read as %q, want it exactly as set, not the default", got)
 	}
 
@@ -56,3 +66,7 @@ func TestEnvSecretKeepsACredentialExactlyAsSet(t *testing.T) {
 		t.Errorf("the log printed a credential:\n%s", log.String())
 	}
 }
+
+// envSecretRuns numbers the runs of TestEnvSecretKeepsACredentialExactlyAsSet
+// in this process.
+var envSecretRuns atomic.Int64
