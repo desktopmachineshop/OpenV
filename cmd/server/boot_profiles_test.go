@@ -43,11 +43,14 @@ import (
 // OPENV_SELF_HOSTED, the plan tiers on (a valid
 // OPENV_BILLING_GRANDFATHER_BEFORE), OPENV_REGISTRATION=closed, OPENV_LIMITS,
 // OPENV_BUILD_SHA (/health and /api/v1/public/build then report the commit)
-// and billing on (a test key and a one-entry price map); then two that
+// and billing on (a test key and a one-entry price map); then three that
 // combine settings: billing configured on a self-hosted deployment, which
-// keeps it off and says so, and the boot the plan says must still come up, a
+// keeps it off and says so, the boot the plan says must still come up, a
 // self-hosted deployment with a malformed grandfather date, which it reads
-// only when not self-hosted; and one of malformed settings, those the server
+// only when not self-hosted, and a self-hosted deployment whose
+// OPENV_PLAN_DEFAULT names no plan, which keeps self_host with one warning
+// (#379 bug 117, which also adds OPENV_PLAN_DEFAULT=open_source, a plan the
+// setting used to ignore); and one of malformed settings, those the server
 // reads at boot and those a request reads, which it must still come up with,
 // each at its default and named once in the boot log (internal/envparse;
 // #379, question 15), SECURE_COOKIES among them although main reads it twice.
@@ -103,6 +106,7 @@ const (
 	testBuildSHA       = "0123456789abcdef0123456789abcdef01234567"
 	testLimits         = `{"max_projects":7}`
 	registrationClosed = "closed"
+	unknownPlan        = "self-host"                               // self_host mistyped: no plan has this name
 	openedEmail        = "boot-harness-before-closing@example.com" // the account signUpOnOpenServer makes
 )
 
@@ -149,6 +153,10 @@ var s4bProfiles = s4b([]bootProfile{
 		env: billingOn(map[string]string{"OPENV_SELF_HOSTED": "true"})},
 	{name: "self_hosted_bad_grandfather", about: "a malformed grandfather date on a self-hosted deployment, which does not read it",
 		env: map[string]string{"OPENV_SELF_HOSTED": "true", "OPENV_BILLING_GRANDFATHER_BEFORE": badGrandfather}},
+	{name: "self_hosted_unknown_plan", about: "a self-hosted deployment whose default plan names no plan, which keeps self_host with one warning",
+		env: map[string]string{"OPENV_SELF_HOSTED": "true", "OPENV_PLAN_DEFAULT": unknownPlan}},
+	{name: "plan_default_open_source", about: "new workspaces created on the open-source plan",
+		env: map[string]string{"OPENV_PLAN_DEFAULT": "open_source"}},
 	{name: "malformed_settings", about: "settings that break the rule, each kept at its default with one warning",
 		env: malformedSettings},
 })

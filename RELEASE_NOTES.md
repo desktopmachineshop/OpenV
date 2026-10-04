@@ -378,6 +378,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   workspace, so they fire only an automation that covers the whole
   workspace, not one made on a project's Automations page.
 
+- **A mistyped `OPENV_PLAN_DEFAULT` is warned about at boot.** For
+  operators: when `OPENV_PLAN_DEFAULT` named no plan, new workspaces were
+  quietly created on the `single` plan, even on a self-hosted deployment,
+  and the boot log still showed the mistyped name as the default plan. Such
+  a name now keeps the deployment's default, `self_host` with
+  `OPENV_SELF_HOSTED=true` and `single` otherwise; the boot log carries a
+  warning naming the variable, and its `workspace limits configured` line
+  shows the plan actually used. `open_source`, which was ignored the same
+  way, is now accepted.
+
+- **A failed Antigravity run points you to a Gemini API key only when it
+  failed to sign in.** The note about the keyring and setting a Gemini API
+  key was added whenever the CLI's error merely contained letters such as
+  "auth" or "login", so an error about an "author" field or a file named
+  `auth.go` was explained, and failed, as a sign-in problem, while
+  "invalid API key" or "HTTP 403" came with no explanation. The note now
+  appears exactly when the run fails as a sign-in problem, read by the
+  same whole-word rule as every other agent's failure.
+
 - **Deleting a project now deletes everything in it.** Deleting a project
   removed the project itself, its members, baselines and share links, but
   left its artifacts with all their versions, comments, attachments and

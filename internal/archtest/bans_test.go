@@ -120,10 +120,13 @@ var pureBuiltins = setOf([]string{
 
 // checkPackageVars bans side-effecting package-level variables: a var whose
 // initialiser calls anything but a pure constructor (pureFuncs,
-// purePackages, pureBuiltins, a conversion, or a method on the result of one
-// of those). Package initialisation then does no I/O, reads no environment
-// and registers nothing, and a function literal's body is not counted,
-// because it runs only when called. Today's hits are grandfathered.
+// purePackages, pureBuiltins, a conversion, or a method on a value a pure
+// standard-library function built). Package initialisation then does no
+// I/O, reads no environment and registers nothing. A function literal's
+// body is not counted, because it runs only when called, unless the
+// initialiser calls it: immediately, or by passing it to a pure call that
+// runs it (maps.Collect running an iterator), when its body is held to the
+// same rule. Today's hits are grandfathered.
 func checkPackageVars(c *check) {
 	why := map[string]string{}
 	var found []string
@@ -166,11 +169,20 @@ func checkPackageVars(c *check) {
 		})
 }
 
-// impureCall returns the first callee in expr, outside function literals,
-// that is not known to be pure, or "".
+// impureCall returns the first callee in expr that is not known to be pure,
+// or "". Function literals are skipped, as they run only when called,
+// except one passed to a pure call that may run it (funcArgsRun): its body
+// is read too, with calls of its own parameters counted as pure, since
+// they call back into the pure call that runs it (an iterator's yield).
 func impureCall(m *module, f *file, expr ast.Expr) string {
+	return impureCallIn(m, f, expr, nil)
+}
+
+// impureCallIn is impureCall over node, where params are the parameters
+// of the function literals node is the body of.
+func impureCallIn(m *module, f *file, node ast.Node, params map[string]bool) string {
 	found := ""
-	ast.Inspect(expr, func(n ast.Node) bool {
+	ast.Inspect(node, func(n ast.Node) bool {
 		if found != "" {
 			return false
 		}
@@ -178,13 +190,82 @@ func impureCall(m *module, f *file, expr ast.Expr) string {
 		case *ast.FuncLit:
 			return false
 		case *ast.CallExpr:
+			if id, ok := x.Fun.(*ast.Ident); ok && params[id.Name] {
+				return true // a call back into the pure call running this literal
+			}
 			if !pureCallee(m, f, x.Fun) {
 				found = render(m, x.Fun)
+				return false
+			}
+			if !funcArgsRun(m, f, x.Fun) {
+				return true
+			}
+			for _, arg := range x.Args {
+				lit, ok := arg.(*ast.FuncLit)
+				if !ok {
+					continue
+				}
+				if callee := impureCallIn(m, f, lit.Body, withParams(params, lit.Type)); callee != "" {
+					found = callee + " in a func literal passed to " + render(m, x.Fun)
+					return false
+				}
 			}
 		}
 		return true
 	})
 	return found
+}
+
+// funcStorers are the pure functions, keyed "importpath.Name", that keep a
+// function they are passed for later rather than call it: sync's Once
+// wrappers, and net/http.HandlerFunc, a conversion.
+var funcStorers = setOf([]string{
+	"sync.OnceFunc", "sync.OnceValue", "sync.OnceValues", "net/http.HandlerFunc",
+})
+
+// funcArgsRun reports whether a pure call of fun may run a function literal
+// it is passed while the package initialises: anything but a conversion,
+// which keeps the literal as a value, a builtin (append keeps it too) and
+// the funcStorers.
+func funcArgsRun(m *module, f *file, fun ast.Expr) bool {
+	switch x := fun.(type) {
+	case *ast.ParenExpr:
+		return funcArgsRun(m, f, x.X)
+	case *ast.IndexExpr:
+		return funcArgsRun(m, f, x.X)
+	case *ast.IndexListExpr:
+		return funcArgsRun(m, f, x.X)
+	case *ast.StarExpr, *ast.ArrayType, *ast.MapType, *ast.ChanType, *ast.FuncType, *ast.InterfaceType, *ast.StructType:
+		return false // a conversion
+	case *ast.Ident:
+		return false // a pure one is a conversion or a builtin; neither calls a function
+	case *ast.SelectorExpr:
+		if ip := f.selectorPkg(x); ip != "" {
+			if funcStorers[ip+"."+x.Sel.Name] {
+				return false
+			}
+			p := m.pkgs[m.nameOf(ip)]
+			return !(m.internal(ip) && p != nil && p.types[x.Sel.Name] != nil)
+		}
+	}
+	return true
+}
+
+// withParams is params with the parameters of a function literal of type
+// ft added.
+func withParams(params map[string]bool, ft *ast.FuncType) map[string]bool {
+	out := map[string]bool{}
+	for name := range params {
+		out[name] = true
+	}
+	if ft.Params != nil {
+		for _, field := range ft.Params.List {
+			for _, name := range field.Names {
+				out[name.Name] = true
+			}
+		}
+	}
+	return out
 }
 
 func pureCallee(m *module, f *file, fun ast.Expr) bool {
@@ -209,7 +290,32 @@ func pureCallee(m *module, f *file, fun ast.Expr) bool {
 			return m.internal(ip) && p != nil && p.types[x.Sel.Name] != nil
 		}
 		if call, ok := x.X.(*ast.CallExpr); ok {
-			return pureCallee(m, f, call.Fun) // a method on a value built by a pure call
+			return builtByStd(f, call.Fun) // a method on a value built by a pure call
+		}
+	}
+	return false
+}
+
+// builtByStd reports whether fun, called, is a pure function of the
+// standard library (pureFuncs, purePackages), or a method on a value one
+// built, so that the value's methods are the standard library's too. A
+// conversion or a builtin such as new may build a value of this module's
+// own type, whose methods are the module's code and may do anything:
+// someType(nil).method() is not pure because the conversion is.
+func builtByStd(f *file, fun ast.Expr) bool {
+	switch x := fun.(type) {
+	case *ast.ParenExpr:
+		return builtByStd(f, x.X)
+	case *ast.IndexExpr:
+		return builtByStd(f, x.X)
+	case *ast.IndexListExpr:
+		return builtByStd(f, x.X)
+	case *ast.SelectorExpr:
+		if ip := f.selectorPkg(x); ip != "" {
+			return pureFuncs[ip+"."+x.Sel.Name] || purePackages[ip]
+		}
+		if call, ok := x.X.(*ast.CallExpr); ok {
+			return builtByStd(f, call.Fun)
 		}
 	}
 	return false
@@ -233,6 +339,107 @@ func render(m *module, e ast.Expr) string {
 	}
 	return s
 }
+
+// TestPackageVarRules proves on a fixture what the side-effecting package
+// variable rule finds, and in particular the two ways initialisation-time
+// work used to slip past it (#379 bug 97): a function literal that a pure
+// call runs while the package initialises, such as maps.Collect running an
+// iterator, whose body went unread; and a method on a conversion's or a
+// builtin's result, which counted as a method of a value a pure call built
+// although it is the module's own code. A literal that is only stored, by
+// sync.OnceValue, a conversion or a plain assignment, is still not read.
+func TestPackageVarRules(t *testing.T) {
+	root := writeFixture(t, map[string]string{
+		"go.mod":                "module example.com/fixture\n\ngo 1.25\n",
+		"internal/other/t.go":   "package other\n\ntype T []string\n\nfunc (T) Load() T { return nil }\n",
+		"internal/vars/vars.go": packageVarsFixture,
+	})
+	m, err := parseModule(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, v := range runRule(t, m, &ratchets{}, checkPackageVars) {
+		key, _, _ := strings.Cut(v, " ")
+		got[key] = v
+	}
+	want := map[string]string{
+		"internal/vars:collected":   "calls os.Getenv in a func literal passed to maps.Collect at package initialisation",
+		"internal/vars:nested":      "calls os.Getenv in a func literal passed to slices.SortFunc in a func literal passed to maps.Collect at package initialisation",
+		"internal/vars:indexed":     "calls os.Getenv in a func literal passed to slices.IndexFunc at package initialisation",
+		"internal/vars:converted":   "calls loader(nil).Load at package initialisation",
+		"internal/vars:pointer":     "calls (*loader)(nil).Load at package initialisation",
+		"internal/vars:allocated":   "calls new(loader).Load at package initialisation",
+		"internal/vars:otherType":   "calls other.T(nil).Load at package initialisation",
+		"internal/vars:invoked":     "calls an immediately invoked func literal at package initialisation",
+		"internal/vars:environment": "calls os.Getenv at package initialisation",
+	}
+	for key, what := range want {
+		if !strings.Contains(got[key], what) {
+			t.Errorf("%s: violation %q, want one that %s", key, got[key], what)
+		}
+	}
+	for key, v := range got {
+		if _, ok := want[key]; !ok {
+			t.Errorf("%s is pure, but the rule reported %q", key, v)
+		}
+	}
+}
+
+const packageVarsFixture = `package vars
+
+import (
+	"maps"
+	"net/http"
+	"os"
+	"slices"
+	"strings"
+	"sync"
+
+	"example.com/fixture/internal/other"
+)
+
+type loader []string
+
+func (loader) Load() loader { return nil }
+
+// Initialisation-time work the rule finds.
+var (
+	collected = maps.Collect(func(yield func(string, int) bool) {
+		yield(os.Getenv("COLLECTED"), 1)
+	})
+	nested = maps.Collect(func(yield func(string, int) bool) {
+		names := []string{"b", "a"}
+		slices.SortFunc(names, func(a, b string) int { return strings.Compare(os.Getenv(a), b) })
+		yield(names[0], 1)
+	})
+	indexed   = slices.IndexFunc([]string{"x"}, func(s string) bool { return s == os.Getenv("INDEXED") })
+	converted = loader(nil).Load()
+	pointer   = (*loader)(nil).Load()
+	allocated = new(loader).Load()
+	otherType = other.T(nil).Load()
+	invoked   = func() int { return 1 }()
+	environment = os.Getenv("ENVIRONMENT")
+)
+
+// Pure, or work left for later: none of these is reported.
+var (
+	pureIterator = maps.Collect(func(yield func(string, int) bool) {
+		for _, k := range []string{"a", "b"} {
+			if !yield(strings.ToUpper(k), len(k)) {
+				return
+			}
+		}
+	})
+	replaced   = strings.NewReplacer("a", "b").Replace("abc")
+	conversion = loader(nil)
+	once       = sync.OnceValue(func() string { return os.Getenv("ONCE") })
+	handler    = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { os.Exit(1) })
+	stored     = func() string { return os.Getenv("STORED") }
+	table      = map[string]func() string{"a": func() string { return os.Getenv("TABLE") }}
+	appended   = append([]func() string{}, func() string { return os.Getenv("APPENDED") })
+)
+`
 
 // TestRouterRules proves on a fixture that a second router fails the one
 // router ban, in cmd/server or elsewhere, and that routes registered through

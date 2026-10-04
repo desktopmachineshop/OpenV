@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
@@ -272,6 +273,45 @@ func TestAntigravityFailureExplainsAuth(t *testing.T) {
 	}
 	if other := antigravityFailure("model unavailable"); other != "model unavailable" {
 		t.Errorf("an unrelated failure was annotated: %q", other)
+	}
+}
+
+// The note is added exactly when the failure classifier reads the failure
+// as auth (classifyAgentError, whole words and status codes since #478),
+// and adding it never changes the run's class. antigravityFailure used to
+// look for substrings of its own ("auth", "login", "sign-in" and others),
+// so "the author field is missing" got the note and, through the note's
+// own mention of an API key, failed as auth, while "invalid API key",
+// already auth, got no explanation (#379 bug 127).
+func TestAntigravityFailureNoteFollowsTheClassifier(t *testing.T) {
+	for _, c := range []struct {
+		detail string
+		note   bool
+	}{
+		{"Error: authentication required", true},
+		{"HTTP 401 Unauthorized", true},
+		{"invalid API key", true},
+		{"not logged in", true},
+		{"please sign in", true},
+		{"model unavailable", false},
+		{"the author field is missing", false},
+		{"wrote 403 lines to auth.go", false},
+		{"rate limit exceeded; check your API key", false},
+	} {
+		got := antigravityFailure(c.detail)
+		switch {
+		case c.note && got != c.detail+" — "+antigravityAuthNote:
+			t.Errorf("antigravityFailure(%q) = %q, want the authentication note after it", c.detail, got)
+		case !c.note && got != c.detail:
+			t.Errorf("antigravityFailure(%q) = %q, want it as it is", c.detail, got)
+		}
+		class := classifyAgentError(errors.New(c.detail))
+		if (class == agentruns.ErrorClassAuth) != c.note {
+			t.Errorf("%q is classed %s: the note must follow the classifier's auth", c.detail, class)
+		}
+		if withNote := classifyAgentError(errors.New(got)); withNote != class {
+			t.Errorf("%q is classed %s, and %s once annotated: the note changed the class", c.detail, class, withNote)
+		}
 	}
 }
 

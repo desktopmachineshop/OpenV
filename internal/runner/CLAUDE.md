@@ -2,7 +2,7 @@
 
 Before you finish a change here or in `internal/mcp`, run:
 - `go test -short -count=1 ./internal/runner ./internal/mcp ./internal/seeds ./internal/hosting ./cmd/agentd ./cmd/openv-mcp ./cmd/openv-connector`
-- before pushing, without `-short`: `go test -count=1 ./internal/runner` (about 80 s)
+- before pushing, without `-short` and under the race detector, as CI runs it: `go test -race -count=1 ./internal/runner` (about 90 s)
 - `go test ./internal/archtest` (a client binary may link no new domain package)
 
 Don't:
