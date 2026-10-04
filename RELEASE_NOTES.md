@@ -173,6 +173,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   still runs. Nightly workspaces, and stable-channel workspaces already on
   0.15.0, see no change.
 
+- **The activity log can show you any kind of event a project records.**
+  The Type filter on a project's Activity page left out six kinds of
+  event the log holds: status changes, review rounds, proposals an agent
+  made for review, and members added to the project, removed from it or
+  given another role. Those events were listed under "all" but could not
+  be picked out on their own. The filter now offers every kind of event a
+  project's activity can hold.
+
 ## 0.15.1 — 2026-09-30
 
 ### Maintenance updates
