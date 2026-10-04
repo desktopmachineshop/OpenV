@@ -121,9 +121,13 @@ func (r *AgentRepository) FindBySlug(orgID, slug string) (*agents.Agent, error) 
 	return a, err
 }
 
-// List returns an org's agents ordered by name.
+// List returns an org's agents ordered by name, case-insensitively and
+// alike under any database collation: the name in small letters compared
+// byte by byte (COLLATE "C"), then the name itself so compared, then the
+// id, so agents of one name list in one order too (#379 bug 94).
 func (r *AgentRepository) List(orgID string) ([]*agents.Agent, error) {
-	rows, err := r.db.Query(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid ORDER BY name`, orgID)
+	rows, err := r.db.Query(`SELECT `+agentColumns+` FROM agents WHERE org_id = NULLIF($1, '')::uuid
+		ORDER BY lower(name) COLLATE "C", name COLLATE "C", id`, orgID)
 	if err != nil {
 		return nil, err
 	}

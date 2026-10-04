@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -211,24 +212,41 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 	})
 }
 
-// List lists a workspace's agents by name alone (agents with one name tie,
-// in no set order); a workspace with none, or an empty workspace id (even
-// beside agents with no workspace), lists nil, and a malformed workspace id
-// is Postgres's refusal.
+// List lists a workspace's agents by name, case-insensitively and alike
+// under any database collation: by the name in small letters compared byte
+// by byte, then by the name itself so compared (a capital first), then by
+// id, so two agents of one name come in one order too (#379 bug 94: by name
+// alone, in the database's collation, which under C put every capital
+// before any small letter). A workspace with none, or an empty workspace id
+// (even beside agents with no workspace), lists nil, and a malformed
+// workspace id is Postgres's refusal.
 func TestAgentRepositoryList(t *testing.T) {
 	db := rtDB(t)
 	repo := NewAgentRepository(db)
 	orgID, otherOrg := uuid.New().String(), uuid.New().String()
-	for i, c := range []struct{ org, name string }{
-		{orgID, "Charlie"},
-		{orgID, "Alpha"},
-		{orgID, "Delta"},
-		{orgID, "Bravo"},
-		{orgID, "Delta"},
-		{otherOrg, "Aardvark"},
+	sameLo, sameHi := uuid.New().String(), uuid.New().String()
+	if sameLo > sameHi {
+		sameLo, sameHi = sameHi, sameLo
+	}
+	for i, c := range []struct{ id, org, name string }{
+		{"", orgID, "charlie"},
+		{"", orgID, "tie-a"},
+		{"", orgID, "Delta"},
+		{sameHi, orgID, "Same"},
+		{"", orgID, "echo"},
+		{"", orgID, "alpha"},
+		{"", orgID, "Echo"},
+		{"", orgID, "tie b"},
+		{"", orgID, "Bravo"},
+		{sameLo, orgID, "Same"},
+		{"", otherOrg, "Aardvark"},
 	} {
+		id := c.id
+		if id == "" {
+			id = uuid.New().String()
+		}
 		// Stamped newest first, so that created_at's order is not the name's.
-		if err := repo.Save(&agents.Agent{ID: uuid.New().String(), OrgID: c.org, Slug: uuid.New().String(), Name: c.name,
+		if err := repo.Save(&agents.Agent{ID: id, OrgID: c.org, Slug: uuid.New().String(), Name: c.name,
 			Provider: "claude", CreatedAt: rtAt(-i), UpdatedAt: rtAt(-i)}); err != nil {
 			t.Fatalf("Save %q: %v", c.name, err)
 		}
@@ -236,14 +254,24 @@ func TestAgentRepositoryList(t *testing.T) {
 	// An agent with no workspace, which no Save writes any more (a database
 	// from before workspaces could hold one until the boot backfill).
 	rtSeed(t, db, `INSERT INTO agents (id, slug, name, provider) VALUES ($1, 'aaron', 'Aaron', 'claude')`, uuid.New().String())
-	list, err := repo.List(orgID)
-	if err != nil {
-		t.Fatalf("List: %v", err)
+	for _, collation := range rtCollations(t, db) {
+		rtSetCollation(t, db, "agents", "name", collation)
+		list, err := repo.List(orgID)
+		if err != nil {
+			t.Fatalf("List under %s: %v", collation, err)
+		}
+		var got []string
+		for _, a := range list {
+			got = append(got, a.Name+" "+a.ID)
+		}
+		want := []string{"alpha", "Bravo", "charlie", "Delta", "Echo", "echo", "Same", "Same", "tie b", "tie-a"}
+		names := rtAgentNames(list)
+		if !reflect.DeepEqual(names, want) || len(list) != 10 || list[6].ID != sameLo || list[7].ID != sameHi {
+			t.Errorf("a workspace's agents under the %s collation listed %q, want %q, the two named Same by id", collation, got, want)
+		}
 	}
-	rtWantOrder(t, "a workspace's agents", rtAgentNames(list), []string{"Alpha"}, []string{"Bravo"}, []string{"Charlie"},
-		[]string{"Delta", "Delta"})
 
-	list, err = repo.List("")
+	list, err := repo.List("")
 	rtWantNil(t, "List with no workspace", list, err)
 	list, err = repo.List(uuid.New().String())
 	rtWantNil(t, "List of a workspace with no agent", list, err)

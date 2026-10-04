@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -141,10 +142,14 @@ func TestMemberRepositoryRoundTrip(t *testing.T) {
 }
 
 // ListByProject lists a project's direct memberships with each account's
-// name, email and avatar joined from users, by name and then email, which
-// breaks a tie on name; people-team grants are not in it. A project with
-// none, or no row, lists nil, and a malformed project id is Postgres's
-// refusal.
+// name, email and avatar joined from users, by name case-insensitively and
+// alike under any database collation (the name in small letters compared
+// byte by byte, then the name itself so compared, a capital first), and
+// then by email in small letters, which is unique and breaks any tie left
+// (#379 bug 94: by name and email in the database's collation, which under
+// C put every capital before any small letter); people-team grants are not
+// in it. A project with none, or no row, lists nil, and a malformed project
+// id is Postgres's refusal.
 func TestMemberRepositoryListByProject(t *testing.T) {
 	db := rtDB(t)
 	repo := NewMemberRepository(db)
@@ -158,8 +163,10 @@ func TestMemberRepositoryListByProject(t *testing.T) {
 	averyB := account{uuid.New().String(), "b.avery@example.com", "Avery", "https://example.com/b.png"}
 	nameless := account{uuid.New().String(), "zed@example.com", "", ""}
 	averyA := account{uuid.New().String(), "a.avery@example.com", "Avery", ""}
+	smallAvery := account{uuid.New().String(), "c.avery@example.com", "avery", ""}
+	bea := account{uuid.New().String(), "Bea@example.com", "bea", ""}
 	granted := account{uuid.New().String(), "granted@example.com", "Granted", ""}
-	for i, a := range []account{casey, averyB, nameless, averyA, granted} {
+	for i, a := range []account{casey, smallAvery, averyB, nameless, bea, averyA, granted} {
 		rtSeedUser(t, db, a.id, a.email, a.name, a.avatar)
 		if a == granted {
 			continue
@@ -180,19 +187,27 @@ func TestMemberRepositoryListByProject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	list, err := repo.ListByProject(projectID)
-	if err != nil {
-		t.Fatalf("ListByProject: %v", err)
+	var list []*members.Member
+	for _, collation := range rtCollations(t, db) {
+		rtSetCollation(t, db, "users", "name", collation)
+		rtSetCollation(t, db, "users", "email", collation)
+		var err error
+		if list, err = repo.ListByProject(projectID); err != nil {
+			t.Fatalf("ListByProject under %s: %v", collation, err)
+		}
+		var emails []string
+		for _, m := range list {
+			emails = append(emails, m.UserEmail)
+		}
+		want := []string{"zed@example.com", "a.avery@example.com", "b.avery@example.com", "c.avery@example.com",
+			"Bea@example.com", "casey@example.com"}
+		if !reflect.DeepEqual(emails, want) {
+			t.Errorf("a project's members under the %s collation listed %q, want %q", collation, emails, want)
+		}
 	}
-	var emails []string
-	for _, m := range list {
-		emails = append(emails, m.UserEmail)
-	}
-	rtWantOrder(t, "a project's members", emails, []string{"zed@example.com"}, []string{"a.avery@example.com"},
-		[]string{"b.avery@example.com"}, []string{"casey@example.com"})
-	if len(list) == 4 {
+	if len(list) == 6 {
 		got := list[2]
-		rtWantTimestamp(t, "a listed membership's created_at", got.CreatedAt, rtAt(-1))
+		rtWantTimestamp(t, "a listed membership's created_at", got.CreatedAt, rtAt(-2))
 		got.CreatedAt = time.Time{}
 		rtWantSame(t, "a listed membership", *got, members.Member{ProjectID: projectID, UserID: averyB.id,
 			Role: members.RoleViewer, UserName: "Avery", UserEmail: "b.avery@example.com", AvatarURL: "https://example.com/b.png"})
@@ -200,7 +215,7 @@ func TestMemberRepositoryListByProject(t *testing.T) {
 
 	empty := uuid.New().String()
 	rtSeedProject(t, db, empty, orgID, "Empty")
-	list, err = repo.ListByProject(empty)
+	list, err := repo.ListByProject(empty)
 	rtWantNil(t, "the members of a project with none", list, err)
 	list, err = repo.ListByProject(uuid.New().String())
 	rtWantNil(t, "the members of a project no row has", list, err)
@@ -290,8 +305,11 @@ func TestMemberRepositoryAccess(t *testing.T) {
 }
 
 // A team grant lists with its team's name, its created_at as a TIMESTAMP
-// column keeps it; a project's grants list by team name alone (teams with
-// one name tie, in no set order). UpsertTeamGrant of a grant the project
+// column keeps it; a project's grants list by team name case-insensitively
+// and alike under any database collation (the name in small letters compared
+// byte by byte, then the name itself so compared, a capital first), and
+// teams of one name by id (#379 bug 94: by name alone, in the database's
+// collation, a tie in no set order). UpsertTeamGrant of a grant the project
 // has rewrites the role alone, keeping created_at; a team or project no row
 // has is the foreign key's refusal, and a malformed id Postgres's, neither
 // mapped to a sentinel. RemoveTeamGrant of a grant no row has, or of a
@@ -302,14 +320,20 @@ func TestMemberRepositoryTeamGrants(t *testing.T) {
 	repo := NewMemberRepository(db)
 	orgID, projectID := uuid.New().String(), uuid.New().String()
 	writers, approvers, qualityA, qualityB := uuid.New().String(), uuid.New().String(), uuid.New().String(), uuid.New().String()
+	beta, smallQuality := uuid.New().String(), uuid.New().String()
+	if qualityA > qualityB {
+		// qualityA's id sorts first; it is granted after qualityB below.
+		qualityA, qualityB = qualityB, qualityA
+	}
 	rtSeedOrg(t, db, orgID)
 	rtSeedProject(t, db, projectID, orgID, "Platform")
 	for _, team := range []struct{ id, name string }{
-		{writers, "Writers"}, {qualityA, "Quality"}, {approvers, "Approvers"}, {qualityB, "Quality"},
+		{writers, "Writers"}, {qualityB, "Quality"}, {smallQuality, "quality"}, {approvers, "Approvers"}, {beta, "beta"},
+		{qualityA, "Quality"},
 	} {
 		rtSeedPeopleTeam(t, db, team.id, orgID, team.name)
 	}
-	for i, team := range []string{writers, qualityA, approvers, qualityB} {
+	for i, team := range []string{writers, qualityB, smallQuality, approvers, beta, qualityA} {
 		// Granted newest first, so that created_at's order is not the name's.
 		if err := repo.UpsertTeamGrant(&members.TeamGrant{ProjectID: projectID, OrgTeamID: team, Role: members.RoleViewer,
 			CreatedAt: rtAt(-i).In(rtCEST)}); err != nil {
@@ -317,18 +341,26 @@ func TestMemberRepositoryTeamGrants(t *testing.T) {
 		}
 	}
 
-	grants, err := repo.ListTeamGrants(projectID)
-	if err != nil {
-		t.Fatalf("ListTeamGrants: %v", err)
+	var grants []*members.TeamGrant
+	for _, collation := range rtCollations(t, db) {
+		rtSetCollation(t, db, "org_teams", "name", collation)
+		var err error
+		if grants, err = repo.ListTeamGrants(projectID); err != nil {
+			t.Fatalf("ListTeamGrants under %s: %v", collation, err)
+		}
+		var got []string
+		for _, g := range grants {
+			got = append(got, g.TeamName+" "+g.OrgTeamID)
+		}
+		want := []string{"Approvers " + approvers, "beta " + beta, "Quality " + qualityA, "Quality " + qualityB,
+			"quality " + smallQuality, "Writers " + writers}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("a project's team grants under the %s collation listed %q, want %q", collation, got, want)
+		}
 	}
-	var names []string
-	for _, g := range grants {
-		names = append(names, g.TeamName)
-	}
-	rtWantOrder(t, "a project's team grants", names, []string{"Approvers"}, []string{"Quality", "Quality"}, []string{"Writers"})
-	if len(grants) == 4 {
+	if len(grants) == 6 {
 		got := grants[0]
-		rtWantTimestamp(t, "a team grant's created_at, sent at +02:00", got.CreatedAt, rtAt(-2).In(rtCEST))
+		rtWantTimestamp(t, "a team grant's created_at, sent at +02:00", got.CreatedAt, rtAt(-3).In(rtCEST))
 		got.CreatedAt = time.Time{}
 		rtWantSame(t, "a team grant", *got, members.TeamGrant{ProjectID: projectID, OrgTeamID: approvers,
 			Role: members.RoleViewer, TeamName: "Approvers"})
@@ -340,10 +372,10 @@ func TestMemberRepositoryTeamGrants(t *testing.T) {
 			t.Fatalf("UpsertTeamGrant of a grant the project has: %v", err)
 		}
 		grants, err := repo.ListTeamGrants(projectID)
-		if err != nil || len(grants) != 4 || grants[0].OrgTeamID != approvers || grants[0].Role != members.RoleOwner {
+		if err != nil || len(grants) != 6 || grants[0].OrgTeamID != approvers || grants[0].Role != members.RoleOwner {
 			t.Fatalf("grants after a second UpsertTeamGrant: %s, %v; want Approvers first as owner", rtJSON(grants), err)
 		}
-		rtWantTimestamp(t, "a grant's created_at after a second UpsertTeamGrant", grants[0].CreatedAt, rtAt(-2).In(rtCEST))
+		rtWantTimestamp(t, "a grant's created_at after a second UpsertTeamGrant", grants[0].CreatedAt, rtAt(-3).In(rtCEST))
 	})
 
 	t.Run("refused upserts", func(t *testing.T) {
@@ -360,8 +392,8 @@ func TestMemberRepositoryTeamGrants(t *testing.T) {
 			t.Fatalf("RemoveTeamGrant: %v", err)
 		}
 		grants, err := repo.ListTeamGrants(projectID)
-		if err != nil || len(grants) != 3 {
-			t.Errorf("grants after RemoveTeamGrant: %s, %v; want three", rtJSON(grants), err)
+		if err != nil || len(grants) != 5 {
+			t.Errorf("grants after RemoveTeamGrant: %s, %v; want five", rtJSON(grants), err)
 		}
 		for _, c := range []struct{ project, team string }{
 			{projectID, writers},
