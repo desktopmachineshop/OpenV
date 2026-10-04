@@ -20,6 +20,7 @@ func TestAnArtifactsHistoryKeepsItsRefAndOutlivesTheArtifact(t *testing.T) {
 	repo := NewArtifactRepository(db)
 	svc := artifacts.NewDefaultService(repo)
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 
 	req := newTestArtifact(projectID, artifacts.TypeRequirement, "Answer in time")
 	if err := svc.CreateArtifact(req); err != nil {

@@ -21,6 +21,7 @@ func TestFindSuspectByProject(t *testing.T) {
 
 	projectA := uuid.New().String()
 	projectB := uuid.New().String()
+	seedProjects(t, db, projectA, projectB)
 
 	mkArtifact := func(projectID, title, typ string) *artifacts.Artifact {
 		a := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
@@ -88,6 +89,7 @@ func TestFindSuspectByProjectMatchesEitherEndpoint(t *testing.T) {
 
 	projectA := uuid.New().String()
 	projectB := uuid.New().String()
+	seedProjects(t, db, projectA, projectB)
 
 	inA := artifacts.NewArtifact(artifacts.CreateArtifactRequest{ProjectID: projectA, Type: "requirement", Title: "A"})
 	inB := artifacts.NewArtifact(artifacts.CreateArtifactRequest{ProjectID: projectB, Type: "design-item", Title: "B"})
@@ -126,6 +128,7 @@ func TestFindByProjectAndStatus(t *testing.T) {
 
 	projectA := uuid.New().String()
 	projectB := uuid.New().String()
+	seedProjects(t, db, projectA, projectB)
 
 	mkInReview := func(projectID, title string) *artifacts.Artifact {
 		a := artifacts.NewArtifact(artifacts.CreateArtifactRequest{ProjectID: projectID, Type: "requirement", Title: title})

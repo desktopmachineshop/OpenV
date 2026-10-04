@@ -18,6 +18,7 @@ func TestArtifactSearchByRef(t *testing.T) {
 	repo := NewArtifactRepository(db)
 
 	proj := uuid.New().String()
+	seedProjects(t, db, proj)
 
 	// Refs are supplied rather than minted so REQ-3 and REQ-30 both exist
 	// without creating twenty-seven artifacts in between; Save keeps a

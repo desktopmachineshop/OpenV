@@ -86,13 +86,15 @@ func rtItemTitles(list []*workitems.WorkItem) []string {
 // note it was raised from, its author or created_at, and an id no row has is
 // no error. An item no row has, and a malformed id, is
 // workitems.ErrNotFound from FindByID, where a malformed id in Update or
-// Delete is Postgres's refusal. Nothing checks the project: an item for a
-// project no row has is stored. Delete takes the item's activity.
+// Delete is Postgres's refusal. An item for a project no row has is the
+// foreign key's refusal (#379 bug 86: it was stored, and outlived its
+// project). Delete takes the item's activity.
 func TestWorkItemRepositoryRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewWorkItemRepository(db)
 	projectID, assignee, run, note, author := uuid.New().String(), uuid.New().String(), uuid.New().String(),
 		uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, projectID)
 	due := time.Date(2026, 4, 1, 17, 30, 0, 987654321, rtCEST)
 
 	saved := &workitems.WorkItem{ID: uuid.New().String(), ProjectID: projectID, Title: "Trace REQ-23",
@@ -169,9 +171,7 @@ func TestWorkItemRepositoryRoundTrip(t *testing.T) {
 			ProjectID: malformed, Title: "x", Column: workitems.ColumnTodo, AssigneeType: workitems.AssigneeUser}))
 		orphan := &workitems.WorkItem{ID: uuid.New().String(), ProjectID: uuid.New().String(), Title: "Orphan",
 			Column: workitems.ColumnTodo, AssigneeType: workitems.AssigneeUser, CreatedAt: rtAt(0), UpdatedAt: rtAt(0)}
-		if err := repo.Save(orphan); err != nil {
-			t.Errorf("Save for a project no row has: %v, want it stored", err)
-		}
+		rtWantPQ(t, "Save for a project no row has", repo.Save(orphan), "23503", "work_items_project_id_fkey")
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -222,6 +222,7 @@ func TestWorkItemRepositoryLists(t *testing.T) {
 	db := rtDB(t)
 	repo := NewWorkItemRepository(db)
 	project, other := uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, project, other)
 	noteA, noteB, noteC := uuid.New().String(), uuid.New().String(), uuid.New().String()
 
 	for _, c := range []struct {
@@ -329,7 +330,9 @@ func TestWorkItemRepositoryLists(t *testing.T) {
 func TestWorkItemRepositoryActivity(t *testing.T) {
 	db := rtDB(t)
 	repo := NewWorkItemRepository(db)
-	item := &workitems.WorkItem{ID: uuid.New().String(), ProjectID: uuid.New().String(), Title: "Card",
+	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
+	item := &workitems.WorkItem{ID: uuid.New().String(), ProjectID: projectID, Title: "Card",
 		Column: workitems.ColumnTodo, AssigneeType: workitems.AssigneeUser, CreatedAt: rtAt(0), UpdatedAt: rtAt(0)}
 	if err := repo.Save(item); err != nil {
 		t.Fatal(err)
@@ -412,6 +415,7 @@ func TestWorkItemRepositoryReadsJSONOfAnotherShape(t *testing.T) {
 	db := rtDB(t)
 	repo := NewWorkItemRepository(db)
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 	newItem := func(title string) *workitems.WorkItem {
 		item := &workitems.WorkItem{ID: uuid.New().String(), ProjectID: projectID, Title: title,
 			Column: workitems.ColumnTodo, AssigneeType: workitems.AssigneeUser, CreatedAt: rtAt(0), UpdatedAt: rtAt(0)}

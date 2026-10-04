@@ -16,10 +16,11 @@ func seedInterviewSession(t *testing.T) (*InterviewRepository, string) {
 	db := testDB(t)
 	initTestSchema(t, db)
 
-	interviewID := uuid.New().String()
+	interviewID, projectID := uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, projectID)
 	if _, err := db.Exec(
 		`INSERT INTO interviews (id, project_id, name) VALUES ($1, $2, 'Test Interview')`,
-		interviewID, uuid.New().String(),
+		interviewID, projectID,
 	); err != nil {
 		t.Fatalf("seed interview: %v", err)
 	}

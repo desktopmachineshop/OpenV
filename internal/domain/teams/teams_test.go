@@ -189,8 +189,14 @@ func (r *fakeRepo) FindDefaultTeam(orgID string) (*Team, error) {
 
 func (r *fakeRepo) SaveNode(n *Node) error   { r.nodes[n.ID] = n; return nil }
 func (r *fakeRepo) UpdateNode(n *Node) error { r.nodes[n.ID] = n; return nil }
+
+// FindNodeByID answers as the Postgres repository does: ErrNodeNotFound
+// for a node no row has (#379 bug 88).
 func (r *fakeRepo) FindNodeByID(id string) (*Node, error) {
-	return r.nodes[id], nil
+	if n, ok := r.nodes[id]; ok {
+		return n, nil
+	}
+	return nil, ErrNodeNotFound
 }
 func (r *fakeRepo) ListNodesByTeam(teamID string) ([]*Node, error) {
 	var out []*Node
@@ -365,6 +371,41 @@ func TestUpdateTeamEntryNodeMustBeAgent(t *testing.T) {
 	}
 	if _, err := svc.UpdateTeam(team.ID, nil, nil, &agentNode.ID); err != nil {
 		t.Errorf("UpdateTeam(agent entry) unexpected error: %v", err)
+	}
+}
+
+// A node no row has, which the repository answers with ErrNodeNotFound
+// (#379 bug 88: it answered nil, nil), is refused as each caller refused it
+// before: as an entry node or an edge's end, a node that does not belong to
+// the crew (the API's 400 with that message); looked up, updated or asked
+// for its successors, ErrNodeNotFound (the API's 404 "team node not
+// found").
+func TestANodeNoRowHasIsRefusedAsBefore(t *testing.T) {
+	svc, _, team := newServiceWithTeam(t)
+	node, _ := svc.AddNode(team.ID, NodeSpec{AgentID: "a1", Label: "Dev"})
+	gone := "no-such-node"
+
+	if _, err := svc.UpdateTeam(team.ID, nil, nil, &gone); err == nil || err.Error() != "entry node does not belong to team" {
+		t.Errorf("UpdateTeam to an entry node no row has: %v, want entry node does not belong to team", err)
+	}
+	if _, err := svc.AddEdge(team.ID, gone, node.ID, EdgeDelegates, nil); err == nil || err.Error() != "from node does not belong to team" {
+		t.Errorf("AddEdge from a node no row has: %v, want from node does not belong to team", err)
+	}
+	if _, err := svc.AddEdge(team.ID, node.ID, gone, EdgeDelegates, nil); err == nil || err.Error() != "to node does not belong to team" {
+		t.Errorf("AddEdge to a node no row has: %v, want to node does not belong to team", err)
+	}
+	if n, err := svc.GetNode(gone); n != nil || err != ErrNodeNotFound {
+		t.Errorf("GetNode of a node no row has: %v, %v; want nil, ErrNodeNotFound", n, err)
+	}
+	label := "x"
+	if _, err := svc.UpdateNode(gone, &label, nil, nil, nil, nil); err != ErrNodeNotFound {
+		t.Errorf("UpdateNode of a node no row has: %v, want ErrNodeNotFound", err)
+	}
+	if _, err := svc.ResolveDelegates(gone); err != ErrNodeNotFound {
+		t.Errorf("ResolveDelegates of a node no row has: %v, want ErrNodeNotFound", err)
+	}
+	if _, err := svc.SuccessorEdges(gone, ""); err != ErrNodeNotFound {
+		t.Errorf("SuccessorEdges of a node no row has: %v, want ErrNodeNotFound", err)
 	}
 }
 

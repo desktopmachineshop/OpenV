@@ -18,6 +18,7 @@ func TestAttributeDefinitionRoundTrip(t *testing.T) {
 
 	orgID := uuid.New().String()
 	projectID := uuid.New().String()
+	seedProjects(t, db, projectID)
 
 	// Org-wide enum definition.
 	orgDef, err := svc.CreateDefinition(attributes.CreateDefinitionRequest{

@@ -62,11 +62,13 @@ func rtSeedAgent(t *testing.T, db *sql.DB, id, orgID, slug string) {
 // node never did); so is a malformed id in UpdateTeam, MarkDefault and
 // DeleteTeam, while deleting a crew no row has is no error. An entry node no
 // row has is the foreign key's refusal, in SaveTeam and UpdateTeam alike
-// (bug 91: it was stored).
+// (bug 91: it was stored), and so is a project no row has (bug 86: it was
+// stored, and the crew outlived its project).
 func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
 	orgID, projectID, agentID := uuid.New().String(), uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, projectID)
 	rtSeedAgent(t, db, agentID, orgID, "lead")
 
 	saved := &teams.Team{ID: uuid.New().String(), OrgID: orgID, Name: "Requirements crew",
@@ -157,6 +159,8 @@ func TestTeamRepositoryTeamRoundTrip(t *testing.T) {
 		gone := uuid.New().String()
 		rtWantPQ(t, "SaveTeam with an entry node no row has", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
 			Name: "x", EntryNodeID: &gone}), "23503", "agent_teams_entry_node_id_fkey")
+		rtWantPQ(t, "SaveTeam for a project no row has", repo.SaveTeam(&teams.Team{ID: uuid.New().String(), OrgID: orgID,
+			Name: "x", ProjectID: &gone}), "23503", "agent_teams_project_id_fkey")
 		var n int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM agent_teams`).Scan(&n); err != nil || n != 2 {
 			t.Errorf("crews after the refused saves: %d (%v), want the two saved", n, err)
@@ -265,6 +269,7 @@ func TestTeamRepositoryListTeams(t *testing.T) {
 	db := rtDB(t)
 	repo := NewTeamRepository(db)
 	orgID, otherOrg, project, otherProject := uuid.New().String(), uuid.New().String(), uuid.New().String(), uuid.New().String()
+	seedProjects(t, db, project, otherProject)
 
 	// Saved out of order: the order is the query's.
 	for _, c := range []struct {
@@ -331,9 +336,10 @@ func TestTeamRepositoryListTeams(t *testing.T) {
 // back as an empty map. UpdateNode rewrites type, agent, user, label,
 // department and position, never the crew or created_at. Nodes list by
 // created_at alone (a tie in no set order), a crew with none lists nil, and
-// a node no row has, or a malformed id, reads as no node and no error (not
-// teams.ErrNodeNotFound). An agent node with no agent, or naming an agent or
-// crew no row has, is Postgres's refusal, as is a malformed id in any write.
+// a node no row has, or a malformed id, is teams.ErrNodeNotFound (#379 bug
+// 88: it read as no node and no error). An agent node with no agent, or
+// naming an agent or crew no row has, is Postgres's refusal, as is a
+// malformed id in any write.
 // Deleting a node takes the edges that touch it and clears the entry node
 // of the crew it was the entry node of, leaving the rest of the crew as it
 // was (#379 bug 91: entry_node_id went on naming the node).
@@ -460,8 +466,8 @@ func TestTeamRepositoryNodeRoundTrip(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		for _, id := range append([]string{uuid.New().String()}, malformedIDs...) {
-			if found, err := repo.FindNodeByID(id); found != nil || err != nil {
-				t.Errorf("FindNodeByID(%q) = %v, %v; want nil, nil", id, found, err)
+			if found, err := repo.FindNodeByID(id); found != nil || err != teams.ErrNodeNotFound {
+				t.Errorf("FindNodeByID(%q) = %v, %v; want nil, teams.ErrNodeNotFound", id, found, err)
 			}
 		}
 	})
@@ -481,8 +487,8 @@ func TestTeamRepositoryNodeRoundTrip(t *testing.T) {
 		if err := repo.DeleteNode(agentNode.ID); err != nil {
 			t.Fatalf("DeleteNode: %v", err)
 		}
-		if found, err := repo.FindNodeByID(agentNode.ID); found != nil || err != nil {
-			t.Errorf("FindNodeByID after DeleteNode: %v, %v; want nil, nil", found, err)
+		if found, err := repo.FindNodeByID(agentNode.ID); found != nil || err != teams.ErrNodeNotFound {
+			t.Errorf("FindNodeByID after DeleteNode: %v, %v; want nil, teams.ErrNodeNotFound", found, err)
 		}
 		if found, err := repo.FindEdgeByID(edge.ID); found != nil || err != nil {
 			t.Errorf("an edge from a deleted node: %v, %v; want it gone with the node", found, err)
@@ -655,7 +661,7 @@ func TestTeamRepositoryEdgeRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, id := range []string{lead, writer, checker, otherA} {
-			if found, err := repo.FindNodeByID(id); found != nil || err != nil {
+			if found, err := repo.FindNodeByID(id); found != nil || err != teams.ErrNodeNotFound {
 				t.Errorf("a node of a deleted crew: %v, %v; want it gone", found, err)
 			}
 		}
