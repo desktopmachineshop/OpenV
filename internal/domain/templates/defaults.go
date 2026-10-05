@@ -12,8 +12,8 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
-	"github.com/openv/requirements-platform/internal/domain/exports"
 	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 const (
@@ -164,7 +164,7 @@ func buildGuidedProductSkeletonSnapshot() ([]byte, error) {
 	// gap analysis view has something to show out of the box.
 	_ = needQuickSetup
 
-	exportData := exports.ProjectExport{
+	exportData := snapshot.ProjectExport{
 		ExportedAt:  now,
 		Version:     "1.0",
 		ProjectID:   "guided-skeleton",
@@ -289,7 +289,7 @@ func GetFileBasedTemplateSnapshot(examplesDir string, keyOrID string) ([]byte, e
 		derivedID := uuid.NewSHA1(uuid.NameSpaceOID, []byte(templateData.Key)).String()
 		if templateData.Key == keyOrID || derivedID == keyOrID {
 			// Convert TemplateData back to ProjectExport format for the snapshot
-			export := exports.ProjectExport{
+			export := snapshot.ProjectExport{
 				ExportedAt:  templateData.ExportedAt,
 				Version:     templateData.Version,
 				ProjectID:   templateData.Key,

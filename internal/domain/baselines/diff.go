@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 // SnapshotRef identifies one side of a baseline comparison: a stored
@@ -71,7 +71,7 @@ type DiffResult struct {
 // project, so IDs are stable), links by (from, to, type). Base and Target
 // refs on the result are left for the caller to fill in. All slices are
 // non-nil so the result marshals as [] rather than null.
-func Diff(base, target *exports.ProjectExport) *DiffResult {
+func Diff(base, target *snapshot.ProjectExport) *DiffResult {
 	result := &DiffResult{
 		Added:        []ArtifactSummary{},
 		Removed:      []ArtifactSummary{},
@@ -186,7 +186,7 @@ func summarize(a *artifacts.Artifact) ArtifactSummary {
 	return ArtifactSummary{ID: a.ID, Type: a.Type, Title: a.Title}
 }
 
-func artifactsByID(export *exports.ProjectExport) map[string]*artifacts.Artifact {
+func artifactsByID(export *snapshot.ProjectExport) map[string]*artifacts.Artifact {
 	byID := make(map[string]*artifacts.Artifact, len(export.Artifacts))
 	for _, artifact := range export.Artifacts {
 		if artifact == nil || artifact.ID == "" {
@@ -204,7 +204,7 @@ type linkKey struct {
 	typ    string
 }
 
-func linksByKey(export *exports.ProjectExport) map[linkKey]linkEndpoints {
+func linksByKey(export *snapshot.ProjectExport) map[linkKey]linkEndpoints {
 	byKey := make(map[linkKey]linkEndpoints, len(export.Links))
 	for _, link := range export.Links {
 		if link == nil {

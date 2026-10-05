@@ -503,17 +503,24 @@ module's named types. It does not follow a value through a helper function;
 instead `decodeErrorSources`, also in `decode_test.go`, maps the name of a
 function or method whose returned error carries such a decode error to the
 alias type, and an error assigned from a call by that name counts as the
-decode's. The sites known today are `Handler.projectExport`
-(`project_snapshot.go`); the export service's `ImportProject` and
-`ImportProjectWithOverrides`, called by the handlers `ImportProject`
-(`project_io_handlers.go`) and `CreateProjectFromTemplate`
-(`template_handlers.go`), which decode in `internal/domain/exports`,
-outside `internal/api`; and the
-report service's `GenerateProjectReport` and `GenerateProjectReportDOCX`
-(through `loadReportExport`) and `GenerateVVReport`. Both lists are empty
-today; P1 adds `ProjectExport` with those six names, after checking for
-others, and P3 `FinishRequest`, each in a class T commit before its move,
-and X14 adds `snapshot`'s `Load`. The scan follows an error only through the
+decode's. The alias list names `ProjectExport` under
+`internal/domain/exports` and `internal/domain/snapshot`, which P1 added in
+a class T commit before moving it; P3 adds `FinishRequest` the same way. The
+sources are `Handler.projectExport` (`project_snapshot.go`); the report
+service's `GenerateProjectReport` and `GenerateProjectReportDOCX` (through
+`loadReportExport`) and `GenerateVVReport`; and the download service's
+`Options` (through `reports.LoadReportExport`); X14 adds `snapshot`'s
+`Load`. Four paths that decode a `ProjectExport` are not on it. The export
+service's `ImportProject` and `ImportProjectWithOverrides`, and the
+template service's `CreateProjectFromTemplate`, which calls the latter,
+return `exports.ErrMalformedImport` with a description of the refusal in
+the terms of the file, not the decode error, since #508 (#379 bug 184;
+`TestImportRefusalsNameNoGoType` in `internal/domain/exports` pins it), so
+their error names no Go type. The download service's `Download` decodes as
+`Options` does, but `serveDownload` writes `err.Error()` for
+`ErrUnsupportedFormat` in its `if err != nil` branch, which the rule would
+flag, and answers every other error with a fixed message, kept by review
+(R8). The scan follows an error only through the
 later statements of the list it was assigned in, so it cannot follow
 `Handler.GenerateReport`, which assigns the error inside a `switch` case
 and tests it after the switch; that site answers with a fixed message
