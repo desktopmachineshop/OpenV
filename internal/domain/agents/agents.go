@@ -163,9 +163,30 @@ type Definition struct {
 	SystemPrompt string `json:"system_prompt" yaml:"-"`
 }
 
-// Validate checks a definition for required fields and sane defaults.
+// Validate checks a definition a person is saving now for required fields and
+// sane defaults: the rules for stored definitions (validateStored), and one
+// tool per allowed_tools entry (oneToolPerEntry).
 func (d *Definition) Validate() error {
-	return d.validate(true)
+	if err := d.validate(true); err != nil {
+		return err
+	}
+	return oneToolPerEntry(d.AllowedTools)
+}
+
+// oneToolPerEntry refuses an allowed_tools entry that holds a comma (#379 bug
+// 186). claude-code receives the list joined with commas (--allowedTools), so
+// such an entry is several tools there, while the platform reads it as one:
+// "mcp__openv__get_artifact,Bash" handed the agent a shell that the trust
+// check (ToolsReachOutside) did not see. It is a rule for a list a person
+// saves; a definition already stored with such an entry still loads, and
+// ToolsReachOutside reads each part of it.
+func oneToolPerEntry(tools []string) error {
+	for _, t := range tools {
+		if strings.Contains(t, ",") {
+			return fmt.Errorf("allowed_tools entry %q holds a comma: name one tool per entry (\"Read\" and \"Grep\", not \"Read, Grep\"), because the vendor CLI reads a comma as the start of another tool", t)
+		}
+	}
+	return nil
 }
 
 // validate is Validate with one knob: requireTools off admits a definition
@@ -308,24 +329,39 @@ func (a *Agent) UntrustedInput() bool {
 // shell into something that cannot reach the internet. An agent holding one
 // therefore runs untrusted — which costs it nothing it was granted, since the
 // allowlist stays the whole approval surface either way.
+//
+// Each comma-separated part of an entry is read on its own (#379 bug 186):
+// claude-code receives the list joined with commas, so "mcp__openv__x,Bash"
+// is a shell there. Validate refuses such an entry when it is saved; this
+// classes one already stored by what the CLI receives.
 func ToolsReachOutside(tools []string) bool {
 	for _, t := range tools {
-		name := strings.TrimSpace(t)
-		// Drop a vendor argument filter ("Bash(git:*)") before matching.
-		if i := strings.IndexByte(name, '('); i >= 0 {
-			name = strings.TrimSpace(name[:i])
+		for _, part := range strings.Split(t, ",") {
+			if toolReachesOutside(part) {
+				return true
+			}
 		}
-		switch {
-		case strings.EqualFold(name, "WebFetch"), strings.EqualFold(name, "WebSearch"):
-			return true
-		case strings.EqualFold(name, "Bash"):
-			return true
-		case name == openvServerTools || strings.HasPrefix(name, openvToolPrefix):
-			// OpenV's own server, in either spelling: its tool results are
-			// the workspace's own data.
-		case strings.HasPrefix(name, "mcp__"):
-			return true
-		}
+	}
+	return false
+}
+
+// toolReachesOutside is ToolsReachOutside for one tool.
+func toolReachesOutside(tool string) bool {
+	name := strings.TrimSpace(tool)
+	// Drop a vendor argument filter ("Bash(git:*)") before matching.
+	if i := strings.IndexByte(name, '('); i >= 0 {
+		name = strings.TrimSpace(name[:i])
+	}
+	switch {
+	case strings.EqualFold(name, "WebFetch"), strings.EqualFold(name, "WebSearch"):
+		return true
+	case strings.EqualFold(name, "Bash"):
+		return true
+	case name == openvServerTools || strings.HasPrefix(name, openvToolPrefix):
+		// OpenV's own server, in either spelling: its tool results are
+		// the workspace's own data.
+	case strings.HasPrefix(name, "mcp__"):
+		return true
 	}
 	return false
 }

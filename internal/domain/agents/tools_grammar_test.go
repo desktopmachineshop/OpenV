@@ -9,7 +9,8 @@ import "testing"
 // asks a different question: does any entry reach content nobody in the
 // workspace wrote. A "(scope)" is cut at the first parenthesis, closed or
 // not; the vendor names compare in any case, the mcp__ prefixes only in
-// lower case.
+// lower case. Since #379 bug 186 each comma-separated part of an entry is
+// read on its own, as claude-code receives the list joined with commas.
 func TestToolsReachOutsideGrammar(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -67,8 +68,13 @@ func TestToolsReachOutsideGrammar(t *testing.T) {
 		{"nil", nil, false},
 		{"empty", []string{}, false},
 
-		// A comma is not a separator here.
-		{"a comma inside one entry", []string{"mcp__openv__get_artifact,Bash"}, false},
+		// A comma separates tools here, as in claude-code's --allowedTools
+		// (bug 186).
+		{"a shell after a comma in one entry (bug 186)", []string{"mcp__openv__get_artifact,Bash"}, true},
+		{"web search after a comma (bug 186)", []string{"Read,WebSearch"}, true},
+		{"another server's tool after a comma and a space (bug 186)", []string{"mcp__openv__get_artifact, mcp__github__search_code"}, true},
+		{"OpenV tools joined by a comma", []string{"mcp__openv__get_artifact,mcp__openv__create_link"}, false},
+		{"a comma inside an OpenV tool's scope", []string{"mcp__openv__get_artifact(a,b)"}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

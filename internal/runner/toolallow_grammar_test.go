@@ -15,9 +15,12 @@ import (
 // the same spellings; the first is mcp.FilterTools
 // (internal/mcp/toolfilter_grammar_test.go). Here an entry is an OpenV tool
 // only with the mcp__openv__ prefix or as the bare server name, a "(scope)"
-// is stripped, and a duplicate is dropped. Merging the two grammars would
-// change which OpenV tools an agent gets (REQ-91);
-// TestAllowlistReadersAreTwoGrammars shows where they part.
+// is stripped, and a duplicate is dropped. Since #379 bug 185 a name is kept
+// only when openv-mcp reads it back as that same one tool: lower-case
+// letters, digits and underscores, and neither the server name nor holding
+// the prefix. Merging the two grammars would change which OpenV tools an
+// agent gets (REQ-91); TestAllowlistReadersAreTwoGrammars shows where they
+// part.
 
 func TestOpenVToolNamesGrammar(t *testing.T) {
 	cases := []struct {
@@ -32,28 +35,32 @@ func TestOpenVToolNamesGrammar(t *testing.T) {
 		{"vendor tools are ignored", []string{"Read", "Bash(git *)", "WebFetch"}, nil, false},
 
 		// Prefixed: the prefix is stripped once, case-sensitively, and the
-		// rest is kept as written.
+		// rest is kept only as a tool-name token (bug 185).
 		{"prefixed name", []string{"mcp__openv__get_artifact"}, []string{"get_artifact"}, false},
 		{"names keep the allowlist's order", []string{"mcp__openv__create_link", "Read", "mcp__openv__get_artifact"}, []string{"create_link", "get_artifact"}, false},
 		{"an unknown name passes through", []string{"mcp__openv__no_such_tool"}, []string{"no_such_tool"}, false},
-		{"the prefix is stripped once", []string{"mcp__openv__mcp__openv__get_artifact"}, []string{"mcp__openv__get_artifact"}, false},
+		{"the prefix twice names nothing (bug 185)", []string{"mcp__openv__mcp__openv__get_artifact"}, nil, false},
+		{"the prefix inside the name names nothing (bug 185)", []string{"mcp__openv__get_mcp__openv__artifact"}, nil, false},
+		{"digits are part of a name", []string{"mcp__openv__tool_2"}, []string{"tool_2"}, false},
+		{"capitals name nothing (bug 185)", []string{"mcp__openv__Get_Artifact"}, nil, false},
 		{"the prefix is case-sensitive", []string{"MCP__OPENV__get_artifact"}, nil, false},
 		{"the prefix alone names nothing", []string{"mcp__openv__"}, nil, false},
-		{"space after the prefix is kept", []string{"mcp__openv__ get_artifact"}, []string{" get_artifact"}, false},
+		{"space after the prefix names nothing (bug 185)", []string{"mcp__openv__ get_artifact"}, nil, false},
 		{"another server's tool", []string{"mcp__github__list_issues"}, nil, false},
 		{"a server named like openv", []string{"mcp__openvpn__connect"}, nil, false},
 
 		// Wildcard: only the prefixed "*"; it does not stop the names.
 		{"prefixed wildcard", []string{"mcp__openv__*"}, nil, true},
 		{"the wildcard keeps the names around it", []string{"mcp__openv__get_artifact", "mcp__openv__*", "mcp__openv__create_link"}, []string{"get_artifact", "create_link"}, true},
-		{"a glob is a name", []string{"mcp__openv__get_*"}, []string{"get_*"}, false},
-		{"space after the prefix spoils the wildcard", []string{"mcp__openv__ *"}, []string{" *"}, false},
+		{"a glob names nothing (bug 185)", []string{"mcp__openv__get_*"}, nil, false},
+		{"space after the prefix spoils the wildcard and names nothing (bug 185)", []string{"mcp__openv__ *"}, nil, false},
+		{"the wildcard behind the prefix twice names nothing (bug 185)", []string{"mcp__openv__mcp__openv__*"}, nil, false},
 		{"another server's wildcard", []string{"mcp__github__*"}, nil, false},
 
 		// Server name: "mcp__openv" on its own is the wildcard.
 		{"server name", []string{"mcp__openv"}, nil, true},
 		{"padded server name", []string{"  mcp__openv  "}, nil, true},
-		{"server name behind the prefix is a name", []string{"mcp__openv__mcp__openv"}, []string{"mcp__openv"}, false},
+		{"server name behind the prefix names nothing (bug 185)", []string{"mcp__openv__mcp__openv"}, nil, false},
 		{"a server named like openv is not the server", []string{"mcp__openvpn"}, nil, false},
 
 		// Scoped: "(scope)" is stripped, on any spelling.
@@ -61,7 +68,7 @@ func TestOpenVToolNamesGrammar(t *testing.T) {
 		{"scope with spaces", []string{" mcp__openv__get_artifact ( read ) "}, []string{"get_artifact"}, false},
 		{"scoped wildcard", []string{"mcp__openv__*(read)"}, nil, true},
 		{"scoped server name", []string{"mcp__openv(read)"}, nil, true},
-		{"an unclosed scope is part of the name", []string{"mcp__openv__get_artifact(read"}, []string{"get_artifact(read"}, false},
+		{"an unclosed scope names nothing (bug 185)", []string{"mcp__openv__get_artifact(read"}, nil, false},
 		{"a scope starts at the first parenthesis", []string{"mcp__openv__get_artifact(a)(b)"}, []string{"get_artifact"}, false},
 
 		// Blank: entries are trimmed, and blank ones skipped.
@@ -78,8 +85,10 @@ func TestOpenVToolNamesGrammar(t *testing.T) {
 		{"nil", nil, nil, false},
 		{"empty", []string{}, nil, false},
 
-		// A comma is not a separator here.
-		{"a comma inside one entry", []string{"mcp__openv__get_artifact,create_link"}, []string{"get_artifact,create_link"}, false},
+		// A comma is not a separator here, and a name holding one is no
+		// tool name (bug 185).
+		{"a comma inside one entry names nothing (bug 185)", []string{"mcp__openv__get_artifact,create_link"}, nil, false},
+		{"a comma before the server name names nothing (bug 185)", []string{"mcp__openv__get_artifact,mcp__openv"}, nil, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -110,7 +119,8 @@ func TestOpenVToolAllowlistValue(t *testing.T) {
 		{"the wildcard drops the names", []string{"mcp__openv__get_artifact", "mcp__openv__*"}, "*"},
 		{"the server name drops the names", []string{"mcp__openv", "mcp__openv__get_artifact"}, "*"},
 		{"duplicates once", []string{"mcp__openv__get_artifact", "mcp__openv__get_artifact"}, "get_artifact"},
-		{"a name is written as kept", []string{"mcp__openv__ get_artifact", "mcp__openv__mcp__openv"}, " get_artifact,mcp__openv"},
+		{"odd names are left out (bug 185)", []string{"mcp__openv__ get_artifact", "mcp__openv__mcp__openv"}, ""},
+		{"only the well-formed name is written (bug 185)", []string{"mcp__openv__get_artifact,mcp__openv", "mcp__openv__get_*", "mcp__openv__create_link"}, "create_link"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -134,9 +144,10 @@ func TestOpenVToolAllowlistValue(t *testing.T) {
 // readers are not merged (REQ-91). outside is agents.ToolsReachOutside, the
 // third reader, which only asks whether a tool reaches past the workspace.
 //
-// The last rows are round trips where the runner's name, read again by the
-// MCP grammar, becomes a wildcard: an entry naming one odd tool gets every
-// OpenV tool. That is today's behavior, pinned as it is (refactor rule R7).
+// The last rows were round trips where the runner's name, read again by the
+// MCP grammar, became a wildcard, so an entry naming one odd tool got every
+// OpenV tool. Since #379 bug 185 the runner writes only names the MCP
+// grammar reads back as that same tool, so they serve nothing.
 func TestAllowlistReadersAreTwoGrammars(t *testing.T) {
 	const env = "OPENV_MCP_TOOLS"
 	table := []mcp.Tool{{Name: "list_projects"}, {Name: "get_artifact"}, {Name: "create_link"}}
@@ -160,13 +171,16 @@ func TestAllowlistReadersAreTwoGrammars(t *testing.T) {
 		{"set but empty", nil, nil, nil, false},
 		{"a vendor shell and a name", []string{"Bash(git *)", "mcp__openv__get_artifact"}, []string{"get_artifact"}, []string{"get_artifact"}, true},
 		{"another server's tool", []string{"mcp__github__list_issues"}, nil, nil, true},
-		{"the prefix twice", []string{"mcp__openv__mcp__openv__get_artifact"}, []string{"get_artifact"}, nil, false},
-		{"space after the prefix", []string{"mcp__openv__ get_artifact"}, []string{"get_artifact"}, nil, false},
-		// Round trips that widen to every tool.
-		{"server name behind the prefix", []string{"mcp__openv__mcp__openv"}, all, nil, false},
-		{"wildcard behind the prefix twice", []string{"mcp__openv__mcp__openv__*"}, all, nil, false},
-		{"space before the wildcard", []string{"mcp__openv__ *"}, all, nil, false},
-		{"a comma before the server name", []string{"mcp__openv__get_artifact,mcp__openv"}, all, nil, false},
+		{"the prefix twice (bug 185)", []string{"mcp__openv__mcp__openv__get_artifact"}, nil, nil, false},
+		{"space after the prefix (bug 185)", []string{"mcp__openv__ get_artifact"}, nil, nil, false},
+		// Round trips that widened to every tool before bug 185.
+		{"server name behind the prefix (bug 185)", []string{"mcp__openv__mcp__openv"}, nil, nil, false},
+		{"wildcard behind the prefix twice (bug 185)", []string{"mcp__openv__mcp__openv__*"}, nil, nil, false},
+		{"space before the wildcard (bug 185)", []string{"mcp__openv__ *"}, nil, nil, false},
+		{"a comma before the server name (bug 185)", []string{"mcp__openv__get_artifact,mcp__openv"}, nil, nil, false},
+		// claude-code receives a shell here, so the agent reaches outside
+		// (bug 186), and openv-mcp serves none of it (bug 185).
+		{"a comma before a shell (bugs 185, 186)", []string{"mcp__openv__get_artifact,Bash"}, nil, nil, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

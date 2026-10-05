@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/mcp"
@@ -109,5 +110,62 @@ func TestClaudeMCPConfigCarriesTheToolFilter(t *testing.T) {
 	want := "get_artifact,record_candidate_need"
 	if got := cfg.McpServers["openv"].Env[mcp.EnvToolAllowlist]; got != want {
 		t.Errorf("%s = %q, want %q", mcp.EnvToolAllowlist, got, want)
+	}
+}
+
+// #379 bug 185: what openv-mcp serves never exceeds what the allowlist names.
+// The runner writes into OPENV_MCP_TOOLS only names the MCP server reads back
+// as that same one tool. Before the fix an entry naming one odd tool, such as
+// the server name behind the prefix, reached the server as a wildcard and
+// every OpenV tool was served; on codex, which has no allowlist of its own,
+// that was the agent's whole OpenV surface.
+func TestOpenVToolFilterServesOnlyNamedTools(t *testing.T) {
+	served := func(t *testing.T, allowed []string) []string {
+		t.Helper()
+		spec := withOpenVToolFilter(RunSpec{AllowedTools: allowed})
+		t.Setenv(mcp.EnvToolAllowlist, spec.MCP.Env[mcp.EnvToolAllowlist])
+		var names []string
+		for _, tool := range mcp.EnvFilteredTools(mcp.Tools()) {
+			names = append(names, tool.Name)
+		}
+		return names
+	}
+
+	// Every tool of the table still passes, bare of scope or scoped, and is
+	// served alone: the rule is narrow, not a new way to lose a tool.
+	for _, tool := range mcp.Tools() {
+		for _, entry := range []string{"mcp__openv__" + tool.Name, "mcp__openv__" + tool.Name + "(read)"} {
+			if got := served(t, []string{entry, "Read"}); !slices.Equal(got, []string{tool.Name}) {
+				t.Errorf("allowlist %q served %q, want just %s", entry, got, tool.Name)
+			}
+		}
+	}
+
+	// Each of these names no tool of the table, so nothing is served.
+	for _, entry := range []string{
+		"mcp__openv__mcp__openv",                    // the server name behind the prefix
+		"mcp__openv__mcp__openv__*",                 // the wildcard behind the prefix twice
+		"mcp__openv__mcp__openv__get_artifact",      // the prefix twice
+		"mcp__openv__ *",                            // a space before the wildcard
+		"mcp__openv__ get_artifact",                 // a space before a name
+		"mcp__openv__get_artifact,mcp__openv",       // a comma before the server name
+		"mcp__openv__get_artifact,*",                // a comma before the wildcard
+		"mcp__openv__get_artifact,create_artifact",  // a comma before another tool
+		"mcp__openv__get_*",                         // a glob
+		"mcp__openv__get_artifact(read",             // an unclosed scope
+		"mcp__openv__get_artifact mcp__openv__list", // two names in one entry
+	} {
+		if got := served(t, []string{entry}); len(got) > 3 {
+			t.Errorf("allowlist %q served %d tools, want none", entry, len(got))
+		} else if len(got) != 0 {
+			t.Errorf("allowlist %q served %q, want none", entry, got)
+		}
+	}
+
+	// The two wildcard spellings still serve the whole table.
+	for _, entry := range []string{"mcp__openv__*", "mcp__openv"} {
+		if got := served(t, []string{entry}); len(got) != len(mcp.Tools()) {
+			t.Errorf("allowlist %q served %d tools, want all %d", entry, len(got), len(mcp.Tools()))
+		}
 	}
 }

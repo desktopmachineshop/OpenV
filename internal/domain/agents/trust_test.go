@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -68,6 +69,9 @@ func TestUntrustedInput(t *testing.T) {
 		{"the bare openv server name is not foreign", &Agent{Slug: "a", AllowedTools: []string{"mcp__openv"}}, false},
 		{"a server merely named like openv is foreign", &Agent{Slug: "a", AllowedTools: []string{"mcp__openvpn"}}, true},
 		{"a scoped foreign tool is still foreign", &Agent{Slug: "a", AllowedTools: []string{"mcp__github__search_code(x)"}}, true},
+		// claude-code receives the list joined with commas, so a shell
+		// after a comma inside one entry is a shell (#379 bug 186).
+		{"a shell after a comma in one entry", &Agent{Slug: "a", AllowedTools: []string{"mcp__openv__get_artifact,Bash"}}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -75,6 +79,64 @@ func TestUntrustedInput(t *testing.T) {
 				t.Errorf("UntrustedInput() = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// #379 bug 186: claude-code receives the allowlist joined with commas
+// (--allowedTools), so an entry holding a comma is several tools there, while
+// the platform read it as one. A definition a person saves now is refused,
+// with a message that says what to write instead. One already stored keeps
+// loading, so the sync does not drop it from the registry, and it is classed
+// by what claude-code receives.
+func TestAToolEntryHoldingACommaIsRefusedWhenSaved(t *testing.T) {
+	for _, entry := range []string{"mcp__openv__get_artifact,Bash", "Read, Grep", "Bash(git log,git status)", ","} {
+		def := &Definition{Slug: "joined", Name: "Joined", Provider: "claude-code", AllowedTools: []string{"mcp__openv__*", entry}}
+		err := def.Validate()
+		if err == nil {
+			t.Errorf("Validate accepted allowed_tools entry %q", entry)
+			continue
+		}
+		for _, want := range []string{"allowed_tools", strconv.Quote(entry), "comma", "one tool per entry"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("Validate(%q) = %q, want it to say %q", entry, err, want)
+			}
+		}
+	}
+
+	const file = "---\nslug: joined\nname: Joined\nprovider: claude-code\nallowed_tools:\n  - \"mcp__openv__get_artifact,Bash\"\n---\nBody.\n"
+	if _, err := ParseFile(file); err == nil || !strings.Contains(err.Error(), "comma") {
+		t.Errorf("ParseFile (a raw save) = %v, want the comma refusal", err)
+	}
+
+	// Already on disk: it still loads, as written, and runs untrusted.
+	def, _, err := parseSyncedFile(file, nil)
+	if err != nil {
+		t.Fatalf("parseSyncedFile refused a stored file: %v", err)
+	}
+	if !slices.Equal(def.AllowedTools, []string{"mcp__openv__get_artifact,Bash"}) {
+		t.Errorf("allowed_tools = %q, want the stored list as written", def.AllowedTools)
+	}
+	dir := t.TempDir()
+	repo := newMemRepo()
+	svc, err := NewFileService(dir, repo)
+	if err != nil {
+		t.Fatalf("NewFileService: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "org-1"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "org-1", "joined.md"), []byte(file), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if err := svc.SyncFromDisk("org-1"); err != nil {
+		t.Fatalf("SyncFromDisk: %v", err)
+	}
+	agent, _ := svc.GetBySlug("org-1", "joined")
+	if agent == nil {
+		t.Fatal("the stored agent dropped out of the registry")
+	}
+	if !agent.UntrustedInput() {
+		t.Error("an agent whose entry joins a shell with a comma must run untrusted")
 	}
 }
 
