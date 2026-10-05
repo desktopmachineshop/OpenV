@@ -150,10 +150,9 @@ type app struct {
 	emailVerification    users.EmailVerificationPolicy
 	sessionPolicy        users.SessionPolicy
 	registrationPolicy   string
-	emailDispatcher      *notify.EmailDispatcher
+	notifyChannels       notify.Channels
 	vapid                notify.VAPIDConfig
 	pushSubService       *pushsubs.DefaultService
-	pushDispatcher       *notify.PushDispatcher
 	notificationService  *notifications.DefaultService
 	minutesMonitor       *notify.MinutesMonitor
 	deploymentKind       string

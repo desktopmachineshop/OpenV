@@ -48,41 +48,44 @@ type WindowOrgs interface {
 
 // SupportWindowWatcher polls the feed and warns admins.
 type SupportWindowWatcher struct {
-	feedURL     string
-	client      *http.Client
-	releases    release.Service
-	orgs        WindowOrgs
-	claims      ReleaseClaimer
-	store       notifications.Service
-	broadcaster Broadcaster
-	email       *EmailDispatcher
-	push        *PushDispatcher
-	now         func() time.Time
+	feedURL  string
+	client   *http.Client
+	releases release.Service
+	orgs     WindowOrgs
+	claims   ReleaseClaimer
+	delivery Delivery
+	now      func() time.Time
 }
 
 // NewSupportWindowWatcher creates a watcher for a dedicated instance.
 func NewSupportWindowWatcher(feedURL string, releases release.Service, orgSvc WindowOrgs, claims ReleaseClaimer, store notifications.Service, broadcaster Broadcaster) *SupportWindowWatcher {
 	return &SupportWindowWatcher{
-		feedURL:     feedURL,
-		client:      &http.Client{Timeout: 20 * time.Second},
-		releases:    releases,
-		orgs:        orgSvc,
-		claims:      claims,
-		store:       store,
-		broadcaster: broadcaster,
-		now:         time.Now,
+		feedURL:  feedURL,
+		client:   &http.Client{Timeout: 20 * time.Second},
+		releases: releases,
+		orgs:     orgSvc,
+		claims:   claims,
+		delivery: Delivery{Store: store, Broadcaster: broadcaster},
+		now:      time.Now,
 	}
+}
+
+// SetChannels attaches the email and web push side channels at once (a nil
+// one is left off).
+func (w *SupportWindowWatcher) SetChannels(c Channels) *SupportWindowWatcher {
+	w.delivery.Channels = c
+	return w
 }
 
 // SetEmailDispatcher attaches the email side channel (nil leaves it off).
 func (w *SupportWindowWatcher) SetEmailDispatcher(d *EmailDispatcher) *SupportWindowWatcher {
-	w.email = d
+	w.delivery.Email = d
 	return w
 }
 
 // SetPushDispatcher attaches the web push side channel (nil leaves it off).
 func (w *SupportWindowWatcher) SetPushDispatcher(d *PushDispatcher) *SupportWindowWatcher {
-	w.push = d
+	w.delivery.Push = d
 	return w
 }
 
@@ -201,20 +204,11 @@ func (w *SupportWindowWatcher) warn(feed *ReleaseFeed, own string, closes time.T
 		if err != nil {
 			continue
 		}
-		for _, m := range members {
-			if m.Role != orgs.RoleAdmin {
-				continue
-			}
-			n := notifications.New(orgID, m.UserID, notifications.TypeReleaseSupportWindow, title, body, ref)
-			if err := w.store.Create(n); err != nil {
-				continue
-			}
-			if w.broadcaster != nil {
-				w.broadcaster.BroadcastSession(StreamKey(m.UserID), "notification", n)
-			}
-			w.email.Dispatch(n)
-			w.push.Dispatch(n)
-		}
+		ToOrgAdmins(members, func(userID string) {
+			n := notifications.New(orgID, userID, notifications.TypeReleaseSupportWindow, title, body, ref)
+			// A row the store refuses is skipped without a log line.
+			_ = w.delivery.Deliver(n)
+		})
 	}
 	slog.Warn("release: support window warning sent", "running", own, "available", feed.Stable, "closes", closes.Format("2006-01-02"))
 }

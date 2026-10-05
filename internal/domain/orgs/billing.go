@@ -141,6 +141,18 @@ func (s *DefaultService) SetMonthlyBudget(id string, budget *float64) (*Org, err
 	return org, nil
 }
 
+// MonthlyBudgetUSD returns the workspace's monthly spend budget, nil when it
+// has none, and Get's error when it cannot be read (ErrNotFound for no such
+// workspace). It is what the run service's budget guard
+// (agentruns.BudgetGuard) reads.
+func (s *DefaultService) MonthlyBudgetUSD(id string) (*float64, error) {
+	org, err := s.Get(id)
+	if err != nil || org == nil {
+		return nil, err
+	}
+	return org.MonthlyBudgetUSD, nil
+}
+
 // ClaimBudgetAlert delegates the atomic per-threshold-per-month dedupe claim
 // to the repository (see Repository.ClaimBudgetAlert).
 func (s *DefaultService) ClaimBudgetAlert(orgID, month string, threshold int) (bool, error) {

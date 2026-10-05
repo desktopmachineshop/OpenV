@@ -40,16 +40,11 @@ type BudgetSpendReader interface {
 // (the same event the failed-run notifier consumes). Warn-only: it never
 // blocks launches.
 type BudgetMonitor struct {
-	orgs        BudgetOrgService
-	spend       BudgetSpendReader
-	store       notifications.Service
-	broadcaster Broadcaster
-	// email is an optional best-effort email side channel (issue #187); nil
-	// means email is off. Dispatch is nil-safe.
-	email *EmailDispatcher
-	// push is an optional best-effort web push side channel (REQ-109); nil
-	// means push is off. Dispatch is nil-safe and returns immediately.
-	push *PushDispatcher
+	orgs  BudgetOrgService
+	spend BudgetSpendReader
+	// delivery holds the store, the SSE broadcaster and the optional email
+	// and web push side channels (nil means that channel is off).
+	delivery Delivery
 	// now is injectable so tests can pin the month; defaults to time.Now.
 	now func() time.Time
 }
@@ -57,20 +52,27 @@ type BudgetMonitor struct {
 // NewBudgetMonitor creates a budget monitor. broadcaster may be nil
 // (store-only mode, used in tests).
 func NewBudgetMonitor(orgSvc BudgetOrgService, spend BudgetSpendReader, store notifications.Service, broadcaster Broadcaster) *BudgetMonitor {
-	return &BudgetMonitor{orgs: orgSvc, spend: spend, store: store, broadcaster: broadcaster, now: time.Now}
+	return &BudgetMonitor{orgs: orgSvc, spend: spend, delivery: Delivery{Store: store, Broadcaster: broadcaster}, now: time.Now}
+}
+
+// SetChannels attaches the email and web push side channels at once; a nil
+// one is left off.
+func (m *BudgetMonitor) SetChannels(c Channels) *BudgetMonitor {
+	m.delivery.Channels = c
+	return m
 }
 
 // SetEmailDispatcher attaches an email side channel. Passing nil (or never
 // calling this) leaves email off.
 func (m *BudgetMonitor) SetEmailDispatcher(d *EmailDispatcher) *BudgetMonitor {
-	m.email = d
+	m.delivery.Email = d
 	return m
 }
 
 // SetPushDispatcher attaches a web push side channel. Passing nil (or never
 // calling this) leaves push off.
 func (m *BudgetMonitor) SetPushDispatcher(d *PushDispatcher) *BudgetMonitor {
-	m.push = d
+	m.delivery.Push = d
 	return m
 }
 
@@ -139,7 +141,7 @@ func crossedThreshold(spend, budget float64) int {
 	}
 }
 
-// alertAdmins stores (and live-pushes) one budget notification per org admin.
+// alertAdmins delivers one budget notification per org admin.
 func (m *BudgetMonitor) alertAdmins(orgID, month string, threshold int, spend, budget float64) {
 	members, err := m.orgs.ListMembers(orgID)
 	if err != nil {
@@ -153,24 +155,12 @@ func (m *BudgetMonitor) alertAdmins(orgID, month string, threshold int, spend, b
 		"threshold": threshold,
 		"month":     month,
 	}
-	for _, mem := range members {
-		if mem.Role != orgs.RoleAdmin {
-			continue
+	ToOrgAdmins(members, func(userID string) {
+		n := notifications.New(orgID, userID, notifications.TypeBudgetThreshold, title, body, ref)
+		if err := m.delivery.Deliver(n); err != nil {
+			slog.Error("budget: failed to store notification", "org_id", orgID, "user_id", userID, "error", err)
 		}
-		n := notifications.New(orgID, mem.UserID, notifications.TypeBudgetThreshold, title, body, ref)
-		if err := m.store.Create(n); err != nil {
-			slog.Error("budget: failed to store notification", "org_id", orgID, "user_id", mem.UserID, "error", err)
-			continue
-		}
-		if m.broadcaster != nil {
-			m.broadcaster.BroadcastSession(StreamKey(mem.UserID), "notification", n)
-		}
-		// Best-effort email side channel; no-op unless SMTP is configured and
-		// the admin is opted in.
-		m.email.Dispatch(n)
-		// Same for web push, which also needs a subscribed device.
-		m.push.Dispatch(n)
-	}
+	})
 }
 
 // budgetMessage renders the title/body for a threshold alert. The title names

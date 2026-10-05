@@ -20,6 +20,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   does not exist, or that the agent cannot see, is still refused as
   *baseline not found*.
 
+- **An interview link opened again after the interview ended shows its
+  thank-you page.** A participant who ended an interview and later opened
+  their invite link again was asked for their name as if they had never
+  started, and the visit alone added an empty, anonymous session to the
+  interview's sessions for reviewers to find. The link now opens on the
+  thank-you page, and no session is added.
+
 - **A run you open straight after a finished one keeps its log live.** In
   a list of runs, such as a project's Runs page, choosing a run that is
   still going right after one that had finished could leave its log

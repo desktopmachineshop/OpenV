@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PANEL_NOTIFICATIONS, PANEL_PARAM } from '../appShortcuts';
 import { AppNotification, NotificationView, notificationsAPI } from '../api/client';
+import { RECONNECT, useEventStream } from '../hooks/useEventStream';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { useConfirm } from './ui';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
 import { pathForNotification } from './NotificationBellPaths';
-import { SSE_EVENT } from '../sseEvents';
 
 interface NotificationBellProps {
   /**
@@ -112,24 +112,32 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  // Initial badge + live updates over SSE.
+  // Initial badge.
   useEffect(() => {
     refresh();
-    const es = new EventSource(notificationsAPI.streamUrl(), { withCredentials: true });
-    es.addEventListener(SSE_EVENT.notification, (ev) => {
-      try {
-        const n: AppNotification = JSON.parse((ev as MessageEvent).data);
-        setUnread((u) => u + 1);
-        // A new notification arrives in the inbox. Dropping it into the
-        // flagged or cleared list while one of those is showing would put a
-        // row there that does not belong to that view.
-        setItems((prev) => (viewRef.current === 'inbox' ? [n, ...prev].slice(0, PAGE_SIZE) : prev));
-      } catch {
-        // malformed frame — ignore
-      }
-    });
-    return () => es.close();
   }, [refresh]);
+
+  // Live updates over SSE: one stream for the life of the bell, with no error
+  // handler, so the browser reconnects it (RECONNECT.browser). The effect
+  // above runs first, so the inbox is asked for before the stream opens.
+  useEventStream(
+    notificationsAPI.streamUrl(),
+    {
+      notification: (ev) => {
+        try {
+          const n: AppNotification = JSON.parse(ev.data);
+          setUnread((u) => u + 1);
+          // A new notification arrives in the inbox. Dropping it into the
+          // flagged or cleared list while one of those is showing would put a
+          // row there that does not belong to that view.
+          setItems((prev) => (viewRef.current === 'inbox' ? [n, ...prev].slice(0, PAGE_SIZE) : prev));
+        } catch {
+          // malformed frame — ignore
+        }
+      },
+    },
+    { withCredentials: true, reconnect: RECONNECT.browser }
+  );
 
   // Close on click outside.
   useEffect(() => {

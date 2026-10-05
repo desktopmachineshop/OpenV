@@ -512,16 +512,25 @@ X14B_IMPORT_EDGES = [
 # this file, as it reads X2B_CALL_SHAPE_CHANGES.
 BOOT_STEPS_FILE = "cmd/server/testdata/boot_steps.txt"
 BOOT_STEPS_CHANGES = [
-    ("    call (*internal/domain/hostedworkers.DefaultService).ListAll",
-     "    call internal/domain/hostedworkers.Reconcile"),
-    ("    if", ""),
-    ("    else", ""),
-    ("      for", ""),
-    ("        call (internal/hosting.Provisioner).ContainerState", ""),
-    ("        if", ""),
-    ("          call (*internal/domain/hostedworkers.DefaultService).SetStatus", ""),
-    ("    call (*database/sql.DB).QueryRow -> (*database/sql.Row).Scan",
-     "    call (*internal/domain/orgs.DefaultService).EarliestPersonalOrgID"),
+    ("  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetEmailDispatcher -> "
+     "(*internal/notify.Notifier).SetPushDispatcher -> (*internal/notify.Notifier).SetOrgService -> "
+     "(*internal/notify.Notifier).SetUserNamer -> (*internal/notify.Notifier).Start",
+     "  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetChannels -> "
+     "(*internal/notify.Notifier).SetOrgService -> (*internal/notify.Notifier).SetUserNamer -> "
+     "(*internal/notify.Notifier).Start"),
+    ("  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetEmailDispatcher -> "
+     "(*internal/notify.BudgetMonitor).SetPushDispatcher -> (*internal/notify.BudgetMonitor).Start",
+     "  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetChannels -> "
+     "(*internal/notify.BudgetMonitor).Start"),
+    ("    call internal/notify.NewStableScheduler -> (*internal/notify.StableScheduler).SetEmailDispatcher -> "
+     "(*internal/notify.StableScheduler).SetPushDispatcher -> (*internal/notify.StableScheduler).Start",
+     "    call internal/notify.NewStableScheduler -> (*internal/notify.StableScheduler).SetChannels -> "
+     "(*internal/notify.StableScheduler).Start"),
+    ("      call internal/notify.NewSupportWindowWatcher -> "
+     "(*internal/notify.SupportWindowWatcher).SetEmailDispatcher -> "
+     "(*internal/notify.SupportWindowWatcher).SetPushDispatcher -> (*internal/notify.SupportWindowWatcher).Start",
+     "      call internal/notify.NewSupportWindowWatcher -> (*internal/notify.SupportWindowWatcher).SetChannels -> "
+     "(*internal/notify.SupportWindowWatcher).Start"),
 ]
 
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
