@@ -150,6 +150,9 @@ func toolStubBodies() map[string]string {
 			`","type":"requirement","title":"Seal integrity","body":"Holds 6 bar.","parent_id":null,"sort_order":1}]`,
 		"GET /api/v1/links": `[{"id":"` + goldenLinkID + `","from_id":"` + goldenArtifactID +
 			`","to_id":"` + goldenOtherArtifactID + `","type":"verifies"}]`,
+		"GET /api/v1/baselines/{id}": `{"project_id":"` + goldenProjectID + `","project_name":"Seal rig","artifacts":[],"links":[]}`,
+		"GET /api/v1/projects/{id}/baselines": `[{"id":"` + goldenBaselineID + `","project_id":"` + goldenProjectID +
+			`","name":"B1","snapshot":null,"created_at":"2026-01-01T09:30:00Z"}]`,
 		"GET /api/v1/projects/{id}/work-items":    `[]`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
 		"GET /api/v1/projects/{id}/quality-rules": `{"effective":{},"summary":"shall"}`,
