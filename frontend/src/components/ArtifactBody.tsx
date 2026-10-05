@@ -42,7 +42,9 @@ export const ArtifactBody: React.FC<ArtifactBodyProps> = ({ body, onReferenceCli
         remarkPlugins={[remarkGfm, remarkSoftBreaks]}
         urlTransform={(url, key, node) => referenceUrlTransform(url, key, node, defaultUrlTransform)}
         components={{
-          a: ({ href, children, ...rest }) => {
+          // `node` is react-markdown's syntax-tree node, not an anchor
+          // attribute: left in `rest` it renders as node="[object Object]".
+          a: ({ node, href, children, ...rest }) => {
             const ref = referenceFromHref(href);
             if (!ref || !onReferenceClick) {
               // An ordinary link: opened in a new tab so a reader does not

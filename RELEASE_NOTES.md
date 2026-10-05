@@ -79,6 +79,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   into the other project's conversation. The panel now opens the
   conversation of the project you are in.
 
+- **Links in an artifact's text no longer carry a stray attribute.** Every
+  ordinary web link in the text of a requirement or other artifact, in the
+  project and on a shared project's page, was written into the page with a
+  meaningless `node="[object Object]"` attribute beside its address. The
+  links looked and opened as before, but the attribute was there for
+  anything that reads the page's markup, such as the browser's inspector,
+  some accessibility tools and HTML checkers. Links now carry only their
+  address and the instruction to open in a new tab.
+
 - **A busy or unreachable interview page no longer calls its link
   broken.** When a participant's network had opened interview pages too
   many times in a short while, or the page could not reach OpenV at all,
