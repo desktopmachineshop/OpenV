@@ -35,6 +35,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   looked for new lines until you chose the run again. It now reconnects,
   as it does for any run still going.
 
+- **Clearing or deleting notifications keeps the panel open, and asks the
+  right question.** Confirming or cancelling *Clear all* or *Delete
+  forever* in the notification panel also closed the panel, so you had to
+  open it again to see what was left; it now stays open. The questions
+  counted only the notifications loaded on screen, at most 30, so a long
+  inbox read "Clear all 30 notifications? 101 of them unread." while the
+  whole inbox was cleared, and an inbox of one "Clear all 1 notifications?".
+  *Clear all* now asks "Clear all notifications?" and says how many of them
+  are unread, and *Delete forever* asks to delete all cleared notifications,
+  with no count.
+
+- **The notification panel shows each notification once, under the right
+  tab.** Switching tabs quickly, say from *Flagged* to *Cleared*, could
+  show the flagged notifications under *Cleared* when the slower answer
+  arrived last, and a page of *Load older* rows could land on the tab you
+  had switched to. A new notification could also appear twice in the list
+  and count twice on the bell. Each tab now shows only its own
+  notifications, and each notification appears and counts once.
+
 - **The V&V Assistant still answers when its conversation fails to
   load.** When the assistant's earlier messages could not be loaded, the
   panel said so and then stopped listening: nothing the assistant wrote

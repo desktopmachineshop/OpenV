@@ -5,7 +5,7 @@ import { AppNotification, NotificationView, notificationsAPI } from '../api/clie
 import { RECONNECT, useEventStream } from '../hooks/useEventStream';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
-import { useConfirm } from './ui';
+import { useConfirm, type ConfirmOptions } from './ui';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
 import { pathForNotification } from './NotificationBellPaths';
 
@@ -53,24 +53,38 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   const [paging, setPaging] = useState(false);
   const confirm = useConfirm();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // The bell's confirmation opens outside it, over the whole window: while it
+  // is up, no press closes the panel (#379, bug 205).
+  const asking = useRef(false);
+  const ask = (options: ConfirmOptions) => {
+    asking.current = true;
+    return confirm(options).finally(() => {
+      asking.current = false;
+    });
+  };
   // The SSE subscription is set up once; this lets its handler see the tab
   // showing right now without tearing the stream down on every switch.
   const viewRef = useRef<NotificationView>('inbox');
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
+  // Each list request is numbered; an answer a later one has superseded (for
+  // another tab, or a reopen) is dropped (#379, bug 207).
+  const latest = useRef(0);
 
   const refresh = useCallback(async (which: NotificationView = 'inbox') => {
+    const request = ++latest.current;
     setLoading(true);
     try {
       const res = await notificationsAPI.list({ view: which, limit: PAGE_SIZE });
+      if (request !== latest.current) return;
       setItems(res.data.notifications || []);
       setUnread(res.data.unread_count);
       setCursor(res.data.next_cursor);
     } catch {
       // ignore — the bell simply stays stale on transient errors
     } finally {
-      setLoading(false);
+      if (request === latest.current) setLoading(false);
     }
   }, []);
 
@@ -79,9 +93,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   // the list cannot make a page skip or repeat rows the way an offset would.
   const loadMore = async () => {
     if (!cursor || paging) return;
+    const request = latest.current;
     setPaging(true);
     try {
       const res = await notificationsAPI.list({ view, limit: PAGE_SIZE, before: cursor });
+      if (request !== latest.current) return;
       setItems((prev) => [...prev, ...(res.data.notifications || [])]);
       setCursor(res.data.next_cursor);
     } catch {
@@ -126,6 +142,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
       notification: (ev) => {
         try {
           const n: AppNotification = JSON.parse(ev.data);
+          // A frame for a row already listed changes nothing (#379, bug 208).
+          if (items.some((x) => x.id === n.id)) return;
           setUnread((u) => u + 1);
           // A new notification arrives in the inbox. Dropping it into the
           // flagged or cleared list while one of those is showing would put a
@@ -139,11 +157,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
     { withCredentials: true, reconnect: RECONNECT.browser }
   );
 
-  // Close on click outside.
+  // Close on click outside, but not on the bell's own confirmation.
   useEffect(() => {
     if (!open) return;
     const onClickOutside = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+      if (!asking.current && rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -176,11 +194,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
 
   // Clearing archives rather than deletes: the rows move to the Cleared tab,
   // so this asks for confirmation but does not warn about losing anything.
+  // It counts no rows: those on screen are a page at most (#379, bug 206).
   const clearAll = async () => {
-    const unreadPart = unread > 0 ? ` ${unread} of them unread.` : '';
-    const ok = await confirm({
+    const unreadPart = unread === 1 ? ' 1 of them is unread.' : unread > 1 ? ` ${unread} of them are unread.` : '';
+    const ok = await ask({
       title: 'Clear notifications',
-      message: `Clear all ${items.length} notifications?${unreadPart} They move to the Cleared tab, where you can still read them.`,
+      message: `Clear all notifications?${unreadPart} They move to the Cleared tab, where you can still read them.`,
       confirmLabel: 'Clear all',
     });
     if (!ok) return;
@@ -199,9 +218,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
 
   // The one destructive action, and it only reaches what is already cleared.
   const deleteCleared = async () => {
-    const ok = await confirm({
+    const ok = await ask({
       title: 'Delete cleared notifications',
-      message: `Permanently delete all ${items.length} cleared notifications? This cannot be undone.`,
+      message: 'Delete all cleared notifications forever? This cannot be undone.',
       confirmLabel: 'Delete forever',
       danger: true,
     });
