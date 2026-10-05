@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/openv/requirements-platform/internal/domain/agents"
-	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/domain/tokens"
 )
 
 // Launch enqueues a run for the worker to claim.
@@ -41,7 +41,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		return nil, "", agents.ErrNotFound
 	}
 
-	token, err := users.NewToken()
+	token, err := tokens.NewToken()
 	if err != nil {
 		return nil, "", err
 	}
@@ -63,7 +63,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		Status:             StatusQueued,
 		Priority:           req.Priority,
 		Prompt:             req.Prompt,
-		RunTokenHash:       users.HashToken(token),
+		RunTokenHash:       tokens.HashToken(token),
 		ArtifactsTouched:   []map[string]interface{}{},
 		LaunchedBy:         req.LaunchedBy,
 		AttemptCount:       req.AttemptCount,
@@ -193,11 +193,11 @@ func (s *DefaultService) ReissueToken(runID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	token, err := users.NewToken()
+	token, err := tokens.NewToken()
 	if err != nil {
 		return "", err
 	}
-	run.RunTokenHash = users.HashToken(token)
+	run.RunTokenHash = tokens.HashToken(token)
 	issued, err := s.repo.UpdateTokenHash(run.ID, run.RunTokenHash)
 	if err != nil {
 		return "", err

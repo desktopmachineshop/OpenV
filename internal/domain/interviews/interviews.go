@@ -1,14 +1,13 @@
 package interviews
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/openv/requirements-platform/internal/domain/tokens"
 )
 
 // Interview status values.
@@ -160,17 +159,12 @@ func NewDefaultService(repo Repository) *DefaultService {
 
 // generateToken returns a 32-byte random token as hex.
 func generateToken() (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(buf), nil
+	return tokens.NewToken()
 }
 
 // hashToken returns the SHA-256 hex digest of a raw token.
 func hashToken(rawToken string) string {
-	sum := sha256.Sum256([]byte(rawToken))
-	return hex.EncodeToString(sum[:])
+	return tokens.HashToken(rawToken)
 }
 
 // CreateInterview creates a new open interview.

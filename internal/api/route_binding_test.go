@@ -121,39 +121,50 @@ func parseAPISource(t *testing.T) *apiSource {
 	if err != nil {
 		t.Fatalf("list the files of package api: %v", err)
 	}
-	src := &apiSource{
+	src := newAPISource()
+	files := append(append([]string{}, pkg.GoFiles...), pkg.CgoFiles...)
+	for _, name := range files {
+		src.parseFile(t, name, nil)
+	}
+	return src
+}
+
+func newAPISource() *apiSource {
+	return &apiSource{
 		fset:    token.NewFileSet(),
 		funcs:   map[string]*ast.FuncDecl{},
 		methods: map[string]*ast.FuncDecl{},
 		imports: map[string]map[string]bool{},
 	}
-	files := append(append([]string{}, pkg.GoFiles...), pkg.CgoFiles...)
-	for _, name := range files {
-		file, err := parser.ParseFile(src.fset, name, nil, parser.SkipObjectResolution)
-		if err != nil {
-			t.Fatalf("parse %s: %v", name, err)
+}
+
+// parseFile adds the file name to s, read from disk when text is nil, else
+// parsed from text, as the guard reader's own test does with its fixture.
+func (s *apiSource) parseFile(t *testing.T, name string, text any) {
+	t.Helper()
+	file, err := parser.ParseFile(s.fset, name, text, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parse %s: %v", name, err)
+	}
+	s.imports[name] = map[string]bool{}
+	for _, imp := range file.Imports {
+		importPath, _ := strconv.Unquote(imp.Path.Value)
+		local := importPath[strings.LastIndex(importPath, "/")+1:]
+		if imp.Name != nil {
+			local = imp.Name.Name
 		}
-		src.imports[name] = map[string]bool{}
-		for _, imp := range file.Imports {
-			importPath, _ := strconv.Unquote(imp.Path.Value)
-			local := importPath[strings.LastIndex(importPath, "/")+1:]
-			if imp.Name != nil {
-				local = imp.Name.Name
-			}
-			src.imports[name][local] = true
-		}
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			switch {
-			case !ok || fn.Body == nil:
-			case fn.Recv == nil:
-				src.funcs[fn.Name.Name] = fn
-			case receiverType(fn) == "Handler":
-				src.methods[fn.Name.Name] = fn
-			}
+		s.imports[name][local] = true
+	}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		switch {
+		case !ok || fn.Body == nil:
+		case fn.Recv == nil:
+			s.funcs[fn.Name.Name] = fn
+		case receiverType(fn) == "Handler":
+			s.methods[fn.Name.Name] = fn
 		}
 	}
-	return src
 }
 
 func (s *apiSource) pos(n ast.Node) token.Position { return s.fset.Position(n.Pos()) }
