@@ -170,7 +170,8 @@ concern.
 - Shared homes (K3), so a helper is found where its kind lives:
   `respond.go` (JSON out), `httperr.go` (error writers; internals go to the
   log, a fixed message to the client), `authz.go` (every `require*` guard),
-  `limits.go` (the plan read-only gate and counts), `publish.go` (domain
+  `limits.go` (the plan read-only gate, over `orgs.LimitEnforcer`'s
+  counts), `publish.go` (domain
   events), `sse.go` (the SSE hub), and the `middleware_*.go`,
   `compression.go`, `ratelimit.go`, `requestlog.go` and
   `security_headers.go` plumbing.
