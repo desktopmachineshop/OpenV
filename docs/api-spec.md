@@ -1030,8 +1030,10 @@ unknown_plan` for a plan, interval or currency not on sale, or a currency
 other than the one the workspace's first purchase fixed; `409
 already_subscribed` while a subscription is live (as a platform admin's plan
 grant over it is), `409 granted_plan` where
-a platform admin set the plan, and `400` for `business` on a personal
-workspace. Where two admins complete two checkouts, the second is cancelled
+a platform admin set the plan, `400` for `business` on a personal
+workspace, and `503 billing_upstream` with `Retry-After` while the
+platform has not yet confirmed the prices with the provider (the message
+says so; the workspace is left as it was). Where two admins complete two checkouts, the second is cancelled
 at bind and the tab says so. `change` keeps one subscription per workspace
 (`409 no_subscription` without one): `business_lite` bills a quantity of
 one, `business` the workspace's seats. `portal` needs a customer record
