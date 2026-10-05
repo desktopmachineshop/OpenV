@@ -428,7 +428,6 @@
     "internal/api:Handler.throttleSSO",
     "internal/api:Handler.touchRunnerSession",
     "internal/api:Handler.verifiedByInvitation",
-    "internal/api:Handler.writeInvitationError",
     "internal/api:OIDCConfig.displayName",
     "internal/api:accountKey",
     "internal/api:launchParent",
