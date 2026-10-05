@@ -287,9 +287,11 @@ REFACTOR = ("refactor", "no-release-notes")
 
 
 class DataTest(unittest.TestCase):
-    def test_the_golden_list_has_21_entries(self):
-        # The plan's 20, plus S15a's run failure goldens.
-        self.assertEqual(len(rg.GOLDEN_LIST), 21)
+    def test_the_golden_list_has_22_entries(self):
+        # The plan's 20, the one X4a and X5 share (the generated contract) and
+        # S15a's run failure goldens; S17's, which the plan once counted, is
+        # dropped.
+        self.assertEqual(len(rg.GOLDEN_LIST), 22)
 
     def test_globs(self):
         cases = [
@@ -319,12 +321,12 @@ class DataTest(unittest.TestCase):
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
         merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S8", "S9", "S10", "S12, S12b, S16",
-                  "S12b", "S15a"}
+                  "S12b", "S15a", "X4a, X5"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 21)
+        self.assertEqual(len(entries), 22)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
@@ -474,7 +476,7 @@ class DataTest(unittest.TestCase):
         # (M4's and M7's moves among them) may not relax them outside a
         # class C or T commit. The matcher's earlier regression test, the
         # other tests beside them and the production files are not, and S11
-        # adds no golden entry: the golden list keeps 21.
+        # adds no golden entry: the golden list keeps 22.
         for path in ("internal/scheduler/scheduler_test.go", "internal/scheduler/scheduler_harness_test.go",
                      "internal/automation/matcher_test.go", "internal/automation/matcher_harness_test.go",
                      "internal/api/automation_run_now_test.go",
@@ -490,7 +492,7 @@ class DataTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIsNone(rg.guard_code_step(path))
         self.assertNotIn("S11", {step for step, _, _ in rg.GOLDEN_LIST})
-        self.assertEqual(len(rg.GOLDEN_LIST), 21)
+        self.assertEqual(len(rg.GOLDEN_LIST), 22)
 
     def test_s15a_run_failure_goldens(self):
         # Both of S15a's goldens are on the list under their own entry, not
@@ -528,7 +530,7 @@ class DataTest(unittest.TestCase):
         # earlier tests beside them (the board order, the malformed-id and
         # time-zone tests, the test database), the repositories themselves
         # and the other steps' Postgres tests are not S15b's, and S15b adds
-        # no golden entry: the golden list keeps 21.
+        # no golden entry: the golden list keeps 22.
         mine = ["internal/persistence/postgres/repository_roundtrip_helpers_test.go"] + [
             f"internal/persistence/postgres/{r}_repository_roundtrip_test.go"
             for r in ("team", "workitem", "project", "agent", "member")]
@@ -554,7 +556,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(rg.guard_code_step("internal/persistence/postgres/export_roundtrip_test.go"), "S9")
         self.assertEqual(rg.guard_code_step("internal/persistence/postgres/scheduler_claim_test.go"), "S11")
         self.assertNotIn("S15b", {step for step, _, _ in rg.GOLDEN_LIST})
-        self.assertEqual(len(rg.GOLDEN_LIST), 21)
+        self.assertEqual(len(rg.GOLDEN_LIST), 22)
 
     def test_s9_formats_payloads_and_import_fields(self):
         # Every one of S9's goldens is under S9's single golden entry, with
@@ -700,6 +702,32 @@ class DataTest(unittest.TestCase):
                 self.assertIn(path, files)
                 self.assertEqual(rg.golden_entry(path), ("S6, S13", "cross-language contracts"))
                 self.assertTrue(rg.matches(path, rg.C_ADDED_ONLY), path)
+
+    def test_x4a_generated_contract(self):
+        # X4a's generator writes the TypeScript contract and its JSON twin,
+        # both goldens of the entry X4a and X5 share (X5's wire.ts will join
+        # the directory), so a change to either needs a release note and a
+        # refactor may not make one. The generator itself is class T tooling
+        # under internal/contract, and none of it is guard code or another
+        # entry's golden.
+        files = subprocess.run(["git", "ls-files", "internal/contract", "frontend/src/generated"], cwd=REPO,
+                               capture_output=True, text=True, check=True).stdout.split()
+        entry = ("X4a, X5", "generated cross-language contract")
+        for path in ("frontend/src/generated/contract.ts", "internal/contract/testdata/contract.json"):
+            with self.subTest(golden=path):
+                self.assertIn(path, files)
+                self.assertEqual(rg.golden_entry(path), entry)
+                self.assertTrue(rg.matches(path, rg.T_PATHS), path)
+        self.assertEqual(rg.golden_entry("frontend/src/generated/wire.ts"), entry)
+        self.assertIn(("X4a, X5", "frontend/src/generated/**"), rg.FROZEN_DATA)
+        for path in files:
+            if path in ("frontend/src/generated/contract.ts", "internal/contract/testdata/contract.json"):
+                continue
+            with self.subTest(tool=path):
+                self.assertTrue(path.startswith("internal/contract/") and rg.matches(path, rg.T_PATHS), path)
+                self.assertIsNone(rg.golden_entry(path))
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertEqual(rg.golden_entry("contracts/vocab.json"), ("S6, S13", "cross-language contracts"))
 
     def test_chunk_names_and_differences(self):
         self.assertEqual(rg.chunk_name("ModuleView-BtaBQDBL.css"), "ModuleView.css")

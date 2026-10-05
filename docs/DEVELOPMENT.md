@@ -592,6 +592,19 @@ joins `COPIES` in the vitest. Both test files are guard code (`GUARD_CODE`
 row S13 in `scripts/refactor/refactor_guard.py`): a refactor pull request
 may change them only in a class C or T commit.
 
+Refactor plan step X4a generates ten Go vocabularies, nine of them S13's,
+for the frontend to read: `internal/contract`'s tests write them from the Go
+catalogues into `frontend/src/generated/contract.ts` (an `as const` constant
+for each, with the union type derived from it, such as `FeatureKey`) and
+`internal/contract/testdata/contract.json`: feature keys, domain event
+types, SSE event names, API error codes, link rules, artifact types and
+statuses, plans, V&V gap labels and providers. A stale file fails
+`go test ./internal/contract/...`; regenerate both with
+`UPDATE_CONTRACTS=1 go test ./internal/contract/...`. Each vocabulary
+`contracts/vocab.json` also holds must equal it there. Both files are on the
+golden list; nothing imports `contract.ts` until X4b moves the hand-written
+copies onto it (`internal/contract/README.md`).
+
 The runner (`internal/runner`, refactor plan step S15a) is characterized
 against a stand-in API, with stand-in vendor CLIs (shell scripts, so these
 tests skip on Windows). `TestRunFailureClassesGolden` has the real

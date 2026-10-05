@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/domain/tokens"
 )
 
 var ErrNotFound = errors.New("worker key not found")
@@ -141,12 +141,12 @@ func (s *DefaultService) CreatePairing(orgID, userID string) (string, time.Time,
 	if s.pairings == nil {
 		return "", time.Time{}, errors.New("pairing is not configured")
 	}
-	code, err := users.NewToken()
+	code, err := tokens.NewToken()
 	if err != nil {
 		return "", time.Time{}, err
 	}
 	expires := time.Now().UTC().Add(PairingTTL)
-	if err := s.pairings.SavePairing(uuid.New().String(), orgID, userID, users.HashToken(code), expires); err != nil {
+	if err := s.pairings.SavePairing(uuid.New().String(), orgID, userID, tokens.HashToken(code), expires); err != nil {
 		return "", time.Time{}, err
 	}
 	return code, expires, nil
@@ -157,7 +157,7 @@ func (s *DefaultService) ExchangePairing(code, userName string) (*Key, string, e
 	if s.pairings == nil {
 		return nil, "", errors.New("pairing is not configured")
 	}
-	orgID, userID, err := s.pairings.ConsumePairing(users.HashToken(code), time.Now().UTC())
+	orgID, userID, err := s.pairings.ConsumePairing(tokens.HashToken(code), time.Now().UTC())
 	if err != nil {
 		return nil, "", err
 	}
@@ -183,7 +183,7 @@ func (s *DefaultService) Create(orgID, name string, createdBy *string, userID *s
 			_ = s.repo.Revoke(existing.ID)
 		}
 	}
-	token, err := users.NewToken()
+	token, err := tokens.NewToken()
 	if err != nil {
 		return nil, "", err
 	}
@@ -192,7 +192,7 @@ func (s *DefaultService) Create(orgID, name string, createdBy *string, userID *s
 		OrgID:     orgID,
 		UserID:    userID,
 		Name:      name,
-		KeyHash:   users.HashToken(token),
+		KeyHash:   tokens.HashToken(token),
 		CreatedBy: createdBy,
 		CreatedAt: time.Now().UTC(),
 	}
@@ -214,7 +214,7 @@ func (s *DefaultService) MintSessionKey(orgID, userID, sessionID, name string) (
 	if name == "" {
 		name = "cloud runner"
 	}
-	token, err := users.NewToken()
+	token, err := tokens.NewToken()
 	if err != nil {
 		return "", "", err
 	}
@@ -223,7 +223,7 @@ func (s *DefaultService) MintSessionKey(orgID, userID, sessionID, name string) (
 		OrgID:     orgID,
 		UserID:    &userID,
 		Name:      name,
-		KeyHash:   users.HashToken(token),
+		KeyHash:   tokens.HashToken(token),
 		CreatedBy: &userID,
 		SessionID: &sessionID,
 		CreatedAt: time.Now().UTC(),
@@ -275,7 +275,7 @@ func (s *DefaultService) Revoke(orgID, keyID string) error {
 
 // Resolve validates a presented worker token.
 func (s *DefaultService) Resolve(token string) (Resolved, error) {
-	key, err := s.repo.FindByHash(users.HashToken(token))
+	key, err := s.repo.FindByHash(tokens.HashToken(token))
 	if err != nil {
 		return Resolved{}, err
 	}
@@ -308,7 +308,7 @@ func (s *DefaultService) HasOnlinePersonalRunner(orgID, userID string, since tim
 // operator who revoked the server's own key on the Runners tab keeps it
 // revoked across restarts, and a new value is what registers a new key.
 func (s *DefaultService) EnsureBootstrapKey(orgID, plaintext, name string) error {
-	hash := users.HashToken(plaintext)
+	hash := tokens.HashToken(plaintext)
 	existing, err := s.repo.FindByHash(hash)
 	if err != nil {
 		return err

@@ -81,13 +81,15 @@ func decodeRuleSet(w http.ResponseWriter, r *http.Request) (quality.RuleSet, boo
 }
 
 // respondRulesError maps a settings failure to its status: a rule set naming
-// an unknown convention, rule or severity is the caller's mistake.
-func (h *Handler) respondRulesError(w http.ResponseWriter, r *http.Request, err error) {
+// an unknown convention, rule or severity is the caller's mistake. Any other
+// failure is a 500 with the caller's verb, so a read says "failed to load
+// quality rules" and a write "failed to save quality rules" (#379's bug 190).
+func (h *Handler) respondRulesError(w http.ResponseWriter, r *http.Request, verb string, err error) {
 	if errors.Is(err, settings.ErrInvalidRules) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respondInternal(w, r, "failed to load quality rules", err)
+	respondInternal(w, r, verb, err)
 }
 
 // GetProjectQualityRules returns the rules a project's requirements are linted
@@ -99,7 +101,7 @@ func (h *Handler) GetProjectQualityRules(w http.ResponseWriter, r *http.Request)
 	}
 	rules, err := h.SettingsService.ProjectQualityRules(h.orgIDForProject(projectID), projectID)
 	if err != nil {
-		h.respondRulesError(w, r, err)
+		h.respondRulesError(w, r, "failed to load quality rules", err)
 		return
 	}
 	writeQualityRules(w, rules)
@@ -118,7 +120,7 @@ func (h *Handler) UpdateProjectQualityRules(w http.ResponseWriter, r *http.Reque
 	}
 	rules, err := h.SettingsService.SetProjectQualityRules(h.orgIDForProject(projectID), projectID, rs)
 	if err != nil {
-		h.respondRulesError(w, r, err)
+		h.respondRulesError(w, r, "failed to save quality rules", err)
 		return
 	}
 	writeQualityRules(w, rules)
@@ -133,7 +135,7 @@ func (h *Handler) GetWorkspaceQualityRules(w http.ResponseWriter, r *http.Reques
 	}
 	rules, err := h.SettingsService.WorkspaceQualityRules(orgID)
 	if err != nil {
-		h.respondRulesError(w, r, err)
+		h.respondRulesError(w, r, "failed to load quality rules", err)
 		return
 	}
 	writeQualityRules(w, rules)
@@ -152,7 +154,7 @@ func (h *Handler) UpdateWorkspaceQualityRules(w http.ResponseWriter, r *http.Req
 	}
 	rules, err := h.SettingsService.SetWorkspaceQualityRules(orgID, rs)
 	if err != nil {
-		h.respondRulesError(w, r, err)
+		h.respondRulesError(w, r, "failed to save quality rules", err)
 		return
 	}
 	writeQualityRules(w, rules)

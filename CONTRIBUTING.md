@@ -122,7 +122,7 @@ scripted rewrite is never resolved in a merge but regenerated on the latest
 On **every** pull request, including every label change:
 
 1. **Goldens.** A golden on the list (`GOLDEN_LIST` in
-   `refactor_guard.py`, 21 entries) that is modified or deleted, a rename
+   `refactor_guard.py`, 22 entries) that is modified or deleted, a rename
    included, needs a `RELEASE_NOTES.md` bullet under `## Unreleased` or the
    maintainer's `behavior-change` label. Adding a golden is fine. An inline
    snapshot (`toMatchInlineSnapshot`, `toThrowErrorMatchingInlineSnapshot`)
@@ -275,6 +275,12 @@ prints:
   for `contracts/vocab-allowed-diffs.json`, the differences between those
   and their TypeScript copies that the change keeps (a fixed drift leaves
   it, a deliberate new one joins it)
+- generated contract (X4a): `UPDATE_CONTRACTS=1 go test ./internal/contract/...`
+  for `frontend/src/generated/contract.ts` and
+  `internal/contract/testdata/contract.json`, the same vocabularies written
+  from the Go catalogues as TypeScript and JSON; the vocabularies they share
+  with `contracts/vocab.json` must equal it, so regenerate that first (S13,
+  above)
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`
 - notification content (S10): `UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'`
   for `internal/notify/testdata/notifications/<type>/` (each type's stored

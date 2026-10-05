@@ -17,7 +17,7 @@ Each package belongs to one area of `docs/areas.json` through its
 | requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `settings/`, `workitems/` |
 | verification | `evidence/`, `vv/` |
 | documents | `attachments/`, `baselines/`, `downloads/`, `exports/`, `reports/`, `snapshot/`, `templates/` |
-| tenancy-identity | `invitations/`, `members/`, `orgs/`, `users/` |
+| tenancy-identity | `invitations/`, `members/`, `orgs/`, `tokens/`, `users/` |
 | agent-suite | `agentruns/`, `agents/`, `automations/`, `crewtemplates/`, `guided/`, `interviews/`, `proposals/`, `providers/`, `repoconns/`, `teams/` |
 | runner-fleet | `hostedworkers/`, `runnersessions/`, `workerkeys/` |
 | events-notifications | `events/`, `notifications/`, `pushsubs/` |
@@ -80,8 +80,9 @@ The glossary in `docs/areas.json` maps the UI's words to these names
 **Add a domain event type.** A constant in `events/events.go` and its entry
 in `pinnedEventTypes` (`events/event_types_test.go`); publish it from the
 API (`internal/api/publish.go`) or a service. Then regenerate S6's payload
-golden (`internal/api/README.md`) and S13's vocabulary:
-`UPDATE_GOLDEN=1 go test ./internal/vocabparity -count=1 -run '^TestVocabulary$'`.
+golden (`internal/api/README.md`), S13's vocabulary:
+`UPDATE_GOLDEN=1 go test ./internal/vocabparity -count=1 -run '^TestVocabulary$'`,
+then X4a's generated contract: `UPDATE_CONTRACTS=1 go test ./internal/contract/...`.
 The frontend's copies follow (`frontend/src/README.md`).
 
 **Add a field to an exported type.** Map it in `createProjectFromExport` or
@@ -91,8 +92,9 @@ then regenerate:
 and the S9 format goldens (`internal/api/README.md`).
 
 **Change a vocabulary** (a link rule, status, plan, error code): regenerate
-`contracts/vocab.json` with the `TestVocabulary` command above and update
-the TypeScript copy; `vocabParity.test.ts` names any copy that disagrees.
+`contracts/vocab.json` with the `TestVocabulary` command above, then the
+generated contract with the `UPDATE_CONTRACTS` one, and update the
+TypeScript copy; `vocabParity.test.ts` names any copy that disagrees.
 
 A new notification type: `internal/notify/README.md`. A feature key: the
 root `CLAUDE.md` ("Deployment").
@@ -113,7 +115,9 @@ Each line: the guard, what it pins, and the command that runs it.
   `go test ./internal/domain/notifications -count=1`
 - **S13** `TestVocabulary`: `contracts/vocab.json` from the Go catalogues
   (I24). `go test ./internal/vocabparity -count=1`
+- **X4a** `TestContract`: `frontend/src/generated/contract.ts` and its JSON
+  twin from the same catalogues. `go test ./internal/contract -count=1`
 - **I25** `TestEmbeddedNotesParse`: the release notes the server embeds.
   `go test ./internal/domain/release -count=1`
 
-Everything: `go test -count=1 ./internal/domain/... ./internal/vocabparity ./internal/archtest`.
+Everything: `go test -count=1 ./internal/domain/... ./internal/vocabparity ./internal/contract ./internal/archtest`.

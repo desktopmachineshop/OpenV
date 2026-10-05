@@ -10,7 +10,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/events"
-	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/domain/tokens"
 )
 
 // DefaultService implements Service.
@@ -96,7 +96,7 @@ func (s *DefaultService) Get(id string) (*Run, error) {
 
 // GetByToken resolves a raw run token to its run.
 func (s *DefaultService) GetByToken(token string) (*Run, error) {
-	run, err := s.repo.FindByTokenHash(users.HashToken(token))
+	run, err := s.repo.FindByTokenHash(tokens.HashToken(token))
 	if err != nil {
 		return nil, err
 	}

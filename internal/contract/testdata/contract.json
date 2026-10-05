@@ -1,0 +1,305 @@
+{
+  "about": "The cross-language contract (refactor plan X4a): the Go vocabularies the frontend reads, each from its Go catalogue: feature keys in registry order, domain event types, the SSE event names (contracts/sse-events.json, which S6 writes from the Go sources), API error codes, link rules with their Go text, artifact types, artifact statuses with the transitions each allows, plans, V&V gap labels by JSON key (the two Go tables in internal/domain/reports must be equal) and agent providers in display order. Written, with the same values as frontend/src/generated/contract.ts, by TestContract (internal/contract); every vocabulary contracts/vocab.json also holds must equal it there (TestContractAgreesWithS13). Regenerate only for a deliberate change: UPDATE_CONTRACTS=1 go test ./internal/contract/...",
+  "feature_keys": [
+    "flow-down",
+    "artifact-owners",
+    "share-links",
+    "assistant-project-edits",
+    "default-workspace",
+    "figure-titles",
+    "password-reset",
+    "antigravity-cli",
+    "todo-list",
+    "figure-revert",
+    "attachment-formats",
+    "figure-citations",
+    "search-by-ref",
+    "note-tagging",
+    "project-review-round",
+    "review-queue-decisions",
+    "artifact-stepping",
+    "workspace-billing",
+    "workspace-automations",
+    "workspace-runs"
+  ],
+  "event_types": [
+    "artifact.created",
+    "artifact.updated",
+    "artifact.deleted",
+    "artifact.status_changed",
+    "artifact.restored",
+    "link.created",
+    "link.updated",
+    "link.deleted",
+    "baseline.captured",
+    "baseline.deleted",
+    "project.review_round_started",
+    "chatter.created",
+    "testrun.recorded",
+    "workitem.created",
+    "workitem.moved",
+    "workitem.updated",
+    "agentrun.finished",
+    "agentrun.successors_skipped",
+    "proposal.created",
+    "org.member_added",
+    "org.member_role_changed",
+    "org.member_removed",
+    "org.invitation_sent",
+    "org.invitation_accepted",
+    "project.member_added",
+    "project.member_role_changed",
+    "project.member_removed"
+  ],
+  "sse_events": [
+    "assistant_partial",
+    "error",
+    "log",
+    "message",
+    "notification",
+    "partial",
+    "status"
+  ],
+  "error_codes": [
+    "email_unverified",
+    "registration_closed",
+    "invitation_email_mismatch",
+    "weak_password",
+    "password_incorrect",
+    "limit_reached",
+    "plan_read_only",
+    "no_password",
+    "reset_invalid",
+    "reset_email_unavailable",
+    "billing_unavailable",
+    "billing_upstream",
+    "unknown_plan",
+    "already_subscribed",
+    "no_subscription",
+    "granted_plan",
+    "no_customer",
+    "checkout_mismatch"
+  ],
+  "link_rules": [
+    {
+      "type": "verifies",
+      "label": "verifies",
+      "inverse_label": "verified by",
+      "allowed_from_types": [
+        "test-case"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A test case demonstrates that a requirement is met"
+    },
+    {
+      "type": "satisfies",
+      "label": "satisfies",
+      "inverse_label": "satisfied by",
+      "allowed_from_types": [
+        "design-item"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A design element implements or fulfills a requirement"
+    },
+    {
+      "type": "mitigates",
+      "label": "mitigates",
+      "inverse_label": "mitigated by",
+      "allowed_from_types": [
+        "design-item"
+      ],
+      "allowed_to_types": [
+        "hazard"
+      ],
+      "description": "A design element reduces or eliminates a hazard"
+    },
+    {
+      "type": "decomposes-to",
+      "label": "decomposes to",
+      "inverse_label": "decomposed from",
+      "allowed_from_types": [
+        "requirement"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A high-level requirement is broken down into more specific sub-requirements"
+    },
+    {
+      "type": "refines",
+      "label": "refines",
+      "inverse_label": "refined by",
+      "allowed_from_types": [
+        "requirement"
+      ],
+      "allowed_to_types": [
+        "requirement"
+      ],
+      "description": "A requirement in a subsystem or supplier project refines a requirement of its parent project; the parent's verification rolls the refinements up"
+    },
+    {
+      "type": "derives-from",
+      "label": "derives from",
+      "inverse_label": "gives rise to",
+      "allowed_from_types": [
+        "requirement"
+      ],
+      "allowed_to_types": [
+        "user-need"
+      ],
+      "description": "A requirement is derived from a user need"
+    },
+    {
+      "type": "validates",
+      "label": "validates",
+      "inverse_label": "validated by",
+      "allowed_from_types": [
+        "test-case"
+      ],
+      "allowed_to_types": [
+        "user-need"
+      ],
+      "description": "A test case confirms that a user need is met"
+    },
+    {
+      "type": "impacts",
+      "label": "impacts",
+      "inverse_label": "impacted by",
+      "allowed_from_types": [
+        "*"
+      ],
+      "allowed_to_types": [
+        "*"
+      ],
+      "description": "A change to one artifact affects another"
+    },
+    {
+      "type": "relates-to",
+      "label": "relates-to",
+      "inverse_label": "relates-to",
+      "allowed_from_types": [
+        "*"
+      ],
+      "allowed_to_types": [
+        "*"
+      ],
+      "description": "A loose, non-semantic association between artifacts"
+    }
+  ],
+  "artifact_types": [
+    {
+      "value": "heading",
+      "label": "Heading"
+    },
+    {
+      "value": "description",
+      "label": "Description"
+    },
+    {
+      "value": "persona",
+      "label": "Persona"
+    },
+    {
+      "value": "user-need",
+      "label": "User Need"
+    },
+    {
+      "value": "requirement",
+      "label": "Requirement"
+    },
+    {
+      "value": "design-item",
+      "label": "Design Item"
+    },
+    {
+      "value": "test-case",
+      "label": "Test Case"
+    },
+    {
+      "value": "hazard",
+      "label": "Hazard"
+    },
+    {
+      "value": "other",
+      "label": "Other"
+    }
+  ],
+  "artifact_statuses": [
+    {
+      "value": "draft",
+      "next": [
+        "in_review"
+      ]
+    },
+    {
+      "value": "in_review",
+      "next": [
+        "draft",
+        "approved"
+      ]
+    },
+    {
+      "value": "approved",
+      "next": [
+        "superseded"
+      ]
+    },
+    {
+      "value": "superseded",
+      "next": []
+    }
+  ],
+  "plans": [
+    "single",
+    "business_lite",
+    "business",
+    "enterprise",
+    "self_host",
+    "open_source",
+    "free",
+    "team"
+  ],
+  "gap_labels": [
+    {
+      "key": "requirements_without_method",
+      "label": "Requirements without a verification method"
+    },
+    {
+      "key": "requirements_without_test_case",
+      "label": "Requirements without a test case"
+    },
+    {
+      "key": "requirements_unverified",
+      "label": "Unverified (demonstration, analysis, inspection)"
+    },
+    {
+      "key": "requirements_failing",
+      "label": "Requirements with failing tests"
+    },
+    {
+      "key": "orphan_test_cases",
+      "label": "Orphan test cases (verify nothing)"
+    },
+    {
+      "key": "needs_without_requirement",
+      "label": "User needs without a derived requirement"
+    },
+    {
+      "key": "hazards_unmitigated",
+      "label": "Unmitigated hazards"
+    }
+  ],
+  "providers": [
+    "claude-code",
+    "codex-cli",
+    "gemini-cli",
+    "antigravity-cli",
+    "anthropic-api",
+    "openai-api",
+    "google-api"
+  ]
+}

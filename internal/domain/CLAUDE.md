@@ -1,7 +1,7 @@
 @README.md
 
 Before you finish a change here, run:
-- `go test -count=1 ./internal/domain/... ./internal/vocabparity ./internal/archtest`
+- `go test -count=1 ./internal/domain/... ./internal/vocabparity ./internal/contract ./internal/archtest`
 - after changing an event type, an exported type or a vocabulary: the regenerate command its recipe in README.md names
 
 Don't:
