@@ -12,7 +12,7 @@ request's edits to the lists and rules below take effect once it merges;
 X2B_CALL_SHAPE_CHANGES alone is read from the pull request's tree.
 
 Every pull request:
-  (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 21 entries)
+  (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 22 entries)
       fails unless the change adds a RELEASE_NOTES.md bullet under
       "## Unreleased" or carries the maintainer's behavior-change label;
       inline snapshots (toMatchInlineSnapshot,
@@ -118,10 +118,10 @@ CHARACTERIZATION_TRAILER = "Refactor-Characterization"
 # (1) The golden list (§6.4 S14b): (owning step, what it pins, patterns).
 # One entry may hold several patterns. `**` spans directories, `*` does not.
 # An entry for a step not yet merged is the pattern the plan names; it
-# matches nothing until that step lands its goldens. X4a/X5 add one entry
-# in a class T commit (S17, which would have added another, is dropped).
-# S15a added one the plan's count of 20 did not foresee: its row asks for
-# "error-class goldens" without naming a path.
+# matches nothing until that step lands its goldens. X4a added the one
+# entry X4a and X5 share, in a class T commit (S17, which would have added
+# another, is dropped). S15a added one the plan's count of 20 did not
+# foresee: its row asks for "error-class goldens" without naming a path.
 GOLDEN_LIST = [
     ("I1, pre-S2", "HTTP route set", ["internal/api/testdata/routes.txt"]),
     ("S2", "route binding in registration order", ["internal/api/testdata/route_handlers.txt"]),
@@ -154,6 +154,11 @@ GOLDEN_LIST = [
      ["internal/notify/testdata/notifications/**", "frontend/src/components/__snapshots__/NotificationBell.paths.txt"]),
     ("S12, S12b, S16", "frontend file snapshots", ["frontend/src/**/__snapshots__/**"]),
     ("S12b", "bundle shape", ["frontend/scripts/testdata/bundle-shape.json"]),
+    # The Go vocabularies the frontend reads, generated from the Go catalogues
+    # by internal/contract's tests into TypeScript and JSON with the same
+    # values (X4a); X5's generated/wire.ts joins the same directory.
+    ("X4a, X5", "generated cross-language contract",
+     ["frontend/src/generated/**", "internal/contract/testdata/**"]),
 ]
 
 # (2) Frozen data a refactor pull request may add to but never modify or
