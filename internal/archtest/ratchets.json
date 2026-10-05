@@ -343,9 +343,7 @@
     ],
     "cmd/openv-vapid": []
   },
-  "domain_reflect": [
-    "internal/domain/links"
-  ],
+  "domain_reflect": [],
   "file_lines": {
     "internal/domain/exports/reqif.go": 958,
     "internal/domain/reports/docx_report.go": 1193,
