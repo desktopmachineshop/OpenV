@@ -49,7 +49,6 @@ const COMPONENTS_IMPORTING_VIEWS = {
 // lower this list to nothing.
 const EVENT_SOURCE_HOOK = 'src/hooks/useEventStream.ts';
 const EVENT_SOURCE_SITES = {
-  'src/components/NotificationBell.tsx': 1,
   'src/components/wizard/GuidedChatPanel.tsx': 1,
   'src/views/InterviewChat.tsx': 1,
 };
