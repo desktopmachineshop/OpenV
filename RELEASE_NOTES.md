@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.17.0 — 2026-10-05
+
 ### New features
 
 - **See the agent runs that belong to no project.** Some runs belong to
