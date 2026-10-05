@@ -29,15 +29,24 @@ var decodeAliasTypes = []string{
 	"internal/workerproto.LogEntry",
 }
 
-// decodeErrorSources maps the name of a function or method whose returned
-// error can carry the decode error of an alias-list type to that type, for
-// decodes the rule cannot see: those in a helper or outside internal/api.
-// An error assigned from a call by that name counts as the decode's error.
+// decodeErrorSources maps a function or method whose returned error can
+// carry the decode error of an alias-list type to that type, for decodes
+// the rule cannot see: those in a helper or outside internal/api. A key is a
+// bare name, which matches a call of any function or method by that name,
+// or "<package>.<Func>" with the module-relative package, as in
+// decodeAliasTypes, which matches only a call of that package's function
+// through an import of it, under whatever name the file gives the import.
+// An error assigned from a matching call counts as the decode's error.
 // The sites that return a ProjectExport decode error to a handler are
 // Handler.projectExport (project_snapshot.go); the report service's
 // GenerateProjectReport and GenerateProjectReportDOCX (through
 // loadReportExport) and GenerateVVReport; and the download service's
-// Options (through reports' LoadReportExport). X14 adds snapshot's Load.
+// Options (through reports' LoadReportExport); and snapshot.Load, which
+// X14a adds ahead of the loader X14b writes. Its key names its package
+// because Load is a common name (runnersessions' PoolCounts.Load, sync.Map's,
+// the planned config.Load), and a bare key would take any of them for the
+// loader. A package key matches a package function only; a method is keyed
+// by its bare name.
 // Four paths that decode a ProjectExport stay off. The export service's
 // ImportProject and ImportProjectWithOverrides, and the template service's
 // CreateProjectFromTemplate, which calls ImportProjectWithOverrides, return
@@ -62,6 +71,9 @@ var decodeErrorSources = map[string]string{
 	"GenerateVVReport":          "internal/domain/exports.ProjectExport",
 	"Options":                   "internal/domain/exports.ProjectExport",
 	"decodeRunLogBody":          "internal/domain/agentruns.LogEntry",
+
+	// Keyed by its package, since Load is a common name (X14a).
+	"internal/domain/snapshot.Load": "internal/domain/exports.ProjectExport",
 }
 
 func checkDecodeAliases(c *check) {
@@ -79,8 +91,8 @@ func checkDecodeAliases(c *check) {
 // itself to a writer that logs it, such as respondError, is fine. The
 // analysis is syntactic: it follows local variables, struct fields and the
 // module's named types, not values passed through helper functions, except
-// the error returned by a call named in sources (function or method name ->
-// alias type).
+// the error returned by a call named in sources (function or method name,
+// or "<package>.<Func>" -> alias type).
 func decodeLeaks(m *module, aliases []string, sources map[string]string) []string {
 	if len(aliases) == 0 {
 		return nil
@@ -109,7 +121,7 @@ type decodeScope struct {
 	f        *file
 	fn       *ast.FuncDecl
 	targets  map[string]bool
-	sources  map[string]string     // callee name -> alias type its error carries
+	sources  map[string]string     // callee name or <package>.<Func> -> alias type its error carries
 	vars     map[string][]ast.Expr // local variable -> declared or literal types
 	writers  map[string]bool       // http.ResponseWriter parameters
 	decoders map[string]bool       // variables holding json.NewDecoder(...)
@@ -240,7 +252,7 @@ func (s *decodeScope) decodeAssign(as *ast.AssignStmt) (string, string) {
 	if !ok || id.Name == "_" {
 		return "", ""
 	}
-	if alias := s.sources[calleeName(call)]; alias != "" && s.targets[alias] {
+	if alias := s.sourceAlias(call); alias != "" && s.targets[alias] {
 		return id.Name, alias
 	}
 	target := s.decodeTarget(call)
@@ -253,6 +265,21 @@ func (s *decodeScope) decodeAssign(as *ast.AssignStmt) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+// sourceAlias returns the alias type the sources give a call's error: the
+// entry for its bare name or, for pkg.Func(...) where pkg is an import of a
+// module package, the entry for "<package>.<Func>".
+func (s *decodeScope) sourceAlias(call *ast.CallExpr) string {
+	if alias := s.sources[calleeName(call)]; alias != "" {
+		return alias
+	}
+	if sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr); ok {
+		if ip := s.f.selectorPkg(sel); s.m.internal(ip) {
+			return s.sources[s.m.nameOf(ip)+"."+sel.Sel.Name]
+		}
+	}
+	return ""
 }
 
 // calleeName returns the function or method name a call names, or "".
@@ -481,16 +508,20 @@ func mentionsAny(list []ast.Expr, name string) bool {
 	return false
 }
 
-// TestDecodeAliasRule proves the R8 check on a fixture module: five
+// TestDecodeAliasRule proves the R8 check on a fixture module: six
 // handlers leak a decode error of an alias-list type (directly, nested in a
 // literal struct, through a named type with a decoder variable, and from a
-// helper method and a plain function named in the error sources), three do
-// not (a fixed message; a type
-// not on the list; a helper's error answered with a fixed message).
+// helper method, a plain function and a package function imported under
+// another name, named in the error sources), five do not (a fixed message; a
+// type not on the list; a helper's error answered with a fixed message;
+// another package's Load and a method Load, beside the source
+// snapshot.Load).
 func TestDecodeAliasRule(t *testing.T) {
 	root := writeFixture(t, map[string]string{
 		"go.mod":                              "module example.com/fixture\n\ngo 1.25\n",
 		"internal/domain/exports/export.go":   "package exports\n\ntype ProjectExport struct {\n\tName string `json:\"name\"`\n}\n",
+		"internal/domain/snapshot/load.go":    "package snapshot\n\nfunc Load(projectID, baselineID string) ([]byte, error) { return nil, nil }\n",
+		"internal/domain/settings/load.go":    "package settings\n\nfunc Load(projectID, baselineID string) ([]byte, error) { return nil, nil }\n",
 		"internal/api/handlers.go":            decodeFixture,
 		"internal/api/handlers_test.go":       "package api\n",
 		"cmd/server/main.go":                  "package main\n\nfunc main() {}\n",
@@ -501,14 +532,15 @@ func TestDecodeAliasRule(t *testing.T) {
 		t.Fatal(err)
 	}
 	sources := map[string]string{
-		"loadExport":   "internal/domain/exports.ProjectExport",
-		"loadExportFn": "internal/domain/exports.ProjectExport",
+		"loadExport":                    "internal/domain/exports.ProjectExport",
+		"loadExportFn":                  "internal/domain/exports.ProjectExport",
+		"internal/domain/snapshot.Load": "internal/domain/exports.ProjectExport",
 	}
 	if leaks := decodeLeaks(m, nil, sources); len(leaks) != 0 {
 		t.Fatalf("an empty alias list must find nothing, found %v", leaks)
 	}
 	leaks := decodeLeaks(m, []string{"internal/domain/exports.ProjectExport"}, sources)
-	want := []string{"Handler.LeakDirect", "Handler.LeakNested", "Handler.LeakThroughNamedType", "Handler.LeakThroughHelper", "Handler.LeakThroughFunc"}
+	want := []string{"Handler.LeakDirect", "Handler.LeakNested", "Handler.LeakThroughNamedType", "Handler.LeakThroughHelper", "Handler.LeakThroughFunc", "Handler.LeakThroughPackageFunc"}
 	if len(leaks) != len(want) {
 		t.Fatalf("found %d leaks, want %d:\n%s", len(leaks), len(want), strings.Join(leaks, "\n"))
 	}
@@ -528,9 +560,15 @@ import (
 	"net/http"
 
 	"example.com/fixture/internal/domain/exports"
+	"example.com/fixture/internal/domain/settings"
+	projectsnapshot "example.com/fixture/internal/domain/snapshot"
 )
 
-type Handler struct{}
+type Handler struct{ cache loader }
+
+type loader struct{}
+
+func (loader) Load(projectID, baselineID string) ([]byte, error) { return nil, nil }
 
 type importBody struct {
 	Project *exports.ProjectExport ` + "`json:\"project\"`" + `
@@ -618,6 +656,33 @@ func (h *Handler) HelperFixedMessage(w http.ResponseWriter, r *http.Request) {
 	if _, err := h.loadExport(data); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid export")
 	}
+}
+
+func (h *Handler) LeakThroughPackageFunc(w http.ResponseWriter, r *http.Request) {
+	data, err := projectsnapshot.Load(r.URL.Query().Get("project"), "")
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_ = data
+}
+
+func (h *Handler) OtherPackageLoad(w http.ResponseWriter, r *http.Request) {
+	data, err := settings.Load(r.URL.Query().Get("project"), "")
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_ = data
+}
+
+func (h *Handler) MethodLoad(w http.ResponseWriter, r *http.Request) {
+	data, err := h.cache.Load(r.URL.Query().Get("project"), "")
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_ = data
 }
 `
 
