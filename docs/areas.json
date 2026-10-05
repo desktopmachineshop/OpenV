@@ -373,6 +373,7 @@
         "internal/mcp/schema*.go",
         "internal/mcp/stdio*.go",
         "internal/mcp/testdata/**",
+        "internal/mcp/toolnames/**",
         "internal/mcp/tools.go",
         "internal/mcp/tools_delegation*.go",
         "internal/mcp/tools_interviews*.go",

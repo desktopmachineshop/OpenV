@@ -229,7 +229,8 @@
       "internal/envparse"
     ],
     "internal/mcp": [
-      "internal/domain/artifacts"
+      "internal/domain/artifacts",
+      "internal/mcp/toolnames"
     ],
     "internal/metrics": [
       "internal/domain/agentruns"
@@ -300,7 +301,7 @@
       "internal/domain/providers",
       "internal/domain/repoconns",
       "internal/domain/runnersessions",
-      "internal/mcp"
+      "internal/mcp/toolnames"
     ],
     "internal/scheduler": [
       "internal/domain/agentruns",
@@ -311,7 +312,8 @@
       "internal/domain/agents",
       "internal/domain/sharedproducts",
       "internal/domain/teams",
-      "internal/mcp"
+      "internal/mcp",
+      "internal/mcp/toolnames"
     ]
   },
   "layering_exceptions": [],
@@ -319,7 +321,6 @@
     "cmd/agentd": [
       "internal/domain/agentruns",
       "internal/domain/agents",
-      "internal/domain/artifacts",
       "internal/domain/events",
       "internal/domain/providers",
       "internal/domain/repoconns",

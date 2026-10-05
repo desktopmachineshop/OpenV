@@ -7,6 +7,8 @@ import (
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/openv/requirements-platform/internal/mcp/toolnames"
 )
 
 // Tool is one MCP tool: schema plus handler. The table is exported so other
@@ -27,38 +29,17 @@ type Tool struct {
 	ReadOnly bool
 }
 
-// ServerTools is Claude Code's server-wide allowlist spelling: naming the MCP
-// server on its own grants every tool that server offers. It is documented
-// alongside the per-tool form, so an agent definition may carry either
-// "mcp__openv" or "mcp__openv__*" to mean the whole OpenV surface, and both
-// must be read the same way everywhere.
-const ServerTools = "mcp__openv"
+// ServerTools is toolnames.ServerTools, the server-wide allowlist spelling
+// "mcp__openv", kept here as an alias.
+const ServerTools = toolnames.ServerTools
 
-// ToolPrefix is what a vendor CLI's allowlist calls these tools: the MCP
-// server is registered as "openv", so its tools are addressed as
-// mcp__openv__<name>.
-const ToolPrefix = ServerTools + "__"
+// ToolPrefix is toolnames.ToolPrefix, the "mcp__openv__" a vendor CLI's
+// allowlist puts before each of these tools, kept here as an alias.
+const ToolPrefix = toolnames.ToolPrefix
 
-// EnvToolAllowlist names the environment variable that narrows the tool set
-// this MCP server exposes. It is the server's own half of REQ-91: a vendor CLI
-// that has no per-run allowlist flag of its own (codex exec, and anything else
-// that only knows how to spawn an MCP server) still cannot call an OpenV tool
-// the agent definition did not name, because the tool is not there to call.
-//
-// The variable is read as *set or unset*, not empty or non-empty:
-//
-//   - unset — no filter; every tool in the table is served. This is how
-//     openv-mcp behaves outside a platform run (a repository session with a
-//     workspace runner key, say).
-//   - "*", "mcp__openv__*" or the bare server name "mcp__openv" — the
-//     wildcard spellings an agent definition may write; every tool is served.
-//   - a comma-separated list — only those tools are served. Entries may be
-//     bare ("get_artifact") or prefixed as a vendor CLI writes them
-//     ("mcp__openv__get_artifact"); blanks are ignored.
-//   - set but empty — no OpenV tool is served at all. That is deliberate: an
-//     agent whose allowlist names no mcp__openv__ tool gets none, rather than
-//     all of them.
-const EnvToolAllowlist = "OPENV_MCP_TOOLS"
+// EnvToolAllowlist is toolnames.EnvToolAllowlist, the variable that narrows
+// the tools this server exposes (see EnvFilteredTools), kept here as an alias.
+const EnvToolAllowlist = toolnames.EnvToolAllowlist
 
 // toolWildcard is the "every tool" entry, accepted bare or prefixed.
 const toolWildcard = "*"
