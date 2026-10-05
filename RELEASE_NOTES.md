@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **An agent that looks up a baseline now gets its name and when it was
+  taken.** An agent using OpenV's tools could look up a baseline by its
+  id with `get_baseline`, but was told only which project it belongs to:
+  its name, its capture time and even its own id came back empty, so the
+  agent could not say which baseline it was working from. It now gets all
+  four, as the project's list of baselines shows them. A baseline that
+  does not exist, or that the agent cannot see, is still refused as
+  *baseline not found*.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features

@@ -3,6 +3,11 @@
 
 package mcp
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // baselineTools returns the baseline tools, in Tools() order.
 func baselineTools() []Tool {
 	return []Tool{
@@ -26,11 +31,7 @@ func baselineTools() []Tool {
 				"id": str("Baseline ID"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				out, _, err := c.request("GET", "/api/v1/baselines/"+strArg(args, "id"), nil, nil)
-				if err != nil {
-					return out, err
-				}
-				return baselineSummary(out)
+				return getBaseline(c, strArg(args, "id"))
 			},
 		},
 		{
@@ -51,4 +52,43 @@ func baselineTools() []Tool {
 			},
 		},
 	}
+}
+
+// getBaseline answers get_baseline with the baseline's id, project, name and
+// capture time. GET /baselines/{id} answers with the baseline's stored
+// snapshot, which names its project but not the baseline (#379 bug 202), so
+// the rest is read from that project's baseline list, the one list_baselines
+// reads. The first read still decides: an unknown id, or one the caller may
+// not read, is its 404.
+func getBaseline(c *Client, id string) (string, error) {
+	out, _, err := c.request("GET", "/api/v1/baselines/"+id, nil, nil)
+	if err != nil {
+		return out, err
+	}
+	var snapshot struct {
+		ProjectID string `json:"project_id"`
+	}
+	if err := json.Unmarshal([]byte(out), &snapshot); err != nil {
+		return "", fmt.Errorf("unexpected baseline response: %v", err)
+	}
+	if snapshot.ProjectID == "" {
+		return "", fmt.Errorf("baseline %s: its snapshot names no project, so its name and capture time cannot be looked up", id)
+	}
+	out, _, err = c.request("GET", "/api/v1/projects/"+snapshot.ProjectID+"/baselines", nil, nil)
+	if err != nil {
+		return out, err
+	}
+	var list []json.RawMessage
+	if err := json.Unmarshal([]byte(out), &list); err != nil {
+		return "", fmt.Errorf("unexpected baseline list response: %v", err)
+	}
+	for _, entry := range list {
+		var b struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(entry, &b) == nil && b.ID == id {
+			return baselineSummary(string(entry))
+		}
+	}
+	return "", fmt.Errorf("baseline %s is not in the baseline list of its project %s", id, snapshot.ProjectID)
 }
