@@ -17,7 +17,7 @@ Each package belongs to one area of `docs/areas.json` through its
 | requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `settings/`, `workitems/` |
 | verification | `evidence/`, `vv/` |
 | documents | `attachments/`, `baselines/`, `downloads/`, `exports/`, `reports/`, `snapshot/`, `templates/` |
-| tenancy-identity | `invitations/`, `members/`, `orgs/`, `users/` |
+| tenancy-identity | `invitations/`, `members/`, `orgs/`, `tokens/`, `users/` |
 | agent-suite | `agentruns/`, `agents/`, `automations/`, `crewtemplates/`, `guided/`, `interviews/`, `proposals/`, `providers/`, `repoconns/`, `teams/` |
 | runner-fleet | `hostedworkers/`, `runnersessions/`, `workerkeys/` |
 | events-notifications | `events/`, `notifications/`, `pushsubs/` |

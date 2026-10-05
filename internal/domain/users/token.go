@@ -1,25 +1,19 @@
 // Tokens: minting one, and the hashed form that a session, a run, an
 // email verification or a password reset stores in place of the token.
+// Both live in internal/domain/tokens (refactor step P2b); these names
+// delegate to it, so every caller of users.NewToken and users.HashToken
+// keeps working unchanged.
 
 package users
 
-import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
-)
+import "github.com/openv/requirements-platform/internal/domain/tokens"
 
 // HashToken returns the stored form of a session or run token.
 func HashToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
+	return tokens.HashToken(token)
 }
 
 // NewToken generates a random URL-safe token.
 func NewToken() (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(buf), nil
+	return tokens.NewToken()
 }

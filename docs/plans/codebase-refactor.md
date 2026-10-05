@@ -782,12 +782,18 @@ These are the only new packages the plan creates, now that Phase 4 is dropped. E
 | **P4** `internal/mcp/toolnames` | 2×S · C, then D · yes | **P4a (C):** table tests for the three readers of an allowlist: `mcp.FilterTools` (`tools.go:124-146`: bare names, `*` and the server name, trimmed), `runner.openvToolNames` (`toolallow.go:45-67`: unprefixed entries ignored, `(scope)` stripped, duplicates dropped) and `domain/agents/agents.go:313`, over bare, prefixed, wildcard, server-name, scoped, blank, duplicate and set-but-empty inputs. **P4b (D):** only the constants `ToolPrefix`, `ServerTools` and `EnvToolAllowlist` move to `internal/mcp/toolnames`; `seeds` and the runner adapters import it, and `mcp` keeps aliases. The readers stay where they are, and change at most in the selectors that name the constants: they are two grammars, and merging them would change which OpenV tools an agent gets (REQ-91) | P4a; S7; the seeds interviewer test · `internal/runner` no longer imports `internal/mcp`; `FilterTools`, `EnvFilteredTools` and `ToolsReachOutside` keep their `declhash`; `openvToolNames`, `isOpenVToolName`, `withOpenVToolFilter` and `geminiToolSettings` change only in their `mcp.X` → `toolnames.X` selectors (`declhash` also hashes the import path behind a qualifier, so these four cannot keep theirs) | P4a: M11; P4b: P4a | agent-exec-8 (constants; the two grammars are named and tested, not merged) |
 | **P5** One automation runtime. Dropped (maintainer decision, #379 comment 5916575366) | S · D · yes | `internal/scheduler` merges into `internal/automation`, and `ResolveTarget` moves with it. P5 creates no package, so its new import edges (`scheduler` → `automation` while `scheduler` stays an alias package, or `internal/api` → `automation` once `agent_handlers.go:1094` calls it directly; `automation` already imports everything `scheduler` imports) fall outside the class D exception (§4.2): approving P5 at Stop point 2 includes writing its edge exception into S14b, in a PR merged before P5's, since the job judges a PR with the base's copy of the guard | S11; S5d run-now copy; S4 `boot_steps.txt`, unchanged while `internal/scheduler` keeps `New` and the `Scheduler` alias (see the S4 note) · `internal/scheduler` is an alias package or gone | S11, M4, S5d | domain-platform-13, services-5 (part) |
 
-**Stop point 2** is reached after P1–P4.
+**Stop point 2** is reached after P1–P4. Reached on 5 October 2026 when
+P2b merged (#516); OpenV baseline `refactor-stop-2`.
 
 ### 6.7 Phase 3: one mechanism per concern
 
 Class E steps merge only after the characterization named in their guard
 has been on `master` since an earlier PR, and they need two reviewers.
+
+Decided at stop point 2 ([question 60 on #379](https://github.com/desktopmachineshop/OpenV/issues/379#issuecomment-5993041326)):
+the steps of other classes go ahead at once, one PR each, and class E PRs
+go to the maintainer, as one of their two reviewers, in batches the
+maintainer schedules.
 
 | Step | Size · class · parallel | What changes (files) | Guard · done when | Depends | Resolves |
 |---|---|---|---|---|---|

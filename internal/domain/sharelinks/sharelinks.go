@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/domain/tokens"
 )
 
 // Roles a link can carry.
@@ -126,7 +126,7 @@ func (s *DefaultService) Create(projectID, role, label string, createdBy *string
 	if !validExpiry(expiresAt) {
 		return nil, "", ErrInvalidExpiry
 	}
-	token, err := users.NewToken()
+	token, err := tokens.NewToken()
 	if err != nil {
 		return nil, "", err
 	}
@@ -139,7 +139,7 @@ func (s *DefaultService) Create(projectID, role, label string, createdBy *string
 		CreatedAt: s.now().UTC(), // a TIMESTAMP column holds the UTC wall clock (#379 bug 170)
 		ExpiresAt: expiresAt,
 	}
-	if err := s.repo.Create(link, users.HashToken(token)); err != nil {
+	if err := s.repo.Create(link, tokens.HashToken(token)); err != nil {
 		return nil, "", err
 	}
 	return link, token, nil
@@ -165,7 +165,7 @@ func (s *DefaultService) Resolve(token string) (*Link, error) {
 	if token == "" {
 		return nil, ErrInvalidToken
 	}
-	link, err := s.repo.FindByTokenHash(users.HashToken(token))
+	link, err := s.repo.FindByTokenHash(tokens.HashToken(token))
 	if err != nil || link == nil || !link.Usable(s.now()) {
 		return nil, ErrInvalidToken
 	}
