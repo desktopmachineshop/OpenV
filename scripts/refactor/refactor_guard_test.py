@@ -705,23 +705,24 @@ class DataTest(unittest.TestCase):
 
     def test_x4a_generated_contract(self):
         # X4a's generator writes the TypeScript contract and its JSON twin,
-        # both goldens of the entry X4a and X5 share (X5's wire.ts will join
-        # the directory), so a change to either needs a release note and a
+        # and X5's writes wire.ts beside them: all goldens of the entry X4a
+        # and X5 share, so a change to any needs a release note and a
         # refactor may not make one. The generator itself is class T tooling
         # under internal/contract, and none of it is guard code or another
         # entry's golden.
         files = subprocess.run(["git", "ls-files", "internal/contract", "frontend/src/generated"], cwd=REPO,
                                capture_output=True, text=True, check=True).stdout.split()
         entry = ("X4a, X5", "generated cross-language contract")
-        for path in ("frontend/src/generated/contract.ts", "internal/contract/testdata/contract.json"):
+        goldens = ("frontend/src/generated/contract.ts", "frontend/src/generated/wire.ts",
+                   "internal/contract/testdata/contract.json")
+        for path in goldens:
             with self.subTest(golden=path):
                 self.assertIn(path, files)
                 self.assertEqual(rg.golden_entry(path), entry)
                 self.assertTrue(rg.matches(path, rg.T_PATHS), path)
-        self.assertEqual(rg.golden_entry("frontend/src/generated/wire.ts"), entry)
         self.assertIn(("X4a, X5", "frontend/src/generated/**"), rg.FROZEN_DATA)
         for path in files:
-            if path in ("frontend/src/generated/contract.ts", "internal/contract/testdata/contract.json"):
+            if path in goldens:
                 continue
             with self.subTest(tool=path):
                 self.assertTrue(path.startswith("internal/contract/") and rg.matches(path, rg.T_PATHS), path)
