@@ -74,6 +74,10 @@ const barColour = (fraction: number, limit: LimitUsage): string => {
   return 'var(--primary)';
 };
 
+/** The limits a read-only workspace is past, by label, for its banner. */
+const overLabels = (data: WorkspaceLimits): string | undefined =>
+  data.over_plan?.map((key) => data.limits.find((l) => l.key === key)?.label || key).join(', ');
+
 interface OrgLimitsTabProps {
   org: Org;
 }
@@ -128,15 +132,20 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
       {data?.read_only && (
         <div role="alert" className="card" style={{ padding: 14, marginBottom: 16, borderLeft: '4px solid var(--danger)' }}>
           <strong>This workspace is read-only.</strong>
-          <p style={{ margin: '6px 0 0', fontSize: 14 }}>
-            It holds more than its plan allows ({data.over_plan?.map((key) => data.limits.find((l) => l.key === key)?.label || key).join(', ')}).
-            Everything stays readable and exportable; nothing can be changed until the workspace is under its limits again or on a plan that fits.
-            {!data.self_hosted && (
-              <>
-                {' '}A workspace admin can subscribe on the <a href="/org/settings?tab=billing">Billing tab</a>, or remove members or delete projects.
-              </>
-            )}
-          </p>
+          {/* A self-hosted deployment has no plans: its ceilings are its own
+              settings, so the way out is raising them, not changing plan. */}
+          {data.self_hosted ? (
+            <p style={{ margin: '6px 0 0', fontSize: 14 }}>
+              It holds more than this deployment’s limits allow ({overLabels(data)}).
+              Everything stays readable and exportable; nothing can be changed until the workspace is under its limits again or an administrator raises them in <code>OPENV_LIMITS</code>.
+            </p>
+          ) : (
+            <p style={{ margin: '6px 0 0', fontSize: 14 }}>
+              It holds more than its plan allows ({overLabels(data)}).
+              Everything stays readable and exportable; nothing can be changed until the workspace is under its limits again or on a plan that fits.
+              {' '}A workspace admin can subscribe on the <a href="/org/settings?tab=billing">Billing tab</a>, or remove members or delete projects.
+            </p>
+          )}
         </div>
       )}
 

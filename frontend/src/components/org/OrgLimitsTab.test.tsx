@@ -131,6 +131,77 @@ describe('a feature flag', () => {
   });
 });
 
+// A workspace past its ceilings is read-only on either kind of deployment,
+// but only a hosted one has a plan to change: a self-hosted one is told which
+// setting raises them, as the server's own refusal tells it (#379 bug 200).
+describe('the read-only banner', () => {
+  (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    act(() => {
+      root = createRoot(container);
+    });
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  const bannerOf = async (selfHosted: boolean) => {
+    vi.mocked(orgsAPI.limits).mockResolvedValue({
+      data: {
+        org_id: 'org-1',
+        plan: 'free',
+        entitled_plan: 'free',
+        plan_status: 'none',
+        grandfathered: false,
+        self_hosted: selfHosted,
+        read_only: true,
+        over_plan: ['max_members'],
+        limits: [limit({ used: 12, limit: 10 })],
+      },
+    } as any);
+    await act(async () => {
+      root.render(<OrgLimitsTab org={{ id: 'org-1', name: 'Acme' } as any} />);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const banner = Array.from(container.querySelectorAll('[role="alert"]')).find((el) =>
+      el.textContent?.includes('This workspace is read-only.')
+    );
+    expect(banner).toBeDefined();
+    return banner as HTMLElement;
+  };
+
+  it('tells a hosted workspace it holds more than its plan allows, and points to the Billing tab', async () => {
+    const banner = await bannerOf(false);
+    const text = banner.textContent || '';
+    expect(text).toContain('It holds more than its plan allows (Workspace members).');
+    expect(text).toContain('or on a plan that fits.');
+    expect(text).toContain('A workspace admin can subscribe on the Billing tab, or remove members or delete projects.');
+    expect(banner.querySelector('a')?.getAttribute('href')).toBe('/org/settings?tab=billing');
+    expect(text).not.toContain('OPENV_LIMITS');
+  });
+
+  it('tells a self-hosted workspace which setting raises its limits, naming no plan', async () => {
+    const banner = await bannerOf(true);
+    const text = banner.textContent || '';
+    expect(text).toContain('It holds more than this deployment’s limits allow (Workspace members).');
+    expect(text).toContain('an administrator raises them in OPENV_LIMITS.');
+    expect(text).not.toMatch(/plan/i);
+    expect(text).not.toContain('Billing');
+    expect(banner.querySelector('a')).toBeNull();
+  });
+});
+
 describe('the usage bar', () => {
   it('is not drawn when there is nothing to measure against', () => {
     expect(usedFraction(limit({ unlimited: true, limit: 0, used: 5 }))).toBeNull();

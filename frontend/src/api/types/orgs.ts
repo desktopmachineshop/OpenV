@@ -150,7 +150,8 @@ export interface LimitUsage {
   fixed?: boolean;
   /** resource | count | flag. A flag has no number, only `included`. */
   kind?: 'resource' | 'count' | 'flag';
-  /** A flag's reading: whether the plan includes the thing. */
+  /** A flag's reading: whether the workspace's plan, or on a self-hosted
+   *  deployment the deployment, includes the thing. */
   included?: boolean;
 }
 
