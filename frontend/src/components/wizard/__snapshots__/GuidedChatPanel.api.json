@@ -73,10 +73,11 @@
         [
           {
             "suggestion": {
-              "kind": "risk",
-              "text": "Coolant mist hides the lamp"
+              "kind": "framing",
+              "field": "target_users",
+              "text": "Machinists, shop leads and maintenance planners."
             },
-            "key": "m-2:23"
+            "key": "m-2:3"
           }
         ]
       ]
@@ -150,13 +151,6 @@
               "severity": "Medium"
             },
             "key": "m-2:17"
-          },
-          {
-            "suggestion": {
-              "kind": "risk",
-              "text": "Coolant mist hides the lamp"
-            },
-            "key": "m-2:23"
           },
           {
             "suggestion": {
@@ -434,6 +428,15 @@
       "call": "guidedAPI.listMessages",
       "args": [
         "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
       ]
     },
     {

@@ -54,6 +54,31 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   and count twice on the bell. Each tab now shows only its own
   notifications, and each notification appears and counts once.
 
+- **The V&V Assistant still answers when its conversation fails to
+  load.** When the assistant's earlier messages could not be loaded, the
+  panel said so and then stopped listening: nothing the assistant wrote
+  afterwards appeared until you left the page and came back. The panel
+  still says the conversation failed to load, but it now connects all
+  the same, so new replies arrive as usual.
+
+- **The V&V Assistant's panel says one thing at a time, and offers only
+  what it can add.** With no runner connected and nothing said yet, the
+  panel showed "The assistant will join in a moment" right beside the
+  notice that the V&V Assistant is not connected; it now shows only the
+  notice. A suggestion of a kind OpenV does not know showed its raw data
+  as its title and offered to add it, and Apply all counted it, though it
+  could not be added. It now shows its kind and a few words of what it
+  says, with no button, and Apply all leaves it out. And a link in an
+  assistant reply, or in the interviewer's on an interview page, no
+  longer carries a stray `node="[object Object]"` attribute in the page.
+
+- **The notes panel's assistant follows you to another project.** With
+  no artifact selected, going from one project's requirements to
+  another's (from a notification, say) kept the first project's V&V
+  Assistant conversation in the notes panel, so what you asked there went
+  into the other project's conversation. The panel now opens the
+  conversation of the project you are in.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features

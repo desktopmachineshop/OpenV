@@ -23,12 +23,13 @@ import { CopilotSuggestion, GuidedChatPanel, GuidedChatPanelHandle } from './Gui
 //                   of every wizard kind (a framing field that has text is
 //                   replaced, one that has none applied, a "replaces" naming an
 //                   entry id shown by its title), two malformed blocks shown
-//                   raw, an unknown kind, a project edit; Apply all. The same
-//                   id again, a message with no id and a malformed one are
-//                   ignored.
+//                   raw, an unknown kind (read-only, by its kind and its text),
+//                   a project edit; Apply all, which leaves out the unknown
+//                   kind. The same id again, a message with no id and a
+//                   malformed one are ignored.
 //     applied       one card added, one refused (its reason shown), then
-//                   Apply all with two refused. A nudge from the wizard
-//                   follows (calls only).
+//                   Apply all with the refused one again. A nudge from the
+//                   wizard follows (calls only).
 //   transcript      a transcript of assistant (markdown), user (line breaks
 //                   kept), assistant with cards, one already applied, and
 //                   system messages: no kickoff.
@@ -38,8 +39,8 @@ import { CopilotSuggestion, GuidedChatPanel, GuidedChatPanelHandle } from './Gui
 //     send-failed   a quick action whose send fails.
 //   runner-offline  the kickoff says no runner is online: the connect notice,
 //                   kept by a send that says so too, gone when a reply lands.
-//   error           the transcript fails to load: no stream, no kickoff. A
-//                   send then clears the error.
+//   error           the transcript fails to load: the stream opens all the
+//                   same, with no kickoff. A send then clears the error.
 //   notes           beside an artifact (ChatterPanel's notes column):
 //                   embedded, the notes subtitle and quick actions, the
 //                   artifact id in every turn, no step and no wizard state;
@@ -478,7 +479,6 @@ describe('GuidedChatPanel characterization (S16i)', () => {
     server.kickoff = kickoff.promise.then(() => ({ status: 'launched', runner_online: true }));
     server.refuse = {
       [TARGET_USERS]: 'Target users are locked by the product profile.',
-      [RISK]: 'Unknown suggestion kind "risk".',
     };
     const panel = React.createRef<GuidedChatPanelHandle>();
     await mount(<Host panelRef={panel} />);
@@ -512,14 +512,16 @@ describe('GuidedChatPanel characterization (S16i)', () => {
     await emit('message', '{"id": "m-9",');
     expect(container.innerHTML).toBe(shown);
 
-    // One card, then one refused (its reason shown as is), then the rest.
+    // The unknown kind has nothing to apply. One card, then one refused (its
+    // reason shown as is), then the rest.
+    expect(byText('div', 'Coolant mist hides the lamp').parentElement!.querySelector('button')).toBeNull();
     await click(cardButton('Sam the Shop Lead'));
     expect(container.textContent).toContain('✓ Added to wizard');
-    await click(cardButton(JSON.stringify({ kind: 'risk', text: 'Coolant mist hides the lamp' })));
-    expect(container.textContent).toContain('Unknown suggestion kind "risk".');
-    await click(byText('button', 'Apply all (10)'));
+    await click(cardButton('Target users'));
+    expect(container.textContent).toContain('Target users are locked by the product profile.');
+    await click(byText('button', 'Apply all (9)'));
     expect(container.textContent).toContain(
-      '2 suggestions could not be applied — Target users are locked by the product profile.'
+      '1 suggestion could not be applied — Target users are locked by the product profile.'
     );
     await snapshot('applied');
 
@@ -537,13 +539,14 @@ describe('GuidedChatPanel characterization (S16i)', () => {
       STREAM('gs-1'),
       'guidedAPI.kickoffChat("gs-1", 2, {…}, null)',
       // Sam's card alone; the refused card alone; Apply all: the cards not
-      // applied, the refused one again among them
+      // applied, the refused one again among them, the unknown kind not
       'onApplySuggestions([1])',
       'onApplySuggestions([1])',
-      'onApplySuggestions([10])',
+      'onApplySuggestions([9])',
       'guidedAPI.nudgeChat("gs-1", 3, {…}, "saved step 2 (\\"Personas\\") and moved on to step 3 (\\"User needs\\")")',
     ]);
-    expect(appliedKeys().slice(0, 2)).toEqual([[SAM], [RISK]]);
+    expect(appliedKeys().slice(0, 2)).toEqual([[SAM], [TARGET_USERS]]);
+    expect(appliedKeys().flat()).not.toContain(RISK);
     keep('wizard');
   });
 
@@ -608,7 +611,7 @@ describe('GuidedChatPanel characterization (S16i)', () => {
     keep('runner-offline');
   });
 
-  it('error: the transcript fails to load; no stream, no kickoff', async () => {
+  it('error: the transcript fails to load; the stream opens, no kickoff', async () => {
     server.transcripts['gs-1'] = new Error('500');
     await mount(<Host />);
     expect(container.textContent).toContain('Failed to load the assistant conversation.');
@@ -618,10 +621,11 @@ describe('GuidedChatPanel characterization (S16i)', () => {
     await click(byText('button', 'Send'));
     expect(container.textContent).not.toContain('Failed to load the assistant conversation.');
     expect(container.textContent).toContain('Hello?');
-    expect(FakeEventSource.all).toHaveLength(0);
+    expect(stream().url).toBe('/api/v1/guided-sessions/gs-1/chat/stream');
 
     expect(brief()).toEqual([
       'guidedAPI.listMessages("gs-1")',
+      STREAM('gs-1'),
       'guidedAPI.sendMessage("gs-1", "Hello?", 2, {…}, null)',
     ]);
     keep('error');

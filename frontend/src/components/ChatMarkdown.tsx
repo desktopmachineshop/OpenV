@@ -40,8 +40,10 @@ export const ChatMarkdown: React.FC<ChatMarkdownProps> = ({ text, streaming }) =
       remarkPlugins={[remarkGfm, remarkSoftBreaks]}
       components={{
         // A link the assistant offers opens in a new tab, so following it
-        // never throws away the conversation behind it.
-        a: ({ href, children, ...rest }) => (
+        // never throws away the conversation behind it. `node` is
+        // react-markdown's syntax tree node, not an attribute: spread onto
+        // the element it printed as node="[object Object]" (#379, bug 209).
+        a: ({ node, href, children, ...rest }) => (
           <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
             {children}
           </a>

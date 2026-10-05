@@ -107,6 +107,21 @@ const KIND_LABELS: Record<string, string> = {
   move: 'Move',
 };
 
+/**
+ * A kind this panel can show and apply: one KIND_LABELS names, as its own
+ * key, so that a kind such as "constructor" is not found on the prototype.
+ * Any other kind is shown read-only (#379, bug 212).
+ */
+const isKnownKind = (kind: string): boolean => Object.prototype.hasOwnProperty.call(KIND_LABELS, kind);
+
+/** A few words for a card of an unknown kind, in place of its JSON: its first text field. */
+const unknownSummary = (s: CopilotSuggestion): string => {
+  const preferred = ['title', 'text', 'name', 'summary', 'description'].map((k) => s[k]);
+  const others = Object.entries(s).filter(([k]) => k !== 'kind').map(([, v]) => v);
+  const text = String([...preferred, ...others].find((v) => typeof v === 'string' && v.trim()) ?? '').trim();
+  return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+};
+
 /** The type catalogue's labels, for a new-artifact card. */
 const TYPE_LABELS: Record<string, string> = {
   heading: 'Heading',
@@ -229,7 +244,8 @@ const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: strin
     case 'move':
       return { title: String(s.ref || ''), detail: moveDestination(s) };
     default:
-      return { title: JSON.stringify(s), detail: '' };
+      // An unknown kind: the card's heading names the kind, this says what it is.
+      return { title: unknownSummary(s), detail: '' };
   }
 };
 
@@ -326,9 +342,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const applyingRef = useRef<Set<string>>(new Set());
   const [applying, setApplying] = useState<ReadonlySet<string>>(() => new Set());
 
-  // The session whose transcript has loaded, and whether it was empty: its
-  // stream opens then, and an empty one is kicked off. Null again when the
-  // session changes, until the next transcript has loaded.
+  // The session whose transcript has loaded (or failed to), and whether it
+  // was empty: its stream opens then, and an empty one is kicked off. Null
+  // again when the session changes, until the next transcript has loaded.
   const [loaded, setLoaded] = useState<{ sessionId: string; empty: boolean } | null>(null);
 
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -348,6 +364,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   stepRef.current = step;
   const artifactRef = useRef(artifactId);
   artifactRef.current = artifactId;
+  // The session on screen now, for a send that outlives a session change.
+  const sessionRef = useRef(sessionId);
+  sessionRef.current = sessionId;
 
   const appendMessage = useCallback((msg: GuidedChatMessage) => {
     setMessages((prev) => {
@@ -388,6 +407,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     kickedRef.current = false;
     setMessages([]);
     setPartial('');
+    // Nothing the previous session said carries over (#379, bug 213).
+    setSendError('');
+    setTyping(false);
+    setRunnerOffline(false);
     let cancelled = false;
     (async () => {
       try {
@@ -398,7 +421,12 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         // Opens the stream below, then kicks off an empty conversation.
         setLoaded({ sessionId, empty: transcript.length === 0 });
       } catch {
-        if (!cancelled) setSendError('Failed to load the assistant conversation.');
+        if (cancelled) return;
+        setSendError('Failed to load the assistant conversation.');
+        // The stream opens all the same, so replies still arrive (#379, bug
+        // 210); a transcript that could not be read is not an empty one, so
+        // it is not kicked off.
+        setLoaded({ sessionId, empty: false });
       }
     })();
     return () => {
@@ -551,25 +579,33 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     setSending(true);
     setSendError('');
     setTyping(true);
+    // The answer belongs to the session the message went to: once the panel
+    // has moved to another, the echo and the turn status are dropped (#379,
+    // bug 217).
+    const sentIn = sessionId;
     try {
       const res = await guidedAPI.sendMessage(
-        sessionId,
+        sentIn,
         content,
         stepRef.current,
         getStateRef.current(),
         artifactRef.current
       );
-      if (res.data.message) appendMessage(res.data.message);
-      if (res.data.runner_online === false) {
-        setRunnerOffline(true);
-        setTyping(false);
-      } else {
-        setRunnerOffline(false);
+      if (sessionRef.current === sentIn) {
+        if (res.data.message) appendMessage(res.data.message);
+        if (res.data.runner_online === false) {
+          setRunnerOffline(true);
+          setTyping(false);
+        } else {
+          setRunnerOffline(false);
+        }
       }
       if (!preset) setComposerText('');
     } catch {
-      setTyping(false);
-      setSendError('Message failed to send — please try again.');
+      if (sessionRef.current === sentIn) {
+        setTyping(false);
+        setSendError('Message failed to send — please try again.');
+      }
     } finally {
       setSending(false);
     }
@@ -642,6 +678,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       );
     }
     const s = seg.suggestion;
+    const known = isKnownKind(s.kind);
     const { title, detail } = suggestionSummary(s);
     const isAdded = !!applied[key];
     // A suggestion replaces existing content when it targets an entry
@@ -668,7 +705,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         }}
       >
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 3 }}>
-          {KIND_LABELS[s.kind] || s.kind}
+          {known ? KIND_LABELS[s.kind] : s.kind}
         </div>
         <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: detail ? 2 : 6 }}>{title}</div>
         {detail && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{detail}</div>}
@@ -677,7 +714,11 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             Replaces: {replacesLabel(s)}
           </div>
         )}
-        {!canApply ? (
+        {!known ? (
+          <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
+            OpenV cannot add this kind of suggestion.
+          </div>
+        ) : !canApply ? (
           <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
             Open the project to add this.
           </div>
@@ -726,7 +767,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       </div>
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-        {messages.length === 0 && !typing && !partial && (
+        {/* Not while the notice below says no runner can answer (#379, bug 211). */}
+        {messages.length === 0 && !typing && !partial && !runnerOffline && (
           <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 12, marginTop: 24 }}>
             The assistant will join in a moment — or ask it anything about your requirements.
           </div>
@@ -772,7 +814,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                         .map((seg, i) => ({ seg, key: `${m.id}:${i}` }))
                         .filter(
                           (x): x is { seg: Segment & { type: 'suggestion' }; key: string } =>
-                            x.seg.type === 'suggestion' && !!x.seg.suggestion && !applied[x.key]
+                            x.seg.type === 'suggestion' &&
+                            !!x.seg.suggestion &&
+                            isKnownKind(x.seg.suggestion.kind) &&
+                            !applied[x.key]
                         )
                         .map((x) => ({ suggestion: x.seg.suggestion as CopilotSuggestion, key: x.key }));
                       return (
