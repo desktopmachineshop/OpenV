@@ -89,8 +89,68 @@ GUARD_PY = """X2B_CALL_SHAPE_CHANGES = [
 X14B_IMPORT_EDGES = [
 ]
 
+BOOT_STEPS_CHANGES = [
+]
+
 OTHER = 1
 """
+
+# S4's boot_steps.txt in miniature, with the lines X6, X7b, X7c and X10b
+# change: two of the four dispatcher-setter chains, the reconcile loop, the
+# bootstrap org query and the fallible parse calls.
+NOTIFIER = ("  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetEmailDispatcher -> "
+            "(*internal/notify.Notifier).SetPushDispatcher -> (*internal/notify.Notifier).Start")
+NOTIFIER_X6 = ("  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetChannels -> "
+               "(*internal/notify.Notifier).Start")
+BUDGET = ("  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetEmailDispatcher -> "
+          "(*internal/notify.BudgetMonitor).SetPushDispatcher -> (*internal/notify.BudgetMonitor).Start")
+BUDGET_X6 = ("  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetChannels -> "
+             "(*internal/notify.BudgetMonitor).Start")
+LIST_ALL = "    call (*internal/domain/hostedworkers.DefaultService).ListAll"
+RECONCILE = "    call internal/domain/hostedworkers.Reconcile"
+ORG_QUERY = "    call (*database/sql.DB).QueryRow -> (*database/sql.Row).Scan"
+ORG_QUERY_X7 = "    call (*internal/persistence/postgres.OrgRepository).EarliestPersonalOrgID"
+BOOT_STEPS = "\n".join([
+    "# The call statements of cmd/server main().",
+    "",
+    "func main()",
+    "  defer value stop",
+    "  call internal/domain/orgs.ParseLimits",
+    "  if",
+    "    call os.Exit",
+    "  if",
+    LIST_ALL,
+    "    if",
+    "    else",
+    "      for",
+    "        call (internal/hosting.Provisioner).ContainerState",
+    "        if",
+    "          call (*internal/domain/hostedworkers.DefaultService).SetStatus",
+    "  if",
+    ORG_QUERY,
+    "    if",
+    "      call (*internal/domain/workerkeys.DefaultService).EnsureBootstrapKey",
+    NOTIFIER,
+    BUDGET,
+    "  call internal/billing.ConfigFromEnv",
+    "  if",
+    "    call os.Exit",
+]) + "\n"
+# X7b's pairs: the loop becomes one call, and the query a repository's.
+X7B_PAIRS = [
+    (LIST_ALL, RECONCILE),
+    ("    if", ""),
+    ("    else", ""),
+    ("      for", ""),
+    ("        call (internal/hosting.Provisioner).ContainerState", ""),
+    ("        if", ""),
+    ("          call (*internal/domain/hostedworkers.DefaultService).SetStatus", ""),
+    (ORG_QUERY, ORG_QUERY_X7),
+]
+X7B_STEPS = BOOT_STEPS.replace(
+    LIST_ALL + "\n    if\n    else\n      for\n        call (internal/hosting.Provisioner).ContainerState\n        if\n"
+    "          call (*internal/domain/hostedworkers.DefaultService).SetStatus\n", RECONCILE + "\n").replace(
+    ORG_QUERY, ORG_QUERY_X7)
 
 
 def trailers(klass=None, **extra):
@@ -221,6 +281,7 @@ class RepoTest(unittest.TestCase):
             "frontend/src/arch/testdata/fixture.json": "{}\n",
             "internal/domain/exports/testdata/in.json": "{}\n",
             "scripts/refactor/refactor_guard.py": GUARD_PY,
+            "cmd/server/testdata/boot_steps.txt": BOOT_STEPS,
             "go.mod": "module example.com/x\n",
             "frontend/package.json": "{\"name\": \"x\"}\n",
             "frontend/package-lock.json": "{\"lockfileVersion\": 3}\n",
@@ -860,9 +921,10 @@ class DataTest(unittest.TestCase):
     # The next four read live files that later steps shrink in commits that
     # may not edit this file (class E may not edit guard code, and is alone in
     # its pull request): X4b and X15b-X15e remove allowlist entries, X2b fills
-    # X2B_CALL_SHAPE_CHANGES, X14b fills X14B_IMPORT_EDGES, M4 drops
-    # cmd/server/main.go from ratchets.json. So they check the shape and pick
-    # their entries at run time.
+    # X2B_CALL_SHAPE_CHANGES, X14b fills X14B_IMPORT_EDGES, X6, X7b, X7c and
+    # X10b fill BOOT_STEPS_CHANGES, M4 drops cmd/server/main.go from
+    # ratchets.json. So they check the shape and pick their entries at run
+    # time.
 
     def test_real_lint_allowlists_parse(self):
         with open(os.path.join(REPO, rg.LINT_ALLOWLIST_FILE)) as f:
@@ -951,6 +1013,64 @@ class DataTest(unittest.TestCase):
         self.assertIsInstance(rg.x14b_edges_in(text), list)
         self.assertEqual(rg.x14b_edges_in(filled), [("internal/x", "internal/y")])
         self.assertIsNone(rg.x14b_edges_in(filled.replace('"),', '", "z"),')))
+
+    def test_own_boot_steps_block_is_found(self):
+        with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
+            text = f.read()
+        span = rg.find_block(text, "BOOT_STEPS_CHANGES")
+        self.assertIsNotNone(span)
+        lines = text.split("\n")
+        # Filled the way X6 fills it, whatever it holds by then: a long line
+        # as adjacent string literals.
+        filled = "\n".join(lines[:span[0]] + ["BOOT_STEPS_CHANGES = [", "    (", '        "  call x -> "',
+                                              '        "y",', '        "  call x -> z",', "    ),",
+                                              '    ("", "  call internal/config.Load"),', "]"] + lines[span[1] + 1:])
+        self.assertNotEqual(filled, text)
+        self.assertEqual(rg.blank_blocks(filled, ["BOOT_STEPS_CHANGES"]), rg.blank_blocks(text, ["BOOT_STEPS_CHANGES"]))
+        self.assertEqual(rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT]["BOOT_STEPS_CHANGES"], "E")
+        # The job reads the list from the pull request's copy of this file.
+        self.assertIsInstance(rg.boot_steps_changes_in(text), list)
+        self.assertEqual(rg.boot_steps_changes_in(filled), [("  call x -> y", "  call x -> z"),
+                                                            ("", "  call internal/config.Load")])
+        # Not a list of (before, after) pairs of single lines, at most one of
+        # each empty: read as missing.
+        for bad in ('("a", "b", "c")', '("", "")', '("a\\nb", "c")', '("a", 1)', '["a", "b"]', '("a", "b")+1'):
+            with self.subTest(bad=bad):
+                self.assertIsNone(rg.boot_steps_changes_in(f"BOOT_STEPS_CHANGES = [\n    {bad},\n]\n"))
+        self.assertIsNone(rg.boot_steps_changes_in("OTHER = 1\n"))
+
+    def test_line_changes_made(self):
+        made = rg.line_changes_made
+        old = b"a\n  if\nb\n  if\nc\n"
+        self.assertTrue(made(old, old, []))
+        self.assertFalse(made(old, old + b"d\n", []))
+        self.assertFalse(made(old, old.rstrip(b"\n"), []), "compared byte for byte")
+        # A replacement, an added line and a removed line.
+        self.assertTrue(made(old, b"a\n  if\nB\n  if\nc\n", [("b", "B")]))
+        self.assertTrue(made(old, b"a\n  if\nb\nX\n  if\nc\n", [("", "X")]))
+        self.assertTrue(made(old, b"a\n  if\nb\nc\n", [("  if", "")]))
+        self.assertTrue(made(old, b"A\n  if\nb\n  if\nc\n", [("a", "A")]))
+        self.assertTrue(made(old, b"a\n  if\nb\n  if\nc\nX\n", [("", "X")]))
+        # Every pair is made, once, and nothing else changes.
+        self.assertFalse(made(old, old, [("z", "Z")]))
+        self.assertFalse(made(old, b"a\n  if\nB\n  if\nC\n", [("b", "B")]))
+        self.assertFalse(made(b"a\na\n", b"A\nA\n", [("a", "A")]))
+        self.assertTrue(made(b"a\na\n", b"A\nA\n", [("a", "A"), ("a", "A")]))
+        self.assertFalse(made(old, b"a\n  if\nb\n  if\nc\n", [("", "X")]))
+        # In list order, which is file order: pairs listed out of it, or a
+        # changed line moved past another, do not match.
+        self.assertTrue(made(old, b"A\n  if\nB\n  if\nc\n", [("a", "A"), ("b", "B")]))
+        self.assertFalse(made(old, b"A\n  if\nB\n  if\nc\n", [("b", "B"), ("a", "A")]))
+        self.assertFalse(made(old, b"  if\nA\nb\n  if\nc\n", [("a", "A")]))
+        self.assertFalse(made(old, b"a\n  if\n  if\nb\nc\n", []))
+        # A repeated line is made where the pairs around it pin it.
+        self.assertTrue(made(old, b"a\n  if\nB\nc\n", [("b", "B"), ("  if", "")]))
+        self.assertFalse(made(old, b"a\nB\n  if\nc\n", [("b", "B"), ("  if", "")]))
+        self.assertTrue(made(old, b"a\nB\n  if\nc\n", [("  if", ""), ("b", "B")]))
+        # The fixture's X7b shape.
+        self.assertTrue(made(BOOT_STEPS.encode(), X7B_STEPS.encode(), X7B_PAIRS))
+        self.assertFalse(made(BOOT_STEPS.encode(), X7B_STEPS.encode(), X7B_PAIRS[:-1]))
+        self.assertFalse(made(BOOT_STEPS.encode(), X7B_STEPS.encode(), X7B_PAIRS[1:2] + X7B_PAIRS[:1] + X7B_PAIRS[2:]))
 
     def test_ratchet_growth(self):
         with open(os.path.join(REPO, rg.RATCHETS_FILE)) as f:
@@ -1185,6 +1305,191 @@ class GoldenTest(RepoTest):
         g = self.guard(*REFACTOR)
         self.assertFailsWith(g, "(1) golden freeze", "route_guards")
         self.assertTrue(any("X2B_CALL_SHAPE_CHANGES" in w for w in g.warnings), g.warnings)
+
+
+class BootStepsTest(RepoTest):
+    """The boot steps' named exception (§8.3): in class E commits of a refactor
+    pull request, a boot_steps.txt change made of exactly the line changes
+    BOOT_STEPS_CHANGES lists, in its order, is not a golden change."""
+
+    STEPS = rg.BOOT_STEPS_FILE
+    E = trailers("E", Refactor_Characterization="internal/api/handlers_test.go")
+    X6_PAIRS = [(NOTIFIER, NOTIFIER_X6), (BUDGET, BUDGET_X6)]
+    X6_STEPS = BOOT_STEPS.replace(NOTIFIER, NOTIFIER_X6).replace(BUDGET, BUDGET_X6)
+
+    @staticmethod
+    def listed(pairs):
+        """The guard script with BOOT_STEPS_CHANGES holding pairs."""
+        return GUARD_PY.replace("BOOT_STEPS_CHANGES = [\n]", "BOOT_STEPS_CHANGES = [\n" +
+                                "".join(f"    ({b!r}, {a!r}),\n" for b, a in pairs) + "]")
+
+    def step(self, steps, pairs=None, body=None):
+        """One commit, class E unless body says otherwise, that writes
+        boot_steps.txt and, when pairs is given, fills the pull request's
+        BOOT_STEPS_CHANGES with them."""
+        files = {self.STEPS: steps}
+        if pairs is not None:
+            files[rg.GUARD_SCRIPT] = self.listed(pairs)
+        self.commit("boot steps", files, self.E if body is None else body)
+
+    def listed_on_the_base(self, pairs):
+        """BOOT_STEPS_CHANGES filled on the base, so a pull request's commit
+        changes boot_steps.txt without editing the list."""
+        self.git("checkout", "-q", "main")
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(pairs)})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+
+    def assertGoldenFails(self, g):
+        self.assertFailsWith(g, "(1) golden freeze", "boot statement order")
+        self.assertFalse([n for n in g.notes if "BOOT_STEPS_CHANGES" in n], g.notes)
+
+    def test_a_listed_replacement_passes_in_class_e(self):
+        # X6: the dispatcher-setter links of each chain become one.
+        self.step(self.X6_STEPS, self.X6_PAIRS)
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertIn(f"{self.STEPS}: only the line changes BOOT_STEPS_CHANGES lists, made in its order (2 replaced; "
+                      "§8.3)", g.notes)
+        self.assertEqual(g.warnings, [])
+
+    def test_a_listed_added_line_passes(self):
+        self.step(BOOT_STEPS.replace("  defer value stop\n", "  defer value stop\n  call internal/config.Load\n"),
+                  [("", "  call internal/config.Load")])
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertIn(f"{self.STEPS}: only the line changes BOOT_STEPS_CHANGES lists, made in its order (1 added; "
+                      "§8.3)", g.notes)
+
+    def test_a_listed_removed_line_passes(self):
+        # X10b: an accessor that keeps no error takes a parse call's place.
+        self.step(BOOT_STEPS.replace("  call internal/billing.ConfigFromEnv\n", ""),
+                  [("  call internal/billing.ConfigFromEnv", "")])
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertIn(f"{self.STEPS}: only the line changes BOOT_STEPS_CHANGES lists, made in its order (1 removed; "
+                      "§8.3)", g.notes)
+
+    def test_x7b_shape_passes_with_repeated_lines_pinned(self):
+        # The reconcile loop becomes one call: its `if`, `else` and `for`
+        # lines, which the file repeats, are pinned by the ListAll line.
+        self.step(X7B_STEPS, X7B_PAIRS)
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertIn(f"{self.STEPS}: only the line changes BOOT_STEPS_CHANGES lists, made in its order (2 replaced, "
+                      "6 removed; §8.3)", g.notes)
+
+    def test_a_list_filled_in_its_own_class_e_commit_passes(self):
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(self.X6_PAIRS)}, self.E)
+        self.step(self.X6_STEPS)
+        self.assertPasses(self.guard(*REFACTOR))
+
+    def test_the_exception_is_empty_until_filled(self):
+        self.step(self.X6_STEPS)
+        g = self.guard(*REFACTOR)
+        self.assertGoldenFails(g)
+        self.assertEqual(g.warnings, [])
+
+    def test_an_unlisted_change_fails(self):
+        self.step(BOOT_STEPS.replace(BUDGET, BUDGET_X6), self.X6_PAIRS[:1])
+        g = self.guard(*REFACTOR)
+        self.assertGoldenFails(g)
+        self.assertTrue(any("1 line change(s) BOOT_STEPS_CHANGES lists" in w for w in g.warnings), g.warnings)
+
+    def test_a_listed_change_and_an_unlisted_one_fail(self):
+        self.step(self.X6_STEPS.replace("  call internal/billing.ConfigFromEnv\n", ""), self.X6_PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_a_listed_change_left_unmade_fails(self):
+        self.step(BOOT_STEPS.replace(NOTIFIER, NOTIFIER_X6), self.X6_PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_pairs_listed_out_of_file_order_fail(self):
+        self.step(self.X6_STEPS, self.X6_PAIRS[::-1])
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_a_listed_line_moved_fails(self):
+        # The right lines, in the wrong order: the new chain moved past the
+        # next one.
+        self.step(BOOT_STEPS.replace(NOTIFIER + "\n" + BUDGET, BUDGET + "\n" + NOTIFIER_X6), self.X6_PAIRS[:1])
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_a_repeated_line_removed_elsewhere_fails(self):
+        # X7b's pairs, but the `    if` removed is the bootstrap query's, not
+        # the loop's: the ListAll line pins where the pair is made.
+        moved = X7B_STEPS.replace(RECONCILE + "\n", RECONCILE + "\n    if\n").replace(
+            ORG_QUERY_X7 + "\n    if\n", ORG_QUERY_X7 + "\n")
+        self.assertEqual(len(moved.split("\n")), len(X7B_STEPS.split("\n")))
+        self.step(moved, X7B_PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_the_list_edited_outside_class_e_fails(self):
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(self.X6_PAIRS)}, trailers("B"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
+
+    def test_the_list_filled_in_class_t_is_not_class_e_alone(self):
+        # Class T may edit guard code, but class E is alone in its pull
+        # request (R2), so the list's step and its change share one class.
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(self.X6_PAIRS)}, trailers("T"))
+        self.step(self.X6_STEPS)
+        self.assertFailsWith(self.guard(*REFACTOR, "refactor:tooling"), "R2 class E alone")
+
+    def assert_listed_change_fails_in(self, klass, *labels):
+        self.listed_on_the_base(self.X6_PAIRS)
+        self.step(self.X6_STEPS, body=trailers(klass))
+        g = self.guard(*REFACTOR, *labels)
+        self.assertGoldenFails(g)
+        self.assertTrue(any("not class E" in w for w in g.warnings), g.warnings)
+
+    def test_a_listed_change_fails_in_class_c(self):
+        self.assert_listed_change_fails_in("C", "refactor:test")
+
+    def test_a_listed_change_fails_in_class_t(self):
+        self.assert_listed_change_fails_in("T", "refactor:tooling")
+
+    def test_a_listed_change_fails_in_class_a(self):
+        self.assert_listed_change_fails_in("A", "refactor:move")
+
+    def test_a_listed_change_split_across_classes_fails(self):
+        self.listed_on_the_base(self.X6_PAIRS)
+        self.step(BOOT_STEPS.replace(NOTIFIER, NOTIFIER_X6))
+        self.step(self.X6_STEPS, body=trailers("C"))
+        self.assertGoldenFails(self.guard(*REFACTOR, "refactor:test"))
+
+    def test_the_list_is_the_pull_requests_not_the_running_scripts(self):
+        self.addCleanup(setattr, rg, "BOOT_STEPS_CHANGES", rg.BOOT_STEPS_CHANGES)
+        rg.BOOT_STEPS_CHANGES = list(self.X6_PAIRS)
+        self.step(self.X6_STEPS)
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_a_malformed_list_counts_as_empty(self):
+        self.commit("boot steps", {self.STEPS: self.X6_STEPS,
+                                   rg.GUARD_SCRIPT: self.listed(self.X6_PAIRS).replace("'),", "')+1,", 1)}, self.E)
+        g = self.guard(*REFACTOR)
+        self.assertGoldenFails(g)
+        self.assertTrue(any("BOOT_STEPS_CHANGES" in w and "missing or not a list" in w for w in g.warnings),
+                        g.warnings)
+
+    def test_an_empty_pair_counts_as_a_malformed_list(self):
+        self.step(self.X6_STEPS, self.X6_PAIRS + [("", "")])
+        g = self.guard(*REFACTOR)
+        self.assertGoldenFails(g)
+        self.assertTrue(any("missing or not a list" in w for w in g.warnings), g.warnings)
+
+    def test_nothing_else_loosens(self):
+        # The listed change passes; another golden, route_guards.txt among
+        # them, still fails.
+        self.step(self.X6_STEPS, self.X6_PAIRS)
+        self.commit("more", {"internal/api/testdata/routes.txt": "GET /a\nGET /b\n",
+                             "internal/api/testdata/route_guards.txt": "GET /a: session\nGET /b: session\n"}, self.E)
+        g = self.guard(*REFACTOR)
+        self.assertEqual(sorted(f.path for f in g.failures if f.rule == "(1) golden freeze"),
+                         ["internal/api/testdata/route_guards.txt", "internal/api/testdata/routes.txt"],
+                         [f.render() for f in g.failures])
+
+    def test_outside_a_refactor_it_is_a_golden_change(self):
+        self.step(self.X6_STEPS, self.X6_PAIRS)
+        self.assertFailsWith(self.guard("no-release-notes"), "(1) golden freeze", "without a release note")
 
 
 class ClassTest(RepoTest):

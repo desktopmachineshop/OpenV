@@ -218,12 +218,15 @@ step that owns it. Entries for steps not yet merged are the patterns the plan
 names, and an empty slot marks a step whose guard files the plan does not
 name yet: each later S-step adds its goldens and guard files to those lists
 in a class T commit of its own pull request. X2b fills
-`X2B_CALL_SHAPE_CHANGES`, the one named golden exception (plan §8.3), in its
+`X2B_CALL_SHAPE_CHANGES`, a named golden exception (plan §8.3), in its
 class E commit; until then every `route_guards.txt` change is an
 authorization change. X14b fills `X14B_IMPORT_EDGES`, a named ratchet
 exception, the same way: in a class E commit, an `import_edges` entry of
 `ratchets.json` that adds only edges listed there, into packages the base
-has, is not a raise.
+has, is not a raise. X6, X7b, X7c and X10b each fill `BOOT_STEPS_CHANGES`,
+the other named golden exception, with the `cmd/server/testdata/boot_steps.txt`
+lines they replace, add or remove: a change to that file made in class E
+commits that is exactly those changes, in list order, is not a golden change.
 
 The job judges a pull request with the **base's** copy of
 `refactor_guard.py` (its *Script self-test* step tests the pull request's
@@ -231,9 +234,9 @@ own copy), so a pull request's edits to the lists and rules take effect only
 once it merges: a pull request that drops a guard-code or protected-path
 entry is still judged by that entry. A step that needs a new exception lands
 it in an earlier pull request, as S12b landed the class T rule for
-TypeScript the build erases before X5 uses it. `X2B_CALL_SHAPE_CHANGES` and `X14B_IMPORT_EDGES` are the
-lists the job reads from the pull request, since X2b and X14b fill them in their own. `make check` does the
-same with the merge base's copy.
+TypeScript the build erases before X5 uses it. `X2B_CALL_SHAPE_CHANGES`, `X14B_IMPORT_EDGES` and
+`BOOT_STEPS_CHANGES` are the lists the job reads from the pull request, since X2b, X14b and the boot-steps
+steps fill them in their own. `make check` does the same with the merge base's copy.
 
 ### Goldens are regenerated only for a behavior change
 

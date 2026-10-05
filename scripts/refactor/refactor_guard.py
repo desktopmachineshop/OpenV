@@ -9,8 +9,8 @@ HEAD^1 is the base the pull request was merged onto and HEAD^2 its head.
 The pull request's change is HEAD^1..HEAD, and its commits are
 HEAD^1..HEAD^2. The job runs the base's copy of this script, so a pull
 request's edits to the lists and rules below take effect once it merges;
-X2B_CALL_SHAPE_CHANGES and X14B_IMPORT_EDGES alone are read from the pull
-request's tree.
+X2B_CALL_SHAPE_CHANGES, X14B_IMPORT_EDGES and BOOT_STEPS_CHANGES alone are
+read from the pull request's tree.
 
 Every pull request:
   (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 22 entries)
@@ -21,11 +21,14 @@ Every pull request:
       they are goldens outside the list that `vitest -u` rewrites in place.
 
 A pull request labelled `refactor` or `refactor:<anything>` also fails on:
-  - a golden M or D in any case, and the behavior-change label;
+  - a golden M or D in any case (X2b's listed route_guards.txt lines and the
+    boot_steps.txt lines BOOT_STEPS_CHANGES lists aside, in class E), and
+    the behavior-change label;
   - (2) an M or D under FROZEN_DATA or PROTECTED_PATHS;
   - an M or D on GUARD_CODE except in a class C or T commit that modifies or
-    deletes no golden (LINT_ALLOWLISTS, X2B_CALL_SHAPE_CHANGES and
-    X14B_IMPORT_EDGES are carved out of their files: see there);
+    deletes no golden (LINT_ALLOWLISTS, X2B_CALL_SHAPE_CHANGES,
+    X14B_IMPORT_EDGES and BOOT_STEPS_CHANGES are carved out of their files:
+    see there);
   - an entry of internal/archtest/ratchets.json raised or added (in a
     commit of any class), apart from class D's new-package entries, a
     class T commit's new rule key and, in class E, X14b's listed import
@@ -444,6 +447,26 @@ X2B_CALL_SHAPE_CHANGES = [
 X14B_IMPORT_EDGES = [
 ]
 
+# The boot steps' named exception (§8.3): the lines of S4's boot_steps.txt a
+# class E step changes on purpose, as ("line before", "line after") pairs,
+# each string a whole line of the file, its indentation included (a long line
+# may be written as adjacent string literals). A pair replaces a line, adds
+# one (before "") or removes one (after ""). X6 lists the dispatcher-setter
+# links of the four chains the file lists, X7b and X7c the reconcile loop's
+# and the bootstrap org query's lines, and X10b the parse calls an accessor
+# replaces, each in its own class E commit (an edit to this list alone is not
+# a guard-code edit in class E), replacing the pairs of the step before:
+# every pair must be made, so a list left as it was exempts no later change.
+# A boot_steps.txt change made in class E commits of a refactor pull request
+# does not count as a golden change when the base's file, with these pairs
+# made in list order and nothing else changed, is the head's byte for byte
+# (line_changes_made). Until a step fills it, every boot_steps.txt change is
+# a golden change. The guard reads the list from the pull request's copy of
+# this file, as it reads X2B_CALL_SHAPE_CHANGES.
+BOOT_STEPS_FILE = "cmd/server/testdata/boot_steps.txt"
+BOOT_STEPS_CHANGES = [
+]
+
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
 # (quirk Q20), and S12b's K14 size budgets for production TypeScript with
 # their grandfathered ceilings and §10's count of files over 1,000 lines.
@@ -468,7 +491,7 @@ GUARD_CODE_CEILINGS = {
 # constant.
 GUARD_CODE_CARVE_OUTS = {
     LINT_ALLOWLIST_FILE: {name: "*" for name in LINT_ALLOWLISTS},
-    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E", "X14B_IMPORT_EDGES": "E"},
+    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E", "X14B_IMPORT_EDGES": "E", "BOOT_STEPS_CHANGES": "E"},
     **{path: {name: "*" for name in names} for path, names in GUARD_CODE_CEILINGS.items()},
 }
 
@@ -1074,6 +1097,56 @@ def x14b_edges_in(text):
     return string_pairs_in(text, "X14B_IMPORT_EDGES")
 
 
+def boot_steps_changes_in(text):
+    """BOOT_STEPS_CHANGES as a copy of this script holds it, a list of
+    (before, after) pairs of single lines, at most one of each pair empty, or
+    None when the literal is missing or is not such a list."""
+    pairs = string_pairs_in(text, "BOOT_STEPS_CHANGES")
+    if pairs is None or any(not (before or after) or "\n" in before + after for before, after in pairs):
+        return None
+    return pairs
+
+
+def line_changes_made(old, new, pairs):
+    """Whether new is old with exactly the line changes pairs lists made, and
+    nothing else (old and new are bytes, the pairs str): each (before, after)
+    pair, in list order, replaces a line before with after, removes a line
+    before (after "") or adds a line after (before ""), at or after the line
+    the pair before it was made at, and every other line is kept, in its
+    order. Lines compare byte for byte, so new is then old with those edits,
+    byte for byte.
+
+    X2b's rule, each listed line replaced wherever it occurs, does not fit
+    boot_steps.txt: its lines move in and out as a call is replaced, and a
+    line such as `    if` or `    call os.Exit` occurs many times. So the pairs
+    are an ordered edit script, each pair made once, and where a pair is made
+    is searched for, not looked up: they match when some placement of them,
+    in list order, turns old into new. A pair listed between two pairs on
+    lines that occur once can only be made between them, so a step pins a
+    repeated line it changes by listing it beside a line that occurs once."""
+    a, b = old.split(b"\n"), new.split(b"\n")
+    at = {(0, 0)}  # (line of old, line of new) where the next pair may be made
+    for k in range(len(pairs) + 1):
+        # Lines equal on both sides are kept, as far as they go.
+        kept, todo = set(), list(at)
+        while todo:
+            i, j = todo.pop()
+            if (i, j) in kept:
+                continue
+            kept.add((i, j))
+            if i < len(a) and j < len(b) and a[i] == b[j]:
+                todo.append((i + 1, j + 1))
+        if k == len(pairs):
+            return (len(a), len(b)) in kept
+        before, after = (s.encode() for s in pairs[k])
+        if not (before or after):
+            return False
+        at = {(i + bool(before), j + bool(after)) for i, j in kept
+              if (not before or (i < len(a) and a[i] == before)) and (not after or (j < len(b) and b[j] == after))}
+        if not at:
+            return False
+
+
 def allowlist_growth(old_text, new_text):
     """[(allowlist, description)] for every entry added or raised."""
     return [(name, desc) for name, _, desc in allowlist_growth_keyed(old_text, new_text)]
@@ -1309,10 +1382,41 @@ class Guard:
         replaced = [allowed.get(line, line) for line in old]
         if replaced != new:
             return False
-        for c in self.commits:
-            if any(p == ROUTE_GUARDS_FILE for _, p in c.changes) and c.trailer_values(CLASS_TRAILER) != ["E"]:
-                return False
-        return True
+        return self.changed_only_in_class_e(ROUTE_GUARDS_FILE)
+
+    def changed_only_in_class_e(self, path):
+        """Whether every commit of the pull request that changes path declares
+        class E."""
+        return all(c.trailer_values(CLASS_TRAILER) == ["E"] for c in self.commits
+                   if any(p == path for _, p in c.changes))
+
+    def boot_steps_exempt(self):
+        """The listed pairs when the boot_steps.txt change is exactly the line
+        changes BOOT_STEPS_CHANGES lists, made in list order (line_changes_made),
+        in class E commits of a refactor pull request (§8.3); otherwise None.
+        The list is the pull request's copy (GUARD_SCRIPT in the merge commit),
+        not this module's, which is the base's in CI."""
+        if not self.refactor:
+            return None
+        listed = boot_steps_changes_in(self.git.text(self.merge, GUARD_SCRIPT))
+        if listed is None:
+            self.warnings.append(f"BOOT_STEPS_CHANGES in {GUARD_SCRIPT} is missing or not a list of (before, after) "
+                                 "pairs of single lines, at most one of each pair empty; counting no boot steps "
+                                 "exception")
+            return None
+        if not listed:
+            return None
+        old, new = self.git.show(self.base, BOOT_STEPS_FILE), self.git.show(self.merge, BOOT_STEPS_FILE)
+        if old is None or new is None or not line_changes_made(old, new, listed):
+            self.warnings.append(f"{BOOT_STEPS_FILE} differs from the base by more than, or other than, the "
+                                 f"{len(listed)} line change(s) BOOT_STEPS_CHANGES lists, made in its order; counting "
+                                 "it as a golden change")
+            return None
+        if not self.changed_only_in_class_e(BOOT_STEPS_FILE):
+            self.warnings.append(f"{BOOT_STEPS_FILE} is changed in a commit that is not class E: BOOT_STEPS_CHANGES "
+                                 "exempts class E commits only; counting it as a golden change")
+            return None
+        return listed
 
     def release_note_added(self):
         try:
@@ -1340,6 +1444,13 @@ class Guard:
         if any(p == ROUTE_GUARDS_FILE for _, p, _ in changed) and self.x2b_exempt():
             changed = [x for x in changed if x[1] != ROUTE_GUARDS_FILE]
             self.notes.append(f"{ROUTE_GUARDS_FILE}: only X2b's listed call-shape lines changed (§8.3)")
+        listed = any(p == BOOT_STEPS_FILE for _, p, _ in changed) and self.boot_steps_exempt()
+        if listed:
+            changed = [x for x in changed if x[1] != BOOT_STEPS_FILE]
+            kinds = [("replaced", sum(1 for b, a in listed if b and a)), ("added", sum(1 for b, _ in listed if not b)),
+                     ("removed", sum(1 for _, a in listed if not a))]
+            self.notes.append(f"{BOOT_STEPS_FILE}: only the line changes BOOT_STEPS_CHANGES lists, made in its order ("
+                              + ", ".join(f"{n} {kind}" for kind, n in kinds if n) + "; §8.3)")
         if self.refactor and self.behavior_change:
             self.fail("(1) golden freeze", f"the pull request carries both a refactor label and "
                       f"'{BEHAVIOR_CHANGE_LABEL}'", "a refactor changes no behavior: remove the refactor labels "
