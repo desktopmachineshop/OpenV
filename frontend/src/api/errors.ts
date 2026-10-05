@@ -101,3 +101,20 @@ export function apiErrorMessage(err: unknown, fallback = 'Request failed'): stri
   if (typeof anyErr?.message === 'string' && anyErr.message) return anyErr.message;
   return fallback;
 }
+
+/**
+ * The inline chain `err.response?.data?.error || err.message || fallback`
+ * that older call sites write out (quirk Q20), as one function that gives
+ * what the chain gives for every input: the body's `error` when truthy, else
+ * the error's `message` when truthy, else the fallback. A truthy value is
+ * passed on as it is, string or not, and a null or undefined err throws as
+ * the chain does. Unlike apiErrorMessage, it shows a plain-text body as the
+ * error's message ("Request failed with status code 500") and never reads a
+ * `{ message }` body. Moving a call site here (X15b-X15e) changes nothing it
+ * renders; moving one on to apiErrorMessage changes what it renders, which is
+ * a release-noted change of its own.
+ */
+export function legacyErrorText(err: unknown, fallback: string): string {
+  const anyErr = err as any;
+  return anyErr.response?.data?.error || anyErr.message || fallback;
+}
