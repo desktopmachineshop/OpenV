@@ -6,6 +6,7 @@ import { useViewport } from '../hooks/useViewport';
 import { LICENSE_GLOSS, LICENSE_INTENT, REPO_URL } from '../landing/content';
 import { OPENV_OWN_PROJECT_NOTE, OPEN_SOURCE_CLAIM_URL, OPEN_SOURCE_INTRO } from './content';
 import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, primaryButton, secondaryButton } from './SiteShell';
+import type { ArtifactTypeValue } from '../generated/contract';
 
 // The open-source page (REQ-151): every project of a workspace on the
 // open-source plan, as of its latest baseline. The list comes from a public
@@ -18,7 +19,7 @@ const countsLine = (counts: Record<string, number>): string => {
     'design-item': ['design item', 'design items'],
     'test-case': ['test case', 'test cases'],
     hazard: ['hazard', 'hazards'],
-  };
+  } satisfies Partial<Record<ArtifactTypeValue, [string, string]>>;
   return Object.keys(names)
     .filter((k) => counts[k] > 0)
     .map((k) => `${counts[k]} ${names[k][counts[k] === 1 ? 0 : 1]}`)

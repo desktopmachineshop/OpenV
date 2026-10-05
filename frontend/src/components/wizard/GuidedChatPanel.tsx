@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
 import { ChatMarkdown } from '../ChatMarkdown';
 import { SSE_EVENT } from '../../sseEvents';
+import type { ArtifactTypeValue } from '../../generated/contract';
 
 /**
  * One structured proposal embedded in a copilot reply: a wizard entry, or —
@@ -117,7 +118,7 @@ const TYPE_LABELS: Record<string, string> = {
   'test-case': 'Test case',
   hazard: 'Hazard',
   other: 'Artifact',
-};
+} satisfies Record<ArtifactTypeValue, string>;
 
 /** Where a move card says the artifact is going. */
 const moveDestination = (s: CopilotSuggestion): string => {

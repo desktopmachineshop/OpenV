@@ -9,6 +9,7 @@ import {
   vvAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
+import type { ArtifactTypeValue } from '../generated/contract';
 
 // Human labels for artifact type buckets; unknown types fall back to the raw
 // value so the view never hides a group it can't name.
@@ -22,7 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
   heading: 'Headings',
   description: 'Descriptions',
   other: 'Other',
-};
+} satisfies Record<ArtifactTypeValue, string>;
 
 const typeLabel = (type: string): string =>
   TYPE_LABELS[type] || (type ? type : 'Unknown');

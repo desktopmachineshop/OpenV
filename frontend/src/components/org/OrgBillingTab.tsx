@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../../api/errors';
 import { useFeature } from '../../hooks/useFeature';
 import { WORKSPACE_BILLING_FEATURE } from '../../features';
 import { ErrorBanner } from '../ui';
+import type { WorkspacePlan } from '../../generated/contract';
 
 /**
  * The workspace's subscription: what it is on, what that costs, and the two
@@ -27,7 +28,7 @@ export const PLAN_LABELS: Record<string, string> = {
   enterprise: 'Enterprise',
   open_source: 'Open source',
   self_host: 'Self-hosted',
-};
+} satisfies Record<WorkspacePlan, string>;
 
 export const planLabel = (plan: string): string => PLAN_LABELS[plan] || (plan ? plan : 'Single User');
 

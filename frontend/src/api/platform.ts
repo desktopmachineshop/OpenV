@@ -7,6 +7,7 @@
 import { client } from './http';
 import type { Org } from './types/orgs';
 import type { AdminUser, AdminWorkspace, ReleaseInfo } from './types/platform';
+import type { WorkspacePlan } from '../generated/contract';
 
 export const releaseAPI = {
   current: () => client.get<ReleaseInfo>('/api/v1/release'),
@@ -15,7 +16,8 @@ export const releaseAPI = {
 // Every plan a workspace can be on (Go's orgs plans). `legacy` marks free
 // and team, the names that shipped first for Single User and Business: rows
 // in the wild still carry them, so a workspace on one is shown by name, but
-// none is offered as a plan to move a workspace onto.
+// none is offered as a plan to move a workspace onto. Each value is a plan of
+// the generated contract's WorkspacePlan (refactor plan X4b).
 export const PLANS: { value: string; label: string; legacy?: boolean }[] = [
   { value: 'single', label: 'Single User' },
   { value: 'business_lite', label: 'Business Lite' },
@@ -25,7 +27,7 @@ export const PLANS: { value: string; label: string; legacy?: boolean }[] = [
   { value: 'self_host', label: 'Self-hosted' },
   { value: 'free', label: 'Free (legacy Single User)', legacy: true },
   { value: 'team', label: 'Team (legacy Business)', legacy: true },
-];
+] satisfies { value: WorkspacePlan; label: string; legacy?: boolean }[];
 
 export const adminAPI = {
   workspaces: () => client.get<AdminWorkspace[]>('/api/v1/admin/workspaces'),

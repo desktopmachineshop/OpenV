@@ -87,8 +87,10 @@ const sits beside the module that owns the gate, or in `features.ts` when
 none does.
 
 **Change a vocabulary the Go side owns.** Change Go first
-(`internal/domain/README.md`), then the copy here; `arch/vocabParity.test.ts`
-names a copy that disagrees with `contracts/vocab.json`.
+(`internal/domain/README.md`) and regenerate `generated/contract.ts`
+(`UPDATE_CONTRACTS=1 go test ./internal/contract/...`): `tsc` names each
+copy typed by it that no longer fits, and `arch/vocabParity.test.ts` each
+copy that disagrees with `contracts/vocab.json`.
 
 ## Guards
 
