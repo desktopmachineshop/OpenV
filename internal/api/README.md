@@ -23,7 +23,7 @@ globs of `docs/areas.json`:
 | events-notifications | `domain_event_*.go`, `event_names*.go`, `notification_*.go`, `publish*.go`, `push_*.go`, `sse*.go` |
 | community | `share_*.go`, `shared_product_*.go` |
 | billing | `billing_*.go` |
-| platform-http | `admin_*.go`, `compression*.go`, `feature_*.go`, `handlers.go`, `health_*.go`, `httperr*.go`, `middleware_*.go`, `ratelimit*.go`, `release_*.go`, `requestlog*.go`, `respond*.go`, `routes*.go`, `security_headers*.go`, `testdata/**`, `*.md` |
+| platform-http | `admin_*.go`, `compression*.go`, `errmap*.go`, `feature_*.go`, `handlers.go`, `health_*.go`, `httperr*.go`, `middleware_*.go`, `ratelimit*.go`, `release_*.go`, `requestlog*.go`, `respond*.go`, `routes*.go`, `security_headers*.go`, `testdata/**`, `*.md` |
 
 A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 
@@ -34,7 +34,7 @@ A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 | `handlers.go` | `HandlerDeps` (every service the layer uses), `Handler` and `NewHandler`: dependencies only |
 | `routes.go` | `RegisterRoutes`, the ordered list of registrar calls; the order is the contract (I2) |
 | `*_handlers.go` | one area each (K1): its handlers and its registrars, `register<Area>Routes`, the only place this package registers routes |
-| `respond.go`, `httperr.go`, `authz.go`, `publish.go`, `cookies.go`, `middleware_*.go` | the K3 homes: JSON out (`respondJSON`), the error envelope and writers, every `require*` guard, domain event publishing, the session and sign-in cookies, middleware |
+| `respond.go`, `httperr.go`, `errmap.go`, `authz.go`, `publish.go`, `cookies.go`, `middleware_*.go` | the K3 homes: JSON out (`respondJSON`), the error envelope and writers, the per-area error writers, every `require*` guard, domain event publishing, the session and sign-in cookies, middleware |
 | `authmiddleware.go`, `compression.go`, `requestlog.go`, `security_headers.go` | the middleware `cmd/server/http.go` chains (I6) |
 | `ratelimit.go` | the rate limiters handlers spend; some buckets are shared across endpoints (quirk Q18) |
 | `limits.go` | plan limits, the read-only gate and `alwaysWritable`, its exemption wrapper |
