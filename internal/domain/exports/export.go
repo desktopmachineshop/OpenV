@@ -533,7 +533,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	// Parse the JSON
 	var importData ProjectExport
 	if err := json.Unmarshal(data, &importData); err != nil {
-		return "", fmt.Errorf("%w: %w", ErrMalformedImport, err)
+		return "", malformedImport(err)
 	}
 	slog.Debug("import: starting", slog.Int("artifacts", len(importData.Artifacts)))
 
