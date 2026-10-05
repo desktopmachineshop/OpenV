@@ -504,18 +504,25 @@ error (`err.Error()`, or `err` passed to `fmt.Sprint*` or `fmt.Errorf`).
 Passing `err` itself to `respondError`, which logs it and answers a fixed
 message, is fine. The check follows local variables, struct fields and the
 module's named types. It does not follow a value through a helper function;
-instead `decodeErrorSources`, also in `decode_test.go`, maps the name of a
-function or method whose returned error carries such a decode error to the
-alias type, and an error assigned from a call by that name counts as the
-decode's. The alias list names `ProjectExport` under
+instead `decodeErrorSources`, also in `decode_test.go`, maps a function or
+method whose returned error carries such a decode error to the alias type,
+and an error assigned from a matching call counts as the decode's. A key is
+a bare name, which matches a call of any function or method by that name,
+or `<package>.<Func>` with the module-relative package, as on the alias
+list, which matches only a call of that package's function through an
+import of it, under whatever name the file gives the import. The alias
+list names `ProjectExport` under
 `internal/domain/exports` and `internal/domain/snapshot`, which P1 added in
 a class T commit before moving it, and `FinishRequest` and `LogEntry` under
 `internal/domain/agentruns` and `internal/workerproto`, which P3 added the
 same way. The sources are `Handler.projectExport` (`project_snapshot.go`); the report
 service's `GenerateProjectReport` and `GenerateProjectReportDOCX` (through
 `loadReportExport`) and `GenerateVVReport`; and the download service's
-`Options` (through `reports.LoadReportExport`); X14 adds `snapshot`'s
-`Load`. Four paths that decode a `ProjectExport` are not on it. The export
+`Options` (through `reports.LoadReportExport`); and
+`internal/domain/snapshot.Load`, the loader X14b writes, which X14a added
+ahead of it, keyed by its package because `Load` is a common name
+(`runnersessions.PoolCounts.Load`, `sync.Map`'s, the planned
+`config.Load`). Four paths that decode a `ProjectExport` are not on it. The export
 service's `ImportProject` and `ImportProjectWithOverrides`, and the
 template service's `CreateProjectFromTemplate`, which calls the latter,
 return `exports.ErrMalformedImport` with a description of the refusal in
