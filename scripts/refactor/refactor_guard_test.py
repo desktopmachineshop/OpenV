@@ -1524,6 +1524,56 @@ class RatchetTest(RepoTest):
         self.commit("P1", files, trailers("D"))
         self.assertPasses(self.guard("refactor"))
 
+    def packages_on_base(self, *pkgs):
+        """Puts a Go file of each package on the base, before the pull
+        request's commits."""
+        self.git("checkout", "-q", "main")
+        self.commit("packages", {f"{p}/{os.path.basename(p)}.go": f"package {os.path.basename(p)}\n" for p in pkgs})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+
+    def p2b_tokens(self, klass, extra=None):
+        """P2b's shape: users and interviews, which import no package of this
+        module and so have no import_edges key, each get a key listing the
+        new tokens; exports, which has a key, gets an edge into it."""
+        self.packages_on_base("internal/domain/users", "internal/domain/interviews")
+
+        def change(r):
+            r["import_edges"]["internal/domain/users"] = ["internal/domain/tokens"]
+            r["import_edges"]["internal/domain/interviews"] = ["internal/domain/tokens"]
+            r["import_edges"]["internal/domain/exports"].append("internal/domain/tokens")
+            if extra:
+                extra(r)
+        files = self.ratchets(change)
+        files["internal/domain/tokens/tokens.go"] = "package tokens\n"
+        self.commit("P2b", files, trailers(klass))
+        return self.guard("refactor")
+
+    def test_class_d_opens_a_key_into_its_new_package(self):
+        self.assertPasses(self.p2b_tokens("D"))
+
+    def test_class_d_new_key_lists_only_new_packages(self):
+        g = self.p2b_tokens("D", lambda r: r["import_edges"]["internal/domain/interviews"].append(
+            "internal/domain/users"))
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/interviews")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_class_b_cannot_open_a_key_into_a_new_package(self):
+        g = self.p2b_tokens("B")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/users")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/interviews")
+
+    def test_class_d_cannot_open_a_key_without_a_new_package(self):
+        self.packages_on_base("internal/domain/users", "internal/domain/interviews")
+
+        def change(r):
+            r["import_edges"]["internal/domain/interviews"] = ["internal/domain/users"]
+            r["import_edges"]["internal/domain/users"] = []
+        self.commit("P2b", self.ratchets(change), trailers("D"))
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/interviews")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/users")
+
     def test_class_d_cannot_add_other_edges(self):
         def change(r):
             r["import_edges"]["internal/domain/exports"].append("internal/domain/snapshot")

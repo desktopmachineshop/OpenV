@@ -1775,10 +1775,15 @@ class Guard:
             return out
 
         if top == "import_edges":
-            if len(kp) == 2:  # a new importer key: the package the commit creates, with its edges
+            # A new importer key: the package the commit creates, with its
+            # edges; or the first edge of a package that imported no package
+            # of this module before, listing only packages the commit creates
+            # (P2b's users and interviews into tokens; question 59 on #379).
+            if len(kp) == 2:
                 pkg = kp[1]
                 if not is_new(pkg):
-                    return False
+                    edges = new_edges.get(pkg)
+                    return isinstance(edges, list) and bool(edges) and all(is_new(v) for v in edges)
                 allowed = old_imports_of(importers(pkg))
                 return all(is_new(v) or v in allowed for v in new_edges.get(pkg, []))
             if len(kp) == 3:  # a new edge: into the new package, or out of it to what its old home imports
