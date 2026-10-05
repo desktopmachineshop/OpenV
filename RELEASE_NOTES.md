@@ -179,6 +179,24 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   tool per entry. An agent already saved that way keeps working, judged by
   each part.
 
+- **A custom attribute that fails to save no longer shows the server's
+  internal error.** When saving a custom attribute failed on the server's
+  side, the message you saw carried the server's own error text, which
+  could name parts of its database. It now says the attribute definition
+  could not be saved, and the details go only to the server's log.
+
+- **Buying a plan before its prices are confirmed says so.** When a
+  workspace admin chose *Continue to Stripe* before OpenV had confirmed
+  the plans' prices with the billing provider, they were told the billing
+  provider did not answer. They are now told the prices have not been
+  confirmed with the billing provider yet, and to try again shortly. The
+  workspace is left as it was, as before.
+
+- **Quality rules that fail to save say so.** When saving a project's or
+  the workspace's requirement quality rules failed on the server's side,
+  the message said the quality rules could not be loaded. It now says
+  they could not be saved; a failure to load them still says so.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

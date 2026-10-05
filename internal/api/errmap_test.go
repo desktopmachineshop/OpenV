@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,7 +57,7 @@ var errmapUnknown = errors.New(`pq: relation "secret_table" does not exist`)
 func errmapJSON() http.Header { return http.Header{"Content-Type": {"application/json"}} }
 
 // errmapRetryAfter is a JSON header plus Retry-After, as writeRateLimited
-// and the billing writer's default set them.
+// and the billing writer's 503s set them.
 func errmapRetryAfter(seconds string) http.Header {
 	return http.Header{"Content-Type": {"application/json"}, "Retry-After": {seconds}}
 }
@@ -107,8 +108,8 @@ func errmapSelfHosted(t *testing.T, selfHosted bool) {
 }
 
 // TestErrmapAttributeDefinitionWriter pins writeAttributeDefinitionError
-// (attribute_definition_handlers.go). Its default passes the unknown error's
-// text through with a 500.
+// (attribute_definition_handlers.go). Its default answers 500 with a fixed
+// message; the unknown error's text reaches only the log (#379's bug 187).
 func TestErrmapAttributeDefinitionWriter(t *testing.T) {
 	cases := []errmapCase{
 		{"ErrNotFound", attributes.ErrNotFound, 404, errmapJSON(),
@@ -139,24 +140,28 @@ func TestErrmapAttributeDefinitionWriter(t *testing.T) {
 			`{"error":"applies_to_type must be a known artifact type or empty for all types"}` + "\n"},
 		{"ErrInvalidTarget wrapped", errmapWrap(attributes.ErrInvalidTarget), 400, errmapJSON(),
 			`{"error":"applies_to_type must be a known artifact type or empty for all types: detail"}` + "\n"},
-		// The unknown error's own text reaches the client.
 		{"unknown error", errmapUnknown, 500, errmapJSON(),
-			`{"error":"pq: relation \"secret_table\" does not exist"}` + "\n"},
+			`{"error":"failed to save attribute definition"}` + "\n"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			writeAttributeDefinitionError(w, tc.err)
+			writeAttributeDefinitionError(w, errmapRequest(), tc.err)
 			errmapCheck(t, tc, w)
+			if strings.Contains(w.Body.String(), "secret_table") {
+				t.Errorf("body %q carries the unknown error's text", w.Body.String())
+			}
 		})
 	}
 }
 
 // TestErrmapBillingWriter pins writeBillingError (billing_handlers.go).
 // Anything it does not name is the provider not answering: 503 with
-// Retry-After, a fixed message and billing_upstream.
+// Retry-After, a fixed message and billing_upstream. Prices not confirmed
+// yet answer the same, with their own message (#379's bug 189).
 func TestErrmapBillingWriter(t *testing.T) {
 	const upstream = `{"error":"the billing provider did not answer; the workspace was left as it was","code":"billing_upstream"}` + "\n"
+	const unconfirmed = `{"error":"prices have not been confirmed with the billing provider yet; try again shortly","code":"billing_upstream"}` + "\n"
 	cases := []errmapCase{
 		{"orgs.ErrNotFound", orgs.ErrNotFound, 404, errmapJSON(),
 			`{"error":"workspace not found"}` + "\n"},
@@ -206,9 +211,8 @@ func TestErrmapBillingWriter(t *testing.T) {
 			`{"error":"that checkout belongs to another workspace","code":"checkout_mismatch"}` + "\n"},
 		{"ErrSessionMismatch wrapped", errmapWrap(billing.ErrSessionMismatch), 403, errmapJSON(),
 			`{"error":"that checkout belongs to another workspace: detail","code":"checkout_mismatch"}` + "\n"},
-		// The checkout path can return ErrPricesUnconfirmed, which the
-		// writer does not name: it answers as the provider not answering.
-		{"ErrPricesUnconfirmed (not named)", billing.ErrPricesUnconfirmed, 503, errmapRetryAfter("30"), upstream},
+		{"ErrPricesUnconfirmed", billing.ErrPricesUnconfirmed, 503, errmapRetryAfter("30"), unconfirmed},
+		{"ErrPricesUnconfirmed wrapped", errmapWrap(billing.ErrPricesUnconfirmed), 503, errmapRetryAfter("30"), unconfirmed},
 		{"unknown error", errmapUnknown, 503, errmapRetryAfter("30"), upstream},
 	}
 	h := newTestHandler(t)
@@ -313,10 +317,9 @@ const (
 )
 
 // TestErrmapInvitationWriter pins writeInvitationError
-// (invitation_handlers.go). A limit refusal is handed to writeLimitError,
-// whose bool the writer ignores: orgs.ErrLimitReached that is not an
-// *orgs.LimitError writes nothing at all (the recorder's 200, no header, no
-// body).
+// (invitation_handlers.go). A limit refusal is handed to writeLimitError;
+// orgs.ErrLimitReached that is not an *orgs.LimitError, which it does not
+// write, answers as an unknown error does (#379's bug 188).
 func TestErrmapInvitationWriter(t *testing.T) {
 	errmapSelfHosted(t, false)
 	throttled := &errThrottled{message: "Too many invitations from this account; try again later.", retryAfter: 90 * time.Second}
@@ -331,8 +334,10 @@ func TestErrmapInvitationWriter(t *testing.T) {
 			`{"error":"slow down"}` + "\n"},
 		{"*orgs.LimitError", orgs.NewLimitError(orgs.LimitMaxMembers, 5, 5), 403, errmapJSON(), errmapMembersHosted},
 		{"*orgs.LimitError wrapped", errmapWrap(orgs.NewLimitError(orgs.LimitMaxMembers, 5, 5)), 403, errmapJSON(), errmapMembersHosted},
-		{"orgs.ErrLimitReached bare writes nothing", orgs.ErrLimitReached, 200, nil, ""},
-		{"orgs.ErrLimitReached wrapped writes nothing", errmapWrap(orgs.ErrLimitReached), 200, nil, ""},
+		{"orgs.ErrLimitReached bare answers as unknown", orgs.ErrLimitReached, 500, errmapJSON(),
+			`{"error":"failed to bring the address into the workspace"}` + "\n"},
+		{"orgs.ErrLimitReached wrapped answers as unknown", errmapWrap(orgs.ErrLimitReached), 500, errmapJSON(),
+			`{"error":"failed to bring the address into the workspace"}` + "\n"},
 		{"invitations.ErrInvalidEmail", invitations.ErrInvalidEmail, 400, errmapJSON(),
 			`{"error":"a valid email is required"}` + "\n"},
 		{"invitations.ErrInvalidEmail wrapped", errmapWrap(invitations.ErrInvalidEmail), 400, errmapJSON(),
@@ -477,24 +482,46 @@ func TestErrmapInviteWriter(t *testing.T) {
 	}
 }
 
+// errmapRulesVerbs is every verb respondRulesError's callers pass
+// (quality_rules_handlers.go): the read routes' and the write routes'.
+var errmapRulesVerbs = []string{
+	"failed to load quality rules",
+	"failed to save quality rules",
+}
+
 // TestErrmapRulesWriter pins respondRulesError (quality_rules_handlers.go).
-// Its 500 says "load" on the write routes too.
+// The verb is the public message of the default 500 and nothing else: a
+// read says "load", a write "save" (#379's bug 190), and every sentinel row
+// answers the same under each verb.
 func TestErrmapRulesWriter(t *testing.T) {
-	cases := []errmapCase{
+	sentinels := []errmapCase{
 		{"ErrInvalidRules", settings.ErrInvalidRules, 400, errmapJSON(),
 			`{"error":"invalid quality rules"}` + "\n"},
 		{"ErrInvalidRules wrapped", errmapWrap(settings.ErrInvalidRules), 400, errmapJSON(),
 			`{"error":"invalid quality rules: detail"}` + "\n"},
-		{"unknown error", errmapUnknown, 500, errmapJSON(),
+	}
+	unknown := map[string]errmapCase{
+		"failed to load quality rules": {"unknown error", errmapUnknown, 500, errmapJSON(),
 			`{"error":"failed to load quality rules"}` + "\n"},
+		"failed to save quality rules": {"unknown error", errmapUnknown, 500, errmapJSON(),
+			`{"error":"failed to save quality rules"}` + "\n"},
+	}
+	if len(unknown) != len(errmapRulesVerbs) {
+		t.Fatalf("%d unknown-error rows for %d verbs", len(unknown), len(errmapRulesVerbs))
 	}
 	h := newTestHandler(t)
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			h.respondRulesError(w, errmapRequest(), tc.err)
-			errmapCheck(t, tc, w)
-		})
+	for _, verb := range errmapRulesVerbs {
+		u, ok := unknown[verb]
+		if !ok {
+			t.Fatalf("no unknown-error row for verb %q", verb)
+		}
+		for _, tc := range append(append([]errmapCase{}, sentinels...), u) {
+			t.Run(verb+"/"+tc.name, func(t *testing.T) {
+				w := httptest.NewRecorder()
+				h.respondRulesError(w, errmapRequest(), verb, tc.err)
+				errmapCheck(t, tc, w)
+			})
+		}
 	}
 }
 
