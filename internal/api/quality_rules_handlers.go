@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 
@@ -78,18 +77,6 @@ func decodeRuleSet(w http.ResponseWriter, r *http.Request) (quality.RuleSet, boo
 		return quality.RuleSet{}, false
 	}
 	return rs, true
-}
-
-// respondRulesError maps a settings failure to its status: a rule set naming
-// an unknown convention, rule or severity is the caller's mistake. Any other
-// failure is a 500 with the caller's verb, so a read says "failed to load
-// quality rules" and a write "failed to save quality rules" (#379's bug 190).
-func (h *Handler) respondRulesError(w http.ResponseWriter, r *http.Request, verb string, err error) {
-	if errors.Is(err, settings.ErrInvalidRules) {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	respondInternal(w, r, verb, err)
 }
 
 // GetProjectQualityRules returns the rules a project's requirements are linted

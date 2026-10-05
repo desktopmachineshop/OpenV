@@ -1,0 +1,20 @@
+{
+  "description": "Refactor step X3b, class A (docs/plans/codebase-refactor.md §6.7, K3 in §4.3): internal/api's eight bespoke error writers leave their area files for errmap.go, the K3 home of the per-area error tables, unchanged and in the order the plan lists them: writeAttributeDefinitionError (attribute_definition_handlers.go), writeBillingError (billing_handlers.go), writeEvidenceError (evidence_handlers.go), writeInvitationError (invitation_handlers.go), writeLimitError (limits.go), writeSharedProductError (shared_product_handlers.go), respondRulesError (quality_rules_handlers.go) and respondInviteError (public_interview_handlers.go). billingRetryAfter, the Retry-After of the billing 503s, travels with writeBillingError, the only declaration that reads it; the sentinels writeInvitationError matches (errThrottled, errAlreadyOrgMember, errInvitationsUnavailable) stay in invitation_handlers.go, where the handlers that return them live. writeInvitationError, used from org_member_handlers.go, leaves the helper-home allowlist (M5). X3a's errmap_test.go pins every writer's answers. Preview with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/X3b.json",
+  "package": "internal/api",
+  "targets": [
+    {
+      "file": "errmap.go",
+      "decls": [
+        "writeAttributeDefinitionError",
+        "billingRetryAfter",
+        "(*Handler).writeBillingError",
+        "(*Handler).writeEvidenceError",
+        "(*Handler).writeInvitationError",
+        "(*Handler).writeLimitError",
+        "writeSharedProductError",
+        "(*Handler).respondRulesError",
+        "respondInviteError"
+      ]
+    }
+  ]
+}

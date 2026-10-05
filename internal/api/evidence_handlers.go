@@ -125,23 +125,6 @@ func (h *Handler) evidenceBundleChecked(w http.ResponseWriter, r *http.Request, 
 // bundleNotFound answers an evidence bundle no row has.
 var bundleNotFound = notFound{http.StatusNotFound, "evidence bundle not found"}
 
-// writeEvidenceError maps the domain's errors onto status codes once, so every
-// handler answers the same way.
-func (h *Handler) writeEvidenceError(w http.ResponseWriter, r *http.Request, verb string, err error) {
-	switch {
-	case errors.Is(err, evidence.ErrNotFound):
-		writeJSONError(w, http.StatusNotFound, "evidence bundle not found")
-	case errors.Is(err, evidence.ErrFileNotFound):
-		writeJSONError(w, http.StatusNotFound, "evidence file not found")
-	case errors.Is(err, evidence.ErrInvalid):
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, evidence.ErrQuotaExceeded):
-		writeJSONError(w, http.StatusRequestEntityTooLarge, err.Error())
-	default:
-		respondInternal(w, r, verb, err)
-	}
-}
-
 // ListEvidenceBundles returns a project's capture sessions, newest first.
 func (h *Handler) ListEvidenceBundles(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
