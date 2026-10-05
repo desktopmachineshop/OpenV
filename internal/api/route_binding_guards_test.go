@@ -16,7 +16,12 @@ import (
 // (route_binding_test.go) writes and checks.
 
 // guardHelper gives a require* helper its canonical kind. A helper with a
-// role parameter appends ":<role>", the value of the role constant passed.
+// role parameter appends ":<role>", the value of the role constant passed;
+// no other argument is read, so a message or a status argument, such as
+// requirePlatformAdmin's msg and anonStatus, leaves the kind as it is.
+// checkGuardResultsUsed takes a helper's last result as the one that says
+// whether its caller goes on, so a helper whose last result does not needs
+// a field here that names the one that does.
 type guardHelper struct {
 	kind      string
 	roleParam string
@@ -25,7 +30,9 @@ type guardHelper struct {
 // guardHelpers maps every require* helper in package api to its canonical
 // kind. Helpers that check the same thing share a kind, so merging or
 // renaming them leaves route_guards.txt unchanged. A require* helper that is
-// missing from this table fails the test.
+// missing from this table fails the test. An entry may come before its
+// helper and matches no call until the helper is declared: step X2a of
+// docs/plans/codebase-refactor.md added requireUserMsg ahead of X2b.
 //
 //   - session: a signed-in user from the session cookie, else 401.
 //   - worker: a worker key, else 403.
@@ -74,6 +81,7 @@ type guardHelper struct {
 // cannot resolve to a constant.
 var guardHelpers = map[string]guardHelper{
 	"requireUser":                     {kind: "session"},
+	"requireUserMsg":                  {kind: "session"},
 	"requireHumanUser":                {kind: "session"},
 	"requireWorker":                   {kind: "worker"},
 	"requireWorkerRun":                {kind: "worker-run"},
@@ -183,11 +191,23 @@ func checkGuardHelpers(t *testing.T, src *apiSource) {
 //     if _, ok := h.requireHumanUser(w, r); !ok { return }.
 func checkGuardResultsUsed(t *testing.T, src *apiSource) {
 	t.Helper()
-	type use struct {
-		at   token.Position
-		name string
+	bad := uncheckedGuards(src)
+	if len(bad) == 0 {
+		return
 	}
-	var bad []use
+	lines := make([]string, len(bad))
+	for i, g := range bad {
+		lines[i] = src.pos(g.call).String() + ": " + g.name
+	}
+	t.Fatalf("the result of a require* guard is not checked:\n  %s\n"+
+		"A guard must stop the handler, as in if !h.requireProjectRole(...) { return }; checkGuardResultsUsed lists the accepted shapes",
+		strings.Join(lines, "\n  "))
+}
+
+// uncheckedGuards lists, in source order, the require* calls whose result
+// takes none of the shapes checkGuardResultsUsed accepts.
+func uncheckedGuards(src *apiSource) []guardCall {
+	var bad []guardCall
 	for _, m := range []map[string]*ast.FuncDecl{src.funcs, src.methods} {
 		for _, fn := range m {
 			recv := receiverName(fn)
@@ -200,7 +220,7 @@ func checkGuardResultsUsed(t *testing.T, src *apiSource) {
 				if call, ok := n.(*ast.CallExpr); ok {
 					name, decl := src.callee(call, recv)
 					if _, guard := guardHelpers[name]; guard && decl != nil && !guardResultUsed(call, decl, parents) {
-						bad = append(bad, use{src.pos(call), name})
+						bad = append(bad, guardCall{name, decl, call})
 					}
 				}
 				parents = append(parents, n)
@@ -208,20 +228,11 @@ func checkGuardResultsUsed(t *testing.T, src *apiSource) {
 			})
 		}
 	}
-	if len(bad) == 0 {
-		return
-	}
 	sort.Slice(bad, func(i, j int) bool {
-		a, b := bad[i].at, bad[j].at
+		a, b := src.pos(bad[i].call), src.pos(bad[j].call)
 		return a.Filename < b.Filename || a.Filename == b.Filename && a.Offset < b.Offset
 	})
-	lines := make([]string, len(bad))
-	for i, u := range bad {
-		lines[i] = u.at.String() + ": " + u.name
-	}
-	t.Fatalf("the result of a require* guard is not checked:\n  %s\n"+
-		"A guard must stop the handler, as in if !h.requireProjectRole(...) { return }; checkGuardResultsUsed lists the accepted shapes",
-		strings.Join(lines, "\n  "))
+	return bad
 }
 
 // guardResultUsed reports whether call, a call to the require* helper decl
@@ -537,3 +548,163 @@ func bindParams(fn *ast.FuncDecl, call *ast.CallExpr) map[string]ast.Expr {
 	}
 	return out
 }
+
+// TestRouteBindingGuardReader runs the guard reader on a fixture whose
+// handlers call the helpers in the shapes step X2b of
+// docs/plans/codebase-refactor.md gives them: requireUserMsg(w, r, msg), which
+// an inline nil-user check becomes, and requirePlatformAdmin(w, r, msg,
+// anonStatus). Where its result stops the handler, each reads as its kind,
+// whatever its message and status; where it does not, checkGuardResultsUsed
+// refuses the call. requireUser is a package function and
+// requirePlatformAdmin a method, so the fixture declares requireUserMsg as
+// each in turn.
+func TestRouteBindingGuardReader(t *testing.T) {
+	asMethod := strings.NewReplacer(
+		"func requireUserMsg(", "func (h *Handler) requireUserMsg(",
+		"requireUserMsg(", "h.requireUserMsg(")
+	for _, tc := range []struct{ name, fixture string }{
+		{"package function", guardReaderFixture},
+		{"method", asMethod.Replace(guardReaderFixture)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			src := newAPISource()
+			src.parseFile(t, "guard_reader_fixture.go", tc.fixture)
+			checkGuardHelpers(t, src)
+
+			var refused []string
+			unchecked := map[string]bool{}
+			for _, g := range uncheckedGuards(src) {
+				for name, fn := range src.methods {
+					if fn.Pos() <= g.call.Pos() && g.call.End() <= fn.End() {
+						refused = append(refused, name+": "+g.name)
+						unchecked[name] = true
+					}
+				}
+			}
+			var reads []string
+			for name := range src.methods {
+				if ast.IsExported(name) && !unchecked[name] {
+					reads = append(reads, name+": "+strings.Join(src.guardsOf(t, name), ", "))
+				}
+			}
+			sort.Strings(reads)
+
+			wantReads := []string{
+				"AdminAssignedThenTested: platform-admin",
+				"AdminComparedWithNil: platform-admin",
+				"UserAssignedThenTested: session",
+				"UserComparedWithNil: session",
+				"UserDeclaredThenTested: session",
+				"UserTestedInItsIf: session",
+				"UserThroughAHelper: session",
+			}
+			wantRefused := []string{ // in source order
+				"UserIgnored: requireUserMsg",
+				"UserDiscarded: requireUserMsg",
+				"UserTestedWithoutReturn: requireUserMsg",
+				"UserTestedLate: requireUserMsg",
+				"AdminIgnored: requirePlatformAdmin",
+			}
+			if got, want := strings.Join(reads, "\n"), strings.Join(wantReads, "\n"); got != want {
+				t.Errorf("guards read:\n%s\nwant:\n%s", got, want)
+			}
+			if got, want := strings.Join(refused, "\n"), strings.Join(wantRefused, "\n"); got != want {
+				t.Errorf("guards refused:\n%s\nwant:\n%s", got, want)
+			}
+		})
+	}
+}
+
+// guardReaderFixture is TestRouteBindingGuardReader's package api. Its two
+// helpers have the signatures X2b gives them, with stand-in bodies: the
+// reader reads a helper's name, parameters and results, not its body.
+const guardReaderFixture = `package api
+
+func requireUserMsg(w http.ResponseWriter, r *http.Request, msg string) *users.User {
+	return CurrentUser(r)
+}
+
+func (h *Handler) requirePlatformAdmin(w http.ResponseWriter, r *http.Request, msg string, anonStatus int) *users.User {
+	return CurrentUser(r)
+}
+
+// signedIn hands the guard's result to its caller, the shape of the
+// helpers in authz.go.
+func (h *Handler) signedIn(w http.ResponseWriter, r *http.Request) bool {
+	return requireUserMsg(w, r, "authentication required") != nil
+}
+
+func (h *Handler) UserAssignedThenTested(w http.ResponseWriter, r *http.Request) {
+	user := requireUserMsg(w, r, "authentication required")
+	if user == nil {
+		return
+	}
+	h.use(user)
+}
+
+func (h *Handler) UserComparedWithNil(w http.ResponseWriter, r *http.Request) {
+	if requireUserMsg(w, r, "sign in to review this project") == nil {
+		return
+	}
+}
+
+func (h *Handler) UserTestedInItsIf(w http.ResponseWriter, r *http.Request) {
+	if user := requireUserMsg(w, r, "authentication required"); user == nil {
+		return
+	}
+}
+
+func (h *Handler) UserDeclaredThenTested(w http.ResponseWriter, r *http.Request) {
+	var user = requireUserMsg(w, r, "authentication required")
+	if user == nil {
+		return
+	}
+	h.use(user)
+}
+
+func (h *Handler) UserThroughAHelper(w http.ResponseWriter, r *http.Request) {
+	if !h.signedIn(w, r) {
+		return
+	}
+}
+
+func (h *Handler) AdminComparedWithNil(w http.ResponseWriter, r *http.Request) {
+	if h.requirePlatformAdmin(w, r, "platform admin required", http.StatusForbidden) == nil {
+		return
+	}
+}
+
+func (h *Handler) AdminAssignedThenTested(w http.ResponseWriter, r *http.Request) {
+	caller := h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized)
+	if caller == nil {
+		return
+	}
+	h.use(caller)
+}
+
+func (h *Handler) UserIgnored(w http.ResponseWriter, r *http.Request) {
+	requireUserMsg(w, r, "authentication required")
+}
+
+func (h *Handler) UserDiscarded(w http.ResponseWriter, r *http.Request) {
+	_ = requireUserMsg(w, r, "authentication required")
+}
+
+func (h *Handler) UserTestedWithoutReturn(w http.ResponseWriter, r *http.Request) {
+	if requireUserMsg(w, r, "authentication required") == nil {
+		h.use(nil)
+	}
+}
+
+func (h *Handler) UserTestedLate(w http.ResponseWriter, r *http.Request) {
+	user := requireUserMsg(w, r, "authentication required")
+	h.use(user)
+	if user == nil {
+		return
+	}
+}
+
+func (h *Handler) AdminIgnored(w http.ResponseWriter, r *http.Request) {
+	h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized)
+}
+`
