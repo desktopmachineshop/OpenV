@@ -20,6 +20,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   does not exist, or that the agent cannot see, is still refused as
   *baseline not found*.
 
+- **A run you open straight after a finished one keeps its log live.** In
+  a list of runs, such as a project's Runs page, choosing a run that is
+  still going right after one that had finished could leave its log
+  frozen: if its live connection dropped before the run had loaded, the
+  panel took the new run for finished too, and neither reconnected nor
+  looked for new lines until you chose the run again. It now reconnects,
+  as it does for any run still going.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features
