@@ -1,0 +1,18 @@
+<div style="position: relative;">
+<button title="Notifications" aria-label="Notifications" style="position: relative; background: none; border: medium; cursor: pointer; padding: 4px; min-width: 40px; min-height: 40px; font-size: 16px; line-height: 1; color: var(--text);">
+<span aria-hidden="true">🔔</span>
+</button>
+<div role="dialog" aria-label="Notifications" style="position: absolute; top: calc(100% + 6px); right: 0px; width: 320px; max-height: 420px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.18); z-index: 1500;">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border-soft);">
+<span style="font-size: 13px; font-weight: 700; color: var(--text);">Notifications</span>
+<div style="display: flex; align-items: center; gap: 12px;">
+</div>
+</div>
+<div role="tablist" aria-label="Notification views" style="display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border-soft);">
+<button role="tab" aria-selected="true" style="flex: 1 1 0%; background: var(--tint-blue); border: medium; border-radius: 4px; color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 6px 8px; min-height: 36px;">Inbox</button>
+<button role="tab" aria-selected="false" style="flex: 1 1 0%; background: none; border: medium; border-radius: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; cursor: pointer; padding: 6px 8px; min-height: 36px;">Flagged</button>
+<button role="tab" aria-selected="false" style="flex: 1 1 0%; background: none; border: medium; border-radius: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; cursor: pointer; padding: 6px 8px; min-height: 36px;">Cleared</button>
+</div>
+<div style="padding: 16px; font-size: 13px; color: var(--text-muted);">You're all caught up.</div>
+</div>
+</div>
