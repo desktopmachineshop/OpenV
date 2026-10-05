@@ -30,7 +30,7 @@ Test files (`*_test.go`) need no area.
 | `http.go` | the one `mux.NewRouter()`, `/metrics`, the middleware chain (`buildHTTPHandler`) and `newServer` |
 | `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`; `reconcileHostedRunners`, the boot call of `hostedworkers.Reconcile`; `removeStoredFiles`, which removes the files a committed purge took |
 | `upload_sweep.go` | `sweepUnreferencedUploads`, which stage `storage` runs once per database after the migrations unless `OPENV_UPLOAD_SWEEP=off`: the stored files no row names, and the logos and profile pictures of workspaces and accounts no row has, by the fail-safe rules at the top of the file |
-| `lookups.go` | closures over the database and services that stages hand to services; `bootstrapOrgID` reads `orgs`' `EarliestPersonalOrgID` |
+| `lookups.go` | closures over the database and services that stages hand to services; `bootstrapOrgID` reads `orgs`' `EarliestPersonalOrgID`, `projectOrgResolver` `ProjectRepository.OrgIDForProject`, and `budgetGuard` is `agentruns.BudgetGuard` |
 | `logging.go` | `initLogging` and `fatal` |
 | `boot_*_test.go`, `harness*_test.go` | the S4 boot harness: the real binary booted per env profile |
 | `tour_*_test.go` | the S5 API tour, one area per `tour_<slice>_<key>_test.go`, plus its framework |

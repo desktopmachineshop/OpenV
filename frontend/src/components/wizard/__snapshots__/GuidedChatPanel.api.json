@@ -1,0 +1,830 @@
+{
+  "wizard": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "guidedAPI.kickoffChat",
+      "args": [
+        "gs-1",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    },
+    {
+      "call": "onApplySuggestions",
+      "args": [
+        [
+          {
+            "suggestion": {
+              "kind": "persona",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe"
+            },
+            "key": "m-2:5"
+          }
+        ]
+      ]
+    },
+    {
+      "call": "onApplySuggestions",
+      "args": [
+        [
+          {
+            "suggestion": {
+              "kind": "risk",
+              "text": "Coolant mist hides the lamp"
+            },
+            "key": "m-2:23"
+          }
+        ]
+      ]
+    },
+    {
+      "call": "onApplySuggestions",
+      "args": [
+        [
+          {
+            "suggestion": {
+              "kind": "framing",
+              "field": "vision",
+              "text": "Every machine on the floor reports its state before anyone touches it."
+            },
+            "key": "m-2:1"
+          },
+          {
+            "suggestion": {
+              "kind": "framing",
+              "field": "target_users",
+              "text": "Machinists, shop leads and maintenance planners."
+            },
+            "key": "m-2:3"
+          },
+          {
+            "suggestion": {
+              "kind": "persona",
+              "replaces": "per-1",
+              "name": "Maya the Machinist",
+              "role": "Senior CNC operator"
+            },
+            "key": "m-2:7"
+          },
+          {
+            "suggestion": {
+              "kind": "need",
+              "persona": "Sam the Shop Lead",
+              "capability": "a list of the live spindles",
+              "outcome": "I can clear the floor"
+            },
+            "key": "m-2:9"
+          },
+          {
+            "suggestion": {
+              "kind": "need",
+              "replaces": "need-1",
+              "outcome": "I can clear the floor before maintenance"
+            },
+            "key": "m-2:11"
+          },
+          {
+            "suggestion": {
+              "kind": "requirement",
+              "text": "The system shall show each live spindle within 1 s.",
+              "fit_criterion": "Measured on the shop display"
+            },
+            "key": "m-2:13"
+          },
+          {
+            "suggestion": {
+              "kind": "nfr",
+              "text": "The system shall keep 90 days of spindle history."
+            },
+            "key": "m-2:15"
+          },
+          {
+            "suggestion": {
+              "kind": "hazard",
+              "hazard": "A spindle restarts after a power dip",
+              "harm": "Crushed fingers",
+              "severity": "Medium"
+            },
+            "key": "m-2:17"
+          },
+          {
+            "suggestion": {
+              "kind": "risk",
+              "text": "Coolant mist hides the lamp"
+            },
+            "key": "m-2:23"
+          },
+          {
+            "suggestion": {
+              "kind": "edit",
+              "ref": "REQ-4",
+              "title": "Spindle lamp",
+              "body": "The lamp shall be red while the spindle turns.",
+              "attributes": {
+                "status": "review",
+                "owner": "Sam"
+              }
+            },
+            "key": "m-2:25"
+          }
+        ]
+      ]
+    },
+    {
+      "call": "guidedAPI.nudgeChat",
+      "args": [
+        "gs-1",
+        3,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        "saved step 2 (\"Personas\") and moved on to step 3 (\"User needs\")"
+      ]
+    }
+  ],
+  "transcript": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "guidedAPI.sendMessage",
+      "args": [
+        "gs-1",
+        "How short can the vision be?\nOne line?",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    },
+    {
+      "call": "guidedAPI.sendMessage",
+      "args": [
+        "gs-1",
+        "Make it one line.",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    },
+    {
+      "call": "guidedAPI.sendMessage",
+      "args": [
+        "gs-1",
+        "Do a gap analysis: given everything entered so far, what is missing on this step and across the definition as a whole? Propose the most important missing entries as suggestions.",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    }
+  ],
+  "runner-offline": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "guidedAPI.kickoffChat",
+      "args": [
+        "gs-1",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    },
+    {
+      "call": "guidedAPI.sendMessage",
+      "args": [
+        "gs-1",
+        "Is anyone there?",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    }
+  ],
+  "error": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "guidedAPI.sendMessage",
+      "args": [
+        "gs-1",
+        "Hello?",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "guidedAPI.kickoffChat",
+      "args": [
+        "gs-1",
+        0,
+        {},
+        "art-7"
+      ]
+    },
+    {
+      "call": "onApplySuggestions",
+      "args": [
+        [
+          {
+            "suggestion": {
+              "kind": "framing",
+              "field": "vision",
+              "text": "Every machine reports its state."
+            },
+            "key": "m-2:1"
+          },
+          {
+            "suggestion": {
+              "kind": "persona",
+              "name": "Pat the Planner",
+              "role": "Maintenance planner"
+            },
+            "key": "m-2:3"
+          },
+          {
+            "suggestion": {
+              "kind": "requirement",
+              "replaces": "REQ-4",
+              "text": "The system shall light the lamp within 200 ms."
+            },
+            "key": "m-2:5"
+          },
+          {
+            "suggestion": {
+              "kind": "artifact",
+              "type": "test-case",
+              "title": "Lamp latency test",
+              "parent": "HDG-4 ",
+              "after": " TC-2"
+            },
+            "key": "m-2:7"
+          },
+          {
+            "suggestion": {
+              "kind": "artifact",
+              "type": "heading",
+              "title": "Maintenance"
+            },
+            "key": "m-2:9"
+          },
+          {
+            "suggestion": {
+              "kind": "edit",
+              "ref": "REQ-7",
+              "body": "The lamp shall be red while the spindle turns."
+            },
+            "key": "m-2:11"
+          },
+          {
+            "suggestion": {
+              "kind": "move",
+              "ref": "REQ-7",
+              "parent": "",
+              "before": "REQ-2",
+              "position": "first"
+            },
+            "key": "m-2:13"
+          },
+          {
+            "suggestion": {
+              "kind": "move",
+              "ref": "REQ-8",
+              "parent": "HDG-4",
+              "after": "REQ-7",
+              "position": "last"
+            },
+            "key": "m-2:15"
+          }
+        ]
+      ]
+    },
+    {
+      "call": "guidedAPI.sendMessage",
+      "args": [
+        "gs-1",
+        "How would I verify the artifact I am reading? Propose a verification method and the test cases that would demonstrate it, and say what evidence each would produce.",
+        0,
+        {},
+        "art-7"
+      ]
+    }
+  ],
+  "read-only": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    }
+  ],
+  "stream-reconnect": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    }
+  ],
+  "stream-session": [
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-1/chat/stream"
+      ]
+    },
+    {
+      "call": "guidedAPI.listMessages",
+      "args": [
+        "gs-2"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/guided-sessions/gs-2/chat/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "guidedAPI.kickoffChat",
+      "args": [
+        "gs-2",
+        2,
+        {
+          "step_1": {
+            "vision": "Every shop floor runs its machines safely.",
+            "problem_statement": "",
+            "target_users": ""
+          },
+          "step_2": {
+            "personas": [
+              {
+                "id": "per-1",
+                "name": "Maya the Machinist",
+                "role": "CNC operator",
+                "goals": "",
+                "pains": ""
+              }
+            ]
+          },
+          "step_3": {
+            "needs": [
+              {
+                "id": "need-1",
+                "persona_id": "per-1",
+                "capability": "a live view of each spindle",
+                "outcome": "I can clear the floor"
+              }
+            ]
+          }
+        },
+        null
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/guided-sessions/gs-2/chat/stream"
+      ]
+    }
+  ]
+}

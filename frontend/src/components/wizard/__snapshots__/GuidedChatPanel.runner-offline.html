@@ -1,0 +1,25 @@
+<div style="display: flex; flex-direction: column; background: var(--surface); width: 340px; min-width: 340px; border: 1px solid var(--border); border-radius: 4px; position: sticky; top: 20px; height: calc(100vh - 160px); min-height: 420px;">
+<div style="padding: 10px 14px; border-bottom: 1px solid var(--border);">
+<div style="font-weight: 700; color: var(--text); font-size: 14px;">V&amp;V Assistant</div>
+<div style="font-size: 12px; color: var(--text-muted);">Asks questions and suggests entries you can add with one click.</div>
+</div>
+<div style="flex: 1 1 0%; overflow-y: auto; padding: 12px;">
+<div style="text-align: center; color: var(--neutral); font-size: 12px; margin-top: 24px;">The assistant will join in a moment — or ask it anything about your requirements.</div>
+<div style="border: 1px solid var(--tint-yellow-border); background: var(--tint-yellow); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; font-size: 12px; color: var(--warning-text); line-height: 1.5;">
+<div style="font-weight: 700; margin-bottom: 4px;">⚠ V&amp;V Assistant not connected</div>No runner is online to answer, so assistant replies are paused. To connect one, open <a style="color: var(--warning-text); font-weight: 600;" href="/org/settings" data-discover="true">Workspace Settings → Runners</a> and launch the Agent Connector on your machine — or restart it if it was already running. Messages you send are saved and will be answered as soon as a runner connects.</div>
+</div>
+<div style="border-top: 1px solid var(--border); padding: 10px;">
+<div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+<button title="Quality-check the entries on the current step" style="background: var(--tint-blue); border: 1px solid var(--tint-blue-border); color: var(--accent-strong); border-radius: 12px; padding: 5px 10px; font-size: 12px; cursor: pointer; width: auto; white-space: nowrap; opacity: 1;">Review step</button>
+<button title="What is missing, here and across the definition" style="background: var(--tint-blue); border: 1px solid var(--tint-blue-border); color: var(--accent-strong); border-radius: 12px; padding: 5px 10px; font-size: 12px; cursor: pointer; width: auto; white-space: nowrap; opacity: 1;">Gap analysis</button>
+<button title="Find contradictions, duplicates and inconsistencies" style="background: var(--tint-blue); border: 1px solid var(--tint-blue-border); color: var(--accent-strong); border-radius: 12px; padding: 5px 10px; font-size: 12px; cursor: pointer; width: auto; white-space: nowrap; opacity: 1;">Conflict check</button>
+<button title="Propose entries for the current step" style="background: var(--tint-blue); border: 1px solid var(--tint-blue-border); color: var(--accent-strong); border-radius: 12px; padding: 5px 10px; font-size: 12px; cursor: pointer; width: auto; white-space: nowrap; opacity: 1;">Draft for me</button>
+</div>
+<div style="display: flex; gap: 6px; align-items: flex-end;">
+<textarea placeholder="Ask the V&amp;V Assistant… (Ctrl+Enter to send)" enterkeyhint="enter" rows="2" style="flex: 1 1 0%; min-height: 40px; resize: none; font-size: 13px;">
+</textarea>
+<button class="button" disabled="" style="background: var(--accent); opacity: 0.5; white-space: nowrap; padding: 8px 12px; font-size: 13px;">Send</button>
+</div>
+</div>
+</div>
+<!-- control 1: textarea = "" -->
