@@ -3,9 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -32,50 +30,6 @@ func (h *Handler) registerBillingRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/billing/checkout", h.alwaysWritable(h.CheckoutOrgBilling)).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/billing/change", h.alwaysWritable(h.ChangeOrgBillingPlan)).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/billing/portal", h.alwaysWritable(h.OpenOrgBillingPortal)).Methods("POST")
-}
-
-// billingRetryAfter is the Retry-After, in seconds, of a 503 that asks the
-// client to try again shortly.
-const billingRetryAfter = 30
-
-// writeBillingError answers a purchase-path refusal with the status and code
-// a client branches on. Anything unrecognised is the provider not answering:
-// 503 with Retry-After, the workspace left as it was. A checkout the
-// provider does not have is its answer, not its silence: 404 (#379's bug 19).
-// Prices the provider has not confirmed yet pass as its silence does, so they
-// get the same 503, Retry-After and code, with a message that says what is
-// missing (#379's bug 189).
-func (h *Handler) writeBillingError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, orgs.ErrNotFound):
-		writeJSONError(w, http.StatusNotFound, "workspace not found")
-	case errors.Is(err, billing.ErrCheckoutNotFound):
-		writeJSONError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, billing.ErrNotConfigured):
-		writeJSONErrorCode(w, http.StatusNotFound, err.Error(), ErrCodeBillingUnavailable)
-	case errors.Is(err, billing.ErrUnknownPlan), errors.Is(err, billing.ErrUnknownCurrency),
-		errors.Is(err, billing.ErrCurrencyLocked), errors.Is(err, billing.ErrPersonalWorkspace):
-		writeJSONErrorCode(w, http.StatusBadRequest, err.Error(), ErrCodeUnknownPlan)
-	case errors.Is(err, billing.ErrAlreadySubscribed):
-		writeJSONErrorCode(w, http.StatusConflict, err.Error(), ErrCodeAlreadySubscribed)
-	case errors.Is(err, billing.ErrNoSubscription):
-		writeJSONErrorCode(w, http.StatusConflict, err.Error(), ErrCodeNoSubscription)
-	case errors.Is(err, billing.ErrGrantedPlan):
-		writeJSONErrorCode(w, http.StatusConflict, err.Error(), ErrCodeGrantedPlan)
-	case errors.Is(err, billing.ErrNoCustomer):
-		writeJSONErrorCode(w, http.StatusConflict, err.Error(), ErrCodeNoCustomer)
-	case errors.Is(err, billing.ErrSessionMismatch):
-		writeJSONErrorCode(w, http.StatusForbidden, err.Error(), ErrCodeCheckoutMismatch)
-	case errors.Is(err, billing.ErrPricesUnconfirmed):
-		w.Header().Set("Retry-After", strconv.Itoa(billingRetryAfter))
-		writeJSONErrorCode(w, http.StatusServiceUnavailable,
-			"prices have not been confirmed with the billing provider yet; try again shortly", ErrCodeBillingUpstream)
-	default:
-		slog.Warn("billing: provider did not answer", "path", r.URL.Path, "org_id", mux.Vars(r)["id"], "error", err)
-		w.Header().Set("Retry-After", strconv.Itoa(billingRetryAfter))
-		writeJSONErrorCode(w, http.StatusServiceUnavailable,
-			"the billing provider did not answer; the workspace was left as it was", ErrCodeBillingUpstream)
-	}
 }
 
 // billingAdmin runs the checks every purchase-path handler shares: an admin

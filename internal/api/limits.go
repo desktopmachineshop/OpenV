@@ -229,26 +229,6 @@ func (h *Handler) leaseMinutesAllowed(orgID string, want int) (int, error) {
 	return want, nil
 }
 
-// writeLimitError answers a limit refusal with the numbers and the remedy
-// attached, so the frontend can show a person what stopped them and what to do
-// without parsing prose.
-func (h *Handler) writeLimitError(w http.ResponseWriter, err error) bool {
-	var limitErr *orgs.LimitError
-	if !errors.As(err, &limitErr) {
-		return false
-	}
-	respondJSON(w, http.StatusForbidden, map[string]interface{}{
-		"error":   limitErr.Error(),
-		"code":    ErrCodeLimitReached,
-		"limit":   limitErr.Key,
-		"label":   limitErr.Label,
-		"used":    limitErr.Used,
-		"allowed": limitErr.Allowed,
-		"remedy":  limitErr.Remedy(),
-	})
-	return true
-}
-
 // effectiveLimits resolves a workspace's limits, or nil when the workspace
 // cannot be read. Nil limits mean nothing is enforced: a limit check must
 // never be the reason a legitimate action fails.

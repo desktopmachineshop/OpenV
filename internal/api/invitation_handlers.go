@@ -338,39 +338,6 @@ func (h *Handler) sendInvitationMailAsync(inv *invitations.Invitation, link stri
 // service (only possible in tests today).
 var errInvitationsUnavailable = errors.New("invitations are not configured on this server")
 
-// writeInvitationError maps the domain's user-facing failures onto statuses.
-func (h *Handler) writeInvitationError(w http.ResponseWriter, r *http.Request, err error) {
-	const failed = "failed to bring the address into the workspace"
-	var throttled *errThrottled
-	switch {
-	case errors.As(err, &throttled):
-		writeRateLimited(w, throttled.message, throttled.retryAfter)
-	case errors.Is(err, orgs.ErrLimitReached):
-		// A full workspace is not a bad request: the caller did nothing
-		// wrong, the workspace is simply out of seats, and the refusal
-		// carries the remedy. A sentinel with no *orgs.LimitError behind
-		// it has no numbers to show, so it answers as the default does
-		// (#379's bug 188).
-		if !h.writeLimitError(w, err) {
-			respondInternal(w, r, failed, err)
-		}
-	case errors.Is(err, invitations.ErrInvalidEmail), errors.Is(err, orgs.ErrInvalidRole):
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, orgs.ErrPersonalOrgMembers):
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, errAlreadyOrgMember):
-		writeJSONError(w, http.StatusConflict, err.Error())
-	case errors.Is(err, orgs.ErrNotFound):
-		writeJSONError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, invitations.ErrNotFound):
-		writeJSONError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, errInvitationsUnavailable):
-		writeJSONError(w, http.StatusNotFound, err.Error())
-	default:
-		respondInternal(w, r, failed, err)
-	}
-}
-
 // ListOrgInvitations returns the workspace's pending invitations (admin).
 func (h *Handler) ListOrgInvitations(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
