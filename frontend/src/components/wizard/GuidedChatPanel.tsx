@@ -330,6 +330,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
   const retryRef = useRef(0);
+  // The pending reconnect: cancelled when the session changes or the panel
+  // unmounts, so it cannot reopen a session the panel has left (#379, bug 203).
+  const retryTimerRef = useRef<number | null>(null);
   const closedRef = useRef(false);
   const kickedRef = useRef(false);
   const lastNudgeRef = useRef(0);
@@ -419,7 +422,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       const attempt = Math.min(retryRef.current + 1, 6);
       retryRef.current = attempt;
       const delay = Math.min(1000 * 2 ** attempt, 15000);
-      window.setTimeout(() => {
+      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = window.setTimeout(() => {
+        retryTimerRef.current = null;
         if (!closedRef.current) connectStream();
       }, delay);
     };
@@ -461,6 +466,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     return () => {
       cancelled = true;
       closedRef.current = true;
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;
