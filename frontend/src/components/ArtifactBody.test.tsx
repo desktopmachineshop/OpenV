@@ -101,3 +101,24 @@ describe('ArtifactBody references', () => {
     expect(anchors()).toHaveLength(0);
   });
 });
+
+// #379 bug 220: the ordinary-link branch spread react-markdown's props onto
+// the anchor, and those props include `node`, its syntax-tree node, so every
+// ordinary link rendered with a stray node="[object Object]" attribute.
+describe('ArtifactBody link attributes', () => {
+  const attributeNames = (link: HTMLAnchorElement) => link.getAttributeNames().sort();
+
+  it('gives an ordinary link only its href, target and rel', async () => {
+    for (const onReferenceClick of [vi.fn(), undefined]) {
+      await render(<ArtifactBody body="see [docs](https://example.com)" onReferenceClick={onReferenceClick} />);
+      const [link] = anchors();
+      expect(attributeNames(link)).toEqual(['href', 'rel', 'target']);
+    }
+  });
+
+  it('gives a reference link no syntax-tree attribute either', async () => {
+    await render(<ArtifactBody body="as shown in #REQ-17" onReferenceClick={vi.fn()} />);
+    const [link] = anchors();
+    expect(attributeNames(link)).toEqual(['href', 'style', 'title']);
+  });
+});
