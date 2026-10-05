@@ -594,6 +594,11 @@ func TestAFlagRefusalNamesTheThingAndTheBillingTab(t *testing.T) {
 	if msg := CheckFlag(limits, LimitTeams).Error(); !strings.Contains(msg, "OPENV_LIMITS") {
 		t.Errorf("a self-hosted flag refusal sells a plan: %s", msg)
 	}
+	// Nor does it speak of one: a self-hosted deployment has none (#379,
+	// bug 192).
+	if msg := CheckFlag(limits, LimitTeams).Error(); strings.Contains(msg, "plan") {
+		t.Errorf("a self-hosted flag refusal speaks of a plan: %s", msg)
+	}
 }
 
 // The read-only remedy suits whoever can act on it, as a limit refusal's

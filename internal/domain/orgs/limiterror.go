@@ -94,6 +94,12 @@ func (e *LimitError) Is(target error) bool { return target == ErrLimitReached }
 // and what to do next.
 func (e *LimitError) Error() string {
 	if e.Flag {
+		if selfHosted {
+			// A deployment somebody runs themselves has no plan: a flag is
+			// off there because the operator turned it off, and the remedy
+			// says where (#379, bug 192).
+			return fmt.Sprintf("%s: turned off on this deployment. %s", e.Label, e.Remedy())
+		}
 		return fmt.Sprintf("%s: not included in this workspace's plan. %s", e.Label, e.Remedy())
 	}
 	msg := fmt.Sprintf("%s: this workspace allows %s and already has %s",

@@ -197,6 +197,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   the message said the quality rules could not be loaded. It now says
   they could not be saved; a failure to load them still says so.
 
+- **Raising `max_upload_mb` in `OPENV_LIMITS` lets bigger figures
+  through.** For operators: on a deployment not set as self-hosted,
+  setting `max_upload_mb` in `OPENV_LIMITS` above 1024 MB, the most any
+  plan allows, raised every workspace's limit on one figure, but a file
+  over 1024 MB was still refused as larger than the upload limit before
+  that limit was checked. Figures up to the deployment's `max_upload_mb`
+  now upload, within the 8192 MB no single upload may exceed. Self-hosted
+  deployments were not affected.
+
+- **A feature turned off on a self-hosted deployment says so.** On a
+  deployment the operator runs themselves, a feature turned off there,
+  such as teams, was refused as not included in the workspace's plan,
+  though such a deployment has no plans. The refusal now says the feature
+  is turned off on this deployment, and still names the setting to change
+  in `OPENV_LIMITS`. Hosted workspaces are pointed to the Billing tab as
+  before. The workspace's Limits tab says the same. A read-only workspace
+  on such a deployment is told to raise its limits in `OPENV_LIMITS`, not
+  to change plan.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes
