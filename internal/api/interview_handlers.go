@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -258,14 +257,9 @@ func (h *Handler) ListProjectInterviewSessions(w http.ResponseWriter, r *http.Re
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	limit := 0
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "limit must be an integer")
-			return
-		}
-		limit = n
+	limit, ok := parseLimit(w, r, interviewSessionsLimit)
+	if !ok {
+		return
 	}
 	list, err := h.InterviewService.ListProjectSessions(projectID, limit)
 	if err != nil {

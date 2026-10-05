@@ -266,14 +266,18 @@ func OverPlan(limits map[string]interface{}, usage map[string]int) []string {
 	return over
 }
 
+// ReadOnlyRemedy is DeploymentPolicy.ReadOnlyRemedy under the package
+// default policy.
+func ReadOnlyRemedy(over []string) string { return defaultPolicy.ReadOnlyRemedy(over) }
+
 // ReadOnlyRemedy is what a workspace over its plan is told on every write it
 // is refused, over naming the limits it is past (OverPlan). Reading and
 // export are never refused, in any state. Like LimitError.Remedy, it is
 // written for whoever can act on this deployment: a hosted workspace's admin
 // subscribes from the Billing tab, while a self-hosted deployment has no
 // billing (REQ-169) and is told which setting to raise (REQ-123).
-func ReadOnlyRemedy(over []string) string {
-	if !selfHosted {
+func (p *DeploymentPolicy) ReadOnlyRemedy(over []string) string {
+	if !p.SelfHosted {
 		return "This workspace has more than its plan allows, so it is read-only until it is " +
 			"brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. " +
 			"A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
@@ -287,26 +291,6 @@ func ReadOnlyRemedy(over []string) string {
 		"This deployment sets its own limits: raise " + keys + " in OPENV_LIMITS to change " + it + " everywhere, " +
 		"or set " + it + " on this workspace alone to change " + it + " here. " +
 		"A workspace admin can also remove members or delete projects."
-}
-
-// deploymentLimits is the middle layer: a deployment-wide override read once
-// at boot from OPENV_LIMITS. Nil until SetDeploymentLimits is called, which is
-// the hosted service's state — it runs on plan defaults alone.
-var deploymentLimits map[string]interface{}
-
-// SetDeploymentLimits installs the deployment-wide defaults. Called once at
-// boot; a nil or empty map leaves plan defaults in charge.
-func SetDeploymentLimits(limits map[string]interface{}) {
-	deploymentLimits = limits
-}
-
-// DeploymentLimits returns the configured deployment-wide defaults.
-func DeploymentLimits() map[string]interface{} {
-	out := map[string]interface{}{}
-	for k, v := range deploymentLimits {
-		out[k] = v
-	}
-	return out
 }
 
 // ParseLimits reads a JSON object of limit values, rejecting keys the platform
@@ -347,10 +331,16 @@ func ParseLimits(raw string) (map[string]interface{}, error) {
 	return out, nil
 }
 
-// EffectiveLimits resolves the three layers for this workspace: the org's own
-// limits win, then the deployment's, then the plan's. The receiver's map is
-// never mutated.
+// EffectiveLimits resolves the three layers for this workspace under the
+// package default policy (DeploymentPolicy.EffectiveLimits).
 func (o *Org) EffectiveLimits() map[string]interface{} {
+	return defaultPolicy.EffectiveLimits(o)
+}
+
+// EffectiveLimits resolves the three layers for workspace o: the org's own
+// limits win, then the deployment's, then the plan's. o's map is never
+// mutated.
+func (p *DeploymentPolicy) EffectiveLimits(o *Org) map[string]interface{} {
 	// On a deployment somebody runs themselves the plan column is meaningless
 	// — there is no billing relationship to describe — so the base is
 	// PlanSelfHost whatever the row says. Reading the column instead would
@@ -364,11 +354,11 @@ func (o *Org) EffectiveLimits() map[string]interface{} {
 	// is the only place billing status touches enforcement, so every check
 	// that reads limits follows it without knowing billing exists.
 	plan := o.EntitledPlan()
-	if selfHosted {
+	if p.SelfHosted {
 		plan = PlanSelfHost
 	}
-	merged := PlanDefaults(plan)
-	for k, v := range deploymentLimits {
+	merged := p.PlanDefaults(plan)
+	for k, v := range p.DeploymentLimits {
 		merged[k] = v
 	}
 	for k, v := range o.Limits {

@@ -145,7 +145,7 @@ func (h *Handler) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
 // AdminIssuePasswordReset mints a reset link for an account and answers it
 // once: {link, expires_at}. The admin hands it over; nothing is emailed.
 func (h *Handler) AdminIssuePasswordReset(w http.ResponseWriter, r *http.Request) {
-	caller := h.requirePlatformAdmin(w, r)
+	caller := h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized)
 	if caller == nil {
 		return
 	}

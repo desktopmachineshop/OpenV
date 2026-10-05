@@ -24,9 +24,8 @@ func (h *Handler) registerPasswordRoutes(router *mux.Router) {
 // already proves who the caller is: it is what makes a borrowed, unlocked
 // browser unable to take the account over.
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	var req struct {

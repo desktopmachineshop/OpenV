@@ -26,9 +26,8 @@ func (h *Handler) registerOrgCoreRoutes(router *mux.Router) {
 
 // ListOrgs returns the caller's workspaces with roles.
 func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	list, err := h.OrgService.ListForUser(user.ID)
@@ -83,13 +82,7 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 // open_source) over a live subscription is 409 already_subscribed: the
 // subscription is cancelled first (REQ-168).
 func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-	if !user.IsAdmin {
-		writeJSONError(w, http.StatusForbidden, "only a platform admin can change a workspace's plan")
+	if h.requirePlatformAdmin(w, r, "only a platform admin can change a workspace's plan", http.StatusUnauthorized) == nil {
 		return
 	}
 	var req struct {
@@ -126,9 +119,8 @@ func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 // one no row has, as the workspace guard answers (I3).
 func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	if !user.IsAdmin {
@@ -164,9 +156,8 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 
 // CreateOrg creates a company workspace with the caller as admin.
 func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	var req struct {

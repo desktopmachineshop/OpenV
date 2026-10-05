@@ -1,7 +1,8 @@
 // The plans a workspace can be on: their names, the limits each defaults to,
-// the tier values once the tiers are in force, the alpha terms, and the plan
-// new workspaces are created on. How a workspace's limits resolve is in
-// limits.go.
+// the tier values once the tiers are in force, the alpha terms, and the
+// largest upload a plan allows. The plan new workspaces are created on is
+// the deployment policy's (deployment_policy.go); how a workspace's limits
+// resolve is in limits.go.
 
 package orgs
 
@@ -49,11 +50,18 @@ const (
 // configuration change rather than a deployment.
 const unlimited = 0
 
-// PlanDefaults returns the default limits for a billing plan.
+// PlanDefaults returns the default limits for a billing plan under the
+// package default policy (DeploymentPolicy.PlanDefaults).
+func PlanDefaults(plan string) map[string]interface{} {
+	return defaultPolicy.PlanDefaults(plan)
+}
+
+// PlanDefaults returns the default limits for a billing plan, with the tier
+// values laid over them when p enforces the tiers.
 //
 // An unknown or empty plan gets the most restrictive hosted defaults, so a bad
 // plan value can never accidentally mean "unlimited".
-func PlanDefaults(plan string) map[string]interface{} {
+func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
 	switch plan {
 	case PlanSelfHost, PlanEnterprise:
 		// Somebody else's hardware, or a negotiated agreement. Nothing here
@@ -81,7 +89,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 		// matters to somebody running an agent over a real repository, so it
 		// is the one that moves — four hours rather than two, on twice the
 		// memory, with a longer idle window to match.
-		return tiered(plan, map[string]interface{}{
+		return p.tiered(plan, map[string]interface{}{
 			LimitRunnerMemoryMB:           8192,
 			LimitRunnerCPUs:               4.0,
 			LimitRunnerSessionMinutes:     240,
@@ -97,7 +105,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitWorkspaceBudget:          true,
 		})
 	case PlanBusinessLite:
-		return tiered(plan, map[string]interface{}{
+		return p.tiered(plan, map[string]interface{}{
 			LimitRunnerMemoryMB:           4096,
 			LimitRunnerCPUs:               2.0,
 			LimitRunnerSessionMinutes:     120,
@@ -113,7 +121,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitWorkspaceBudget:          true,
 		})
 	default: // PlanSingle, PlanFree and anything unrecognized
-		return tiered(plan, map[string]interface{}{
+		return p.tiered(plan, map[string]interface{}{
 			LimitRunnerMemoryMB:           2048,
 			LimitRunnerCPUs:               1.0,
 			LimitRunnerSessionMinutes:     60,
@@ -134,25 +142,12 @@ func PlanDefaults(plan string) map[string]interface{} {
 	}
 }
 
-// tiersEnforced is the switch between the alpha terms — every count open,
-// every flag on, for everybody — and the tiers as sold. It is thrown by
-// OPENV_BILLING_GRANDFATHER_BEFORE: naming the date is what turns the tiers
-// on, and the same boot grandfathers every workspace created before it, so
-// the two can never be out of step.
-var tiersEnforced bool
-
-// SetTiersEnforced turns the tier values on or off. Called once at boot.
-func SetTiersEnforced(on bool) { tiersEnforced = on }
-
-// TiersEnforced reports whether the tier values are in force.
-func TiersEnforced() bool { return tiersEnforced }
-
 // FreeHostedRunnerMinutes is the free tier's monthly cloud-runner allowance
 // once the tiers are in force.
 const FreeHostedRunnerMinutes = 300
 
 // tiered lays the tier's counts and flags over a plan's alpha defaults when
-// the tiers are in force. The paid tiers pay for the company layer, not the
+// p enforces the tiers. The paid tiers pay for the company layer, not the
 // product: what moves is seats, shared workspaces, the flags and hosted
 // minutes; every product limit stays as it was.
 //
@@ -164,8 +159,8 @@ const FreeHostedRunnerMinutes = 300
 // Business keeps members unlimited: nobody caps seats on a plan billed per
 // seat. Lite gets the free tier's counts, not fewer. The project caps are
 // abuse ceilings, high enough that nobody chooses which product to track.
-func tiered(plan string, m map[string]interface{}) map[string]interface{} {
-	if !tiersEnforced {
+func (p *DeploymentPolicy) tiered(plan string, m map[string]interface{}) map[string]interface{} {
+	if !p.TiersEnforced {
 		return m
 	}
 	switch plan {
@@ -213,6 +208,10 @@ var allPlans = []string{
 	PlanSelfHost, PlanOpenSource, PlanFree, PlanTeam,
 }
 
+// MaxPlanUploadMB is DeploymentPolicy.MaxPlanUploadMB under the package
+// default policy.
+func MaxPlanUploadMB() int { return defaultPolicy.MaxPlanUploadMB() }
+
 // MaxPlanUploadMB is the largest per-file upload any CAPPED plan allows, or
 // the deployment layer's max_upload_mb where that is larger, or 0 where no
 // plan on this deployment has a ceiling.
@@ -240,40 +239,21 @@ var allPlans = []string{
 // is already the transport ceiling, which the layer could not lift, and taking
 // the layer's figure would lower it, refusing at the request a workspace the
 // operator raised on its own.
-func MaxPlanUploadMB() int {
-	if selfHosted {
+func (p *DeploymentPolicy) MaxPlanUploadMB() int {
+	if p.SelfHosted {
 		return 0
 	}
 	largest := 0
 	for _, plan := range allPlans {
-		if mb, ok := LimitInt(PlanDefaults(plan), LimitMaxUploadMB); ok && mb > largest {
+		if mb, ok := LimitInt(p.PlanDefaults(plan), LimitMaxUploadMB); ok && mb > largest {
 			largest = mb
 		}
 	}
-	if mb, ok := LimitInt(deploymentLimits, LimitMaxUploadMB); ok && mb > largest {
+	if mb, ok := LimitInt(p.DeploymentLimits, LimitMaxUploadMB); ok && mb > largest {
 		largest = mb
 	}
 	return largest
 }
-
-// defaultPlan is the plan new workspaces are created on. The hosted service
-// leaves it at PlanSingle; a self-hosted deployment sets PlanSelfHost, which
-// is what makes "no limits from us" true rather than merely advertised.
-var defaultPlan = PlanSingle
-
-// SetDefaultPlan installs the plan new workspaces are created on: any plan
-// ValidPlan accepts, the open-source plan included. An unknown name is
-// ignored rather than stored, so a typo cannot create workspaces on a plan
-// whose defaults nobody has written; cmd/server warns about one at boot and
-// installs the deployment's own default instead.
-func SetDefaultPlan(plan string) {
-	if ValidPlan(plan) {
-		defaultPlan = plan
-	}
-}
-
-// DefaultPlan is the plan new workspaces are created on.
-func DefaultPlan() string { return defaultPlan }
 
 // PlanNames is every plan ValidPlan accepts, in the order a list of them
 // is shown: the tiers, the self-host plan, the open-source plan and the

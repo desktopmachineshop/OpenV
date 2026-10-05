@@ -2,12 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
-	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 // DiffBaseline computes the changes from the baseline in the path ("base")
@@ -38,40 +39,40 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var base exports.ProjectExport
-	if err := json.Unmarshal(baseline.Snapshot, &base); err != nil {
+	// The base is the baseline read above, decoded without reading it again.
+	base, _, err := snapshot.Load(baseline.ProjectID, baselineID, heldBaseline(baseline))
+	if err != nil {
 		respondInternal(w, r, "failed to parse baseline snapshot", err)
 		return
 	}
 
-	var target exports.ProjectExport
-	targetRef := baselines.SnapshotRef{ID: "live", Name: "Live Project"}
+	targetID := against
 	if against == "live" {
-		raw, _, err := h.ExportService.ExportProject(baseline.ProjectID, exports.FormatJSON)
-		if err != nil {
-			respondInternal(w, r, "failed to export project", err)
-			return
-		}
-		if err := json.Unmarshal(raw, &target); err != nil {
+		targetID = ""
+	}
+	target, other, err := snapshot.Load(baseline.ProjectID, targetID, h.snapshotSources())
+	if err != nil {
+		var bad *snapshot.DecodeError
+		switch decode := errors.As(err, &bad); {
+		case against == "live" && decode:
 			respondInternal(w, r, "failed to parse project export", err)
-			return
-		}
-	} else {
-		// A baseline from another project (or another org's project) is
-		// indistinguishable from a missing one: 404 either way.
-		other, err := h.BaselineService.GetProjectBaseline(baseline.ProjectID, against)
-		if err != nil {
-			respondError(w, r, http.StatusNotFound, "comparison baseline not found", err)
-			return
-		}
-		if err := json.Unmarshal(other.Snapshot, &target); err != nil {
+		case against == "live":
+			respondInternal(w, r, "failed to export project", err)
+		case decode:
 			respondInternal(w, r, "failed to parse baseline snapshot", err)
-			return
+		default:
+			// A baseline from another project (or another org's project) is
+			// indistinguishable from a missing one: 404 either way.
+			respondError(w, r, http.StatusNotFound, "comparison baseline not found", err)
 		}
+		return
+	}
+	targetRef := baselines.SnapshotRef{ID: "live", Name: "Live Project"}
+	if other != nil {
 		targetRef = baselines.SnapshotRef{ID: other.ID, Name: other.Name}
 	}
 
-	result := baselines.Diff(&base, &target)
+	result := baselines.Diff(base, target)
 	result.Base = baselines.SnapshotRef{ID: baseline.ID, Name: baseline.Name}
 	result.Target = targetRef
 

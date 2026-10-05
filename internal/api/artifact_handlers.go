@@ -212,9 +212,9 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	if limit <= 0 || limit > maxArtifactPageLimit {
-		limit = defaultArtifactPageLimit
+	limit, ok := parseLimit(w, r, artifactsLimit)
+	if !ok {
+		return
 	}
 	offset, _ := strconv.Atoi(q.Get("offset"))
 	if offset < 0 {
