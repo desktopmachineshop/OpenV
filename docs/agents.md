@@ -603,6 +603,12 @@ runner adapters (`internal/runner`):
 `allowed_tools` (frontmatter, and **Allowed tools** in the agent editor) is a
 comma-separated allowlist passed to the vendor CLI. `mcp__openv__*` grants the
 OpenV tool surface; the vendor's own built-in tools can be named alongside it.
+Each entry names one tool: Claude Code receives the list joined with commas, so
+an entry that holds a comma (`Read, Grep` written as one entry in the markdown
+file) would be several tools there. The API refuses such an entry with a `400`
+on create, on update and on a raw file save, saying to list each tool on its
+own; the editor's field already splits on commas. A definition already stored
+with one still loads, and is judged by each of its parts (below).
 
 **An allowlist is mandatory.** An agent whose definition names no tools is
 refused: the API answers `400` on create and on update, and the runner fails
@@ -723,7 +729,9 @@ the seeded interviewer — so the mark rides on the queued run
   command line, not a network policy, so no spelling of one stops `curl`,
   `wget` or `git fetch` from bringing the outside world in. It costs such an
   agent nothing it was granted — the allowlist stays the whole approval
-  surface either way;
+  surface either way. Each comma-separated part of an entry counts on its own,
+  as Claude Code receives it, so a stored `mcp__openv__get_artifact,Bash` is a
+  shell;
 - it is the seeded **interviewer** (kept as a backstop for the origin rule
   above).
 

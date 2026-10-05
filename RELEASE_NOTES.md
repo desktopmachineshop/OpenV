@@ -168,6 +168,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   names, whichever AI provider runs it. `mcp__openv__*` and `mcp__openv`
   still grant them all.
 
+- **An agent's allowed tools name one tool per entry.** In an agent's
+  markdown file, one `allowed_tools` entry could list several tools
+  separated by commas, such as `mcp__openv__get_artifact, Bash`. Claude
+  Code takes each of them, but OpenV read the entry as a single tool, so an
+  agent given a shell, web access or another MCP server that way was not
+  treated as reaching outside the workspace, and its runs were not given
+  the stricter settings such agents get. OpenV now reads every part of
+  such an entry, and saving one is refused with a message asking for one
+  tool per entry. An agent already saved that way keeps working, judged by
+  each part.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes

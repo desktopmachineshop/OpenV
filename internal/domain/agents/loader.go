@@ -101,7 +101,14 @@ func parseFile(content string, synced bool, seedTools SeedToolsFunc) (*Definitio
 		log.Printf("agents: %q has no allowed_tools; setting %v and rewriting the file — review the list and narrow it if the agent needs less",
 			def.Slug, def.AllowedTools)
 	}
-	if err := def.Validate(); err != nil {
+	validate := def.Validate
+	if synced {
+		// Already on disk: refusing it now would drop the agent from the
+		// registry, so a save-only rule such as one tool per entry does not
+		// apply here.
+		validate = func() error { return validateStored(def) }
+	}
+	if err := validate(); err != nil {
 		return nil, false, err
 	}
 	return def, backfilled, nil
@@ -129,9 +136,19 @@ func backfillToolsFor(slug string, seedTools SeedToolsFunc) []string {
 // disk. Split out so the exemption is named where it is used.
 func validateLoose(def *Definition) error { return def.validate(false) }
 
-// SerializeFile renders a definition back to markdown file content.
+// validateStored validates a definition that is already stored, or being
+// written back as stored: every rule but the ones Validate adds for a list a
+// person is saving now (oneToolPerEntry). The file sync and SerializeFile use
+// it, so an agent stored before such a rule still loads and still takes a
+// seed update (seeds.adoptSeedDefaults) instead of failing the reconcile.
+func validateStored(def *Definition) error { return def.validate(true) }
+
+// SerializeFile renders a definition back to markdown file content. It holds
+// the definition to the rules for stored ones (validateStored); a definition a
+// person is saving is checked with Validate first, by the API and by
+// ParseFile.
 func SerializeFile(def *Definition) (string, error) {
-	if err := def.Validate(); err != nil {
+	if err := validateStored(def); err != nil {
 		return "", err
 	}
 	front, err := yaml.Marshal(def)

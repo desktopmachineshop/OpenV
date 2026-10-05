@@ -1217,14 +1217,26 @@ such a run before launching anything (`docs/agents.md`, *Tools an agent may
 use*). Definitions already on disk from before this rule are backfilled to
 `mcp__openv__*` when they sync, not rejected.
 
-A **non-empty** allowlist is never a reason to refuse, whichever provider the
-agent names. Claude Code takes it verbatim (`--allowedTools`); gemini-cli has
-it translated into the settings that CLI documents for restricting tools
-(`tools.core`, and the openv server's `includeTools`); codex-cli, which has no
-allowlist mechanism at all, is confined by its sandbox instead. In every case
-the OpenV MCP server is additionally handed `OPENV_MCP_TOOLS` and serves only
-the `mcp__openv__*` tools the definition names, so the allowlist is enforced
-for OpenV's own tools regardless of what the vendor CLI can express.
+**One tool per entry.** The same three endpoints answer **400** when an entry
+of `allowed_tools` holds a comma, since Claude Code receives the list joined
+with commas and would read such an entry as several tools:
+
+```json
+{"error":"allowed_tools entry \"Read, Grep\" holds a comma: name one tool per entry (\"Read\" and \"Grep\", not \"Read, Grep\"), because the vendor CLI reads a comma as the start of another tool"}
+```
+
+A definition already stored with such an entry still loads when it syncs, and
+the platform judges whether it reaches outside the workspace by each part.
+
+Otherwise a **non-empty** allowlist is never a reason to refuse, whichever
+provider the agent names. Claude Code takes it verbatim (`--allowedTools`);
+gemini-cli has it translated into the settings that CLI documents for
+restricting tools (`tools.core`, and the openv server's `includeTools`);
+codex-cli, which has no allowlist mechanism at all, is confined by its sandbox
+instead. In every case the OpenV MCP server is additionally handed
+`OPENV_MCP_TOOLS` and serves only the `mcp__openv__*` tools the definition
+names, so the allowlist is enforced for OpenV's own tools regardless of what
+the vendor CLI can express.
 
 ### Agent runs
 

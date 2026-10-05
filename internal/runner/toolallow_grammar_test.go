@@ -178,6 +178,9 @@ func TestAllowlistReadersAreTwoGrammars(t *testing.T) {
 		{"wildcard behind the prefix twice (bug 185)", []string{"mcp__openv__mcp__openv__*"}, nil, nil, false},
 		{"space before the wildcard (bug 185)", []string{"mcp__openv__ *"}, nil, nil, false},
 		{"a comma before the server name (bug 185)", []string{"mcp__openv__get_artifact,mcp__openv"}, nil, nil, false},
+		// claude-code receives a shell here, so the agent reaches outside
+		// (bug 186), and openv-mcp serves none of it (bug 185).
+		{"a comma before a shell (bugs 185, 186)", []string{"mcp__openv__get_artifact,Bash"}, nil, nil, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
