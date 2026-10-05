@@ -48,9 +48,7 @@ const COMPONENTS_IMPORTING_VIEWS = {
 // one without an entry here, before or after it exists, and X15b-X15e then
 // lower this list to nothing.
 const EVENT_SOURCE_HOOK = 'src/hooks/useEventStream.ts';
-const EVENT_SOURCE_SITES = {
-  'src/components/wizard/GuidedChatPanel.tsx': 1,
-};
+const EVENT_SOURCE_SITES = {};
 
 // An entry for a file that is gone would never be reported stale (only linted
 // files are), and a new file at that path would inherit its exception.

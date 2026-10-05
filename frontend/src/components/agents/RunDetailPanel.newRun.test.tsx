@@ -209,4 +209,20 @@ describe('RunDetailPanel moving to another run', () => {
     expect(logReads('run-1')).toBe(1);
     expect(logReads('run-2')).toBe(0);
   });
+
+  it("retries the new run's stream when it drops before the run has loaded, after a finished run", async () => {
+    vi.useFakeTimers();
+    // run-1 has finished; run-2's load never answers, so the panel knows
+    // nothing of its status when its stream drops (#379 bug 204).
+    api.get.mockImplementation(((id: string) =>
+      id === 'run-1' ? Promise.resolve({ data: run(id, 'succeeded') }) : new Promise(() => undefined)) as any);
+    await show('run-1');
+    expect(container.textContent).toContain('succeeded');
+
+    await show('run-2');
+    await drop();
+    expect(logReads('run-2')).toBe(1);
+    await reconnectsAfter(1000);
+    expect(stream().url).toBe('/stream/run-2?after_seq=0');
+  });
 });

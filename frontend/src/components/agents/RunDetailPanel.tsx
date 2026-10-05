@@ -235,6 +235,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
   useEffect(() => {
     setLogs([]);
     lastSeqRef.current = 0;
+    statusRef.current = '';
     loadRun();
 
     let pollTimer: number | null = null;
