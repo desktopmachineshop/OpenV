@@ -145,6 +145,75 @@ func TestAgentDefinitionRequiresAllowedTools(t *testing.T) {
 	}
 }
 
+// #379 bug 186: an allowed_tools entry holding a comma is refused on create,
+// on update and on a raw file save, with a 400 that says to list each tool on
+// its own, and nothing is stored. claude-code receives the list joined with
+// commas, so such an entry is several tools there.
+func TestAgentDefinitionRefusesACommaInAToolEntry(t *testing.T) {
+	const body = `{"slug":"reviewer","name":"Reviewer","provider":"claude-code","allowed_tools":["mcp__openv__*","mcp__openv__get_artifact,Bash"]}`
+	wantSaid := func(t *testing.T, what string, w *httptest.ResponseRecorder) {
+		t.Helper()
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400 (body %q)", what, w.Code, w.Body.String())
+		}
+		for _, want := range []string{"allowed_tools", "mcp__openv__get_artifact,Bash", "comma", "one tool per entry"} {
+			if !strings.Contains(w.Body.String(), want) {
+				t.Errorf("%s: error %q should say %q", what, w.Body.String(), want)
+			}
+		}
+	}
+
+	for _, method := range []string{http.MethodPost, http.MethodPut} {
+		svc := &fakeAgentDefService{bySlug: map[string]*agents.Agent{}}
+		h := newTestHandler(t, func(h *Handler) { h.AgentService = svc })
+		w := httptest.NewRecorder()
+		r := agentReq(method, "/api/v1/agents/reviewer", map[string]string{"slug": "reviewer"}, body)
+		if method == http.MethodPost {
+			h.CreateAgent(w, r)
+		} else {
+			h.UpdateAgent(w, r)
+		}
+		wantSaid(t, method, w)
+		if len(svc.saved) != 0 {
+			t.Errorf("%s: the definition reached the store anyway", method)
+		}
+	}
+
+	// The raw markdown editor, through the real file store: refused before
+	// the file is written.
+	store := &recordingAgentStore{}
+	svc, err := agents.NewFileService(t.TempDir(), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := newTestHandler(t, func(h *Handler) { h.AgentService = svc })
+	content := "---\nslug: reviewer\nname: Reviewer\nprovider: claude-code\nallowed_tools:\n  - mcp__openv__*\n  - \"mcp__openv__get_artifact,Bash\"\n---\nReview.\n"
+	raw, _ := json.Marshal(map[string]string{"content": content})
+	w := httptest.NewRecorder()
+	h.SaveAgentRaw(w, agentReq(http.MethodPut, "/api/v1/agents/reviewer/raw", map[string]string{"slug": "reviewer"}, string(raw)))
+	wantSaid(t, "raw save", w)
+	if _, err := svc.RawFile("org-1", "reviewer"); err == nil {
+		t.Error("raw save: the file was written anyway")
+	}
+	if len(store.saved) != 0 {
+		t.Errorf("raw save: %v reached the registry anyway", store.saved)
+	}
+}
+
+// recordingAgentStore is an agent registry with no agents that records what a
+// save writes to it.
+type recordingAgentStore struct {
+	emptyAgentStore
+	saved []string
+}
+
+func (s *recordingAgentStore) Save(a *agents.Agent) error {
+	s.saved = append(s.saved, a.Slug)
+	return nil
+}
+
+func (s *recordingAgentStore) Update(a *agents.Agent) error { return s.Save(a) }
+
 // TestWorkerLifecycleErrorContract locks in the 409-vs-500 split on the
 // worker lifecycle endpoints: a status-transition conflict is the worker's
 // problem (409, sentinel text preserved), while any other failure — e.g. a DB

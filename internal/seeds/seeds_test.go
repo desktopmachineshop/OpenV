@@ -1,6 +1,9 @@
 package seeds
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -385,5 +388,72 @@ func TestAdoptSeedDefaultsSkipsALockedAgent(t *testing.T) {
 	changed, err = adoptSeedDefaults("org-1", existing, want, svc)
 	if err != nil || !changed {
 		t.Fatalf("after unlocking, adoptSeedDefaults() = %v, %v; want true, nil", changed, err)
+	}
+}
+
+// #379 bug 186: no seed, current or recorded, names two tools in one
+// allowed_tools entry. A person saving such an entry is refused, and the
+// seeds are written through the same store.
+func TestSeedAllowlistsNameOneToolPerEntry(t *testing.T) {
+	check := func(where string, tools []string) {
+		for _, entry := range tools {
+			if strings.Contains(entry, ",") {
+				t.Errorf("%s: allowed_tools entry %q holds a comma", where, entry)
+			}
+		}
+	}
+	for _, seed := range defaultAgents() {
+		check("seed "+seed.def.Slug, seed.def.AllowedTools)
+	}
+	for slug, versions := range previousSeedVersions {
+		for i, v := range versions {
+			check(fmt.Sprintf("previous seed %s #%d", slug, i), v.AllowedTools)
+		}
+	}
+}
+
+// #379 bug 186: the refusal is for a list a person saves. A seeded agent
+// already stored with a comma in an entry still loads from disk and still
+// takes a seed update, its list left as written, so the startup reconcile
+// does not stop at it.
+func TestAdoptSeedDefaultsCarriesAStoredCommaEntry(t *testing.T) {
+	want := currentCopilotSeed(t)
+	prev := previousSeedVersions["requirements-copilot"][0]
+	stored := []string{"mcp__openv__*", "Read,WebSearch"}
+	content, err := agents.SerializeFile(&agents.Definition{
+		Slug: "requirements-copilot", Name: prev.Name, Description: prev.Description,
+		SystemPrompt: prev.SystemPrompt, Provider: "claude-code", AllowedTools: stored,
+	})
+	if err != nil {
+		t.Fatalf("SerializeFile refused a stored definition: %v", err)
+	}
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "org-1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "org-1", "requirements-copilot.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	svc, err := agents.NewFileService(dir, newMemAgentRepo(), agents.WithSeedAllowedTools(SeedAllowedTools))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.SyncFromDisk("org-1"); err != nil {
+		t.Fatalf("SyncFromDisk: %v", err)
+	}
+	existing, err := svc.GetBySlug("org-1", "requirements-copilot")
+	if err != nil {
+		t.Fatalf("the stored agent did not load: %v", err)
+	}
+	changed, err := adoptSeedDefaults("org-1", existing, want, svc)
+	if err != nil || !changed {
+		t.Fatalf("adoptSeedDefaults() = %v, %v; want true, nil", changed, err)
+	}
+	got, _ := svc.GetBySlug("org-1", "requirements-copilot")
+	if got.Name != want.Name {
+		t.Errorf("name = %q, want the seed update %q", got.Name, want.Name)
+	}
+	if !slices.Equal(got.AllowedTools, stored) {
+		t.Errorf("allowed_tools = %q, want the stored list as written", got.AllowedTools)
 	}
 }
