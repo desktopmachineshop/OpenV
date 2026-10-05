@@ -273,6 +273,7 @@
         "internal/domain/downloads/**",
         "internal/domain/exports/**",
         "internal/domain/reports/**",
+        "internal/domain/snapshot/**",
         "internal/domain/templates/**",
         "internal/mcp/tools_baselines*.go",
         "internal/persistence/postgres/attachment_*.go",

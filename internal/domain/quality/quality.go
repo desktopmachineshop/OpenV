@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 // Severity ranks a finding. Weights drive the score deduction.
@@ -471,7 +471,7 @@ func firstWords(s string, n int) string {
 // LintProject lints every requirement-type artifact in the export and returns a
 // report. Non-requirement types are skipped. Entries preserve the export's
 // artifact order for a deterministic result.
-func LintProject(export *exports.ProjectExport, rs RuleSet) *Report {
+func LintProject(export *snapshot.ProjectExport, rs RuleSet) *Report {
 	report := &Report{
 		ProjectID: export.ProjectID,
 		Entries:   []ArtifactScore{},
@@ -501,7 +501,7 @@ func LintProject(export *exports.ProjectExport, rs RuleSet) *Report {
 // both judge a citation the same way: a citation judged untraceable in the
 // project report and fine on the artifact's own page would be worse than no
 // rule at all.
-func LinkedRefsByArtifact(export *exports.ProjectExport) map[string]map[string]bool {
+func LinkedRefsByArtifact(export *snapshot.ProjectExport) map[string]map[string]bool {
 	// Sized by the project's own artifacts; the linked ones from other
 	// projects grow it as needed (a summed hint is an allocation-size
 	// computation CodeQL flags as able to overflow).

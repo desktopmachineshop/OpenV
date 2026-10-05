@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 // Traversal directions for impact analysis.
@@ -76,7 +76,7 @@ type impactEdge struct {
 // upstream, or both (any other value is treated as "both"). Traversal is
 // breadth-first so recorded distances/paths are the shortest; a visited set
 // guards against cycles and depth is bounded by maxImpactDepth.
-func ComputeImpact(export *exports.ProjectExport, artifactID, direction string) *ImpactReport {
+func ComputeImpact(export *snapshot.ProjectExport, artifactID, direction string) *ImpactReport {
 	switch direction {
 	case DirectionDownstream, DirectionUpstream, DirectionBoth:
 	default:
@@ -121,7 +121,7 @@ func ComputeImpact(export *exports.ProjectExport, artifactID, direction string) 
 // When downstream is true edges point from a link's ToID back to its FromID
 // (who depends on this); otherwise edges point from FromID to ToID (what this
 // depends on).
-func buildImpactAdjacency(export *exports.ProjectExport, downstream bool) map[string][]impactEdge {
+func buildImpactAdjacency(export *snapshot.ProjectExport, downstream bool) map[string][]impactEdge {
 	adj := make(map[string][]impactEdge)
 	for _, l := range export.Links {
 		if l == nil || l.FromID == "" || l.ToID == "" {
