@@ -2,7 +2,7 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
 import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
 import { ChatMarkdown } from '../ChatMarkdown';
-import { SSE_EVENT } from '../../sseEvents';
+import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import type { ArtifactTypeValue } from '../../generated/contract';
 
 /**
@@ -326,14 +326,13 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const applyingRef = useRef<Set<string>>(new Set());
   const [applying, setApplying] = useState<ReadonlySet<string>>(() => new Set());
 
+  // The session whose transcript has loaded, and whether it was empty: its
+  // stream opens then, and an empty one is kicked off. Null again when the
+  // session changes, until the next transcript has loaded.
+  const [loaded, setLoaded] = useState<{ sessionId: string; empty: boolean } | null>(null);
+
   const scrollerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
-  const esRef = useRef<EventSource | null>(null);
-  const retryRef = useRef(0);
-  // The pending reconnect: cancelled when the session changes or the panel
-  // unmounts, so it cannot reopen a session the panel has left (#379, bug 203).
-  const retryTimerRef = useRef<number | null>(null);
-  const closedRef = useRef(false);
   const kickedRef = useRef(false);
   const lastNudgeRef = useRef(0);
   // The newest nudge that arrived inside the throttle window, waiting for it
@@ -384,55 +383,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     }
   }, []);
 
-  const connectStream = useCallback(() => {
-    if (!sessionId || closedRef.current) return;
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
-    const es = new EventSource(guidedAPI.chatStreamUrl(sessionId), { withCredentials: true });
-    esRef.current = es;
-    es.onopen = () => {
-      retryRef.current = 0;
-    };
-    es.addEventListener(SSE_EVENT.message, (event: MessageEvent) => {
-      try {
-        const msg = JSON.parse(event.data) as GuidedChatMessage;
-        if (msg && msg.id) appendMessage(msg);
-      } catch {
-        // ignore malformed events
-      }
-    });
-    es.addEventListener(SSE_EVENT.assistant_partial, (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data) as { run_id?: string; text?: string };
-        if (typeof data?.text !== 'string' || !data.text) return;
-        setPartial(data.text);
-        // Text is arriving, so the assistant is demonstrably answering.
-        setTyping(false);
-        setRunnerOffline(false);
-      } catch {
-        // ignore malformed events
-      }
-    });
-    es.onerror = () => {
-      es.close();
-      if (esRef.current === es) esRef.current = null;
-      if (closedRef.current) return;
-      const attempt = Math.min(retryRef.current + 1, 6);
-      retryRef.current = attempt;
-      const delay = Math.min(1000 * 2 ** attempt, 15000);
-      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = window.setTimeout(() => {
-        retryTimerRef.current = null;
-        if (!closedRef.current) connectStream();
-      }, delay);
-    };
-  }, [sessionId, appendMessage]);
-
   useEffect(() => {
     if (!sessionId) return;
-    closedRef.current = false;
     kickedRef.current = false;
     setMessages([]);
     setPartial('');
@@ -443,39 +395,69 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         if (cancelled) return;
         const transcript = res.data || [];
         transcript.forEach((m) => appendMessage(m));
-        connectStream();
-        // Empty conversation: ask the assistant to open with a question.
-        if (transcript.length === 0 && !kickedRef.current) {
-          kickedRef.current = true;
-          try {
-            const kick = await guidedAPI.kickoffChat(
-              sessionId,
-              stepRef.current,
-              getStateRef.current(),
-              artifactRef.current
-            );
-            applyTurnStatus(kick.data);
-          } catch {
-            // the assistant is optional — the wizard still works without it
-          }
-        }
+        // Opens the stream below, then kicks off an empty conversation.
+        setLoaded({ sessionId, empty: transcript.length === 0 });
       } catch {
         if (!cancelled) setSendError('Failed to load the assistant conversation.');
       }
     })();
     return () => {
       cancelled = true;
-      closedRef.current = true;
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
+      setLoaded(null);
     };
-  }, [sessionId, appendMessage, connectStream, applyTurnStatus]);
+  }, [sessionId, appendMessage]);
+
+  // The session's stream, open from the moment its transcript has loaded. A
+  // drop retries for ever (RECONNECT.cappedExponent: 2, 4, 8, 15, 15 ... s),
+  // an open starting the wait over. A session change closes it at once, and
+  // cancels a pending reconnect so that it cannot reopen a session the panel
+  // has left (#379, bug 203), as an unmount does.
+  useEventStream(
+    loaded && loaded.sessionId === sessionId ? guidedAPI.chatStreamUrl(sessionId) : null,
+    {
+      message: (event) => {
+        try {
+          const msg = JSON.parse(event.data) as GuidedChatMessage;
+          if (msg && msg.id) appendMessage(msg);
+        } catch {
+          // ignore malformed events
+        }
+      },
+      assistant_partial: (event) => {
+        try {
+          const data = JSON.parse(event.data) as { run_id?: string; text?: string };
+          if (typeof data?.text !== 'string' || !data.text) return;
+          setPartial(data.text);
+          // Text is arriving, so the assistant is demonstrably answering.
+          setTyping(false);
+          setRunnerOffline(false);
+        } catch {
+          // ignore malformed events
+        }
+      },
+    },
+    { withCredentials: true, reconnect: RECONNECT.cappedExponent }
+  );
+
+  // Empty conversation: ask the assistant to open with a question. Declared
+  // after the stream, so that the stream is open before the kickoff goes.
+  useEffect(() => {
+    if (!loaded || loaded.sessionId !== sessionId || !loaded.empty || kickedRef.current) return;
+    kickedRef.current = true;
+    (async () => {
+      try {
+        const kick = await guidedAPI.kickoffChat(
+          sessionId,
+          stepRef.current,
+          getStateRef.current(),
+          artifactRef.current
+        );
+        applyTurnStatus(kick.data);
+      } catch {
+        // the assistant is optional — the wizard still works without it
+      }
+    })();
+  }, [loaded, sessionId, applyTurnStatus]);
 
   // Send one nudge now, opening a fresh throttle window.
   const sendNudge = useCallback(
