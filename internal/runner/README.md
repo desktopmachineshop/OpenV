@@ -13,7 +13,7 @@ server, so what they send is a contract. This README covers both packages;
 
 | Area (`docs/areas.json`) | Globs |
 |---|---|
-| runner-fleet | `internal/runner/**` (this file too), `cmd/agentd/**`, `cmd/openv-connector/**`, `internal/hosting/**` |
+| runner-fleet | `internal/runner/**` (this file too), `cmd/agentd/**`, `cmd/openv-connector/**`, `internal/hosting/**`, `internal/workerproto/**` |
 | agent-suite | the MCP core: `internal/mcp/tools.go`, `internal/mcp/client*.go`, `internal/mcp/stdio*.go`, `internal/mcp/schema*.go`, `internal/mcp/context_bundle*.go`, `internal/mcp/tools_delegation*.go`, `internal/mcp/tools_interviews*.go`, `internal/mcp/testdata/**`, `internal/mcp/toolnames/**`, `internal/mcp/*.md`; `cmd/openv-mcp/**`; `internal/seeds/seeds*.go` |
 | requirements-core | `internal/mcp/tools_artifacts*.go`, `internal/mcp/tools_comments*.go`, `internal/mcp/tools_links*.go`, `internal/mcp/tools_projects*.go`, `internal/mcp/tools_quality*.go`, `internal/mcp/tools_reviews*.go`, `internal/mcp/tools_workitems*.go` |
 | verification | `internal/mcp/tools_testruns*.go`, `internal/mcp/tools_vv*.go` |
@@ -25,6 +25,7 @@ server, so what they send is a contract. This README covers both packages;
 |---|---|
 | `worker.go` | `Worker`: the claim loop, its two slot pools, a run from claim to finish or release |
 | `client.go` | `Client`: every request of the worker wire (claim, start, logs, finish, release, sign-ins, pool) |
+| `internal/workerproto/workerproto.go` | the worker wire's bodies, a types-only leaf (K7) the API and the runner both use; `agentruns.FinishRequest` and `LogEntry` and this package's `RunAuth`, `PoolNode` and `PoolAssignment` are aliases of its types |
 | `adapter.go`, `claudecode.go`, `codexcli.go`, `geminicli.go`, `antigravity.go` | the provider adapters, one per vendor CLI, and detection |
 | `classify.go`, `process.go` | the failure taxonomy (where a run ended, its class, whether it retries); the CLI process and its watchdog |
 | `toolallow.go`, `childenv.go` | the agent's tool allowlist translated for each vendor CLI; the environment a CLI starts with |
@@ -73,8 +74,10 @@ server, so what they send is a contract. This README covers both packages;
 Scaffold: `go run ./internal/tools/scaffold -area <area> mcp-tool <name>`, `<area>` as in `tools_<area>.go`
 
 **Change the worker wire.** Server side in
-`internal/api/worker_protocol_handlers.go`, runner side in `client.go`;
-keep accepting what older runners send. Add cases to `wireGoldenCases`
+`internal/api/worker_protocol_handlers.go`, runner side in `client.go`,
+the bodies both send in `internal/workerproto` (a body that replaced a map
+declares its fields in the map's sorted key order, R10); keep accepting
+what older runners send. Add cases to `wireGoldenCases`
 (`wire_cases_test.go`), then regenerate:
 `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run TestRunnerWireGolden`,
 and the S5d tour's `TestTourS5dWorkerWire` with a database

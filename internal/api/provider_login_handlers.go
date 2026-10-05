@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
 // registerProviderLoginRoutes wires the provider CLI login broker: the
@@ -197,14 +198,7 @@ func (h *Handler) ProgressProviderLogin(w http.ResponseWriter, r *http.Request) 
 	if h.workerLoginChecked(w, r) == nil {
 		return
 	}
-	var req struct {
-		Status  string `json:"status"`
-		AuthURL string `json:"auth_url"`
-		Detail  string `json:"detail"`
-		// PasteKind ("code" or "url") is what the worker is waiting for the
-		// member to paste back; older workers omit it.
-		PasteKind string `json:"paste_kind"`
-	}
+	var req workerproto.LoginProgress
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return

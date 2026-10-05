@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
 // Run statuses.
@@ -238,14 +240,9 @@ func (r *Run) UntrustedOrigin() bool {
 	return r.InterviewSessionID != nil
 }
 
-// LogEntry is one streamed event from a run.
-type LogEntry struct {
-	RunID     string                 `json:"run_id"`
-	Seq       int                    `json:"seq"`
-	Kind      string                 `json:"kind"`
-	Payload   map[string]interface{} `json:"payload"`
-	CreatedAt time.Time              `json:"created_at"`
-}
+// LogEntry is one streamed event from a run: workerproto.LogEntry, which
+// the worker's log push carries, under the same name (R8).
+type LogEntry = workerproto.LogEntry
 
 // LaunchRequest describes a run to enqueue.
 type LaunchRequest struct {
@@ -274,19 +271,9 @@ type LaunchRequest struct {
 	NextAttemptAt *time.Time
 }
 
-// FinishRequest is the worker's terminal report for a run.
-type FinishRequest struct {
-	Status    string `json:"status"` // succeeded | failed | cancelled | timed_out
-	ExitCode  *int   `json:"exit_code,omitempty"`
-	FinalText string `json:"final_text"`
-	Error     string `json:"error"`
-	// ErrorClass is the runner's classification of a terminal failure (one of
-	// the ErrorClass* constants); empty for a succeeded or cancelled run.
-	ErrorClass string   `json:"error_class,omitempty"`
-	TokensIn   int64    `json:"tokens_in"`
-	TokensOut  int64    `json:"tokens_out"`
-	CostUSD    *float64 `json:"cost_usd,omitempty"`
-}
+// FinishRequest is the worker's terminal report for a run:
+// workerproto.FinishRequest, under the same name (R8).
+type FinishRequest = workerproto.FinishRequest
 
 // QueueStats summarizes an org's queued runs (worker-status endpoint).
 type QueueStats struct {

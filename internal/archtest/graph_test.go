@@ -37,7 +37,8 @@ func checkImportEdges(c *check) {
 // typesLeaves are the types-only leaf packages outside internal/domain that
 // domain code may import (K7). Each holds wire types and imports no package
 // of this module. P3 creates internal/workerproto, and
-// agentruns.FinishRequest becomes an alias of its type.
+// agentruns.FinishRequest and agentruns.LogEntry become aliases of its
+// types.
 var typesLeaves = setOf([]string{"internal/workerproto"})
 
 // layer places a package in the K7 layering.

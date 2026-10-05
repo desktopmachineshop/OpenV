@@ -110,7 +110,8 @@
       "internal/hosting",
       "internal/notify",
       "internal/scheduler",
-      "internal/seeds"
+      "internal/seeds",
+      "internal/workerproto"
     ],
     "internal/automation": [
       "internal/domain/agentruns",
@@ -129,7 +130,8 @@
     "internal/domain/agentruns": [
       "internal/domain/agents",
       "internal/domain/events",
-      "internal/domain/users"
+      "internal/domain/users",
+      "internal/workerproto"
     ],
     "internal/domain/agents": [
       "internal/domain/providers"
@@ -301,7 +303,8 @@
       "internal/domain/providers",
       "internal/domain/repoconns",
       "internal/domain/runnersessions",
-      "internal/mcp/toolnames"
+      "internal/mcp/toolnames",
+      "internal/workerproto"
     ],
     "internal/scheduler": [
       "internal/domain/agentruns",
