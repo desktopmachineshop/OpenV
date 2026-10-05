@@ -52,9 +52,8 @@ func avatarURL(userID string, at time.Time) string {
 // another type is removed so one account never leaves two files behind.
 // Answers the updated user, whose avatar_url now points at the picture.
 func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	// The API-wide body cap skips a multipart request so that an upload
@@ -155,9 +154,8 @@ func (h *Handler) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
 // is left without a picture; an identity provider's picture returns at its
 // next sign-in. Answers the updated user.
 func (h *Handler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	current, err := h.UserService.GetByID(user.ID)

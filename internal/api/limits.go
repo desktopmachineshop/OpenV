@@ -129,6 +129,17 @@ func mutating(method string) bool {
 	return false
 }
 
+// planGate is the plan read-only gate requireProjectRole and requireOrgRole
+// end with, once the caller's access is decided: requireWritable on the
+// workspace orgID names. orgID is called for a write only, so a project
+// guard looks the project's workspace up for nothing else.
+func (h *Handler) planGate(w http.ResponseWriter, r *http.Request, orgID func() string) bool {
+	if !mutating(r.Method) {
+		return true
+	}
+	return h.requireWritable(w, r, orgID())
+}
+
 // requireWritable refuses a mutating request scoped to a workspace that
 // holds more than its plan allows, with 403 plan_read_only and the remedy.
 // Reads pass untouched, as do the requests alwaysWritable marks. A

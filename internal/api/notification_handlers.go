@@ -53,9 +53,8 @@ type notificationPrefsUpdate struct {
 
 // GetNotificationPrefs returns the caller's own notification preferences.
 func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -69,9 +68,8 @@ func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
 // Own-user only: the update is keyed on the authenticated user id, so a caller
 // can never change another user's preferences.
 func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	var req notificationPrefsUpdate
