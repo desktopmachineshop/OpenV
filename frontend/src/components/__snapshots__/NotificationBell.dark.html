@@ -1,0 +1,93 @@
+<div style="position: relative;">
+<button title="Notifications" aria-label="Notifications (4 unread)" style="position: relative; background: none; border: medium; cursor: pointer; padding: 4px; min-width: 40px; min-height: 40px; font-size: 16px; line-height: 1; color: var(--sidebar-text-dim);">
+<span aria-hidden="true">🔔</span>
+<span style="position: absolute; top: -2px; right: -4px; min-width: 16px; height: 16px; padding: 0px 4px; border-radius: 8px; background: var(--danger); color: rgb(255, 255, 255); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">4</span>
+</button>
+<div role="dialog" aria-label="Notifications" style="position: absolute; bottom: calc(100% + 6px); left: 0px; width: 320px; max-height: 420px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.18); z-index: 1500;">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border-soft);">
+<span style="font-size: 13px; font-weight: 700; color: var(--text);">Notifications</span>
+<div style="display: flex; align-items: center; gap: 12px;">
+<button style="background: none; border: medium; color: var(--accent); cursor: pointer; font-size: 12.5px; padding: 6px 0px; min-height: 36px;">Mark all read</button>
+<button style="background: none; border: medium; color: var(--text-muted); cursor: pointer; font-size: 12.5px; padding: 6px 0px; min-height: 36px;">Clear all</button>
+</div>
+</div>
+<div role="tablist" aria-label="Notification views" style="display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border-soft);">
+<button role="tab" aria-selected="true" style="flex: 1 1 0%; background: var(--tint-blue); border: medium; border-radius: 4px; color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 6px 8px; min-height: 36px;">Inbox</button>
+<button role="tab" aria-selected="false" style="flex: 1 1 0%; background: none; border: medium; border-radius: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; cursor: pointer; padding: 6px 8px; min-height: 36px;">Flagged</button>
+<button role="tab" aria-selected="false" style="flex: 1 1 0%; background: none; border: medium; border-radius: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; cursor: pointer; padding: 6px 8px; min-height: 36px;">Cleared</button>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: var(--tint-blue);">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Run failed: nightly trace check</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">The runner exited with status 1 after 4 minutes.</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">now</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+<button title="Mark read" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; font-size: 12.5px; color: var(--accent);">Mark read</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: var(--tint-blue);">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">3 proposals wait for your review</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">From the run "Requirements sweep" &amp; its follow-up.</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">now</span>
+<button aria-pressed="true" aria-label="Remove flag" title="Remove flag" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--accent);">★</button>
+<button title="Mark read" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; font-size: 12.5px; color: var(--accent);">Mark read</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: transparent;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 400; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Dana mentioned you on REQ-12</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Can you check the fit criterion?</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">1m</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: transparent;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 400; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Interview completed: Shop lead</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">59m</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: var(--tint-blue);">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Review requested: REQ-4</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Sam asked you to review a requirement.</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">1h</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+<button title="Mark read" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; font-size: 12.5px; color: var(--accent);">Mark read</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: transparent;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 400; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Workspace at 80% of its token budget</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">80% of this month’s budget is spent.</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">23h</span>
+<button aria-pressed="true" aria-label="Remove flag" title="Remove flag" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--accent);">★</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: var(--tint-blue);">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">OpenV 0.16.0 is out</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">See what is new.</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">1d</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+<button title="Mark read" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; font-size: 12.5px; color: var(--accent);">Mark read</button>
+</div>
+</div>
+</div>
+</div>
