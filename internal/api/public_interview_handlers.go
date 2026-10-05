@@ -36,8 +36,8 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 	// the first message (or the stream, which needs one for its channel).
 	// With no active session, the invite's latest one answers: once the
 	// participant has ended the interview it is completed, and the page
-	// shows its thank-you and opens no stream, which would start a new
-	// session on the same invite (#379 bug 214). Only an active session's
+	// shows its thank-you and opens no stream (#379 bug 214), which the
+	// server would refuse (#379 bug 216). Only an active session's
 	// transcript is sent: an ended one answers without it (null), so the
 	// link reads no finished conversation, as it could not before, and the
 	// thank-you page shows none.
@@ -82,6 +82,10 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 		writeRateLimited(w,
 			"You're sending messages a little too quickly. Please wait a moment and try again.",
 			retryAfter)
+		return
+	}
+	if h.refuseEndedInterview(w, r, invite.ID,
+		"we could not start your interview session; please try again in a moment") {
 		return
 	}
 	session, err := h.InterviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
@@ -175,6 +179,34 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	return err
 }
 
+// interviewEndedText is the public answer to a message or a stream connect
+// once the invite's interview has ended (#379 bug 216).
+const interviewEndedText = "This interview has ended — thank you."
+
+// refuseEndedInterview answers 409 when the invite's interview has ended: no
+// session of the invite is active, and its latest one is completed. A
+// message or a stream would otherwise start a new, anonymous session on the
+// same invite (StartOrResumeSession); a member who wants a second interview
+// with the same person sends a new invite. Returns true when it has
+// answered, a lookup's failure included (failure is that answer's public
+// text: the storage error's own must never reach the public).
+func (h *Handler) refuseEndedInterview(w http.ResponseWriter, r *http.Request, inviteID, failure string) bool {
+	active, err := h.InterviewService.FindActiveSession(inviteID)
+	var latest *interviews.Session
+	if err == nil && active == nil {
+		latest, err = h.InterviewService.FindLatestSession(inviteID)
+	}
+	if err != nil {
+		respondInternal(w, r, failure, err)
+		return true
+	}
+	if latest == nil || latest.Status != interviews.SessionStatusCompleted {
+		return false
+	}
+	writeJSONError(w, http.StatusConflict, interviewEndedText)
+	return true
+}
+
 // allowInterviewRead applies the coarse per-IP bucket for the
 // unauthenticated interview intro GET. Returns false after writing the 429
 // when the caller is over budget.
@@ -207,6 +239,12 @@ func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) 
 	}
 	// The SSE channel is keyed by session, so the stream genuinely needs
 	// one; StartOrResumeSession reuses the active session when it exists.
+	// An ended interview's link opens none: refused before the stream's
+	// head is written (#379 bug 216).
+	if h.refuseEndedInterview(w, r, invite.ID,
+		"we could not open your interview stream; please reload the page") {
+		return
+	}
 	session, err := h.InterviewService.StartOrResumeSession(invite.ID, interview.ID, "")
 	if err != nil {
 		// Unauthenticated endpoint: storage-error text must never leak.

@@ -77,7 +77,7 @@ POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
 POST /api/v1/projects/{id}/test-runs: 201, 400, 403, 404; test_runs_results
 POST /api/v1/projects/{id}/work-items: 201, 400, 403, 404; work_items
 POST /api/v1/public/interviews/{token}/finish: 204, 404; interviews
-POST /api/v1/public/interviews/{token}/messages: 200, 400, 404, 429; interviews
+POST /api/v1/public/interviews/{token}/messages: 200, 400, 404, 409, 429; interviews
 POST /api/v1/shared-products: 201, 400, 403, 409, 429; shared_products
 POST /api/v1/shared-products/{id}/report: 204, 403, 404; shared_products
 POST /api/v1/test-results/{id}/citations: 201, 400, 403, 404; evidence

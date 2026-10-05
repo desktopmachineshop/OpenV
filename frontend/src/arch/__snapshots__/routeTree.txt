@@ -54,7 +54,7 @@ index routes: 1
   /login                           <Login>  [eager ./views/Login#Login]
   /verify-email                    <VerifyEmail>  [eager ./views/VerifyEmail#VerifyEmail]
   /reset-password                  <ResetPassword>  [eager ./views/ResetPassword#ResetPassword]
-  /interview/:token                <InterviewChat>  [eager ./views/InterviewChat#InterviewChat]
+  /interview/:token                <InterviewChatRoute>  [eager ./views/InterviewChat#InterviewChatRoute]
   /share/:token                    <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
   /s/:token                        <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
   /open-source/:id                 <SharedProjectView source="open-source">  [lazy ./views/SharedProjectView#SharedProjectView]

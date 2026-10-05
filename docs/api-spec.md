@@ -1184,8 +1184,8 @@ when the next `message` arrives.
 | GET | `/api/v1/interviews/{id}/sessions` | List participant sessions | viewer |
 | GET | `/api/v1/interview-sessions/{id}/transcript` | Transcript | viewer |
 | GET | `/api/v1/public/interviews/{token}` | Public interview intro | token |
-| POST | `/api/v1/public/interviews/{token}/messages` | Participant sends a message | token |
-| GET | `/api/v1/public/interviews/{token}/stream` | SSE stream of interviewer replies | token |
+| POST | `/api/v1/public/interviews/{token}/messages` | Participant sends a message; `409` once the interview has ended (no active session, the latest completed), and no session is started | token |
+| GET | `/api/v1/public/interviews/{token}/stream` | SSE stream of interviewer replies; `409` once the interview has ended, as for a message | token |
 | POST | `/api/v1/public/interviews/{token}/finish` | Participant ends the session | token |
 
 ### Agents (definitions)

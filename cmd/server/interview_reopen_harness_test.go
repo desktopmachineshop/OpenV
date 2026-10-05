@@ -20,7 +20,9 @@ import (
 // answered no session, and the page asked for a name again and opened a
 // stream, which started a new, anonymous session on the same invite. The
 // intro still writes nothing: a fresh invite has no session after it, and an
-// ended one keeps its one session.
+// ended one keeps its one session. Nor does the ended link's stream or a
+// message to it (#379 bug 216): each is refused, 409, in the words the page
+// shows, where before the fix each started a new session on the invite.
 func TestAnEndedInterviewLinkReopensOnItsThankYouPage(t *testing.T) {
 	bin := serverBinary(t)
 	s, _ := bootServer(t, bin, nil)
@@ -164,6 +166,45 @@ func TestAnEndedInterviewLinkReopensOnItsThankYouPage(t *testing.T) {
 	}
 	if rows := sessions(); len(rows) != 1 || rows[0].ID != started.Session.ID || rows[0].Status != "completed" {
 		t.Fatalf("sessions after the intros of Dana's ended interview: %+v, want only hers, completed", rows)
+	}
+
+	// Her page's stream reconnects, and she writes again: both refused, 409,
+	// and neither opens a session (#379 bug 216). The stream is read only to
+	// its status line, which an open stream sends before its frames.
+	refused := func(method, path, body string) {
+		t.Helper()
+		req, err := http.NewRequest(method, s.base+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		resp, err := s.client().Do(req)
+		if err != nil {
+			t.Fatalf("%s %s: %v\n%s", method, path, err, s.output())
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusConflict {
+			t.Errorf("%s %s once Dana's interview ended: %s %s, want 409", method, path, resp.Status,
+				resp.Header.Get("Content-Type"))
+			return
+		}
+		answer, _ := io.ReadAll(resp.Body)
+		if got, want := string(answer), `{"error":"This interview has ended — thank you."}`+"\n"; got != want {
+			t.Errorf("%s %s once Dana's interview ended: %q, want %q", method, path, got, want)
+		}
+	}
+	refused(http.MethodGet, "/api/v1/public/interviews/"+dana+"/stream", "")
+	refused(http.MethodPost, "/api/v1/public/interviews/"+dana+"/messages",
+		`{"participant_name":"Dana","content":"One more thing: metric units."}`)
+	if rows := sessions(); len(rows) != 1 || rows[0].ID != started.Session.ID || rows[0].Status != "completed" {
+		t.Fatalf("sessions after a stream and a message to Dana's ended interview: %+v, want only hers, completed "+
+			"(a member who wants a second interview with her sends a new invite)", rows)
+	}
+	if got, _, sent := intro(dana); got == nil || got.ID != started.Session.ID || got.Status != "completed" || sent != "null" {
+		t.Fatalf("the intro of Dana's ended interview after the refusals: session %+v, transcript %s, want hers, "+
+			"completed, null", got, sent)
 	}
 	if got, _, _ := intro(lee); got != nil {
 		t.Fatalf("the intro of the fresh invite, once Dana's ended: session %+v, want none", *got)
