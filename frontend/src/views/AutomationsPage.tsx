@@ -11,6 +11,7 @@ import {
 import { useAppStore } from '../state/store';
 import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
+import { WORKSPACE_AUTOMATIONS_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
 import { EVENT_TYPES } from './AutomationsPageEvents';
 import {
@@ -44,7 +45,7 @@ export const AutomationsPage: React.FC = () => {
   const isAdmin = useAppStore((s) =>
     Boolean(s.currentUser?.is_admin || s.orgs.find((o) => o.id === s.activeOrgId)?.role === 'admin')
   );
-  const canChooseScope = useFeature('workspace-automations') && isAdmin;
+  const canChooseScope = useFeature(WORKSPACE_AUTOMATIONS_FEATURE) && isAdmin;
   const navigate = useNavigate();
   const confirm = useConfirm();
   // The run Run now started with no project, shown beside the list (?run=).

@@ -9,6 +9,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import { isPublicPath } from '../utils/publicPaths';
 import { getAPIBaseURL } from './baseURL';
+import { API_ERROR } from './errors';
 import { ORG_HEADER, readActiveOrg } from '../state/activeOrgStorage';
 import type { UploadProgressHandler } from './types/attachments';
 
@@ -89,7 +90,7 @@ client.interceptors.response.use(
     // but the auth endpoints until the emailed link is clicked.
     if (
       error.response?.status === 403 &&
-      error.response?.data?.code === 'email_unverified' &&
+      error.response?.data?.code === API_ERROR.email_unverified &&
       typeof window !== 'undefined' &&
       !window.location.pathname.startsWith('/verify-email')
     ) {

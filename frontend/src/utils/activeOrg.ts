@@ -1,7 +1,8 @@
 import { Org } from '../api/client';
+import type { FeatureKey } from '../generated/contract';
 
 /** Feature gate for choosing a default workspace (REQ-137). */
-export const DEFAULT_WORKSPACE_FEATURE = 'default-workspace';
+export const DEFAULT_WORKSPACE_FEATURE: FeatureKey = 'default-workspace';
 
 /**
  * Which workspace the app opens in once the member's workspaces are known.

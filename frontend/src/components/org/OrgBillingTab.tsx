@@ -3,7 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { BillingState, Org, PublicPlan, billingAPI, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { useFeature } from '../../hooks/useFeature';
+import { WORKSPACE_BILLING_FEATURE } from '../../features';
 import { ErrorBanner } from '../ui';
+import type { WorkspacePlan } from '../../generated/contract';
 
 /**
  * The workspace's subscription: what it is on, what that costs, and the two
@@ -26,7 +28,7 @@ export const PLAN_LABELS: Record<string, string> = {
   enterprise: 'Enterprise',
   open_source: 'Open source',
   self_host: 'Self-hosted',
-};
+} satisfies Record<WorkspacePlan, string>;
 
 export const planLabel = (plan: string): string => PLAN_LABELS[plan] || (plan ? plan : 'Single User');
 
@@ -140,7 +142,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
   const [interval, setInterval] = useState('month');
   const [currency, setCurrency] = useState('gbp');
   const [changing, setChanging] = useState(false);
-  const pickerOpen = useFeature('workspace-billing');
+  const pickerOpen = useFeature(WORKSPACE_BILLING_FEATURE);
 
   // The return from checkout: bind the completed session before anything
   // renders, then take the parameters out of the URL so a refresh does not

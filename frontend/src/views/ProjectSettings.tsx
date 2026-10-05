@@ -24,6 +24,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
+import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE, SHARE_LINKS_FEATURE } from '../features';
 import { QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { AttributeForm, RepoForm, emptyAttributeForm, emptyRepoForm } from './projectSettings/shared';
 import { GeneralTab } from './projectSettings/GeneralTab';
@@ -61,9 +62,9 @@ export const ProjectSettings: React.FC = () => {
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const confirm = useConfirm();
   // Both reach stable-channel workspaces at their next stable release.
-  const flowDown = useFeature('flow-down');
-  const ownersOn = useFeature('artifact-owners');
-  const shareLinksOn = useFeature('share-links');
+  const flowDown = useFeature(FLOW_DOWN_FEATURE);
+  const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
+  const shareLinksOn = useFeature(SHARE_LINKS_FEATURE);
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.

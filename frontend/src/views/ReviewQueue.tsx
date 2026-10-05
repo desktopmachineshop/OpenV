@@ -23,14 +23,15 @@ import {
   groupAttachments,
   previewText,
 } from './reviewArtifacts';
+import type { FeatureKey } from '../generated/contract';
 
 // The project-wide review round is gated until a stable release carries it.
-export const REVIEW_ROUND_FEATURE = 'project-review-round';
+export const REVIEW_ROUND_FEATURE: FeatureKey = 'project-review-round';
 // Deciding a review from the queue — previews, inline Approve / Send back,
 // selection and bulk actions — is gated the same way. What it writes is the
 // ordinary status change and the ordinary note, so a decision made on nightly
 // reads correctly in a workspace that has not received the controls yet.
-export const REVIEW_DECISIONS_FEATURE = 'review-queue-decisions';
+export const REVIEW_DECISIONS_FEATURE: FeatureKey = 'review-queue-decisions';
 
 type Section = 'all' | 'links' | 'artifacts';
 

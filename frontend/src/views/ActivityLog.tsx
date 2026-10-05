@@ -4,13 +4,15 @@ import { DomainEvent, eventsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner } from '../components/ui';
+import type { DomainEventType } from '../generated/contract';
 
 // Every event type a project's activity can hold: the types the backend
 // emits (internal/domain/events/events.go), in its order, less the
 // workspace-level org.* membership events, which carry no project and so
-// never appear in a project's log. src/arch/vocabParity.test.ts holds this
-// list to Go's.
-const EVENT_TYPES = [
+// never appear in a project's log. A typed subset of the generated
+// contract's DomainEventType (refactor plan X4b), so a type Go renames or
+// drops fails tsc; src/arch/vocabParity.test.ts holds this list to Go's.
+const EVENT_TYPES: DomainEventType[] = [
   'artifact.created',
   'artifact.updated',
   'artifact.deleted',

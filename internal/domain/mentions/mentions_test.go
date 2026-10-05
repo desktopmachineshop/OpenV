@@ -1,6 +1,9 @@
 package mentions
 
 import (
+	"bytes"
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -62,33 +65,48 @@ func TestHandlesWithoutAName(t *testing.T) {
 // change here that is not made there produces mentions that name nobody —
 // silently, because an unmatched @token is indistinguishable from prose.
 //
-// Change one side and this test fails; change both and it passes. That is the
-// whole point of it.
+// The cases are testdata/handles.json, which the composer's test reads too
+// (refactor plan X4b): change one side and that side's test fails; change
+// both, and the cases with them, and both pass. That is the whole point of it.
 func TestHandlesOrderMatchesTheComposer(t *testing.T) {
-	cases := []struct {
-		name, email string
-		want        []string
-	}{
-		{"Dana Okoro", "dana.okoro@example.com", []string{"danaokoro", "dana", "dana.okoro"}},
-		{"", "jo@example.com", []string{"jo"}},
-		{"Dana Okoro", "not-an-email", []string{"danaokoro", "dana"}},
-		// An apostrophe survives here but the @([\w.-]+) pattern stops at it,
-		// so the composer skips this handle and writes the next one instead.
-		{"Ciara O'Brien", "ciara.obrien@example.com", []string{"ciarao'brien", "ciara", "ciara.obrien"}},
+	data, err := os.ReadFile(handleCasesFile)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, c := range cases {
-		got := Handles(c.name, c.email)
-		if len(got) != len(c.want) {
-			t.Errorf("Handles(%q, %q) = %v, want %v", c.name, c.email, got, c.want)
+	var file struct {
+		About string `json:"about"`
+		Cases []struct {
+			Why     string   `json:"why"`
+			Name    string   `json:"name"`
+			Email   string   `json:"email"`
+			Handles []string `json:"handles"`
+		} `json:"cases"`
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&file); err != nil {
+		t.Fatalf("%s: %v", handleCasesFile, err)
+	}
+	if len(file.Cases) == 0 {
+		t.Fatalf("%s holds no case", handleCasesFile)
+	}
+	for _, c := range file.Cases {
+		got := Handles(c.Name, c.Email)
+		if len(got) != len(c.Handles) {
+			t.Errorf("%s: Handles(%q, %q) = %v, want %v", c.Why, c.Name, c.Email, got, c.Handles)
 			continue
 		}
 		for i := range got {
-			if got[i] != c.want[i] {
-				t.Errorf("Handles(%q, %q)[%d] = %q, want %q", c.name, c.email, i, got[i], c.want[i])
+			if got[i] != c.Handles[i] {
+				t.Errorf("%s: Handles(%q, %q)[%d] = %q, want %q", c.Why, c.Name, c.Email, i, got[i], c.Handles[i])
 			}
 		}
 	}
 }
+
+// handleCasesFile holds the handle cases this package's test and the note
+// composer's share; its about says what each field is.
+const handleCasesFile = "testdata/handles.json"
 
 func member(id, name, email string) *members.Member {
 	return &members.Member{UserID: id, UserName: name, UserEmail: email}

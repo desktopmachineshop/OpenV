@@ -13,13 +13,14 @@ import {
 } from './attachmentKinds';
 import { useAlert, useConfirm, usePrompt } from './ui';
 import { useFeature } from '../hooks/useFeature';
+import type { FeatureKey } from '../generated/contract';
 import './ImageGallery.css';
 
 /** The feature key that gates renaming a figure (REQ-157). */
-export const FIGURE_TITLES_FEATURE = 'figure-titles';
+export const FIGURE_TITLES_FEATURE: FeatureKey = 'figure-titles';
 
 /** Restoring an older version of a figure sits behind this gate. */
-export const FIGURE_REVERT_FEATURE = 'figure-revert';
+export const FIGURE_REVERT_FEATURE: FeatureKey = 'figure-revert';
 
 interface ImageGalleryProps {
   artifactId: string;

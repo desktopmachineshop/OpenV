@@ -32,6 +32,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 |---|---|
 | `index.tsx`, `App.tsx` | the entry with the eager stylesheet imports in order; the hand-written `<Route>` table (K13), each view eager or `lazy()` |
 | `index.css`, `theme.css`, `theme.ts`, `appShortcuts.ts` | global styles, the theme and its storage key, keyboard shortcuts |
+| `features.ts`, `sseEvents.ts` | the feature gates with no module of their own to sit beside; the SSE event names, held to `generated/contract.ts` |
 | `views/*.tsx` | the pages; a split view keeps its path and export, with its panes in `views/moduleView/` or `views/projectSettings/` |
 | `components/**` | shared components; `components/ui/**` is the UI kit, and `components/agents/`, `components/crews/`, `components/kanban/`, `components/org/` and `components/wizard/` hold one feature each |
 | `components/ProjectLayout.tsx`, `components/navSections.ts`, `components/helpTopics.ts` | the project shell: its `navSections` list, the menu state, the help topic per path |
@@ -79,12 +80,17 @@ Scaffold: `node frontend/scripts/scaffold.mjs page <name>` (X17, in N3's tool)
 
 **Add an API call.** In `api/`; see `api/README.md`.
 
-**Read a feature flag.** `useFeature('<key>')` from `hooks/useFeature.ts`,
-with the key registered in `internal/domain/release/features.go`.
+**Read a feature flag.** `useFeature(X_FEATURE)` from `hooks/useFeature.ts`,
+where `X_FEATURE` is a const typed `FeatureKey` (`generated/contract.ts`), so
+its key must be one `internal/domain/release/features.go` registers. The
+const sits beside the module that owns the gate, or in `features.ts` when
+none does.
 
 **Change a vocabulary the Go side owns.** Change Go first
-(`internal/domain/README.md`), then the copy here; `arch/vocabParity.test.ts`
-names a copy that disagrees with `contracts/vocab.json`.
+(`internal/domain/README.md`) and regenerate `generated/contract.ts`
+(`UPDATE_CONTRACTS=1 go test ./internal/contract/...`): `tsc` names each
+copy typed by it that no longer fits, and `arch/vocabParity.test.ts` each
+copy that disagrees with `contracts/vocab.json`.
 
 ## Guards
 

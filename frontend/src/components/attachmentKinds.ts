@@ -1,4 +1,5 @@
 import { Attachment, AttachmentKind } from '../api/client';
+import type { FeatureKey } from '../generated/contract';
 
 // How the app talks about an attached file.
 //
@@ -142,5 +143,5 @@ export const UNSUPPORTED_UPLOAD_MESSAGE =
  * gate that made an existing file unreadable or existing prose broken would
  * be a regression dressed as a release policy.
  */
-export const ATTACHMENT_FORMATS_FEATURE = 'attachment-formats';
-export const FIGURE_CITATIONS_FEATURE = 'figure-citations';
+export const ATTACHMENT_FORMATS_FEATURE: FeatureKey = 'attachment-formats';
+export const FIGURE_CITATIONS_FEATURE: FeatureKey = 'figure-citations';

@@ -14,7 +14,7 @@ import { AddTodoControl, NoteTodoChip } from './NoteTodo';
 import { NoteText } from './NoteText';
 import { NOTE_TAGGING_FEATURE } from './noteTagging';
 import { NoteComposer, postNote } from './NoteComposer';
-import { TODO_LIST_FEATURE } from '../views/TodoList';
+import { TODO_LIST_FEATURE } from '../features';
 
 interface ChatterPanelProps {
   /** The artifact whose notes these are; absent when nothing is selected. */

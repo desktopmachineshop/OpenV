@@ -1,3 +1,5 @@
+import type { FeatureKey } from '../generated/contract';
+
 /**
  * Tagging inside a note: "@" and "@@" for people, "#" and "##" for references.
  *
@@ -8,4 +10,4 @@
  * "##REQ-12" renders for everybody, because a gate that broke existing prose
  * would be worse than no gate.
  */
-export const NOTE_TAGGING_FEATURE = 'note-tagging';
+export const NOTE_TAGGING_FEATURE: FeatureKey = 'note-tagging';

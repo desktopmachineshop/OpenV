@@ -63,10 +63,11 @@ The notification and event types themselves are domain packages
 **Add a notification type.**
 1. Add the type in `internal/domain/notifications/notifications.go` and
    create it from the notifier or the monitor that sees the cause.
-2. Give it a deep link on both sides, with a row in each side's table:
-   `notificationPath` (`email.go`, `TestEmailAndPushLinkWhereTheBellOpens`)
-   and the bell's `pathForNotification`
-   (`frontend/src/components/NotificationBellPaths.ts`).
+2. Give it a deep link on both sides, `notificationPath` (`email.go`) and
+   the bell's `pathForNotification`
+   (`frontend/src/components/NotificationBellPaths.ts`), and a case in
+   `testdata/deep_links.json`, which both sides' tests read
+   (`TestEmailAndPushLinkWhereTheBellOpens` and `NotificationBell.test.tsx`).
 3. Add a scenario to `ncScenarios` (`notification_content_test.go`), then
    regenerate the Go goldens and, after them, the bell's:
    `UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'`

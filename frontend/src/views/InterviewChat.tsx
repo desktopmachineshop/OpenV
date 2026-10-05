@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { publicInterviewAPI, InterviewMessage } from '../api/client';
 import { useConfirm } from '../components/ui';
 import { ChatMarkdown } from '../components/ChatMarkdown';
+import { SSE_EVENT } from '../sseEvents';
 
 type Phase = 'loading' | 'error' | 'name' | 'chat' | 'done';
 
@@ -53,7 +54,7 @@ export const InterviewChat: React.FC = () => {
     es.onopen = () => {
       retryRef.current = 0;
     };
-    es.addEventListener('message', (event: MessageEvent) => {
+    es.addEventListener(SSE_EVENT.message, (event: MessageEvent) => {
       try {
         const msg = JSON.parse(event.data) as InterviewMessage;
         if (msg && msg.id) appendMessage(msg);
@@ -61,7 +62,7 @@ export const InterviewChat: React.FC = () => {
         // ignore malformed events
       }
     });
-    es.addEventListener('assistant_partial', (event: MessageEvent) => {
+    es.addEventListener(SSE_EVENT.assistant_partial, (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as { run_id?: string; text?: string };
         if (typeof data?.text !== 'string' || !data.text) return;
