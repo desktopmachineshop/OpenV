@@ -113,6 +113,7 @@ type Repository interface {
 	SetParticipantName(sessionID, name string) error
 	FindSessionByID(id string) (*Session, error)
 	FindActiveSessionByInvite(inviteID string) (*Session, error) // nil, nil when none
+	FindLatestSessionByInvite(inviteID string) (*Session, error) // any status; nil, nil when none
 	ListSessionsByInterview(interviewID string) ([]*Session, error)
 	// ListSessionsByProject returns the most recent sessions across every
 	// interview in a project, newest first, at most limit rows.
@@ -139,6 +140,7 @@ type Service interface {
 
 	StartOrResumeSession(inviteID, interviewID, participantName string) (*Session, error)
 	FindActiveSession(inviteID string) (*Session, error) // nil, nil when none
+	FindLatestSession(inviteID string) (*Session, error) // any status; nil, nil when none
 	GetSession(id string) (*Session, error)
 	ListSessions(interviewID string) ([]*Session, error)
 	ListProjectSessions(projectID string, limit int) ([]*Session, error)
@@ -381,6 +383,14 @@ func (s *DefaultService) StartOrResumeSession(inviteID, interviewID, participant
 // read-only public endpoints so an unauthenticated page view never writes.
 func (s *DefaultService) FindActiveSession(inviteID string) (*Session, error) {
 	return s.repo.FindActiveSessionByInvite(inviteID)
+}
+
+// FindLatestSession returns an invite's most recent session, whatever its
+// status, without creating one; nil, nil when the invite has none. The
+// public intro reads it when the invite has no active session, so a link
+// whose interview has ended reopens on that ended session.
+func (s *DefaultService) FindLatestSession(inviteID string) (*Session, error) {
+	return s.repo.FindLatestSessionByInvite(inviteID)
 }
 
 // GetSession retrieves a session by ID.

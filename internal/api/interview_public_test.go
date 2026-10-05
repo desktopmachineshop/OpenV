@@ -21,6 +21,7 @@ type fakeInterviewService struct {
 	interview *interviews.Interview
 	invite    *interviews.Invite
 	session   *interviews.Session // active session, nil for a first visit
+	latest    *interviews.Session // FindLatestSession's answer: the newest session, of any status
 	messages  []*interviews.Message
 	starts    int   // StartOrResumeSession call count
 	startErr  error // returned by StartOrResumeSession after counting the call
@@ -35,6 +36,10 @@ func (f *fakeInterviewService) ResolveInviteToken(rawToken string) (*interviews.
 
 func (f *fakeInterviewService) FindActiveSession(inviteID string) (*interviews.Session, error) {
 	return f.session, nil
+}
+
+func (f *fakeInterviewService) FindLatestSession(inviteID string) (*interviews.Session, error) {
+	return f.latest, nil
 }
 
 func (f *fakeInterviewService) StartOrResumeSession(inviteID, interviewID, participantName string) (*interviews.Session, error) {
@@ -165,6 +170,75 @@ func TestPublicInterviewIntroDoesNotCreateSession(t *testing.T) {
 	}
 	if payload.InterviewName != "Test Interview" {
 		t.Fatalf("interview_name = %q", payload.InterviewName)
+	}
+}
+
+// introSession reads the intro of the good token and decodes its session
+// and transcript.
+func introSession(t *testing.T, h *Handler) (*interviews.Session, []*interviews.Message) {
+	t.Helper()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/public/interviews/good-token", nil)
+	r = mux.SetURLVars(r, map[string]string{"token": "good-token"})
+	w := httptest.NewRecorder()
+	h.PublicInterviewIntro(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("intro: status = %d, body %q", w.Code, w.Body.String())
+	}
+	var payload struct {
+		Session    *interviews.Session   `json:"session"`
+		Transcript []*interviews.Message `json:"transcript"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("intro body: %v", err)
+	}
+	return payload.Session, payload.Transcript
+}
+
+// TestPublicInterviewIntroAfterFinishAnswersTheEndedSession is #379 bug 214:
+// once the participant has ended the interview, the invite has no active
+// session, and the intro answers its latest one, completed, so the page
+// shows its thank-you instead of the name prompt (whose stream would start a
+// new session on the same invite). It answers without the ended session's
+// transcript, which it does not read, and still writes nothing.
+func TestPublicInterviewIntroAfterFinishAnswersTheEndedSession(t *testing.T) {
+	h, fake := newInterviewTestHandler(t)
+	ended := time.Now()
+	fake.latest = &interviews.Session{ID: "sess-1", InterviewID: "int-1", InviteID: "inv-1",
+		ParticipantName: "Ada", Status: interviews.SessionStatusCompleted, StartedAt: ended.Add(-time.Hour), EndedAt: &ended}
+	fake.messages = []*interviews.Message{{ID: "msg-1", SessionID: "sess-1", Role: interviews.RoleParticipant, Content: "hello"}}
+
+	session, transcript := introSession(t, h)
+	if session == nil {
+		t.Fatal("intro after finish returned no session; the page would ask for a name again")
+	}
+	if session.ID != "sess-1" || session.Status != interviews.SessionStatusCompleted {
+		t.Fatalf("intro after finish: session %s %q, want sess-1 %q", session.ID, session.Status, interviews.SessionStatusCompleted)
+	}
+	if len(transcript) != 0 {
+		t.Fatalf("intro after finish: transcript %+v, want none (an ended session answers without it)", transcript)
+	}
+	if fake.starts != 0 {
+		t.Fatalf("intro created a session (StartOrResumeSession called %d times)", fake.starts)
+	}
+}
+
+// TestPublicInterviewIntroPrefersTheActiveSession pins that an active session
+// answers the intro as before, even when a newer session of the invite has
+// ended, so the intro shows the session a message or the stream resumes.
+func TestPublicInterviewIntroPrefersTheActiveSession(t *testing.T) {
+	h, fake := newInterviewTestHandler(t)
+	now := time.Now()
+	fake.session = &interviews.Session{ID: "sess-1", InterviewID: "int-1", InviteID: "inv-1",
+		ParticipantName: "Ada", Status: interviews.SessionStatusActive, StartedAt: now.Add(-time.Hour)}
+	fake.latest = &interviews.Session{ID: "sess-2", InterviewID: "int-1", InviteID: "inv-1",
+		Status: interviews.SessionStatusCompleted, StartedAt: now.Add(-time.Minute), EndedAt: &now}
+
+	session, _ := introSession(t, h)
+	if session == nil || session.ID != "sess-1" || session.Status != interviews.SessionStatusActive {
+		t.Fatalf("intro with an active session: %+v, want sess-1, active", session)
+	}
+	if fake.starts != 0 {
+		t.Fatalf("intro created a session (StartOrResumeSession called %d times)", fake.starts)
 	}
 }
 

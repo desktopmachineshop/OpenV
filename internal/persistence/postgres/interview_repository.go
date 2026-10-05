@@ -375,6 +375,29 @@ func (r *InterviewRepository) FindActiveSessionByInvite(inviteID string) (*inter
 	return session, nil
 }
 
+// FindLatestSessionByInvite retrieves an invite's most recent session,
+// whatever its status; nil, nil when the invite has none
+func (r *InterviewRepository) FindLatestSessionByInvite(inviteID string) (*interviews.Session, error) {
+	query := `
+		SELECT id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at
+		FROM interview_sessions
+		WHERE invite_id = $1
+		ORDER BY started_at DESC
+		LIMIT 1
+	`
+
+	row := r.db.QueryRow(query, inviteID)
+	session, err := scanInterviewSession(row.Scan)
+	if err != nil {
+		if noRow(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return session, nil
+}
+
 // ListSessionsByInterview retrieves all sessions for an interview, newest first
 func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*interviews.Session, error) {
 	query := `

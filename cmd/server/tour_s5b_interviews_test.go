@@ -32,14 +32,15 @@ import (
 // the transcript frame by frame), messages (the first names the anonymous
 // session; each queues an interviewer run, whose prompt the area reads; an
 // interview with no agent answers with a system note), finish (a
-// chatter.created event, and the next message opens a new session), and the
-// three rate limits: per invite on messages (spent only once a message is
-// read and has content), per network on intros and on streams (spent before
-// the token is read), each with the last request its bucket lets through and
-// the 429 after it, with its Retry-After. Last, two accounts from workspaces
-// of their own: an editor of P, whose interview gets P's workspace's
-// interviewer rather than its own workspace's (every workspace is seeded
-// with one), and an outsider, whom the reads of P's interviews, sessions and
+// chatter.created event; the intro then answers the ended session, without
+// its transcript, and the next message opens a new session), and the three
+// rate limits: per invite on messages (spent only once a message is read and
+// has content), per network on intros and on streams (spent before the token
+// is read), each with the last request its bucket lets through and the 429
+// after it, with its Retry-After. Last, two accounts from workspaces of their
+// own: an editor of P, whose interview gets P's workspace's interviewer
+// rather than its own workspace's (every workspace is seeded with one), and
+// an outsider, whom the reads of P's interviews, sessions and
 // transcripts refuse.
 //
 // Every JSON answer but a refusal and a 429 is a bare encode with no
@@ -359,8 +360,9 @@ func interviewsTour(tr *tour) {
 		note("an S5d route, read for the prompt the interview handler builds; the run stays queued "+
 			"(HOSTED_RUNNERS=off, no runner) and gets no tracking card"))
 
-	// Finishing: with no session, with one (an event), and again; the next
-	// message opens a new session.
+	// Finishing: with no session, with one (an event), and again; the intro
+	// then answers the ended session, without its transcript, and the next
+	// message opens a new one.
 	tr.step("finish an invite with no session: nothing to finish", anon, "POST /api/v1/public/interviews/{token}/finish",
 		at("token", "{{inv_future.token}}"))
 	tr.step("finish the expired invite", anon, "POST /api/v1/public/interviews/{token}/finish",
@@ -369,8 +371,10 @@ func interviewsTour(tr *tour) {
 		"POST /api/v1/public/interviews/{token}/finish", at("token", "{{inv1.token}}"))
 	tr.step("Dana finishes again: no active session, so nothing to finish", anon,
 		"POST /api/v1/public/interviews/{token}/finish", at("token", "{{inv1.token}}"))
-	tr.step("the intro once Dana finished: no active session", anon, "GET /api/v1/public/interviews/{token}",
-		at("token", "{{inv1.token}}"), spent)
+	tr.step("the intro once Dana finished: her latest session, completed, without its transcript (#379 bug 214)",
+		anon, "GET /api/v1/public/interviews/{token}", at("token", "{{inv1.token}}"), spent,
+		note("no session is active, so the invite's latest answers, without its transcript (only an active "+
+			"session's is sent), and the page shows its thank-you with no stream"))
 	again := tr.step("Dana writes again: a new session", anon, "POST /api/v1/public/interviews/{token}/messages",
 		at("token", "{{inv1.token}}"), jsonBody(`{"participant_name":"Dana","content":"One more thing: metric units."}`))
 	again.capture("s2", "/session/id")
