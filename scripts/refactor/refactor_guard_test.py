@@ -89,6 +89,9 @@ GUARD_PY = """X2B_CALL_SHAPE_CHANGES = [
 X14B_IMPORT_EDGES = [
 ]
 
+X11B_IMPORT_EDGES = [
+]
+
 BOOT_STEPS_CHANGES = [
 ]
 
@@ -1013,6 +1016,26 @@ class DataTest(unittest.TestCase):
         self.assertIsInstance(rg.x14b_edges_in(text), list)
         self.assertEqual(rg.x14b_edges_in(filled), [("internal/x", "internal/y")])
         self.assertIsNone(rg.x14b_edges_in(filled.replace('"),', '", "z"),')))
+
+    def test_own_x11b_block_lists_x11bs_edges(self):
+        with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
+            text = f.read()
+        self.assertIsNotNone(rg.find_block(text, "X11B_IMPORT_EDGES"))
+        # Filled here, in class T, with exactly the edges X11b adds: the
+        # API's into the package it creates, and that package's own.
+        self.assertEqual(rg.X11B_IMPORT_EDGES, [
+            ("internal/api", "internal/domain/traceability"),
+            ("internal/domain/traceability", "internal/domain/artifacts"),
+            ("internal/domain/traceability", "internal/domain/chatter"),
+            ("internal/domain/traceability", "internal/domain/links"),
+            ("internal/domain/traceability", "internal/domain/members"),
+        ])
+        # The job reads the list from the pull request's copy of this file,
+        # which no class may edit as data: X11b's class E commit leaves it.
+        self.assertEqual(rg.x11b_edges_in(text), rg.X11B_IMPORT_EDGES)
+        self.assertNotIn("X11B_IMPORT_EDGES", rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT])
+        self.assertIsNone(rg.x11b_edges_in(text.replace('"internal/domain/members"),',
+                                                        '"internal/domain/members", "z"),')))
 
     def test_own_boot_steps_block_is_found(self):
         with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
@@ -2128,6 +2151,134 @@ class RatchetTest(RepoTest):
         self.assertFailsWith(g, "(2) ratchets", "counts.raw_json_encodes (249 -> 250)")
         self.assertFailsWith(g, "(2) ratchets", "file_lines.internal/api/loader.go")
         self.assertEqual(len(g.failures), 2, [f.render() for f in g.failures])
+
+    # X11b's named exception (§8.3): in class E, an import edge listed in
+    # X11B_IMPORT_EDGES, into a package the base has or one the commit
+    # creates, is not a raise. The list is filled in class T ahead of X11b,
+    # so these tests fill it on the base, and X11b's commit leaves it.
+
+    X11B_EDGES = [("internal/api", "internal/domain/traceability"),
+                  ("internal/domain/traceability", "internal/domain/artifacts"),
+                  ("internal/domain/traceability", "internal/domain/chatter"),
+                  ("internal/domain/traceability", "internal/domain/links"),
+                  ("internal/domain/traceability", "internal/domain/members")]
+    X11B_LISTED = GUARD_PY.replace("X11B_IMPORT_EDGES = [\n]", "X11B_IMPORT_EDGES = [\n" + "".join(
+        f'    ("{a}", "{b}"),\n' for a, b in X11B_EDGES) + "]")
+    X11B_PACKAGE = {"internal/domain/traceability/traceability.go": "package traceability\n"}
+
+    @staticmethod
+    def x11b_adds_its_edges(r):
+        r["import_edges"]["internal/api"].append("internal/domain/traceability")
+        r["import_edges"]["internal/domain/traceability"] = [
+            "internal/domain/artifacts", "internal/domain/chatter", "internal/domain/links", "internal/domain/members"]
+
+    def x11b(self, klass, change, files=None, listed=None):
+        """X11b's shape: the packages its edges go to on the base, with
+        X11B_IMPORT_EDGES filled there (listed, by default X11b's edges, or
+        none when listed is False), then one commit of the given class that
+        changes ratchets.json and adds files (by default the package X11b
+        creates, internal/domain/traceability)."""
+        self.packages_on_base("internal/domain/artifacts", "internal/domain/chatter", "internal/domain/links",
+                              "internal/domain/members")
+        if listed is not False:
+            self.git("checkout", "-q", "main")
+            self.commit("list", {"scripts/refactor/refactor_guard.py": listed or self.X11B_LISTED})
+            self.git("checkout", "-q", "pr")
+            self.git("reset", "-q", "--hard", "main")
+        out = self.ratchets(change)
+        out.update(self.X11B_PACKAGE if files is None else files)
+        self.commit("X11b", out, trailers(klass, Refactor_Characterization="internal/api/handlers_test.go")
+                    if klass == "E" else trailers(klass))
+
+    def test_x11b_listed_edges_into_the_package_it_creates_pass_in_class_e(self):
+        self.x11b("E", self.x11b_adds_its_edges)
+        g = self.guard("refactor")
+        self.assertPasses(g)
+        for importer, target in self.X11B_EDGES:
+            self.assertIn(f"{rg.RATCHETS_FILE}: X11b's listed import edge {importer} -> {target} (§8.3)", g.notes)
+
+    def test_x11b_unlisted_edge_fails(self):
+        def change(r):
+            self.x11b_adds_its_edges(r)
+            r["import_edges"]["internal/api"].append("internal/domain/links")
+        self.x11b("E", change)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.internal/api."
+                             "internal/domain/links")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x11b_unlisted_edge_of_its_new_importer_key_fails(self):
+        def change(r):
+            self.x11b_adds_its_edges(r)
+            r["import_edges"]["internal/domain/traceability"].append("internal/domain/exports")
+        self.x11b("E", change)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.internal/domain/traceability")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x11b_listed_edge_into_a_package_neither_on_the_base_nor_created_fails(self):
+        self.x11b("E", self.x11b_adds_its_edges, files={})
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/traceability")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x11b_edge_fails_while_the_pull_requests_list_is_empty(self):
+        self.addCleanup(setattr, rg, "X11B_IMPORT_EDGES", rg.X11B_IMPORT_EDGES)
+        rg.X11B_IMPORT_EDGES = list(self.X11B_EDGES)  # the running script's copy, not the pull request's
+        self.x11b("E", self.x11b_adds_its_edges, listed=False)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/traceability")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/traceability")
+
+    def test_x11b_list_that_does_not_parse_counts_as_empty(self):
+        self.x11b("E", self.x11b_adds_its_edges, listed=self.X11B_LISTED.replace('"),', '")+1,'))
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/traceability")
+        self.assertTrue(any("X11B_IMPORT_EDGES" in w for w in g.warnings), g.warnings)
+
+    def test_x11b_list_edited_in_class_e_fails(self):
+        self.commit("X11b list", {"scripts/refactor/refactor_guard.py": self.X11B_LISTED},
+                    trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
+
+    def test_x11b_list_edited_in_class_t_passes(self):
+        self.commit("X11b list", {"scripts/refactor/refactor_guard.py": self.X11B_LISTED}, trailers("T"))
+        self.assertPasses(self.guard("refactor", "refactor:tooling"))
+
+    def assert_x11b_edges_fail_in(self, klass, *labels):
+        self.x11b(klass, self.x11b_adds_its_edges)
+        g = self.guard("refactor", *labels)
+        self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.internal/api."
+                             "internal/domain/traceability")
+
+    def test_x11b_listed_edges_fail_in_class_c(self):
+        self.assert_x11b_edges_fail_in("C", "refactor:test")
+
+    def test_x11b_listed_edges_fail_in_class_t(self):
+        self.assert_x11b_edges_fail_in("T", "refactor:tooling")
+
+    def test_x11b_listed_edges_fail_in_class_a(self):
+        self.assert_x11b_edges_fail_in("A", "refactor:move")
+
+    def test_x11b_exception_loosens_no_other_ratchet(self):
+        def change(r):
+            self.x11b_adds_its_edges(r)
+            r["counts"]["raw_json_encodes"] = 250
+            r["file_lines"]["internal/domain/traceability/traceability.go"] = 900
+        self.x11b("E", change)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "counts.raw_json_encodes (249 -> 250)")
+        self.assertFailsWith(g, "(2) ratchets", "file_lines.internal/domain/traceability/traceability.go")
+        self.assertEqual(len(g.failures), 2, [f.render() for f in g.failures])
+
+    def test_x14b_list_does_not_admit_x11bs_new_package(self):
+        listed = self.X11B_LISTED.replace("X14B_IMPORT_EDGES = [\n]",
+                                          'X14B_IMPORT_EDGES = [\n    ("internal/api", "internal/domain/loader"),\n]')
+        self.x11b("E", lambda r: r["import_edges"]["internal/api"].append("internal/domain/loader"),
+                  files={"internal/domain/loader/loader.go": "package loader\n"}, listed=listed)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/loader")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
 
 
 class AllowlistTest(RepoTest):

@@ -1099,8 +1099,13 @@ shows a change is call shape only. Beside it, the class E PR X14b has a
 named ratchet exception: a class E commit may add to `ratchets.json`'s
 `import_edges` only the edges listed in `X14B_IMPORT_EDGES`, each into a
 package the base already has, which X14b fills in its own commit with the
-`internal/api` → `internal/domain/snapshot` edge its loader adds; every
-other ratchet stays shrink-only. And S4's `boot_steps.txt` has a named
+`internal/api` → `internal/domain/snapshot` edge its loader adds; the class
+E PR X11b has the same exception for the edges listed in
+`X11B_IMPORT_EDGES`, each into a package the base has or the commit
+creates, filled in a class T commit ahead of X11b with the
+`internal/api` → `internal/domain/traceability` edge and the new package's
+own (to `artifacts`, `chatter`, `links` and `members`), and left as it is by
+X11b; every other ratchet stays shrink-only. And S4's `boot_steps.txt` has a named
 golden exception for the class E steps that change it on purpose (X6, X7b,
 X7c and X10b; see the S4 note): each lists the lines it replaces, adds or
 removes in `BOOT_STEPS_CHANGES`, in its own class E commit, and a change
