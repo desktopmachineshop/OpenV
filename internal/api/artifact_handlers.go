@@ -312,25 +312,14 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			removeInterfaceArray[i] = v
 		}
 
-		// Fetch link details BEFORE removing them (for chatter)
-		for _, linkID := range req.PendingLinkRemoves {
-			if link, err := h.LinkService.GetLink(linkID); err == nil {
-				removedLinks = append(removedLinks, link)
-			}
-		}
-
-		// Build link details for adds. Unlike removals, adds are not IDs of
-		// existing links: each entry is the link object about to be created
-		// ({from_id,to_id,type,...}), so read those fields for the chatter
-		// summary.
-		addedLinks = linksFromPendingAdds(req.PendingLinkAdds)
-
-		affected, err := h.processManagedLinkChanges(r, oldArtifact.ProjectID, id, req.PendingLinkAdds, removeInterfaceArray)
+		// The note lists the links the edit made and removed, read back
+		// from what it did, never from what it was asked (#379 bug 196).
+		changes, err := h.processManagedLinkChanges(r, oldArtifact.ProjectID, id, req.PendingLinkAdds, removeInterfaceArray)
 		if err != nil {
 			respondInternal(w, r, "failed to process link changes", err)
 			return
 		}
-		affectedArtifactIDs = affected
+		affectedArtifactIDs, addedLinks, removedLinks = changes.affected, changes.added, changes.removed
 
 		// After processing link changes, fetch current links and store in snapshot (deduplicated)
 		seenLinkIDs := make(map[string]bool)
@@ -376,6 +365,17 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondInternal(w, r, "failed to update artifact", err)
 		return
+	}
+
+	// A content change marks every link of the artifact suspect, the ones
+	// this edit has just made too; those were made against the new content,
+	// so they are cleared again (#379 bug 197).
+	if artifact.Type != oldArtifact.Type || artifact.Title != oldArtifact.Title || artifact.Body != oldArtifact.Body {
+		for _, link := range addedLinks {
+			if _, err := h.LinkService.ConfirmLink(link.ID); err != nil {
+				slog.Warn("api: failed to clear the suspect flag of a link made with a content change", "link_id", link.ID, "error", err)
+			}
+		}
 	}
 
 	// Build a detailed change summary for chatter

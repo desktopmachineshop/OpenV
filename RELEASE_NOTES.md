@@ -27,6 +27,50 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A guided draft's links follow the same rules as any other link.** When
+  the requirements wizard created its draft artifacts, it made every link a
+  draft asked for: one to an artifact of another workspace, one into a
+  project you can only view, or one of a kind the link rules do not allow,
+  such as a requirement that *verifies* a user need. A draft now gets only
+  the links you could have added to it yourself in the artifact editor; the
+  others are left out, and the draft is still created.
+
+- **An agent whose writes wait for review can no longer create guided
+  drafts.** An agent working in proposal mode, whose changes wait for a
+  person to approve them, was already refused the commit of a guided
+  session, but could create the session's draft artifacts directly, with
+  no review. It is now refused the drafts too.
+
+- **Deleting a link needs edit rights on the projects at both of its
+  ends.** Deleting a link adds a version to the artifacts at both ends, yet
+  only the project the link starts in was checked, so you could delete a
+  link into a project you can only view and change an artifact there. A
+  link that crosses projects now needs edit rights in both, as it already
+  did when removed in the artifact editor. A flow-down (*refines*) link,
+  which a supplier can make with view rights on the parent, can still be
+  deleted with them.
+
+- **Saving an artifact changes only its own links.** An update of an
+  artifact, from an agent or the API, could also add or remove a link
+  between two other artifacts; after such a removal, the artifact the link
+  started from went on listing it in its latest version. An update no
+  longer adds or removes a link between two other artifacts: it changes
+  only links to or from the artifact it saves.
+
+- **An artifact's history lists only the link changes that were made.**
+  When a save added or removed links, its note in the artifact's history
+  listed every link asked for, including ones that were refused, such as a
+  link of a kind the rules do not allow or one into a project you cannot
+  edit, and so could name an artifact you have no access to. The note now
+  lists only the links that were actually added or removed.
+
+- **A link added while editing an artifact's text is no longer suspect at
+  once.** When you changed an artifact's title, text or type and added a
+  link in the same save, the new link was immediately flagged suspect, as
+  if the artifact had changed after the link was made, and waited in the
+  review queue for someone to confirm it. A link made in the same save now
+  starts trusted; the artifact's other links are flagged as before.
+
 - **Importing a file that is not an OpenV export says what is wrong in
   plain terms.** When a JSON file you imported as a project held a value
   of the wrong kind, such as text where an OpenV export has a list, or was

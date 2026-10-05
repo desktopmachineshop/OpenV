@@ -210,35 +210,26 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 	return changes
 }
 
-// linksFromPendingAdds converts the pending link-add payloads of an artifact
-// update ({from_id,to_id,type,...} objects, mirroring what
-// processManagedLinkChanges creates) into Link values for the chatter
-// summary. Entries missing any of the three required fields are skipped,
-// matching the create path's behavior.
-func linksFromPendingAdds(toAdd []interface{}) []*links.Link {
-	var added []*links.Link
-	for _, linkDataInterface := range toAdd {
-		linkData, ok := linkDataInterface.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		fromID, _ := linkData["from_id"].(string)
-		toID, _ := linkData["to_id"].(string)
-		linkType, _ := linkData["type"].(string)
-		if fromID == "" || toID == "" || linkType == "" {
-			continue
-		}
-		added = append(added, &links.Link{FromID: fromID, ToID: toID, Type: linkType})
-	}
-	return added
+// managedLinkChanges is what a managed link edit did: the links it added and
+// removed, which the edited artifact's note lists, and the other artifacts
+// those links touch, which are auto-versioned. A requested add or removal
+// that was skipped is in none of them, so the note names no artifact the
+// caller was refused (#379 bug 196).
+type managedLinkChanges struct {
+	added, removed []*links.Link
+	affected       []string
 }
 
-// processManagedLinkChanges handles link additions and removals
-// Returns list of artifact IDs that had links change (for auto-versioning)
+// processManagedLinkChanges handles link additions and removals.
 // baseProjectID is the project of the artifact being updated; the caller has
-// already verified editor rights on it. Entries touching artifacts in other
-// projects are skipped unless the caller has editor rights there too.
-func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, fromArtifactID string, toAdd, toRemove []interface{}) ([]string, error) {
+// already verified editor rights on it. An edit of one artifact changes
+// that artifact's own links only: a removal must name a link of the edited
+// artifact (#379 bug 198), and an add must have it at one end (#379 bug
+// 201). A removal also needs both its ends' projects to be the caller's to
+// edit; an add must pass the link rules, with editor rights on both ends'
+// projects. Any other entry is skipped with a warning.
+func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, fromArtifactID string, toAdd, toRemove []interface{}) (*managedLinkChanges, error) {
+	changes := &managedLinkChanges{}
 	affectedArtifactIDs := make(map[string]bool) // Use map to avoid duplicates
 
 	// canEditLinkedArtifact reports whether the caller may edit the project
@@ -258,27 +249,33 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 			continue
 		}
 
-		// Get the link before deleting to determine affected artifact
 		link, err := h.LinkService.GetLink(linkID)
-		if err == nil && link != nil {
-			// Both endpoints may live outside the base project; the caller
-			// needs editor rights on their projects to remove the link.
-			if !canEditLinkedArtifact(link.FromID) || !canEditLinkedArtifact(link.ToID) {
-				slog.Warn("api: skipping link removal, no editor access to a linked artifact's project", "link_id", linkID)
-				continue
-			}
-			// Mark the 'to' artifact as affected (it had an incoming link removed)
-			if link.ToID == fromArtifactID {
-				affectedArtifactIDs[link.FromID] = true
-			} else {
-				affectedArtifactIDs[link.ToID] = true
-			}
+		if err != nil || link == nil {
+			slog.Warn("api: skipping link removal, no such link", "link_id", linkID, "error", err)
+			continue
+		}
+		if link.FromID != fromArtifactID && link.ToID != fromArtifactID {
+			slog.Warn("api: skipping link removal, the link does not touch the edited artifact",
+				"link_id", linkID, "artifact_id", fromArtifactID)
+			continue
+		}
+		// The other end may live outside the base project; the caller
+		// needs editor rights on both ends' projects to remove the link.
+		if !canEditLinkedArtifact(link.FromID) || !canEditLinkedArtifact(link.ToID) {
+			slog.Warn("api: skipping link removal, no editor access to a linked artifact's project", "link_id", linkID)
+			continue
 		}
 
-		// Hard delete the link
-		err = h.LinkService.DeleteLink(linkID)
-		if err != nil {
+		if err := h.LinkService.DeleteLink(linkID); err != nil {
 			slog.Warn("api: failed to delete link", "link_id", linkID, "error", err)
+			continue
+		}
+		changes.removed = append(changes.removed, link)
+		// Mark the other end as affected
+		if link.ToID == fromArtifactID {
+			affectedArtifactIDs[link.FromID] = true
+		} else {
+			affectedArtifactIDs[link.ToID] = true
 		}
 	}
 
@@ -299,6 +296,10 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		}
 		linkType, ok := linkDataMap["type"].(string)
 		if !ok {
+			continue
+		}
+		if fromID != fromArtifactID && toID != fromArtifactID {
+			slog.Warn("api: skipping link add, the link does not touch the edited artifact", "from_id", fromID, "to_id", toID)
 			continue
 		}
 
@@ -353,20 +354,21 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 			continue
 		}
 
+		changes.added = append(changes.added, link)
 		// Mark both artifacts as affected
 		affectedArtifactIDs[fromID] = true
 		affectedArtifactIDs[toID] = true
 	}
 
 	// Convert map to slice
-	result := make([]string, 0, len(affectedArtifactIDs))
+	changes.affected = make([]string, 0, len(affectedArtifactIDs))
 	for id := range affectedArtifactIDs {
 		if id != fromArtifactID { // Don't include the artifact we're currently updating
-			result = append(result, id)
+			changes.affected = append(changes.affected, id)
 		}
 	}
 
-	return result, nil
+	return changes, nil
 }
 
 // autoVersionLinkedArtifacts creates new versions for artifacts that had link changes

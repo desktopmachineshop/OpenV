@@ -20,8 +20,8 @@ import "testing"
 // project guard), read and listed; its steps saved (answers merge at the top
 // level and are written with sorted keys, numbers through float64); drafts
 // materialised (status draft, origin guided-flow unless the draft gives one,
-// any type accepted; a link the drafts name is created unchecked, or skipped
-// when the store refuses it; a batch that fails part way leaves the drafts
+// any type accepted; a link the drafts name is checked as a managed edit's
+// add, and skipped if refused; a batch that fails part way leaves the drafts
 // before the failure in the project but not in the session); the copilot
 // chat (kickoff, messages, nudges and the stream's replay); the commit (each
 // draft goes through review to approved, a version and a note per step,
@@ -146,16 +146,16 @@ func guidedSessionsTour(tr *tour) {
 			`{"type":"derives-from","to_id":"{{phantom}}"},{"type":"derives-from","to_id":"not-a-uuid"}]},`+
 			`{"type":"hazard","title":"Spindle starts with the guard open","body":"Hand injury.",`+
 			`"parent_id":"{{heading}}","attributes":{"severity":"critical","origin":"assistant","status":"approved"}}]}`),
-		note("the drafts' links are written with no check, so the one to an id no artifact has is created too, and "+
-			"one the store refuses (a to_id that is not a UUID) is skipped: nothing in the answer says so; and "+
-			"neither the drafts nor their links publish an event"))
+		note("the drafts' links are checked as a managed edit's adds are, so the one to an id no artifact has and "+
+			"the one whose to_id is not a UUID are skipped: nothing in the answer says so; and neither the drafts "+
+			"nor their links publish an event"))
 	drafts.capture("draft_req", "/artifact_ids/0")
 	drafts.capture("draft_hazard", "/artifact_ids/1")
 	tr.step("the drafted hazard: status draft whatever the draft said, and the origin it gave kept", o,
 		"GET /api/v1/artifacts/{id}", at("id", "{{draft_hazard}}"),
 		note("an S5a route, read to show what a draft is created as; origin is guided-flow only when a draft "+
 			"gives none"))
-	tr.step("the drafted requirement's links: the one to the user need and the one to an id no artifact has", o,
+	tr.step("the drafted requirement's links: the one to the user need alone", o,
 		"GET /api/v1/artifacts/{id}/links", at("id", "{{draft_req}}"),
 		note("an S5a route, read to show the links the drafts created, newest first"))
 	tr.step("materialise a draft of a type no artifact has: accepted as it is, nothing checks the type", o,
