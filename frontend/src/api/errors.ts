@@ -1,3 +1,20 @@
+import type { ApiErrorCode } from '../generated/contract';
+
+/**
+ * The API's error codes (`code` in an error body, internal/api/httperr.go)
+ * the app branches on, each its own key and value. The object is held to the
+ * generated contract's ApiErrorCode (refactor plan X4b), so a code the server
+ * renames or drops fails tsc here; arch/vocabParity.test.ts reads each one the
+ * app compares a code with through it.
+ */
+export const API_ERROR = {
+  email_unverified: 'email_unverified',
+  limit_reached: 'limit_reached',
+  plan_read_only: 'plan_read_only',
+  reset_invalid: 'reset_invalid',
+  reset_email_unavailable: 'reset_email_unavailable',
+} as const satisfies { readonly [Code in ApiErrorCode]?: Code };
+
 /**
  * Extracts a human-readable message from an API (axios) error.
  *
@@ -10,7 +27,7 @@
 /** True when the API refused the call because the account's email is unverified. */
 export function isEmailUnverifiedError(err: unknown): boolean {
   const anyErr = err as { response?: { status?: number; data?: { code?: unknown } } } | null;
-  return anyErr?.response?.status === 403 && anyErr?.response?.data?.code === 'email_unverified';
+  return anyErr?.response?.status === 403 && anyErr?.response?.data?.code === API_ERROR.email_unverified;
 }
 
 /** What the API said when a workspace limit stopped the call. */
@@ -35,7 +52,7 @@ export interface LimitRefusal {
 export function limitRefusal(err: unknown): LimitRefusal | null {
   const anyErr = err as { response?: { status?: number; data?: Record<string, unknown> } } | null;
   const data = anyErr?.response?.data;
-  if (anyErr?.response?.status !== 403 || !data || data.code !== 'limit_reached') return null;
+  if (anyErr?.response?.status !== 403 || !data || data.code !== API_ERROR.limit_reached) return null;
   return {
     limit: String(data.limit ?? ''),
     label: String(data.label ?? ''),
@@ -50,7 +67,7 @@ export function limitRefusal(err: unknown): LimitRefusal | null {
  *  UI point at the Billing tab. */
 export function isPlanReadOnlyError(err: unknown): boolean {
   const anyErr = err as { response?: { status?: number; data?: { code?: unknown } } } | null;
-  return anyErr?.response?.status === 403 && anyErr?.response?.data?.code === 'plan_read_only';
+  return anyErr?.response?.status === 403 && anyErr?.response?.data?.code === API_ERROR.plan_read_only;
 }
 
 /** The stable `code` field of an API error body, or '' when there is none. */

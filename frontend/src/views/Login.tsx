@@ -6,7 +6,7 @@ import {
   InvitationPreview,
   authAPI,
 } from '../api/client';
-import { apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
+import { API_ERROR, apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
@@ -252,7 +252,7 @@ export const Login: React.FC = () => {
       setResetSentTo(res.data.sent_to || email);
     } catch (err: any) {
       const wait = retryAfterSeconds(err);
-      if (apiErrorCode(err) === 'reset_email_unavailable') {
+      if (apiErrorCode(err) === API_ERROR.reset_email_unavailable) {
         setResetByEmail(false);
       } else {
         setError(

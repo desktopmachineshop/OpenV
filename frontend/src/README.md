@@ -32,7 +32,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 |---|---|
 | `index.tsx`, `App.tsx` | the entry with the eager stylesheet imports in order; the hand-written `<Route>` table (K13), each view eager or `lazy()` |
 | `index.css`, `theme.css`, `theme.ts`, `appShortcuts.ts` | global styles, the theme and its storage key, keyboard shortcuts |
-| `features.ts` | the feature gates with no module of their own to sit beside |
+| `features.ts`, `sseEvents.ts` | the feature gates with no module of their own to sit beside; the SSE event names, held to `generated/contract.ts` |
 | `views/*.tsx` | the pages; a split view keeps its path and export, with its panes in `views/moduleView/` or `views/projectSettings/` |
 | `components/**` | shared components; `components/ui/**` is the UI kit, and `components/agents/`, `components/crews/`, `components/kanban/`, `components/org/` and `components/wizard/` hold one feature each |
 | `components/ProjectLayout.tsx`, `components/navSections.ts`, `components/helpTopics.ts` | the project shell: its `navSections` list, the menu state, the help topic per path |
