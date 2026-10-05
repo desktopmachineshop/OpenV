@@ -29,6 +29,9 @@ export const InterviewChat: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
   const retryRef = useRef<number>(0);
+  // The pending reconnect: cancelled when the token changes or the page
+  // unmounts, so it cannot reopen an interview the page has left (#379, bug 203).
+  const retryTimerRef = useRef<number | null>(null);
   const closedRef = useRef(false);
 
   const appendMessage = useCallback((msg: InterviewMessage) => {
@@ -79,7 +82,9 @@ export const InterviewChat: React.FC = () => {
       const attempt = Math.min(retryRef.current + 1, 6);
       retryRef.current = attempt;
       const delay = Math.min(1000 * 2 ** attempt, 15000);
-      window.setTimeout(() => {
+      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = window.setTimeout(() => {
+        retryTimerRef.current = null;
         if (!closedRef.current) connectStream();
       }, delay);
     };
@@ -117,6 +122,10 @@ export const InterviewChat: React.FC = () => {
     return () => {
       cancelled = true;
       closedRef.current = true;
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;
