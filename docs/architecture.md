@@ -142,8 +142,9 @@ Each stage is a method in a `wire_*.go` file and wires one concern:
 | `billing`, `handlers`, `server` | `wire_http.go` | billing; `api.NewHandler` with every dependency, the proposal appliers; the HTTP server |
 
 Beside them: `config.go` holds the env getters, `http.go` builds the
-middleware chain (`buildHTTPHandler`) and the server, `jobs.go` the reaper,
-purge and hosted-runner reconcile loops, `lookups.go` the closures that join
+middleware chain (`buildHTTPHandler`) and the server, `jobs.go` the reaper
+and purge loops and the boot call of the hosted-runner reconcile (whose rule
+is `hostedworkers.Reconcile`), `lookups.go` the closures that join
 two domains (a project's workspace, the budget guard), and `logging.go` the
 log setup. `cmd/server/testdata/boot_steps.txt` (S4) pins the order of
 every call `main()` makes; new wiring goes in the stage that owns its

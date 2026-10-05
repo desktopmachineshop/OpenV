@@ -62,15 +62,9 @@ func main()
     call internal/domain/orgs.SetTiersEnforced
   call (*internal/domain/workerkeys.DefaultService).SetPairingRepository
   if
-    call (*internal/domain/hostedworkers.DefaultService).ListAll
-    if
-    else
-      for
-        call (internal/hosting.Provisioner).ContainerState
-        if
-          call (*internal/domain/hostedworkers.DefaultService).SetStatus
+    call internal/domain/hostedworkers.Reconcile
   if
-    call (*database/sql.DB).QueryRow -> (*database/sql.Row).Scan
+    call (*internal/domain/orgs.DefaultService).EarliestPersonalOrgID
     if
       call (*internal/domain/workerkeys.DefaultService).EnsureBootstrapKey
   call (*internal/domain/exports.DefaultService).SetProductService

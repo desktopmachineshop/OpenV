@@ -28,9 +28,9 @@ Test files (`*_test.go`) need no area.
 | `wire_*.go` | the stages, methods on `*app` that `main()` calls in this order: `signals`, `config` (`wire_config.go`); `connect`, `storage` (`wire_storage.go`); `core`; `workspace`, `runners` (`wire_workspace.go`); `projects`; `agents`; `realtime`; `notify`, `release` (`wire_notify.go`); `jobs`; `sso`; `billing`, `handlers`, `server` (`wire_http.go`) |
 | `config.go` | the env getters `envOr`, `envInt`, `envBool`, `envSwitch` and `envSecret`, over `internal/envparse` |
 | `http.go` | the one `mux.NewRouter()`, `/metrics`, the middleware chain (`buildHTTPHandler`) and `newServer` |
-| `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`, `reconcileHostedRunners`; `removeStoredFiles`, which removes the files a committed purge took |
+| `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`; `reconcileHostedRunners`, the boot call of `hostedworkers.Reconcile`; `removeStoredFiles`, which removes the files a committed purge took |
 | `upload_sweep.go` | `sweepUnreferencedUploads`, which stage `storage` runs once per database after the migrations unless `OPENV_UPLOAD_SWEEP=off`: the stored files no row names, and the logos and profile pictures of workspaces and accounts no row has, by the fail-safe rules at the top of the file |
-| `lookups.go` | closures over the database and services that stages hand to services |
+| `lookups.go` | closures over the database and services that stages hand to services; `bootstrapOrgID` reads `orgs`' `EarliestPersonalOrgID` |
 | `logging.go` | `initLogging` and `fatal` |
 | `boot_*_test.go`, `harness*_test.go` | the S4 boot harness: the real binary booted per env profile |
 | `tour_*_test.go` | the S5 API tour, one area per `tour_<slice>_<key>_test.go`, plus its framework |
