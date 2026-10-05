@@ -127,6 +127,14 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
     if (!artifactId) setTab('assistant');
   }, [artifactId]);
 
+  // The conversation is the project's: with no artifact selected, the panel
+  // stays mounted when the reader moves to another project, so it finds that
+  // project's own instead of keeping the last one (#379, bug 218).
+  useEffect(() => {
+    setAssistantSessionId('');
+    setAssistantError('');
+  }, [projectId]);
+
   useEffect(() => {
     if (!isOpen || tab !== 'assistant' || !projectId || assistantSessionId) return;
     let cancelled = false;
