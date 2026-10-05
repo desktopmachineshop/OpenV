@@ -239,7 +239,10 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 	if projectID != "" && !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	limit, _ := strconv.Atoi(q.Get("limit"))
+	limit, ok := parseLimit(w, r, agentRunsLimit)
+	if !ok {
+		return
+	}
 	// Scope the listing to a workspace in SQL (so a busy sibling workspace
 	// can never starve the page before LIMIT applies): the named project's,
 	// whose runs the guard just let the caller read, whatever workspace it
