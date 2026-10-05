@@ -15,11 +15,10 @@ import { ErrorBanner, SegmentedControl } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { useAppStore } from '../state/store';
 
-/**
- * The gate this page and the note's "Add to-do" control sit behind, until
- * every supported stable release carries them.
- */
-export const TODO_LIST_FEATURE = 'todo-list';
+// The gate this page and the note's "Add to-do" control sit behind lives in
+// src/features.ts, which the components that read it import; this module
+// still exports it for any reader of the old name.
+export { TODO_LIST_FEATURE } from '../features';
 
 /** A person (or agent, or team, or nobody) and what they owe. */
 interface Group {

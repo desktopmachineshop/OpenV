@@ -3,6 +3,7 @@ import { AgentDef, agentsAPI, ProviderSetting, providerSettingsAPI } from '../..
 import { ModelSelect } from './ModelSelect';
 import { useViewport } from '../../hooks/useViewport';
 import { useFeature } from '../../hooks/useFeature';
+import type { FeatureKey } from '../../generated/contract';
 
 // Used until the provider settings load (or if they fail to) — the server
 // returns the same list, in the same order, with each provider's models.
@@ -20,7 +21,7 @@ const FALLBACK_PROVIDERS = [
 // a stable-channel workspace is offered it once its stable release carries
 // the feature. An agent already on it keeps it in the picker, so editing that
 // agent never silently moves it to another provider.
-export const ANTIGRAVITY_FEATURE = 'antigravity-cli';
+export const ANTIGRAVITY_FEATURE: FeatureKey = 'antigravity-cli';
 
 interface AgentEditorProps {
   agent: AgentDef | null; // null = creating a new agent

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { BillingState, Org, PublicPlan, billingAPI, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { useFeature } from '../../hooks/useFeature';
+import { WORKSPACE_BILLING_FEATURE } from '../../features';
 import { ErrorBanner } from '../ui';
 
 /**
@@ -140,7 +141,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
   const [interval, setInterval] = useState('month');
   const [currency, setCurrency] = useState('gbp');
   const [changing, setChanging] = useState(false);
-  const pickerOpen = useFeature('workspace-billing');
+  const pickerOpen = useFeature(WORKSPACE_BILLING_FEATURE);
 
   // The return from checkout: bind the completed session before anything
   // renders, then take the parameters out of the URL so a refresh does not

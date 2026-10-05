@@ -42,6 +42,10 @@ declaration name, so it adds no import edge to
   `contracts/vocab.json` also lists equal to it, value for value and in
   order, so the two goldens cannot drift apart; the one vocabulary it does
   not list (`sse_events`) names its own golden in `fromS6`.
+- `TestPhoneAuditFeatureKeys` (X4b) holds the feature keys that
+  `e2e/tools/phone-audit.js` turns on for its mocked workspace to
+  `release.Registry`: the audit is plain JavaScript, outside the type check
+  that holds the frontend's keys to `FeatureKey`.
 
 Both generated files are on the refactor guard's golden list (entry
 `X4a, X5` in `scripts/refactor/refactor_guard.py`): changing them is a
@@ -50,9 +54,10 @@ not.
 
 ## Who reads it
 
-`contract.ts`: nothing yet. Refactor plan X4b moves the frontend's
-hand-written copies onto it (`useFeature(key: FeatureKey)`, typed event
-filters, SSE and error-code constants). The TypeScript names avoid every
+`contract.ts`, since refactor plan X4b: `FeatureKey` types the key of
+`useFeature` (`frontend/src/hooks/useFeature.ts`) and every `*_FEATURE`
+const, in `frontend/src/features.ts` or beside the module that owns its
+gate. The TypeScript names avoid every
 name S13's `vocabParity.test.ts` locates a hand-written copy by
 (`EVENT_TYPES`, `PLANS`, `GAP_LABELS`, `ArtifactStatus`, ...), since a
 second declaration of one would leave that reader unable to tell which is

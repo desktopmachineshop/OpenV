@@ -39,8 +39,7 @@ const under = (rel, dir) => rel === dir || rel.startsWith(`${dir}/`);
 // reads: both take TODO_LIST_FEATURE from views/TodoList (pain point
 // fe-requirements-13).
 const COMPONENTS_IMPORTING_VIEWS = {
-  'src/components/ChatterPanel.tsx': ['src/views/TodoList'],
-  'src/components/ProjectLayout.tsx': ['src/views/TodoList'],
+  // None since X4b: both now take TODO_LIST_FEATURE from src/features.ts.
 };
 
 // The four hand-written SSE consumers (quirk Q21), each with how many

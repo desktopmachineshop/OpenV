@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchAPI, SearchHit, SearchMode } from '../api/client';
 import { useFeature } from '../hooks/useFeature';
+import type { FeatureKey } from '../generated/contract';
 
 // SEARCH_BY_REF_FEATURE gates matching an artifact by its ref. The server
 // gates the search itself; this gates what the box says it can do, so a
 // workspace that has not received it is not invited to type a ref that will
 // not be found.
-export const SEARCH_BY_REF_FEATURE = 'search-by-ref';
+export const SEARCH_BY_REF_FEATURE: FeatureKey = 'search-by-ref';
 
 // GlobalSearch is the workspace-wide artifact search box (issue #128). It
 // lives in the project sidebar header, queries GET /api/v1/search (debounced),

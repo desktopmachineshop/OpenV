@@ -11,6 +11,7 @@ import {
   headingsFor,
   planSuggestion,
 } from './suggestionDrafts';
+import type { FeatureKey } from '../../generated/contract';
 
 /**
  * Applying an assistant suggestion to a project that already exists.
@@ -33,7 +34,7 @@ import {
  */
 
 /** Feature gate for the assistant's project changes (REQ-137). */
-export const ASSISTANT_EDITS_FEATURE = 'assistant-project-edits';
+export const ASSISTANT_EDITS_FEATURE: FeatureKey = 'assistant-project-edits';
 
 /**
  * The suggestion kinds that change the project rather than add a wizard
