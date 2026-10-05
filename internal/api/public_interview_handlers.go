@@ -22,21 +22,6 @@ func (h *Handler) registerPublicInterviewRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/public/interviews/{token}/finish", h.PublicInterviewFinish).Methods("POST")
 }
 
-// respondInviteError answers a failed invite-token resolution: the
-// participant-facing verdicts (unknown, revoked, expired, interview closed)
-// pass through as 404s, anything else is an internal failure.
-func respondInviteError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, interviews.ErrInviteNotFound),
-		errors.Is(err, interviews.ErrInviteRevoked),
-		errors.Is(err, interviews.ErrInviteExpired),
-		errors.Is(err, interviews.ErrInterviewClosed):
-		writeJSONError(w, http.StatusNotFound, err.Error())
-	default:
-		respondInternal(w, r, "failed to resolve invite", err)
-	}
-}
-
 func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 	if !h.allowInterviewRead(w, r) {
 		return

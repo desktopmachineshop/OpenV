@@ -144,7 +144,7 @@ func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 	}
 	def, err := h.AttributeService.CreateDefinition(req)
 	if err != nil {
-		writeAttributeDefinitionError(w, err)
+		writeAttributeDefinitionError(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -179,7 +179,7 @@ func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 	}
 	def, err := h.AttributeService.UpdateDefinition(id, req)
 	if err != nil {
-		writeAttributeDefinitionError(w, err)
+		writeAttributeDefinitionError(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -211,21 +211,4 @@ func (h *Handler) DeleteAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// writeAttributeDefinitionError maps domain validation errors to 400s.
-func writeAttributeDefinitionError(w http.ResponseWriter, err error) {
-	switch {
-	case errors.Is(err, attributes.ErrNotFound):
-		writeJSONError(w, http.StatusNotFound, "attribute definition not found")
-	case errors.Is(err, attributes.ErrInvalidScope),
-		errors.Is(err, attributes.ErrKeyRequired),
-		errors.Is(err, attributes.ErrInvalidKey),
-		errors.Is(err, attributes.ErrInvalidType),
-		errors.Is(err, attributes.ErrEnumValues),
-		errors.Is(err, attributes.ErrInvalidTarget):
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-	default:
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
-	}
 }

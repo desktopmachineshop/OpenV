@@ -508,6 +508,7 @@
         "internal/api/*.md",
         "internal/api/admin_*.go",
         "internal/api/compression*.go",
+        "internal/api/errmap*.go",
         "internal/api/feature_*.go",
         "internal/api/handlers.go",
         "internal/api/health_*.go",

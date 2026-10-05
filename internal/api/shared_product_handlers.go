@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -210,28 +209,4 @@ func (h *Handler) DeleteSharedProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// writeSharedProductError maps domain errors onto status codes. Validation
-// refusals are reported verbatim so the publisher can see why their product
-// was turned away (a link, a marker, an overlong field).
-func writeSharedProductError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, sharedproducts.ErrNotFound):
-		writeJSONError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, sharedproducts.ErrDuplicate):
-		writeJSONError(w, http.StatusConflict, err.Error())
-	case errors.Is(err, sharedproducts.ErrRateLimited), errors.Is(err, sharedproducts.ErrPoolFull):
-		writeJSONError(w, http.StatusTooManyRequests, err.Error())
-	case errors.Is(err, sharedproducts.ErrNotPublishable), errors.Is(err, sharedproducts.ErrNotVotable):
-		writeJSONError(w, http.StatusForbidden, err.Error())
-	case errors.Is(err, sharedproducts.ErrBadSort),
-		errors.Is(err, sharedproducts.ErrEmptyField),
-		errors.Is(err, sharedproducts.ErrTooLong),
-		errors.Is(err, sharedproducts.ErrLinksNotAllowed),
-		errors.Is(err, sharedproducts.ErrDisallowedText):
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-	default:
-		respondInternal(w, r, "failed to update shared products", err)
-	}
 }
