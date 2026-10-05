@@ -34,9 +34,19 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 	// Read-only: a page view must not write. A first visit simply has no
 	// session yet (the UI shows the name prompt); the session is created by
 	// the first message (or the stream, which needs one for its channel).
+	// With no active session, the invite's latest one answers: once the
+	// participant has ended the interview it is completed, and the page
+	// shows its thank-you and opens no stream, which would start a new
+	// session on the same invite (#379 bug 214). Only an active session's
+	// transcript is sent: an ended one answers without it (null), so the
+	// link reads no finished conversation, as it could not before, and the
+	// thank-you page shows none.
 	session, _ := h.InterviewService.FindActiveSession(invite.ID)
+	if session == nil {
+		session, _ = h.InterviewService.FindLatestSession(invite.ID)
+	}
 	var transcript []*interviews.Message
-	if session != nil {
+	if session != nil && session.Status == interviews.SessionStatusActive {
 		transcript, _ = h.InterviewService.GetTranscript(session.ID)
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{

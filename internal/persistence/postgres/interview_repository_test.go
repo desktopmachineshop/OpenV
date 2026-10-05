@@ -105,3 +105,53 @@ func TestSetParticipantNameNeverOverwrites(t *testing.T) {
 		t.Errorf("participant_name = %q, want it left as %q", got.ParticipantName, "Grace")
 	}
 }
+
+// TestFindLatestSessionByInvite pins the read the public intro falls back to
+// when an invite has no active session (#379 bug 214): the invite's newest
+// session, whatever its status, and nil, nil for an invite with none. The
+// active-session read keeps its meaning: none, once the session has ended.
+func TestFindLatestSessionByInvite(t *testing.T) {
+	repo, first := seedInterviewSession(t)
+	seeded, err := repo.FindSessionByID(first)
+	if err != nil {
+		t.Fatalf("FindSessionByID: %v", err)
+	}
+	invite := seeded.InviteID
+
+	if got, err := repo.FindLatestSessionByInvite(uuid.New().String()); err != nil || got != nil {
+		t.Fatalf("an invite with no session: %+v, %v; want nil, nil", got, err)
+	}
+	if got, err := repo.FindLatestSessionByInvite(invite); err != nil || got == nil || got.ID != first {
+		t.Fatalf("the invite's active session: %+v, %v; want %s", got, err, first)
+	}
+
+	// The participant ends the interview: no active session, and the latest
+	// is that one, completed.
+	ended := time.Now()
+	seeded.Status, seeded.EndedAt = interviews.SessionStatusCompleted, &ended
+	if err := repo.UpdateSession(seeded); err != nil {
+		t.Fatalf("UpdateSession: %v", err)
+	}
+	if got, err := repo.FindActiveSessionByInvite(invite); err != nil || got != nil {
+		t.Fatalf("FindActiveSessionByInvite once ended: %+v, %v; want nil, nil", got, err)
+	}
+	got, err := repo.FindLatestSessionByInvite(invite)
+	if err != nil || got == nil || got.ID != first || got.Status != interviews.SessionStatusCompleted || got.EndedAt == nil {
+		t.Fatalf("the invite's ended session: %+v, %v; want %s, completed, with its end", got, err, first)
+	}
+
+	// A newer session of the same invite is the latest; another invite's is
+	// never read.
+	newer := &interviews.Session{ID: uuid.New().String(), InterviewID: seeded.InterviewID, InviteID: invite,
+		Status: interviews.SessionStatusActive, StartedAt: seeded.StartedAt.Add(time.Minute)}
+	other := &interviews.Session{ID: uuid.New().String(), InterviewID: seeded.InterviewID, InviteID: uuid.New().String(),
+		Status: interviews.SessionStatusActive, StartedAt: seeded.StartedAt.Add(time.Hour)}
+	for _, s := range []*interviews.Session{newer, other} {
+		if err := repo.SaveSession(s); err != nil {
+			t.Fatalf("SaveSession: %v", err)
+		}
+	}
+	if got, err := repo.FindLatestSessionByInvite(invite); err != nil || got == nil || got.ID != newer.ID {
+		t.Fatalf("the invite's newest session: %+v, %v; want %s", got, err, newer.ID)
+	}
+}
