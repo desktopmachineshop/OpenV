@@ -1,0 +1,492 @@
+{
+  "loading": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    }
+  ],
+  "error": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    }
+  ],
+  "name": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "Hello!",
+        "Pat Lee"
+      ]
+    }
+  ],
+  "transcript": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    }
+  ],
+  "send": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "We check them every Monday.",
+        "Pat"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "The shift lead.",
+        "Pat"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "In the paper log.",
+        "Pat"
+      ]
+    }
+  ],
+  "send-error": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "We check them every Monday.",
+        "Pat"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "We check them every Monday.",
+        "Pat"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.sendMessage",
+      "args": [
+        "tok-1",
+        "We check them every Monday.",
+        "Pat"
+      ]
+    }
+  ],
+  "end": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.finish",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.finish",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    }
+  ],
+  "ended": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    }
+  ],
+  "reconnect": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        2000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        4000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        2000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        4000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        8000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        15000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        15000
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        2000
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "setTimeout",
+      "args": [
+        2000
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.finish",
+      "args": [
+        "tok-1"
+      ]
+    }
+  ],
+  "phone": [
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream"
+      ]
+    },
+    {
+      "call": "publicInterviewAPI.intro",
+      "args": [
+        "tok-1"
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/public/interviews/tok-1/stream",
+        {
+          "withCredentials": false
+        }
+      ]
+    }
+  ]
+}
