@@ -2,7 +2,7 @@ package vv
 
 import (
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 // Rollup values computed for requirement verification coverage.
@@ -68,12 +68,12 @@ func rollupSeverity(rollup string) int {
 // RefinersByRequirement maps a local requirement to the foreign requirements
 // that refine it: "refines" links whose target is local and whose source is
 // one of the export's linked (other-project) artifacts.
-func RefinersByRequirement(export *exports.ProjectExport) map[string][]*exports.LinkedArtifact {
+func RefinersByRequirement(export *snapshot.ProjectExport) map[string][]*snapshot.LinkedArtifact {
 	linked := export.LinkedByID()
 	if len(linked) == 0 {
 		return nil
 	}
-	out := map[string][]*exports.LinkedArtifact{}
+	out := map[string][]*snapshot.LinkedArtifact{}
 	for _, l := range export.Links {
 		if l == nil || l.Type != "refines" {
 			continue
@@ -87,7 +87,7 @@ func RefinersByRequirement(export *exports.ProjectExport) map[string][]*exports.
 
 // ChildProjectIDs lists the projects whose requirements refine this
 // project's, so a caller can compute their coverage for ApplyFlowDown.
-func ChildProjectIDs(export *exports.ProjectExport) []string {
+func ChildProjectIDs(export *snapshot.ProjectExport) []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, refiners := range RefinersByRequirement(export) {
@@ -108,7 +108,7 @@ func ChildProjectIDs(export *exports.ProjectExport) []string {
 // rollup; one with evidence keeps the worse of the two; one with no
 // verification method keeps method-missing, since the method is still its
 // own to state. The summary is recomputed.
-func ApplyFlowDown(report *CoverageReport, export *exports.ProjectExport, childRollups map[string]string) {
+func ApplyFlowDown(report *CoverageReport, export *snapshot.ProjectExport, childRollups map[string]string) {
 	if report == nil || export == nil {
 		return
 	}
@@ -241,7 +241,7 @@ func rollupForSeverity(severity int) string {
 
 // verifiersByRequirement maps requirement ID -> test-case IDs linked to it via
 // "verifies" links (test case is FromID, requirement is ToID).
-func verifiersByRequirement(export *exports.ProjectExport) map[string][]string {
+func verifiersByRequirement(export *snapshot.ProjectExport) map[string][]string {
 	testCases := map[string]bool{}
 	for _, a := range export.Artifacts {
 		if a.Type == "test-case" {
@@ -274,7 +274,7 @@ func latestStatuses(testCaseIDs []string, latest map[string]*TestResult) map[str
 
 // ComputeCoverage computes verification coverage per requirement from a
 // project export and the latest test result per test case.
-func ComputeCoverage(export *exports.ProjectExport, latest map[string]*TestResult) *CoverageReport {
+func ComputeCoverage(export *snapshot.ProjectExport, latest map[string]*TestResult) *CoverageReport {
 	report := &CoverageReport{
 		ProjectID: export.ProjectID,
 		Entries:   []CoverageEntry{},
@@ -336,7 +336,7 @@ func ComputeCoverage(export *exports.ProjectExport, latest map[string]*TestResul
 
 // BuildMatrix builds the full traceability matrix: user needs, design items,
 // test cases, latest results, and hazards per requirement.
-func BuildMatrix(export *exports.ProjectExport, latest map[string]*TestResult) *Matrix {
+func BuildMatrix(export *snapshot.ProjectExport, latest map[string]*TestResult) *Matrix {
 	matrix := &Matrix{Rows: []MatrixRow{}}
 
 	verifiers := verifiersByRequirement(export)
@@ -404,7 +404,7 @@ func BuildMatrix(export *exports.ProjectExport, latest map[string]*TestResult) *
 
 // GapAnalysis derives traceability and verification gaps from a coverage
 // report and the project export.
-func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapReport {
+func GapAnalysis(export *snapshot.ProjectExport, coverage *CoverageReport) *GapReport {
 	report := &GapReport{
 		RequirementsWithoutMethod:   []string{},
 		RequirementsWithoutTestCase: []string{},
