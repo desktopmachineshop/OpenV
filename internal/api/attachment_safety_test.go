@@ -113,6 +113,61 @@ func TestUploadLimitFollowsTheWorkspacePlan(t *testing.T) {
 	}
 }
 
+// The request bound is set before the workspace is known, so it has to be at
+// least what the workspace will be allowed. A deployment whose OPENV_LIMITS
+// raises max_upload_mb above the largest plan's lifts it (#379, bug 191):
+// before, a business workspace allowed 4096 MB by the deployment was refused
+// at the request past 1024 MB. The bound stays within the 8192 MB transport
+// ceiling, a self-hosted deployment keeps that ceiling whatever the layer
+// says, and OPENV_MAX_UPLOAD_MB still wins over both. Each row also gives the
+// refusal a business workspace gets past its own limit.
+func TestTheUploadRequestBoundTakesTheDeploymentLimit(t *testing.T) {
+	prevSelfHosted, prevLayer := orgs.SelfHosted(), orgs.DeploymentLimits()
+	t.Cleanup(func() {
+		orgs.SetSelfHosted(prevSelfHosted)
+		orgs.SetDeploymentLimits(prevLayer)
+	})
+	h := newTestHandler(t, func(h *Handler) { h.OrgService = &fakeOrgService{plan: orgs.PlanBusiness} })
+
+	for _, row := range []struct {
+		name       string
+		selfHosted bool
+		layer      map[string]interface{}
+		env        string
+		boundMB    int64  // the request bound, less the multipart overhead
+		message    string // the business workspace's refusal past its own limit
+	}{
+		{"hosted, no layer", false, nil, "", 1024,
+			"File is larger than this workspace's 1024 MB upload limit"},
+		{"hosted, max_upload_mb 4096", false, map[string]interface{}{orgs.LimitMaxUploadMB: 4096}, "", 4096,
+			"File is larger than this workspace's 4096 MB upload limit"},
+		{"hosted, max_upload_mb 1024", false, map[string]interface{}{orgs.LimitMaxUploadMB: 1024}, "", 1024,
+			"File is larger than this workspace's 1024 MB upload limit"},
+		{"hosted, max_upload_mb 256", false, map[string]interface{}{orgs.LimitMaxUploadMB: 256}, "", 1024,
+			"File is larger than this workspace's 256 MB upload limit"},
+		{"hosted, max_upload_mb 10000", false, map[string]interface{}{orgs.LimitMaxUploadMB: 10000}, "", 8192,
+			"File is larger than this workspace's 8192 MB upload limit"},
+		{"hosted, max_upload_mb 4096, OPENV_MAX_UPLOAD_MB=7", false, map[string]interface{}{orgs.LimitMaxUploadMB: 4096}, "7", 7,
+			"File is larger than this workspace's 7 MB upload limit"},
+		{"self-hosted, no layer", true, nil, "", 8192,
+			"File is larger than this workspace's 8192 MB upload limit"},
+		{"self-hosted, max_upload_mb 4096", true, map[string]interface{}{orgs.LimitMaxUploadMB: 4096}, "", 8192,
+			"File is larger than this workspace's 4096 MB upload limit"},
+	} {
+		t.Run(row.name, func(t *testing.T) {
+			t.Setenv(envMaxUploadMB, row.env)
+			orgs.SetSelfHosted(row.selfHosted)
+			orgs.SetDeploymentLimits(row.layer)
+			if got, want := h.uploadRequestCeilingBytes(), row.boundMB*bytesPerMB+multipartOverheadBytes; got != want {
+				t.Errorf("request bound = %d bytes (%d MB), want %d (%d MB)", got, got/bytesPerMB, want, row.boundMB)
+			}
+			if got := uploadLimitMessage(h.uploadLimitBytes("w-business")); got != row.message {
+				t.Errorf("refusal = %q, want %q", got, row.message)
+			}
+		})
+	}
+}
+
 // Every plan must allow a real CAD file, which is what the 25 MB this shipped
 // with did not (issue #364).
 func TestEveryPlanAllowsAFigureWorthUploading(t *testing.T) {
