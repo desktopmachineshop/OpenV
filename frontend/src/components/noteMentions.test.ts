@@ -9,6 +9,23 @@ import {
   todoTargets,
 } from './noteMentions';
 import { ProjectMember } from '../api/client';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// The handle cases this file shares with the Go test of mentions.Handles;
+// the file's about says what each field is.
+const HANDLE_CASES = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../internal/domain/mentions/testdata/handles.json'
+);
+interface HandleCase {
+  why: string;
+  name: string;
+  email: string;
+  handles: string[];
+}
+const handleCases = (): HandleCase[] => JSON.parse(fs.readFileSync(HANDLE_CASES, 'utf8')).cases;
 
 const member = (over: Partial<ProjectMember>): ProjectMember => ({
   project_id: 'p1',
@@ -18,23 +35,18 @@ const member = (over: Partial<ProjectMember>): ProjectMember => ({
 });
 
 describe('mentionHandles', () => {
-  // These cases mirror mentions.Handles in internal/domain/mentions. The two
-  // lists have to agree: a handle this menu writes that the server does not
-  // recognise is a mention that names nobody.
-  it('offers the name without spaces, the first name, then the email local part', () => {
-    expect(mentionHandles('Dana Okoro', 'dana.okoro@example.com')).toEqual([
-      'danaokoro',
-      'dana',
-      'dana.okoro',
-    ]);
+  // The cases mentions.Handles in internal/domain/mentions is held to as
+  // well, from the fixture both read (refactor plan X4b). The two lists have
+  // to agree: a handle this menu writes that the server does not recognise
+  // is a mention that names nobody.
+  const cases = handleCases();
+
+  it('reads the shared cases', () => {
+    expect(cases.length).toBeGreaterThan(0);
   });
 
-  it('skips the name when there is none', () => {
-    expect(mentionHandles('', 'jo@example.com')).toEqual(['jo']);
-  });
-
-  it('skips the email when it is not one', () => {
-    expect(mentionHandles('Dana Okoro', 'not-an-email')).toEqual(['danaokoro', 'dana']);
+  it.each(cases)('$why', ({ name, email, handles }) => {
+    expect(mentionHandles(name, email)).toEqual(handles);
   });
 });
 

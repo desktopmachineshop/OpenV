@@ -390,6 +390,21 @@ func (s *DefaultService) GetArtifact(id string) (*Artifact, error) {
 	return s.repo.FindByID(id)
 }
 
+// CurrentVersion answers the version the artifact is at now, through
+// GetArtifact. It satisfies links.ArtifactVersions, the port the link
+// service records each end of a link through. A lookup that answers no
+// artifact and no error answers version 0.
+func (s *DefaultService) CurrentVersion(id string) (int, error) {
+	a, err := s.GetArtifact(id)
+	if err != nil {
+		return 0, err
+	}
+	if a == nil {
+		return 0, nil
+	}
+	return a.Version, nil
+}
+
 // GetArtifactsByProject retrieves all artifacts for a project
 func (s *DefaultService) GetArtifactsByProject(projectID string) ([]*Artifact, error) {
 	return s.repo.FindByProjectID(projectID)

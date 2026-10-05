@@ -28,6 +28,7 @@ import { useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
+import { ARTIFACT_OWNERS_FEATURE } from '../features';
 import { ARTIFACT_STEPPING_FEATURE } from '../components/ArtifactStepper';
 import {
   compareArtifacts,
@@ -57,7 +58,7 @@ export const ModuleView: React.FC = () => {
   // project, and the parent project's requirements a requirement here may
   // refine.
   const [linkedArtifacts, setLinkedArtifacts] = useState<LinkedArtifact[]>([]);
-  const ownersOn = useFeature('artifact-owners');
+  const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
   const [parentProject, setParentProject] = useState<Project | null>(null);
   const [parentArtifacts, setParentArtifacts] = useState<Artifact[]>([]);

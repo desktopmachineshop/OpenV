@@ -1,0 +1,9 @@
+{
+  "about": "The handles a member answers to, in the order they are tried: the cases TestHandlesOrderMatchesTheComposer (internal/domain/mentions, mentions.Handles) and the note composer's mentionHandles (frontend/src/components/noteMentions.test.ts) share, so neither keeps a copy of the other's (refactor plan X4b). The composer writes the first handle the server's @([\\w.-]+) pattern captures whole, so the two lists must agree: a handle it writes that the server does not answer to is a mention that names nobody. why says what the case shows; handles is the list both give for name and email.",
+  "cases": [
+    { "why": "offers the name without spaces, the first name, then the email local part", "name": "Dana Okoro", "email": "dana.okoro@example.com", "handles": ["danaokoro", "dana", "dana.okoro"] },
+    { "why": "skips the name when there is none", "name": "", "email": "jo@example.com", "handles": ["jo"] },
+    { "why": "skips the email when it is not one", "name": "Dana Okoro", "email": "not-an-email", "handles": ["danaokoro", "dana"] },
+    { "why": "keeps an apostrophe, which the pattern stops at, so the composer writes the next handle instead", "name": "Ciara O'Brien", "email": "ciara.obrien@example.com", "handles": ["ciarao'brien", "ciara", "ciara.obrien"] }
+  ]
+}

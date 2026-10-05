@@ -63,8 +63,7 @@ type releaseResponse struct {
 
 // GetRelease answers the release the server is running and its notes.
 func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return
 	}
 	resp := releaseResponse{Notes: []string{}, Releases: []release.Release{}, Deployment: h.DeploymentKind}

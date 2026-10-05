@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -68,12 +67,9 @@ func (h *Handler) GlobalSearch(w http.ResponseWriter, r *http.Request) {
 	if mode == "" {
 		mode = modeKeyword
 	}
-	limit, _ := strconv.Atoi(params.Get("limit"))
-	if limit <= 0 {
-		limit = defaultSearchLimit
-	}
-	if limit > maxSearchLimit {
-		limit = maxSearchLimit
+	limit, ok := parseLimit(w, r, searchLimit)
+	if !ok {
+		return
 	}
 
 	if query == "" {

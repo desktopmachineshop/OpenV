@@ -432,6 +432,52 @@ RATCHET_RULE_CODE = "internal/archtest/*.go"
 GUARD_SCRIPT = "scripts/refactor/refactor_guard.py"
 ROUTE_GUARDS_FILE = "internal/api/testdata/route_guards.txt"
 X2B_CALL_SHAPE_CHANGES = [
+    ("DELETE /api/v1/me/avatar: -",
+     "DELETE /api/v1/me/avatar: session"),
+    ("DELETE /api/v1/orgs/{id}/members/{userId}: org:admin|org:member",
+     "DELETE /api/v1/orgs/{id}/members/{userId}: session, org:admin|org:member"),
+    ("DELETE /api/v1/shared-products/{id}: -",
+     "DELETE /api/v1/shared-products/{id}: platform-admin"),
+    ("DELETE /api/v1/shared-products/{id}/vote: -",
+     "DELETE /api/v1/shared-products/{id}/vote: session"),
+    ("GET /api/v1/me/default-workspace: -",
+     "GET /api/v1/me/default-workspace: session"),
+    ("GET /api/v1/me/notification-prefs: -",
+     "GET /api/v1/me/notification-prefs: session"),
+    ("GET /api/v1/orgs: -",
+     "GET /api/v1/orgs: session"),
+    ("GET /api/v1/provider-logins/{id}: -",
+     "GET /api/v1/provider-logins/{id}: session"),
+    ("GET /api/v1/release: -",
+     "GET /api/v1/release: session"),
+    ("GET /api/v1/users: -",
+     "GET /api/v1/users: session"),
+    ("POST /api/v1/me/avatar: -",
+     "POST /api/v1/me/avatar: session"),
+    ("POST /api/v1/orgs: -",
+     "POST /api/v1/orgs: session"),
+    ("POST /api/v1/orgs/{id}/restore: -",
+     "POST /api/v1/orgs/{id}/restore: session"),
+    ("POST /api/v1/provider-logins: org:admin|org:member",
+     "POST /api/v1/provider-logins: session, org:admin|org:member"),
+    ("POST /api/v1/provider-logins/{id}/cancel: org:admin",
+     "POST /api/v1/provider-logins/{id}/cancel: session, org:admin"),
+    ("POST /api/v1/provider-logins/{id}/code: org:admin",
+     "POST /api/v1/provider-logins/{id}/code: session, org:admin"),
+    ("POST /api/v1/shared-products: org:member",
+     "POST /api/v1/shared-products: session, org:member"),
+    ("POST /api/v1/shared-products/{id}/report: -",
+     "POST /api/v1/shared-products/{id}/report: session"),
+    ("PUT /api/v1/me/default-workspace: -",
+     "PUT /api/v1/me/default-workspace: session"),
+    ("PUT /api/v1/me/notification-prefs: -",
+     "PUT /api/v1/me/notification-prefs: session"),
+    ("PUT /api/v1/me/password: -",
+     "PUT /api/v1/me/password: session"),
+    ("PUT /api/v1/orgs/{id}/plan: -",
+     "PUT /api/v1/orgs/{id}/plan: platform-admin"),
+    ("PUT /api/v1/shared-products/{id}/vote: -",
+     "PUT /api/v1/shared-products/{id}/vote: session"),
 ]
 
 # X14b's named exception (§8.3): the import edges X14b adds, as ("from
@@ -445,6 +491,7 @@ X2B_CALL_SHAPE_CHANGES = [
 # class E commit adds an edge. The guard reads the list from the pull
 # request's copy of this file, as it reads X2B_CALL_SHAPE_CHANGES.
 X14B_IMPORT_EDGES = [
+    ("internal/api", "internal/domain/snapshot"),
 ]
 
 # The boot steps' named exception (§8.3): the lines of S4's boot_steps.txt a

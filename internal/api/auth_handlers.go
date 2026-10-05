@@ -471,8 +471,7 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 // ListUsers returns the active workspace's members (for member invitations);
 // the global user directory is never exposed.
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return
 	}
 	out := []map[string]string{}

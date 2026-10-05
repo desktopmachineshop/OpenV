@@ -31,14 +31,15 @@ import { HelpSidebar } from './HelpSidebar';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
-import { TODO_LIST_FEATURE } from '../views/TodoList';
+import { TODO_LIST_FEATURE } from '../features';
+import type { FeatureKey } from '../generated/contract';
 
 interface NavItem {
   to: string;
   label: string;
   end?: boolean;
   /** Hide the entry until this gated feature is on for the workspace. */
-  feature?: string;
+  feature?: FeatureKey;
 }
 
 // The sidebar is grouped by what the user is doing: defining the product,

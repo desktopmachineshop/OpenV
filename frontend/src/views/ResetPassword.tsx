@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_MIN_PASSWORD_LENGTH, authAPI } from '../api/client';
-import { apiErrorCode, apiErrorMessage } from '../api/errors';
+import { API_ERROR, apiErrorCode, apiErrorMessage } from '../api/errors';
 
 // The landing for a password reset link (REQ-158): ?token= from the email
 // or from a platform admin. It asks for the new password twice, spends the
@@ -67,7 +67,7 @@ export const ResetPassword: React.FC = () => {
       await authAPI.confirmPasswordReset(token, password);
       navigate('/login?reset=done', { replace: true });
     } catch (err: any) {
-      if (apiErrorCode(err) === 'reset_invalid') {
+      if (apiErrorCode(err) === API_ERROR.reset_invalid) {
         setInvalid(true);
       } else {
         setError(apiErrorMessage(err, 'The password could not be set'));

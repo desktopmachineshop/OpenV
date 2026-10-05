@@ -42,6 +42,10 @@ declaration name, so it adds no import edge to
   `contracts/vocab.json` also lists equal to it, value for value and in
   order, so the two goldens cannot drift apart; the one vocabulary it does
   not list (`sse_events`) names its own golden in `fromS6`.
+- `TestPhoneAuditFeatureKeys` (X4b) holds the feature keys that
+  `e2e/tools/phone-audit.js` turns on for its mocked workspace to
+  `release.Registry`: the audit is plain JavaScript, outside the type check
+  that holds the frontend's keys to `FeatureKey`.
 
 Both generated files are on the refactor guard's golden list (entry
 `X4a, X5` in `scripts/refactor/refactor_guard.py`): changing them is a
@@ -50,11 +54,33 @@ not.
 
 ## Who reads it
 
-`contract.ts`: nothing yet. Refactor plan X4b moves the frontend's
-hand-written copies onto it (`useFeature(key: FeatureKey)`, typed event
-filters, SSE and error-code constants). The TypeScript names avoid every
-name S13's `vocabParity.test.ts` locates a hand-written copy by
-(`EVENT_TYPES`, `PLANS`, `GAP_LABELS`, `ArtifactStatus`, ...), since a
+`contract.ts`, since refactor plan X4b, where the frontend copies a Go
+vocabulary:
+
+- by value, where the copy is the whole vocabulary in Go's shape: the link
+  rules (`frontend/src/config/linkTypeRules.ts`), the automation trigger
+  list (`views/AutomationsPageEvents.ts`) and the fallback provider list
+  (`components/agents/AgentEditor.tsx`) are copies of `LINK_TYPE_RULES`,
+  `DOMAIN_EVENT_TYPES` and `AGENT_PROVIDERS`;
+- by type, where the copy is a part of one, UI copy beside one, or a name
+  the code uses: `FeatureKey` types `useFeature`'s key and every
+  `*_FEATURE` const (in `frontend/src/features.ts` or beside the module
+  that owns its gate); `SseEventName` holds `SSE_EVENT`
+  (`frontend/src/sseEvents.ts`), through which every SSE listener names its
+  event, and `ApiErrorCode` holds `API_ERROR` (`frontend/src/api/errors.ts`),
+  through which the app names every code it branches on; the activity log's
+  filter is a `DomainEventType[]`; and the named overrides, the per-view
+  labels of artifact types, plans and V&V gaps, the suggestion type list,
+  `PLANS` and the CLI sign-in providers, `satisfies` a record or list over
+  `ArtifactTypeValue`, `WorkspacePlan`, `VvGapKey` or `AgentProvider`.
+
+S13's `vocabParity.test.ts` still reads every copy, following one into
+`contract.ts`. Of the copies it reads of a vocabulary `contract.ts` has,
+those left as they were are the ones its readers need in their own form:
+the `ArtifactStatus` union and the maps keyed by it, the type picker's
+`<option>`s, and the provider colours' `case` labels and comparisons. The
+TypeScript names avoid every name S13's reader locates a hand-written copy
+by (`EVENT_TYPES`, `PLANS`, `GAP_LABELS`, `ArtifactStatus`, ...), since a
 second declaration of one would leave that reader unable to tell which is
 the copy. `wire.ts`: `frontend/src/api/wireCompat.ts`, by type only.
 

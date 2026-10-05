@@ -35,9 +35,8 @@ type defaultWorkspace struct {
 
 // GetDefaultWorkspace answers the caller's own choice.
 func (h *Handler) GetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -49,9 +48,8 @@ func (h *Handler) GetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 // workspace's: a stable-channel workspace whose release predates the
 // feature cannot yet be chosen, and the answer says so.
 func (h *Handler) SetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	var req defaultWorkspace

@@ -16,18 +16,8 @@ import (
 // plan" is nonsense — there is no plan and nobody to pay; they own the
 // hardware and need to know which setting to change. Telling a hosted member
 // to edit OPENV_LIMITS is equally useless, because they have no shell. So the
-// remedy is chosen from the deployment mode, once, at boot.
-
-// selfHosted records whether this deployment is somebody's own installation.
-// The hosted service leaves it false.
-var selfHosted bool
-
-// SetSelfHosted tells the domain which remedy to offer when a limit is hit.
-// Called once at boot from the deployment configuration.
-func SetSelfHosted(v bool) { selfHosted = v }
-
-// SelfHosted reports the configured deployment mode.
-func SelfHosted() bool { return selfHosted }
+// remedy is chosen from the deployment mode, once, at boot
+// (DeploymentPolicy.SelfHosted, read when the message is).
 
 // ErrLimitReached is the sentinel every limit refusal wraps, so handlers can
 // map the whole family onto one status code without knowing the keys.
@@ -94,7 +84,7 @@ func (e *LimitError) Is(target error) bool { return target == ErrLimitReached }
 // and what to do next.
 func (e *LimitError) Error() string {
 	if e.Flag {
-		if selfHosted {
+		if defaultPolicy.SelfHosted {
 			// A deployment somebody runs themselves has no plan: a flag is
 			// off there because the operator turned it off, and the remedy
 			// says where (#379, bug 192).
@@ -113,7 +103,7 @@ func (e *LimitError) Error() string {
 // Remedy is the sentence that tells the reader how to raise the ceiling,
 // written for whoever is actually able to do it on this deployment.
 func (e *LimitError) Remedy() string {
-	if selfHosted {
+	if defaultPolicy.SelfHosted {
 		return fmt.Sprintf(
 			"This deployment sets its own limits: raise %s in OPENV_LIMITS to change it everywhere, "+
 				"or set it on this workspace alone to change it here.", e.Key)

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentRun, agentRunsAPI, RunLogEntry } from '../../api/client';
 import { ExpandableText } from '../ExpandableText';
 import { useViewport } from '../../hooks/useViewport';
+import { SSE_EVENT } from '../../sseEvents';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
@@ -287,7 +288,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
         es = new EventSource(agentRunsAPI.streamUrl(runId, lastSeqRef.current), {
           withCredentials: true,
         });
-        es.addEventListener('log', (evt: MessageEvent) => {
+        es.addEventListener(SSE_EVENT.log, (evt: MessageEvent) => {
           // A live event proves the stream is healthy again — reset the budget
           // so the next drop gets a fresh set of reconnect attempts.
           reconnectAttempts = 0;
@@ -298,7 +299,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             // ignore malformed events
           }
         });
-        es.addEventListener('partial', (evt: MessageEvent) => {
+        es.addEventListener(SSE_EVENT.partial, (evt: MessageEvent) => {
           // The answer as the agent writes it; replaced by final_text at
           // finish. Always the whole text, so a dropped frame is harmless.
           reconnectAttempts = 0;
@@ -310,7 +311,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             // ignore malformed events
           }
         });
-        es.addEventListener('status', (evt: MessageEvent) => {
+        es.addEventListener(SSE_EVENT.status, (evt: MessageEvent) => {
           reconnectAttempts = 0;
           let status = '';
           try {

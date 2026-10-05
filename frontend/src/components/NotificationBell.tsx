@@ -7,6 +7,7 @@ import { useViewport } from '../hooks/useViewport';
 import { useConfirm } from './ui';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
 import { pathForNotification } from './NotificationBellPaths';
+import { SSE_EVENT } from '../sseEvents';
 
 interface NotificationBellProps {
   /**
@@ -115,7 +116,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   useEffect(() => {
     refresh();
     const es = new EventSource(notificationsAPI.streamUrl(), { withCredentials: true });
-    es.addEventListener('notification', (ev) => {
+    es.addEventListener(SSE_EVENT.notification, (ev) => {
       try {
         const n: AppNotification = JSON.parse((ev as MessageEvent).data);
         setUnread((u) => u + 1);

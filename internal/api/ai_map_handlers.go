@@ -1,7 +1,7 @@
 package api
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 // registerAIMapRoutes wires a project's outline for coding agents.
@@ -40,16 +41,20 @@ func (h *Handler) ProjectAIMap(w http.ResponseWriter, r *http.Request) {
 	var payload exports.ProjectExport
 	source := "live state"
 
+	// Any baseline_id names a baseline, "live" too: there is no baseline
+	// "live", so it answers as one no row has.
 	if baselineID := r.URL.Query().Get("baseline_id"); baselineID != "" {
-		baseline, err := h.BaselineService.GetProjectBaseline(projectID, baselineID)
+		loaded, baseline, err := snapshot.Load(projectID, baselineID, h.snapshotSources())
+		var bad *snapshot.DecodeError
+		if errors.As(err, &bad) {
+			respondInternal(w, r, "failed to parse baseline snapshot", err)
+			return
+		}
 		if err != nil {
 			writeJSONError(w, http.StatusNotFound, "baseline not found in this project")
 			return
 		}
-		if err := json.Unmarshal(baseline.Snapshot, &payload); err != nil {
-			respondInternal(w, r, "failed to parse baseline snapshot", err)
-			return
-		}
+		payload = *loaded
 		source = fmt.Sprintf("baseline %q (%s, captured %s)",
 			baseline.Name, baseline.ID, baseline.CreatedAt.UTC().Format(time.RFC3339))
 	} else {

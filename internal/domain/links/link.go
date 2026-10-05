@@ -1,8 +1,6 @@
 package links
 
 import (
-	"encoding/json"
-	"reflect"
 	"time"
 
 	"github.com/google/uuid"
@@ -99,7 +97,9 @@ type Service interface {
 	// (either endpoint), enriched with artifact titles/types, for the review
 	// queue (issue #183).
 	ListSuspectByProject(projectID string) ([]*SuspectLink, error)
-	SetArtifactService(artifactService interface{}) // Allows link service to trigger artifact versioning
+	// SetArtifactService gives the service the artifact versions it records
+	// each link against (link_artifacts).
+	SetArtifactService(versions ArtifactVersions)
 	// ConfirmLink clears the suspect flag on one link: a human has re-read
 	// the changed artifact and vouches that the link still holds.
 	ConfirmLink(id string) (*Link, error)
@@ -134,10 +134,21 @@ type Repository interface {
 	SetSuspectByArtifact(artifactID string, suspect bool) error
 }
 
+// ArtifactVersions is the port the link service reads an artifact's current
+// version through, to record each end of a link at it (link_artifacts). The
+// artifact service satisfies it and cmd/server wires it. It is declared
+// here so that links does not import artifacts, as artifacts reaches links
+// through its own port, LinkSuspector.
+type ArtifactVersions interface {
+	// CurrentVersion answers the version the artifact is at now. An error
+	// means it could not be read: that end of the link is not recorded.
+	CurrentVersion(artifactID string) (int, error)
+}
+
 // DefaultService implements the Service interface
 type DefaultService struct {
-	repo            Repository
-	artifactService interface{} // Will be set to avoid circular imports
+	repo     Repository
+	versions ArtifactVersions // set by SetArtifactService; nil records nothing
 }
 
 // NewDefaultService creates a new link service
@@ -145,9 +156,10 @@ func NewDefaultService(repo Repository) *DefaultService {
 	return &DefaultService{repo: repo}
 }
 
-// SetArtifactService sets the artifact service for triggering versioning
-func (s *DefaultService) SetArtifactService(artifactService interface{}) {
-	s.artifactService = artifactService
+// SetArtifactService sets the artifact versions each link is recorded
+// against. Without them (never set, or set to nil) nothing is recorded.
+func (s *DefaultService) SetArtifactService(versions ArtifactVersions) {
+	s.versions = versions
 }
 
 // CreateLink creates a new link and records version associations
@@ -166,43 +178,26 @@ func (s *DefaultService) CreateLink(link *Link) error {
 	return nil
 }
 
-// recordLinkForCurrentArtifactVersions records the link for the current version of both artifacts
+// recordLinkForCurrentArtifactVersions records the link for the current
+// version of both artifacts, the from end and then the to end. Neither can
+// fail the write: an end whose version cannot be read is skipped, and an
+// error recording it is dropped.
 func (s *DefaultService) recordLinkForCurrentArtifactVersions(link *Link) {
-	if s.artifactService == nil {
+	if s.versions == nil {
 		return
 	}
+	s.recordLinkForCurrentVersion(link.ID, link.FromID)
+	s.recordLinkForCurrentVersion(link.ID, link.ToID)
+}
 
-	// Get current versions of both artifacts
-	getMethod := reflect.ValueOf(s.artifactService).MethodByName("GetArtifact")
-	if !getMethod.IsValid() {
+// recordLinkForCurrentVersion records the link for one artifact's current
+// version, unless that version cannot be read.
+func (s *DefaultService) recordLinkForCurrentVersion(linkID, artifactID string) {
+	version, err := s.versions.CurrentVersion(artifactID)
+	if err != nil {
 		return
 	}
-
-	// Record for FromID artifact's current version
-	results := getMethod.Call([]reflect.Value{reflect.ValueOf(link.FromID)})
-	if len(results) >= 2 && results[1].IsNil() {
-		artifact := results[0].Interface()
-		data, err := json.Marshal(artifact)
-		if err == nil {
-			var artifactData struct{ Version int }
-			if json.Unmarshal(data, &artifactData) == nil {
-				s.repo.RecordLinkForArtifactVersion(link.ID, link.FromID, artifactData.Version)
-			}
-		}
-	}
-
-	// Record for ToID artifact's current version
-	results = getMethod.Call([]reflect.Value{reflect.ValueOf(link.ToID)})
-	if len(results) >= 2 && results[1].IsNil() {
-		artifact := results[0].Interface()
-		data, err := json.Marshal(artifact)
-		if err == nil {
-			var artifactData struct{ Version int }
-			if json.Unmarshal(data, &artifactData) == nil {
-				s.repo.RecordLinkForArtifactVersion(link.ID, link.ToID, artifactData.Version)
-			}
-		}
-	}
+	_ = s.repo.RecordLinkForArtifactVersion(linkID, artifactID, version)
 }
 
 // GetLink retrieves a link by ID

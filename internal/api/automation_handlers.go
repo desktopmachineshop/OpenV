@@ -240,7 +240,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 		LaunchedBy:   CurrentUserID(r),
 	})
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeLaunchError(w, r, launchErrs400, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)

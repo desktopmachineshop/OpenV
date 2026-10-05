@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -59,11 +58,9 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
-	limit := 0
-	if v := r.URL.Query().Get("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			limit = n
-		}
+	limit, ok := parseLimit(w, r, sharedProductsLimit)
+	if !ok {
+		return
 	}
 	viewerID := ""
 	if user := CurrentUser(r); user != nil {
@@ -94,9 +91,8 @@ func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, sharedproducts.ErrNotPublishable.Error(), http.StatusForbidden)
 	if user == nil {
-		writeJSONError(w, http.StatusForbidden, sharedproducts.ErrNotPublishable.Error())
 		return
 	}
 	orgID := ActiveOrg(r)
@@ -135,9 +131,8 @@ func (h *Handler) ReportSharedProduct(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "only a signed-in person can report a shared product", http.StatusForbidden)
 	if user == nil {
-		writeJSONError(w, http.StatusForbidden, "only a signed-in person can report a shared product")
 		return
 	}
 	if err := h.SharedProductService.Report(mux.Vars(r)["id"], user.ID); err != nil {
@@ -170,9 +165,8 @@ func (h *Handler) changeSharedProductVote(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, sharedproducts.ErrNotVotable.Error(), http.StatusForbidden)
 	if user == nil {
-		writeJSONError(w, http.StatusForbidden, sharedproducts.ErrNotVotable.Error())
 		return
 	}
 	id := mux.Vars(r)["id"]
@@ -199,9 +193,7 @@ func (h *Handler) DeleteSharedProduct(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
-	user := CurrentUser(r)
-	if user == nil || !user.IsAdmin {
-		writeJSONError(w, http.StatusForbidden, "platform admin required")
+	if h.requirePlatformAdmin(w, r, "platform admin required", http.StatusForbidden) == nil {
 		return
 	}
 	if err := h.SharedProductService.Delete(mux.Vars(r)["id"]); err != nil {

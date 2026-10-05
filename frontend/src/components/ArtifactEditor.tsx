@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useFeature } from '../hooks/useFeature';
+import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE } from '../features';
 import {
   Artifact,
   AttributeDefinition,
@@ -126,8 +127,8 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   // Who can own an artifact (REQ-147): the project's parties (the workspace
   // first) and its members, offered as suggestions; any name is accepted.
   const [ownerOptions, setOwnerOptions] = useState<string[]>([]);
-  const ownersOn = useFeature('artifact-owners');
-  const flowDown = useFeature('flow-down');
+  const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
+  const flowDown = useFeature(FLOW_DOWN_FEATURE);
   useEffect(() => {
     if (!effectiveProjectId) return;
     let cancelled = false;

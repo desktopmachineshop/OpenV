@@ -49,11 +49,13 @@ explained in `internal/archtest/README.md`.
   clock, file, network or call into the module (archtest *side-effecting
   package variables*). Build the value where it is needed, or behind
   `sync.OnceValue`.
-- Add no mutable package-level state; pass a value in instead. The four
-  deployment settings `internal/domain/orgs` holds in package variables
-  (`SetSelfHosted`, `SetTiersEnforced`, `SetDefaultPlan`,
-  `SetDeploymentLimits`) are the known exception, which refactor step X8
-  replaces.
+- Add no mutable package-level state; pass a value in instead. The known
+  exception is `internal/domain/orgs`'s default `DeploymentPolicy`, the
+  four deployment settings boot writes through `SetSelfHosted`,
+  `SetTiersEnforced`, `SetDefaultPlan` and `SetDeploymentLimits` and
+  everything reads at call time (refactor step X8); a test that needs other
+  settings builds a `DeploymentPolicy` of its own where the code it tests
+  takes one.
 - **Settings.** A binary reads its environment through its getters over
   `internal/envparse` (`cmd/server/config.go`, `cmd/agentd/main.go`), which
   trim and parse every value one way. Under `internal/`, the direct env

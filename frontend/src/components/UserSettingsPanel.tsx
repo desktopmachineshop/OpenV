@@ -30,6 +30,7 @@ import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
 import { providerCaution } from './agents/providerCautions';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import type { AgentProvider } from '../generated/contract';
 
 interface UserSettingsPanelProps {
   onClose: () => void;
@@ -39,12 +40,13 @@ interface UserSettingsPanelProps {
 // The CLIs a member can sign in to from here. Antigravity CLI is deliberately
 // absent: it keeps its sign-in in the operating system keyring, which a runner
 // container does not have, so it runs from a workspace Gemini API key instead
-// of a personal sign-in (docs/agents.md).
+// of a personal sign-in (docs/agents.md). Each key is a provider Go knows
+// (the generated contract's AgentProvider, refactor plan X4b).
 const CLI_PROVIDERS: { key: string; label: string }[] = [
   { key: 'claude-code', label: 'Claude Code' },
   { key: 'codex-cli', label: 'Codex CLI' },
   { key: 'gemini-cli', label: 'Gemini CLI' },
-];
+] satisfies { key: AgentProvider; label: string }[];
 
 // UserSettingsPanel is the per-user settings modal opened from the user info
 // block in the bottom-left of the sidebar. This is where local agent auth

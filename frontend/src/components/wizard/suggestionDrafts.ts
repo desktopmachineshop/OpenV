@@ -13,6 +13,7 @@ import {
   canonicalNfrCategory,
   subSectionKey,
 } from './wizardEntries';
+import type { ArtifactTypeValue } from '../../generated/contract';
 
 /**
  * Turning one of the assistant's suggestions into the thing it describes.
@@ -38,7 +39,9 @@ export interface CopilotSuggestionLike {
 /**
  * The artifact types a suggestion may create. Mirrors the server's catalogue
  * (internal/domain/artifacts/types.go), which stays the authority — this list
- * only lets a typo be refused with a reason instead of a 400.
+ * only lets a typo be refused with a reason instead of a 400. Each is a type
+ * of the generated contract's ArtifactTypeValue (refactor plan X4b), and
+ * arch/vocabParity.test.ts holds the list to Go's, in order.
  */
 export const ARTIFACT_TYPES = [
   'heading',
@@ -50,7 +53,7 @@ export const ARTIFACT_TYPES = [
   'test-case',
   'hazard',
   'other',
-] as const;
+] as const satisfies readonly ArtifactTypeValue[];
 
 /** An artifact a suggestion asks for, ready to be created. */
 export interface SuggestionDraft {

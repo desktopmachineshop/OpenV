@@ -2,6 +2,8 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
 import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
 import { ChatMarkdown } from '../ChatMarkdown';
+import { SSE_EVENT } from '../../sseEvents';
+import type { ArtifactTypeValue } from '../../generated/contract';
 
 /**
  * One structured proposal embedded in a copilot reply: a wizard entry, or —
@@ -116,7 +118,7 @@ const TYPE_LABELS: Record<string, string> = {
   'test-case': 'Test case',
   hazard: 'Hazard',
   other: 'Artifact',
-};
+} satisfies Record<ArtifactTypeValue, string>;
 
 /** Where a move card says the artifact is going. */
 const moveDestination = (s: CopilotSuggestion): string => {
@@ -390,7 +392,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     es.onopen = () => {
       retryRef.current = 0;
     };
-    es.addEventListener('message', (event: MessageEvent) => {
+    es.addEventListener(SSE_EVENT.message, (event: MessageEvent) => {
       try {
         const msg = JSON.parse(event.data) as GuidedChatMessage;
         if (msg && msg.id) appendMessage(msg);
@@ -398,7 +400,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         // ignore malformed events
       }
     });
-    es.addEventListener('assistant_partial', (event: MessageEvent) => {
+    es.addEventListener(SSE_EVENT.assistant_partial, (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data) as { run_id?: string; text?: string };
         if (typeof data?.text !== 'string' || !data.text) return;

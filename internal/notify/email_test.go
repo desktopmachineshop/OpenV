@@ -3,11 +3,13 @@ package notify
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -152,63 +154,76 @@ func TestNilDispatcherSafe(t *testing.T) {
 // TestEmailAndPushLinkWhereTheBellOpens pins, for every notification type
 // and each entity kind it carries, the page the email's link and the web
 // push's url open: the page the bell opens for the same notification
-// (pathForNotification in frontend/src/components/NotificationBellPaths.ts, whose
-// own table is in NotificationBell.test.tsx). They used to part ways for
-// workspace and project membership, releases and the support window, which
-// email and push sent to the projects list or the project's overview, and
-// all three sent the cloud runner minutes alert to the projects list,
-// though it points at the Billing tab (#379, bugs 58 and 59).
+// (pathForNotification in frontend/src/components/NotificationBellPaths.ts).
+// The cases are testdata/deep_links.json, which the bell's own table in
+// NotificationBell.test.tsx reads too (refactor plan X4b); this test checks
+// each case's go path. They used to part ways for workspace and project
+// membership, releases and the support window, which email and push sent
+// to the projects list or the project's overview, and all three sent the
+// cloud runner minutes alert to the projects list, though it points at the
+// Billing tab (#379, bugs 58 and 59).
 func TestEmailAndPushLinkWhereTheBellOpens(t *testing.T) {
-	type ref = map[string]interface{}
-	cases := []struct {
-		ntype string
-		ref   ref
-		want  string
-	}{
-		{notifications.TypeProposalPending, ref{"kind": "proposal", "proposal_id": "prop-7", "project_id": "p1", "run_id": "r1"}, "/projects/p1/agent-runs?run=r1"},
-		{notifications.TypeProposalPending, ref{"kind": "proposal", "proposal_id": "prop-8", "project_id": "p1", "run_id": ""}, "/projects/p1/agent-runs"},
-		{notifications.TypeRunFailed, ref{"kind": "run", "project_id": "p1", "run_id": "r1"}, "/projects/p1/agent-runs?run=r1"},
-		// A run with no project opens on the workspace Runs page (#379 bug
-		// 168); it opened the projects list, where no page lists it.
-		{notifications.TypeRunFailed, ref{"kind": "run", "project_id": "", "run_id": "r2"}, "/org/runs?run=r2"},
-		{notifications.TypeInterviewCompleted, ref{"kind": "interview", "project_id": "p1", "session_id": "s1"}, "/projects/p1/interviews"},
-		{notifications.TypeMention, ref{"kind": "artifact", "project_id": "p1", "artifact_id": "a1", "chatter_id": "c1"}, "/projects/p1/requirements"},
-		{notifications.TypeReviewRequested, ref{"kind": "artifact", "project_id": "p1", "artifact_id": "a1"}, "/projects/p1/requirements"},
-		{notifications.TypeBudgetThreshold, ref{"kind": "org_usage", "org_id": "o1", "threshold": 80}, "/org/settings?tab=usage"},
-		{notifications.TypeHostedMinutes, ref{"kind": "org_limits", "org_id": "o1", "threshold": 100, "month": "2026-10"}, "/org/settings?tab=billing"},
-		{notifications.TypeAccessChanged, ref{"kind": "membership", "org_id": "o1", "user_id": "u1"}, "/org/settings?tab=members"},
-		{notifications.TypeAccessChanged, ref{"kind": "project_membership", "org_id": "o1", "user_id": "u1", "project_id": "p1"}, "/projects/p1/settings?tab=members"},
-		{notifications.TypeMembershipChanged, ref{"kind": "membership", "org_id": "o1", "user_id": "u1"}, "/org/settings?tab=members"},
-		{notifications.TypeReleasePublished, ref{"kind": "release", "version": "0.16.0"}, "/whats-new"},
-		{notifications.TypeReleasePublished, ref{"kind": "release", "version": "0.15.0", "org_id": "o1"}, "/whats-new"},
-		{notifications.TypeReleaseScheduled, ref{"kind": "release", "version": "0.15.0", "org_id": "o1"}, "/whats-new"},
-		{notifications.TypeReleaseSupportWindow, ref{"kind": "support_window", "running": "0.14.0", "available": "0.15.0", "closes": "2026-11-30"}, "/org/settings"},
-		// The fallbacks: a project-scoped kind with no project (a run with
-		// no id either), a kind the mapping does not know, and no entity
-		// reference at all.
-		{notifications.TypeRunFailed, ref{"kind": "run"}, "/projects"},
-		{notifications.TypeProposalPending, ref{"kind": "proposal", "proposal_id": "prop-9", "run_id": "r2"}, "/projects"},
-		{notifications.TypeAccessChanged, ref{"kind": "project_membership", "org_id": "o1", "user_id": "u1"}, "/projects"},
-		{"some_future_type", ref{"kind": "something_new", "project_id": "p1"}, "/projects/p1"},
-		{"some_future_type", nil, "/projects"},
-	}
+	cases := loadDeepLinkCases(t)
 	const base = "https://app.example.com"
 	covered := map[string]bool{}
 	for _, tc := range cases {
-		covered[tc.ntype] = true
-		n := &notifications.Notification{Type: tc.ntype, Title: "T", Body: "B", EntityRef: tc.ref}
-		if got := deepLink(n, base); got != base+tc.want {
-			t.Errorf("%s %v: email link %q, want %q", tc.ntype, tc.ref, got, base+tc.want)
+		covered[tc.Type] = true
+		n := &notifications.Notification{Type: tc.Type, Title: "T", Body: "B", EntityRef: tc.Ref}
+		if got := deepLink(n, base); got != base+tc.Go {
+			t.Errorf("%s %v: email link %q, want %q", tc.Type, tc.Ref, got, base+tc.Go)
 		}
-		if got := renderPush(n).URL; got != tc.want {
-			t.Errorf("%s %v: push url %q, want %q", tc.ntype, tc.ref, got, tc.want)
+		if got := renderPush(n).URL; got != tc.Go {
+			t.Errorf("%s %v: push url %q, want %q", tc.Type, tc.Ref, got, tc.Go)
 		}
 	}
 	for _, c := range ncTypeConstants(t) {
 		if !covered[c.value] {
-			t.Errorf("notifications.%s (%q) has no row here: add the page its email and push open", c.name, c.value)
+			t.Errorf("notifications.%s (%q) has no case in %s: add the page its email and push open, and the "+
+				"bell's beside it", c.name, c.value, deepLinkCasesFile)
 		}
 	}
+}
+
+// deepLinkCasesFile holds the deep-link cases this package's test and the
+// bell's share; its about says what each field is.
+const deepLinkCasesFile = "testdata/deep_links.json"
+
+// deepLinkCase is one case of deepLinkCasesFile: a notification type, its
+// entity reference (nil for none), and the path the email and the push
+// open (go) beside the one the bell opens (ts, read by the frontend's test),
+// with a note on why the case is there where it needs one.
+type deepLinkCase struct {
+	Type string                 `json:"type"`
+	Ref  map[string]interface{} `json:"ref"`
+	Go   string                 `json:"go"`
+	TS   string                 `json:"ts"`
+	Note string                 `json:"note,omitempty"`
+}
+
+func loadDeepLinkCases(t *testing.T) []deepLinkCase {
+	t.Helper()
+	data, err := os.ReadFile(deepLinkCasesFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var file struct {
+		About string         `json:"about"`
+		Cases []deepLinkCase `json:"cases"`
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&file); err != nil {
+		t.Fatalf("%s: %v", deepLinkCasesFile, err)
+	}
+	if len(file.Cases) == 0 {
+		t.Fatalf("%s holds no case", deepLinkCasesFile)
+	}
+	for i, c := range file.Cases {
+		if c.Type == "" || c.Go == "" || c.TS == "" {
+			t.Fatalf("%s: case %d needs a type, a go path and a ts path", deepLinkCasesFile, i)
+		}
+	}
+	return file.Cases
 }
 
 // TestRunFailedProducesEmailViaSMTP is the end-to-end capture: a run_failed

@@ -32,7 +32,7 @@ type adminWorkspace struct {
 // AdminListWorkspaces answers every live workspace with its plan and
 // member count, oldest first.
 func (h *Handler) AdminListWorkspaces(w http.ResponseWriter, r *http.Request) {
-	if h.requirePlatformAdmin(w, r) == nil {
+	if h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized) == nil {
 		return
 	}
 	ids, err := h.OrgService.ListAll()
@@ -73,7 +73,7 @@ func toAdminUser(u *users.User) adminUser {
 
 // AdminListUsers answers every account, admins first then by name.
 func (h *Handler) AdminListUsers(w http.ResponseWriter, r *http.Request) {
-	if h.requirePlatformAdmin(w, r) == nil {
+	if h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized) == nil {
 		return
 	}
 	list, err := h.UserService.ListUsers()
@@ -99,7 +99,7 @@ func (h *Handler) AdminListUsers(w http.ResponseWriter, r *http.Request) {
 // → the user. An admin cannot demote themselves (somebody else does that),
 // and the last admin cannot be demoted at all.
 func (h *Handler) AdminSetUserAdmin(w http.ResponseWriter, r *http.Request) {
-	caller := h.requirePlatformAdmin(w, r)
+	caller := h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized)
 	if caller == nil {
 		return
 	}

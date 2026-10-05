@@ -1,3 +1,5 @@
+import type { VvGapKey } from '../generated/contract';
+
 // Human titles for the buckets of GET /api/v1/projects/{id}/vv/gaps.
 //
 // The dashboard renders whatever buckets the server sends, so an unknown key
@@ -7,7 +9,9 @@
 // verification method is demonstration, analysis or inspection and which
 // nothing has yet attested to: no test case can ever cover them, so they
 // would otherwise be invisible in this view while the coverage rollup
-// already counts them as uncovered.
+// already counts them as uncovered. Every key is one of the generated
+// contract's VvGapKey and every one is here (refactor plan X4b);
+// arch/vocabParity.test.ts holds the titles to Go's.
 export const GAP_LABELS: Record<string, string> = {
   requirements_without_method: 'Requirements without a verification method',
   requirements_without_test_case: 'Requirements without a test case',
@@ -16,7 +20,7 @@ export const GAP_LABELS: Record<string, string> = {
   orphan_test_cases: 'Orphan test cases (verify nothing)',
   needs_without_requirement: 'User needs without a derived requirement',
   hazards_unmitigated: 'Unmitigated hazards',
-};
+} satisfies Record<VvGapKey, string>;
 
 // gapLabel titles one gap bucket. Unknown keys — a bucket added server-side
 // before this table catches up — fall back to the key with its separators

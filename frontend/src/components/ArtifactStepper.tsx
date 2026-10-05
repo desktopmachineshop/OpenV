@@ -1,10 +1,11 @@
 import React, { useRef } from 'react';
+import type { FeatureKey } from '../generated/contract';
 
 // Stepping between artifacts is gated like any other new control. What it
 // changes is navigation — the same selection a tap on the tree makes, written
 // to the same place — so nothing it does becomes unreadable in a workspace that
 // has not received the controls yet.
-export const ARTIFACT_STEPPING_FEATURE = 'artifact-stepping';
+export const ARTIFACT_STEPPING_FEATURE: FeatureKey = 'artifact-stepping';
 
 export interface ArtifactStepperProps {
   /** 1-based place in the document, and how many artifacts there are. */

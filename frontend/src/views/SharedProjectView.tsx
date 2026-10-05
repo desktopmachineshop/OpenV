@@ -13,6 +13,7 @@ import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactBody } from '../components/ArtifactBody';
 import { artifactRefOfFigure } from '../components/artifactReferences';
 import { useViewport } from '../hooks/useViewport';
+import type { ArtifactTypeValue } from '../generated/contract';
 
 // SharedProjectView is a project for somebody with no account (REQ-149,
 // REQ-151): what a public share link opens, and what the open-source page
@@ -44,7 +45,7 @@ const TYPE_LABELS: Record<string, string> = {
   'test-case': 'Test case',
   hazard: 'Hazard',
   other: 'Other',
-};
+} satisfies Record<ArtifactTypeValue, string>;
 
 const typeLabel = (type: string): string => TYPE_LABELS[type] || type;
 

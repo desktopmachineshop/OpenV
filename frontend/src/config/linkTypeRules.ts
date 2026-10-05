@@ -1,90 +1,22 @@
+import { LINK_TYPE_RULES } from '../generated/contract';
+
 // Link type configuration with directional constraints
 export interface LinkTypeRule {
   type: string;
   label: string;
   inverseLabel: string;
-  allowedFromTypes: string[]; // Source artifact types
-  allowedToTypes: string[];   // Target artifact types
+  allowedFromTypes: readonly string[]; // Source artifact types ('*' for all)
+  allowedToTypes: readonly string[];   // Target artifact types ('*' for all)
   description: string;
 }
 
-export const linkTypeRules: LinkTypeRule[] = [
-  {
-    type: 'verifies',
-    label: 'verifies',
-    inverseLabel: 'verified by',
-    allowedFromTypes: ['test-case'],
-    allowedToTypes: ['requirement'],
-    description: 'A test case demonstrates that a requirement is met',
-  },
-  {
-    type: 'satisfies',
-    label: 'satisfies',
-    inverseLabel: 'satisfied by',
-    allowedFromTypes: ['design-item'],
-    allowedToTypes: ['requirement'],
-    description: 'A design element implements or fulfills a requirement',
-  },
-  {
-    type: 'mitigates',
-    label: 'mitigates',
-    inverseLabel: 'mitigated by',
-    allowedFromTypes: ['design-item'],
-    allowedToTypes: ['hazard'],
-    description: 'A design element reduces or eliminates a hazard',
-  },
-  {
-    type: 'decomposes-to',
-    label: 'decomposes to',
-    inverseLabel: 'decomposed from',
-    allowedFromTypes: ['requirement'],
-    allowedToTypes: ['requirement'],
-    description: 'A high-level requirement is broken down into more specific sub-requirements',
-  },
-  {
-    // Flow-down between projects (REQ-145): a requirement in a subsystem or
-    // supplier project refines a requirement of its parent project.
-    type: 'refines',
-    label: 'refines',
-    inverseLabel: 'refined by',
-    allowedFromTypes: ['requirement'],
-    allowedToTypes: ['requirement'],
-    description:
-      "A requirement in a subsystem or supplier project refines a requirement of its parent project; the parent's verification rolls the refinements up",
-  },
-  {
-    type: 'derives-from',
-    label: 'derives from',
-    inverseLabel: 'gives rise to',
-    allowedFromTypes: ['requirement'],
-    allowedToTypes: ['user-need'],
-    description: 'A requirement is derived from a user need',
-  },
-  {
-    type: 'validates',
-    label: 'validates',
-    inverseLabel: 'validated by',
-    allowedFromTypes: ['test-case'],
-    allowedToTypes: ['user-need'],
-    description: 'A test case confirms that a user need is met',
-  },
-  {
-    type: 'impacts',
-    label: 'impacts',
-    inverseLabel: 'impacted by',
-    allowedFromTypes: ['*'], // All types
-    allowedToTypes: ['*'],   // All types
-    description: 'A change to one artifact affects another',
-  },
-  {
-    type: 'relates-to',
-    label: 'relates-to',
-    inverseLabel: 'relates-to',
-    allowedFromTypes: ['*'], // All types
-    allowedToTypes: ['*'],   // All types
-    description: 'A loose, non-semantic association between artifacts',
-  },
-];
+// The link types with their labels, directions and descriptions (the
+// description is the link picker's tooltip): links.GetLinkTypeRules
+// (internal/domain/links), read from the generated contract (refactor plan
+// X4b) with Go's text and in Go's order. No rule needs a UI override: the
+// refines tooltip, quirk Q6, has carried Go's whole description since the
+// fix for #379 bug 80.
+export const linkTypeRules: LinkTypeRule[] = [...LINK_TYPE_RULES];
 
 // Helper function to get available link types for a source artifact type
 export function getAvailableLinkTypes(sourceArtifactType: string): LinkTypeRule[] {
@@ -95,7 +27,7 @@ export function getAvailableLinkTypes(sourceArtifactType: string): LinkTypeRule[
 }
 
 // Helper function to get allowed target artifact types for a link type
-export function getAllowedTargetTypes(linkType: string): string[] {
+export function getAllowedTargetTypes(linkType: string): readonly string[] {
   const rule = linkTypeRules.find(r => r.type === linkType);
   return rule ? rule.allowedToTypes : [];
 }

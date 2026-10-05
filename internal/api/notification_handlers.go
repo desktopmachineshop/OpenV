@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -54,9 +53,8 @@ type notificationPrefsUpdate struct {
 
 // GetNotificationPrefs returns the caller's own notification preferences.
 func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -70,9 +68,8 @@ func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
 // Own-user only: the update is keyed on the authenticated user id, so a caller
 // can never change another user's preferences.
 func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	var req notificationPrefsUpdate
@@ -111,21 +108,14 @@ func (h *Handler) ListNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, ok := parseLimit(w, r, notificationsLimit)
+	if !ok {
+		return
+	}
 	query := notifications.ListQuery{
 		View:       notifications.ParseView(r.URL.Query().Get("view")),
 		UnreadOnly: r.URL.Query().Get("unread") == "true",
-		Limit:      defaultNotificationLimit,
-	}
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil || parsed < 1 {
-			writeJSONError(w, http.StatusBadRequest, "limit must be a positive integer")
-			return
-		}
-		query.Limit = parsed
-		if query.Limit > maxNotificationLimit {
-			query.Limit = maxNotificationLimit
-		}
+		Limit:      limit,
 	}
 	// The cursor is opaque to the client: it hands back whatever the previous
 	// page's next_cursor said. A malformed one is the client's bug, not a

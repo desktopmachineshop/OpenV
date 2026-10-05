@@ -3,24 +3,19 @@ import { AgentDef, agentsAPI, ProviderSetting, providerSettingsAPI } from '../..
 import { ModelSelect } from './ModelSelect';
 import { useViewport } from '../../hooks/useViewport';
 import { useFeature } from '../../hooks/useFeature';
+import { AGENT_PROVIDERS, FeatureKey } from '../../generated/contract';
 
 // Used until the provider settings load (or if they fail to) — the server
-// returns the same list, in the same order, with each provider's models.
-const FALLBACK_PROVIDERS = [
-  'claude-code',
-  'codex-cli',
-  'gemini-cli',
-  'antigravity-cli',
-  'anthropic-api',
-  'openai-api',
-  'google-api',
-];
+// returns the same list, in the same order, with each provider's models:
+// providers.KnownProviders, read from the generated contract (refactor plan
+// X4b).
+const FALLBACK_PROVIDERS: string[] = [...AGENT_PROVIDERS];
 
 // The antigravity-cli provider ships behind its release feature (REQ-137):
 // a stable-channel workspace is offered it once its stable release carries
 // the feature. An agent already on it keeps it in the picker, so editing that
 // agent never silently moves it to another provider.
-export const ANTIGRAVITY_FEATURE = 'antigravity-cli';
+export const ANTIGRAVITY_FEATURE: FeatureKey = 'antigravity-cli';
 
 interface AgentEditorProps {
   agent: AgentDef | null; // null = creating a new agent
