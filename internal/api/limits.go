@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
@@ -13,7 +12,10 @@ import (
 //
 // Every count limit is read through one place so that "unlimited", the
 // off-by-one, and the wording of the refusal cannot drift apart between the
-// three handlers that enforce them.
+// three handlers that enforce them. That place is orgs.LimitEnforcer, which
+// counts and decides; this file answers for the API: it fails open where
+// the enforcer could not read, and holds the read-only gate, its
+// exemptions and the limits endpoint's response.
 //
 // A refusal is a 403 rather than a 402. Payment Required would be wrong on a
 // self-hosted deployment, where there is no plan and nobody to pay — the
@@ -70,36 +72,62 @@ type limitsResponse struct {
 	OverPlan []string `json:"over_plan,omitempty"`
 }
 
+// limitsEnforcer is the workspace limits enforcer over the handler's services
+// as they are at the call: it counts and decides, and the methods below
+// answer for the API, failing open where it could not read.
+func (h *Handler) limitsEnforcer() *orgs.LimitEnforcer {
+	e := &orgs.LimitEnforcer{Orgs: h.OrgService}
+	if h.InvitationService != nil {
+		e.PendingInvitations = func(orgID string) (int, error) {
+			pending, err := h.InvitationService.ListPending(orgID)
+			if err != nil {
+				return 0, err
+			}
+			return len(pending), nil
+		}
+	}
+	if h.ProjectService != nil {
+		e.Projects = func(orgID string) (int, error) {
+			list, err := h.ProjectService.ListProjectsByOrg(orgID)
+			if err != nil {
+				return 0, err
+			}
+			return len(list), nil
+		}
+	}
+	if h.RunnerSessionService != nil {
+		e.RunnerMinutes = h.RunnerSessionService.MinutesUsed
+	}
+	if h.EvidenceService != nil {
+		e.EvidenceBytes = h.EvidenceService.StorageUsedByOrg
+	}
+	return e
+}
+
+// failOpen is how every limit check answers the API: a refusal stands, and
+// anything else the enforcer returns, a workspace or a count it could not
+// read, refuses nothing. A limit check must never be the reason a
+// legitimate action fails, and refusing on a database hiccup would turn a
+// transient fault into a billing message, which is the worst of both.
+func failOpen(err error) error {
+	var limitErr *orgs.LimitError
+	if errors.As(err, &limitErr) {
+		return err
+	}
+	return nil
+}
+
 // checkFlag refuses when the workspace's plan does not include a flag. A
 // workspace that cannot be read is not refused, as with every limit.
 func (h *Handler) checkFlag(orgID, key string) error {
-	limits := h.effectiveLimits(orgID)
-	if limits == nil {
-		return nil
-	}
-	return orgs.CheckFlag(limits, key)
+	return failOpen(h.limitsEnforcer().CheckFlag(orgID, key))
 }
 
-// overPlan names the count limits a workspace is already past. It counts
-// only where a ceiling applies, so a workspace on the alpha terms, a paid
-// plan or a self-hosted deployment costs one read and no counting.
+// overPlan names the count limits a workspace is already past
+// (LimitEnforcer.OverPlan). A count that cannot be read names nothing.
 func (h *Handler) overPlan(org *orgs.Org) []string {
-	if org == nil || org.OrgType == orgs.TypePersonal {
-		return nil
-	}
-	limits := org.EffectiveLimits()
-	usage := map[string]int{}
-	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxMembers); capped {
-		if n, err := h.countOrgSeats(org.ID); err == nil {
-			usage[orgs.LimitMaxMembers] = n
-		}
-	}
-	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxProjects); capped && h.ProjectService != nil {
-		if list, err := h.ProjectService.ListProjectsByOrg(org.ID); err == nil {
-			usage[orgs.LimitMaxProjects] = len(list)
-		}
-	}
-	return orgs.OverPlan(limits, usage)
+	over, _ := h.limitsEnforcer().OverPlan(org)
+	return over
 }
 
 // ctxAlwaysWritable marks a request for one of the few writes a read-only
@@ -202,179 +230,52 @@ func joinAnd(items []string) string {
 	return out
 }
 
-// hostedMinutes reads the workspace's monthly cloud-runner allowance and
-// what it has used. capped is false where no ceiling applies or the usage
-// cannot be read, and nothing is then enforced.
-func (h *Handler) hostedMinutes(orgID string) (used, allowance int, capped bool) {
-	limits := h.effectiveLimits(orgID)
-	allowance, capped = orgs.Ceiling(limits, orgs.LimitHostedRunnerMinutesMonth)
-	if !capped || h.RunnerSessionService == nil {
-		return 0, 0, false
-	}
-	now := time.Now().UTC()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	used, err := h.RunnerSessionService.MinutesUsed(orgID, monthStart)
-	if err != nil {
-		return 0, 0, false
-	}
-	return used, allowance, true
-}
-
 // leaseMinutesAllowed fits a lease of `want` minutes under the month's
-// remaining allowance: the whole lease where there is room, a shorter one
-// where only part of it fits, and a limit refusal once nothing does. The
-// allowance is hard: a lease never runs past it.
+// remaining allowance (LimitEnforcer.LeaseMinutesAllowed). A month whose
+// usage cannot be read is not enforced: the whole lease.
 func (h *Handler) leaseMinutesAllowed(orgID string, want int) (int, error) {
-	used, allowance, capped := h.hostedMinutes(orgID)
-	if !capped {
+	minutes, err := h.limitsEnforcer().LeaseMinutesAllowed(orgID, want)
+	if err != nil && failOpen(err) == nil {
 		return want, nil
 	}
-	left := allowance - used
-	if left <= 0 {
-		return 0, orgs.NewLimitError(orgs.LimitHostedRunnerMinutesMonth, used, allowance).
-			WithDetail("agents on your own machine through the Agent Connector are never counted")
-	}
-	if want > left {
-		return left, nil
-	}
-	return want, nil
-}
-
-// effectiveLimits resolves a workspace's limits, or nil when the workspace
-// cannot be read. Nil limits mean nothing is enforced: a limit check must
-// never be the reason a legitimate action fails.
-func (h *Handler) effectiveLimits(orgID string) map[string]interface{} {
-	org := h.orgForLimits(orgID)
-	if org == nil {
-		return nil
-	}
-	return org.EffectiveLimits()
+	return minutes, err
 }
 
 // orgForLimits reads the workspace a limit check applies to, or nil when it
 // cannot be read. Callers that need more than the numbers — whether the
-// workspace is a personal one, say — use this rather than effectiveLimits.
+// workspace is a personal one, say — use this.
 func (h *Handler) orgForLimits(orgID string) *orgs.Org {
-	if h.OrgService == nil || orgID == "" {
-		return nil
-	}
-	org, err := h.OrgService.Get(orgID)
+	org, err := h.limitsEnforcer().Org(orgID)
 	if err != nil {
 		return nil
 	}
 	return org
 }
 
-// countOrgSeats counts the people a workspace's member limit applies to:
-// current members plus invitations still waiting to be accepted.
-//
-// Pending invitations count deliberately. Without that an admin could issue
-// fifty invitations against five seats, and the refusal would land on the
-// sixth person to click their link rather than on the admin who caused it —
-// the error arriving for somebody who cannot act on it.
+// countOrgSeats counts the people a workspace's member limit applies to
+// (LimitEnforcer.CountSeats), errors included: it is the billing path's
+// seat count as well as the limit's.
 func (h *Handler) countOrgSeats(orgID string) (int, error) {
-	members, err := h.OrgService.ListMembers(orgID)
-	if err != nil {
-		return 0, err
-	}
-	seats := len(members)
-	if h.InvitationService != nil {
-		pending, err := h.InvitationService.ListPending(orgID)
-		if err != nil {
-			return 0, err
-		}
-		seats += len(pending)
-	}
-	return seats, nil
+	return h.limitsEnforcer().CountSeats(orgID)
 }
 
 // checkOrgSeats refuses when the workspace has no room for `adding` more
 // people. A nil error means there is room, or that no limit applies.
 func (h *Handler) checkOrgSeats(orgID string, adding int) error {
-	org := h.orgForLimits(orgID)
-	if org == nil {
-		return nil
-	}
-	if org.OrgType == orgs.TypePersonal {
-		// A personal workspace's single seat is enforced in the domain, by
-		// AddMember and the invitation path, which refuse more specifically
-		// than a seat count can and say so as a 400. Refusing here too would
-		// only replace that with a vaguer 403 about a ceiling nothing raises.
-		// The limit is still reported, so the panel says "1 of 1" rather than
-		// claiming a workspace nobody can join has no limit at all.
-		return nil
-	}
-	limits := org.EffectiveLimits()
-	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxMembers); !capped {
-		return nil
-	}
-	seats, err := h.countOrgSeats(orgID)
-	if err != nil {
-		// A limit that cannot be counted is not enforced. Refusing on a
-		// database hiccup would turn a transient fault into a billing
-		// message, which is the worst of both.
-		return nil
-	}
-	if err := orgs.CheckCeiling(limits, orgs.LimitMaxMembers, seats, adding); err != nil {
-		var limitErr *orgs.LimitError
-		if errors.As(err, &limitErr) {
-			return limitErr.WithDetail("including invitations not yet accepted")
-		}
-		return err
-	}
-	return nil
+	return failOpen(h.limitsEnforcer().CheckSeats(orgID, adding))
 }
 
 // checkProjectCount refuses when a workspace is already holding as many
 // projects as it may.
 func (h *Handler) checkProjectCount(orgID string) error {
-	limits := h.effectiveLimits(orgID)
-	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxProjects); !capped {
-		return nil
-	}
-	if h.ProjectService == nil {
-		return nil
-	}
-	list, err := h.ProjectService.ListProjectsByOrg(orgID)
-	if err != nil {
-		return nil
-	}
-	return orgs.CheckCeiling(limits, orgs.LimitMaxProjects, len(list), 1)
+	return failOpen(h.limitsEnforcer().CheckProjectCount(orgID))
 }
 
 // checkSharedWorkspaceCount refuses creating another shared workspace once
-// the person has created as many as their own plan allows.
-//
-// The count is of workspaces the person CREATED, not ones they belong to,
-// and the ceiling is their personal workspace's — the one that is theirs to
-// upgrade. Counting memberships instead would refuse somebody who did
-// nothing but accept an invitation, and taking the most generous workspace
-// they belong to would let one Business membership mint unlimited free
-// workspaces for everybody in it. A person with no personal workspace (a
-// service account, say) is not limited here.
+// the person has created as many as their own plan allows
+// (LimitEnforcer.CheckSharedWorkspaceCount).
 func (h *Handler) checkSharedWorkspaceCount(userID string) error {
-	if h.OrgService == nil || userID == "" {
-		return nil
-	}
-	list, err := h.OrgService.ListForUser(userID)
-	if err != nil {
-		return nil
-	}
-	created := 0
-	var personal *orgs.Org
-	for _, org := range list {
-		if org.OrgType == orgs.TypePersonal {
-			personal = org
-			continue
-		}
-		if org.CreatedBy != nil && *org.CreatedBy == userID {
-			created++
-		}
-	}
-	if personal == nil {
-		return nil
-	}
-	return orgs.CheckCeiling(personal.EffectiveLimits(), orgs.LimitMaxSharedWorkspaces, created, 1)
+	return failOpen(h.limitsEnforcer().CheckSharedWorkspaceCount(userID))
 }
 
 // buildLimitsResponse renders every catalogued limit for one workspace, with
@@ -441,63 +342,14 @@ func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
 	return out, nil
 }
 
-// countFor measures one limit's current usage. The second result is false for
-// a limit this deployment cannot measure, which the response then simply
-// omits rather than reporting as zero.
+// countFor measures one limit's current usage (LimitEnforcer.Used). The
+// second result is false for a limit this deployment cannot measure, or
+// whose usage cannot be read, which the response then simply omits rather
+// than reporting as zero.
 func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
-	switch key {
-	case orgs.LimitMaxMembers:
-		seats, err := h.countOrgSeats(org.ID)
-		if err != nil {
-			return 0, false
-		}
-		return seats, true
-	case orgs.LimitMaxProjects:
-		if h.ProjectService == nil {
-			return 0, false
-		}
-		list, err := h.ProjectService.ListProjectsByOrg(org.ID)
-		if err != nil {
-			return 0, false
-		}
-		return len(list), true
-	case orgs.LimitMaxSharedWorkspaces:
-		// The same reading the creation check makes: workspaces this
-		// person created, not ones they were invited into.
-		if org.CreatedBy == nil {
-			return 0, false
-		}
-		list, err := h.OrgService.ListForUser(*org.CreatedBy)
-		if err != nil {
-			return 0, false
-		}
-		created := 0
-		for _, o := range list {
-			if o.OrgType != orgs.TypePersonal && o.CreatedBy != nil && *o.CreatedBy == *org.CreatedBy {
-				created++
-			}
-		}
-		return created, true
-	case orgs.LimitHostedRunnerMinutesMonth:
-		if h.RunnerSessionService == nil {
-			return 0, false
-		}
-		now := time.Now().UTC()
-		used, err := h.RunnerSessionService.MinutesUsed(org.ID, time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC))
-		if err != nil {
-			return 0, false
-		}
-		return used, true
-	case orgs.LimitEvidenceStorageMB:
-		if h.EvidenceService == nil {
-			return 0, false
-		}
-		bytes, err := h.EvidenceService.StorageUsedByOrg(org.ID)
-		if err != nil {
-			return 0, false
-		}
-		// Reported in the limit's own unit so the two numbers compare.
-		return int(bytes / (1024 * 1024)), true
+	used, err := h.limitsEnforcer().Used(key, org)
+	if err != nil {
+		return 0, false
 	}
-	return 0, false
+	return used, true
 }
