@@ -14,7 +14,7 @@ server, so what they send is a contract. This README covers both packages;
 | Area (`docs/areas.json`) | Globs |
 |---|---|
 | runner-fleet | `internal/runner/**` (this file too), `cmd/agentd/**`, `cmd/openv-connector/**`, `internal/hosting/**`, `internal/workerproto/**` |
-| agent-suite | the MCP core: `internal/mcp/tools.go`, `internal/mcp/client*.go`, `internal/mcp/stdio*.go`, `internal/mcp/schema*.go`, `internal/mcp/context_bundle*.go`, `internal/mcp/tools_delegation*.go`, `internal/mcp/tools_interviews*.go`, `internal/mcp/testdata/**`, `internal/mcp/*.md`; `cmd/openv-mcp/**`; `internal/seeds/seeds*.go` |
+| agent-suite | the MCP core: `internal/mcp/tools.go`, `internal/mcp/client*.go`, `internal/mcp/stdio*.go`, `internal/mcp/schema*.go`, `internal/mcp/context_bundle*.go`, `internal/mcp/tools_delegation*.go`, `internal/mcp/tools_interviews*.go`, `internal/mcp/testdata/**`, `internal/mcp/toolnames/**`, `internal/mcp/*.md`; `cmd/openv-mcp/**`; `internal/seeds/seeds*.go` |
 | requirements-core | `internal/mcp/tools_artifacts*.go`, `internal/mcp/tools_comments*.go`, `internal/mcp/tools_links*.go`, `internal/mcp/tools_projects*.go`, `internal/mcp/tools_quality*.go`, `internal/mcp/tools_reviews*.go`, `internal/mcp/tools_workitems*.go` |
 | verification | `internal/mcp/tools_testruns*.go`, `internal/mcp/tools_vv*.go` |
 | documents | `internal/mcp/tools_baselines*.go` |

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
-	"github.com/openv/requirements-platform/internal/mcp"
+	"github.com/openv/requirements-platform/internal/mcp/toolnames"
 )
 
 // This file translates an agent definition's tool allowlist — which is written
@@ -54,14 +54,14 @@ func openvToolNames(allowed []string) (names []string, wildcard bool) {
 	seen := map[string]bool{}
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, _ := splitToolScope(entry)
-		if name == mcp.ServerTools {
+		if name == toolnames.ServerTools {
 			wildcard = true
 			continue
 		}
-		if !strings.HasPrefix(name, mcp.ToolPrefix) {
+		if !strings.HasPrefix(name, toolnames.ToolPrefix) {
 			continue
 		}
-		name = strings.TrimPrefix(name, mcp.ToolPrefix)
+		name = strings.TrimPrefix(name, toolnames.ToolPrefix)
 		if name == "*" {
 			wildcard = true
 			continue
@@ -81,7 +81,7 @@ func openvToolNames(allowed []string) (names []string, wildcard bool) {
 // strip again. Whitespace, a comma, "*" and "(" all fail the shape, so no
 // name passes that openv-mcp would split, trim or widen.
 func isOpenVToolName(name string) bool {
-	if name == "" || name == mcp.ServerTools || strings.Contains(name, mcp.ToolPrefix) {
+	if name == "" || name == toolnames.ServerTools || strings.Contains(name, toolnames.ToolPrefix) {
 		return false
 	}
 	for _, r := range name {
@@ -118,7 +118,7 @@ func withOpenVToolFilter(spec RunSpec) RunSpec {
 	for k, v := range spec.MCP.Env {
 		env[k] = v
 	}
-	env[mcp.EnvToolAllowlist] = openvToolAllowlist(spec.AllowedTools)
+	env[toolnames.EnvToolAllowlist] = openvToolAllowlist(spec.AllowedTools)
 	spec.MCP.Env = env
 	return spec
 }
@@ -190,7 +190,7 @@ func geminiToolSettings(allowed []string) (core []string, include []string, incl
 
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, scope := splitToolScope(entry)
-		if name == mcp.ServerTools || strings.HasPrefix(name, mcp.ToolPrefix) {
+		if name == toolnames.ServerTools || strings.HasPrefix(name, toolnames.ToolPrefix) {
 			continue // an OpenV tool: already handled above.
 		}
 		for _, mapped := range geminiBuiltinTools[name] {

@@ -170,9 +170,9 @@ this keeps it so.
 `internal/domain` packages it links, directly or not, may only shrink from
 its entry in `client_domain_deps`. A new binary fails until its entry, with
 the domain packages it links, is added by hand in review
-(`TestClientBinaryDiscovery` proves this on a fixture). `cmd/agentd` links 8
-(agentruns, agents, artifacts, events, providers, repoconns,
-runnersessions, users), `cmd/openv-mcp` links artifacts, and
+(`TestClientBinaryDiscovery` proves this on a fixture). `cmd/agentd` links 7
+(agentruns, agents, events, providers, repoconns, runnersessions, users;
+artifacts went with P4b), `cmd/openv-mcp` links artifacts, and
 `cmd/openv-connector` and `cmd/openv-vapid` link none. The walk is the
 same as `go list -deps`, over every build variant.
 
