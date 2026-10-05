@@ -411,7 +411,8 @@
         "internal/persistence/postgres/hosted_worker_*.go",
         "internal/persistence/postgres/runner_session_*.go",
         "internal/persistence/postgres/worker_key_*.go",
-        "internal/runner/**"
+        "internal/runner/**",
+        "internal/workerproto/**"
       ]
     },
     {
