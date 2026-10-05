@@ -383,15 +383,14 @@ log level=INFO msg="http request" method=POST path=/api/v1/orgs/<uuid>/billing/r
 
 == probe billing-checkout: POST /api/v1/orgs/{id}/billing/checkout {"plan":"business_lite","interval":"month"}
 status 503 Service Unavailable
-header Content-Length: 108
+header Content-Length: 118
 header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
 header Content-Type: application/json
 header Referrer-Policy: strict-origin-when-cross-origin
 header Retry-After: 30
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
-body "{\"error\":\"the billing provider did not answer; the workspace was left as it was\",\"code\":\"billing_upstream\"}\n"
-log level=WARN msg="billing: provider did not answer" path=/api/v1/orgs/<uuid>/billing/checkout org_id=<uuid> error="prices have not been confirmed with the billing provider yet"
+body "{\"error\":\"prices have not been confirmed with the billing provider yet; try again shortly\",\"code\":\"billing_upstream\"}\n"
 log level=ERROR msg="http request" method=POST path=/api/v1/orgs/<uuid>/billing/checkout status=503 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
 
 == probe billing-change: POST /api/v1/orgs/{id}/billing/change {"plan":"business_lite","interval":"month"}
