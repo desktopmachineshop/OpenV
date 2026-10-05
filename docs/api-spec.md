@@ -677,7 +677,7 @@ pushes new items live.
 | `membership_changed` | Somebody joins, leaves, is invited, or changes role | Workspace admins |
 | `release_published` | A server first boots on a new release (the top section of `RELEASE_NOTES.md`); `entity_ref.kind` is `release`, the title reads *OpenV version upgraded to 0.2.0* and the body carries the release's first bullets under their group headings. Or a stable release turns on for a workspace at its upgrade window, with the notes since the previous stable | Nightly: every account with a nightly-channel workspace, once per release (`release_announcements` claim). Stable: the workspace's members, once per workspace and release (`release_schedule` claim) |
 | `release_scheduled` | A stable release is designated and will turn on for the workspace at its window, and again a day before it does | The workspace's admins |
-| `release_support_window` | On a dedicated instance: a newer stable exists on the shared service and the 90-day support window is 30 or 7 days from closing, or has closed | Every workspace's admins on that instance |
+| `release_support_window` | On a dedicated instance: a newer stable exists on the shared service and the 90-day support window is 30 or 7 days from closing, or has closed | Every workspace admin on that instance, once per warning however many workspaces they administer (`release_announcements` claim), stored under the first of them |
 
 `access_changed` and `membership_changed` are two audiences for the same
 events, and are separate types because the reasons differ: one answers "what

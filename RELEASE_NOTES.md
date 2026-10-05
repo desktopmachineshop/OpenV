@@ -110,6 +110,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   previous interview's conversation while the new one loaded, and kept a
   half-typed answer after it. The page now starts afresh on each link.
 
+- **On a dedicated instance, each support window warning reaches you
+  once.** On an OpenV instance you run yourselves, the warnings that its
+  support window is about to close, or has closed, came once for every
+  workspace you administer, your personal workspace included, so an admin
+  of two workspaces got each warning twice: in the bell, by email and by
+  push. Each warning now comes once, however many workspaces you
+  administer.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features

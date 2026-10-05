@@ -89,6 +89,11 @@ const (
 	ncZurich     = "org-zurich"
 	ncZurichName = "Zürich Labs"
 	ncProject    = "proj-apollo"
+
+	// ncAdaHome is user-ada's personal workspace, which she alone
+	// administers.
+	ncAdaHome     = "org-ada-home"
+	ncAdaHomeName = "Ada's workspace"
 )
 
 // ncProjectMembers is the project's member list: an owner and an editor, who
@@ -111,6 +116,9 @@ var ncOrgMembers = map[string][]*orgs.Member{
 	ncZurich: {
 		{OrgID: ncZurich, UserID: "user-gus", Role: orgs.RoleAdmin},
 		{OrgID: ncZurich, UserID: "user-hal", Role: orgs.RoleMember},
+	},
+	ncAdaHome: {
+		{OrgID: ncAdaHome, UserID: "user-ada", Role: orgs.RoleAdmin},
 	},
 }
 
@@ -367,13 +375,15 @@ func (ch *ncChannels) stable(t *testing.T, now string, list []*orgs.Org, taken .
 
 // dedicated runs the support-window watcher of an instance on stable
 // 0.14.0 once at now, against a feed whose stable is 0.15.0, designated on
-// 2026-09-01: support for 0.14.0 ends on 2026-11-30.
+// 2026-09-01: support for 0.14.0 ends on 2026-11-30. user-ada administers
+// her personal workspace as well as ncOrg, and is warned once, on ncOrg's
+// row, the first of hers (#379 bug 221).
 func (ch *ncChannels) dedicated(t *testing.T, now string) {
 	feed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"version":"0.16.0","stable":"0.15.0","stable_since":"2026-09-01"}`))
 	}))
 	defer feed.Close()
-	list := []*orgs.Org{{ID: ncOrg, Name: ncOrgName}, ncZurichOrg()}
+	list := []*orgs.Org{{ID: ncOrg, Name: ncOrgName}, ncZurichOrg(), {ID: ncAdaHome, Name: ncAdaHomeName}}
 	w := NewSupportWindowWatcher(feed.URL, ncReleases(t, ncDedicatedNotes), &ncOrgs{list: list}, &ncClaims{},
 		ch.store, ch.bc).
 		SetEmailDispatcher(ch.email).

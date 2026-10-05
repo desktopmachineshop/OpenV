@@ -1,8 +1,11 @@
 package notify
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,9 +14,17 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
-type fakeWindowOrgs struct{ members map[string][]*orgs.Member }
+type fakeWindowOrgs struct {
+	members map[string][]*orgs.Member
+	// order is what ListAll answers; when it is empty, ListAll answers the
+	// keys of members in no particular order.
+	order []string
+}
 
 func (f fakeWindowOrgs) ListAll() ([]string, error) {
+	if len(f.order) > 0 {
+		return f.order, nil
+	}
 	ids := []string{}
 	for id := range f.members {
 		ids = append(ids, id)
@@ -126,5 +137,78 @@ func TestSupportWindowWarningCountsTheDaysLeft(t *testing.T) {
 			}
 			t.Errorf("%v before the close: titles %q, want [%q]", tc.left, titles, tc.want)
 		}
+	}
+}
+
+// TestSupportWindowWarnsEachAdminOnce: a warning is about the instance, not
+// a workspace, so it reaches each admin once, by bell, email and push,
+// however many workspaces they administer (a personal one counts). Their
+// one row is stored under the first workspace they administer, in ListAll
+// order; an admin of one workspace is warned as before. Each warning used to
+// reach an admin once for every workspace they administer (#379 bug 221).
+func TestSupportWindowWarnsEachAdminOnce(t *testing.T) {
+	for _, k := range ncEnvKeys {
+		t.Setenv(k, notifications.TypeReleaseSupportWindow)
+	}
+	ch := newNCChannels(t)
+	feed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"version":"0.5.0","stable":"0.4.0","stable_since":"2026-10-01"}`))
+	}))
+	t.Cleanup(feed.Close)
+	// ada is only a member of o-team, administers her own o-ada, and
+	// administers o-lab with dee; gus administers o-team alone.
+	o := fakeWindowOrgs{
+		order: []string{"o-team", "o-ada", "o-lab"},
+		members: map[string][]*orgs.Member{
+			"o-team": {
+				{OrgID: "o-team", UserID: "user-ada", Role: orgs.RoleMember},
+				{OrgID: "o-team", UserID: "user-gus", Role: orgs.RoleAdmin},
+			},
+			"o-ada": {{OrgID: "o-ada", UserID: "user-ada", Role: orgs.RoleAdmin}},
+			"o-lab": {
+				{OrgID: "o-lab", UserID: "user-dee", Role: orgs.RoleAdmin},
+				{OrgID: "o-lab", UserID: "user-ada", Role: orgs.RoleAdmin},
+			},
+		},
+	}
+	w := NewSupportWindowWatcher(feed.URL, fakeReleases{stable: &release.Stable{Version: "0.3.0", Since: "2026-09-01"}},
+		o, &fakeClaimer{claimed: map[string]bool{}}, ch.store, ch.bc).
+		SetChannels(Channels{Email: ch.email, Push: ch.push})
+
+	// The window closes on 2026-12-30: the 7-day warning, then the closed one.
+	for _, now := range []time.Time{
+		time.Date(2026, 12, 26, 0, 0, 0, 0, time.UTC),
+		time.Date(2027, 1, 5, 0, 0, 0, 0, time.UTC),
+	} {
+		w.now = func() time.Time { return now }
+		w.Run()
+	}
+
+	deliveries, strays := ch.rec.take()
+	if len(strays) > 0 {
+		t.Errorf("sent with no row stored: %v", strays)
+	}
+	var got []string
+	for _, d := range deliveries {
+		got = append(got, fmt.Sprintf("%s in %s: %q by %d SSE, %d email, %d push",
+			d.row.UserID, d.row.OrgID, d.row.Title, len(d.frames), len(d.emails), len(d.pushes)))
+		for _, p := range ncAddressProblems(d) {
+			t.Error(p)
+		}
+		if p := ncOrderProblem(d); p != "" {
+			t.Error(p)
+		}
+	}
+	want := []string{
+		`user-gus in o-team: "Upgrade OpenV within 4 days" by 1 SSE, 1 email, 1 push`,
+		`user-ada in o-ada: "Upgrade OpenV within 4 days" by 1 SSE, 1 email, 1 push`,
+		`user-dee in o-lab: "Upgrade OpenV within 4 days" by 1 SSE, 1 email, 1 push`,
+		`user-gus in o-team: "OpenV support window has closed" by 1 SSE, 1 email, 1 push`,
+		`user-ada in o-ada: "OpenV support window has closed" by 1 SSE, 1 email, 1 push`,
+		`user-dee in o-lab: "OpenV support window has closed" by 1 SSE, 1 email, 1 push`,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("delivered:\n  %s\nwant each admin warned once per warning:\n  %s",
+			strings.Join(got, "\n  "), strings.Join(want, "\n  "))
 	}
 }
