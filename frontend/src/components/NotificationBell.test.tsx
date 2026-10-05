@@ -4,6 +4,24 @@ import { mockApi } from '../test/mockApi';
 import { NotificationBell } from './NotificationBell';
 import { notificationsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// The deep-link cases this file shares with the Go test of the email link
+// and the push url; the file's about says what each field is.
+const DEEP_LINK_CASES = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../internal/notify/testdata/deep_links.json'
+);
+interface DeepLinkCase {
+  type: string;
+  ref: Record<string, unknown> | null;
+  go: string;
+  ts: string;
+  note?: string;
+}
+const deepLinkCases = (): DeepLinkCase[] => JSON.parse(fs.readFileSync(DEEP_LINK_CASES, 'utf8')).cases;
 
 // The notification panel: three views, the flag that survives a clear, the
 // two bulk actions, and paging through the history.
@@ -284,39 +302,24 @@ const opens = async (type: string, ref: Record<string, unknown> | undefined): Pr
 };
 
 describe('where a row opens', () => {
-  // The same table as TestEmailAndPushLinkWhereTheBellOpens
-  // (internal/notify/email_test.go): the email link and the web push url go
-  // where the bell does, in a workspace with the workspace Runs page. The
-  // cloud runner minutes alert, which points at the Billing tab, opened the
-  // projects list (#379, bug 59).
+  // The cases TestEmailAndPushLinkWhereTheBellOpens
+  // (internal/notify/email_test.go) checks too, from the fixture both read
+  // (refactor plan X4b): each case's ts path is where the bell goes, in a
+  // workspace with the workspace Runs page, and its go path where the email
+  // link and the web push url go. The cloud runner minutes alert, which
+  // points at the Billing tab, opened the projects list (#379, bug 59).
   beforeEach(() => withWorkspaceRuns(true));
   afterEach(() => useAppStore.setState({ features: null }));
 
-  const cases: [string, Record<string, unknown> | undefined, string][] = [
-    ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-7', project_id: 'p1', run_id: 'r1' }, '/projects/p1/agent-runs?run=r1'],
-    ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-8', project_id: 'p1', run_id: '' }, '/projects/p1/agent-runs'],
-    ['run_failed', { kind: 'run', project_id: 'p1', run_id: 'r1' }, '/projects/p1/agent-runs?run=r1'],
-    // A run with no project opens on the workspace Runs page (#379 bug
-    // 168); it opened the projects list, where no page lists it.
-    ['run_failed', { kind: 'run', project_id: '', run_id: 'r2' }, '/org/runs?run=r2'],
-    ['interview_completed', { kind: 'interview', project_id: 'p1', session_id: 's1' }, '/projects/p1/interviews'],
-    ['mention', { kind: 'artifact', project_id: 'p1', artifact_id: 'a1', chatter_id: 'c1' }, '/projects/p1/requirements'],
-    ['review_requested', { kind: 'artifact', project_id: 'p1', artifact_id: 'a1' }, '/projects/p1/requirements'],
-    ['budget_threshold', { kind: 'org_usage', org_id: 'o1', threshold: 80 }, '/org/settings?tab=usage'],
-    ['hosted_minutes', { kind: 'org_limits', org_id: 'o1', threshold: 100, month: '2026-10' }, '/org/settings?tab=billing'],
-    ['access_changed', { kind: 'membership', org_id: 'o1', user_id: 'u1' }, '/org/settings?tab=members'],
-    ['access_changed', { kind: 'project_membership', org_id: 'o1', user_id: 'u1', project_id: 'p1' }, '/projects/p1/settings?tab=members'],
-    ['membership_changed', { kind: 'membership', org_id: 'o1', user_id: 'u1' }, '/org/settings?tab=members'],
-    ['release_published', { kind: 'release', version: '0.16.0' }, '/whats-new'],
-    ['release_published', { kind: 'release', version: '0.15.0', org_id: 'o1' }, '/whats-new'],
-    ['release_scheduled', { kind: 'release', version: '0.15.0', org_id: 'o1' }, '/whats-new'],
-    ['release_support_window', { kind: 'support_window', running: '0.14.0', available: '0.15.0', closes: '2026-11-30' }, '/org/settings'],
-    ['run_failed', { kind: 'run' }, '/projects'],
-    ['proposal_pending', { kind: 'proposal', proposal_id: 'prop-9', run_id: 'r2' }, '/projects'],
-    ['access_changed', { kind: 'project_membership', org_id: 'o1', user_id: 'u1' }, '/projects'],
-    ['some_future_type', { kind: 'something_new', project_id: 'p1' }, '/projects/p1'],
-    ['some_future_type', undefined, '/projects'],
-  ];
+  const cases: [string, Record<string, unknown> | undefined, string][] = deepLinkCases().map((c) => [
+    c.type,
+    c.ref ?? undefined,
+    c.ts,
+  ]);
+
+  it('reads the shared cases', () => {
+    expect(cases.length).toBeGreaterThan(0);
+  });
 
   it.each(cases)('%s %j opens %s', async (type, ref, want) => {
     expect(await opens(type, ref)).toBe(want);
