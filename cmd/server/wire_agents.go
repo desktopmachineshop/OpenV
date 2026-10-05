@@ -2,7 +2,6 @@ package main
 
 import (
 	"log/slog"
-	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
@@ -35,21 +34,7 @@ func (a *app) agents() {
 	a.runService = agentruns.NewDefaultService(a.agentRunRepo, a.agentService, a.bus)
 	// First-refusal routing: runs launched by a user with an online personal
 	// runner wait for it before hosted/workspace runners may claim.
-	a.runService.SetRoutingPolicy(
-		func(orgID, userID string) bool {
-			online, err := a.workerKeyService.HasOnlinePersonalRunner(orgID, userID, time.Now().Add(-30*time.Second))
-			return err == nil && online
-		},
-		func(orgID string) int {
-			org, err := a.orgService.Get(orgID)
-			if err != nil {
-				return 0
-			}
-			if v, ok := org.Limits["runner_grace_seconds"].(float64); ok {
-				return int(v)
-			}
-			return 0
-		})
+	a.runService.SetRoutingPolicy(agentruns.RoutingPolicy(a.workerKeyService, a.orgService))
 	// Bounded auto-retry (issue #184): a retryable terminal failure
 	// (provider_unavailable | timeout | worker_error) re-enqueues a fresh
 	// attempt with backoff while attempts remain. OPENV_RUN_MAX_ATTEMPTS caps
