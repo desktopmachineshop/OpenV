@@ -72,7 +72,7 @@ const COMPONENT_CEILINGS = {
   'GuidedWizard': 1682,
   'HostedRunnerCard': 396,
   'ImageGallery': 563,
-  'InterviewChat': 463,
+  'InterviewChat': 440,
   'InterviewsPage': 462,
   'KanbanBoard': 663,
   'Landing': 405,

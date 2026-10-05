@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { publicInterviewAPI, InterviewMessage } from '../api/client';
 import { useConfirm } from '../components/ui';
 import { ChatMarkdown } from '../components/ChatMarkdown';
-import { SSE_EVENT } from '../sseEvents';
+import { RECONNECT, useEventStream } from '../hooks/useEventStream';
 
 type Phase = 'loading' | 'error' | 'name' | 'chat' | 'done';
 
@@ -25,14 +25,12 @@ export const InterviewChat: React.FC = () => {
   // the whole text so far, replaced by the final message when it lands.
   const [partial, setPartial] = useState('');
   const [sendError, setSendError] = useState('');
+  // The interview whose live stream is open: its token once the intro is in
+  // and the session still open, null when the interview ends or the page
+  // leaves the link. No stream for a finished session or a broken link.
+  const [liveToken, setLiveToken] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const esRef = useRef<EventSource | null>(null);
-  const retryRef = useRef<number>(0);
-  // The pending reconnect: cancelled when the token changes or the page
-  // unmounts, so it cannot reopen an interview the page has left (#379, bug 203).
-  const retryTimerRef = useRef<number | null>(null);
-  const closedRef = useRef(false);
 
   const appendMessage = useCallback((msg: InterviewMessage) => {
     setMessages((prev) => {
@@ -45,57 +43,11 @@ export const InterviewChat: React.FC = () => {
     }
   }, []);
 
-  // Live updates via SSE, with reconnect + backoff.
-  const connectStream = useCallback(() => {
-    if (!token || closedRef.current) return;
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
-    const es = new EventSource(publicInterviewAPI.streamUrl(token), { withCredentials: false });
-    esRef.current = es;
-    es.onopen = () => {
-      retryRef.current = 0;
-    };
-    es.addEventListener(SSE_EVENT.message, (event: MessageEvent) => {
-      try {
-        const msg = JSON.parse(event.data) as InterviewMessage;
-        if (msg && msg.id) appendMessage(msg);
-      } catch {
-        // ignore malformed events
-      }
-    });
-    es.addEventListener(SSE_EVENT.assistant_partial, (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data) as { run_id?: string; text?: string };
-        if (typeof data?.text !== 'string' || !data.text) return;
-        setPartial(data.text);
-        setTyping(false);
-      } catch {
-        // ignore malformed events
-      }
-    });
-    es.onerror = () => {
-      es.close();
-      if (esRef.current === es) esRef.current = null;
-      if (closedRef.current) return;
-      const attempt = Math.min(retryRef.current + 1, 6);
-      retryRef.current = attempt;
-      const delay = Math.min(1000 * 2 ** attempt, 15000);
-      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = window.setTimeout(() => {
-        retryTimerRef.current = null;
-        if (!closedRef.current) connectStream();
-      }, delay);
-    };
-  }, [token, appendMessage]);
-
   useEffect(() => {
     if (!token) {
       setPhase('error');
       return;
     }
-    closedRef.current = false;
     let cancelled = false;
     (async () => {
       try {
@@ -114,24 +66,46 @@ export const InterviewChat: React.FC = () => {
         } else {
           setPhase('name');
         }
-        connectStream();
+        setLiveToken(token);
       } catch {
         if (!cancelled) setPhase('error');
       }
     })();
     return () => {
       cancelled = true;
-      closedRef.current = true;
-      if (retryTimerRef.current !== null) {
-        window.clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
+      setLiveToken(null);
     };
-  }, [token, connectStream]);
+  }, [token]);
+
+  // Live updates via SSE, from liveToken: opened once the intro is in, and
+  // closed the moment the link changes, before the new link's intro is asked
+  // for. A drop retries for ever after 2, 4, 8, then 15 s, an open restarting
+  // the count (RECONNECT.cappedExponent); a retry pending when the link
+  // changes, the interview ends or the page unmounts is cancelled (#379, bug 203).
+  useEventStream(
+    liveToken !== null && liveToken === token ? publicInterviewAPI.streamUrl(liveToken) : null,
+    {
+      message: (event) => {
+        try {
+          const msg = JSON.parse(event.data) as InterviewMessage;
+          if (msg && msg.id) appendMessage(msg);
+        } catch {
+          // ignore malformed events
+        }
+      },
+      assistant_partial: (event) => {
+        try {
+          const data = JSON.parse(event.data) as { run_id?: string; text?: string };
+          if (typeof data?.text !== 'string' || !data.text) return;
+          setPartial(data.text);
+          setTyping(false);
+        } catch {
+          // ignore malformed events
+        }
+      },
+    },
+    { withCredentials: false, reconnect: RECONNECT.cappedExponent }
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -182,11 +156,7 @@ export const InterviewChat: React.FC = () => {
     } catch {
       // Even if finish fails, show the thank-you screen — the link may already be closed.
     }
-    closedRef.current = true;
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
+    setLiveToken(null);
     setPhase('done');
   };
 
