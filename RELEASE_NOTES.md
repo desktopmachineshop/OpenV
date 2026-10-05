@@ -46,14 +46,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   only the project the link starts in was checked, so you could delete a
   link into a project you can only view and change an artifact there. A
   link that crosses projects now needs edit rights in both, as it already
-  did when removed in the artifact editor; that includes a flow-down
-  (*refines*) link into a parent project.
+  did when removed in the artifact editor. A flow-down (*refines*) link,
+  which a supplier can make with view rights on the parent, can still be
+  deleted with them.
 
-- **Saving an artifact removes only its own links.** An update of an
-  artifact, from an agent or the API, could also remove a link between two
-  other artifacts, and the one the link started from went on listing it in
-  its latest version. An update now removes only links to or from the
-  artifact it saves, and leaves any other link as it is.
+- **Saving an artifact changes only its own links.** An update of an
+  artifact, from an agent or the API, could also add or remove a link
+  between two other artifacts; after such a removal, the artifact the link
+  started from went on listing it in its latest version. An update no
+  longer adds or removes a link between two other artifacts: it changes
+  only links to or from the artifact it saves.
 
 - **An artifact's history lists only the link changes that were made.**
   When a save added or removed links, its note in the artifact's history

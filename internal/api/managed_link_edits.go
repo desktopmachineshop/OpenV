@@ -222,10 +222,12 @@ type managedLinkChanges struct {
 
 // processManagedLinkChanges handles link additions and removals.
 // baseProjectID is the project of the artifact being updated; the caller has
-// already verified editor rights on it. A removal must name a link of the
-// edited artifact (#379 bug 198), and both its ends' projects must be the
-// caller's to edit; an add must pass the link rules, with editor rights on
-// both ends' projects. Any other entry is skipped with a warning.
+// already verified editor rights on it. An edit of one artifact changes
+// that artifact's own links only: a removal must name a link of the edited
+// artifact (#379 bug 198), and an add must have it at one end (#379 bug
+// 201). A removal also needs both its ends' projects to be the caller's to
+// edit; an add must pass the link rules, with editor rights on both ends'
+// projects. Any other entry is skipped with a warning.
 func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, fromArtifactID string, toAdd, toRemove []interface{}) (*managedLinkChanges, error) {
 	changes := &managedLinkChanges{}
 	affectedArtifactIDs := make(map[string]bool) // Use map to avoid duplicates
@@ -252,7 +254,6 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 			slog.Warn("api: skipping link removal, no such link", "link_id", linkID, "error", err)
 			continue
 		}
-		// An edit of one artifact removes that artifact's own links only.
 		if link.FromID != fromArtifactID && link.ToID != fromArtifactID {
 			slog.Warn("api: skipping link removal, the link does not touch the edited artifact",
 				"link_id", linkID, "artifact_id", fromArtifactID)
@@ -265,7 +266,6 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 			continue
 		}
 
-		// Hard delete the link
 		if err := h.LinkService.DeleteLink(linkID); err != nil {
 			slog.Warn("api: failed to delete link", "link_id", linkID, "error", err)
 			continue
@@ -296,6 +296,10 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		}
 		linkType, ok := linkDataMap["type"].(string)
 		if !ok {
+			continue
+		}
+		if fromID != fromArtifactID && toID != fromArtifactID {
+			slog.Warn("api: skipping link add, the link does not touch the edited artifact", "from_id", fromID, "to_id", toID)
 			continue
 		}
 

@@ -15,7 +15,7 @@ DELETE /api/v1/crew-nodes/{id}: session, scoped-write
 DELETE /api/v1/crews/{id}: session, scoped-write
 DELETE /api/v1/evidence-bundles/{id}: project:editor
 DELETE /api/v1/evidence-files/{id}: project:editor
-DELETE /api/v1/links/{id}: project:editor, project:editor
+DELETE /api/v1/links/{id}: project:editor, project:editor|project:viewer
 DELETE /api/v1/me/avatar: -
 DELETE /api/v1/me/push-subscriptions: session
 DELETE /api/v1/notifications/cleared: session

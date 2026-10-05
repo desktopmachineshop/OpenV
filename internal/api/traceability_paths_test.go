@@ -67,9 +67,10 @@ import (
 //	TargetRole     editor, viewer for    editor on both ends'  none at apply; the    editor on the
 //	               refines; a project    projects, any type,   run reaches its own   target's project when
 //	               not reached is 400;   add or removal; it    project only          it is another, any
-//	               delete: editor on     removes the edited                          type; the same
-//	               both ends' projects   artifact's own links                        workspace
-//	                                     only
+//	               delete: the same,     adds and removes the                        type; the same
+//	               viewer for refines    edited artifact's                           workspace
+//	               only while the        own links only
+//	               feature is on
 //	Snapshots      both ends, always     the edited artifact   both ends, always     none; nothing is
 //	               written, [] too       while a link remains  written, [] too       versioned
 //	                                     (Q4); the other end,
@@ -812,9 +813,11 @@ func (b *tpBus) Subscribe(func(events.Event)) {}
 // against the link rules (400), gates refines on the flow-down feature for a
 // member, wants editor rights on the target's project (viewer for refines),
 // auto-versions both ends with a links_snapshot and a note each, and
-// publishes link.created as the caller. DELETE /api/v1/links/{id} wants
-// editor rights on both ends' projects, refines too (an end no artifact has
-// asks none), before a proposal-mode run's delete is proposed.
+// publishes link.created as the caller. DELETE /api/v1/links/{id} wants what
+// creating wants, before a proposal-mode run's delete is proposed: editor
+// rights on the source's project, and on the target's, where refines takes
+// viewer rights while the flow-down feature is on; no feature gate refuses a
+// delete, and a target no artifact has asks nothing.
 func TestTraceabilityPathPostLinks(t *testing.T) {
 	t.Run("a valid new link", func(t *testing.T) {
 		fx := newTPFixture(t, true)
@@ -990,7 +993,7 @@ func TestTraceabilityPathPostLinks(t *testing.T) {
 		fx.setup(tpAsSupplier, "POST", "/api/v1/links", `{"from_id":"{{creq}}","to_id":"{{req}}","type":"refines"}`)
 		fx.setup(tpAsEditor, "POST", "/api/v1/links", `{"from_id":"{{req2}}","to_id":"{{need}}","type":"derives-from"}`)
 		fx.setup(tpAsEditor, "POST", "/api/v1/links", `{"from_id":"{{req}}","to_id":"{{creq}}","type":"relates-to"}`)
-		fx.note("the supplier made the refines link with viewer rights on P; deleting it wants editor rights there")
+		fx.note("the supplier made the refines link with viewer rights on P, and deletes it with them")
 		fx.step(tpAsSupplier, "DELETE", "/api/v1/links/{{L1}}", "")
 		fx.note("the user need is deleted (its row is gone from reads): its link asks the source's project alone")
 		delete(fx.arts.rows, fx.ids["need"])
@@ -998,9 +1001,15 @@ func TestTraceabilityPathPostLinks(t *testing.T) {
 		fx.note("a proposal-mode run reaches its own project only, so a link into C is refused, not proposed")
 		fx.step(tpAsProposalRun, "DELETE", "/api/v1/links/{{L3}}", "")
 		fx.expect(`
-			# the supplier made the refines link with viewer rights on P; deleting it wants editor rights there
+			# the supplier made the refines link with viewer rights on P, and deletes it with them
 			> DELETE /api/v1/links/L1 as u-supplier
-			< 403 {"error":"you do not have access to this project"}
+			< 204 (no body)
+			  link deleted: L1
+			  version creq 3->4 links_snapshot=[L3 req-relates-to->creq suspect=false attributes=null]
+			  chatter creq link-change auto=true by=- author="" "Auto-updated to version 4 due to link changes"
+			  version req 3->4 links_snapshot=[L3 req-relates-to->creq suspect=false attributes=null]
+			  chatter req link-change auto=true by=- author="" "Auto-updated to version 4 due to link changes"
+			  event link.deleted L1 project=proj-c org=org-1 actor=user:u-supplier {from_id string creq, link_type string refines, to_id string req}
 			# the user need is deleted (its row is gone from reads): its link asks the source's project alone
 			> DELETE /api/v1/links/L2 as u-editor
 			< 204 (no body)
@@ -1013,15 +1022,38 @@ func TestTraceabilityPathPostLinks(t *testing.T) {
 			< 404 {"error":"project not found"}
 		`)
 	})
+
+	t.Run("RequireFlowDownFeature of a removal: with the feature closed, refines wants editor rights on the target", func(t *testing.T) {
+		fx := newTPFixture(t, false)
+		fx.note("a refines link from C into P, made by a managed edit, which asks no feature")
+		fx.setup(tpAsEditor, "PUT", "/api/v1/artifacts/{{creq}}",
+			`{"pendingLinkAdds":[{"from_id":"{{creq}}","to_id":"{{req}}","type":"refines"}]}`)
+		fx.step(tpAsSupplier, "DELETE", "/api/v1/links/{{L1}}", "")
+		fx.note("no feature gate refuses the delete itself")
+		fx.step(tpAsEditor, "DELETE", "/api/v1/links/{{L1}}", "")
+		fx.expect(`
+			# a refines link from C into P, made by a managed edit, which asks no feature
+			> DELETE /api/v1/links/L1 as u-supplier
+			< 403 {"error":"you do not have access to this project"}
+			# no feature gate refuses the delete itself
+			> DELETE /api/v1/links/L1 as u-editor
+			< 204 (no body)
+			  link deleted: L1
+			  version creq 2->3 links_snapshot=[]
+			  chatter creq link-change auto=true by=- author="" "Auto-updated to version 3 due to link changes"
+			  version req 2->3 links_snapshot=[]
+			  chatter req link-change auto=true by=- author="" "Auto-updated to version 3 due to link changes"
+			  event link.deleted L1 project=proj-c org=org-1 actor=user:u-editor {from_id string creq, link_type string refines, to_id string req}
+		`)
+	})
 }
 
 // ---- path 2: the managed link edits of PUT /api/v1/artifacts/{id} ----
 
 // TestTraceabilityPathManagedEdits: pendingLinkAdds and pendingLinkRemoves
 // in PUT /api/v1/artifacts/{id} (Q3, Q4). An add or a removal the rules or
-// the caller's roles refuse, and a removal of a link that does not touch the
-// edited artifact, is skipped without a word and the update still answers
-// 200; there is no flow-down gate; editor rights are wanted on both ends'
+// the caller's roles refuse, or of a link that does not touch the edited
+// artifact, is skipped without a word and the update still answers 200; there is no flow-down gate; editor rights are wanted on both ends'
 // projects whatever the type; the edited artifact gets one version whose
 // links_snapshot is written only while a link remains (Q4), and a note
 // listing the links made and removed, not the ones skipped; the other end
@@ -1067,6 +1099,23 @@ func TestTraceabilityPathManagedEdits(t *testing.T) {
 			  version di 1->2 links_snapshot=[L2 di-satisfies->req suspect=false attributes={}, L1 di-satisfies->req suspect=false attributes={}]
 			  chatter di version-change auto=true by=- author="" "Updated to version 2\n\nChanges:\n- Links:\n    - satisfies: Req one (added)\n    - satisfies: Req one (added)\n"
 			  version req 1->2 links_snapshot=[L2 di-satisfies->req suspect=false attributes={}, L1 di-satisfies->req suspect=false attributes={}]
+			  chatter req link-change auto=true by=- author="" "Auto-updated to version 2 due to link changes"
+			  event artifact.updated di project=proj-p org=org-1 actor=user:u-editor {artifact_type string design-item, title string Design one, version int 2}
+		`)
+	})
+
+	t.Run("an add between two other artifacts: not the edited artifact's, so skipped; an incoming add is made", func(t *testing.T) {
+		fx := newTPFixture(t, true)
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{di}}",
+			`{"pendingLinkAdds":[{"from_id":"{{tc}}","to_id":"{{req}}","type":"verifies"},`+
+				`{"from_id":"{{req}}","to_id":"{{di}}","type":"impacts"}]}`)
+		fx.expect(`
+			> PUT /api/v1/artifacts/di as u-editor {"pendingLinkAdds":[{"from_id":"tc","to_id":"req","type":"verifies"},{"from_id":"req","to_id":"di","type":"impacts"}]}
+			< 200 artifact di v2 links_snapshot=[L1 req-impacts->di suspect=false attributes={}]
+			  link created: L1 req-impacts->di suspect=false attributes={}
+			  version di 1->2 links_snapshot=[L1 req-impacts->di suspect=false attributes={}]
+			  chatter di version-change auto=true by=- author="" "Updated to version 2\n\nChanges:\n- Links:\n    - impacts: Req one (added)\n"
+			  version req 1->2 links_snapshot=[L1 req-impacts->di suspect=false attributes={}]
 			  chatter req link-change auto=true by=- author="" "Auto-updated to version 2 due to link changes"
 			  event artifact.updated di project=proj-p org=org-1 actor=user:u-editor {artifact_type string design-item, title string Design one, version int 2}
 		`)
