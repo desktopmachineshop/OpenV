@@ -50,7 +50,6 @@ const COMPONENTS_IMPORTING_VIEWS = {
 const EVENT_SOURCE_HOOK = 'src/hooks/useEventStream.ts';
 const EVENT_SOURCE_SITES = {
   'src/components/wizard/GuidedChatPanel.tsx': 1,
-  'src/views/InterviewChat.tsx': 1,
 };
 
 // An entry for a file that is gone would never be reported stale (only linted
