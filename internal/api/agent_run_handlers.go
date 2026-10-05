@@ -113,13 +113,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	run, err := h.launchRun(r, launch)
 	if err != nil {
-		// Over-budget soft-block (enforcement on) is a distinct, expected
-		// refusal — surface it as 402 so the UI can message it clearly.
-		if errors.Is(err, agentruns.ErrBudgetExceeded) {
-			writeJSONError(w, http.StatusPaymentRequired, err.Error())
-			return
-		}
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeLaunchError(w, r, launchErrs402, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -210,12 +204,7 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 	}
 	run, err := h.launchRun(r, launch)
 	if err != nil {
-		// Mirror LaunchAgentRun: an over-budget soft-block is a distinct 402.
-		if errors.Is(err, agentruns.ErrBudgetExceeded) {
-			writeJSONError(w, http.StatusPaymentRequired, err.Error())
-			return
-		}
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeLaunchError(w, r, launchErrs402, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
