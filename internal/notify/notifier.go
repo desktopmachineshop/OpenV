@@ -31,15 +31,10 @@ type Broadcaster interface {
 
 // Notifier is the bus subscriber that materializes notifications.
 type Notifier struct {
-	store       notifications.Service
-	memberSvc   MemberLister
-	broadcaster Broadcaster
-	// email is an optional best-effort email side channel (issue #187); nil
-	// means email is off. Dispatch is nil-safe.
-	email *EmailDispatcher
-	// push is an optional best-effort web push side channel (REQ-109); nil
-	// means push is off. Dispatch is nil-safe and returns immediately.
-	push *PushDispatcher
+	// delivery holds the store, the SSE broadcaster and the optional email
+	// and web push side channels (nil means that channel is off).
+	delivery  Delivery
+	memberSvc MemberLister
 	// orgSvc and userNamer serve the membership fan-out (see membership.go).
 	// Both are optional: without orgSvc the membership events are ignored
 	// rather than half-delivered.
@@ -50,20 +45,27 @@ type Notifier struct {
 // NewNotifier creates a notifier. broadcaster may be nil (store-only mode,
 // used in tests).
 func NewNotifier(store notifications.Service, memberSvc MemberLister, broadcaster Broadcaster) *Notifier {
-	return &Notifier{store: store, memberSvc: memberSvc, broadcaster: broadcaster}
+	return &Notifier{delivery: Delivery{Store: store, Broadcaster: broadcaster}, memberSvc: memberSvc}
+}
+
+// SetChannels attaches the email and web push side channels at once; a nil
+// one is left off.
+func (n *Notifier) SetChannels(c Channels) *Notifier {
+	n.delivery.Channels = c
+	return n
 }
 
 // SetEmailDispatcher attaches an email side channel. Passing nil (or never
 // calling this) leaves email off.
 func (n *Notifier) SetEmailDispatcher(d *EmailDispatcher) *Notifier {
-	n.email = d
+	n.delivery.Email = d
 	return n
 }
 
 // SetPushDispatcher attaches a web push side channel. Passing nil (or never
 // calling this) leaves push off.
 func (n *Notifier) SetPushDispatcher(d *PushDispatcher) *Notifier {
-	n.push = d
+	n.delivery.Push = d
 	return n
 }
 
@@ -211,28 +213,17 @@ func (n *Notifier) handleMentions(e domainevents.Event) {
 	}
 }
 
-// deliver stores one notification and pushes it on the recipient's SSE
-// stream — unless the recipient is the event's own actor.
+// deliver stores one notification and sends it on every channel
+// (Delivery.Deliver) — unless the recipient is the event's own actor.
 func (n *Notifier) deliver(e domainevents.Event, userID, ntype, title, body string, ref map[string]interface{}) {
 	if e.Actor == "user:"+userID {
 		return
 	}
 	notification := notifications.New(e.OrgID, userID, ntype, title, body, ref)
-	if err := n.store.Create(notification); err != nil {
+	if err := n.delivery.Deliver(notification); err != nil {
 		slog.Error("notify: failed to store notification",
 			"event_type", e.EventType, "user_id", userID, "error", err)
-		return
 	}
-	if n.broadcaster != nil {
-		n.broadcaster.BroadcastSession(StreamKey(userID), "notification", notification)
-	}
-	// Best-effort email side channel; a no-op unless SMTP is configured, the
-	// type is eligible, and the recipient is opted in.
-	n.email.Dispatch(notification)
-	// Same gates for web push, which additionally needs the recipient to have
-	// subscribed a device. Queued to a goroutine, so this does not wait on a
-	// push service.
-	n.push.Dispatch(notification)
 }
 
 func payloadString(e domainevents.Event, key string) string {

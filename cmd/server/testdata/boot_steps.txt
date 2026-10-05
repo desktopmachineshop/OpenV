@@ -92,14 +92,14 @@ func main()
   call (*internal/orchestration.Hooks).SubscribeBus(*internal/events.DefaultBus)
   call (*internal/domain/users.DefaultService).SetEmailVerificationPolicy
   call (*internal/domain/users.DefaultService).SetSessionPolicy
-  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetEmailDispatcher -> (*internal/notify.Notifier).SetPushDispatcher -> (*internal/notify.Notifier).SetOrgService -> (*internal/notify.Notifier).SetUserNamer -> (*internal/notify.Notifier).Start
-  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetEmailDispatcher -> (*internal/notify.BudgetMonitor).SetPushDispatcher -> (*internal/notify.BudgetMonitor).Start
+  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetChannels -> (*internal/notify.Notifier).SetOrgService -> (*internal/notify.Notifier).SetUserNamer -> (*internal/notify.Notifier).Start
+  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetChannels -> (*internal/notify.BudgetMonitor).Start
   call internal/domain/release.NewService
   if
     go (*internal/notify.ReleaseAnnouncer).Announce
-    call internal/notify.NewStableScheduler -> (*internal/notify.StableScheduler).SetEmailDispatcher -> (*internal/notify.StableScheduler).SetPushDispatcher -> (*internal/notify.StableScheduler).Start
+    call internal/notify.NewStableScheduler -> (*internal/notify.StableScheduler).SetChannels -> (*internal/notify.StableScheduler).Start
     if
-      call internal/notify.NewSupportWindowWatcher -> (*internal/notify.SupportWindowWatcher).SetEmailDispatcher -> (*internal/notify.SupportWindowWatcher).SetPushDispatcher -> (*internal/notify.SupportWindowWatcher).Start
+      call internal/notify.NewSupportWindowWatcher -> (*internal/notify.SupportWindowWatcher).SetChannels -> (*internal/notify.SupportWindowWatcher).Start
   if
     call (*internal/domain/agentruns.DefaultService).SetBudgetGuard
   call internal/automation.NewTriggerMatcher -> (*internal/automation.TriggerMatcher).Start

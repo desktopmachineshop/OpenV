@@ -29,29 +29,33 @@ type MinutesReader interface {
 // call Check after a lease starts or extends; a workspace with no ceiling
 // is never alerted. Warn-only: the ceiling itself is enforced at the lease.
 type MinutesMonitor struct {
-	orgs        MinutesOrgService
-	minutes     MinutesReader
-	store       notifications.Service
-	broadcaster Broadcaster
-	email       *EmailDispatcher
-	push        *PushDispatcher
-	now         func() time.Time
+	orgs     MinutesOrgService
+	minutes  MinutesReader
+	delivery Delivery
+	now      func() time.Time
 }
 
 // NewMinutesMonitor creates a monitor. broadcaster may be nil.
 func NewMinutesMonitor(orgSvc MinutesOrgService, minutes MinutesReader, store notifications.Service, broadcaster Broadcaster) *MinutesMonitor {
-	return &MinutesMonitor{orgs: orgSvc, minutes: minutes, store: store, broadcaster: broadcaster, now: time.Now}
+	return &MinutesMonitor{orgs: orgSvc, minutes: minutes, delivery: Delivery{Store: store, Broadcaster: broadcaster}, now: time.Now}
+}
+
+// SetChannels attaches the email and web push side channels at once; a nil
+// one is left off.
+func (m *MinutesMonitor) SetChannels(c Channels) *MinutesMonitor {
+	m.delivery.Channels = c
+	return m
 }
 
 // SetEmailDispatcher attaches an email side channel; nil leaves it off.
 func (m *MinutesMonitor) SetEmailDispatcher(d *EmailDispatcher) *MinutesMonitor {
-	m.email = d
+	m.delivery.Email = d
 	return m
 }
 
 // SetPushDispatcher attaches a web push side channel; nil leaves it off.
 func (m *MinutesMonitor) SetPushDispatcher(d *PushDispatcher) *MinutesMonitor {
-	m.push = d
+	m.delivery.Push = d
 	return m
 }
 
@@ -105,21 +109,12 @@ func (m *MinutesMonitor) alertAdmins(orgID, month string, threshold, used, allow
 		"threshold": threshold,
 		"month":     month,
 	}
-	for _, mem := range members {
-		if mem.Role != orgs.RoleAdmin {
-			continue
+	ToOrgAdmins(members, func(userID string) {
+		n := notifications.New(orgID, userID, notifications.TypeHostedMinutes, title, body, ref)
+		if err := m.delivery.Deliver(n); err != nil {
+			slog.Error("minutes: failed to store notification", "org_id", orgID, "user_id", userID, "error", err)
 		}
-		n := notifications.New(orgID, mem.UserID, notifications.TypeHostedMinutes, title, body, ref)
-		if err := m.store.Create(n); err != nil {
-			slog.Error("minutes: failed to store notification", "org_id", orgID, "user_id", mem.UserID, "error", err)
-			continue
-		}
-		if m.broadcaster != nil {
-			m.broadcaster.BroadcastSession(StreamKey(mem.UserID), "notification", n)
-		}
-		m.email.Dispatch(n)
-		m.push.Dispatch(n)
-	}
+	})
 }
 
 func minutesMessage(threshold, used, allowance int) (string, string) {

@@ -37,29 +37,33 @@ type ChannelMembers interface {
 
 // ReleaseAnnouncer materialises the release notification.
 type ReleaseAnnouncer struct {
-	claims      ReleaseClaimer
-	members     ChannelMembers
-	store       notifications.Service
-	broadcaster Broadcaster
-	email       *EmailDispatcher
-	push        *PushDispatcher
-	now         func() time.Time
+	claims   ReleaseClaimer
+	members  ChannelMembers
+	delivery Delivery
+	now      func() time.Time
 }
 
 // NewReleaseAnnouncer creates an announcer. broadcaster may be nil.
 func NewReleaseAnnouncer(claims ReleaseClaimer, members ChannelMembers, store notifications.Service, broadcaster Broadcaster) *ReleaseAnnouncer {
-	return &ReleaseAnnouncer{claims: claims, members: members, store: store, broadcaster: broadcaster, now: time.Now}
+	return &ReleaseAnnouncer{claims: claims, members: members, delivery: Delivery{Store: store, Broadcaster: broadcaster}, now: time.Now}
+}
+
+// SetChannels attaches the email and web push side channels at once (a nil
+// one is left off).
+func (a *ReleaseAnnouncer) SetChannels(c Channels) *ReleaseAnnouncer {
+	a.delivery.Channels = c
+	return a
 }
 
 // SetEmailDispatcher attaches the email side channel (nil leaves it off).
 func (a *ReleaseAnnouncer) SetEmailDispatcher(d *EmailDispatcher) *ReleaseAnnouncer {
-	a.email = d
+	a.delivery.Email = d
 	return a
 }
 
 // SetPushDispatcher attaches the web push side channel (nil leaves it off).
 func (a *ReleaseAnnouncer) SetPushDispatcher(d *PushDispatcher) *ReleaseAnnouncer {
-	a.push = d
+	a.delivery.Push = d
 	return a
 }
 
@@ -94,16 +98,11 @@ func (a *ReleaseAnnouncer) Announce(rel *release.Release) int {
 	notified := 0
 	for _, userID := range all {
 		n := notifications.New("", userID, notifications.TypeReleasePublished, title, body, ref)
-		if err := a.store.Create(n); err != nil {
+		if err := a.delivery.Deliver(n); err != nil {
 			slog.Error("release: failed to store notification", "user_id", userID, "error", err)
 			continue
 		}
 		notified++
-		if a.broadcaster != nil {
-			a.broadcaster.BroadcastSession(StreamKey(userID), "notification", n)
-		}
-		a.email.Dispatch(n)
-		a.push.Dispatch(n)
 	}
 	slog.Info("release: announced", "version", rel.Version, "accounts", notified)
 	return notified

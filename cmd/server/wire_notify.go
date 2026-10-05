@@ -39,7 +39,9 @@ func (a *app) notify() {
 	a.userService.SetSessionPolicy(a.sessionPolicy)
 	// Registration policy (REQ-95): open unless the operator closes it.
 	a.registrationPolicy = api.RegistrationPolicyFromEnv()
-	a.emailDispatcher = notify.NewEmailDispatcher(a.emailMailer, a.userService, a.emailLinkBase, notify.EmailTypesFromEnv())
+	// The email and web push side channels, one value handed to every
+	// notification producer below and in stage release (SetChannels).
+	a.notifyChannels.Email = notify.NewEmailDispatcher(a.emailMailer, a.userService, a.emailLinkBase, notify.EmailTypesFromEnv())
 
 	// Optional web push side channel for the same high-signal types (REQ-109).
 	// Also strictly opt-in: with no OPENV_VAPID_* key pair the dispatcher has
@@ -56,15 +58,14 @@ func (a *app) notify() {
 	}
 	// Push deep links are same-origin paths resolved by the service worker,
 	// so unlike the emails above the dispatcher needs no base URL.
-	a.pushDispatcher = notify.NewPushDispatcher(pushSender, a.pushSubService, a.userService, notify.PushTypesFromEnv())
+	a.notifyChannels.Push = notify.NewPushDispatcher(pushSender, a.pushSubService, a.userService, notify.PushTypesFromEnv())
 
 	// Notification fan-out: bus events become per-user inbox rows plus live
 	// SSE pushes on notify:<user_id> (issue #132), plus a best-effort email
 	// for eligible types when the recipient is opted in and SMTP is on (#187).
 	a.notificationService = notifications.NewDefaultService(a.notificationRepo)
 	notify.NewNotifier(a.notificationService, a.memberService, a.sseHub).
-		SetEmailDispatcher(a.emailDispatcher).
-		SetPushDispatcher(a.pushDispatcher).
+		SetChannels(a.notifyChannels).
 		// Membership and privilege changes: the affected member hears what
 		// changed about their own access, and the workspace's admins hear who
 		// joined and who left.
@@ -82,8 +83,7 @@ func (a *app) notify() {
 	// month-to-date spend across 80%/100% of the org's monthly budget; the
 	// monitor alerts org admins once per threshold per month. Warn-only.
 	notify.NewBudgetMonitor(a.orgService, a.runService, a.notificationService, a.sseHub).
-		SetEmailDispatcher(a.emailDispatcher).
-		SetPushDispatcher(a.pushDispatcher).
+		SetChannels(a.notifyChannels).
 		Start(a.bus)
 
 	// Hosted-minutes alerts: the lease handlers ask the monitor after every
@@ -91,8 +91,7 @@ func (a *app) notify() {
 	// from, and the handlers are nil-safe.
 	if a.runnerSessionService != nil {
 		a.minutesMonitor = notify.NewMinutesMonitor(a.orgService, a.runnerSessionService, a.notificationService, a.sseHub).
-			SetEmailDispatcher(a.emailDispatcher).
-			SetPushDispatcher(a.pushDispatcher)
+			SetChannels(a.notifyChannels)
 	}
 }
 
@@ -121,23 +120,20 @@ func (a *app) release() {
 		slog.Info("release", "version", cur.Version)
 		releaseRepo := postgres.NewReleaseRepository(a.db)
 		announcer := notify.NewReleaseAnnouncer(releaseRepo, a.orgService, a.notificationService, a.sseHub).
-			SetEmailDispatcher(a.emailDispatcher).
-			SetPushDispatcher(a.pushDispatcher)
+			SetChannels(a.notifyChannels)
 		go announcer.Announce(cur)
 		// Stable-channel workspaces move to a stable release at their own
 		// upgrade time: the scheduler tells their admins at the cut, reminds
 		// them a day before, and turns the release on (REQ-138, REQ-140).
 		notify.NewStableScheduler(a.releaseService, a.orgService, releaseRepo, a.notificationService, a.sseHub).
-			SetEmailDispatcher(a.emailDispatcher).
-			SetPushDispatcher(a.pushDispatcher).
+			SetChannels(a.notifyChannels).
 			Start(a.ctx, time.Hour)
 		// A dedicated instance (OPENV_DEPLOYMENT=dedicated) is supported for
 		// 90 days after the next stable is cut on the shared service; it
 		// reads the public release feed daily and warns admins (REQ-139).
 		if a.deploymentKind == "dedicated" {
 			notify.NewSupportWindowWatcher(releaseFeedURL, a.releaseService, a.orgService, releaseRepo, a.notificationService, a.sseHub).
-				SetEmailDispatcher(a.emailDispatcher).
-				SetPushDispatcher(a.pushDispatcher).
+				SetChannels(a.notifyChannels).
 				Start(a.ctx, 24*time.Hour)
 		}
 	}
