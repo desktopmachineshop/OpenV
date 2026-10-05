@@ -213,21 +213,33 @@ var allPlans = []string{
 	PlanSelfHost, PlanOpenSource, PlanFree, PlanTeam,
 }
 
-// MaxPlanUploadMB is the largest per-file upload any CAPPED plan allows, or 0
-// where no plan on this deployment has a ceiling.
+// MaxPlanUploadMB is the largest per-file upload any CAPPED plan allows, or
+// the deployment layer's max_upload_mb where that is larger, or 0 where no
+// plan on this deployment has a ceiling.
 //
-// It is derived from PlanDefaults rather than written down a second time, so
-// raising a tier's ceiling cannot leave a bound elsewhere quietly refusing
-// what the tier now permits. An upload handler uses it to bound a request
-// BEFORE it knows which workspace the upload is for: parsing a multipart body
-// spools every part to disk, so something has to say how much disk one request
-// may take while the answer is still unknown. What the bytes are finally
-// measured against is the workspace's own limit.
+// It is derived from PlanDefaults and the deployment layer rather than written
+// down a second time, so raising a tier's ceiling, or the deployment's, cannot
+// leave a bound elsewhere quietly refusing what the tier now permits. An upload
+// handler uses it to bound a request BEFORE it knows which workspace the upload
+// is for: parsing a multipart body spools every part to disk, so something has
+// to say how much disk one request may take while the answer is still unknown.
+// What the bytes are finally measured against is the workspace's own limit.
+//
+// The deployment layer (OPENV_LIMITS) sits above every plan, so a
+// max_upload_mb there above the plans' largest is what every workspace without
+// one of its own resolves, and the bound takes it: otherwise such a workspace
+// is refused at the request with the plans' smaller figure (#379, bug 191). A
+// figure there below the plans' largest leaves that in charge; the layer only
+// ever lifts the bound.
 //
 // The uncapped plans (self-host, enterprise) are skipped rather than collapsing
-// the answer to "no bound". A plan with no ceiling means OpenV rations nothing,
-// not that one HTTP request may be any size at all; a deployment that is itself
-// self-hosted reports 0 and leaves the bound to the operator.
+// the answer to "no bound", and so is a 0 in the deployment layer. A plan with
+// no ceiling means OpenV rations nothing, not that one HTTP request may be any
+// size at all; a deployment that is itself self-hosted reports 0, whatever its
+// deployment layer says, and leaves the bound to the operator. The bound there
+// is already the transport ceiling, which the layer could not lift, and taking
+// the layer's figure would lower it, refusing at the request a workspace the
+// operator raised on its own.
 func MaxPlanUploadMB() int {
 	if selfHosted {
 		return 0
@@ -237,6 +249,9 @@ func MaxPlanUploadMB() int {
 		if mb, ok := LimitInt(PlanDefaults(plan), LimitMaxUploadMB); ok && mb > largest {
 			largest = mb
 		}
+	}
+	if mb, ok := LimitInt(deploymentLimits, LimitMaxUploadMB); ok && mb > largest {
+		largest = mb
 	}
 	return largest
 }

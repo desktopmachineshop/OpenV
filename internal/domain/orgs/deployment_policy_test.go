@@ -502,7 +502,7 @@ func TestSelfHostedAfterTheServiceIsBuilt(t *testing.T) {
 		t.Errorf("self-hosted: a refusal built before the switch = %q, want %q", got, want)
 	}
 	if got, want := CheckFlag(flagLimits, LimitTeams).Error(),
-		"Teams and per-project access: not included in this workspace's plan. "+
+		"Teams and per-project access: turned off on this deployment. "+
 			"This deployment sets its own limits: raise teams in OPENV_LIMITS to change it everywhere, "+
 			"or set it on this workspace alone to change it here."; got != want {
 		t.Errorf("self-hosted: flag refusal = %q, want %q", got, want)
@@ -790,8 +790,8 @@ func TestDeploymentLimitsAfterTheServiceIsBuilt(t *testing.T) {
 // it without validation (ParseLimits is the validator, at boot) and keeps
 // the caller's map rather than a copy, so a later write to that map moves
 // the layer; DeploymentLimits answers a copy, so a write to that does not.
-// MaxPlanUploadMB reads the plans alone, so a deployment layer above every
-// plan's upload ceiling does not raise it.
+// MaxPlanUploadMB reads the deployment layer as well as the plans, so a
+// layer above every plan's upload ceiling raises it (#379, bug 191).
 func TestDeploymentLimitsSetterKeepsTheMapItIsGiven(t *testing.T) {
 	atPolicyDefaults(t)
 
@@ -818,7 +818,61 @@ func TestDeploymentLimitsSetterKeepsTheMapItIsGiven(t *testing.T) {
 	if got, _ := LimitInt(policyLimits(t, svc, "w-single"), LimitMaxUploadMB); got != 4096 {
 		t.Errorf("deployment layer max_upload_mb 4096: w-single max_upload_mb = %d, want 4096", got)
 	}
-	if got := MaxPlanUploadMB(); got != 1024 {
-		t.Errorf("deployment layer max_upload_mb 4096: MaxPlanUploadMB() = %d, want 1024", got)
+	if got := MaxPlanUploadMB(); got != 4096 {
+		t.Errorf("deployment layer max_upload_mb 4096: MaxPlanUploadMB() = %d, want 4096", got)
+	}
+}
+
+// The upload request bound against the deployment layer (#379, bug 191).
+// Hosted, MaxPlanUploadMB is the larger of the capped plans' largest (1024)
+// and the layer's max_upload_mb: a layer above the plans lifts it, one at
+// or below them, a 0 (no ceiling) or none leaves it, and a figure above the
+// API's 8192 MB transport ceiling is answered as set, the API capping it.
+// It is then never below what a workspace with no limits of its own
+// resolves on any plan, which is what the request bound needs. Self-hosted,
+// it is 0 whatever the layer says, leaving the bound to the operator.
+func TestTheUploadBoundTakesTheDeploymentLayer(t *testing.T) {
+	atPolicyDefaults(t)
+
+	parsed, err := ParseLimits(`{"max_upload_mb": 4096}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range []struct {
+		name       string
+		selfHosted bool
+		layer      map[string]interface{}
+		want       int // MaxPlanUploadMB()
+	}{
+		{"hosted, no layer", false, nil, 1024},
+		{"hosted, a layer without max_upload_mb", false, map[string]interface{}{LimitMaxProjects: 7}, 1024},
+		{"hosted, max_upload_mb above the plans", false, map[string]interface{}{LimitMaxUploadMB: 4096}, 4096},
+		{"hosted, max_upload_mb above the plans, as parsed", false, parsed, 4096},
+		{"hosted, max_upload_mb equal to the plans", false, map[string]interface{}{LimitMaxUploadMB: 1024}, 1024},
+		{"hosted, max_upload_mb below the plans", false, map[string]interface{}{LimitMaxUploadMB: 256}, 1024},
+		{"hosted, max_upload_mb 0, no ceiling", false, map[string]interface{}{LimitMaxUploadMB: 0}, 1024},
+		{"hosted, max_upload_mb above 8192", false, map[string]interface{}{LimitMaxUploadMB: 10000}, 10000},
+		{"self-hosted, no layer", true, nil, 0},
+		{"self-hosted, max_upload_mb 4096", true, map[string]interface{}{LimitMaxUploadMB: 4096}, 0},
+		{"self-hosted, max_upload_mb above 8192", true, map[string]interface{}{LimitMaxUploadMB: 10000}, 0},
+		{"self-hosted, max_upload_mb 0", true, map[string]interface{}{LimitMaxUploadMB: 0}, 0},
+	} {
+		t.Run(row.name, func(t *testing.T) {
+			SetSelfHosted(row.selfHosted)
+			SetDeploymentLimits(row.layer)
+			bound := MaxPlanUploadMB()
+			if bound != row.want {
+				t.Errorf("MaxPlanUploadMB() = %d, want %d", bound, row.want)
+			}
+			if row.selfHosted {
+				return
+			}
+			for _, plan := range allPlans {
+				limits := policyOrg("w-"+plan, TypeCompany, plan, policyCreated).EffectiveLimits()
+				if mb, capped := Ceiling(limits, LimitMaxUploadMB); capped && mb > bound {
+					t.Errorf("a %s workspace resolves max_upload_mb %d, over the %d MB bound", plan, mb, bound)
+				}
+			}
+		})
 	}
 }
