@@ -14,7 +14,7 @@ Each package belongs to one area of `docs/areas.json` through its
 
 | Area | Packages |
 |---|---|
-| requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `settings/`, `workitems/` |
+| requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `settings/`, `traceability/`, `workitems/` |
 | verification | `evidence/`, `vv/` |
 | documents | `attachments/`, `baselines/`, `downloads/`, `exports/`, `reports/`, `snapshot/`, `templates/` |
 | tenancy-identity | `invitations/`, `members/`, `orgs/`, `tokens/`, `users/` |
@@ -35,6 +35,7 @@ Billing has no domain package: it is `internal/billing` (see
 | `*/*.go` named after the package or its entity (`artifacts/artifact.go`, `orgs/orgs.go`) | the types, `Repository`, the `Service` interface and `DefaultService`, built by `NewDefaultService` (or `NewService`) |
 | `*/repository.go` | the `Repository` port where it has a file of its own (`projects/repository.go`) |
 | other `*/*.go` | one concern each, such as `orgs/plans.go`, `orgs/limits.go`, `orgs/enforcer.go` (the limits enforcer: counting and limit checks), `orgs/teams.go` (people-teams), `release/features.go`, `exports/reqif.go`, `hostedworkers/reconcile.go` (the boot reconcile of hosted runners with their containers), `agentruns/budget.go` and `agentruns/routing.go` (the budget guard and the first-refusal routing the run service is wired with) |
+| `traceability/*.go` | the link write service: the checks, writes, `links_snapshot` refreshes with their notes, link events and change summaries that the four link-write paths share, each path under its own `Policy` (quirks Q3, Q4) |
 | `events/events.go` | the domain event types: stored data that automations and the notifier match |
 | `notifications/notifications.go` | the notification types the notifier creates |
 | `release/features.go` | the feature keys that gate unreleased work by release channel |

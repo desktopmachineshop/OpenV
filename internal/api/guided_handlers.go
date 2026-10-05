@@ -12,8 +12,8 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/guided"
-	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/traceability"
 )
 
 // registerGuidedSessionRoutes wires the guided wizard's sessions: start,
@@ -125,10 +125,12 @@ func (h *Handler) MaterializeGuidedDrafts(w http.ResponseWriter, r *http.Request
 
 // dropRefusedDraftLinks takes out of each draft the links a managed edit
 // would skip as an add (processManagedLinkChanges), each with a warning; the
-// draft itself is still created (#379 bug 193). The checks ask who is
-// calling, so they are made here: the guided service has no request.
+// draft itself is still created (#379 bug 193), as guidedDraftPolicy's
+// OnInvalid says. The checks ask who is calling, so they are made here: the
+// guided service has no request.
 func (h *Handler) dropRefusedDraftLinks(r *http.Request, session *guided.Session, drafts []guided.DraftSpec) {
 	orgID := h.orgIDForProject(session.ProjectID)
+	trace := h.traceabilityFor(r)
 	for i := range drafts {
 		draft := &drafts[i]
 		if len(draft.Links) == 0 {
@@ -136,7 +138,7 @@ func (h *Handler) dropRefusedDraftLinks(r *http.Request, session *guided.Session
 		}
 		kept := make([]guided.DraftLink, 0, len(draft.Links))
 		for _, dl := range draft.Links {
-			if err := h.draftLinkRefusal(r, session.ProjectID, orgID, draft.Type, dl); err != nil {
+			if err := h.draftLinkRefusal(trace, session.ProjectID, orgID, draft.Type, dl); err != nil {
 				slog.Warn("api: skipping a guided draft's link", "session_id", session.ID, "draft_title", draft.Title,
 					"link_type", dl.Type, "to_id", dl.ToID, "reason", err)
 				continue
@@ -149,10 +151,10 @@ func (h *Handler) dropRefusedDraftLinks(r *http.Request, session *guided.Session
 
 // draftLinkRefusal says why a draft of type draftType, to be created in
 // projectID of workspace orgID, may not have the link dl, or nil when it may:
-// the target must be an artifact of the same workspace, the link rules must
-// allow the type between the two, and a target in another project needs
-// editor rights there.
-func (h *Handler) draftLinkRefusal(r *http.Request, projectID, orgID, draftType string, dl guided.DraftLink) error {
+// the target must be an artifact of the same workspace, then the link rules
+// must allow the type between the two and a target in another project needs
+// editor rights there (guidedDraftPolicy, through trace.CheckLink).
+func (h *Handler) draftLinkRefusal(trace *traceability.Service, projectID, orgID, draftType string, dl guided.DraftLink) error {
 	target, err := h.ArtifactService.GetArtifact(dl.ToID)
 	if err != nil || target == nil {
 		return errors.New("no artifact has the target id")
@@ -160,13 +162,8 @@ func (h *Handler) draftLinkRefusal(r *http.Request, projectID, orgID, draftType 
 	if target.ProjectID != projectID && (orgID == "" || h.orgIDForProject(target.ProjectID) != orgID) {
 		return errors.New("the target is in another workspace")
 	}
-	if err := links.ValidateLinkType(dl.Type, draftType, target.Type); err != nil {
-		return err
-	}
-	if target.ProjectID != projectID && !h.hasProjectRole(r, target.ProjectID, members.RoleEditor) {
-		return errors.New("no editor access to the target's project")
-	}
-	return nil
+	draft := traceability.End{Type: draftType, ProjectID: projectID}
+	return trace.CheckLink(guidedDraftPolicy, projectID, draft, traceability.EndOf(target), dl.Type)
 }
 
 // CommitGuidedSession approves the session's drafts and closes it. Approval

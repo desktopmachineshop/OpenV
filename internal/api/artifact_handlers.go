@@ -303,6 +303,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	// update_artifact tool) into a wipe.
 
 	// Process link changes FIRST (add/remove from table)
+	trace := h.traceabilityFor(r)
 	var affectedArtifactIDs []string
 	var addedLinks, removedLinks []*links.Link
 	if len(req.PendingLinkAdds) > 0 || len(req.PendingLinkRemoves) > 0 {
@@ -319,44 +320,11 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			respondInternal(w, r, "failed to process link changes", err)
 			return
 		}
-		affectedArtifactIDs, addedLinks, removedLinks = changes.affected, changes.added, changes.removed
+		affectedArtifactIDs, addedLinks, removedLinks = changes.Affected, changes.Added, changes.Removed
 
-		// After processing link changes, fetch current links and store in snapshot (deduplicated)
-		seenLinkIDs := make(map[string]bool)
-		allLinks := make([]interface{}, 0)
-
-		incomingLinks, err := h.LinkService.GetLinksTo(id)
-		if err == nil {
-			for _, link := range incomingLinks {
-				if !seenLinkIDs[link.ID] {
-					seenLinkIDs[link.ID] = true
-					allLinks = append(allLinks, link)
-				}
-			}
-		}
-
-		outgoingLinks, err := h.LinkService.GetLinksFrom(id)
-		if err == nil {
-			for _, link := range outgoingLinks {
-				if !seenLinkIDs[link.ID] {
-					seenLinkIDs[link.ID] = true
-					allLinks = append(allLinks, link)
-				}
-			}
-		}
-
-		if len(allLinks) > 0 {
-			// Storing the snapshot needs a concrete attributes map. If the
-			// request left attributes untouched (nil), seed a copy of the
-			// current ones so the snapshot write doesn't clear the rest.
-			if req.Attributes == nil {
-				req.Attributes = make(map[string]interface{}, len(oldArtifact.Attributes)+1)
-				for k, v := range oldArtifact.Attributes {
-					req.Attributes[k] = v
-				}
-			}
-			req.Attributes["links_snapshot"] = allLinks
-		}
+		// After processing link changes, fetch current links and store in
+		// snapshot (deduplicated), while a link remains (Q4)
+		trace.SetLinksSnapshot(&req, id, oldArtifact.Attributes)
 	}
 
 	// Update the artifact ONCE with all changes including link snapshot
@@ -379,7 +347,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build a detailed change summary for chatter
-	chatterMessage := h.buildChangesSummary(oldArtifact, artifact, addedLinks, removedLinks)
+	chatterMessage := trace.BuildChangesSummary(oldArtifact, artifact, addedLinks, removedLinks)
 	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "version-change")
 	if err := h.ChatterService.CreateEntry(chatterEntry); err != nil {
 		// Log but don't fail the request
@@ -389,11 +357,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	// Auto-version any artifacts that had link changes
 	// These are OTHER artifacts affected by link changes, not the one we just updated
 	if len(affectedArtifactIDs) > 0 {
-		err = h.autoVersionLinkedArtifacts(affectedArtifactIDs)
-		if err != nil {
-			// Log but don't fail the request
-			slog.Warn("api: failed to auto-version linked artifacts", "error", err)
-		}
+		trace.RefreshLinkSnapshots(affectedArtifactIDs...)
 	}
 
 	h.publish(r, events.ArtifactUpdated, artifact.ProjectID, artifact.ID, map[string]interface{}{

@@ -152,15 +152,20 @@ the Phase 3 consolidations that give quirks their names.
 
 - **Where:** `UpdateArtifact` (`internal/api/artifact_handlers.go`) applies
   `pending_link_adds` and removals through `processManagedLinkChanges`
-  (`internal/api/managed_link_edits.go`). Unlike `POST /links` it skips the
-  FeatureFlowDown gate, which `CreateLink` checks
-  (`internal/api/link_handlers.go`), publishes no `LinkCreated` or
-  `LinkDeleted` event (`CreateLink` and `DeleteLink` do), silently skips an
-  invalid add (the `continue`s of `processManagedLinkChanges`' add loop),
-  and the version note lists the *requested* links
-  (`linksFromPendingAdds`, `managed_link_edits.go`), not the ones created.
-- **Pinned by, named as:** S5a; X11a *(planned)*; explicit `Policy` flags in
-  X11b *(planned)*. Pain point api-requirements-3.
+  (`internal/api/managed_link_edits.go`), which calls
+  `traceability.Service.ApplyManagedLinkEdits`
+  (`internal/domain/traceability/managed.go`) with `managedEditPolicy`
+  (`internal/api/link_traceability.go`). Unlike `POST /links`, whose
+  `linkCreatePolicy` asks for it, that policy skips the FeatureFlowDown gate
+  (`RequireFlowDownFeature: false`), publishes no `LinkCreated` or
+  `LinkDeleted` event (`EmitEvents: false`; `CreateLink` and `DeleteLink`
+  publish through `PublishLinkEvent`), and silently skips an invalid add
+  (`OnInvalid: Skip`). The version note's part is resolved by the fix for
+  #379's bug 196: the note (`BuildChangesSummary`,
+  `internal/domain/traceability/summary.go`) lists only the links the edit
+  made or removed.
+- **Pinned by, named as:** S5a; X11a (`internal/api/traceability_paths_test.go`);
+  explicit `Policy` flags in X11b. Pain point api-requirements-3.
 - **Pinned today:** the S5a tour, `cmd/server/testdata/tour/s5a/links_managed_edits.json`:
   one managed edit adds a valid and an invalid link and removes a link
   between two other artifacts (step 49): the invalid add is skipped without
@@ -176,11 +181,12 @@ the Phase 3 consolidations that give quirks their names.
 ## Q4. `links_snapshot` and auto-version numbering
 
 - **Where:** `UpdateArtifact` writes `links_snapshot` only when at least one
-  link remains (`internal/api/artifact_handlers.go`), while
-  `autoVersionLinkedArtifacts` (`internal/api/managed_link_edits.go`) always
-  writes it; the chatter note it writes names auto-version N as the version
-  read before the update plus 1.
-- **Pinned by, named as:** S5a; X11a *(planned)*.
+  link remains (`traceability.Service.SetLinksSnapshot`,
+  `internal/domain/traceability/writes.go`), while `RefreshLinkSnapshots`
+  (the same file, `autoVersionLinkedArtifacts` before X11b) always writes
+  it; the chatter note it writes names auto-version N as the version read
+  before the update plus 1.
+- **Pinned by, named as:** S5a; X11a (`internal/api/traceability_paths_test.go`).
 - **Pinned today:** the S5a tour, `cmd/server/testdata/tour/s5a/links_managed_edits.json`: a
   managed removal that leaves no link carries the previous `links_snapshot`
   forward (steps 57–59), while `autoVersionLinkedArtifacts` writes an empty

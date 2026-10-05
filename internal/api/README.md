@@ -40,6 +40,7 @@ A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 | `limits.go` | plan limits for the API: the limits endpoint's response, the read-only gate and `alwaysWritable`, its exemption wrapper, and `failOpen` over `orgs.LimitEnforcer`, which counts and decides |
 | `sse.go` | `SSEHub` and `ServeStream`: the event streams and their keys (I9) |
 | `event_names.go` | the actor and entity names the activity log shows beside each domain event |
+| `link_traceability.go` | the `traceability.Policy` of each link-write path (`POST` and `DELETE /links`, managed edits, proposal appliers, guided drafts) and the link write service built for a request or for the appliers |
 | other non-test files | area helpers that are not handlers, such as `ai_map.go`, `managed_link_edits.go`, `proposal_appliers.go`, `attachment_safety.go` |
 | `testkit_test.go` | `newTestHandler` and the shared fakes (K6) |
 | `route_*_test.go` | S2: the route inventory, binding, overlaps and guards |
