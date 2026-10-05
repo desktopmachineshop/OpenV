@@ -494,7 +494,7 @@ flowchart LR
 |---|---|---:|---:|---|
 | **0 Safety net** (classes C and T; no production code) | S0–S16 (S17 dropped) | about 28, plus 11 just-in-time S16 PRs | 32–38 | **Stop point 0,** a milestone rather than a gate: Phase 1 moves start as soon as their own guards are merged. Reached once S0–S15 are merged. Every contract in §3 is pinned except the per-view DOM snapshots (S16a–S16k), which land right before each view is touched. The golden list grows from 1 entry to the 20 that S14b enumerates. The flaky test is fixed; the pgvector tests run on their own CI leg while the no-vector leg stays. The authorization matrix and the env-profile matrix exist, and the refactor gate, move tools and window generators work. OpenV records verification for the requirements §8.5 maps. The `pre-refactor` baseline is captured earlier, before the first M or F step merges. |
 | **1 Same-package moves** (classes A, B, C, R, T; E for M15b) | M1–M15, F1–F7, N1–N3, D1 (F8 rolling) | about 38, plus about 6 rolling F8 PRs | 27–32 | **Stop point 1,** the programme's target: it stops here unless the maintainer approves Phase 2. No hub is a shared insertion point: `handlers.go` holds deps only, `main()` is about 60 lines, migrations are one per file, and `client.ts` is a barrel. A dependency is declared in 2 places, not 4. Tests use one constructor and one mock helper. Every non-test file has an area, every area maps to a README section, and 4 of the 5 scaffolds exist (`scaffold page` arrives with X17). The hub-touch rate is expected to fall below 30%. |
-| **2 Leaf packages** (class D, with C first for P2a and P4a, and a T commit first in P1 and P3) | P1–P4 (P5 dropped) | 6 | 6–8 | **Stop point 2.** The domain context graph has no cycles. The worker wire has named types, and `agentd` links fewer server packages. |
+| **2 Leaf packages** (class D, with C first for P2a and P4a, and a T commit first in P1 and P3) | P1–P4 (P5 dropped) | 6 | 6–8 | **Stop point 2.** The domain context graph's cycles fall from 2 to 1 (P1); requirements core ↔ documents remains through `templates → exports`. The worker wire has named types, and `agentd` links fewer server packages. |
 | **3 One mechanism per concern** (mostly class E) | X1–X18, D2 (X19 dropped) | about 63 | 55–65 | **Stop point 3.** Domain rules are out of handlers and `main()`. Config is typed. The Go→TS contract is generated and checked. Helpers, delivery, snapshot loading and link writes each exist once. The hot views are shells. |
 | **4 Dropped** (maintainer decision, #379 comment 5916575366; was optional, gated) | O1–O3 | about 6 | 10–15 | Not undertaken. It would have brought API subpackages for clean areas, and the remaining sagas, had the §6.8 gate said so. |
 
@@ -1240,7 +1240,7 @@ shows a change is call shape only.
 the five hubs plus their successor registration points: `routes.go`, the
 deps in `handlers.go`, the migration registry, the `client.ts` barrel and
 `App.tsx`. Stop point 2 moves only two rows, import edges and domain context
-cycles (P1–P4; the cycles fall with P1) and the `agentd` link count (P3,
+cycles (P1–P4; P1 takes the cycles from 2 to 1) and the `agentd` link count (P3,
 P4b); the table shows them at stop point 3.
 
 | Metric | Now | Stop point 1 | Stop point 3 | Measured by |
@@ -1260,7 +1260,7 @@ P4b); the table shows them at stop point 3.
 | `internal/api` statement coverage | 47.3% | ≥ 65% | ≥ 70% | `go test -cover` plus the covered tour binary |
 | Go packages without tests / known flaky tests | 14 / 1 | ≤ 7 / 0 (S4 `cmd/server`; S8 `cmd/agentd`, `cmd/openv-vapid`; S6 `domain/events`; S10 `domain/notifications`; S11 `scheduler`, `automation`) | ≤ 6 / 0 (X7 moves `Reconcile` and its tests into `domain/hostedworkers`) | `go test` |
 | Go↔TS vocabularies with an automated check | 1 of 15 | 14 of 15 | 15 of 15, 10 generated | S13, X4 |
-| Import edges / domain context cycles | 227 / 2 | frozen / 2 | frozen apart from the P1–P4 packages' own edges (§4.2) / 0 | S1 |
+| Import edges / domain context cycles | 227 / 2 | frozen / 2 | frozen apart from the P1–P4 packages' own edges (§4.2) / 1 | S1 |
 | Server domain packages linked by `agentd` | 8 | 8 | ≤ 4 (P3, P4b) | `go list -deps` |
 | Direct env reads under `internal/` / mutable `orgs` globals | 39 `Getenv`/`LookupEnv` calls on 38 lines, 44 calls with `Environ` (S1 prints the baseline) / 4 | same / 4 | only S8's reasoned exemptions remain (X10) / 1, the shared default `DeploymentPolicy` (X8b) | S1, S8 |
 | N1 areas mapped to a README section / scaffolds | 0 / 0 | 12 of 12 / 4 of 5 | 12 of 12 / 5 of 5 (X17 adds `page`) | N1, N2; the N3 and X17 scaffold tests |
