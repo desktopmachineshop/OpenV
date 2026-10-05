@@ -17,11 +17,16 @@ import (
 // "<package>.<Type>" with the module-relative package. A moved type is named
 // under its old and its new package, so a decode written against the new
 // name after the move stays covered. P1 added ProjectExport, under exports
-// and snapshot, in a class T commit before its move; P3 adds
-// agentruns.FinishRequest the same way. The list only grows.
+// and snapshot, and P3 FinishRequest and LogEntry, under agentruns and
+// workerproto, each in a class T commit before its move. The list only
+// grows.
 var decodeAliasTypes = []string{
 	"internal/domain/exports.ProjectExport",
 	"internal/domain/snapshot.ProjectExport",
+	"internal/domain/agentruns.FinishRequest",
+	"internal/workerproto.FinishRequest",
+	"internal/domain/agentruns.LogEntry",
+	"internal/workerproto.LogEntry",
 }
 
 // decodeErrorSources maps the name of a function or method whose returned
@@ -42,16 +47,21 @@ var decodeAliasTypes = []string{
 // The download service's Download decodes as Options does, but
 // serveDownload writes err.Error() for ErrUnsupportedFormat in its
 // if err != nil branch, which the rule would flag, and answers every other
-// error with a fixed message, kept by review (R8). The scan follows an error
-// only through later statements of the list it was assigned in, so
-// Handler.GenerateReport, which assigns it inside a switch case and tests it
-// after the switch, stays out of its reach.
+// error with a fixed message, kept by review (R8). A FinishRequest is
+// decoded only by Handler.FinishAgentRun, in internal/api, which the rule
+// reads itself; a LogEntry, in the worker's log push, by the helper
+// decodeRunLogBody, whose caller Handler.AppendAgentRunLogs answers a fixed
+// message. The scan follows an error only through later statements of the
+// list it was assigned in, so Handler.GenerateReport, which assigns it
+// inside a switch case and tests it after the switch, stays out of its
+// reach.
 var decodeErrorSources = map[string]string{
 	"projectExport":             "internal/domain/exports.ProjectExport",
 	"GenerateProjectReport":     "internal/domain/exports.ProjectExport",
 	"GenerateProjectReportDOCX": "internal/domain/exports.ProjectExport",
 	"GenerateVVReport":          "internal/domain/exports.ProjectExport",
 	"Options":                   "internal/domain/exports.ProjectExport",
+	"decodeRunLogBody":          "internal/domain/agentruns.LogEntry",
 }
 
 func checkDecodeAliases(c *check) {
