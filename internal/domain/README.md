@@ -34,7 +34,7 @@ Billing has no domain package: it is `internal/billing` (see
 |---|---|
 | `*/*.go` named after the package or its entity (`artifacts/artifact.go`, `orgs/orgs.go`) | the types, `Repository`, the `Service` interface and `DefaultService`, built by `NewDefaultService` (or `NewService`) |
 | `*/repository.go` | the `Repository` port where it has a file of its own (`projects/repository.go`) |
-| other `*/*.go` | one concern each, such as `orgs/plans.go`, `orgs/limits.go`, `orgs/enforcer.go` (the limits enforcer: counting and limit checks), `orgs/teams.go` (people-teams), `release/features.go`, `exports/reqif.go` |
+| other `*/*.go` | one concern each, such as `orgs/plans.go`, `orgs/limits.go`, `orgs/enforcer.go` (the limits enforcer: counting and limit checks), `orgs/teams.go` (people-teams), `release/features.go`, `exports/reqif.go`, `hostedworkers/reconcile.go` (the boot reconcile of hosted runners with their containers) |
 | `events/events.go` | the domain event types: stored data that automations and the notifier match |
 | `notifications/notifications.go` | the notification types the notifier creates |
 | `release/features.go` | the feature keys that gate unreleased work by release channel |

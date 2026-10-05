@@ -13,6 +13,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/vv"
+	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
 
 // The function values main() hands to services: each looks something up in
@@ -31,17 +32,13 @@ func projectOrgResolver(db *sql.DB) func(projectID string) string {
 }
 
 // bootstrapOrgID resolves the earliest personal org (legacy worker-key
-// fallback + env-key registration).
+// fallback + env-key registration), OrgRepository.EarliestPersonalOrgID
+// read through the orgs service each time it is called, or "" when there is
+// none or the lookup fails.
 func bootstrapOrgID(db *sql.DB) func() string {
+	orgService := orgs.NewDefaultService(postgres.NewOrgRepository(db))
 	return func() string {
-		var id string
-		err := db.QueryRow(`
-			SELECT o.id FROM organizations o
-			JOIN org_members m ON m.org_id = o.id
-			JOIN users u ON u.id = m.user_id
-			WHERE o.org_type = 'personal'
-			ORDER BY u.created_at LIMIT 1
-		`).Scan(&id)
+		id, err := orgService.EarliestPersonalOrgID()
 		if err != nil {
 			return ""
 		}

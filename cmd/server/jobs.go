@@ -17,39 +17,16 @@ import (
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
 
-// The work main() does itself rather than hand to a service: the boot
-// reconcile of hosted runners, and the two loops it starts with go, which
-// stop when ctx, the signal context, is canceled.
+// The background work main() starts: the boot reconcile of hosted runners,
+// whose rule is hostedworkers.Reconcile, and the two loops it starts with go,
+// which stop when ctx, the signal context, is canceled.
 
 // reconcileHostedRunners brings each stored hosted runner's status in line
-// with its container's state. A failure is logged and skips that runner, or
-// all of them when the list cannot be read.
+// with its container's state: hostedworkers.Reconcile, which stage runners
+// calls only when hosting is enabled. A failure is logged and skips that
+// runner, or all of them when the list cannot be read.
 func reconcileHostedRunners(provisioner hosting.Provisioner, hostedWorkerService *hostedworkers.DefaultService) {
-	if hostedList, err := hostedWorkerService.ListAll(); err != nil {
-		slog.Warn("failed to list hosted workers for reconcile", "error", err)
-	} else {
-		for _, hw := range hostedList {
-			state, err := provisioner.ContainerState(hw.ContainerName)
-			if err != nil {
-				slog.Warn("failed to inspect hosted runner", "container", hw.ContainerName, "error", err)
-				continue
-			}
-			status, detail := hw.Status, hw.Detail
-			switch state {
-			case "missing":
-				status, detail = hostedworkers.StatusError, "container not found"
-			case "running":
-				status, detail = hostedworkers.StatusRunning, ""
-			case "exited", "created", "paused", "dead":
-				status, detail = hostedworkers.StatusStopped, ""
-			}
-			if status != hw.Status || detail != hw.Detail {
-				if _, err := hostedWorkerService.SetStatus(hw.ID, status, detail); err != nil {
-					slog.Warn("failed to reconcile hosted runner", "container", hw.ContainerName, "error", err)
-				}
-			}
-		}
-	}
+	hostedworkers.Reconcile(provisioner, hostedWorkerService)
 }
 
 // runPurgeLoop hard-deletes the workspaces whose deletion grace period has

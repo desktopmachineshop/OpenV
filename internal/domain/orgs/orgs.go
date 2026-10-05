@@ -194,6 +194,10 @@ type Repository interface {
 	FindOrgByID(id string) (*Org, error)
 	ListOrgsForUser(userID string) ([]*Org, error)
 	FindPersonalOrgForUser(userID string) (*Org, error)
+	// EarliestPersonalOrgID returns the id of the personal workspace whose
+	// member account was created first (the bootstrap workspace), or ""
+	// when there is none.
+	EarliestPersonalOrgID() (string, error)
 	// ListAllOrgIDs returns every organization id (boot-time seeding).
 	ListAllOrgIDs() ([]string, error)
 
