@@ -14,6 +14,13 @@
 // contracts/vocab.json also lists equal to it, so the generated contract and
 // S13's golden cannot drift apart. Refactor plan X4b moves the frontend's
 // hand-written copies onto contract.ts; until then nothing imports it.
+//
+// Refactor plan X5 adds a third file, frontend/src/generated/wire.ts: one
+// TypeScript interface per Go type the API sends most, written by reflect
+// with encoding/json's rules and checked against json.Marshal of a sample
+// (wire_test.go). TestWire holds it as TestContract holds the other two,
+// under the same UPDATE_CONTRACTS=1, and frontend/src/api/wireCompat.ts
+// holds the hand-written interfaces to it, by type only.
 package contract
 
 import (
@@ -42,13 +49,28 @@ const regenerate = updateEnv + "=1 go test ./internal/contract/..."
 func TestContract(t *testing.T) {
 	src := loadSources(t)
 	c := buildContract(t, src)
-	files := []struct {
-		path string
-		data []byte
-	}{
-		{jsonFile, c.jsonBytes(t)},
-		{tsFile, c.typescript()},
-	}
+	const why = "The frontend reads these values, and stored data, saved automations and deployed clients use " +
+		"them, so a refactor never changes this file (it is on the refactor guard's golden list)."
+	const after = "and contracts/vocab.json with S13's command if TestContractAgreesWithS13 asks for it."
+	syncGenerated(t, src, []generated{
+		{path: jsonFile, data: c.jsonBytes(t), from: "the Go catalogues", why: why, after: after},
+		{path: tsFile, data: c.typescript(), from: "the Go catalogues", why: why, after: after},
+	})
+}
+
+// generated is one file the package writes: its module-relative path, the
+// bytes it must hold, and what a stale copy's message says: what it is
+// generated from, why it must not drift, and what else to regenerate.
+type generated struct {
+	path, from, why, after string
+	data                   []byte
+}
+
+// syncGenerated compares each file with the bytes the Go sources give now,
+// or, under UPDATE_CONTRACTS=1, writes those that differ. Every generated
+// file of the package goes through it, so one command regenerates them all.
+func syncGenerated(t *testing.T, src *sources, files []generated) {
+	t.Helper()
 	if os.Getenv(updateEnv) == "1" {
 		for _, f := range files {
 			path := src.path(f.path)
@@ -74,13 +96,11 @@ func TestContract(t *testing.T) {
 		if bytes.Equal(want, f.data) {
 			continue
 		}
-		t.Errorf("%s is stale: it does not match the Go catalogues; first differences (- checked in, + generated "+
-			"now, by line):\n%s\n"+
-			"The frontend reads these values, and stored data, saved automations and deployed clients use them, so "+
-			"a refactor never changes this file (it is on the refactor guard's golden list). If the change is "+
-			"deliberate, regenerate both generated files with:\n  %s\n(only %s=1 regenerates; any other value "+
-			"compares), and contracts/vocab.json with S13's command if TestContractAgreesWithS13 asks for it.",
-			f.path, strings.Join(lineDiff(string(want), string(f.data), 20), "\n"), regenerate, updateEnv)
+		t.Errorf("%s is stale: it does not match %s; first differences (- checked in, + generated now, by "+
+			"line):\n%s\n%s If the change is deliberate, regenerate the generated files with:\n  %s\n(only %s=1 "+
+			"regenerates; any other value compares), %s",
+			f.path, f.from, strings.Join(lineDiff(string(want), string(f.data), 20), "\n"), f.why, regenerate,
+			updateEnv, f.after)
 	}
 }
 

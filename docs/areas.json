@@ -500,6 +500,7 @@
         "docs/data-model.md",
         "docs/release-policy.md",
         "frontend/src/api/**/platform*",
+        "frontend/src/api/wireCompat*",
         "frontend/src/components/ReleaseUpdateBanner*",
         "frontend/src/generated/**",
         "frontend/src/views/PlatformAdmin*",
