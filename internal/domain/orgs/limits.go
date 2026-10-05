@@ -417,6 +417,25 @@ func Allowed(limits map[string]interface{}, key string) bool {
 	return flag
 }
 
+// RunnerGraceSeconds is the runner-grace lookup of first-refusal routing
+// (agentruns.RoutingPolicy): how long a run reserved for its launcher's
+// personal runner waits before other runners may claim it. It reads the
+// workspace's own limits only, not EffectiveLimits, and the key
+// runner_grace_seconds is not in the catalogue, so OPENV_LIMITS cannot set
+// it. A JSON number is truncated to whole seconds, with no upper bound; a
+// missing key, any other type, or a workspace that cannot be read gives 0.
+// The run service applies its own default to anything under 1.
+func (s *DefaultService) RunnerGraceSeconds(orgID string) int {
+	org, err := s.Get(orgID)
+	if err != nil {
+		return 0
+	}
+	if v, ok := org.Limits["runner_grace_seconds"].(float64); ok {
+		return int(v)
+	}
+	return 0
+}
+
 func numeric(value interface{}) (float64, bool) {
 	switch v := value.(type) {
 	case float64:
