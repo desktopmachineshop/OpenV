@@ -428,7 +428,7 @@ func TestErrmapLimitWriter(t *testing.T) {
 				`"used":0}` + "\n"}, false, true},
 		{errmapCase{"flag, self-hosted remedy", orgs.NewFlagError(orgs.LimitTeams), 403, errmapJSON(),
 			`{"allowed":0,"code":"limit_reached",` +
-				`"error":"Teams and per-project access: not included in this workspace's plan. This deployment sets its own limits: raise teams in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",` +
+				`"error":"Teams and per-project access: turned off on this deployment. This deployment sets its own limits: raise teams in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",` +
 				`"label":"Teams and per-project access","limit":"teams",` +
 				`"remedy":"This deployment sets its own limits: raise teams in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here.",` +
 				`"used":0}` + "\n"}, true, true},

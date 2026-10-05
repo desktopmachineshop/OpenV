@@ -27,6 +27,50 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A guided draft's links follow the same rules as any other link.** When
+  the requirements wizard created its draft artifacts, it made every link a
+  draft asked for: one to an artifact of another workspace, one into a
+  project you can only view, or one of a kind the link rules do not allow,
+  such as a requirement that *verifies* a user need. A draft now gets only
+  the links you could have added to it yourself in the artifact editor; the
+  others are left out, and the draft is still created.
+
+- **An agent whose writes wait for review can no longer create guided
+  drafts.** An agent working in proposal mode, whose changes wait for a
+  person to approve them, was already refused the commit of a guided
+  session, but could create the session's draft artifacts directly, with
+  no review. It is now refused the drafts too.
+
+- **Deleting a link needs edit rights on the projects at both of its
+  ends.** Deleting a link adds a version to the artifacts at both ends, yet
+  only the project the link starts in was checked, so you could delete a
+  link into a project you can only view and change an artifact there. A
+  link that crosses projects now needs edit rights in both, as it already
+  did when removed in the artifact editor. A flow-down (*refines*) link,
+  which a supplier can make with view rights on the parent, can still be
+  deleted with them.
+
+- **Saving an artifact changes only its own links.** An update of an
+  artifact, from an agent or the API, could also add or remove a link
+  between two other artifacts; after such a removal, the artifact the link
+  started from went on listing it in its latest version. An update no
+  longer adds or removes a link between two other artifacts: it changes
+  only links to or from the artifact it saves.
+
+- **An artifact's history lists only the link changes that were made.**
+  When a save added or removed links, its note in the artifact's history
+  listed every link asked for, including ones that were refused, such as a
+  link of a kind the rules do not allow or one into a project you cannot
+  edit, and so could name an artifact you have no access to. The note now
+  lists only the links that were actually added or removed.
+
+- **A link added while editing an artifact's text is no longer suspect at
+  once.** When you changed an artifact's title, text or type and added a
+  link in the same save, the new link was immediately flagged suspect, as
+  if the artifact had changed after the link was made, and waited in the
+  review queue for someone to confirm it. A link made in the same save now
+  starts trusted; the artifact's other links are flagged as before.
+
 - **Importing a file that is not an OpenV export says what is wrong in
   plain terms.** When a JSON file you imported as a project held a value
   of the wrong kind, such as text where an OpenV export has a list, or was
@@ -196,6 +240,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   the workspace's requirement quality rules failed on the server's side,
   the message said the quality rules could not be loaded. It now says
   they could not be saved; a failure to load them still says so.
+
+- **Raising `max_upload_mb` in `OPENV_LIMITS` lets bigger figures
+  through.** For operators: on a deployment not set as self-hosted,
+  setting `max_upload_mb` in `OPENV_LIMITS` above 1024 MB, the most any
+  plan allows, raised every workspace's limit on one figure, but a file
+  over 1024 MB was still refused as larger than the upload limit before
+  that limit was checked. Figures up to the deployment's `max_upload_mb`
+  now upload, within the 8192 MB no single upload may exceed. Self-hosted
+  deployments were not affected.
+
+- **A feature turned off on a self-hosted deployment says so.** On a
+  deployment the operator runs themselves, a feature turned off there,
+  such as teams, was refused as not included in the workspace's plan,
+  though such a deployment has no plans. The refusal now says the feature
+  is turned off on this deployment, and still names the setting to change
+  in `OPENV_LIMITS`. Hosted workspaces are pointed to the Billing tab as
+  before. The workspace's Limits tab says the same. A read-only workspace
+  on such a deployment is told to raise its limits in `OPENV_LIMITS`, not
+  to change plan.
 
 ## 0.16.1 — 2026-10-04
 

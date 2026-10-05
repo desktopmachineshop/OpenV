@@ -188,25 +188,28 @@ func linksManagedEditsTour(tr *tour) {
 		note("the automatic version always writes links_snapshot, empty or not (Q4)"))
 
 	// The managed edit (Q3): in one PUT of the design item, a valid add, an
-	// invalid add and the removal of a link between two other artifacts.
+	// invalid add and the removal of a link between two other artifacts,
+	// which a managed edit skips as it skips the invalid add (#379 bug 198).
 	tr.step("managed edit of the design item: add satisfies and verifies to the requirement, remove the verifies "+
 		"link from the test case", owner, "PUT /api/v1/artifacts/{id}", at("id", "{{di}}"),
 		jsonBody(`{"pendingLinkAdds":[{"from_id":"{{di}}","to_id":"{{req}}","type":"satisfies"},`+
 			`{"from_id":"{{di}}","to_id":"{{req}}","type":"verifies"}],"pendingLinkRemoves":["{{l_verifies}}"]}`),
-		note("Q3: the invalid verifies add is skipped without a word; no link.created or link.deleted is "+
-			"published, only artifact.updated; the links_snapshot in this answer is the handler's own list of "+
-			"links, keys in the order the server writes a link in, not the stored jsonb's")).
+		note("Q3: the invalid verifies add, and the removal of a link that is not the design item's, are "+
+			"skipped without a word; no link.created or link.deleted is published, only artifact.updated; the "+
+			"links_snapshot in this answer is the handler's own list of links, keys in the order the server "+
+			"writes a link in, not the stored jsonb's")).
 		capture("l_managed", "/attributes/links_snapshot/0/id")
-	tr.step("the design item's note lists the links requested, the skipped one too (Q3)", owner,
+	tr.step("the design item's note lists the link made, not the skipped add and removal", owner,
 		"GET /api/v1/chatter", query("artifact_id={{di}}"))
 	tr.step("the design item's current links: only the satisfies link was made", owner,
 		"GET /api/v1/artifacts/{id}/links", at("id", "{{di}}"))
 	tr.step("the design item read back: its links_snapshot through jsonb, keys in alphabetical order", owner,
 		"GET /api/v1/artifacts/{id}", at("id", "{{di}}"))
-	tr.step("the test case's current links: none left", owner, "GET /api/v1/artifacts/{id}/links", at("id", "{{tc}}"))
-	tr.step("the test case's version 3 still lists the removed link", owner, "GET /api/v1/artifacts/{id}/links",
+	tr.step("the test case's current links: the verifies link, which the edit did not remove", owner,
+		"GET /api/v1/artifacts/{id}/links", at("id", "{{tc}}"))
+	tr.step("the test case's version 3 lists the verifies link", owner, "GET /api/v1/artifacts/{id}/links",
 		at("id", "{{tc}}"), query("version=3"))
-	tr.step("the test case has no version 4: the removed link's source was not auto-versioned", owner,
+	tr.step("the test case has no version 4: the managed edit left it alone", owner,
 		"GET /api/v1/artifacts/{id}/links", at("id", "{{tc}}"), query("version=4"))
 	tr.step("the test case's notes: nothing from the managed edit", owner, "GET /api/v1/chatter",
 		query("artifact_id={{tc}}"))
@@ -233,7 +236,7 @@ func linksManagedEditsTour(tr *tour) {
 		"PUT /api/v1/artifacts/{id}", at("id", "{{creq}}"),
 		jsonBody(`{"pendingLinkAdds":[{"from_id":"{{creq}}","to_id":"{{req}}","type":"refines"}]}`),
 		note("a managed edit wants editor rights on the other end's project for every type, where "+
-			"POST /api/v1/links lets refines through with viewer rights; the note still lists the add"))
+			"POST /api/v1/links lets refines through with viewer rights; the note does not list the add"))
 	tr.step("C's requirement: still the one refines link", supplier, "GET /api/v1/artifacts/{id}/links",
 		at("id", "{{creq}}"))
 	tr.step("C's requirement's notes", owner, "GET /api/v1/chatter", query("artifact_id={{creq}}"))

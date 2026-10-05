@@ -268,17 +268,35 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(link)
 }
 
-// DeleteLink deletes a link
+// DeleteLink deletes a link. The delete auto-versions both ends, so it needs
+// what creating the link needs (#379 bug 194): editor rights on the source's
+// project, and on the target's when it is another project, except that a
+// flow-down link (refines) takes viewer rights there while the flow-down
+// feature is on, so a supplier can remove the link it was allowed to make.
+// No feature gate refuses a delete: with the feature off, a refines link
+// wants editor rights on the target like any other. A target no artifact
+// has any more has no project to ask about. A link no row has answers as
+// the source's guard answers a project it cannot resolve.
 func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	link, _ := h.LinkService.GetLink(id)
 
-	projectID := ""
+	projectID, targetProjectID := "", ""
 	if link != nil {
 		projectID = h.projectIDForArtifact(link.FromID)
+		targetProjectID = h.projectIDForArtifact(link.ToID)
 	}
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
 		return
+	}
+	if targetProjectID != "" && targetProjectID != projectID {
+		targetRole := members.RoleEditor
+		if link.Type == links.TypeRefines && h.projectFeatureEnabled(r, projectID, release.FeatureFlowDown) {
+			targetRole = members.RoleViewer
+		}
+		if !h.requireProjectRole(w, r, targetProjectID, targetRole) {
+			return
+		}
 	}
 	if h.maybePropose(w, r, projectID, proposals.OpDeleteLink, &id, nil) {
 		return

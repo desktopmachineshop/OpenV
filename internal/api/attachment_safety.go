@@ -94,8 +94,10 @@ const multipartOverheadBytes = int64(1024 * 1024)
 //
 // Parsing a multipart body spools every part to a temp file, so the bound has
 // to be in place before the form is touched — and at that point the only
-// honest answer is "no more than any plan could possibly allow". The
-// workspace's own, tighter limit is applied to the bytes afterwards.
+// honest answer is "no more than any plan, or the deployment's own
+// max_upload_mb, could possibly allow" (orgs.MaxPlanUploadMB), within the
+// transport ceiling. The workspace's own, tighter limit is applied to the
+// bytes afterwards.
 func (h *Handler) uploadRequestCeilingBytes() int64 {
 	if mb, ok := envUploadMB(); ok {
 		return mb*bytesPerMB + multipartOverheadBytes
