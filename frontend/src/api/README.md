@@ -35,7 +35,7 @@ and its types module share a name.
 | `http.ts` | the one axios instance `client`, its two interceptors (the `X-Org-ID` header out; the sign-in and verify-email redirects back), `API_BASE_URL`, `uploadConfig`, `downloadBlob`, `saveBlob` |
 | `*.ts` named after an area | that area's `xxxAPI` objects (`vvAPI`, `evidenceAPI`) and its helpers and constants |
 | `types/*.ts` | that area's request and response types; the build erases them |
-| `errors.ts` | reading an error answer: `apiErrorMessage`, `apiErrorCode`, `limitRefusal`, `isPlanReadOnlyError`, `retryAfterSeconds` |
+| `errors.ts` | reading an error answer: `apiErrorMessage`, `apiErrorCode`, `limitRefusal`, `isPlanReadOnlyError`, `retryAfterSeconds`; `legacyErrorText`, the inline chain of Q20 as one function, for the call sites X15 moves |
 | `baseURL.ts`, `contentDisposition.ts` | `getAPIBaseURL` and `resolveAvatarUrl`; `filenameFromContentDisposition` |
 | `wireCompat.ts` | type-only assertions (X5) that each response type in `types/` names only keys its Go twin in `src/generated/wire.ts` writes, with types that accept its values; `COMPAT_EXCEPTIONS` lists today's differences with reasons. Nothing imports it, so the build erases it |
 | `*.test.ts` | unit tests of the helpers and of uploads; the barrel's surface is pinned in `frontend/src/arch/` |

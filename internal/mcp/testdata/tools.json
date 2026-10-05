@@ -291,8 +291,11 @@
         "required": ["id"],
         "type": "object"
       },
-      "calls": ["GET /api/v1/baselines/{id}"],
-      "requests": ["GET /api/v1/baselines/55555555-5555-4555-8555-555555555555"]
+      "calls": ["GET /api/v1/baselines/{id}", "GET /api/v1/projects/{id}/baselines"],
+      "requests": [
+        "GET /api/v1/baselines/55555555-5555-4555-8555-555555555555",
+        "GET /api/v1/projects/11111111-1111-4111-8111-111111111111/baselines"
+      ]
     },
     {
       "name": "create_baseline",

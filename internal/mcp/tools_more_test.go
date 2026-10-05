@@ -356,18 +356,8 @@ func TestToolRequests(t *testing.T) {
 			wantPath:   "/api/v1/projects/p1/baselines",
 			wantOut:    `[]`,
 		},
-		{
-			tool:   "get_baseline",
-			args:   map[string]interface{}{"id": "b1"},
-			status: 200,
-			// The API returns the whole project snapshot; the tool answers
-			// with the baseline's metadata alone (read its content through
-			// get_project_map with baseline_id).
-			response:   `{"id":"b1","project_id":"p1","name":"v1","created_at":"2026-01-01T00:00:00Z","snapshot":{"artifacts":[]}}`,
-			wantMethod: "GET",
-			wantPath:   "/api/v1/baselines/b1",
-			wantOut:    `{"id":"b1","project_id":"p1","name":"v1","created_at":"2026-01-01T00:00:00Z"}`,
-		},
+		// get_baseline makes two requests, which this table cannot answer
+		// differently: TestGetBaseline (tools_baselines_test.go) covers it.
 		{
 			tool:       "create_test_run",
 			args:       map[string]interface{}{"project_id": "p1", "name": "Smoke", "description": "d"},
