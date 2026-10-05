@@ -47,10 +47,13 @@ func TestWorkerAnswersWriteTheMapsBytes(t *testing.T) {
 			AllowedTools: []string{"mcp__openv__get_artifact"}},
 		"nil": nil,
 	}
-	auths := []map[string]string{
-		{"mode": "user-account"},
-		{"mode": "api-key", "api_key_env": "ANTHROPIC_API_KEY"},
-		{"mode": "api-key", "api_key_env": ""}, // a provider with no default key variable
+	auths := []any{
+		map[string]string{"mode": "user-account"},
+		map[string]string{"mode": "api-key", "api_key_env": "ANTHROPIC_API_KEY"},
+		map[string]string{"mode": "api-key", "api_key_env": ""}, // a provider with no default key variable
+		// resolveRunAuth never answers nil, but the map wrote "auth":null for
+		// it: the key is never left out (no omitempty, I12).
+		nil,
 	}
 	for runName, run := range runs {
 		for agentName, agent := range agentsByName {
