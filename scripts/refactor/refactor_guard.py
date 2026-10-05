@@ -9,7 +9,8 @@ HEAD^1 is the base the pull request was merged onto and HEAD^2 its head.
 The pull request's change is HEAD^1..HEAD, and its commits are
 HEAD^1..HEAD^2. The job runs the base's copy of this script, so a pull
 request's edits to the lists and rules below take effect once it merges;
-X2B_CALL_SHAPE_CHANGES alone is read from the pull request's tree.
+X2B_CALL_SHAPE_CHANGES and X14B_IMPORT_EDGES alone are read from the pull
+request's tree.
 
 Every pull request:
   (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 22 entries)
@@ -23,11 +24,12 @@ A pull request labelled `refactor` or `refactor:<anything>` also fails on:
   - a golden M or D in any case, and the behavior-change label;
   - (2) an M or D under FROZEN_DATA or PROTECTED_PATHS;
   - an M or D on GUARD_CODE except in a class C or T commit that modifies or
-    deletes no golden (LINT_ALLOWLISTS and X2B_CALL_SHAPE_CHANGES are
-    carved out of their files: see there);
+    deletes no golden (LINT_ALLOWLISTS, X2B_CALL_SHAPE_CHANGES and
+    X14B_IMPORT_EDGES are carved out of their files: see there);
   - an entry of internal/archtest/ratchets.json raised or added (in a
-    commit of any class), apart from class D's new-package entries and a
-    class T commit's new rule key;
+    commit of any class), apart from class D's new-package entries, a
+    class T commit's new rule key and, in class E, X14b's listed import
+    edges;
   - an entry of an S12 lint allowlist added or raised, or a ceiling in guard
     code (GUARD_CODE_CEILINGS: S12's error chains, S12b's K14 size budgets)
     raised or added, and an allowlist or ceiling map holding anything but
@@ -408,9 +410,10 @@ LINT_ALLOWLISTS = {"COMPONENTS_IMPORTING_VIEWS": "list", "EVENT_SOURCE_SITES": "
 # a commit of any class, except: a class D commit's import_edges and
 # client_domain_deps entries for the package it creates (§4.2), a new
 # top-level key added by a class T commit that also changes the archtest
-# rules (RATCHET_RULE_CODE), such as M5's K3 allowlist, and a func_lines
+# rules (RATCHET_RULE_CODE), such as M5's K3 allowlist, a func_lines
 # ceiling carried, at no higher value, to the same method on a new receiver
-# (ceiling_carried).
+# (ceiling_carried), and a class E commit's import_edges listed in
+# X14B_IMPORT_EDGES.
 RATCHETS_FILE = "internal/archtest/ratchets.json"
 RATCHET_RULE_CODE = "internal/archtest/*.go"
 
@@ -426,6 +429,19 @@ RATCHET_RULE_CODE = "internal/archtest/*.go"
 GUARD_SCRIPT = "scripts/refactor/refactor_guard.py"
 ROUTE_GUARDS_FILE = "internal/api/testdata/route_guards.txt"
 X2B_CALL_SHAPE_CHANGES = [
+]
+
+# X14b's named exception (§8.3): the import edges X14b adds, as ("from
+# package", "to package") pairs of module-relative packages, filled by X14b
+# in its own class E commit (an edit to this list alone is not a guard-code
+# edit in class E). In a class E commit of a refactor pull request, an
+# import_edges entry added to ratchets.json (a new target in an importer's
+# list, or a new importer's key with its list) is not a raise when every
+# edge it adds is listed here and goes into a package the base already has.
+# Every other ratchet rule stands, in class E too. Until X14b fills it, no
+# class E commit adds an edge. The guard reads the list from the pull
+# request's copy of this file, as it reads X2B_CALL_SHAPE_CHANGES.
+X14B_IMPORT_EDGES = [
 ]
 
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
@@ -452,7 +468,7 @@ GUARD_CODE_CEILINGS = {
 # constant.
 GUARD_CODE_CARVE_OUTS = {
     LINT_ALLOWLIST_FILE: {name: "*" for name in LINT_ALLOWLISTS},
-    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E"},
+    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E", "X14B_IMPORT_EDGES": "E"},
     **{path: {name: "*" for name in names} for path, names in GUARD_CODE_CEILINGS.items()},
 }
 
@@ -1028,11 +1044,11 @@ def parse_allowlist(text, name, kind):
     return read_literal(text, name, kind)[0]
 
 
-def x2b_changes_in(text):
-    """X2B_CALL_SHAPE_CHANGES as a copy of this script holds it, a list of
-    (before, after) string pairs, or None when the literal is missing or is
-    not such a list."""
-    block = block_text(text or "", "X2B_CALL_SHAPE_CHANGES")
+def string_pairs_in(text, name):
+    """The list literal NAME as a copy of this script holds it, a list of
+    string pairs, or None when the literal is missing or is not such a
+    list."""
+    block = block_text(text or "", name)
     if "=" not in block:
         return None
     try:
@@ -1042,6 +1058,20 @@ def x2b_changes_in(text):
     pairs = isinstance(value, list) and all(
         isinstance(p, tuple) and len(p) == 2 and all(isinstance(x, str) for x in p) for p in value)
     return value if pairs else None
+
+
+def x2b_changes_in(text):
+    """X2B_CALL_SHAPE_CHANGES as a copy of this script holds it, a list of
+    (before, after) string pairs, or None when the literal is missing or is
+    not such a list."""
+    return string_pairs_in(text, "X2B_CALL_SHAPE_CHANGES")
+
+
+def x14b_edges_in(text):
+    """X14B_IMPORT_EDGES as a copy of this script holds it, a list of
+    (from package, to package) string pairs, or None when the literal is
+    missing or is not such a list."""
+    return string_pairs_in(text, "X14B_IMPORT_EDGES")
 
 
 def allowlist_growth(old_text, new_text):
@@ -1180,6 +1210,8 @@ class Guard:
         self.commits = []
         self.pr_changes = []
         self._on_base = {}
+        self._x14b_edges = None
+        self.x14b_used = set()
 
     # ---- helpers
 
@@ -1235,6 +1267,8 @@ class Guard:
             self.check_frozen_paths()
             for c in self.commits:
                 self.check_commit(c)
+            for importer, target in sorted(self.x14b_used):
+                self.notes.append(f"{RATCHETS_FILE}: X14b's listed import edge {importer} -> {target} (§8.3)")
             self.check_class_mixing()
             self.check_build_identity()
         return not self.failures
@@ -1755,8 +1789,43 @@ class Guard:
                       "needed, or regenerate with UPDATE_RATCHETS=1 go test ./internal/archtest, which only tightens",
                       commit=c, path=RATCHETS_FILE)
 
+    def x14b_edges(self):
+        """X14b's listed import edges (§8.3), a set of (from, to) pairs. The
+        list is the pull request's copy (GUARD_SCRIPT in the merge commit),
+        not this module's, which is the base's in CI."""
+        if self._x14b_edges is None:
+            listed = x14b_edges_in(self.git.text(self.merge, GUARD_SCRIPT))
+            if listed is None:
+                self.warnings.append(f"X14B_IMPORT_EDGES in {GUARD_SCRIPT} is missing or not a list of "
+                                     "(from, to) string pairs; counting no X14b exception")
+                listed = []
+            self._x14b_edges = set(listed)
+        return self._x14b_edges
+
+    def x14b_listed(self, kp, new):
+        """Whether an import_edges entry a class E commit adds is X14b's
+        (§8.3): every edge it adds (a new target in an importer's list, or
+        each target of a new importer's key) is listed in X14B_IMPORT_EDGES
+        and goes into a package the base already has."""
+        importer = kp[1]
+        if len(kp) == 3:
+            targets = [kp[2]]
+        else:
+            new_edges = new.get("import_edges", {}) if isinstance(new, dict) else {}
+            targets = new_edges.get(importer) if isinstance(new_edges, dict) else None
+        if not isinstance(targets, list) or not targets:
+            return False
+        listed = self.x14b_edges()
+        if not all(isinstance(t, str) and (importer, t) in listed and self.git.is_dir(self.base, t)
+                   for t in targets):
+            return False
+        self.x14b_used.update((importer, t) for t in targets)
+        return True
+
     def ratchet_exception(self, c, parent, old, new, growth):
         kp, kind, _ = growth
+        if c.klass == "E" and kind == "added" and len(kp) in (2, 3) and kp[0] == "import_edges":
+            return self.x14b_listed(kp, new)  # X14b's named exception (§8.3)
         if kind == "added" and len(kp) == 2 and kp[0] == "func_lines" and ceiling_carried(kp[1], old, new):
             return True  # the same method on its new receiver, at no higher ceiling (M15b)
         if kind == "added" and len(kp) == 1 and c.klass == "T" and any(

@@ -86,6 +86,9 @@ it(`files stay within ${FILE_BUDGET}`, () => {});
 GUARD_PY = """X2B_CALL_SHAPE_CHANGES = [
 ]
 
+X14B_IMPORT_EDGES = [
+]
+
 OTHER = 1
 """
 
@@ -854,11 +857,12 @@ class DataTest(unittest.TestCase):
         self.assertEqual(rg.golden_entry("internal/domain/exports/testdata/formats/x.csv")[0], "S9")
         self.assertIsNone(rg.golden_entry("frontend/src/arch/testdata/backendDeepLinks.json"))
 
-    # The next three read live files that later steps shrink in commits that
+    # The next four read live files that later steps shrink in commits that
     # may not edit this file (class E may not edit guard code, and is alone in
     # its pull request): X4b and X15b-X15e remove allowlist entries, X2b fills
-    # X2B_CALL_SHAPE_CHANGES, M4 drops cmd/server/main.go from ratchets.json.
-    # So they check the shape and pick their entries at run time.
+    # X2B_CALL_SHAPE_CHANGES, X14b fills X14B_IMPORT_EDGES, M4 drops
+    # cmd/server/main.go from ratchets.json. So they check the shape and pick
+    # their entries at run time.
 
     def test_real_lint_allowlists_parse(self):
         with open(os.path.join(REPO, rg.LINT_ALLOWLIST_FILE)) as f:
@@ -929,6 +933,24 @@ class DataTest(unittest.TestCase):
         # The job reads the list from the pull request's copy of this file.
         self.assertIsInstance(rg.x2b_changes_in(text), list)
         self.assertEqual(rg.x2b_changes_in(filled), [("GET /x: -", "GET /x: session")])
+
+    def test_own_x14b_block_is_found(self):
+        with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
+            text = f.read()
+        span = rg.find_block(text, "X14B_IMPORT_EDGES")
+        self.assertIsNotNone(span)
+        lines = text.split("\n")
+        # Filled the way X14b fills it, whatever it holds by then.
+        filled = "\n".join(lines[:span[0]] + ["X14B_IMPORT_EDGES = [", '    ("internal/x", "internal/y"),', "]"] +
+                           lines[span[1] + 1:])
+        self.assertNotEqual(filled, text)
+        self.assertEqual(rg.blank_blocks(filled, ["X14B_IMPORT_EDGES"]), rg.blank_blocks(text, ["X14B_IMPORT_EDGES"]))
+        self.assertIn("X14B_IMPORT_EDGES", rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT])
+        self.assertEqual(rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT]["X14B_IMPORT_EDGES"], "E")
+        # The job reads the list from the pull request's copy of this file.
+        self.assertIsInstance(rg.x14b_edges_in(text), list)
+        self.assertEqual(rg.x14b_edges_in(filled), [("internal/x", "internal/y")])
+        self.assertIsNone(rg.x14b_edges_in(filled.replace('"),', '", "z"),')))
 
     def test_ratchet_growth(self):
         with open(os.path.join(REPO, rg.RATCHETS_FILE)) as f:
@@ -1679,6 +1701,128 @@ class RatchetTest(RepoTest):
         self.commit("key", self.ratchets(lambda r: r.update(helper_homes=[])), trailers("T"))
         self.assertFailsWith(self.guard("refactor", "refactor:tooling"), "(2) ratchets", "adds ratchets.json entry "
                              "helper_homes")
+
+    # X14b's named exception (§8.3): in class E, an import edge listed in
+    # X14B_IMPORT_EDGES, into a package the base has, is not a raise.
+
+    X14B_LISTED = GUARD_PY.replace("X14B_IMPORT_EDGES = [\n]",
+                                   'X14B_IMPORT_EDGES = [\n    ("internal/api", "internal/domain/snapshot"),\n]')
+    X14B_E = trailers("E", Refactor_Characterization="internal/api/handlers_test.go")
+
+    def x14b(self, klass, change, listed=None, files=None):
+        """One commit of the given class that changes ratchets.json and, when
+        listed is given, sets the pull request's X14B_IMPORT_EDGES to it.
+        internal/domain/snapshot and internal/domain/links are on the base."""
+        self.packages_on_base("internal/domain/snapshot", "internal/domain/links")
+        out = self.ratchets(change)
+        if listed is not None:
+            out["scripts/refactor/refactor_guard.py"] = listed
+        out.update(files or {})
+        self.commit("X14b", out, trailers(klass, Refactor_Characterization="internal/api/handlers_test.go")
+                    if klass == "E" else trailers(klass))
+
+    def test_x14b_listed_edge_passes_in_class_e(self):
+        self.x14b("E", lambda r: r["import_edges"]["internal/api"].append("internal/domain/snapshot"),
+                  self.X14B_LISTED)
+        g = self.guard("refactor")
+        self.assertPasses(g)
+        self.assertIn(f"{rg.RATCHETS_FILE}: X14b's listed import edge internal/api -> internal/domain/snapshot "
+                      "(§8.3)", g.notes)
+
+    def test_x14b_listed_new_importer_key_passes_in_class_e(self):
+        listed = GUARD_PY.replace("X14B_IMPORT_EDGES = [\n]", 'X14B_IMPORT_EDGES = [\n'
+                                  '    ("internal/domain/links", "internal/domain/snapshot"),\n]')
+        self.x14b("E", lambda r: r["import_edges"].update({"internal/domain/links": ["internal/domain/snapshot"]}),
+                  listed)
+        self.assertPasses(self.guard("refactor"))
+
+    def test_x14b_unlisted_edge_fails(self):
+        def change(r):
+            r["import_edges"]["internal/api"].append("internal/domain/snapshot")
+            r["import_edges"]["internal/api"].append("internal/domain/links")
+        self.x14b("E", change, self.X14B_LISTED)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.internal/api."
+                             "internal/domain/links")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14b_unlisted_edge_of_a_new_importer_key_fails(self):
+        self.x14b("E", lambda r: r["import_edges"].update({"internal/domain/links": ["internal/domain/snapshot"]}),
+                  self.X14B_LISTED)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/domain/links")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14b_edge_fails_while_the_list_is_empty(self):
+        self.x14b("E", lambda r: r["import_edges"]["internal/api"].append("internal/domain/snapshot"))
+        self.assertFailsWith(self.guard("refactor"), "(2) ratchets",
+                             "import_edges.internal/api.internal/domain/snapshot")
+
+    def test_x14b_list_is_the_pull_requests_not_the_running_scripts(self):
+        self.addCleanup(setattr, rg, "X14B_IMPORT_EDGES", rg.X14B_IMPORT_EDGES)
+        rg.X14B_IMPORT_EDGES = [("internal/api", "internal/domain/snapshot")]
+        self.x14b("E", lambda r: r["import_edges"]["internal/api"].append("internal/domain/snapshot"))
+        self.assertFailsWith(self.guard("refactor"), "(2) ratchets",
+                             "import_edges.internal/api.internal/domain/snapshot")
+
+    def test_x14b_list_that_does_not_parse_counts_as_empty(self):
+        self.x14b("E", lambda r: r["import_edges"]["internal/api"].append("internal/domain/snapshot"),
+                  self.X14B_LISTED.replace('"),', '")+1,'))
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/snapshot")
+        self.assertTrue(any("X14B_IMPORT_EDGES" in w for w in g.warnings), g.warnings)
+
+    def test_x14b_list_edited_in_a_non_e_commit_fails(self):
+        self.commit("X14b list", {"scripts/refactor/refactor_guard.py": self.X14B_LISTED}, trailers("B"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
+
+    def test_x14b_list_edited_alone_in_class_e_passes(self):
+        self.commit("X14b list", {"scripts/refactor/refactor_guard.py": self.X14B_LISTED}, self.X14B_E)
+        self.assertPasses(self.guard("refactor"))
+
+    def x14b_listed_on_the_base(self):
+        """X14B_IMPORT_EDGES filled on the base, so a pull request's commit
+        adds the edge without editing the list."""
+        self.git("checkout", "-q", "main")
+        self.commit("list", {"scripts/refactor/refactor_guard.py": self.X14B_LISTED})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+
+    def assert_x14b_edge_fails_in(self, klass, *labels):
+        self.x14b_listed_on_the_base()
+        self.x14b(klass, lambda r: r["import_edges"]["internal/api"].append("internal/domain/snapshot"))
+        g = self.guard("refactor", *labels)
+        self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.internal/api."
+                             "internal/domain/snapshot")
+
+    def test_x14b_listed_edge_fails_in_class_c(self):
+        self.assert_x14b_edge_fails_in("C", "refactor:test")
+
+    def test_x14b_listed_edge_fails_in_class_t(self):
+        self.assert_x14b_edge_fails_in("T", "refactor:tooling")
+
+    def test_x14b_listed_edge_fails_in_class_a(self):
+        self.assert_x14b_edge_fails_in("A", "refactor:move")
+
+    def test_x14b_listed_edge_into_a_package_not_on_the_base_fails(self):
+        listed = GUARD_PY.replace("X14B_IMPORT_EDGES = [\n]",
+                                  'X14B_IMPORT_EDGES = [\n    ("internal/api", "internal/domain/loader"),\n]')
+        self.x14b("E", lambda r: r["import_edges"]["internal/api"].append("internal/domain/loader"), listed,
+                  {"internal/domain/loader/loader.go": "package loader\n"})
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/loader")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14b_exception_loosens_no_other_ratchet(self):
+        def change(r):
+            r["import_edges"]["internal/api"].append("internal/domain/snapshot")
+            r["counts"]["raw_json_encodes"] = 250
+            r["file_lines"]["internal/api/loader.go"] = 100
+        self.x14b("E", change, self.X14B_LISTED)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "counts.raw_json_encodes (249 -> 250)")
+        self.assertFailsWith(g, "(2) ratchets", "file_lines.internal/api/loader.go")
+        self.assertEqual(len(g.failures), 2, [f.render() for f in g.failures])
 
 
 class AllowlistTest(RepoTest):
