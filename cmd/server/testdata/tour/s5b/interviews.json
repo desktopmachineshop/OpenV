@@ -3212,26 +3212,38 @@
     },
     {
       "n": 80,
-      "title": "the intro once Dana finished: no active session",
+      "title": "the intro once Dana finished: her latest session, completed, without its transcript (#379 bug 214)",
       "actor": "anonymous",
       "route": "GET /api/v1/public/interviews/{token}",
       "request": {
         "method": "GET",
         "path": "/api/v1/public/interviews/<inv1.token>"
       },
+      "notes": [
+        "no session is active, so the invite's latest answers, without its transcript (only an active session's is sent), and the page shows its thank-you with no stream"
+      ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 100,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"interview_name\":\"Onboarding \\u003cinterviews\\u003e \\u0026 more\",\"session\":null,\"transcript\":null}"
+        "{\"interview_name\":\"Onboarding \\u003cinterviews\\u003e \\u0026 more\",\"session\":{\"id\":\"<s1>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"completed\",\"summary\":\"\",\"started_at\":\"<time@step 63>\",\"ended_at\":\"<time@step 78>\"},\"transcript\":null}"
       ],
       "trailing_newline": true,
       "parsed": {
         "interview_name": "Onboarding \u003cinterviews\u003e \u0026 more",
-        "session": null,
+        "session": {
+          "id": "<s1>",
+          "interview_id": "<i1>",
+          "invite_id": "<inv1>",
+          "participant_name": "Dana",
+          "status": "completed",
+          "summary": "",
+          "started_at": "<time@step 63>",
+          "ended_at": "<time@step 78>"
+        },
         "transcript": null
       },
       "gzip": "not sent: each intro spends a token of the per-address bucket"
