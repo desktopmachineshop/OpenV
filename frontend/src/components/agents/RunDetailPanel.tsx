@@ -1,19 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentRun, agentRunsAPI, RunLogEntry } from '../../api/client';
+import { legacyErrorText } from '../../api/errors';
 import { ExpandableText } from '../ExpandableText';
+import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import { useViewport } from '../../hooks/useViewport';
-import { SSE_EVENT } from '../../sseEvents';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
 // Statuses the backend accepts on POST /agent-runs/{id}/retry (succeeded is
 // deliberately excluded — retrying success invites duplicate side effects).
 const RETRYABLE_STATUSES = ['failed', 'timed_out', 'cancelled'];
-
-// After an SSE drop we retry the stream this many times (with exponential
-// backoff) before settling on the 3s polling fallback for good.
-const MAX_SSE_RECONNECT_ATTEMPTS = 3;
-const SSE_RECONNECT_BASE_DELAY_MS = 1000;
 
 // A finished crew run's log can still grow: the server appends its notes (a
 // hand-off refused, successors the budget did not launch) just after the
@@ -88,6 +84,16 @@ export const runStatusColor = (status: string): string => {
       return 'var(--neutral)';
   }
 };
+
+// What the run's stream reaches of the panel's log effect, all of it the
+// current run's: the log it appends to, the catch-up and the polling it falls
+// back on, and the finish a terminal status starts.
+interface RunFeed {
+  appendLogs: (entries: RunLogEntry[]) => void;
+  catchUp: () => void;
+  startPolling: () => void;
+  finished: () => void;
+}
 
 interface RunDetailPanelProps {
   runId: string;
@@ -208,6 +214,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
   const logsEndRef = useRef<HTMLDivElement>(null);
   const lastSeqRef = useRef(0);
   const statusRef = useRef('');
+  const feedRef = useRef<RunFeed | null>(null);
 
   const loadRun = useCallback(() => {
     agentRunsAPI
@@ -216,22 +223,20 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
         setRun(res.data);
         statusRef.current = res.data.status;
       })
-      .catch((err: any) =>
-        setError(err.response?.data?.error || err.message || 'Failed to load run')
-      );
+      .catch((err) => setError(legacyErrorText(err, 'Failed to load run')));
     agentRunsAPI
       .tree(runId)
       .then((res) => setTree(res.data || []))
       .catch(() => setTree([]));
   }, [runId]);
 
-  // Log streaming with polling fallback
+  // The run's log, its catch-up and the polling fallback, with their timers,
+  // for the stream below.
   useEffect(() => {
     setLogs([]);
     lastSeqRef.current = 0;
     loadRun();
 
-    let es: EventSource | null = null;
     let pollTimer: number | null = null;
     let settleTimer: number | null = null;
     let closed = false;
@@ -278,95 +283,87 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
       pollTimer = window.setInterval(poll, 3000);
     };
 
-    let reconnectAttempts = 0;
-    let reconnectTimer: number | null = null;
-
-    const connectStream = () => {
-      if (closed) return;
-      try {
-        // Resume from the last seq we saw so nothing is lost across drops.
-        es = new EventSource(agentRunsAPI.streamUrl(runId, lastSeqRef.current), {
-          withCredentials: true,
-        });
-        es.addEventListener(SSE_EVENT.log, (evt: MessageEvent) => {
-          // A live event proves the stream is healthy again — reset the budget
-          // so the next drop gets a fresh set of reconnect attempts.
-          reconnectAttempts = 0;
-          try {
-            const entry: RunLogEntry = JSON.parse(evt.data);
-            appendLogs([entry]);
-          } catch {
-            // ignore malformed events
-          }
-        });
-        es.addEventListener(SSE_EVENT.partial, (evt: MessageEvent) => {
-          // The answer as the agent writes it; replaced by final_text at
-          // finish. Always the whole text, so a dropped frame is harmless.
-          reconnectAttempts = 0;
-          try {
-            const data = JSON.parse(evt.data);
-            const text = typeof data === 'string' ? data : data.text || '';
-            setRun((prev) => (prev ? { ...prev, partial_text: text } : prev));
-          } catch {
-            // ignore malformed events
-          }
-        });
-        es.addEventListener(SSE_EVENT.status, (evt: MessageEvent) => {
-          reconnectAttempts = 0;
-          let status = '';
-          try {
-            const data = JSON.parse(evt.data);
-            status = typeof data === 'string' ? data : data.status || '';
-            setRun((prev) => (prev ? { ...prev, ...((typeof data === 'object' && data) || {}), status } : prev));
-          } catch {
-            status = evt.data;
-            setRun((prev) => (prev ? { ...prev, status } : prev));
-          }
-          statusRef.current = status;
-          if (TERMINAL_STATUSES.includes(status)) {
-            es?.close();
-            // Refresh once for final text / tokens, and catch the log up for
-            // the server's notes (FINISHED_LOG_SETTLE_MS).
-            loadRun();
-            catchUp();
-            if (settleTimer === null) {
-              settleTimer = window.setTimeout(() => {
-                settleTimer = null;
-                if (!closed) catchUp();
-              }, FINISHED_LOG_SETTLE_MS);
-            }
-          }
-        });
-        es.onerror = () => {
-          es?.close();
-          es = null;
-          if (closed || TERMINAL_STATUSES.includes(statusRef.current)) return;
-          if (reconnectAttempts < MAX_SSE_RECONNECT_ATTEMPTS) {
-            const delay = SSE_RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempts;
-            reconnectAttempts += 1;
-            // Catch up on anything missed while disconnected, then retry SSE.
-            catchUp();
-            reconnectTimer = window.setTimeout(connectStream, delay);
-          } else {
-            // Reconnect budget exhausted — settle on polling.
-            startPolling();
-          }
-        };
-      } catch {
-        startPolling();
+    // A terminal status: refresh once for final text / tokens, and catch the
+    // log up for the server's notes (FINISHED_LOG_SETTLE_MS).
+    const finished = () => {
+      loadRun();
+      catchUp();
+      if (settleTimer === null) {
+        settleTimer = window.setTimeout(() => {
+          settleTimer = null;
+          if (!closed) catchUp();
+        }, FINISHED_LOG_SETTLE_MS);
       }
     };
 
-    connectStream();
+    feedRef.current = { appendLogs, catchUp, startPolling, finished };
 
     return () => {
       closed = true;
-      es?.close();
-      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      feedRef.current = null;
       if (settleTimer !== null) window.clearTimeout(settleTimer);
       if (pollTimer !== null) window.clearInterval(pollTimer);
     };
   }, [runId, loadRun]);
+
+  // Log streaming with polling fallback. Each (re)connect resumes from the
+  // last seq we saw, so nothing is lost across drops. After a drop the stream
+  // is retried 3 times with exponential backoff (RECONNECT.backoff: 1, 2 and
+  // 4 s), each after a catch-up, before the panel settles on the 3s polling
+  // fallback for good; a live event restores the budget. The effect above
+  // runs first, so a new run's stream opens from seq 0.
+  useEventStream(
+    agentRunsAPI.streamUrl(runId),
+    {
+      log: (evt) => {
+        try {
+          const entry: RunLogEntry = JSON.parse(evt.data);
+          feedRef.current?.appendLogs([entry]);
+        } catch {
+          // ignore malformed events
+        }
+      },
+      partial: (evt) => {
+        // The answer as the agent writes it; replaced by final_text at
+        // finish. Always the whole text, so a dropped frame is harmless.
+        try {
+          const data = JSON.parse(evt.data);
+          const text = typeof data === 'string' ? data : data.text || '';
+          setRun((prev) => (prev ? { ...prev, partial_text: text } : prev));
+        } catch {
+          // ignore malformed events
+        }
+      },
+      status: (evt, stream) => {
+        let status = '';
+        try {
+          const data = JSON.parse(evt.data);
+          status = typeof data === 'string' ? data : data.status || '';
+          setRun((prev) => (prev ? { ...prev, ...((typeof data === 'object' && data) || {}), status } : prev));
+        } catch {
+          status = evt.data;
+          setRun((prev) => (prev ? { ...prev, status } : prev));
+        }
+        statusRef.current = status;
+        if (TERMINAL_STATUSES.includes(status)) {
+          stream.close();
+          feedRef.current?.finished();
+        }
+      },
+    },
+    {
+      withCredentials: true,
+      reconnect: {
+        ...RECONNECT.backoff,
+        // Catch up on anything missed while disconnected, then retry SSE.
+        onRetry: () => feedRef.current?.catchUp(),
+        // Reconnect budget exhausted, or no EventSource at all: settle on polling.
+        onGiveUp: () => feedRef.current?.startPolling(),
+        isDone: () => TERMINAL_STATUSES.includes(statusRef.current),
+      },
+      resumeUrl: () => agentRunsAPI.streamUrl(runId, lastSeqRef.current),
+    }
+  );
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -376,8 +373,8 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
     try {
       const res = await agentRunsAPI.cancel(runId);
       setRun(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to cancel run');
+    } catch (err) {
+      setError(legacyErrorText(err, 'Failed to cancel run'));
     }
   };
 
@@ -389,8 +386,8 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
       // by the current user); jump the panel to it.
       const res = await agentRunsAPI.retry(runId);
       onSelectRun(res.data.id);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to retry run');
+    } catch (err) {
+      setError(legacyErrorText(err, 'Failed to retry run'));
     } finally {
       setRetrying(false);
     }
