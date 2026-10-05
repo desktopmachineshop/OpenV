@@ -116,9 +116,8 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RemoveOrgMember(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	// Members may remove themselves (leave); removing others requires admin.

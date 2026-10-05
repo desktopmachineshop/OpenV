@@ -43,11 +43,8 @@ func (h *Handler) requireProjectRoleFor(w http.ResponseWriter, r *http.Request, 
 	}
 	// Access decided, one more question for a write: is the workspace
 	// over its plan? A read-only workspace refuses every write but the
-	// few that alwaysWritable marks (limits.go, requireWritable).
-	if mutating(r.Method) {
-		return h.requireWritable(w, r, h.orgIDForProject(projectID))
-	}
-	return true
+	// few that alwaysWritable marks (limits.go, planGate).
+	return h.planGate(w, r, func() string { return h.orgIDForProject(projectID) })
 }
 
 func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectID string, minRole string, absent notFound) bool {
@@ -81,9 +78,8 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 		return true
 	}
 
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
 	if user.IsAdmin {
@@ -152,9 +148,8 @@ func (h *Handler) requireOrgVisible(w http.ResponseWriter, r *http.Request, orgI
 // handler's lookup, so an account that exists and one that does not cost
 // the refused caller the same queries.
 func (h *Handler) requireUserVisible(w http.ResponseWriter, r *http.Request, userID string, absent notFound) bool {
-	caller := CurrentUser(r)
+	caller := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if caller == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
 	if caller.IsAdmin || caller.ID == userID {
@@ -293,7 +288,7 @@ func (h *Handler) requireOrgRoleFor(w http.ResponseWriter, r *http.Request, orgI
 	if !h.orgAccess(w, r, orgID, minRole, absent, notFound{}) {
 		return false
 	}
-	return h.requireWritable(w, r, orgID)
+	return h.planGate(w, r, func() string { return orgID })
 }
 
 // orgAccess is requireOrgRoleFor less the plan gate; a member below minRole
@@ -306,18 +301,16 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		absent.write(w)
 		return false
 	}
-	user := CurrentUser(r)
+	// A caller with no session (a worker key, a run token) gets the guard's
+	// 401; but where the handler looked the resource up first, one that is
+	// not of the resource's workspace gets the lookup's answer to an id no
+	// row has, or the 401 would tell it the resource exists (I3).
+	if CurrentUser(r) == nil && lookedUp && sessionlessOrg(r) != orgID {
+		absent.write(w)
+		return false
+	}
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		// A caller with no session (a worker key, a run token) gets the
-		// guard's 401; but where the handler looked the resource up first,
-		// one that is not of the resource's workspace gets the lookup's
-		// answer to an id no row has, or the 401 would tell it the resource
-		// exists (I3).
-		if lookedUp && sessionlessOrg(r) != orgID {
-			absent.write(w)
-			return false
-		}
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
 	if user.IsAdmin {
@@ -631,8 +624,7 @@ func (h *Handler) requireProjectCreate(w http.ResponseWriter, r *http.Request) (
 		writeJSONError(w, http.StatusForbidden, "runner keys cannot create projects")
 		return "", false
 	}
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return "", false
 	}
 	orgID := ActiveOrg(r)
@@ -673,11 +665,18 @@ func (h *Handler) pendingArtifactRef(runID, ref string) *proposals.Proposal {
 }
 
 func requireUser(w http.ResponseWriter, r *http.Request) bool {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return false
+	return requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) != nil
+}
+
+// requireUserMsg answers the signed-in user, or writes status and msg and
+// answers nil; most routes answer 401 "authentication required".
+func requireUserMsg(w http.ResponseWriter, r *http.Request, msg string, status int) *users.User {
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, status, msg)
+		return nil
 	}
-	return true
+	return user
 }
 
 func requireWorker(w http.ResponseWriter, r *http.Request) bool {
@@ -725,24 +724,25 @@ func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agen
 // requireHumanUser answers the current user or writes a 401. Notifications
 // are strictly per-person, so run tokens and worker keys never pass.
 func (h *Handler) requireHumanUser(w http.ResponseWriter, r *http.Request) (userID string, ok bool) {
-	user := CurrentUser(r)
+	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return "", false
 	}
 	return user.ID, true
 }
 
-// requirePlatformAdmin writes 401/403 and answers nil unless the caller is
-// a signed-in platform admin.
-func (h *Handler) requirePlatformAdmin(w http.ResponseWriter, r *http.Request) *users.User {
-	user := CurrentUser(r)
-	if user == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
-		return nil
+// requirePlatformAdmin answers the caller if a signed-in platform admin, or
+// writes a refusal and answers nil: 403 msg to anyone else signed in, and
+// anonStatus with no session, worded "authentication required" for a 401
+// and msg otherwise (a shared product's takedown refuses both 403 alike).
+func (h *Handler) requirePlatformAdmin(w http.ResponseWriter, r *http.Request, msg string, anonStatus int) *users.User {
+	anonMsg := msg
+	if anonStatus == http.StatusUnauthorized {
+		anonMsg = "authentication required"
 	}
-	if !user.IsAdmin {
-		writeJSONError(w, http.StatusForbidden, "platform admins only")
+	user := requireUserMsg(w, r, anonMsg, anonStatus)
+	if user != nil && !user.IsAdmin {
+		writeJSONError(w, http.StatusForbidden, msg)
 		return nil
 	}
 	return user

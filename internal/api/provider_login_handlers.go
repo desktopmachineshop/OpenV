@@ -28,8 +28,7 @@ func (h *Handler) registerProviderLoginRoutes(router *mux.Router) {
 // workspace admin; user-targeted sign-ins run only on the requester's own
 // personal runner, so any workspace member may start one.
 func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return
 	}
 	var req struct {
@@ -101,8 +100,7 @@ func (h *Handler) userLoginWriteChecked(w http.ResponseWriter, r *http.Request) 
 
 // GetProviderLogin returns login progress for the UI (code never echoed).
 func (h *Handler) GetProviderLogin(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return
 	}
 	login := h.userLoginChecked(w, r)
@@ -114,8 +112,7 @@ func (h *Handler) GetProviderLogin(w http.ResponseWriter, r *http.Request) {
 
 // SubmitProviderLoginCode records the user's pasted authorization code.
 func (h *Handler) SubmitProviderLoginCode(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return
 	}
 	if h.userLoginWriteChecked(w, r) == nil {
@@ -138,8 +135,7 @@ func (h *Handler) SubmitProviderLoginCode(w http.ResponseWriter, r *http.Request
 
 // CancelProviderLogin abandons a login request.
 func (h *Handler) CancelProviderLogin(w http.ResponseWriter, r *http.Request) {
-	if CurrentUser(r) == nil {
-		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return
 	}
 	if h.userLoginWriteChecked(w, r) == nil {
