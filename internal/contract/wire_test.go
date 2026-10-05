@@ -69,6 +69,9 @@ var wireAdded = map[reflect.Type][]addedKey{
 func TestWire(t *testing.T) {
 	src := loadSources(t)
 	w := buildWire(t, wireTypes, wireAdded)
+	if t.Failed() {
+		return // a self-check failure: wire.ts is neither compared nor written
+	}
 	syncGenerated(t, src, []generated{{
 		path: wireFile, data: w.typescript(), from: "the JSON the Go types write",
 		why: "frontend/src/api/wireCompat.ts holds the frontend's hand-written interfaces to it, and a refactor " +
