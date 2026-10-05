@@ -70,8 +70,13 @@ first edge of a package that imported no package of this module before,
 which adds that package's key, listing only packages the PR creates (P2b's
 `users` and `interviews`, each listing `tokens`). The new package must still
 pass K7. A class T commit that adds a rule may add that rule's key, holding
-only what the tree has (M5's K3 allowlist). Everything else in the file may
-only shrink, in that PR too.
+only what the tree has (M5's K3 allowlist). A class E commit may add an
+`import_edges` edge listed in `X14B_IMPORT_EDGES`
+(`scripts/refactor/refactor_guard.py`, read from the PR), into a package
+the base already has, as a new target in an importer's list or a new
+importer's key: a named exception (plan §8.3) that X14b fills in its own
+class E commit for the `internal/api` → `internal/domain/snapshot` edge its
+loader adds. Everything else in the file may only shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which
 must still pass K7, and the entry of a new client binary. A ceiling is
