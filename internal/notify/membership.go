@@ -203,7 +203,8 @@ func roleWord(role string) string {
 
 // alertOrgAdmins delivers to every admin of the event's workspace except the
 // actor. It is the membership counterpart of the budget monitor's fan-out and
-// shares its shape: list, filter to admins, skip the actor, deliver.
+// shares its shape: list, filter to admins (ToOrgAdmins), skip the actor,
+// deliver.
 func (n *Notifier) alertOrgAdmins(e domainevents.Event, title, body string, ref map[string]interface{}) {
 	if n.orgSvc == nil || e.OrgID == "" {
 		return
@@ -214,12 +215,9 @@ func (n *Notifier) alertOrgAdmins(e domainevents.Event, title, body string, ref 
 			"event_type", e.EventType, "org_id", e.OrgID, "error", err)
 		return
 	}
-	for _, mem := range list {
-		if mem.Role != orgs.RoleAdmin {
-			continue
-		}
-		n.deliver(e, mem.UserID, notifications.TypeMembershipChanged, title, body, ref)
-	}
+	ToOrgAdmins(list, func(userID string) {
+		n.deliver(e, userID, notifications.TypeMembershipChanged, title, body, ref)
+	})
 }
 
 // payloadBool reads a boolean payload field, treating anything else as false.

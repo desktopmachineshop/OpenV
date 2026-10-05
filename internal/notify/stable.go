@@ -37,30 +37,34 @@ type StableOrgs interface {
 
 // StableScheduler moves stable-channel workspaces to the newest stable.
 type StableScheduler struct {
-	releases    release.Service
-	orgs        StableOrgs
-	steps       StableSteps
-	store       notifications.Service
-	broadcaster Broadcaster
-	email       *EmailDispatcher
-	push        *PushDispatcher
-	now         func() time.Time
+	releases release.Service
+	orgs     StableOrgs
+	steps    StableSteps
+	delivery Delivery
+	now      func() time.Time
 }
 
 // NewStableScheduler creates a scheduler. broadcaster may be nil.
 func NewStableScheduler(releases release.Service, orgSvc StableOrgs, steps StableSteps, store notifications.Service, broadcaster Broadcaster) *StableScheduler {
-	return &StableScheduler{releases: releases, orgs: orgSvc, steps: steps, store: store, broadcaster: broadcaster, now: time.Now}
+	return &StableScheduler{releases: releases, orgs: orgSvc, steps: steps, delivery: Delivery{Store: store, Broadcaster: broadcaster}, now: time.Now}
+}
+
+// SetChannels attaches the email and web push side channels at once (a nil
+// one is left off).
+func (s *StableScheduler) SetChannels(c Channels) *StableScheduler {
+	s.delivery.Channels = c
+	return s
 }
 
 // SetEmailDispatcher attaches the email side channel (nil leaves it off).
 func (s *StableScheduler) SetEmailDispatcher(d *EmailDispatcher) *StableScheduler {
-	s.email = d
+	s.delivery.Email = d
 	return s
 }
 
 // SetPushDispatcher attaches the web push side channel (nil leaves it off).
 func (s *StableScheduler) SetPushDispatcher(d *PushDispatcher) *StableScheduler {
-	s.push = d
+	s.delivery.Push = d
 	return s
 }
 
@@ -169,16 +173,11 @@ func (s *StableScheduler) turnOn(org *orgs.Org, stable *release.Stable, now time
 	count := 0
 	for _, m := range members {
 		n := notifications.New(org.ID, m.UserID, notifications.TypeReleasePublished, title, body, ref)
-		if err := s.store.Create(n); err != nil {
+		if err := s.delivery.Deliver(n); err != nil {
 			slog.Error("release: failed to store notification", "user_id", m.UserID, "error", err)
 			continue
 		}
 		count++
-		if s.broadcaster != nil {
-			s.broadcaster.BroadcastSession(StreamKey(m.UserID), "notification", n)
-		}
-		s.email.Dispatch(n)
-		s.push.Dispatch(n)
 	}
 	slog.Info("release: stable turned on", "org_id", org.ID, "version", stable.Version, "members", count)
 }
@@ -190,21 +189,12 @@ func (s *StableScheduler) notifyAdmins(org *orgs.Org, ntype, title, body, versio
 		return
 	}
 	ref := map[string]interface{}{"kind": "release", "version": version, "org_id": org.ID}
-	for _, m := range members {
-		if m.Role != orgs.RoleAdmin {
-			continue
+	ToOrgAdmins(members, func(userID string) {
+		n := notifications.New(org.ID, userID, ntype, title, body, ref)
+		if err := s.delivery.Deliver(n); err != nil {
+			slog.Error("release: failed to store notification", "user_id", userID, "error", err)
 		}
-		n := notifications.New(org.ID, m.UserID, ntype, title, body, ref)
-		if err := s.store.Create(n); err != nil {
-			slog.Error("release: failed to store notification", "user_id", m.UserID, "error", err)
-			continue
-		}
-		if s.broadcaster != nil {
-			s.broadcaster.BroadcastSession(StreamKey(m.UserID), "notification", n)
-		}
-		s.email.Dispatch(n)
-		s.push.Dispatch(n)
-	}
+	})
 }
 
 // previewLine is the one-line summary of what a stable release brings:
