@@ -31,9 +31,13 @@ export const formatLimit = (value: number, unit: LimitUsage['unit']): string => 
 };
 
 /** The one-line reading of a limit: how much of it is gone, or that there is
- *  no ceiling at all. */
-export const limitSummary = (limit: LimitUsage): string => {
-  if (limit.kind === 'flag') return limit.included ? 'Included' : 'Not on this plan';
+ *  no ceiling at all. A self-hosted deployment has no plans, so a feature
+ *  turned off there reads as off on the deployment, not as off the plan. */
+export const limitSummary = (limit: LimitUsage, selfHosted = false): string => {
+  if (limit.kind === 'flag') {
+    if (limit.included) return 'Included';
+    return selfHosted ? 'Turned off on this deployment' : 'Not on this plan';
+  }
   if (limit.unlimited) {
     return limit.used === undefined
       ? 'No limit'
@@ -166,7 +170,7 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
                       fontWeight: alarming ? 600 : 400,
                     }}
                   >
-                    {limitSummary(limit)}
+                    {limitSummary(limit, data.self_hosted)}
                   </span>
                 </div>
                 {fraction !== null && (

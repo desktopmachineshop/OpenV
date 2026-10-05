@@ -1,6 +1,11 @@
-import { formatLimit, isAlarming, limitSummary, usedFraction } from './OrgLimitsTab';
+import React, { act } from 'react';
+import { createRoot, Root } from 'react-dom/client';
+import { mockApi } from '../../test/mockApi';
+import { OrgLimitsTab, formatLimit, isAlarming, limitSummary, usedFraction } from './OrgLimitsTab';
 import { limitRefusal } from '../../api/errors';
-import { LimitUsage } from '../../api/client';
+import { LimitUsage, orgsAPI } from '../../api/client';
+
+vi.mock('../../api/client', async (orig) => mockApi(await orig()));
 
 const limit = (over: Partial<LimitUsage> = {}): LimitUsage => ({
   key: 'max_members',
@@ -49,6 +54,80 @@ describe('the one-line summary', () => {
 
   it('shows a ceiling alone when usage cannot be counted', () => {
     expect(limitSummary(limit({ unit: 'minutes', limit: 45, used: undefined }))).toBe('45 minutes');
+  });
+});
+
+// A self-hosted deployment has no plans, so a feature its operator turned off
+// is not "off the plan" there (#379 bug 199, the twin of the server's bug 192).
+describe('a feature flag', () => {
+  const teams = (included: boolean) =>
+    limit({ key: 'teams', label: 'Teams and per-project access', unit: '', limit: 0, kind: 'flag', included });
+
+  it('on a hosted workspace, reads as off the plan when the plan leaves it out', () => {
+    expect(limitSummary(teams(false))).toBe('Not on this plan');
+    expect(limitSummary(teams(false), false)).toBe('Not on this plan');
+    expect(limitSummary(teams(true), false)).toBe('Included');
+  });
+
+  it('on a self-hosted deployment, reads as turned off on the deployment', () => {
+    expect(limitSummary(teams(false), true)).toBe('Turned off on this deployment');
+    expect(limitSummary(teams(false), true)).not.toMatch(/plan/i);
+    expect(limitSummary(teams(true), true)).toBe('Included');
+  });
+
+  // The tab, not only the reader: it must hand the response's self_hosted on.
+  describe('on the Limits tab', () => {
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+    let container: HTMLDivElement;
+    let root: Root;
+
+    beforeEach(() => {
+      vi.resetAllMocks();
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      act(() => {
+        root = createRoot(container);
+      });
+    });
+
+    afterEach(() => {
+      act(() => root.unmount());
+      container.remove();
+    });
+
+    const renderWith = async (selfHosted: boolean) => {
+      vi.mocked(orgsAPI.limits).mockResolvedValue({
+        data: {
+          org_id: 'org-1',
+          plan: 'free',
+          entitled_plan: 'free',
+          plan_status: 'none',
+          grandfathered: false,
+          self_hosted: selfHosted,
+          limits: [teams(false)],
+        },
+      } as any);
+      await act(async () => {
+        root.render(<OrgLimitsTab org={{ id: 'org-1', name: 'Acme' } as any} />);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      return container.textContent || '';
+    };
+
+    it('says a hosted workspace’s plan leaves the feature out', async () => {
+      const text = await renderWith(false);
+      expect(text).toContain('Not on this plan');
+      expect(text).not.toContain('Turned off on this deployment');
+    });
+
+    it('says a self-hosted deployment has the feature turned off, naming no plan', async () => {
+      const text = await renderWith(true);
+      expect(text).toContain('Turned off on this deployment');
+      expect(text).not.toContain('Not on this plan');
+    });
   });
 });
 

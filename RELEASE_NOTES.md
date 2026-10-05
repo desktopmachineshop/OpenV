@@ -212,7 +212,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   though such a deployment has no plans. The refusal now says the feature
   is turned off on this deployment, and still names the setting to change
   in `OPENV_LIMITS`. Hosted workspaces are pointed to the Billing tab as
-  before.
+  before. The workspace's Limits tab says the same.
 
 ## 0.16.1 — 2026-10-04
 
