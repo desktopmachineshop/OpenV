@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -59,11 +58,9 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
 		return
 	}
-	limit := 0
-	if v := r.URL.Query().Get("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			limit = n
-		}
+	limit, ok := parseLimit(w, r, sharedProductsLimit)
+	if !ok {
+		return
 	}
 	viewerID := ""
 	if user := CurrentUser(r); user != nil {

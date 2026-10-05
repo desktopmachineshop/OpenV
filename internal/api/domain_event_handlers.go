@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -40,9 +39,9 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 	if projectID != "" && !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	if limit <= 0 || limit > 500 {
-		limit = 100
+	limit, ok := parseLimit(w, r, domainEventsLimit)
+	if !ok {
+		return
 	}
 	// "before" is a keyset cursor (an event ID from a previous page): the
 	// repo returns only events strictly older than it, so "load more" pages

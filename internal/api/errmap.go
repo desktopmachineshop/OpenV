@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/billing"
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
@@ -127,6 +128,57 @@ func (h *Handler) writeInvitationError(w http.ResponseWriter, r *http.Request, e
 		writeJSONError(w, http.StatusNotFound, err.Error())
 	default:
 		respondInternal(w, r, failed, err)
+	}
+}
+
+// launchErr is one row of a launch error table: a failed run launch whose
+// error wraps sentinel (any error, when sentinel is nil) answers status with
+// the error's own text or, when public is set, with public while the error
+// reaches only the server log.
+type launchErr struct {
+	sentinel error
+	status   int
+	public   string
+}
+
+// The launch error tables (quirk Q9): one failed launch answers by route, so
+// an over-budget refusal is a 402 on two routes, a 400 on three and a 500 on
+// delegation. writeLaunchError tests a table's rows in order, and every
+// table ends with the row for any other error.
+var (
+	// launchErrs402 answers LaunchAgentRun and DraftTestCases: an
+	// over-budget soft-block (enforcement on) is a distinct, expected
+	// refusal, a 402 the UI can message clearly.
+	launchErrs402 = []launchErr{
+		{agentruns.ErrBudgetExceeded, http.StatusPaymentRequired, ""},
+		{nil, http.StatusBadRequest, ""},
+	}
+	// launchErrs400 answers RunAutomationNow, LaunchTeamRun and
+	// LaunchTestRunAgent: every refusal, an over-budget one included.
+	launchErrs400 = []launchErr{
+		{nil, http.StatusBadRequest, ""},
+	}
+	// launchErrsDelegate answers DelegateRun: an over-budget refusal is
+	// among the 500s.
+	launchErrsDelegate = []launchErr{
+		{agentruns.ErrInvalidTransition, http.StatusConflict, ""},
+		{nil, http.StatusInternalServerError, "failed to launch delegated run"},
+	}
+)
+
+// writeLaunchError answers a failed run launch by the first row of table
+// that err matches.
+func writeLaunchError(w http.ResponseWriter, r *http.Request, table []launchErr, err error) {
+	for _, row := range table {
+		if row.sentinel != nil && !errors.Is(err, row.sentinel) {
+			continue
+		}
+		if row.public == "" {
+			writeJSONError(w, row.status, err.Error())
+		} else {
+			respondError(w, r, row.status, row.public, err)
+		}
+		return
 	}
 }
 

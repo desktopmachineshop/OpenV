@@ -345,11 +345,7 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 		Prompt:      req.Prompt,
 	})
 	if err != nil {
-		if errors.Is(err, agentruns.ErrInvalidTransition) {
-			writeJSONError(w, http.StatusConflict, err.Error())
-			return
-		}
-		respondInternal(w, r, "failed to launch delegated run", err)
+		writeLaunchError(w, r, launchErrsDelegate, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
