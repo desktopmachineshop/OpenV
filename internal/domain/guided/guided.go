@@ -241,7 +241,10 @@ func (s *DefaultService) SaveStep(sessionID string, step int, answers map[string
 }
 
 // MaterializeDrafts creates draft artifacts (and their links) for a session
-// and returns the created artifact IDs.
+// and returns the created artifact IDs. It checks no link: the caller has
+// already dropped every link the link rules or the caller's roles refuse
+// (the API's MaterializeGuidedDrafts). A link the store refuses is logged
+// and skipped; the draft stays.
 func (s *DefaultService) MaterializeDrafts(sessionID string, drafts []DraftSpec) ([]string, error) {
 	session, err := s.repo.FindByID(sessionID)
 	if err != nil {
@@ -285,7 +288,8 @@ func (s *DefaultService) MaterializeDrafts(sessionID string, drafts []DraftSpec)
 			})
 			if err := s.linkService.CreateLink(link); err != nil {
 				// Non-fatal: the draft artifact itself was created.
-				fmt.Printf("Warning: failed to create draft link %s -> %s: %v\n", artifact.ID, dl.ToID, err)
+				slog.Warn("guided: failed to create a draft's link",
+					"artifact_id", artifact.ID, "to_id", dl.ToID, "link_type", dl.Type, "error", err)
 			}
 		}
 	}

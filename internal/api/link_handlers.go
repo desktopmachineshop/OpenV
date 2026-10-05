@@ -268,16 +268,24 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(link)
 }
 
-// DeleteLink deletes a link
+// DeleteLink deletes a link. The delete auto-versions both ends, so it needs
+// editor rights on both ends' projects, as a managed edit's removal does
+// (#379 bug 194); an end no artifact has any more has no project to ask
+// about. A link no row has answers as the source's guard answers a project
+// it cannot resolve.
 func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	link, _ := h.LinkService.GetLink(id)
 
-	projectID := ""
+	projectID, targetProjectID := "", ""
 	if link != nil {
 		projectID = h.projectIDForArtifact(link.FromID)
+		targetProjectID = h.projectIDForArtifact(link.ToID)
 	}
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if targetProjectID != "" && targetProjectID != projectID && !h.requireProjectRole(w, r, targetProjectID, members.RoleEditor) {
 		return
 	}
 	if h.maybePropose(w, r, projectID, proposals.OpDeleteLink, &id, nil) {

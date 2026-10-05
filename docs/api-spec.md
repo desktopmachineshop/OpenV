@@ -508,7 +508,7 @@ Every artifact carries two identifiers, and they answer different questions:
 | GET | `/api/v1/links/{id}` | Get link | viewer |
 | PUT | `/api/v1/links/{id}` | Update link | editor |
 | PUT | `/api/v1/links/{id}/confirm` | Clear the suspect flag: an editor vouches that the trace still holds after an artifact at one end changed. Idempotent — confirming a link that is not suspect changes nothing. Refused `403` for a proposal-mode agent run rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag exists to trigger | editor |
-| DELETE | `/api/v1/links/{id}` | Delete link | editor |
+| DELETE | `/api/v1/links/{id}` | Delete link. Both ends get a new version, so the caller needs editor rights on both ends' projects, `refines` included; a target whose artifact has been deleted asks none. A proposal-mode agent run's delete becomes a proposal once those checks pass | editor |
 | POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact as a figure (`artifact_id`). A figure takes its artifact to a new version, as a new figure version and a rename do (see Figures). An upload whose project is deleted while the file comes in waits for the delete and answers `404` "project not found", its file removed | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata (`title` is the name a member gave the figure, empty when none; readers fall back to `original_filename`) | viewer |
 | PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157) | editor |
@@ -1143,7 +1143,7 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | GET | `/api/v1/guided-sessions` | List sessions (`?project_id=`) | viewer |
 | GET | `/api/v1/guided-sessions/{id}` | Session state | viewer |
 | PUT | `/api/v1/guided-sessions/{id}/step` | Save a step's answers | editor |
-| POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts | editor |
+| POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts. Each draft's links are checked as an artifact update's `pendingLinkAdds` are: a link to an id no artifact has, to another workspace's artifact, of a type the link rules refuse for the draft's type, or into another project the caller cannot edit is skipped, and the draft is still made. Refused `403` for a proposal-mode agent run, like the commit | editor |
 | POST | `/api/v1/guided-sessions/{id}/commit` | Commit session: each of its drafts is approved through the review states (`draft` → `in_review` → `approved`, a version and a `status-change` note per step), and the session closes. Each approval publishes the `artifact.status_changed` event a status change does, with the committing user as actor and the session id as `guided_session`; the step into review publishes none, so editors are not asked to review it. Refused `403` for a proposal-mode agent run, like a status change | editor |
 | POST | `/api/v1/guided-sessions/{id}/abandon` | Abandon session | editor |
 | GET | `/api/v1/guided-sessions/{id}/messages` | Assistant chat history | viewer |

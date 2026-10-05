@@ -1869,7 +1869,7 @@
         "body": "{\"pendingLinkAdds\":[{\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\"},{\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"verifies\"}],\"pendingLinkRemoves\":[\"<l_verifies>\"]}"
       },
       "notes": [
-        "Q3: the invalid verifies add is skipped without a word; no link.created or link.deleted is published, only artifact.updated; the links_snapshot in this answer is the handler's own list of links, keys in the order the server writes a link in, not the stored jsonb's"
+        "Q3: the invalid verifies add, and the removal of a link that is not the design item's, are skipped without a word; no link.created or link.deleted is published, only artifact.updated; the links_snapshot in this answer is the handler's own list of links, keys in the order the server writes a link in, not the stored jsonb's"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -1932,7 +1932,7 @@
     },
     {
       "n": 50,
-      "title": "the design item's note lists the links requested, the skipped one too (Q3)",
+      "title": "the design item's note lists the link made, not the skipped add and removal",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
       "request": {
@@ -1947,14 +1947,14 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n    - verifies: Req one (added)\\n    - verifies: Test one (removed)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
+        "[{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
           "id": "<uuid:5>",
           "artifact_id": "<di>",
-          "message": "Updated to version 4\n\nChanges:\n- Links:\n    - satisfies: Req one (added)\n    - verifies: Req one (added)\n    - verifies: Test one (removed)\n",
+          "message": "Updated to version 4\n\nChanges:\n- Links:\n    - satisfies: Req one (added)\n",
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
@@ -2077,7 +2077,7 @@
     },
     {
       "n": 53,
-      "title": "the test case's current links: none left",
+      "title": "the test case's current links: the verifies link, which the edit did not remove",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
       "request": {
@@ -2088,18 +2088,35 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 3,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[]"
+        "[{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"}]"
       ],
       "trailing_newline": true,
-      "parsed": [],
+      "parsed": [
+        {
+          "id": "<l_verifies>",
+          "from_id": "<tc>",
+          "to_id": "<req>",
+          "type": "verifies",
+          "suspect": false,
+          "attributes": {
+            "method": "test",
+            "witness": "\u003cqa\u003e \u0026 co"
+          },
+          "version": 2,
+          "valid_from": "<time@step 8>",
+          "valid_to": null,
+          "created_at": "<time@step 8>",
+          "updated_at": "<time@step 39>"
+        }
+      ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
       "n": 54,
-      "title": "the test case's version 3 still lists the removed link",
+      "title": "the test case's version 3 lists the verifies link",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
       "request": {
@@ -2139,7 +2156,7 @@
     },
     {
       "n": 55,
-      "title": "the test case has no version 4: the removed link's source was not auto-versioned",
+      "title": "the test case has no version 4: the managed edit left it alone",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
       "request": {
@@ -2432,7 +2449,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:10>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 6\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 60>\",\"updated_at\":\"<time@step 60>\"},{\"id\":\"<uuid:11>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 5\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (removed)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 57>\",\"updated_at\":\"<time@step 57>\"},{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n    - verifies: Req one (added)\\n    - verifies: Test one (removed)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
+        "[{\"id\":\"<uuid:10>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 6\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 60>\",\"updated_at\":\"<time@step 60>\"},{\"id\":\"<uuid:11>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 5\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (removed)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 57>\",\"updated_at\":\"<time@step 57>\"},{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2459,7 +2476,7 @@
         {
           "id": "<uuid:5>",
           "artifact_id": "<di>",
-          "message": "Updated to version 4\n\nChanges:\n- Links:\n    - satisfies: Req one (added)\n    - verifies: Req one (added)\n    - verifies: Test one (removed)\n",
+          "message": "Updated to version 4\n\nChanges:\n- Links:\n    - satisfies: Req one (added)\n",
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
@@ -2507,7 +2524,7 @@
         "body": "{\"pendingLinkAdds\":[{\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\"}]}"
       },
       "notes": [
-        "a managed edit wants editor rights on the other end's project for every type, where POST /api/v1/links lets refines through with viewer rights; the note still lists the add"
+        "a managed edit wants editor rights on the other end's project for every type, where POST /api/v1/links lets refines through with viewer rights; the note does not list the add"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -2620,14 +2637,14 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:12>\",\"artifact_id\":\"<creq>\",\"message\":\"Updated to version 3\\n\\nChanges:\\n- Links:\\n    - refines: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<uuid:13>\",\"artifact_id\":\"<creq>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
+        "[{\"id\":\"<uuid:12>\",\"artifact_id\":\"<creq>\",\"message\":\"Updated to version 3\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<uuid:13>\",\"artifact_id\":\"<creq>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
           "id": "<uuid:12>",
           "artifact_id": "<creq>",
-          "message": "Updated to version 3\n\nChanges:\n- Links:\n    - refines: Req one (added)\n",
+          "message": "Updated to version 3",
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
@@ -2792,7 +2809,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2808,6 +2825,22 @@
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
+        },
+        {
+          "id": "<l_verifies>",
+          "from_id": "<tc>",
+          "to_id": "<req>",
+          "type": "verifies",
+          "suspect": false,
+          "attributes": {
+            "method": "test",
+            "witness": "\u003cqa\u003e \u0026 co"
+          },
+          "version": 2,
+          "valid_from": "<time@step 8>",
+          "valid_to": null,
+          "created_at": "<time@step 8>",
+          "updated_at": "<time@step 39>"
         },
         {
           "id": "<l_derives>",
@@ -2867,7 +2900,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2883,6 +2916,22 @@
           "valid_to": null,
           "created_at": "<time@step 16>",
           "updated_at": "<time@step 16>"
+        },
+        {
+          "id": "<l_verifies>",
+          "from_id": "<tc>",
+          "to_id": "<req>",
+          "type": "verifies",
+          "suspect": false,
+          "attributes": {
+            "method": "test",
+            "witness": "\u003cqa\u003e \u0026 co"
+          },
+          "version": 2,
+          "valid_from": "<time@step 8>",
+          "valid_to": null,
+          "created_at": "<time@step 8>",
+          "updated_at": "<time@step 39>"
         },
         {
           "id": "<l_derives>",
