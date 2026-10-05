@@ -27,6 +27,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   interview's sessions for reviewers to find. The link now opens on the
   thank-you page, and no session is added.
 
+- **A run you open straight after a finished one keeps its log live.** In
+  a list of runs, such as a project's Runs page, choosing a run that is
+  still going right after one that had finished could leave its log
+  frozen: if its live connection dropped before the run had loaded, the
+  panel took the new run for finished too, and neither reconnected nor
+  looked for new lines until you chose the run again. It now reconnects,
+  as it does for any run still going.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features
