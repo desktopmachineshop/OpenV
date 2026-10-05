@@ -37,7 +37,7 @@ A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 | `respond.go`, `httperr.go`, `errmap.go`, `authz.go`, `publish.go`, `cookies.go`, `middleware_*.go` | the K3 homes: JSON out (`respondJSON`), the error envelope and writers, the per-area error writers, every `require*` guard, domain event publishing, the session and sign-in cookies, middleware |
 | `authmiddleware.go`, `compression.go`, `requestlog.go`, `security_headers.go` | the middleware `cmd/server/http.go` chains (I6) |
 | `ratelimit.go` | the rate limiters handlers spend; some buckets are shared across endpoints (quirk Q18) |
-| `limits.go` | plan limits, the read-only gate and `alwaysWritable`, its exemption wrapper |
+| `limits.go` | plan limits for the API: the limits endpoint's response, the read-only gate and `alwaysWritable`, its exemption wrapper, and `failOpen` over `orgs.LimitEnforcer`, which counts and decides |
 | `sse.go` | `SSEHub` and `ServeStream`: the event streams and their keys (I9) |
 | `event_names.go` | the actor and entity names the activity log shows beside each domain event |
 | other non-test files | area helpers that are not handlers, such as `ai_map.go`, `managed_link_edits.go`, `proposal_appliers.go`, `attachment_safety.go` |

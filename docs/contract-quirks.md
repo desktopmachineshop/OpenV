@@ -359,7 +359,7 @@ the Phase 3 consolidations that give quirks their names.
   `DefaultReturnURL` on it (`NewHandler`, `internal/api/handlers.go`; the
   plan's I17 row cites `handlers.go:373-379` at `d11dee8`).
 - **Pinned by, named as:** S4a `boot_steps.txt` (statement order) and the
-  S4b billing profile's boot log; X12 keeps the point *(planned)*. Pain
+  S4b billing profile's boot log; X12 keeps the point. Pain
   point boot-v1.
 - **Pinned today:** S4a's `TestBootSteps` (`cmd/server/boot_steps_test.go`)
   fails if `(*internal/billing.Service).Start` moves past
