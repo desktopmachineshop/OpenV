@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { InterviewChat } from './InterviewChat';
+import { InterviewChat, InterviewChatRoute } from './InterviewChat';
 import { DialogProvider } from '../components/ui';
 
 // Refactor plan step S16j (invariants I9 and I21): the public interview page
@@ -16,8 +16,11 @@ import { DialogProvider } from '../components/ui';
 //                no name is called "Interview", and the stream opens only
 //                once the intro is in; unmounted while loading, the page
 //                never opens one.
-//   error        error: an expired invite (404); a rate-limited intro (429)
-//                reads the same, and so does no token at all, without a call.
+//   error        error: an expired invite (404), and no token at all,
+//                without a call, read the same. busy: a rate-limited intro
+//                (429) says to wait, in the server's words; no answer at all
+//                (a network error) asks to check the connection (#379 bug
+//                215).
 //   name         name: a first visit (no session yet) asks a name, with the
 //                stream already open; Start is disabled until the name is
 //                more than spaces. fresh: the name taken (trimmed, no call),
@@ -44,10 +47,12 @@ import { DialogProvider } from '../components/ui';
 //                thank-you page; the same page when finish fails.
 //   ended        ended: a session the intro already reports completed (or
 //                finished) shows the thank-you page and opens no stream.
-//   reconnect    reconnect: a dropped stream reopens after 2, 4, 8, 15, 15 ...
-//                s, an open restarting the count; a reopened stream's replay
-//                adds nothing and its new message shows. A reconnect pending
-//                at unmount or at the end of the interview opens nothing.
+//   reconnect    reconnect: a dropped stream asks the intro again (an
+//                interview ended elsewhere refuses its stream, #379 bug 216)
+//                and reopens after 2, 4, 8, 15, 15 ... s, an open restarting
+//                the count; a reopened stream's replay adds nothing and its
+//                new message shows. A reconnect pending at unmount or at the
+//                end of the interview opens nothing.
 //   phone        phone: at 390px with a coarse pointer the page is the same
 //                markup as on a desktop, and the confirmation fills the width.
 //
@@ -157,6 +162,8 @@ const TRANSCRIPT = (): Row[] => [
 ];
 
 const RATE_LIMIT = "You're sending messages a little too quickly. Please wait a moment and try again.";
+const BUSY = 'Too many requests from your network. Please wait a moment and reload the page.';
+const OFFLINE = "We couldn't reach the server. Check your connection and reload the page.";
 
 // An error as axios rejects with it: the server's JSON body on .response.
 const httpError = (status: number, error: string) =>
@@ -168,10 +175,13 @@ const httpError = (status: number, error: string) =>
 // message or a stream connect starts a session when there is none, and a
 // message fills in a blank participant name; finish completes the session
 // and answers 204 with no body. The intro sends whatever session the test
-// holds: the real one sends only an active session (FindActiveSessionByInvite),
-// so the `ended` mode's completed session is the page's own branch.
+// holds, as the real one sends the invite's active session or else its
+// latest (#379 bug 214), so the `ended` mode's completed session is what a
+// link reopened after its interview ended reads. The real server refuses a
+// message or a stream once the interview has ended (409, #379 bug 216); no
+// mode here sends one.
 let server: {
-  invite: 'open' | 'expired' | 'busy';
+  invite: 'open' | 'expired' | 'busy' | 'offline';
   name: string;
   session: Row | null;
   transcript: Row[];
@@ -194,11 +204,9 @@ const held = (body: unknown) => (server.hold ? server.hold.then(() => body) : bo
 const CANNED: Record<string, (...args: any[]) => unknown> = {
   'publicInterviewAPI.intro': () => {
     if (server.invite === 'expired') return Promise.reject(httpError(404, 'invite has expired'));
-    if (server.invite === 'busy') {
-      return Promise.reject(
-        httpError(429, 'Too many requests from your network. Please wait a moment and reload the page.')
-      );
-    }
+    if (server.invite === 'busy') return Promise.reject(httpError(429, BUSY));
+    // No answer at all: axios rejects with no response.
+    if (server.invite === 'offline') return Promise.reject(new Error('Network Error'));
     return held({
       interview_name: server.name,
       session: server.session ? clone(server.session) : null,
@@ -324,7 +332,7 @@ const mount = async (entry = `/interview/${TOKEN}`) => {
       <MemoryRouter initialEntries={[entry]}>
         <DialogProvider>
           <Routes>
-            <Route path="/interview/:token" element={<InterviewChat />} />
+            <Route path="/interview/:token" element={<InterviewChatRoute />} />
             <Route path="/interview" element={<InterviewChat />} />
           </Routes>
         </DialogProvider>
@@ -581,7 +589,7 @@ describe('InterviewChat characterization (S16j)', () => {
     keep('loading');
   });
 
-  it('error: an expired or refused invite, and no token at all', async () => {
+  it('error: an expired invite, a rate-limited or unanswered intro, and no token at all', async () => {
     server.invite = 'expired';
     await mount();
     expect(text()).toBe(
@@ -592,10 +600,19 @@ describe('InterviewChat characterization (S16j)', () => {
     await snapshot('error');
     const page = container.innerHTML;
 
-    // A rate-limited intro reads the same.
+    // A rate-limited intro says to wait, in the server's words: the link is
+    // fine (#379 bug 215).
     server.invite = 'busy';
     await mount();
-    expect(container.innerHTML).toBe(page);
+    expect(text()).toBe("⏳The interview didn't load" + BUSY);
+    expect(FakeEventSource.all).toHaveLength(0);
+    await snapshot('busy');
+
+    // No answer at all: the page's own words, on the same page.
+    server.invite = 'offline';
+    await mount();
+    expect(text()).toBe("⏳The interview didn't load" + OFFLINE);
+    expect(FakeEventSource.all).toHaveLength(0);
 
     // With no token the page asks nothing.
     server.invite = 'open';
@@ -603,7 +620,7 @@ describe('InterviewChat characterization (S16j)', () => {
     expect(container.innerHTML).toBe(page);
     expect(FakeEventSource.all).toHaveLength(0);
 
-    expect(brief()).toEqual([INTRO, INTRO]);
+    expect(brief()).toEqual([INTRO, INTRO, INTRO]);
     keep('error');
   });
 
@@ -891,33 +908,43 @@ describe('InterviewChat characterization (S16j)', () => {
     expect(FakeEventSource.all.filter((es) => !es.closed)).toHaveLength(0);
     expect(timers).toHaveLength(0);
 
+    // Each drop asks the intro again before its delay (#379 bug 216).
     expect(brief()).toEqual([
       ...MOUNT,
       CLOSE,
+      INTRO,
       TIMER(2000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(4000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(2000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(4000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(8000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(15000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(15000),
       STREAM,
       CLOSE,
+      INTRO,
       TIMER(2000),
       ...MOUNT,
       CLOSE,
+      INTRO,
       TIMER(2000),
       FINISH,
     ]);

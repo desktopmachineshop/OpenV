@@ -489,6 +489,55 @@ describe('useEventStream for InterviewChat (the capped exponent, without credent
     tick(60000);
     expect(opened()).toBe(2);
   });
+
+  // An interview that has ended refuses its stream (409), which an
+  // EventSource cannot read: the page asks its intro again at each drop, in
+  // the policy's onRetry, and leaves the stream if it has ended (#379 bug
+  // 216). Like backoff's, onRetry is read from the newest render and called
+  // before the retry's delay.
+  const withRetry = (url: string | null, onRetry: () => void): ProbeProps => ({
+    url,
+    listeners: { [SSE_EVENT.message]: () => {} },
+    options: { withCredentials: false, reconnect: { ...RECONNECT.cappedExponent, onRetry } },
+  });
+
+  it("calls onRetry at each drop, before the retry's delay, from the newest render", () => {
+    vi.useFakeTimers();
+    const calls: string[] = [];
+    render(withRetry('/public/interviews/tok-1/stream', () => calls.push('first')));
+    expect(calls).toEqual([]);
+    drop();
+    expect(calls).toEqual(['first']);
+    reconnectsAfter(2000);
+    // A new callback reopens nothing; an open or an event calls none.
+    render(withRetry('/public/interviews/tok-1/stream', () => calls.push('second')));
+    expect(opened()).toBe(2);
+    emit('open');
+    emit(SSE_EVENT.message, { id: 'm-1' });
+    expect(calls).toEqual(['first']);
+    drop();
+    expect(calls).toEqual(['first', 'second']);
+    reconnectsAfter(2000);
+    expect(stream().init).toEqual({ withCredentials: false });
+  });
+
+  it('cancels the retry when the caller leaves the stream after onRetry', () => {
+    vi.useFakeTimers();
+    let retries = 0;
+    const onRetry = () => {
+      retries += 1;
+    };
+    render(withRetry('/public/interviews/tok-1/stream', onRetry));
+    const es = stream();
+    drop();
+    expect(retries).toBe(1);
+    // The caller's answer comes in: the interview has ended, so it leaves.
+    render(withRetry(null, onRetry));
+    expect(es.closed).toBe(true);
+    tick(60000);
+    expect(opened()).toBe(1);
+    expect(retries).toBe(1);
+  });
 });
 
 // NotificationBell.tsx:116-132: one stream for the life of the bell, with no

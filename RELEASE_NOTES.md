@@ -88,6 +88,28 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   some accessibility tools and HTML checkers. Links now carry only their
   address and the instruction to open in a new tab.
 
+- **A busy or unreachable interview page no longer calls its link
+  broken.** When a participant's network had opened interview pages too
+  many times in a short while, or the page could not reach OpenV at all,
+  the participant was told the link wasn't working, may have expired or
+  been revoked, and to ask you for a new one. The page now says to wait a
+  moment and reload, or to check the connection and reload; only a link
+  that really is expired, revoked or closed shows the broken-link page.
+
+- **An ended interview's link can no longer start another conversation.**
+  After a participant ended an interview, their link could still start a
+  second, anonymous conversation on the same invite, from a page left open
+  that wrote again or simply reconnected, and it appeared among the
+  interview's sessions. An ended interview's link now takes no more
+  answers and starts nothing; a page left open shows the thank-you page.
+  To interview the same person again, send them a new invite.
+
+- **Moving to another interview link shows only that interview.** When a
+  participant went from one interview link to another in the same browser
+  tab, for example with Back and Forward, the page kept showing the
+  previous interview's conversation while the new one loaded, and kept a
+  half-typed answer after it. The page now starts afresh on each link.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features

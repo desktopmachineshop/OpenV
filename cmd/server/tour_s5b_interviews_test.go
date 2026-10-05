@@ -33,7 +33,7 @@ import (
 // session; each queues an interviewer run, whose prompt the area reads; an
 // interview with no agent answers with a system note), finish (a
 // chatter.created event; the intro then answers the ended session, without
-// its transcript, and the next message opens a new session), and the three
+// its transcript, and the next message is refused, 409), and the three
 // rate limits: per invite on messages (spent only once a message is read and
 // has content), per network on intros and on streams (spent before the token
 // is read), each with the last request its bucket lets through and the 429
@@ -362,7 +362,7 @@ func interviewsTour(tr *tour) {
 
 	// Finishing: with no session, with one (an event), and again; the intro
 	// then answers the ended session, without its transcript, and the next
-	// message opens a new one.
+	// message is refused and opens no session.
 	tr.step("finish an invite with no session: nothing to finish", anon, "POST /api/v1/public/interviews/{token}/finish",
 		at("token", "{{inv_future.token}}"))
 	tr.step("finish the expired invite", anon, "POST /api/v1/public/interviews/{token}/finish",
@@ -375,11 +375,12 @@ func interviewsTour(tr *tour) {
 		anon, "GET /api/v1/public/interviews/{token}", at("token", "{{inv1.token}}"), spent,
 		note("no session is active, so the invite's latest answers, without its transcript (only an active "+
 			"session's is sent), and the page shows its thank-you with no stream"))
-	again := tr.step("Dana writes again: a new session", anon, "POST /api/v1/public/interviews/{token}/messages",
-		at("token", "{{inv1.token}}"), jsonBody(`{"participant_name":"Dana","content":"One more thing: metric units."}`))
-	again.capture("s2", "/session/id")
-	again.capture("m3", "/message/id")
-	tr.step("I1's sessions, newest first: the new one active, the finished one completed", o,
+	tr.step("Dana writes again: 409, her interview has ended, and no session opens (#379 bug 216)", anon,
+		"POST /api/v1/public/interviews/{token}/messages", at("token", "{{inv1.token}}"),
+		jsonBody(`{"participant_name":"Dana","content":"One more thing: metric units."}`),
+		note("fixed under #379 bug 216: the message opened a second session on the same invite; a member who "+
+			"wants a second interview with the same person sends a new invite"))
+	tr.step("I1's sessions: Dana's one, completed; the refused message opened none", o,
 		"GET /api/v1/interviews/{id}/sessions", at("id", "{{i1}}"))
 
 	// An interview with no agent: the message is kept, and a system note

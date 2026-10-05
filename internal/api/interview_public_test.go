@@ -345,3 +345,82 @@ func TestPublicInterviewMessageInternalErrorIsSanitized(t *testing.T) {
 		t.Fatalf("500 body %q leaks the internal error text", w.Body.String())
 	}
 }
+
+// endedSession is an invite's latest session once its participant has ended
+// the interview: completed, and no session of the invite active.
+func endedSession() *interviews.Session {
+	ended := time.Now()
+	return &interviews.Session{ID: "sess-1", InterviewID: "int-1", InviteID: "inv-1", ParticipantName: "Ada",
+		Status: interviews.SessionStatusCompleted, StartedAt: ended.Add(-time.Hour), EndedAt: &ended}
+}
+
+// refusedAsEnded checks a 409 in the package's JSON error envelope, in the
+// words the participant's page shows.
+func refusedAsEnded(t *testing.T, what string, w *httptest.ResponseRecorder) {
+	t.Helper()
+	if w.Code != http.StatusConflict {
+		t.Fatalf("%s once the interview ended: status = %d, want 409 (body %q)", what, w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("%s once the interview ended: Content-Type = %q, want application/json", what, ct)
+	}
+	if got, want := w.Body.String(), `{"error":"This interview has ended — thank you."}`+"\n"; got != want {
+		t.Fatalf("%s once the interview ended: body %q, want %q", what, got, want)
+	}
+}
+
+// TestPublicInterviewMessageAfterTheInterviewEndedIsRefused is #379 bug 216:
+// once the participant has ended the interview, the invite has no active
+// session and its latest one is completed. A message to the link is refused,
+// 409, and starts no session: StartOrResumeSession would open a second,
+// anonymous one on the same invite.
+func TestPublicInterviewMessageAfterTheInterviewEndedIsRefused(t *testing.T) {
+	h, fake := newInterviewTestHandler(t)
+	fake.latest = endedSession()
+
+	refusedAsEnded(t, "a message", postMessage(h, "good-token"))
+	if fake.starts != 0 {
+		t.Fatalf("a message once the interview ended started a session (StartOrResumeSession called %d times)", fake.starts)
+	}
+	if len(fake.messages) != 0 {
+		t.Fatalf("a message once the interview ended was recorded: %+v", fake.messages)
+	}
+}
+
+// TestPublicInterviewStreamAfterTheInterviewEndedIsRefused is the stream's
+// side of #379 bug 216: a stream connect to the ended interview's link is
+// refused the same way, before any stream opens, and starts no session.
+func TestPublicInterviewStreamAfterTheInterviewEndedIsRefused(t *testing.T) {
+	h, fake := newInterviewTestHandler(t)
+	fake.latest = endedSession()
+
+	w := httptest.NewRecorder()
+	h.PublicInterviewStream(w, streamRequest("203.0.113.9:4444"))
+	refusedAsEnded(t, "a stream connect", w)
+	if fake.starts != 0 {
+		t.Fatalf("a stream connect once the interview ended started a session (StartOrResumeSession called %d times)", fake.starts)
+	}
+}
+
+// TestPublicInterviewActiveSessionIsResumedWhateverTheLatest pins that the
+// refusal is for an ended interview only: with a session active, a message
+// and a stream resume it, even when the invite's latest answer is a
+// completed one (the fake answers both independently).
+func TestPublicInterviewActiveSessionIsResumedWhateverTheLatest(t *testing.T) {
+	h, fake := newInterviewTestHandler(t)
+	fake.session = &interviews.Session{ID: "sess-2", InterviewID: "int-1", InviteID: "inv-1",
+		ParticipantName: "Ada", Status: interviews.SessionStatusActive, StartedAt: time.Now()}
+	fake.latest = endedSession()
+
+	if w := postMessage(h, "good-token"); w.Code != http.StatusOK {
+		t.Fatalf("a message with a session active: status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	w := httptest.NewRecorder()
+	h.PublicInterviewStream(w, streamRequest("203.0.113.9:4444"))
+	if w.Code != http.StatusOK {
+		t.Fatalf("a stream with a session active: status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	if fake.starts != 2 || fake.session.ID != "sess-2" {
+		t.Fatalf("with a session active: %d resumes of %s, want 2 of sess-2", fake.starts, fake.session.ID)
+	}
+}

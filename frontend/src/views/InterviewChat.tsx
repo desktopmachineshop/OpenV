@@ -1,11 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicInterviewAPI, InterviewMessage } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useConfirm } from '../components/ui';
 import { ChatMarkdown } from '../components/ChatMarkdown';
 import { RECONNECT, useEventStream } from '../hooks/useEventStream';
 
 type Phase = 'loading' | 'error' | 'name' | 'chat' | 'done';
+
+// What the page says when its intro gets no answer at all (#379 bug 215).
+const OFFLINE = "We couldn't reach the server. Check your connection and reload the page.";
+// A session the intro reports is over: the page shows its thank-you.
+const isOver = (status?: string) => status === 'finished' || status === 'completed';
 
 // Public standalone interview page — no auth, no app shell. Mobile-friendly
 // full-height chat reached via /interview/:token invite links.
@@ -25,6 +31,9 @@ export const InterviewChat: React.FC = () => {
   // the whole text so far, replaced by the final message when it lands.
   const [partial, setPartial] = useState('');
   const [sendError, setSendError] = useState('');
+  // Why the intro failed when the link itself is fine: the server's words
+  // for a rate limit, or OFFLINE. Empty for a refusal: a broken link.
+  const [notice, setNotice] = useState('');
   // The interview whose live stream is open: its token once the intro is in
   // and the session still open, null when the interview ends or the page
   // leaves the link. No stream for a finished session or a broken link.
@@ -56,7 +65,7 @@ export const InterviewChat: React.FC = () => {
         setInterviewName(res.data.interview_name || 'Interview');
         setMessages(res.data.transcript || []);
         const session = res.data.session;
-        if (session?.status === 'finished' || session?.status === 'completed') {
+        if (isOver(session?.status)) {
           setPhase('done');
           return;
         }
@@ -67,8 +76,14 @@ export const InterviewChat: React.FC = () => {
           setPhase('name');
         }
         setLiveToken(token);
-      } catch {
-        if (!cancelled) setPhase('error');
+      } catch (err: any) {
+        if (cancelled) return;
+        // Only a refusal (404, 410, any answer but a 429) says the link is
+        // broken; a rate limit or no answer at all says to wait (#379 bug 215).
+        const status = err?.response?.status;
+        if (status === 429) setNotice(apiErrorMessage(err, 'Please wait a moment and reload the page.'));
+        else setNotice(status ? '' : OFFLINE);
+        setPhase('error');
       }
     })();
     return () => {
@@ -76,6 +91,29 @@ export const InterviewChat: React.FC = () => {
       setLiveToken(null);
     };
   }, [token]);
+
+  // The interview is over: its thank-you page, and no stream.
+  const showThanks = () => {
+    setLiveToken(null);
+    setPhase('done');
+  };
+
+  // A drop asks the intro again before its retry: an interview ended
+  // elsewhere refuses its stream (409), which an EventSource cannot read, so
+  // a completed session shows the thank-you, which cancels the retry; no
+  // answer lets it go ahead (#379 bug 216).
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+  const recheck = () => {
+    const asked = token;
+    if (!asked) return;
+    publicInterviewAPI.intro(asked).then(
+      (res) => {
+        if (asked === tokenRef.current && isOver(res.data.session?.status)) showThanks();
+      },
+      () => {}
+    );
+  };
 
   // Live updates via SSE, from liveToken: opened once the intro is in, and
   // closed the moment the link changes, before the new link's intro is asked
@@ -104,7 +142,7 @@ export const InterviewChat: React.FC = () => {
         }
       },
     },
-    { withCredentials: false, reconnect: RECONNECT.cappedExponent }
+    { withCredentials: false, reconnect: { ...RECONNECT.cappedExponent, onRetry: recheck } }
   );
 
   useEffect(() => {
@@ -130,6 +168,8 @@ export const InterviewChat: React.FC = () => {
       setComposerText('');
     } catch (err: any) {
       setTyping(false);
+      // The interview has ended elsewhere: the answer is refused (#379 bug 216).
+      if (err?.response?.status === 409) return showThanks();
       // Surface server-provided messages (e.g. the rate-limit notice) verbatim.
       const serverMsg = err?.response?.data?.error;
       setSendError(
@@ -156,8 +196,7 @@ export const InterviewChat: React.FC = () => {
     } catch {
       // Even if finish fails, show the thank-you screen — the link may already be closed.
     }
-    setLiveToken(null);
-    setPhase('done');
+    showThanks();
   };
 
   const page = (children: React.ReactNode) => (
@@ -192,11 +231,13 @@ export const InterviewChat: React.FC = () => {
   if (phase === 'error') {
     return page(
       <div style={{ margin: 'auto', textAlign: 'center', padding: 24 }}>
-        <div style={{ fontSize: 44, marginBottom: 12 }}>🔗</div>
-        <h2 style={{ color: 'var(--text)', marginBottom: 10 }}>This link isn't working</h2>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>{notice ? '⏳' : '🔗'}</div>
+        <h2 style={{ color: 'var(--text)', marginBottom: 10 }}>
+          {notice ? "The interview didn't load" : "This link isn't working"}
+        </h2>
         <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          The interview invite may have expired or been revoked. Please ask the person who sent it to
-          you for a new link.
+          {notice ||
+            'The interview invite may have expired or been revoked. Please ask the person who sent it to you for a new link.'}
         </p>
       </div>
     );
@@ -408,4 +449,12 @@ export const InterviewChat: React.FC = () => {
       </div>
     </>
   );
+};
+
+// The page on its route, /interview/:token. A new link mounts a new page, so
+// nothing of the previous link's interview (its conversation, a half-typed
+// answer) stays on show while the new one loads, nor after (#379 bug 219).
+export const InterviewChatRoute: React.FC = () => {
+  const { token } = useParams<{ token: string }>();
+  return <InterviewChat key={token} />;
 };

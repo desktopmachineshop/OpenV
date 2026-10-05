@@ -11,7 +11,8 @@ import type { SseEventName } from '../generated/contract';
 //                      restoring them; then the caller polls) and after_seq
 //   GuidedChatPanel    a capped exponent for ever (2, 4, 8, 15, 15 ... s; an
 //                      open restarts it)
-//   InterviewChat      the same, without credentials (the public interview)
+//   InterviewChat      the same, without credentials (the public interview),
+//                      asking at each drop whether its interview has ended
 //   NotificationBell   the browser's own reconnect (no error handler at all)
 
 /** What a listener may do to the stream its event arrived on. */
@@ -48,12 +49,20 @@ export interface BrowserReconnect {
  * closes the stream and raises n by one, up to maxExponent, then waits
  * min(baseDelayMs * 2^n, maxDelayMs); an open sets n back to 0. Like the
  * retryRef each of those components keeps, n outlives a change of url.
+ * onRetry is read when it is needed, from the newest render.
  */
 export interface CappedExponentReconnect {
   readonly kind: 'cappedExponent';
   readonly baseDelayMs: number;
   readonly maxExponent: number;
   readonly maxDelayMs: number;
+  /**
+   * A retry is scheduled: called before its delay. InterviewChat asks its
+   * intro again there, and once its interview has ended, whose stream the
+   * server refuses (#379 bug 216), leaves the stream: url null, which
+   * cancels the retry.
+   */
+  readonly onRetry?: () => void;
 }
 
 /**
@@ -165,6 +174,7 @@ export function useEventStream(
           const n = Math.min(exponent.current + 1, policy.maxExponent);
           exponent.current = n;
           const delay = Math.min(policy.baseDelayMs * 2 ** n, policy.maxDelayMs);
+          policy.onRetry?.();
           retryTimer = window.setTimeout(connect, delay);
         } else if (policy.kind === 'backoff') {
           if (policy.isDone?.()) return;

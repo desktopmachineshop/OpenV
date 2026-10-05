@@ -21,7 +21,7 @@ import { AgentRunsPage } from './views/AgentRunsPage';
 import { AgentsPage } from './views/AgentsPage';
 import { ProjectSettings } from './views/ProjectSettings';
 import { OrgSettings } from './views/OrgSettings';
-import { InterviewChat } from './views/InterviewChat';
+import { InterviewChatRoute } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import './index.css';
@@ -227,7 +227,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/interview/:token" element={<InterviewChat />} />
+        <Route path="/interview/:token" element={<InterviewChatRoute />} />
         {/* A share link opens without a session (REQ-149): /share/:token is
             the link handed out (the deployed nginx sends unfurlers to the
             API's preview page for it) and /s/:token is where the app takes

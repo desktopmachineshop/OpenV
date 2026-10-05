@@ -3250,7 +3250,7 @@
     },
     {
       "n": 81,
-      "title": "Dana writes again: a new session",
+      "title": "Dana writes again: 409, her interview has ended, and no session opens (#379 bug 216)",
       "actor": "anonymous",
       "route": "POST /api/v1/public/interviews/{token}/messages",
       "request": {
@@ -3261,40 +3261,28 @@
         ],
         "body": "{\"participant_name\":\"Dana\",\"content\":\"One more thing: metric units.\"}"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "notes": [
+        "fixed under #379 bug 216: the message opened a second session on the same invite; a member who wants a second interview with the same person sends a new invite"
+      ],
+      "status": 409,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 52,
       "kind": "json",
       "body": [
-        "{\"message\":{\"id\":\"<m3>\",\"session_id\":\"<s2>\",\"role\":\"participant\",\"content\":\"One more thing: metric units.\",\"created_at\":\"<time@step 81>\"},\"session\":{\"id\":\"<s2>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@step 81>\"}}"
+        "{\"error\":\"This interview has ended — thank you.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "message": {
-          "id": "<m3>",
-          "session_id": "<s2>",
-          "role": "participant",
-          "content": "One more thing: metric units.",
-          "created_at": "<time@step 81>"
-        },
-        "session": {
-          "id": "<s2>",
-          "interview_id": "<i1>",
-          "invite_id": "<inv1>",
-          "participant_name": "Dana",
-          "status": "active",
-          "summary": "",
-          "started_at": "<time@step 81>"
-        }
+        "error": "This interview has ended — thank you."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 82,
-      "title": "I1's sessions, newest first: the new one active, the finished one completed",
+      "title": "I1's sessions: Dana's one, completed; the refused message opened none",
       "actor": "owner",
       "route": "GET /api/v1/interviews/{id}/sessions",
       "request": {
@@ -3308,19 +3296,10 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<s2>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@step 81>\"},{\"id\":\"<s1>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"completed\",\"summary\":\"\",\"started_at\":\"<time@step 63>\",\"ended_at\":\"<time@step 78>\"}]"
+        "[{\"id\":\"<s1>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"completed\",\"summary\":\"\",\"started_at\":\"<time@step 63>\",\"ended_at\":\"<time@step 78>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
-        {
-          "id": "<s2>",
-          "interview_id": "<i1>",
-          "invite_id": "<inv1>",
-          "participant_name": "Dana",
-          "status": "active",
-          "summary": "",
-          "started_at": "<time@step 81>"
-        },
         {
           "id": "<s1>",
           "interview_id": "<i1>",
@@ -3665,7 +3644,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<s_burst>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv_burst>\",\"participant_name\":\"Sam\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@before step 86>\"},{\"id\":\"<s0>\",\"interview_id\":\"<i0>\",\"invite_id\":\"<inv0>\",\"participant_name\":\"Lee\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@step 83>\"},{\"id\":\"<s2>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@step 81>\"},{\"id\":\"<s1>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"completed\",\"summary\":\"\",\"started_at\":\"<time@step 63>\",\"ended_at\":\"<time@step 78>\"}]"
+        "[{\"id\":\"<s_burst>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv_burst>\",\"participant_name\":\"Sam\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@before step 86>\"},{\"id\":\"<s0>\",\"interview_id\":\"<i0>\",\"invite_id\":\"<inv0>\",\"participant_name\":\"Lee\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@step 83>\"},{\"id\":\"<s1>\",\"interview_id\":\"<i1>\",\"invite_id\":\"<inv1>\",\"participant_name\":\"Dana\",\"status\":\"completed\",\"summary\":\"\",\"started_at\":\"<time@step 63>\",\"ended_at\":\"<time@step 78>\"},{\"id\":\"<r21.session>\",\"interview_id\":\"<i2>\",\"invite_id\":\"<r21.invite>\",\"participant_name\":\"Respondent 21\",\"status\":\"active\",\"summary\":\"\",\"started_at\":\"<time@before step 43>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3688,15 +3667,6 @@
           "started_at": "<time@step 83>"
         },
         {
-          "id": "<s2>",
-          "interview_id": "<i1>",
-          "invite_id": "<inv1>",
-          "participant_name": "Dana",
-          "status": "active",
-          "summary": "",
-          "started_at": "<time@step 81>"
-        },
-        {
           "id": "<s1>",
           "interview_id": "<i1>",
           "invite_id": "<inv1>",
@@ -3705,6 +3675,15 @@
           "summary": "",
           "started_at": "<time@step 63>",
           "ended_at": "<time@step 78>"
+        },
+        {
+          "id": "<r21.session>",
+          "interview_id": "<i2>",
+          "invite_id": "<r21.invite>",
+          "participant_name": "Respondent 21",
+          "status": "active",
+          "summary": "",
+          "started_at": "<time@before step 43>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
