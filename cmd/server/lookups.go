@@ -2,10 +2,8 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"os"
-	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
@@ -20,11 +18,13 @@ import (
 // live state when the service calls it.
 
 // projectOrgResolver is the event bus's org resolver: the workspace of a
-// project, or "" when the lookup fails.
+// project, ProjectRepository.OrgIDForProject read each time it is called,
+// or "" when the lookup fails.
 func projectOrgResolver(db *sql.DB) func(projectID string) string {
+	projectRepo := postgres.NewProjectRepository(db)
 	return func(projectID string) string {
-		var orgID string
-		if err := db.QueryRow(`SELECT COALESCE(org_id::text, '') FROM projects WHERE id = $1::uuid`, projectID).Scan(&orgID); err != nil {
+		orgID, err := projectRepo.OrgIDForProject(projectID)
+		if err != nil {
 			return ""
 		}
 		return orgID
@@ -86,21 +86,8 @@ func downloadWorkspaceSource(projectService projects.Service, orgService *orgs.D
 	}
 }
 
-// budgetGuard is the over-budget soft-block: it refuses a launch once the
-// workspace's month-to-date spend has reached its monthly budget, and lets
-// it through when the workspace has no budget or a lookup fails.
+// budgetGuard is the over-budget soft-block, agentruns.BudgetGuard over the
+// workspace's budget and the run service's month-to-date spend.
 func budgetGuard(orgService *orgs.DefaultService, runService *agentruns.DefaultService) func(orgID string) (bool, string) {
-	return func(orgID string) (bool, string) {
-		org, err := orgService.Get(orgID)
-		if err != nil || org == nil || org.MonthlyBudgetUSD == nil || *org.MonthlyBudgetUSD <= 0 {
-			return false, ""
-		}
-		now := time.Now().UTC()
-		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		spend, err := runService.MonthlySpend(orgID, monthStart)
-		if err != nil || spend < *org.MonthlyBudgetUSD {
-			return false, ""
-		}
-		return true, fmt.Sprintf("this workspace has reached its $%.2f monthly budget ($%.2f spent); new runs are blocked until next month or the budget is raised", *org.MonthlyBudgetUSD, spend)
-	}
+	return agentruns.BudgetGuard(orgService, runService)
 }

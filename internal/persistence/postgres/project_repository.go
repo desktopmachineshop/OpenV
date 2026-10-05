@@ -18,7 +18,7 @@ type ProjectRepository struct {
 const cols = "SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at"
 
 // NewProjectRepository creates a new project repository
-func NewProjectRepository(db *sql.DB) projects.Repository {
+func NewProjectRepository(db *sql.DB) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
@@ -136,6 +136,23 @@ func (r *ProjectRepository) ListChildren(id string) ([]*projects.Project, error)
 		projectList = append(projectList, project)
 	}
 	return projectList, rows.Err()
+}
+
+// OrgIDForProject returns the id of a project's workspace as text, "" for
+// a project with no workspace (COALESCE), and "" with no error for an id no
+// project has, a malformed one included (the $1::uuid cast refuses it). The
+// event bus resolves the workspace of an event that names only its project
+// with it, and reads any error as "" too.
+func (r *ProjectRepository) OrgIDForProject(projectID string) (string, error) {
+	var orgID string
+	err := r.db.QueryRow(`SELECT COALESCE(org_id::text, '') FROM projects WHERE id = $1::uuid`, projectID).Scan(&orgID)
+	if noRow(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return orgID, nil
 }
 
 // Update updates an existing project: projects.ErrNotFound for an id no

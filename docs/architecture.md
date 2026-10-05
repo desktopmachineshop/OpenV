@@ -145,10 +145,11 @@ Beside them: `config.go` holds the env getters, `http.go` builds the
 middleware chain (`buildHTTPHandler`) and the server, `jobs.go` the reaper
 and purge loops and the boot call of the hosted-runner reconcile (whose rule
 is `hostedworkers.Reconcile`), `lookups.go` the closures that join
-two domains (a project's workspace, the budget guard), and `logging.go` the
-log setup. `cmd/server/testdata/boot_steps.txt` (S4) pins the order of
-every call `main()` makes; new wiring goes in the stage that owns its
-concern.
+two domains (a project's workspace and the budget guard, whose rules are
+`ProjectRepository.OrgIDForProject` and `agentruns.BudgetGuard`), and
+`logging.go` the log setup. `cmd/server/testdata/boot_steps.txt` (S4) pins
+the order of every call `main()` makes; new wiring goes in the stage that
+owns its concern.
 
 ### API layer: `internal/api`
 
@@ -170,7 +171,8 @@ concern.
 - Shared homes (K3), so a helper is found where its kind lives:
   `respond.go` (JSON out), `httperr.go` (error writers; internals go to the
   log, a fixed message to the client), `authz.go` (every `require*` guard),
-  `limits.go` (the plan read-only gate and counts), `publish.go` (domain
+  `limits.go` (the plan read-only gate, over `orgs.LimitEnforcer`'s
+  counts), `publish.go` (domain
   events), `sse.go` (the SSE hub), and the `middleware_*.go`,
   `compression.go`, `ratelimit.go`, `requestlog.go` and
   `security_headers.go` plumbing.

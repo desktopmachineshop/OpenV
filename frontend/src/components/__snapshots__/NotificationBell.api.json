@@ -1,0 +1,554 @@
+{
+  "closed": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    }
+  ],
+  "badge": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    }
+  ],
+  "cap": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "empty": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "flagged",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "cleared",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "inbox": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "mark-one": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.markRead",
+      "args": [
+        [
+          "n-2"
+        ]
+      ]
+    },
+    {
+      "call": "notificationsAPI.markRead",
+      "args": [
+        [
+          "n-5"
+        ]
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "mark-all": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.markAllRead",
+      "args": []
+    }
+  ],
+  "stream": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "flagged",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource.close",
+      "args": [
+        "/api/v1/notifications/stream"
+      ]
+    }
+  ],
+  "flagged": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "flagged",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.setFlagged",
+      "args": [
+        "n-6",
+        false
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.setFlagged",
+      "args": [
+        "n-3",
+        true
+      ]
+    },
+    {
+      "call": "notificationsAPI.setFlagged",
+      "args": [
+        "n-1",
+        true
+      ]
+    }
+  ],
+  "cleared": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "cleared",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "cleared",
+          "limit": 30,
+          "before": "2026-05-29T12:00:00Z|c-2"
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.deleteCleared",
+      "args": []
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "cleared",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "clear-all": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.clearAll",
+      "args": []
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "cleared",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "phone": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "dark": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    }
+  ],
+  "deep-link": [
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    },
+    {
+      "call": "EventSource",
+      "args": [
+        "/api/v1/notifications/stream",
+        {
+          "withCredentials": true
+        }
+      ]
+    },
+    {
+      "call": "notificationsAPI.list",
+      "args": [
+        {
+          "view": "inbox",
+          "limit": 30
+        }
+      ]
+    }
+  ]
+}

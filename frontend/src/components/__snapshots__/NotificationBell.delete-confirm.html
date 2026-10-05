@@ -1,0 +1,58 @@
+<div style="position: relative;">
+<button title="Notifications" aria-label="Notifications (4 unread)" style="position: relative; background: none; border: medium; cursor: pointer; padding: 4px; min-width: 40px; min-height: 40px; font-size: 16px; line-height: 1; color: var(--text);">
+<span aria-hidden="true">🔔</span>
+<span style="position: absolute; top: -2px; right: -4px; min-width: 16px; height: 16px; padding: 0px 4px; border-radius: 8px; background: var(--danger); color: rgb(255, 255, 255); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">4</span>
+</button>
+<div role="dialog" aria-label="Notifications" style="position: absolute; top: calc(100% + 6px); right: 0px; width: 320px; max-height: 420px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.18); z-index: 1500;">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border-soft);">
+<span style="font-size: 13px; font-weight: 700; color: var(--text);">Notifications</span>
+<div style="display: flex; align-items: center; gap: 12px;">
+<button style="background: none; border: medium; color: var(--text-muted); cursor: pointer; font-size: 12.5px; padding: 6px 0px; min-height: 36px;">Delete forever</button>
+</div>
+</div>
+<div role="tablist" aria-label="Notification views" style="display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border-soft);">
+<button role="tab" aria-selected="false" style="flex: 1 1 0%; background: none; border: medium; border-radius: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; cursor: pointer; padding: 6px 8px; min-height: 36px; background-image: none; background-position: 0% 0%; background-position-x: 0%; background-position-y: 0%; background-size: auto; background-repeat: repeat; background-origin: padding-box; background-clip: border-box; background-attachment: scroll; background-color: transparent;">Inbox</button>
+<button role="tab" aria-selected="false" style="flex: 1 1 0%; background: none; border: medium; border-radius: 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; cursor: pointer; padding: 6px 8px; min-height: 36px;">Flagged</button>
+<button role="tab" aria-selected="true" style="flex: 1 1 0%; background: var(--tint-blue); border: medium; border-radius: 4px; color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 6px 8px; min-height: 36px;">Cleared</button>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: transparent;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 400; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Run failed: weekly export</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">The export timed out.</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">2d</span>
+<button aria-pressed="true" aria-label="Remove flag" title="Remove flag" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--accent);">★</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: transparent;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 400; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Lee mentioned you on DI-3</div>
+<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Is this the right supplier?</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">3d</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-soft); background: transparent;">
+<div style="flex: 1 1 0%; min-width: 0px;">
+<div style="font-size: 13px; font-weight: 400; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">You are now an admin of the workspace</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+<span style="font-size: 12px; color: var(--text-muted);">9d</span>
+<button aria-pressed="false" aria-label="Flag this notification" title="Flag to keep" style="background: none; border: medium; cursor: pointer; padding: 6px 0px; min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; color: var(--text-muted);">☆</button>
+</div>
+</div>
+</div>
+</div>
+<div style="position: fixed; inset: 0px; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 3000;">
+<div role="alertdialog" aria-modal="true" class="card" style="width: 420px; max-width: calc(100vw - 40px); max-height: calc(100vh - 60px); overflow-y: auto; padding: 22px; border-radius: 8px; margin: 0px; background: var(--surface);">
+<h3 style="margin-top: 0px; margin-bottom: 10px; color: var(--text); font-size: 16px;">Delete cleared notifications</h3>
+<div style="font-size: 13.5px; color: var(--text-body); line-height: 1.5; margin-bottom: 18px;">Permanently delete all 3 cleared notifications? This cannot be undone.</div>
+<div style="display: flex; gap: 10px; justify-content: flex-end;">
+<button type="button" class="button-secondary" style="width: auto; padding: 8px 16px; font-size: 13px; min-height: 40px;">Cancel</button>
+<button type="button" style="width: auto; padding: 8px 16px; font-size: 13px; background: var(--danger); color: rgb(255, 255, 255); border: medium; border-radius: 4px; cursor: pointer; font-weight: 600; min-height: 40px;">Delete forever</button>
+</div>
+</div>
+</div>
