@@ -21,7 +21,8 @@ import (
 // about newer stables from the shared service's public release feed
 // (GET /api/v1/public/release) and warns every workspace's admins when the
 // window is about to close, and once more when it has closed. Each warning
-// is claimed in release_announcements so a restart never repeats it.
+// is claimed in release_announcements so a restart never repeats it, and
+// reaches each admin once, however many workspaces they administer.
 
 // SupportWindowDays is how long a dedicated instance is supported after
 // the next stable release is cut.
@@ -199,14 +200,24 @@ func (w *SupportWindowWatcher) warn(feed *ReleaseFeed, own string, closes time.T
 		return
 	}
 	ref := map[string]interface{}{"kind": "support_window", "running": own, "available": feed.Stable, "closes": closes.Format("2006-01-02")}
+	// The warning is about the instance, not a workspace, and the bell lists
+	// a person's notifications from all their workspaces: each admin gets
+	// one row, under the first workspace they administer in ListAll order,
+	// however many they administer (#379 bug 221).
+	warned := map[string]bool{}
 	for _, orgID := range ids {
 		members, err := w.orgs.ListMembers(orgID)
 		if err != nil {
 			continue
 		}
 		ToOrgAdmins(members, func(userID string) {
+			if warned[userID] {
+				return
+			}
+			warned[userID] = true
 			n := notifications.New(orgID, userID, notifications.TypeReleaseSupportWindow, title, body, ref)
-			// A row the store refuses is skipped without a log line.
+			// A row the store refuses is skipped without a log line, and
+			// not tried again under the admin's next workspace.
 			_ = w.delivery.Deliver(n)
 		})
 	}
