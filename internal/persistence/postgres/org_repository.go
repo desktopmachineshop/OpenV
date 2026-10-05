@@ -156,6 +156,29 @@ func (r *OrgRepository) FindPersonalOrgForUser(userID string) (*orgs.Org, error)
 	return o, err
 }
 
+// EarliestPersonalOrgID returns the id of the personal workspace whose member
+// account was created first, by the account's created_at (ORDER BY
+// u.created_at LIMIT 1), or "" when there is none. It goes through
+// org_members, so a personal workspace counts by its members, not its
+// created_by, and it reads soft-deleted workspaces too.
+func (r *OrgRepository) EarliestPersonalOrgID() (string, error) {
+	var id string
+	err := r.db.QueryRow(`
+		SELECT o.id FROM organizations o
+		JOIN org_members m ON m.org_id = o.id
+		JOIN users u ON u.id = m.user_id
+		WHERE o.org_type = 'personal'
+		ORDER BY u.created_at LIMIT 1
+	`).Scan(&id)
+	if noRow(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
 // ListAllOrgIDs returns every organization id, oldest first.
 func (r *OrgRepository) ListAllOrgIDs() ([]string, error) {
 	rows, err := r.db.Query(`SELECT id FROM organizations WHERE deleted_at IS NULL ORDER BY created_at`)

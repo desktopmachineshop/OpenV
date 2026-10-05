@@ -25,6 +25,10 @@ type Workspaces interface {
 	ListForUser(userID string) ([]*Org, error)
 	// ListAll returns every organization id (trusted boot-time callers only).
 	ListAll() ([]string, error)
+	// EarliestPersonalOrgID returns the bootstrap workspace, the personal
+	// workspace whose member account was created first, or "" when there is
+	// none (trusted boot-time callers and the legacy worker key only).
+	EarliestPersonalOrgID() (string, error)
 	UpdateOrg(id string, name *string) (*Org, error)
 	// SetLogo records the workspace logo's on-disk path and MIME type and
 	// returns the updated org.
@@ -131,6 +135,14 @@ func (s *DefaultService) ListForUser(userID string) ([]*Org, error) {
 // ListAll returns every organization id.
 func (s *DefaultService) ListAll() ([]string, error) {
 	return s.repo.ListAllOrgIDs()
+}
+
+// EarliestPersonalOrgID returns the bootstrap workspace: the personal
+// workspace whose member account was created first, or "" when there is
+// none. It is where the legacy WORKER_API_KEY is registered at boot, and
+// where that key acts while no key row holds it.
+func (s *DefaultService) EarliestPersonalOrgID() (string, error) {
+	return s.repo.EarliestPersonalOrgID()
 }
 
 // UpdateOrg renames an org.
