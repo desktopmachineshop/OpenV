@@ -15,8 +15,8 @@ import { useAppStore } from '../state/store';
 //   badge         mounted with four unread: the count on the bell.
 //   cap           99 unread shows 99, and a 100th from the stream 99+; with
 //                 the panel open a new arrival keeps the list at one page
-//                 (30 rows), and Clear all counts the rows on screen but the
-//                 unread on the server. Cancel.
+//                 (30 rows), and Clear all counts the unread on the server,
+//                 not the rows on screen. Cancel leaves the panel open.
 //   empty         opened while the list loads, then nothing to show, in each
 //                 of the three tabs.
 //   inbox         opened on the seven-row inbox: every kind of row (read and
@@ -32,9 +32,10 @@ import { useAppStore } from '../state/store';
 //   flagged       the Flagged tab, a flag removed there (the row goes), a flag
 //                 the server refuses (put back) and one it takes, in the inbox.
 //   cleared       the Cleared tab paged with Load older, Delete forever asked
-//                 and confirmed, and the tab reopened empty.
-//   clear-all     Clear all asked and confirmed, the inbox reopened empty and
-//                 the rows found under Cleared.
+//                 and confirmed with the panel left open, and the tab
+//                 reopened empty.
+//   clear-all     Clear all asked and confirmed with the panel left open, the
+//                 inbox reopened empty and the rows found under Cleared.
 //   phone         the panel at 390px with a coarse pointer (fixed, full width).
 //   dark          the sidebar's variant, which opens upward.
 //   deep-link     ?panel=notifications opens the panel on mount and is
@@ -43,7 +44,7 @@ import { useAppStore } from '../state/store';
 //
 // A press is a mousedown, then a click, as a pointer makes them: the bell
 // closes on a mousedown outside itself, and the confirmation dialog is
-// outside it.
+// outside it, yet a press on the dialog leaves the panel open (#379, bug 205).
 //
 // Each snapshot is container.innerHTML, one tag per line so a diff reads,
 // written to __snapshots__/NotificationBell.<name>.html. Each mode asserts its
@@ -534,17 +535,19 @@ describe('NotificationBell characterization (S16k)', () => {
     expect(titles()[29]).toBe('Mention 28');
     expect(bell().getAttribute('aria-label')).toBe('Notifications (101 unread)');
 
-    // Clear all counts the rows on screen, and the unread on the server.
+    // Clear all counts the unread on the server, not the rows on screen
+    // (#379, bug 206).
     await press(byText(panel()!, 'button', 'Clear all'));
     expect(confirmation()!.textContent).toBe(
       'Clear notifications' +
-        'Clear all 30 notifications? 101 of them unread. They move to the Cleared tab, where you can still read them.' +
+        'Clear all notifications? 101 of them are unread. They move to the Cleared tab, where you can still read them.' +
         'CancelClear all'
     );
-    // The press on Cancel lands outside the bell, so the panel closes too.
+    // The press on Cancel lands outside the bell, on its dialog, so the panel
+    // stays open (#379, bug 205).
     await press(byText(confirmation()!, 'button', 'Cancel'));
     expect(confirmation()).toBeNull();
-    expect(panel()).toBeNull();
+    expect(panel()).not.toBeNull();
     expect(badge()).toBe('99+');
 
     expect(brief()).toEqual([...MOUNT, LIST()]);
@@ -760,18 +763,21 @@ describe('NotificationBell characterization (S16k)', () => {
     await press(byText(panel()!, 'button', 'Delete forever'));
     expect(confirmation()!.textContent).toBe(
       'Delete cleared notifications' +
-        'Permanently delete all 3 cleared notifications? This cannot be undone.' +
+        'Delete all cleared notifications forever? This cannot be undone.' +
         'CancelDelete forever'
     );
     await snapshot('delete-confirm');
 
-    // The press on the dialog closes the panel behind it.
+    // The press on the dialog leaves the panel open behind it (#379, bug 205).
     await press(byText(confirmation()!, 'button', 'Delete forever'));
     expect(confirmation()).toBeNull();
-    expect(panel()).toBeNull();
+    expect(panel()).not.toBeNull();
     expect(badge()).toBe('4');
 
-    // Reopened, the panel is still on the Cleared tab.
+    // Closed by a press outside and reopened, the panel is still on the
+    // Cleared tab.
+    await press(document.body);
+    expect(panel()).toBeNull();
     await press(bell());
     expect(panel()!.querySelector('[aria-selected="true"]')!.textContent).toBe('Cleared');
     expect(emptyText()).toBe('Nothing cleared yet.');
@@ -793,16 +799,20 @@ describe('NotificationBell characterization (S16k)', () => {
     await press(byText(panel()!, 'button', 'Clear all'));
     expect(confirmation()!.textContent).toBe(
       'Clear notifications' +
-        'Clear all 7 notifications? 4 of them unread. They move to the Cleared tab, where you can still read them.' +
+        'Clear all notifications? 4 of them are unread. They move to the Cleared tab, where you can still read them.' +
         'CancelClear all'
     );
     await snapshot('clear-confirm');
 
+    // The press on the dialog leaves the panel open behind it (#379, bug 205).
     await press(byText(confirmation()!, 'button', 'Clear all'));
     expect(confirmation()).toBeNull();
-    expect(panel()).toBeNull();
+    expect(panel()).not.toBeNull();
     expect(badge()).toBeNull();
 
+    // Closed by a press outside, and reopened.
+    await press(document.body);
+    expect(panel()).toBeNull();
     await press(bell());
     expect(emptyText()).toBe("You're all caught up.");
     await press(byText(panel()!, 'button', 'Cleared'));
