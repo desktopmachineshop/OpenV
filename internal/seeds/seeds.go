@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/mcp"
+	"github.com/openv/requirements-platform/internal/mcp/toolnames"
 )
 
 type seedAgent struct {
@@ -36,7 +37,7 @@ Ground rules (always follow):
 // from the tool table itself (internal/mcp) rather than written out here, so a
 // tool added there is classified once, in one place.
 func interviewerTools() []string {
-	return append(mcp.ReadOnlyToolNames(), mcp.ToolPrefix+"record_candidate_need")
+	return append(mcp.ReadOnlyToolNames(), toolnames.ToolPrefix+"record_candidate_need")
 }
 
 func defaultAgents() []seedAgent {
