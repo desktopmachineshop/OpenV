@@ -33,6 +33,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
+	projectsnapshot "github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
 func (h *Handler) registerShareRoutes(router *mux.Router) {
@@ -460,16 +461,12 @@ func (h *Handler) latestSnapshot(projectID string) (id, name string, at time.Tim
 			latest = b
 		}
 	}
-	var data exports.ProjectExport
-	full, err := h.BaselineService.GetProjectBaseline(projectID, latest.ID)
-	if err == nil {
-		err = json.Unmarshal(full.Snapshot, &data)
-	}
+	data, _, err := projectsnapshot.Load(projectID, latest.ID, h.snapshotSources())
 	if err != nil {
 		slog.Error("open source: failed to read a project's latest baseline; it is not published", "project_id", projectID, "baseline_id", latest.ID, "error", err)
 		return "", "", time.Time{}, nil
 	}
-	return latest.ID, latest.Name, latest.CreatedAt, &data
+	return latest.ID, latest.Name, latest.CreatedAt, data
 }
 
 // baselinedIdentity is the name and description a project had when its

@@ -100,6 +100,7 @@
       "internal/domain/settings",
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
+      "internal/domain/snapshot",
       "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/users",

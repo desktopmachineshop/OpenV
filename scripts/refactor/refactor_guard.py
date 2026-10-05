@@ -488,6 +488,7 @@ X2B_CALL_SHAPE_CHANGES = [
 # class E commit adds an edge. The guard reads the list from the pull
 # request's copy of this file, as it reads X2B_CALL_SHAPE_CHANGES.
 X14B_IMPORT_EDGES = [
+    ("internal/api", "internal/domain/snapshot"),
 ]
 
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
