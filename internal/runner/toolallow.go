@@ -42,6 +42,14 @@ func splitToolScope(entry string) (name, scope string) {
 // such an agent an empty OPENV_MCP_TOOLS, i.e. no OpenV tools at all.
 // Duplicates are dropped: this is an allowlist, so naming a tool twice grants
 // nothing the first mention did not.
+//
+// A name is kept only when openv-mcp reads it back as that same one tool
+// (isOpenVToolName), and anything else is dropped (#379 bug 185). The names
+// travel in OPENV_MCP_TOOLS, which openv-mcp splits on commas, trims, and
+// reads with its own grammar, where the server name and the prefix are
+// wildcards. So a name such as "mcp__openv" (from "mcp__openv__mcp__openv"),
+// " *" or "get_artifact,mcp__openv" used to reach it as a wildcard, and an
+// agent naming one odd tool was served every OpenV tool.
 func openvToolNames(allowed []string) (names []string, wildcard bool) {
 	seen := map[string]bool{}
 	for _, entry := range agents.NonEmptyTools(allowed) {
@@ -58,12 +66,30 @@ func openvToolNames(allowed []string) (names []string, wildcard bool) {
 			wildcard = true
 			continue
 		}
-		if name != "" && !seen[name] {
+		if isOpenVToolName(name) && !seen[name] {
 			seen[name] = true
 			names = append(names, name)
 		}
 	}
 	return names, wildcard
+}
+
+// isOpenVToolName reports whether name, with the prefix already stripped, is
+// one OpenV tool name as openv-mcp matches it: lower-case letters, digits and
+// underscores, the shape of every tool in its table, and neither the server
+// name nor holding the prefix, which openv-mcp would read as a wildcard or
+// strip again. Whitespace, a comma, "*" and "(" all fail the shape, so no
+// name passes that openv-mcp would split, trim or widen.
+func isOpenVToolName(name string) bool {
+	if name == "" || name == mcp.ServerTools || strings.Contains(name, mcp.ToolPrefix) {
+		return false
+	}
+	for _, r := range name {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 // openvToolAllowlist is the OPENV_MCP_TOOLS value for a spec: "*" when the

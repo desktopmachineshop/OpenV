@@ -641,7 +641,12 @@ CLI can apply, and what fills the gap where it cannot.
 not depend on any vendor flag. `openv-mcp` reads it and serves only the tools
 it names: `*` for the whole surface, a comma-separated list (bare or
 `mcp__openv__`-prefixed) for a subset, and — set but empty — nothing at all,
-which is what an agent that names no OpenV tool gets.
+which is what an agent that names no OpenV tool gets. The runner writes into
+it only the names `openv-mcp` reads back as that same one tool: from an entry
+`mcp__openv__<tool>`, with any `(scope)` dropped, a `<tool>` of lower-case
+letters, digits and underscores that is neither `mcp__openv` nor holds the
+`mcp__openv__` prefix again. An entry that names no tool that way grants no
+OpenV tool, so what `openv-mcp` serves never exceeds what the allowlist names.
 
 An allowlist may ask for the whole OpenV surface in either of the two spellings
 Claude Code documents: the per-tool glob `mcp__openv__*`, or the server-wide

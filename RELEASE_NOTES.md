@@ -158,6 +158,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   deletes each within a minute of its being used or expiring. A link still
   waiting to be used is kept.
 
+- **An agent's OpenV tool list is enforced as written on every runner.**
+  An agent's allowed tools can name OpenV tools one at a time, as in
+  `mcp__openv__get_artifact`. An entry written in an unusual way, with the
+  `mcp__openv__` prefix twice, a space after it, or two names joined by a
+  comma, could give the agent more OpenV tools than it named, up to all of
+  them, most visibly for agents run by Codex CLI. Such an entry now gives
+  the agent no OpenV tool, so an agent gets only the OpenV tools its list
+  names, whichever AI provider runs it. `mcp__openv__*` and `mcp__openv`
+  still grant them all.
+
 ## 0.16.1 — 2026-10-04
 
 ### Bug fixes
