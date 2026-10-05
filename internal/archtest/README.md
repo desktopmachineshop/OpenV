@@ -65,10 +65,13 @@ declarations' old home already imports (the moved code's own dependencies:
 for P1, `snapshot` to `artifacts`, `attachments`, `attributes`, `links` and
 `products`, which `exports` imports today), and, for a new domain package,
 its name in the `client_domain_deps` of a binary that linked the old
-package (P2b's `tokens` for `cmd/agentd`). The new package must still pass
-K7. A class T commit that adds a rule may add that rule's key, holding only
-what the tree has (M5's K3 allowlist). Everything else in the file may only
-shrink, in that PR too.
+package (P2b's `tokens` for `cmd/agentd`). The edges into it include the
+first edge of a package that imported no package of this module before,
+which adds that package's key, listing only packages the PR creates (P2b's
+`users` and `interviews`, each listing `tokens`). The new package must still
+pass K7. A class T commit that adds a rule may add that rule's key, holding
+only what the tree has (M5's K3 allowlist). Everything else in the file may
+only shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which
 must still pass K7, and the entry of a new client binary. A ceiling is
@@ -147,7 +150,8 @@ imports only other `internal/domain` packages and the types-only leaves
 `internal/api` never imports `internal/persistence`; a types-only leaf
 imports no package of this module. The types-only leaves are `typesLeaves`
 in `graph_test.go`: `internal/workerproto` only, the package of worker wire
-types P3 creates, whose `FinishRequest` `agentruns` then aliases. A leaf is
+types P3 creates, whose `FinishRequest` and `LogEntry` `agentruns` then
+aliases. A leaf is
 not a domain package, so it counts in no client binary's list. A new leaf
 joins `typesLeaves` in a class T commit, in review. Nothing breaks this
 today, so `layering_exceptions` is empty. `TestLayeringRule` pins the
@@ -169,9 +173,9 @@ this keeps it so.
 `internal/domain` packages it links, directly or not, may only shrink from
 its entry in `client_domain_deps`. A new binary fails until its entry, with
 the domain packages it links, is added by hand in review
-(`TestClientBinaryDiscovery` proves this on a fixture). `cmd/agentd` links 8
-(agentruns, agents, artifacts, events, providers, repoconns,
-runnersessions, users), `cmd/openv-mcp` links artifacts, and
+(`TestClientBinaryDiscovery` proves this on a fixture). `cmd/agentd` links 7
+(agentruns, agents, events, providers, repoconns, runnersessions, users;
+artifacts went with P4b), `cmd/openv-mcp` links artifacts, and
 `cmd/openv-connector` and `cmd/openv-vapid` link none. The walk is the
 same as `go list -deps`, over every build variant.
 
@@ -503,17 +507,29 @@ module's named types. It does not follow a value through a helper function;
 instead `decodeErrorSources`, also in `decode_test.go`, maps the name of a
 function or method whose returned error carries such a decode error to the
 alias type, and an error assigned from a call by that name counts as the
-decode's. The sites known today are `Handler.projectExport`
-(`project_snapshot.go`); the export service's `ImportProject` and
-`ImportProjectWithOverrides`, called by the handlers `ImportProject`
-(`project_io_handlers.go`) and `CreateProjectFromTemplate`
-(`template_handlers.go`), which decode in `internal/domain/exports`,
-outside `internal/api`; and the
-report service's `GenerateProjectReport` and `GenerateProjectReportDOCX`
-(through `loadReportExport`) and `GenerateVVReport`. Both lists are empty
-today; P1 adds `ProjectExport` with those six names, after checking for
-others, and P3 `FinishRequest`, each in a class T commit before its move,
-and X14 adds `snapshot`'s `Load`. The scan follows an error only through the
+decode's. The alias list names `ProjectExport` under
+`internal/domain/exports` and `internal/domain/snapshot`, which P1 added in
+a class T commit before moving it, and `FinishRequest` and `LogEntry` under
+`internal/domain/agentruns` and `internal/workerproto`, which P3 added the
+same way. The sources are `Handler.projectExport` (`project_snapshot.go`); the report
+service's `GenerateProjectReport` and `GenerateProjectReportDOCX` (through
+`loadReportExport`) and `GenerateVVReport`; and the download service's
+`Options` (through `reports.LoadReportExport`); X14 adds `snapshot`'s
+`Load`. Four paths that decode a `ProjectExport` are not on it. The export
+service's `ImportProject` and `ImportProjectWithOverrides`, and the
+template service's `CreateProjectFromTemplate`, which calls the latter,
+return `exports.ErrMalformedImport` with a description of the refusal in
+the terms of the file, not the decode error, since #508 (#379 bug 184;
+`TestImportRefusalsNameNoGoType` in `internal/domain/exports` pins it), so
+their error names no Go type. The download service's `Download` decodes as
+`Options` does, but `serveDownload` writes `err.Error()` for
+`ErrUnsupportedFormat` in its `if err != nil` branch, which the rule would
+flag, and answers every other error with a fixed message, kept by review
+(R8). A `FinishRequest` is decoded only by `Handler.FinishAgentRun`, in
+`internal/api`, which the rule reads itself; a `LogEntry`, in the worker's
+log push, by the helper `decodeRunLogBody`, a source, whose caller
+`Handler.AppendAgentRunLogs` answers a fixed message. The scan follows an
+error only through the
 later statements of the list it was assigned in, so it cannot follow
 `Handler.GenerateReport`, which assigns the error inside a `switch` case
 and tests it after the switch; that site answers with a fixed message

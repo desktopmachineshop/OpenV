@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
 // registerProviderSettingsRoutes wires the provider settings and a worker's
@@ -72,7 +73,7 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 	if !requireWorker(w, r) {
 		return
 	}
-	var req map[string]map[string]interface{}
+	var req workerproto.DetectionReport
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return

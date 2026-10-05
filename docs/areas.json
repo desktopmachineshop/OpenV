@@ -273,6 +273,7 @@
         "internal/domain/downloads/**",
         "internal/domain/exports/**",
         "internal/domain/reports/**",
+        "internal/domain/snapshot/**",
         "internal/domain/templates/**",
         "internal/mcp/tools_baselines*.go",
         "internal/persistence/postgres/attachment_*.go",
@@ -373,6 +374,7 @@
         "internal/mcp/schema*.go",
         "internal/mcp/stdio*.go",
         "internal/mcp/testdata/**",
+        "internal/mcp/toolnames/**",
         "internal/mcp/tools.go",
         "internal/mcp/tools_delegation*.go",
         "internal/mcp/tools_interviews*.go",
@@ -411,7 +413,8 @@
         "internal/persistence/postgres/hosted_worker_*.go",
         "internal/persistence/postgres/runner_session_*.go",
         "internal/persistence/postgres/worker_key_*.go",
-        "internal/runner/**"
+        "internal/runner/**",
+        "internal/workerproto/**"
       ]
     },
     {

@@ -14,26 +14,55 @@ import (
 // response (R8). encoding/json names the target type in its errors, package
 // qualified ("Go value of type exports.ProjectExport"), so a type that moves
 // to a new package behind an alias changes that text. Entries are
-// "<package>.<Type>" with the module-relative package. P1 adds
-// internal/domain/exports.ProjectExport and P3 agentruns.FinishRequest, each
-// in a class T commit before its move. The list only grows.
-var decodeAliasTypes = []string{}
+// "<package>.<Type>" with the module-relative package. A moved type is named
+// under its old and its new package, so a decode written against the new
+// name after the move stays covered. P1 added ProjectExport, under exports
+// and snapshot, and P3 FinishRequest and LogEntry, under agentruns and
+// workerproto, each in a class T commit before its move. The list only
+// grows.
+var decodeAliasTypes = []string{
+	"internal/domain/exports.ProjectExport",
+	"internal/domain/snapshot.ProjectExport",
+	"internal/domain/agentruns.FinishRequest",
+	"internal/workerproto.FinishRequest",
+	"internal/domain/agentruns.LogEntry",
+	"internal/workerproto.LogEntry",
+}
 
 // decodeErrorSources maps the name of a function or method whose returned
 // error can carry the decode error of an alias-list type to that type, for
 // decodes the rule cannot see: those in a helper or outside internal/api.
 // An error assigned from a call by that name counts as the decode's error.
-// The sites known today that return an exports.ProjectExport decode error
-// to a handler are Handler.projectExport (project_snapshot.go), the export
-// service's ImportProject and ImportProjectWithOverrides (which
-// ImportProject in project_io_handlers.go and CreateProjectFromTemplate in
-// template_handlers.go call), and the report service's GenerateProjectReport, GenerateProjectReportDOCX and
-// GenerateVVReport; P1 adds those six names with the ProjectExport entry,
-// after checking for others, and X14 adds snapshot's Load. The scan follows
-// an error only through later statements of the list it was assigned in, so
-// Handler.GenerateReport, which assigns it inside a switch case and tests it
-// after the switch, stays out of its reach.
-var decodeErrorSources = map[string]string{}
+// The sites that return a ProjectExport decode error to a handler are
+// Handler.projectExport (project_snapshot.go); the report service's
+// GenerateProjectReport and GenerateProjectReportDOCX (through
+// loadReportExport) and GenerateVVReport; and the download service's
+// Options (through reports' LoadReportExport). X14 adds snapshot's Load.
+// Four paths that decode a ProjectExport stay off. The export service's
+// ImportProject and ImportProjectWithOverrides, and the template service's
+// CreateProjectFromTemplate, which calls ImportProjectWithOverrides, return
+// exports.ErrMalformedImport with a description of the refusal in the terms
+// of the file, not the decode error, since #508 (#379 bug 184); exports'
+// TestImportRefusalsNameNoGoType pins that, so their error names no Go type.
+// The download service's Download decodes as Options does, but
+// serveDownload writes err.Error() for ErrUnsupportedFormat in its
+// if err != nil branch, which the rule would flag, and answers every other
+// error with a fixed message, kept by review (R8). A FinishRequest is
+// decoded only by Handler.FinishAgentRun, in internal/api, which the rule
+// reads itself; a LogEntry, in the worker's log push, by the helper
+// decodeRunLogBody, whose caller Handler.AppendAgentRunLogs answers a fixed
+// message. The scan follows an error only through later statements of the
+// list it was assigned in, so Handler.GenerateReport, which assigns it
+// inside a switch case and tests it after the switch, stays out of its
+// reach.
+var decodeErrorSources = map[string]string{
+	"projectExport":             "internal/domain/exports.ProjectExport",
+	"GenerateProjectReport":     "internal/domain/exports.ProjectExport",
+	"GenerateProjectReportDOCX": "internal/domain/exports.ProjectExport",
+	"GenerateVVReport":          "internal/domain/exports.ProjectExport",
+	"Options":                   "internal/domain/exports.ProjectExport",
+	"decodeRunLogBody":          "internal/domain/agentruns.LogEntry",
+}
 
 func checkDecodeAliases(c *check) {
 	leaks := decodeLeaks(c.m, decodeAliasTypes, decodeErrorSources)

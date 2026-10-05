@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -30,6 +32,56 @@ func TestImportProjectWhoseJSONDoesNotParseAnswers400(t *testing.T) {
 		}
 		if !strings.HasPrefix(w.Body.String(), `{"error":"failed to import JSON: malformed JSON: `) {
 			t.Fatalf("import of %s: %q, want the parser's reason", body, w.Body.String())
+		}
+	}
+}
+
+// goTypeText is what encoding/json's own messages name of the program: a Go
+// value or struct field, a method such as Time.UnmarshalJSON, or a package
+// qualified type such as exports.ProjectExport or artifacts.Artifact.
+var goTypeText = regexp.MustCompile(`Go (value|struct)|UnmarshalJSON|\b[a-z][a-z0-9]*\.[A-Z][A-Za-z0-9]*`)
+
+// A JSON import that is not an OpenV export is refused in the terms of the
+// file, never of the Go types it is read into (#379 bug 184): the reason
+// was encoding/json's, which named them ("Go value of type
+// exports.ProjectExport", "Go struct field ProjectExport.linked_artifacts of
+// type []*exports.LinkedArtifact"), so it read as the program's internals
+// and changed with the program's layout. A value of the wrong kind now
+// names its field, as the file spells it, and what it is; a syntax error,
+// and a time that does not parse, keep the parser's text, which names no
+// Go type (the S5 tour pins the truncated document's).
+func TestAMalformedImportNamesNoGoType(t *testing.T) {
+	h := NewHandler(HandlerDeps{ExportService: exports.NewService(nil, nil, nil, nil, nil)})
+
+	const prefix = "failed to import JSON: malformed JSON: "
+	for _, tc := range []struct{ body, want string }{
+		{`[]`, `json: cannot unmarshal array into a project export`},
+		{`"x"`, `json: cannot unmarshal string into a project export`},
+		{`{"linked_artifacts":"x"}`, `json: cannot unmarshal string into field "linked_artifacts"`},
+		{`{"linked_artifacts":[1]}`, `json: cannot unmarshal number into field "linked_artifacts"`},
+		{`{"artifacts":5}`, `json: cannot unmarshal number into field "artifacts"`},
+		{`{"artifacts":[{"title":5}]}`, `json: cannot unmarshal number into field "artifacts.title"`},
+		{`{"exported_at":5}`, `json: a date and time must be a JSON string`},
+		{`{"exported_at":"soon"}`, `parsing time "soon" as "2006-01-02T15:04:05Z07:00": cannot parse "soon" as "2006"`},
+		{`{`, `unexpected end of JSON input`},
+		{`{"project_name":`, `unexpected end of JSON input`},
+		{`{"project_name" "x"}`, `invalid character '"' after object key`},
+		{`x`, `invalid character 'x' looking for beginning of value`},
+	} {
+		w := httptest.NewRecorder()
+		h.ImportProject(w, importRequest(t, tc.body, "", true))
+		var got struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil || w.Code != http.StatusBadRequest {
+			t.Errorf("import of %s: %d %q, want 400 with an error", tc.body, w.Code, w.Body.String())
+			continue
+		}
+		if got.Error != prefix+tc.want {
+			t.Errorf("import of %s answers\n  %q\nwant\n  %q", tc.body, got.Error, prefix+tc.want)
+		}
+		if m := goTypeText.FindString(w.Body.String()); m != "" {
+			t.Errorf("import of %s names %q of the program: %s", tc.body, m, w.Body.String())
 		}
 	}
 }

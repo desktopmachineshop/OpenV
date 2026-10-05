@@ -110,7 +110,8 @@
       "internal/hosting",
       "internal/notify",
       "internal/scheduler",
-      "internal/seeds"
+      "internal/seeds",
+      "internal/workerproto"
     ],
     "internal/automation": [
       "internal/domain/agentruns",
@@ -129,14 +130,15 @@
     "internal/domain/agentruns": [
       "internal/domain/agents",
       "internal/domain/events",
-      "internal/domain/tokens"
+      "internal/domain/tokens",
+      "internal/workerproto"
     ],
     "internal/domain/agents": [
       "internal/domain/providers"
     ],
     "internal/domain/baselines": [
       "internal/domain/artifacts",
-      "internal/domain/exports"
+      "internal/domain/snapshot"
     ],
     "internal/domain/crewtemplates": [
       "internal/domain/agents",
@@ -158,7 +160,8 @@
       "internal/domain/attributes",
       "internal/domain/links",
       "internal/domain/products",
-      "internal/domain/projects"
+      "internal/domain/projects",
+      "internal/domain/snapshot"
     ],
     "internal/domain/guided": [
       "internal/domain/artifacts",
@@ -180,7 +183,7 @@
     ],
     "internal/domain/quality": [
       "internal/domain/artifacts",
-      "internal/domain/exports"
+      "internal/domain/snapshot"
     ],
     "internal/domain/reports": [
       "internal/domain/artifacts",
@@ -198,11 +201,19 @@
     "internal/domain/sharelinks": [
       "internal/domain/tokens"
     ],
+    "internal/domain/snapshot": [
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/attributes",
+      "internal/domain/links",
+      "internal/domain/products"
+    ],
     "internal/domain/templates": [
       "internal/domain/artifacts",
       "internal/domain/attachments",
       "internal/domain/exports",
-      "internal/domain/links"
+      "internal/domain/links",
+      "internal/domain/snapshot"
     ],
     "internal/domain/users": [
       "internal/domain/tokens"
@@ -211,7 +222,7 @@
       "internal/domain/artifacts",
       "internal/domain/chatter",
       "internal/domain/events",
-      "internal/domain/exports"
+      "internal/domain/snapshot"
     ],
     "internal/domain/workerkeys": [
       "internal/domain/tokens"
@@ -227,7 +238,8 @@
       "internal/envparse"
     ],
     "internal/mcp": [
-      "internal/domain/artifacts"
+      "internal/domain/artifacts",
+      "internal/mcp/toolnames"
     ],
     "internal/metrics": [
       "internal/domain/agentruns"
@@ -298,7 +310,8 @@
       "internal/domain/providers",
       "internal/domain/repoconns",
       "internal/domain/runnersessions",
-      "internal/mcp"
+      "internal/mcp/toolnames",
+      "internal/workerproto"
     ],
     "internal/scheduler": [
       "internal/domain/agentruns",
@@ -309,7 +322,8 @@
       "internal/domain/agents",
       "internal/domain/sharedproducts",
       "internal/domain/teams",
-      "internal/mcp"
+      "internal/mcp",
+      "internal/mcp/toolnames"
     ]
   },
   "layering_exceptions": [],
@@ -317,7 +331,6 @@
     "cmd/agentd": [
       "internal/domain/agentruns",
       "internal/domain/agents",
-      "internal/domain/artifacts",
       "internal/domain/events",
       "internal/domain/providers",
       "internal/domain/repoconns",

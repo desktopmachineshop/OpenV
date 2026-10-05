@@ -104,7 +104,7 @@ The layering (K7), which `internal/archtest` enforces on every pull request:
 - `internal/persistence/postgres` imports only the domain;
 - `internal/api` never imports the persistence layer;
 - the client programs link as little of the domain as they can: `agentd`
-  links eight domain packages, `openv-mcp` one (`artifacts`), and the
+  links seven domain packages, `openv-mcp` one (`artifacts`), and the
   connector and the VAPID tool none (`client_domain_deps`).
 
 A domain package declares what it needs as an interface, a port, and

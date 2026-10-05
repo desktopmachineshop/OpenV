@@ -10,6 +10,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
+	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
 // RegisterRunnerSessionRoutes wires the transient runner endpoints: the pool
@@ -38,11 +39,7 @@ func (h *Handler) RegisterPoolNode(w http.ResponseWriter, r *http.Request) {
 	if !requirePoolNode(w, r) || !h.requireRunnerSessions(w) {
 		return
 	}
-	var req struct {
-		Name      string   `json:"name"`
-		Pool      string   `json:"pool"`
-		Providers []string `json:"providers"`
-	}
+	var req workerproto.PoolNodeRegistration
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -80,9 +77,9 @@ func (h *Handler) PoolNodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			assignment.UserName = user.Name
 		}
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"node":       node,
-		"assignment": assignment,
+	json.NewEncoder(w).Encode(workerproto.PoolHeartbeatResponse{
+		Assignment: assignment,
+		Node:       node,
 	})
 }
 
@@ -92,9 +89,7 @@ func (h *Handler) ReleasePoolNode(w http.ResponseWriter, r *http.Request) {
 	if !requirePoolNode(w, r) || !h.requireRunnerSessions(w) {
 		return
 	}
-	var req struct {
-		SessionID string `json:"session_id"`
-	}
+	var req workerproto.PoolNodeRelease
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return

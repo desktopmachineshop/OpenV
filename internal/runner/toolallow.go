@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
-	"github.com/openv/requirements-platform/internal/mcp"
+	"github.com/openv/requirements-platform/internal/mcp/toolnames"
 )
 
 // This file translates an agent definition's tool allowlist — which is written
@@ -42,28 +42,54 @@ func splitToolScope(entry string) (name, scope string) {
 // such an agent an empty OPENV_MCP_TOOLS, i.e. no OpenV tools at all.
 // Duplicates are dropped: this is an allowlist, so naming a tool twice grants
 // nothing the first mention did not.
+//
+// A name is kept only when openv-mcp reads it back as that same one tool
+// (isOpenVToolName), and anything else is dropped (#379 bug 185). The names
+// travel in OPENV_MCP_TOOLS, which openv-mcp splits on commas, trims, and
+// reads with its own grammar, where the server name and the prefix are
+// wildcards. So a name such as "mcp__openv" (from "mcp__openv__mcp__openv"),
+// " *" or "get_artifact,mcp__openv" used to reach it as a wildcard, and an
+// agent naming one odd tool was served every OpenV tool.
 func openvToolNames(allowed []string) (names []string, wildcard bool) {
 	seen := map[string]bool{}
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, _ := splitToolScope(entry)
-		if name == mcp.ServerTools {
+		if name == toolnames.ServerTools {
 			wildcard = true
 			continue
 		}
-		if !strings.HasPrefix(name, mcp.ToolPrefix) {
+		if !strings.HasPrefix(name, toolnames.ToolPrefix) {
 			continue
 		}
-		name = strings.TrimPrefix(name, mcp.ToolPrefix)
+		name = strings.TrimPrefix(name, toolnames.ToolPrefix)
 		if name == "*" {
 			wildcard = true
 			continue
 		}
-		if name != "" && !seen[name] {
+		if isOpenVToolName(name) && !seen[name] {
 			seen[name] = true
 			names = append(names, name)
 		}
 	}
 	return names, wildcard
+}
+
+// isOpenVToolName reports whether name, with the prefix already stripped, is
+// one OpenV tool name as openv-mcp matches it: lower-case letters, digits and
+// underscores, the shape of every tool in its table, and neither the server
+// name nor holding the prefix, which openv-mcp would read as a wildcard or
+// strip again. Whitespace, a comma, "*" and "(" all fail the shape, so no
+// name passes that openv-mcp would split, trim or widen.
+func isOpenVToolName(name string) bool {
+	if name == "" || name == toolnames.ServerTools || strings.Contains(name, toolnames.ToolPrefix) {
+		return false
+	}
+	for _, r := range name {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 // openvToolAllowlist is the OPENV_MCP_TOOLS value for a spec: "*" when the
@@ -92,7 +118,7 @@ func withOpenVToolFilter(spec RunSpec) RunSpec {
 	for k, v := range spec.MCP.Env {
 		env[k] = v
 	}
-	env[mcp.EnvToolAllowlist] = openvToolAllowlist(spec.AllowedTools)
+	env[toolnames.EnvToolAllowlist] = openvToolAllowlist(spec.AllowedTools)
 	spec.MCP.Env = env
 	return spec
 }
@@ -164,7 +190,7 @@ func geminiToolSettings(allowed []string) (core []string, include []string, incl
 
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, scope := splitToolScope(entry)
-		if name == mcp.ServerTools || strings.HasPrefix(name, mcp.ToolPrefix) {
+		if name == toolnames.ServerTools || strings.HasPrefix(name, toolnames.ToolPrefix) {
 			continue // an OpenV tool: already handled above.
 		}
 		for _, mapped := range geminiBuiltinTools[name] {

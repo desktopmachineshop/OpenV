@@ -17,6 +17,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
 // registerWorkerDispatchRoutes wires a worker claiming a run, and a running
@@ -47,12 +48,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return
 	}
-	var req struct {
-		WorkerID    string   `json:"worker_id"`
-		Providers   []string `json:"providers"`
-		MinPriority int      `json:"min_priority"`
-		Hosted      bool     `json:"hosted"`
-	}
+	var req workerproto.ClaimRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -109,11 +105,11 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to issue run token", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"run":       run,
-		"agent":     agent,
-		"run_token": token,
-		"auth":      h.resolveRunAuth(run, agent),
+	json.NewEncoder(w).Encode(workerproto.ClaimResponse{
+		Agent:    agent,
+		Auth:     h.resolveRunAuth(run, agent),
+		Run:      run,
+		RunToken: token,
 	})
 }
 
@@ -193,9 +189,7 @@ func (h *Handler) ReleaseAgentRun(w http.ResponseWriter, r *http.Request) {
 	if run == nil {
 		return
 	}
-	var req struct {
-		WorkerID string `json:"worker_id"`
-	}
+	var req workerproto.ReleaseRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -224,9 +218,9 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to append run logs", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"cancel_requested": run.CancelRequested,
-		"status":           run.Status,
+	json.NewEncoder(w).Encode(workerproto.LogsResponse{
+		CancelRequested: run.CancelRequested,
+		Status:          run.Status,
 	})
 }
 
@@ -241,16 +235,13 @@ func decodeRunLogBody(body io.Reader) ([]agentruns.LogEntry, string, error) {
 	}
 	trimmed := bytes.TrimLeft(raw, " \t\r\n")
 	if len(trimmed) > 0 && trimmed[0] == '[' {
-		var entries []agentruns.LogEntry
+		var entries workerproto.LegacyLogsRequest
 		if err := json.Unmarshal(raw, &entries); err != nil {
 			return nil, "", err
 		}
 		return entries, "", nil
 	}
-	var payload struct {
-		Entries     []agentruns.LogEntry `json:"entries"`
-		PartialText string               `json:"partial_text"`
-	}
+	var payload workerproto.LogsRequest
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, "", err
 	}

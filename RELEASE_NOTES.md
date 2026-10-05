@@ -27,6 +27,28 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Importing a file that is not an OpenV export says what is wrong in
+  plain terms.** When a JSON file you imported as a project held a value
+  of the wrong kind, such as text where an OpenV export has a list, or was
+  not a project at all, the refusal named the program's internal types,
+  such as *exports.ProjectExport*. It now names the field in the file and
+  what it found there, as in *cannot unmarshal string into field
+  "linked_artifacts"*, or says the file cannot be read as a project
+  export. A file that is not valid JSON is described as before.
+
+- **A project's Runs page no longer warns about another workspace's
+  runners.** When a link took you to a project in your other workspace,
+  from a notification for example, its Runs page kept the warning of the
+  workspace you came from, that runs were queued but no runner was online,
+  until it had checked the runners of the new one. It now shows only the
+  warning of the workspace you are in.
+
+- **A project's Runs page no longer shows the error of the project you
+  left.** When a project's Runs page could not load its runs and you went
+  on to another project's, the first project's error stayed above the
+  second project's list until the second project's runs arrived. The error
+  now goes as you switch, and each project's page shows only its own.
+
 - **A project's Runs page no longer shows another project's runs while it
   loads.** When you went from one project's Runs page to another's, from
   a notification for example, the first project's runs stayed on the list
@@ -135,6 +157,27 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   reset link it had sent, once used or expired, for good. The server now
   deletes each within a minute of its being used or expiring. A link still
   waiting to be used is kept.
+
+- **An agent's OpenV tool list is enforced as written on every runner.**
+  An agent's allowed tools can name OpenV tools one at a time, as in
+  `mcp__openv__get_artifact`. An entry written in an unusual way, with the
+  `mcp__openv__` prefix twice, a space after it, or two names joined by a
+  comma, could give the agent more OpenV tools than it named, up to all of
+  them, most visibly for agents run by Codex CLI. Such an entry now gives
+  the agent no OpenV tool, so an agent gets only the OpenV tools its list
+  names, whichever AI provider runs it. `mcp__openv__*` and `mcp__openv`
+  still grant them all.
+
+- **An agent's allowed tools name one tool per entry.** In an agent's
+  markdown file, one `allowed_tools` entry could list several tools
+  separated by commas, such as `mcp__openv__get_artifact, Bash`. Claude
+  Code takes each of them, but OpenV read the entry as a single tool, so an
+  agent given a shell, web access or another MCP server that way was not
+  treated as reaching outside the workspace, and its runs were not given
+  the stricter settings such agents get. OpenV now reads every part of
+  such an entry, and saving one is refused with a message asking for one
+  tool per entry. An agent already saved that way keeps working, judged by
+  each part.
 
 ## 0.16.1 — 2026-10-04
 
