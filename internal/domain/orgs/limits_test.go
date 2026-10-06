@@ -166,6 +166,33 @@ func TestParseLimitsRefusesWhatItCannotHonour(t *testing.T) {
 	}
 }
 
+// Of several keys it cannot honour, OPENV_LIMITS names the first in key
+// order, the same on every boot (#379, bug 223): ranging over the parsed
+// map named a random one, so a fix to the key it named could be met by
+// another the next time. What it accepts, it reads as before.
+func TestParseLimitsNamesTheFirstBadKeyInOrder(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{`{"zz_unknown": 1, "max_members": "five", "aa_unknown": 2, "max_projects": -1, "teams": 3}`,
+			`unknown limit "aa_unknown" `},
+		{`{"max_projects": -1, "teams": 3, "max_members": "five", "evidence_storage_mb": true}`,
+			`limit "evidence_storage_mb" must be a number`},
+		{`{"teams": 3, "max_projects": -1, "max_members": 5}`,
+			`limit "max_projects" must not be negative`},
+	} {
+		for run := range 200 {
+			_, err := ParseLimits(tc.raw)
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
+				t.Fatalf("%s, run %d: error %v, want it to begin %q", tc.raw, run, err, tc.want)
+			}
+		}
+	}
+	got, err := ParseLimits(`{"teams": false, "max_projects": 7, "evidence_storage_mb": 0, "runner_cpus": 0.5}`)
+	want := map[string]interface{}{LimitTeams: false, LimitMaxProjects: float64(7), LimitEvidenceStorageMB: float64(0), LimitRunnerCPUs: 0.5}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("a valid object parsed as %v, %v; want %v", got, err, want)
+	}
+}
+
 // Every catalogued limit must be described, because the catalogue is what the
 // docs, the API and the settings panel all render from.
 func TestEveryCataloguedLimitIsDescribed(t *testing.T) {

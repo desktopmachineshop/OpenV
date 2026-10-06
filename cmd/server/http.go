@@ -13,14 +13,17 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
+	"github.com/openv/requirements-platform/internal/envparse"
 	"github.com/openv/requirements-platform/internal/metrics"
 )
 
 // maxRequestBodyBytes is the cap the API places on any single request body.
 // OPENV_MAX_BODY_MB overrides the 32 MB default; attachment uploads carry a
-// tighter cap of their own (OPENV_MAX_UPLOAD_MB).
+// tighter cap of their own (OPENV_MAX_UPLOAD_MB). A size whose bytes do not
+// fit in an int64 keeps the default, with a warning (#379, bug 224): it
+// wrapped round to a negative cap, which refused every body.
 func maxRequestBodyBytes() int64 {
-	return int64(envInt("OPENV_MAX_BODY_MB", 32)) * 1024 * 1024
+	return int64(envparse.Mebibytes("OPENV_MAX_BODY_MB", envInt("OPENV_MAX_BODY_MB", 32), 32)) * 1024 * 1024
 }
 
 // buildHTTPHandler builds the API's handler: the router with every route,

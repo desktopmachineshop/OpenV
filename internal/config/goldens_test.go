@@ -201,22 +201,25 @@ func captureLog(t *testing.T) *bytes.Buffer {
 	return &buf
 }
 
-// envparseLines are the messages of internal/envparse's warnings, which it
-// logs once per variable and value for the whole process, so that a second
-// read of the same value, by today's helper and then by an accessor, logs
-// nothing: tests that compare the two logs leave them out and check them
-// with values of their own.
-var envparseLines = []string{
+// oncePerValueLines are the messages of the warnings logged once per
+// variable and value for the whole process: internal/envparse's, and the
+// session lifetime's, which users and sessionLifetime each keep apart. A
+// second read of the same value, by today's helper and then by an accessor,
+// logs nothing, so tests that compare the two logs leave them out and check
+// them with values of their own.
+var oncePerValueLines = []string{
 	`msg="ignoring a malformed setting; its default applies"`,
 	`msg="a credential setting has spaces or a line break around it; it is used exactly as set"`,
+	`msg="session lifetime: ignoring unusable value"`,
+	`msg="session lifetime: value above the ceiling, clamping"`,
 }
 
-// withoutEnvparse is a log with internal/envparse's warnings left out.
-func withoutEnvparse(log string) string {
+// withoutOncePerValue is a log with the once-per-value warnings left out.
+func withoutOncePerValue(log string) string {
 	var keep []string
 	for _, line := range strings.Split(log, "\n") {
 		drop := false
-		for _, m := range envparseLines {
+		for _, m := range oncePerValueLines {
 			drop = drop || strings.Contains(line, m)
 		}
 		if !drop {

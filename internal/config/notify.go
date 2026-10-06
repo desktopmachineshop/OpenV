@@ -11,9 +11,11 @@ package config
 import (
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/envparse"
 	"github.com/openv/requirements-platform/internal/notify"
 )
 
@@ -51,11 +53,11 @@ func (c *Config) EmailLinkBase() string {
 
 // EmailVerification is notify.VerificationPolicyFromEnv(m): verification is
 // required when the mailer can send and OPENV_EMAIL_VERIFICATION is not
-// off, in any case. It logs the line naming the state, as that helper does.
+// off, in any case. It logs the line naming the state, as that helper does,
+// and its warning for a value other than off.
 func (c *Config) EmailVerification(m notify.Mailer) users.EmailVerificationPolicy {
-	switched := strings.ToLower(strings.TrimSpace(c.getenv("OPENV_EMAIL_VERIFICATION")))
 	switch {
-	case switched == "off":
+	case envparse.Off("OPENV_EMAIL_VERIFICATION", c.getenv("OPENV_EMAIL_VERIFICATION")):
 		slog.Info("email verification: disabled (OPENV_EMAIL_VERIFICATION=off)")
 		return users.EmailVerificationPolicy{}
 	case m == nil || !m.Enabled():
@@ -82,7 +84,8 @@ func (c *Config) SessionPolicy() users.SessionPolicy {
 
 // sessionLifetime is users' envDuration: a positive duration, trimmed, or
 // ceiling when unset, unusable or above it, each of the last two with a
-// warning.
+// warning, once per variable and value, that names the variable and never
+// the value.
 func (c *Config) sessionLifetime(name string, ceiling time.Duration) time.Duration {
 	raw := strings.TrimSpace(c.getenv(name))
 	if raw == "" {
@@ -90,14 +93,27 @@ func (c *Config) sessionLifetime(name string, ceiling time.Duration) time.Durati
 	}
 	d, err := time.ParseDuration(raw)
 	if err != nil || d <= 0 {
-		slog.Warn("session lifetime: ignoring unusable value", "var", name, "value", raw, "using", ceiling)
+		warnSessionOnce(name, raw, "session lifetime: ignoring unusable value", ceiling)
 		return ceiling
 	}
 	if d > ceiling {
-		slog.Warn("session lifetime: value above the ceiling, clamping", "var", name, "value", d, "using", ceiling)
+		warnSessionOnce(name, raw, "session lifetime: value above the ceiling, clamping", ceiling)
 		return ceiling
 	}
 	return d
+}
+
+// sessionWarned is users' warnedLifetimes: the session lifetime variable and
+// value pairs already warned about.
+var sessionWarned sync.Map
+
+// warnSessionOnce is users' warnLifetimeOnce: msg, once per variable and
+// value, with the variable and the duration that applies, never the value.
+func warnSessionOnce(name, raw, msg string, using time.Duration) {
+	if _, seen := sessionWarned.LoadOrStore(name+"\x00"+raw, true); seen {
+		return
+	}
+	slog.Warn(msg, "var", name, "using", using)
 }
 
 // The registration policies, as api.RegistrationOpen and
@@ -120,7 +136,7 @@ func (c *Config) Registration() string {
 		return registrationOpen
 	default:
 		slog.Warn("registration: unrecognised OPENV_REGISTRATION value; leaving registration open",
-			"value", c.getenv("OPENV_REGISTRATION"))
+			"want", registrationOpen+" or "+registrationClosed)
 		return registrationOpen
 	}
 }

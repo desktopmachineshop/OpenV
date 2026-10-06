@@ -211,7 +211,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	// The workspace is known here (the attachment named it), so the request
 	// is bounded by its own limit rather than by the deployment's ceiling.
 	limit := h.uploadLimitBytes(h.orgIDForProject(h.projectIDForArtifact(existing.ArtifactID)))
-	r.Body = http.MaxBytesReader(w, r.Body, limit+multipartOverheadBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, plusMultipartOverhead(limit))
 
 	file, header, err := r.FormFile("file")
 	if err != nil {

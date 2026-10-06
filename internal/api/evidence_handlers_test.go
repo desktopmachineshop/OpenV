@@ -2,12 +2,16 @@ package api
 
 import (
 	"bytes"
+	"log/slog"
 	"mime/multipart"
 	"net/http/httptest"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/evidence"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // The evidence cap is deliberately its own knob. A 25 MB ceiling is right for
@@ -40,6 +44,55 @@ func TestEvidenceUploadCapIsSeparateFromTheFigureCap(t *testing.T) {
 		if got := maxEvidenceBytes(); got != defaultMaxEvidenceMB*1024*1024 {
 			t.Errorf("OPENV_MAX_EVIDENCE_MB=%q gave %d, want the default", bad, got)
 		}
+	}
+}
+
+// sizeCapRuns numbers the runs of the size cap tests within one test
+// binary: internal/envparse names a variable once per value for the life of
+// the process, so each run (go test -count=2) sets values of its own.
+var sizeCapRuns atomic.Int64
+
+// captureSizeCapLog sends slog's default logger to a buffer for the test.
+func captureSizeCapLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	return &buf
+}
+
+// checkOneSizeWarning checks that log holds one warning, naming name, and
+// not value.
+func checkOneSizeWarning(t *testing.T, log, name, value string) {
+	t.Helper()
+	if n := strings.Count(log, "level=WARN"); n != 1 || !strings.Contains(log, "var="+name+" ") {
+		t.Errorf("%s=%s read three times: want one warning naming the variable, got:\n%s", name, value, log)
+	}
+	if strings.Contains(log, value) {
+		t.Errorf("the warning printed the value of %s:\n%s", name, log)
+	}
+}
+
+// An OPENV_MAX_EVIDENCE_MB whose bytes do not fit in an int64 keeps the
+// default, with one warning naming the variable, never the value (#379, bug
+// 224): multiplied into bytes it wrapped round to a negative cap, which
+// refused every evidence file.
+func TestEvidenceCapTooBigForBytesKeepsTheDefault(t *testing.T) {
+	tooBig := strconv.FormatInt(envparse.MaxMebibytes+sizeCapRuns.Add(1), 10)
+	t.Setenv(envMaxEvidenceMB, tooBig)
+	log := captureSizeCapLog(t)
+	for range 3 {
+		if got := maxEvidenceBytes(); got != defaultMaxEvidenceMB*bytesPerMB {
+			t.Errorf("OPENV_MAX_EVIDENCE_MB=%s gave %d, want the default %d", tooBig, got, defaultMaxEvidenceMB*bytesPerMB)
+		}
+	}
+	checkOneSizeWarning(t, log.String(), envMaxEvidenceMB, tooBig)
+
+	// The largest size that fits is taken as set.
+	t.Setenv(envMaxEvidenceMB, strconv.FormatInt(envparse.MaxMebibytes, 10))
+	if got, want := maxEvidenceBytes(), envparse.MaxMebibytes*bytesPerMB; got != want {
+		t.Errorf("OPENV_MAX_EVIDENCE_MB=%d gave %d, want %d", envparse.MaxMebibytes, got, want)
 	}
 }
 

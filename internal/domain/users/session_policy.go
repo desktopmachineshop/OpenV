@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -58,8 +59,9 @@ func (p SessionPolicy) Normalized() SessionPolicy {
 // SessionPolicyFromEnv reads OPENV_SESSION_MAX_AGE and OPENV_SESSION_IDLE
 // (Go duration strings, e.g. "12h", "45m"). Anything unparseable or out of
 // range falls back to the default, and a value above the ceiling is clamped;
-// each of those decisions logs one line, so an operator who typed "30d" — not
-// a Go duration — sees why their sessions still last 30 days.
+// each of those decisions logs one line, once per variable and value, so an
+// operator who typed "30d" — not a Go duration — sees why their sessions
+// still last 30 days.
 func SessionPolicyFromEnv() SessionPolicy {
 	p := SessionPolicy{
 		MaxAge: envDuration(envSessionMaxAge, DefaultSessionMaxAge),
@@ -77,12 +79,29 @@ func envDuration(name string, max time.Duration) time.Duration {
 	}
 	d, err := time.ParseDuration(raw)
 	if err != nil || d <= 0 {
-		slog.Warn("session lifetime: ignoring unusable value", "var", name, "value", raw, "using", max)
+		warnLifetimeOnce(name, raw, "session lifetime: ignoring unusable value", max)
 		return max
 	}
 	if d > max {
-		slog.Warn("session lifetime: value above the ceiling, clamping", "var", name, "value", d, "using", max)
+		warnLifetimeOnce(name, raw, "session lifetime: value above the ceiling, clamping", max)
 		return max
 	}
 	return d
+}
+
+// warnedLifetimes holds the variable and value pairs already warned about,
+// so that a session lifetime read more than once warns once, as
+// internal/envparse's settings do; K7 keeps this domain package from
+// importing it.
+var warnedLifetimes sync.Map
+
+// warnLifetimeOnce logs msg, once per variable and value, with the variable
+// and the duration that applies instead. The value is left out on purpose:
+// a secret pasted into the wrong variable must not reach the log (#379, bug
+// 222).
+func warnLifetimeOnce(name, raw, msg string, using time.Duration) {
+	if _, seen := warnedLifetimes.LoadOrStore(name+"\x00"+raw, true); seen {
+		return
+	}
+	slog.Warn(msg, "var", name, "using", using)
 }

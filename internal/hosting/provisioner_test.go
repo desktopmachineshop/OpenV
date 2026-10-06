@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/moby/moby/api/types/container"
@@ -247,6 +248,79 @@ func TestNewProvisionerNamesAMalformedPidsLimitAtBoot(t *testing.T) {
 	}
 	if strings.Contains(logged.String(), value) {
 		t.Errorf("a warning printed the value:\n%s", logged.String())
+	}
+}
+
+// hostedRunnersRuns numbers the runs of the test below within one test
+// binary: internal/envparse names a variable once per value for the life of
+// the process, so each run (go test -count=2) spells its value differently.
+var hostedRunnersRuns atomic.Int64
+
+// spelled is word with the case of its i-th letter flipped where bit i of n
+// is set, so n = 0 is word as written.
+func spelled(word string, n int64) string {
+	b := []byte(word)
+	for i := range b {
+		if n&(1<<i) != 0 {
+			b[i] ^= 'a' - 'A'
+		}
+	}
+	return string(b)
+}
+
+// Only off switches hosted runners off (#379, bug 225). Any other value,
+// false among them, leaves them on, as before, but is no longer passed over
+// in silence: the log names the variable and the value it takes once,
+// however often it is read, never the value it has. A blank value is silent.
+// A stand-in docker daemon answers the ping.
+func TestHostedRunnersWarnsOnAValueItDoesNotTake(t *testing.T) {
+	daemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Api-Version", "1.47")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(daemon.Close)
+	t.Setenv("DOCKER_HOST", "tcp://"+daemon.Listener.Addr().String())
+	for _, name := range []string{"DOCKER_API_VERSION", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY", "HOSTED_RUNNER_PIDS_LIMIT"} {
+		t.Setenv(name, "")
+	}
+	var logged bytes.Buffer
+	prev, prevOut, prevFlags := slog.Default(), log.Writer(), log.Flags()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
+	t.Cleanup(func() {
+		slog.SetDefault(prev)
+		log.SetOutput(prevOut)
+		log.SetFlags(prevFlags)
+	})
+	provision := func() {
+		t.Helper()
+		p := NewProvisioner()
+		d, ok := p.(*dockerProvisioner)
+		if !ok {
+			t.Fatalf("NewProvisioner() = %T with HOSTED_RUNNERS=%q and a docker daemon answering; log:\n%s",
+				p, os.Getenv("HOSTED_RUNNERS"), logged.String())
+		}
+		d.cli.Close()
+	}
+
+	value := spelled("false", hostedRunnersRuns.Add(1)-1)
+	t.Setenv("HOSTED_RUNNERS", value)
+	provision()
+	provision()
+	warning := `level=WARN msg="ignoring a malformed setting; its default applies" var=HOSTED_RUNNERS want="off (any case), or unset"`
+	if n := strings.Count(logged.String(), "var=HOSTED_RUNNERS "); n != 1 || !strings.Contains(logged.String(), warning) {
+		t.Errorf("HOSTED_RUNNERS=%q read twice: want the one warning\n%s\ngot:\n%s", value, warning, logged.String())
+	}
+	if strings.Contains(logged.String(), value) {
+		t.Errorf("the warning printed the value:\n%s", logged.String())
+	}
+
+	for _, blank := range []string{"", "   "} {
+		logged.Reset()
+		t.Setenv("HOSTED_RUNNERS", blank)
+		provision()
+		if strings.Contains(logged.String(), "level=WARN") {
+			t.Errorf("HOSTED_RUNNERS=%q warned:\n%s", blank, logged.String())
+		}
 	}
 }
 

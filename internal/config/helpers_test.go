@@ -19,9 +19,10 @@ import (
 // package to that helper as it is today: the helper reads the process
 // environment, set with t.Setenv, and the accessor a Config loaded from it,
 // and the two must return the same value and, where the accessor logs what
-// the helper logs, the same lines. internal/envparse's own warnings are left
-// out of that comparison (it logs each variable and value once per process,
-// so the second read is quiet by design); pairs_test.go checks them.
+// the helper logs, the same lines. The warnings logged once per variable and
+// value are left out of that comparison (internal/envparse's and the session
+// lifetime's: the second read is quiet by design); pairs_test.go checks
+// them.
 
 // inputs are S8's inputs (env_parse.txt's first column), unset first, then
 // extra.
@@ -40,10 +41,10 @@ func both[T any](t *testing.T, helper func() T, accessor func(*Config) T) (want,
 	t.Helper()
 	buf := captureLog(t)
 	want = helper()
-	wantLog = withoutEnvparse(buf.String())
+	wantLog = withoutOncePerValue(buf.String())
 	buf.Reset()
 	got = accessor(Load(os.LookupEnv))
-	gotLog = withoutEnvparse(buf.String())
+	gotLog = withoutOncePerValue(buf.String())
 	return want, got, wantLog, gotLog
 }
 
@@ -217,7 +218,8 @@ func TestBillingIsConfigFromEnv(t *testing.T) {
 }
 
 func TestDeploymentLimitsAreParseLimits(t *testing.T) {
-	for _, in := range inputs(`{"max_projects":7}`, ` {"max_projects":7} `, `{"max_projects":-1}`, `{"no_such_limit":1}`, `[]`, `{}`) {
+	for _, in := range inputs(`{"max_projects":7}`, ` {"max_projects":7} `, `{"max_projects":-1}`, `{"no_such_limit":1}`, `[]`, `{}`,
+		`{"zz_no_such_limit":1,"max_members":"five","aa_no_such_limit":2,"max_projects":-1}`) {
 		setEnv(t, "OPENV_LIMITS", in.unset, in.input)
 		// Stage config reads it through envOr, which trims.
 		want, wantErr := orgs.ParseLimits(envOrToday("OPENV_LIMITS", ""))

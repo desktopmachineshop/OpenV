@@ -38,11 +38,14 @@ run.
 The server and the runner read every setting by one rule
 (`internal/envparse`; [operations.md](operations.md#how-a-setting-is-read)
 has the detail). A value is trimmed, and one of only spaces counts as unset.
-A count (a burst, a size in MB, a concurrency) is a whole number above 0; a
-duration is a positive Go duration (`90m`, `24h`, not `30d`); a rate, a
-`…_REFILL_PER_HOUR`, is a positive, finite number; an on/off setting is
-`true` or `false` in any case, or `1` or `0`, and a switch documented as
-`=off`, `OPENV_UPLOAD_SWEEP`, also takes `on` or `off` in any case. A
+A count (a burst, a size in MB, a concurrency) is a whole number above 0,
+and a size in MB at most 8796093022207, the largest whose count of bytes
+fits in a 64-bit integer; a duration is a positive Go duration (`90m`,
+`24h`, not `30d`); a rate, a `…_REFILL_PER_HOUR`, is a positive, finite
+number; an on/off setting is `true` or `false` in any case, or `1` or `0`,
+and a switch documented as `=off`, `OPENV_UPLOAD_SWEEP`, also takes `on` or
+`off` in any case, while `HOSTED_RUNNERS` and `OPENV_EMAIL_VERIFICATION`
+take only `off`. A
 value that breaks its rule
 keeps the default, and the log names the variable once, never its value.
 The exceptions are named in their lines: the billing counts and
@@ -94,12 +97,12 @@ buckets live in the API process, so they assume a single API instance.
 | `OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR` | server | `20` | Failed sign-ins per account per hour, steady state. |
 | `OPENV_AUTH_IP_BURST` | server | `30` | Sign-in attempts one client address may make at once; email verification and password reset spend the same bucket (contract quirk Q18). |
 | `OPENV_AUTH_IP_REFILL_PER_HOUR` | server | `120` | Sign-in attempts per client address per hour, steady state. |
-| `OPENV_EMAIL_VERIFICATION` | server | none: required whenever `OPENV_SMTP_HOST` is set | `off` lets password accounts in without confirming their address even where the server can send mail. |
+| `OPENV_EMAIL_VERIFICATION` | server | none: required whenever `OPENV_SMTP_HOST` is set | `off`, in any case, lets password accounts in without confirming their address even where the server can send mail. Any other value, `false` and `0` among them, is ignored, with a warning naming the variable. |
 | `OPENV_INVITE_BURST` | server | `20` | Workspace invitations one inviting account may send at once. |
 | `OPENV_INVITE_PREVIEW_BURST` | server | `60` | Invite-link previews one client address may make at once; share-link lookups and accepts spend the same bucket (contract quirk Q18). |
 | `OPENV_INVITE_PREVIEW_REFILL_PER_HOUR` | server | `240` | Invite-link previews per client address per hour, steady state. |
 | `OPENV_INVITE_REFILL_PER_HOUR` | server | `60` | Workspace invitations per inviting account per hour, steady state. |
-| `OPENV_LIMITS` | server | none | A JSON object of workspace limit values that overrides any limit across the deployment, such as `{"max_upload_mb": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server. |
+| `OPENV_LIMITS` | server | none | A JSON object of workspace limit values that overrides any limit across the deployment, such as `{"max_upload_mb": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server, with a message naming the first such key in alphabetical order. |
 | `OPENV_OIDC_CLIENT_ID` | server | none | OIDC single sign-on's client id. |
 | `OPENV_OIDC_CLIENT_SECRET` | server | none | OIDC single sign-on's client secret. A credential, used exactly as set. |
 | `OPENV_OIDC_ISSUER` | server | none | Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured. |
@@ -157,7 +160,7 @@ buckets live in the API process, so they assume a single API instance.
 | `GOOGLE_GENAI_USE_GCA` | agentd | none | The Gemini CLI's OAuth auth mode. A run adds it itself unless this or another auth-mode variable is already set, in the run's own environment or the runner's. |
 | `GOOGLE_GENAI_USE_VERTEXAI` | agentd | none | One of the Gemini CLI's auth-mode variables: when set, a Gemini run is not switched to the runner's OAuth sign-in. |
 | `HOME` | agentd | set by the system | A pool node remembers its own `HOME` at start and points `HOME` at a fresh directory under `RUNNER_SESSION_ROOT` for each lease (`os.Setenv`), so a member's sign-ins never outlive the lease. The runner's default `-workspaces` (`~/.openv/workspaces`) and the provider probes also start from it. |
-| `HOSTED_RUNNERS` | server | none | `off` turns hosted runners off. Otherwise they are on whenever the Docker daemon answers, and off, with a log line, when it does not. |
+| `HOSTED_RUNNERS` | server | none | `off`, in any case, turns hosted runners off; any other value is ignored, with a warning naming the variable. Otherwise they are on whenever the Docker daemon answers, and off, with a log line, when it does not. |
 | `HOSTED_RUNNER_PIDS_LIMIT` | server | `1024` | Task cap (threads, not processes) of each hosted runner container; `0` or less means no cap. Read again for each runner the API provisions. |
 | `OPENAI_API_KEY` | agentd | none | When set in the runner's environment, the Codex CLI counts as signed in (API key mode). Passed on to the CLI exactly as set. |
 | `OPENV_API_URL` | agentd, openv-mcp | `http://localhost:8080` | The API base URL a runner (`-api`) and `openv-mcp` call, as seen from where they run. |

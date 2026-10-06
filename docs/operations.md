@@ -93,10 +93,16 @@ only spaces counts as unset. A count, such as a burst, a size in MB or
 rate, a `…_REFILL_PER_HOUR`, is a positive, finite number; and an on/off
 setting, such as `SECURE_COOKIES`, `OPENV_SELF_HOSTED` or `OPENV_HOSTED`, is
 `true` or `false` in any case, or `1` or `0`; `OPENV_UPLOAD_SWEEP`, a switch
-documented as `=off`, also takes `on` or `off` in any case. A value that
-breaks the rule
+documented as `=off`, also takes `on` or `off` in any case. A size in MB
+(`OPENV_MAX_BODY_MB`, `OPENV_MAX_UPLOAD_MB`, `OPENV_MAX_EVIDENCE_MB`) is at
+most 8796093022207, the largest whose count of bytes fits in a 64-bit
+integer. `HOSTED_RUNNERS` and `OPENV_EMAIL_VERIFICATION` are switched off by
+`off`, in any case, and by nothing else: `false` or `0` leaves them as they
+are when unset. A value that breaks the rule
 keeps the setting's default, and the log says so once, as the API or the
-runner starts, naming the variable but not the value. That holds too for a
+runner starts, naming the variable but not the value, as do the API's
+warnings about an unknown `OPENV_LOG_LEVEL` or `OPENV_REGISTRATION` and an
+unusable session lifetime. That holds too for a
 setting read again later: the proxy trust and the upload and evidence caps,
 which a request reads each time it needs them, are also read once at
 start-up, and so, with hosted runners on, is `HOSTED_RUNNER_PIDS_LIMIT`, read
@@ -293,7 +299,10 @@ accounts (SEC-15 / REQ-95). The boot log says which state applies:
   at sign-up and nothing is enforced (the default for a self-hosted stack,
   dev, CI).
 - `email verification: disabled (OPENV_EMAIL_VERIFICATION=off)` — the
-  operator's switch, immediate, no data change.
+  operator's switch, immediate, no data change. Only `off`, in any case,
+  switches it: any other value, `false` and `0` among them, leaves
+  verification as it would be unset, and a warning before this line names
+  the variable.
 
 Accounts created through Google or OIDC are verified by the provider and never
 meet the page. **Every password account that existed before the feature is
@@ -456,8 +465,9 @@ them past the defaults.
 Values are Go durations (`720h`, `12h`, `45m` — note `30d` is *not* a Go
 duration). A value above the ceiling is clamped, and anything unparseable or
 non-positive falls back to the default; each of those decisions logs a line at
-boot. The session cookie's own expiry tracks `OPENV_SESSION_MAX_AGE`, so
-shortening it also shortens how long a browser keeps the cookie. A live
+boot, naming the variable and the duration that applies, never the value. The
+session cookie's own expiry tracks `OPENV_SESSION_MAX_AGE`, so shortening it
+also shortens how long a browser keeps the cookie. A live
 session records its last activity at most once a minute, so shortening the
 idle window does not multiply database writes.
 
@@ -564,7 +574,8 @@ Notes:
     `OPENV_LIMITS='{"max_members": 25, "evidence_storage_mb": 51200}'`.
     An unknown key or a non-numeric value **fails the boot** rather than being
     ignored, because a typo that silently did nothing would look exactly like
-    a limit that does not work.
+    a limit that does not work. Of several such keys, the message names the
+    first in alphabetical order, the same one on every boot.
   - To change one workspace only, set the key in its `limits` column; that
     beats both layers above.
   - The full list of keys, with what each one means, is in the manual's

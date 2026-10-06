@@ -76,9 +76,10 @@ const (
 )
 
 // maxEvidenceBytes is the cap: OPENV_MAX_EVIDENCE_MB, a whole number above
-// 0, or the default (internal/envparse).
+// 0 whose bytes fit in an int64, or the default (internal/envparse).
 func maxEvidenceBytes() int64 {
-	return int64(envparse.Count(envMaxEvidenceMB, os.Getenv(envMaxEvidenceMB), defaultMaxEvidenceMB)) * 1024 * 1024
+	n := envparse.Count(envMaxEvidenceMB, os.Getenv(envMaxEvidenceMB), defaultMaxEvidenceMB)
+	return int64(envparse.Mebibytes(envMaxEvidenceMB, n, defaultMaxEvidenceMB)) * bytesPerMB
 }
 
 // evidenceStorageLimitBytes is the workspace's total evidence allowance, from
@@ -243,7 +244,7 @@ func (h *Handler) UploadEvidenceFile(w http.ResponseWriter, r *http.Request) {
 	// MaxBytesReader bounds the whole request, so a client cannot stream
 	// unbounded data at the server regardless of what the multipart headers
 	// claim.
-	r.Body = http.MaxBytesReader(w, r.Body, limit+1024*1024)
+	r.Body = http.MaxBytesReader(w, r.Body, plusMultipartOverhead(limit))
 
 	reader, err := r.MultipartReader()
 	if err != nil {
