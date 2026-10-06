@@ -1136,6 +1136,63 @@ func TestTraceabilityPathManagedEdits(t *testing.T) {
 		`)
 	})
 
+	t.Run("OnInvalid: an add with no from_id or no to_id, or whose source no artifact has", func(t *testing.T) {
+		fx := newTPFixture(t, true)
+		fx.note("no from_id, then no to_id: the edited artifact at the missing end would make a valid link")
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{req}}", `{"pendingLinkAdds":[{"to_id":"{{req2}}","type":"decomposes-to"}]}`)
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{req}}", `{"pendingLinkAdds":[{"from_id":"{{tc}}","type":"verifies"}]}`)
+		fx.note("a source no artifact has, into the edited artifact, by a type its target's end allows")
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{req}}",
+			`{"pendingLinkAdds":[{"from_id":"{{phantom}}","to_id":"{{req}}","type":"verifies"}]}`)
+		fx.expect(`
+			# no from_id, then no to_id: the edited artifact at the missing end would make a valid link
+			> PUT /api/v1/artifacts/req as u-editor {"pendingLinkAdds":[{"to_id":"req2","type":"decomposes-to"}]}
+			< 200 artifact req v2 links_snapshot absent
+			  version req 1->2 links_snapshot absent
+			  chatter req version-change auto=true by=- author="" "Updated to version 2"
+			  event artifact.updated req project=proj-p org=org-1 actor=user:u-editor {artifact_type string requirement, title string Req one, version int 2}
+			> PUT /api/v1/artifacts/req as u-editor {"pendingLinkAdds":[{"from_id":"tc","type":"verifies"}]}
+			< 200 artifact req v3 links_snapshot absent
+			  version req 2->3 links_snapshot absent
+			  chatter req version-change auto=true by=- author="" "Updated to version 3"
+			  event artifact.updated req project=proj-p org=org-1 actor=user:u-editor {artifact_type string requirement, title string Req one, version int 3}
+			# a source no artifact has, into the edited artifact, by a type its target's end allows
+			> PUT /api/v1/artifacts/req as u-editor {"pendingLinkAdds":[{"from_id":"phantom","to_id":"req","type":"verifies"}]}
+			< 200 artifact req v4 links_snapshot absent
+			  version req 3->4 links_snapshot absent
+			  chatter req version-change auto=true by=- author="" "Updated to version 4"
+			  event artifact.updated req project=proj-p org=org-1 actor=user:u-editor {artifact_type string requirement, title string Req one, version int 4}
+		`)
+	})
+
+	t.Run("OnInvalid of a removal: the other end no artifact has any more", func(t *testing.T) {
+		fx := newTPFixture(t, true)
+		fx.setup(tpAsEditor, "POST", "/api/v1/links", `{"from_id":"{{di}}","to_id":"{{need}}","type":"impacts"}`)
+		fx.setup(tpAsEditor, "POST", "/api/v1/links", `{"from_id":"{{req2}}","to_id":"{{di}}","type":"impacts"}`)
+		fx.note("the user need and req2 are deleted (their rows are gone from reads): neither link can be removed, and both remain")
+		delete(fx.arts.rows, fx.ids["need"])
+		delete(fx.arts.rows, fx.ids["req2"])
+		fx.note("the target is gone")
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{di}}", `{"pendingLinkRemoves":["{{L1}}"]}`)
+		fx.note("the source is gone")
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{di}}", `{"pendingLinkRemoves":["{{L2}}"]}`)
+		fx.expect(`
+			# the user need and req2 are deleted (their rows are gone from reads): neither link can be removed, and both remain
+			# the target is gone
+			> PUT /api/v1/artifacts/di as u-editor {"pendingLinkRemoves":["L1"]}
+			< 200 artifact di v4 links_snapshot=[L2 req2-impacts->di suspect=false attributes=null, L1 di-impacts->need suspect=false attributes=null]
+			  version di 3->4 links_snapshot=[L2 req2-impacts->di suspect=false attributes=null, L1 di-impacts->need suspect=false attributes=null]
+			  chatter di version-change auto=true by=- author="" "Updated to version 4"
+			  event artifact.updated di project=proj-p org=org-1 actor=user:u-editor {artifact_type string design-item, title string Design one, version int 4}
+			# the source is gone
+			> PUT /api/v1/artifacts/di as u-editor {"pendingLinkRemoves":["L2"]}
+			< 200 artifact di v5 links_snapshot=[L2 req2-impacts->di suspect=false attributes=null, L1 di-impacts->need suspect=false attributes=null]
+			  version di 4->5 links_snapshot=[L2 req2-impacts->di suspect=false attributes=null, L1 di-impacts->need suspect=false attributes=null]
+			  chatter di version-change auto=true by=- author="" "Updated to version 5"
+			  event artifact.updated di project=proj-p org=org-1 actor=user:u-editor {artifact_type string design-item, title string Design one, version int 5}
+		`)
+	})
+
 	t.Run("TargetRole: another workspace's artifact, a project the caller only views", func(t *testing.T) {
 		fx := newTPFixture(t, true)
 		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{di}}",
