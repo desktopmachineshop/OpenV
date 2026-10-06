@@ -19,23 +19,22 @@ import (
 
 // LogLevel is OPENV_LOG_LEVEL as initLogging (stage signals) reads it,
 // trimmed and lower-cased: debug; warn or warning; error; info, or nothing,
-// for info. Any other value reads as info too, and unrecognized is then the
-// value exactly as set, which today's warning quotes; it is "" otherwise.
-// LogLevel logs nothing: that warning waits until the logger the level
-// configures is installed, so the caller logs it.
-func (c *Config) LogLevel() (level slog.Level, unrecognized string) {
-	raw := c.getenv("OPENV_LOG_LEVEL")
-	switch strings.ToLower(strings.TrimSpace(raw)) {
+// for info. Any other value reads as info too, and unrecognized is then
+// true, for today's warning, which names the variable, never the value
+// (#379, bug 222). LogLevel logs nothing: that warning waits until the
+// logger the level configures is installed, so the caller logs it.
+func (c *Config) LogLevel() (level slog.Level, unrecognized bool) {
+	switch strings.ToLower(strings.TrimSpace(c.getenv("OPENV_LOG_LEVEL"))) {
 	case "debug":
-		return slog.LevelDebug, ""
+		return slog.LevelDebug, false
 	case "warn", "warning":
-		return slog.LevelWarn, ""
+		return slog.LevelWarn, false
 	case "error":
-		return slog.LevelError, ""
+		return slog.LevelError, false
 	case "", "info":
-		return slog.LevelInfo, ""
+		return slog.LevelInfo, false
 	}
-	return slog.LevelInfo, raw
+	return slog.LevelInfo, true
 }
 
 // DatabaseURL is DATABASE_URL exactly as set, or "" (stage config's first
@@ -192,9 +191,9 @@ func (c *Config) RunnerPoolKey() string {
 
 // HostedRunnersOff is whether HOSTED_RUNNERS is off, in any case, which
 // hosting.NewProvisioner reads first and which keeps it from dialling
-// Docker.
+// Docker. Any other value leaves hosted runners on, with today's warning.
 func (c *Config) HostedRunnersOff() bool {
-	return strings.EqualFold(c.text("HOSTED_RUNNERS", ""), "off")
+	return envparse.Off("HOSTED_RUNNERS", c.text("HOSTED_RUNNERS", ""))
 }
 
 // RunnerContainer is what a hosted runner container is started from,

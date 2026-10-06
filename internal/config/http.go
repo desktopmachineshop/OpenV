@@ -172,7 +172,8 @@ func (c *Config) CORSOrigin() string {
 }
 
 // MaxBodyBytes is the cap on a request body, maxRequestBodyBytes's value:
-// OPENV_MAX_BODY_MB (a count, 32 by default) mebibytes.
+// OPENV_MAX_BODY_MB (a count, 32 by default) mebibytes, and the default for
+// a count whose bytes do not fit in an int64, with a warning.
 func (c *Config) MaxBodyBytes() int64 {
-	return int64(c.count("OPENV_MAX_BODY_MB", 32)) * 1024 * 1024
+	return int64(envparse.Mebibytes("OPENV_MAX_BODY_MB", c.count("OPENV_MAX_BODY_MB", 32), 32)) * 1024 * 1024
 }

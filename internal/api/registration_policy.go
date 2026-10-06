@@ -32,8 +32,10 @@ func RegistrationPolicyFromEnv() string {
 		slog.Info("registration: open (set OPENV_REGISTRATION=closed to require an invitation)")
 		return RegistrationOpen
 	default:
+		// The value is left out: a secret pasted into the wrong variable
+		// must not reach the log (#379, bug 222).
 		slog.Warn("registration: unrecognised OPENV_REGISTRATION value; leaving registration open",
-			"value", os.Getenv(envRegistration))
+			"want", RegistrationOpen+" or "+RegistrationClosed)
 		return RegistrationOpen
 	}
 }

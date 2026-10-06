@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log/slog"
 	"math"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -202,6 +203,79 @@ func TestSwitchTakesOnOffAsWellAsABoolean(t *testing.T) {
 			t.Errorf("Switch(%q, default %v) = %v, want %v", c.raw, c.def, got, c.want)
 		}
 		checkWarning(t, log.String(), c.raw, "OPENV_TEST_SWITCH", c.warns)
+	}
+}
+
+// A size in mebibytes keeps its default when its bytes would not fit in an
+// int64 (#379, bug 224): 8796093022208 MiB is 2^63 bytes, which wraps round
+// to a negative cap. The warning names the variable, never the value, and
+// comes once however often the size is read.
+func TestMebibytesFitInAnInt64(t *testing.T) {
+	if want := strconv.FormatInt(MaxMebibytes, 10); !strings.HasSuffix(wantMebibytes, " "+want) {
+		t.Fatalf("the warning says %q, but MaxMebibytes is %s", wantMebibytes, want)
+	}
+	if most := MaxMebibytes; most<<20 < 0 || (most+1)<<20 >= 0 {
+		t.Fatalf("MaxMebibytes = %d is not the largest count of mebibytes an int64 holds in bytes", MaxMebibytes)
+	}
+	cases := []struct {
+		n, want int
+		warns   bool
+	}{
+		{1, 1, false},
+		{32, 32, false},
+		{int(MaxMebibytes), int(MaxMebibytes), false},
+		{int(MaxMebibytes) + 1, 32, true},
+		{math.MaxInt, 32, true},
+	}
+	for _, c := range cases {
+		log := captureLog(t)
+		for range 3 {
+			if got := Mebibytes("OPENV_TEST_MB", c.n, 32); got != c.want {
+				t.Errorf("Mebibytes(%d) = %d, want %d", c.n, got, c.want)
+			}
+		}
+		checkWarning(t, log.String(), strconv.Itoa(c.n), "OPENV_TEST_MB", c.warns)
+		if c.warns && strings.Contains(log.String(), strconv.Itoa(c.n)) {
+			t.Errorf("Mebibytes(%d): the warning printed the value:\n%s", c.n, log)
+		}
+	}
+}
+
+// An off switch takes off in any case and nothing else (#379, bug 225):
+// false and 0 are not off, and anything but off or a blank value keeps what
+// it controls on, with one warning naming the variable and what it takes.
+func TestOffTakesOnlyOff(t *testing.T) {
+	cases := []struct {
+		raw   string
+		want  bool
+		warns bool
+	}{
+		{"", false, false},
+		{"   ", false, false},
+		{"off", true, false},
+		{" OFF ", true, false},
+		{"Off\n", true, false},
+		{"false", false, true},
+		{"0", false, true},
+		{"on", false, true},
+		{"no", false, true},
+		{"of", false, true},
+		{"o ff", false, true},
+	}
+	for _, c := range cases {
+		log := captureLog(t)
+		for range 3 {
+			if got := Off("OPENV_TEST_OFF", c.raw); got != c.want {
+				t.Errorf("Off(%q) = %v, want %v", c.raw, got, c.want)
+			}
+		}
+		checkWarning(t, log.String(), c.raw, "OPENV_TEST_OFF", c.warns)
+		if c.warns && !strings.Contains(log.String(), `want="off (any case), or unset"`) {
+			t.Errorf("Off(%q): the warning does not say what the setting takes:\n%s", c.raw, log)
+		}
+		if c.warns && strings.Contains(log.String(), "="+strings.TrimSpace(c.raw)+" ") {
+			t.Errorf("Off(%q): the warning printed the value:\n%s", c.raw, log)
+		}
 	}
 }
 

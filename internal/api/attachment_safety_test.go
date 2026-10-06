@@ -1,14 +1,17 @@
 package api
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 func TestUploadLooksLikeImage(t *testing.T) {
@@ -110,6 +113,40 @@ func TestUploadLimitFollowsTheWorkspacePlan(t *testing.T) {
 	t.Setenv(envMaxUploadMB, " 7 ")
 	if got, want := h.uploadLimitBytes(""), int64(7)*bytesPerMB; got != want {
 		t.Fatalf("OPENV_MAX_UPLOAD_MB=\" 7 \" gave %d, want %d", got, want)
+	}
+}
+
+// An OPENV_MAX_UPLOAD_MB whose bytes do not fit in an int64 is not an
+// override: the workspace's limit stays in charge, with one warning naming
+// the variable, never the value (#379, bug 224). Multiplied into bytes it
+// wrapped round to a negative cap, which refused every figure. The largest
+// size that fits is taken as set, and the request's bound, a mebibyte over
+// it for the multipart envelope, stops at the largest int64 rather than
+// wrapping round.
+func TestUploadOverrideTooBigForBytesIsIgnored(t *testing.T) {
+	h := newTestHandler(t)
+	t.Setenv(envMaxUploadMB, "")
+	planLimit, planBound := h.uploadLimitBytes(""), h.uploadRequestCeilingBytes()
+
+	tooBig := strconv.FormatInt(envparse.MaxMebibytes+sizeCapRuns.Add(1), 10)
+	t.Setenv(envMaxUploadMB, tooBig)
+	log := captureSizeCapLog(t)
+	for range 3 {
+		if got := h.uploadLimitBytes(""); got != planLimit {
+			t.Errorf("OPENV_MAX_UPLOAD_MB=%s gave a limit of %d, want the plan's %d", tooBig, got, planLimit)
+		}
+	}
+	if got := h.uploadRequestCeilingBytes(); got != planBound {
+		t.Errorf("OPENV_MAX_UPLOAD_MB=%s gave a request bound of %d, want the plan's %d", tooBig, got, planBound)
+	}
+	checkOneSizeWarning(t, log.String(), envMaxUploadMB, tooBig)
+
+	t.Setenv(envMaxUploadMB, strconv.FormatInt(envparse.MaxMebibytes, 10))
+	if got, want := h.uploadLimitBytes(""), envparse.MaxMebibytes*bytesPerMB; got != want {
+		t.Errorf("OPENV_MAX_UPLOAD_MB=%d gave a limit of %d, want %d", envparse.MaxMebibytes, got, want)
+	}
+	if got := h.uploadRequestCeilingBytes(); got != math.MaxInt64 {
+		t.Errorf("OPENV_MAX_UPLOAD_MB=%d gave a request bound of %d, want %d", envparse.MaxMebibytes, got, int64(math.MaxInt64))
 	}
 }
 

@@ -21,8 +21,10 @@ func initLogging() {
 	case "", "info":
 		// default
 	default:
-		// Unknown value: keep info, but say so once.
-		defer slog.Warn("unrecognized OPENV_LOG_LEVEL, using info", "value", os.Getenv("OPENV_LOG_LEVEL"))
+		// Unknown value: keep info, but say so once, naming the variable,
+		// never the value: a secret pasted into the wrong variable must not
+		// reach the log (#379, bug 222).
+		defer slog.Warn("unrecognized OPENV_LOG_LEVEL, using info", "want", "debug, info, warn or error (any case)")
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
 }

@@ -1,14 +1,21 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/api"
+	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/envparse"
+	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
 
@@ -232,26 +239,28 @@ func TestOIDCScopes(t *testing.T) {
 
 // TestLogLevel pins OPENV_LOG_LEVEL as initLogging reads it (logging.go),
 // which no test pinned before: trimmed and lower-cased, and an unknown value
-// keeps info and is handed back, as set, for the warning the caller logs.
+// keeps info and is reported, for the warning the caller logs, which names
+// the variable, never the value (#379, bug 222), so LogLevel does not hand
+// the value back.
 func TestLogLevel(t *testing.T) {
 	cases := map[string]struct {
 		level   slog.Level
-		unknown string
+		unknown bool
 	}{
-		"\x00unset": {slog.LevelInfo, ""},
-		"":          {slog.LevelInfo, ""},
-		"   ":       {slog.LevelInfo, ""},
-		"info":      {slog.LevelInfo, ""},
-		" INFO ":    {slog.LevelInfo, ""},
-		"debug":     {slog.LevelDebug, ""},
-		"Debug\n":   {slog.LevelDebug, ""},
-		"warn":      {slog.LevelWarn, ""},
-		"warning":   {slog.LevelWarn, ""},
-		"WARNING":   {slog.LevelWarn, ""},
-		"error":     {slog.LevelError, ""},
-		"verbose":   {slog.LevelInfo, "verbose"},
-		" trace ":   {slog.LevelInfo, " trace "},
-		"1":         {slog.LevelInfo, "1"},
+		"\x00unset": {slog.LevelInfo, false},
+		"":          {slog.LevelInfo, false},
+		"   ":       {slog.LevelInfo, false},
+		"info":      {slog.LevelInfo, false},
+		" INFO ":    {slog.LevelInfo, false},
+		"debug":     {slog.LevelDebug, false},
+		"Debug\n":   {slog.LevelDebug, false},
+		"warn":      {slog.LevelWarn, false},
+		"warning":   {slog.LevelWarn, false},
+		"WARNING":   {slog.LevelWarn, false},
+		"error":     {slog.LevelError, false},
+		"verbose":   {slog.LevelInfo, true},
+		" trace ":   {slog.LevelInfo, true},
+		"1":         {slog.LevelInfo, true},
 	}
 	for in, want := range cases {
 		env := map[string]string{}
@@ -261,7 +270,7 @@ func TestLogLevel(t *testing.T) {
 		log := captureLog(t)
 		level, unknown := loadFrom(env).LogLevel()
 		if level != want.level || unknown != want.unknown {
-			t.Errorf("OPENV_LOG_LEVEL=%q: LogLevel() = %v, %q; want %v, %q", in, level, unknown, want.level, want.unknown)
+			t.Errorf("OPENV_LOG_LEVEL=%q: LogLevel() = %v, %v; want %v, %v", in, level, unknown, want.level, want.unknown)
 		}
 		if log.Len() != 0 {
 			t.Errorf("OPENV_LOG_LEVEL=%q: LogLevel() logged, before the logger is installed:\n%s", in, log)
@@ -321,8 +330,10 @@ func TestDatabase(t *testing.T) {
 }
 
 // TestHostedRunnersOff pins hosting.NewProvisioner's switch: HOSTED_RUNNERS,
-// trimmed, off in any case.
+// trimmed, off in any case. TestFixedWarningsNameTheVariable checks the
+// warning any other value gives.
 func TestHostedRunnersOff(t *testing.T) {
+	quietLog(t)
 	for in, want := range map[string]bool{"\x00unset": false, "": false, "off": true, " OFF ": true, "Off": true, "on": false, "0": false, "false": false} {
 		env := map[string]string{}
 		if in != "\x00unset" {
@@ -371,10 +382,12 @@ func TestCORSOriginStaysAPIsCheck(t *testing.T) {
 }
 
 // TestMaxBodyBytes pins maxRequestBodyBytes (http.go): OPENV_MAX_BODY_MB
-// mebibytes, 32 by default.
+// mebibytes, 32 by default, and the default for a size whose bytes do not
+// fit in an int64 (#379, bug 224), which wrapped round.
 func TestMaxBodyBytes(t *testing.T) {
 	quietLog(t)
-	for in, want := range map[string]int64{"\x00unset": 32 << 20, "64": 64 << 20, " 1 ": 1 << 20, "32MB": 32 << 20, "0": 32 << 20} {
+	for in, want := range map[string]int64{"\x00unset": 32 << 20, "64": 64 << 20, " 1 ": 1 << 20, "32MB": 32 << 20, "0": 32 << 20,
+		"8796093022207": envparse.MaxMebibytes << 20, "8796093022208": 32 << 20, "9223372036854775807": 32 << 20} {
 		env := map[string]string{}
 		if in != "\x00unset" {
 			env["OPENV_MAX_BODY_MB"] = in
@@ -404,6 +417,123 @@ func TestEnvparseWarnsOncePerValue(t *testing.T) {
 	}
 	if strings.Contains(log.String(), "x10a") {
 		t.Errorf("a warning carries a value:\n%s", log)
+	}
+}
+
+// configWarningRuns numbers the runs of TestFixedWarningsNameTheVariable
+// within one test binary: a warning comes once per variable and value for
+// the life of the process, so each run (go test -count=2) sets values of
+// its own.
+var configWarningRuns atomic.Int64
+
+// spelled is word with the case of its i-th letter flipped where bit i of n
+// is set, so n = 0 is word as written.
+func spelled(word string, n int64) string {
+	b := []byte(word)
+	for i := range b {
+		if n&(1<<i) != 0 {
+			b[i] ^= 'a' - 'A'
+		}
+	}
+	return string(b)
+}
+
+// TestFixedWarningsNameTheVariable pins the warnings #379's bugs 222, 224
+// and 225 fixed, as the accessors give them: each names the variable and
+// never its value (a secret pasted into the wrong variable must not reach
+// the log), and the session lifetime's, the body cap's and the off
+// switches' come once per variable and value, however often the setting is
+// read. The session lifetime's are users.SessionPolicyFromEnv's, line for
+// line.
+func TestFixedWarningsNameTheVariable(t *testing.T) {
+	run := configWarningRuns.Add(1)
+	tag := fmt.Sprintf("sk_live_x10a_run%d", run)
+	log := captureLog(t)
+	checkOnce := func(what, name, value string, want ...string) {
+		t.Helper()
+		if n := strings.Count(log.String(), "level=WARN"); n != 1 || strings.Count(log.String(), name) != 1 {
+			t.Errorf("%s: want one warning naming %s, got:\n%s", what, name, log)
+		}
+		for _, w := range want {
+			if !strings.Contains(log.String(), w) {
+				t.Errorf("%s: the warning lacks %s:\n%s", what, w, log)
+			}
+		}
+		if strings.Contains(log.String(), value) {
+			t.Errorf("%s: the warning printed the value %q:\n%s", what, value, log)
+		}
+		log.Reset()
+	}
+
+	// Bug 222: the registration policy and the session lifetimes.
+	if got := loadFrom(map[string]string{"OPENV_REGISTRATION": "invite-" + tag}).Registration(); got != registrationOpen {
+		t.Errorf("OPENV_REGISTRATION=%q: Registration() = %q, want open", "invite-"+tag, got)
+	}
+	checkOnce("an unknown OPENV_REGISTRATION", "OPENV_REGISTRATION", "invite-"+tag, `want="open or closed"`)
+
+	unusable, above := "30d-"+tag, fmt.Sprintf("%dh", 100000+run)
+	setEnv(t, "OPENV_SESSION_MAX_AGE", false, unusable)
+	setEnv(t, "OPENV_SESSION_IDLE", false, above)
+	users.SessionPolicyFromEnv()
+	wantLog := log.String()
+	log.Reset()
+	c := Load(os.LookupEnv)
+	for range 3 {
+		if p := c.SessionPolicy(); p.MaxAge != users.DefaultSessionMaxAge || p.Idle != users.DefaultSessionIdle {
+			t.Errorf("SessionPolicy() = %+v, want the defaults", p)
+		}
+	}
+	gotLog := log.String()
+	if again := `level=INFO msg="session lifetime" max_age=720h0m0s idle=168h0m0s` + "\n"; gotLog != wantLog+again+again {
+		t.Errorf("SessionPolicy() read three times logged\n%s\nwant what users.SessionPolicyFromEnv() logged\n%s\nthen its last line twice", gotLog, wantLog)
+	}
+	for _, name := range []string{"OPENV_SESSION_MAX_AGE", "OPENV_SESSION_IDLE"} {
+		if n := strings.Count(gotLog, "var="+name+" "); n != 1 {
+			t.Errorf("SessionPolicy() read three times named %s %d times, want once:\n%s", name, n, gotLog)
+		}
+	}
+	if strings.Count(gotLog, "level=WARN") != 2 || strings.Contains(gotLog, unusable) || strings.Contains(gotLog, above) {
+		t.Errorf("SessionPolicy() read three times: want two warnings, and no value, got:\n%s", gotLog)
+	}
+	log.Reset()
+
+	// Bug 224: a body cap whose bytes do not fit in an int64 (a value
+	// TestMaxBodyBytes does not set).
+	tooBig := strconv.FormatInt(envparse.MaxMebibytes+1000+run, 10)
+	c = loadFrom(map[string]string{"OPENV_MAX_BODY_MB": tooBig})
+	for range 3 {
+		if got := c.MaxBodyBytes(); got != 32<<20 {
+			t.Errorf("OPENV_MAX_BODY_MB=%s: MaxBodyBytes() = %d, want the default", tooBig, got)
+		}
+	}
+	checkOnce("OPENV_MAX_BODY_MB too big for bytes", "OPENV_MAX_BODY_MB", tooBig)
+
+	// Bug 225: an off switch given anything but off, false spelled in a
+	// case of this run's (TestHostedRunnersOff sets false as written).
+	value := spelled("false", run)
+	c = loadFrom(map[string]string{"HOSTED_RUNNERS": value, "OPENV_EMAIL_VERIFICATION": value})
+	on := &notify.SMTPMailer{}
+	for range 3 {
+		if c.HostedRunnersOff() {
+			t.Errorf("HOSTED_RUNNERS=%q: HostedRunnersOff() = true", value)
+		}
+	}
+	checkOnce("HOSTED_RUNNERS="+value, "HOSTED_RUNNERS", value, `want="off (any case), or unset"`)
+	for range 3 {
+		c.EmailVerification(on)
+	}
+	if n := strings.Count(log.String(), "var=OPENV_EMAIL_VERIFICATION "); n != 1 || strings.Contains(log.String(), value) ||
+		!strings.Contains(log.String(), `want="off (any case), or unset"`) {
+		t.Errorf("OPENV_EMAIL_VERIFICATION=%q read three times: want one warning naming it, never the value, got:\n%s", value, log)
+	}
+	log.Reset()
+	for _, quiet := range []string{"off", " OFF ", "", "   "} {
+		c = loadFrom(map[string]string{"HOSTED_RUNNERS": quiet, "OPENV_EMAIL_VERIFICATION": quiet})
+		c.HostedRunnersOff()
+		c.EmailVerification(on)
+		if strings.Contains(log.String(), "level=WARN") {
+			t.Errorf("HOSTED_RUNNERS and OPENV_EMAIL_VERIFICATION=%q warned:\n%s", quiet, log)
+		}
 	}
 }
 
@@ -440,7 +570,7 @@ func TestAccessorsReadTodaysVariables(t *testing.T) {
 		{"SMTP", func(c *Config) { c.SMTP() }, []string{"OPENV_SMTP_HOST", "OPENV_SMTP_PORT", "OPENV_SMTP_USER", "OPENV_SMTP_PASSWORD", "OPENV_SMTP_FROM"}},
 		{"EmailLinkBase", func(c *Config) { c.EmailLinkBase() }, []string{"PUBLIC_URL", "FRONTEND_URL"}},
 		{"SessionPolicy", func(c *Config) { c.SessionPolicy() }, []string{"OPENV_SESSION_MAX_AGE", "OPENV_SESSION_IDLE"}},
-		{"Registration (unrecognised)", func(c *Config) { c.Registration() }, []string{"OPENV_REGISTRATION", "OPENV_REGISTRATION"}},
+		{"Registration (unrecognised)", func(c *Config) { c.Registration() }, []string{"OPENV_REGISTRATION"}},
 		{"VAPID", func(c *Config) { c.VAPID() }, []string{"OPENV_VAPID_PUBLIC_KEY", "OPENV_VAPID_PRIVATE_KEY", "OPENV_VAPID_SUBJECT"}},
 		{"BuildSHA", func(c *Config) { c.BuildSHA() }, []string{"RAILWAY_GIT_COMMIT_SHA", "OPENV_BUILD_SHA"}},
 		{"GoogleOAuth", func(c *Config) { c.GoogleOAuth() }, []string{"GOOGLE_CLIENT_ID", "PORT", "PUBLIC_URL", "GOOGLE_CLIENT_SECRET", "FRONTEND_URL"}},

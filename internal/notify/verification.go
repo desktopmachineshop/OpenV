@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // VerificationSendTimeout bounds a send made on a request path. net/smtp
@@ -29,11 +30,12 @@ var ErrSendTimeout = errors.New("email: send timed out")
 // VerificationPolicyFromEnv decides whether password accounts must verify
 // their address: on iff the mailer can send and OPENV_EMAIL_VERIFICATION is
 // not "off". It logs one line naming the state, so an operator reading the
-// boot log knows whether their users are about to meet the wall.
+// boot log knows whether their users are about to meet the wall, and a
+// warning before it for a value other than off, which leaves verification
+// as it would be unset (#379, bug 225).
 func VerificationPolicyFromEnv(m Mailer) users.EmailVerificationPolicy {
-	switched := strings.ToLower(strings.TrimSpace(os.Getenv("OPENV_EMAIL_VERIFICATION")))
 	switch {
-	case switched == "off":
+	case envparse.Off("OPENV_EMAIL_VERIFICATION", os.Getenv("OPENV_EMAIL_VERIFICATION")):
 		slog.Info("email verification: disabled (OPENV_EMAIL_VERIFICATION=off)")
 		return users.EmailVerificationPolicy{}
 	case m == nil || !m.Enabled():

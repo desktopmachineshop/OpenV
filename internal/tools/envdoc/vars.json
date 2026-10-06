@@ -147,7 +147,7 @@
     "HOSTED_RUNNERS": {
       "area": "runner-fleet",
       "read_by": "server",
-      "text": "`off` turns hosted runners off. Otherwise they are on whenever the Docker daemon answers, and off, with a log line, when it does not."
+      "text": "`off`, in any case, turns hosted runners off; any other value is ignored, with a warning naming the variable. Otherwise they are on whenever the Docker daemon answers, and off, with a log line, when it does not."
     },
     "HOSTED_RUNNER_PIDS_LIMIT": {
       "area": "runner-fleet",
@@ -286,7 +286,7 @@
       "area": "tenancy-identity",
       "read_by": "server",
       "default": "none: required whenever `OPENV_SMTP_HOST` is set",
-      "text": "`off` lets password accounts in without confirming their address even where the server can send mail."
+      "text": "`off`, in any case, lets password accounts in without confirming their address even where the server can send mail. Any other value, `false` and `0` among them, is ignored, with a warning naming the variable."
     },
     "OPENV_EMBEDDING_API_KEY": {
       "area": "requirements-core",
@@ -363,7 +363,7 @@
     "OPENV_LIMITS": {
       "area": "tenancy-identity",
       "read_by": "server",
-      "text": "A JSON object of workspace limit values that overrides any limit across the deployment, such as `{\"max_upload_mb\": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server."
+      "text": "A JSON object of workspace limit values that overrides any limit across the deployment, such as `{\"max_upload_mb\": 1024}`. An unknown key, a negative number, or a value of the wrong kind (a limit takes a number, a flag `true` or `false`) stops the server, with a message naming the first such key in alphabetical order."
     },
     "OPENV_LOG_LEVEL": {
       "area": "platform-http",

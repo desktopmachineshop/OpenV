@@ -7,9 +7,9 @@ package hosting
 import (
 	"errors"
 	"log"
-	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // ResourceLimits caps a hosted runner container's resources. A zero value
@@ -68,10 +68,11 @@ type Provisioner interface {
 }
 
 // NewProvisioner builds the deployment's provisioner. HOSTED_RUNNERS=off
-// disables the feature; an unreachable docker daemon auto-disables it (logged
+// disables the feature, and any other value leaves it on with a warning
+// (#379, bug 225); an unreachable docker daemon auto-disables it (logged
 // once at startup).
 func NewProvisioner() Provisioner {
-	if strings.EqualFold(envOr("HOSTED_RUNNERS", ""), "off") {
+	if envparse.Off("HOSTED_RUNNERS", envOr("HOSTED_RUNNERS", "")) {
 		log.Print("Hosted runners disabled (HOSTED_RUNNERS=off)")
 		return disabledProvisioner{}
 	}

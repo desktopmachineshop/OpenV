@@ -413,7 +413,7 @@
     "require_outside_authz": 2
   },
   "env_reads": {
-    "internal/api": 10,
+    "internal/api": 9,
     "internal/domain/embeddings": 2,
     "internal/domain/reports": 1,
     "internal/domain/users": 1,

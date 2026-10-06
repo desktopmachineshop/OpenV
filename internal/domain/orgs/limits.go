@@ -3,6 +3,8 @@ package orgs
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -296,7 +298,9 @@ func (p *DeploymentPolicy) ReadOnlyRemedy(over []string) string {
 // ParseLimits reads a JSON object of limit values, rejecting keys the platform
 // does not understand and values that are not numbers. Refusing an unknown key
 // is deliberate: a typo in OPENV_LIMITS that silently did nothing would look
-// exactly like a limit that does not work.
+// exactly like a limit that does not work. The keys are checked in order, so
+// of several it cannot honour the error names the first, the same one on
+// every boot (#379, bug 223).
 func ParseLimits(raw string) (map[string]interface{}, error) {
 	if raw == "" {
 		return nil, nil
@@ -306,7 +310,8 @@ func ParseLimits(raw string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("not a JSON object of limit values: %w", err)
 	}
 	out := map[string]interface{}{}
-	for key, value := range parsed {
+	for _, key := range slices.Sorted(maps.Keys(parsed)) {
+		value := parsed[key]
 		def, known := Describe(key)
 		if !known {
 			return nil, fmt.Errorf("unknown limit %q (known limits: %v)", key, KnownLimitKeys())

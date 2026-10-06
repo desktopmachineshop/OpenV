@@ -118,6 +118,23 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   push. Each warning now comes once, however many workspaces you
   administer.
 
+- **A setting the server cannot use is named in its log, never quoted.**
+  If you run your own OpenV server: an unknown `OPENV_LOG_LEVEL` or
+  `OPENV_REGISTRATION`, or an unusable `OPENV_SESSION_MAX_AGE` or
+  `OPENV_SESSION_IDLE`, was written to the log with its value, so a
+  password or key pasted into the wrong setting ended up there. The
+  warning now names the setting and what applies instead, never the value.
+  `HOSTED_RUNNERS` or `OPENV_EMAIL_VERIFICATION` set to anything but
+  `off`, such as `false`, was ignored without a word; only `off` still
+  turns either off, but the log now names the setting and says it takes
+  `off`. A size too large to count in bytes (8,796,093,022,208 MB or more)
+  in `OPENV_MAX_BODY_MB`, `OPENV_MAX_UPLOAD_MB` or `OPENV_MAX_EVIDENCE_MB`
+  made the server refuse every request body, figure or evidence file it
+  applied to; it now keeps the default, with a warning. And when
+  `OPENV_LIMITS` has several keys the server cannot use, the message it
+  stops with names the first in alphabetical order, the same one on every
+  start, where it named any one of them.
+
 ## 0.17.0 — 2026-10-05
 
 ### New features

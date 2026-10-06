@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -55,11 +56,12 @@ const (
 	bytesPerMB         = int64(1024 * 1024)
 )
 
-// envUploadMB reads the operator's override, a whole number above 0, and
-// whether it was set to something usable; a malformed one warns once
-// (internal/envparse) and leaves the workspace's limit in charge.
+// envUploadMB reads the operator's override, a whole number above 0 whose
+// bytes fit in an int64, and whether it was set to something usable; a
+// malformed one warns once (internal/envparse) and leaves the workspace's
+// limit in charge.
 func envUploadMB() (int64, bool) {
-	n := envparse.Count(envMaxUploadMB, os.Getenv(envMaxUploadMB), 0)
+	n := envparse.Mebibytes(envMaxUploadMB, envparse.Count(envMaxUploadMB, os.Getenv(envMaxUploadMB), 0), 0)
 	return int64(n), n > 0
 }
 
@@ -89,6 +91,18 @@ func (h *Handler) uploadLimitBytes(orgID string) int64 {
 // refusing a file that is exactly at the limit.
 const multipartOverheadBytes = int64(1024 * 1024)
 
+// plusMultipartOverhead is the bound on a request that carries a file of up
+// to limit bytes: limit and multipartOverheadBytes, or the largest int64
+// where that sum would not fit. An operator's cap close to the largest
+// int64 would otherwise wrap round to a negative bound, which refuses
+// every upload (#379, bug 224).
+func plusMultipartOverhead(limit int64) int64 {
+	if limit > math.MaxInt64-multipartOverheadBytes {
+		return math.MaxInt64
+	}
+	return limit + multipartOverheadBytes
+}
+
 // uploadRequestCeilingBytes bounds an upload request before the handler knows
 // which workspace it is for.
 //
@@ -100,13 +114,13 @@ const multipartOverheadBytes = int64(1024 * 1024)
 // bytes afterwards.
 func (h *Handler) uploadRequestCeilingBytes() int64 {
 	if mb, ok := envUploadMB(); ok {
-		return mb*bytesPerMB + multipartOverheadBytes
+		return plusMultipartOverhead(mb * bytesPerMB)
 	}
 	mb := int64(orgs.MaxPlanUploadMB())
 	if mb <= 0 || mb > maxUploadCeilingMB {
 		mb = maxUploadCeilingMB
 	}
-	return mb*bytesPerMB + multipartOverheadBytes
+	return plusMultipartOverhead(mb * bytesPerMB)
 }
 
 // uploadLimitMessage says what the ceiling is, because "too large" without a

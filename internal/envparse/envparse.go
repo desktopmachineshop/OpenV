@@ -7,7 +7,9 @@
 //   - a duration is positive;
 //   - a rate is a positive, finite number;
 //   - a boolean is true or false in any case, or 1 or 0;
-//   - a switch is on or off in any case, or what a boolean is.
+//   - a switch is on or off in any case, or what a boolean is;
+//   - a size in mebibytes is a count whose bytes an int64 holds;
+//   - an off switch is off in any case, or nothing.
 //
 // A value that breaks the rule reads as the setting's default, and the log
 // carries one warning that names the variable, never its value: a secret
@@ -42,7 +44,14 @@ const (
 	wantBool     = "true or false (any case), or 1 or 0"
 	wantSwitch   = "on or off, or true or false (any case), or 1 or 0"
 	wantNumber   = "a whole number"
+	// wantMebibytes is a count of at most MaxMebibytes, written out.
+	wantMebibytes = "a whole number above 0, at most 8796093022207"
+	wantOff       = "off (any case), or unset"
 )
+
+// MaxMebibytes is the largest number of mebibytes whose bytes an int64
+// holds, 8,796,093,022,207: one more, multiplied into bytes, wraps round.
+const MaxMebibytes int64 = math.MaxInt64 >> 20
 
 // Secret returns raw exactly as set: a credential is not trimmed, since a
 // key, token, password or private key with its spaces cut off is another
@@ -161,6 +170,39 @@ func Switch(name, raw string, def bool) bool {
 	}
 	warn(name, raw, wantSwitch)
 	return def
+}
+
+// Mebibytes checks n, a size in mebibytes read from name as a count (Count,
+// or a getter over it), before it is multiplied into bytes: n when its bytes
+// fit in an int64, and otherwise def, with one warning naming the variable,
+// never its value. A larger count wraps round when multiplied, into a
+// negative cap or a tiny one (#379, bug 224). The caller still multiplies,
+// so the read that gave n stays where it is.
+func Mebibytes(name string, n, def int) int {
+	if int64(n) <= MaxMebibytes {
+		return n
+	}
+	warn(name, strconv.Itoa(n), wantMebibytes)
+	return def
+}
+
+// Off reads a setting whose one value is off, in any case, and which leaves
+// on what it controls otherwise: true for off, false for a blank value.
+// Anything else, false and 0 among them, is false as well, with one warning
+// naming the variable and the value it takes, never its own (#379, bug
+// 225), so a typo does not leave the feature on in silence. It is for
+// HOSTED_RUNNERS and OPENV_EMAIL_VERIFICATION, which have only ever been
+// switched off by off.
+func Off(name, raw string) bool {
+	v := strings.TrimSpace(raw)
+	switch {
+	case v == "":
+		return false
+	case strings.EqualFold(v, "off"):
+		return true
+	}
+	warn(name, raw, wantOff)
+	return false
 }
 
 // boolean reads a trimmed, set value as true or false in any case, or 1 or
