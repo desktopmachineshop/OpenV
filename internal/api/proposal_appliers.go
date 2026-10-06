@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
+	"github.com/openv/requirements-platform/internal/domain/traceability"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
 
@@ -35,6 +36,12 @@ func (h *Handler) ProposalAppliers() proposals.Appliers {
 // of band from the review request, so the actor is the platform itself
 // rather than the reviewing user or the originating agent run.
 func (h *Handler) publishApplied(eventType, projectID, entityID string, payload map[string]interface{}) {
+	h.publishAppliedAs(eventType, projectID, entityID, events.ActorSystem, payload)
+}
+
+// publishAppliedAs is publishApplied with the actor the caller names: the
+// link write service's (appliedTraceability), whose Policy names the system.
+func (h *Handler) publishAppliedAs(eventType, projectID, entityID, actor string, payload map[string]interface{}) {
 	if h.Bus == nil {
 		return
 	}
@@ -44,7 +51,7 @@ func (h *Handler) publishApplied(eventType, projectID, entityID string, payload 
 			orgID = project.OrgID
 		}
 	}
-	h.Bus.Publish(events.New(eventType, projectID, entityID, events.ActorSystem, payload).WithOrg(orgID))
+	h.Bus.Publish(events.New(eventType, projectID, entityID, actor, payload).WithOrg(orgID))
 }
 
 // decodeProposalPayload re-hydrates a stored proposal payload into a typed
@@ -132,7 +139,7 @@ func (h *Handler) applyCreateLink(payload map[string]interface{}) (string, error
 	// invalid edge is written. Fetch the real endpoint types and validate the
 	// link type exists and its from/to constraints hold; on failure return an
 	// error so the proposal resolves to apply_failed with a clear message and no
-	// link is created.
+	// link is created. The applier's Policy asks no role and no feature.
 	fromArtifact, err := h.ArtifactService.GetArtifact(req.FromID)
 	if err != nil {
 		return "", fmt.Errorf("cannot apply create_link: source artifact %q not found: %w", req.FromID, err)
@@ -141,38 +148,31 @@ func (h *Handler) applyCreateLink(payload map[string]interface{}) (string, error
 	if err != nil {
 		return "", fmt.Errorf("cannot apply create_link: target artifact %q not found: %w", req.ToID, err)
 	}
-	if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
+	trace, p := h.appliedTraceability(), appliedLinkPolicy
+	from, to := traceability.EndOf(fromArtifact), traceability.EndOf(toArtifact)
+	if err := trace.CheckLink(p, from.ProjectID, from, to, req.Type); err != nil {
 		return "", fmt.Errorf("cannot apply create_link: %w", err)
-	}
-	link := links.NewLink(req)
-	if err := h.LinkService.CreateLink(link); err != nil {
-		return "", err
 	}
 	// Refresh both endpoints' link snapshots, exactly as the CreateLink
 	// handler does, so endpoint versions stay in step with the new edge.
-	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
-	h.publishApplied(events.LinkCreated, h.projectIDForArtifact(link.FromID), link.ID, map[string]interface{}{
-		"link_type": link.Type,
-		"from_id":   link.FromID,
-		"to_id":     link.ToID,
-	})
+	link, err := trace.CreateLink(req)
+	if err != nil {
+		return "", err
+	}
+	trace.PublishLinkEvent(p, events.LinkCreated, h.projectIDForArtifact(link.FromID), link)
 	return link.ID, nil
 }
 
 func (h *Handler) applyDeleteLink(targetID string) error {
 	link, _ := h.LinkService.GetLink(targetID)
-	if err := h.LinkService.DeleteLink(targetID); err != nil {
+	// Refresh both endpoints' link snapshots, exactly as the DeleteLink
+	// handler does.
+	trace := h.appliedTraceability()
+	if err := trace.DeleteLink(targetID, link); err != nil {
 		return err
 	}
 	if link != nil {
-		// Refresh both endpoints' link snapshots, exactly as the DeleteLink
-		// handler does.
-		_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
-		h.publishApplied(events.LinkDeleted, h.projectIDForArtifact(link.FromID), link.ID, map[string]interface{}{
-			"link_type": link.Type,
-			"from_id":   link.FromID,
-			"to_id":     link.ToID,
-		})
+		trace.PublishLinkEvent(appliedLinkPolicy, events.LinkDeleted, h.projectIDForArtifact(link.FromID), link)
 	}
 	return nil
 }

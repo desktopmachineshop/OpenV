@@ -176,6 +176,12 @@ owns its concern.
   events), `sse.go` (the SSE hub), and the `middleware_*.go`,
   `compression.go`, `ratelimit.go`, `requestlog.go` and
   `security_headers.go` plumbing.
+- The four paths that write traceability links (`POST` and
+  `DELETE /links`, the managed link edits of `PUT /artifacts/{id}`, the
+  proposal appliers and the guided drafts) call
+  `internal/domain/traceability`, each with the `Policy`
+  `link_traceability.go` gives it; their `require*` guards stay in the
+  handlers.
 
 The route inventory, `testdata/routes.txt`, lists every method and path
 (341); `docs/api-spec.md` documents them, and an archtest ratchet counts the
@@ -191,7 +197,11 @@ interfaces (`orgs.Service` is `Workspaces`, `Membership`, `BillingStore`,
 domain: `artifacts` (nine other domain packages import it), `exports` (the project
 snapshot that reports, baselines, templates, downloads, quality and V&V
 read),
-`events` and `agentruns`.
+`events` and `agentruns`. `traceability` is the link write service: the
+checks, writes, `links_snapshot` refreshes, link events and change
+summaries that the API's four link-write paths share, each path under a
+`Policy` of its own, which keeps where they differ explicit (quirks Q3 and
+Q4).
 
 ### Persistence: `internal/persistence/postgres`
 

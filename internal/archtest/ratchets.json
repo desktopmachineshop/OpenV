@@ -103,6 +103,7 @@
       "internal/domain/snapshot",
       "internal/domain/teams",
       "internal/domain/templates",
+      "internal/domain/traceability",
       "internal/domain/users",
       "internal/domain/vv",
       "internal/domain/workerkeys",
@@ -225,6 +226,12 @@
       "internal/domain/exports",
       "internal/domain/links",
       "internal/domain/snapshot"
+    ],
+    "internal/domain/traceability": [
+      "internal/domain/artifacts",
+      "internal/domain/chatter",
+      "internal/domain/links",
+      "internal/domain/members"
     ],
     "internal/domain/users": [
       "internal/domain/tokens"
@@ -364,9 +371,7 @@
   "func_lines": {
     "internal/api:Handler.CreateLink": 115,
     "internal/api:Handler.OIDCCallback": 115,
-    "internal/api:Handler.UpdateArtifact": 168,
-    "internal/api:Handler.buildChangesList": 114,
-    "internal/api:Handler.processManagedLinkChanges": 143,
+    "internal/api:Handler.UpdateArtifact": 130,
     "internal/api:buildAIMap": 132,
     "internal/api:buildGuidedCopilotPrompt": 140,
     "internal/domain/artifacts:DefaultService.UpdateArtifact": 115,

@@ -12,6 +12,12 @@ import (
 // the owning org (the project's org when project-scoped, else the caller's
 // active workspace).
 func (h *Handler) publish(r *http.Request, eventType, projectID, entityID string, payload map[string]interface{}) {
+	h.publishAs(r, Actor(r), eventType, projectID, entityID, payload)
+}
+
+// publishAs is publish stamped with actor rather than Actor(r): the link
+// write service publishes as its Policy's Actor (traceabilityFor).
+func (h *Handler) publishAs(r *http.Request, actor, eventType, projectID, entityID string, payload map[string]interface{}) {
 	if h.Bus == nil {
 		return
 	}
@@ -24,7 +30,7 @@ func (h *Handler) publish(r *http.Request, eventType, projectID, entityID string
 	if orgID == "" {
 		orgID = ActiveOrg(r)
 	}
-	h.Bus.Publish(events.New(eventType, projectID, entityID, Actor(r), payload).WithOrg(orgID))
+	h.Bus.Publish(events.New(eventType, projectID, entityID, actor, payload).WithOrg(orgID))
 }
 
 // publishOrgEvent publishes a workspace-level event, where the tenant comes

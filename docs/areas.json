@@ -202,6 +202,7 @@
         "internal/domain/projects/**",
         "internal/domain/quality/**",
         "internal/domain/settings/**",
+        "internal/domain/traceability/**",
         "internal/domain/workitems/**",
         "internal/mcp/tools_artifacts*.go",
         "internal/mcp/tools_comments*.go",
