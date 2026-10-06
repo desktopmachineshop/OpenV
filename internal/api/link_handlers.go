@@ -10,7 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
-	"github.com/openv/requirements-platform/internal/domain/release"
+	"github.com/openv/requirements-platform/internal/domain/traceability"
 )
 
 // registerLinkRoutes wires links: create, list, read, update, confirm and
@@ -73,11 +73,11 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	// Validate link type only when both endpoint types are known. When an
 	// endpoint is a pending ref its type is not yet knowable; the human review
 	// of the paired proposals is the check in that case.
-	if fromArtifact != nil && toArtifact != nil {
-		if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
-			return
-		}
+	trace, p := h.traceabilityFor(r), linkCreatePolicy(r)
+	from, to := traceability.EndOf(fromArtifact), traceability.EndOf(toArtifact)
+	if err := traceability.CheckRules(req.Type, from, to); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Determine the project to authorize and to file the proposal under. Prefer
@@ -106,14 +106,15 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	//
 	// The one exception is the flow-down link (REQ-145): a supplier working
 	// in a child project refines requirements it can only read, so "refines"
-	// crosses into the target's project with viewer rights there. What it
-	// writes on the parent side is the link snapshot, which is the point.
+	// crosses into the target's project with viewer rights there, while the
+	// workspace has the feature (the policy's gate). What it writes on the
+	// parent side is the link snapshot, which is the point.
+	if err := trace.CheckFlowDown(p, projectID, req.Type); err != nil {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
 	targetRole := members.RoleEditor
-	if req.Type == links.TypeRefines {
-		if !h.projectFeatureEnabled(r, projectID, release.FeatureFlowDown) {
-			writeJSONError(w, http.StatusForbidden, featureGateMessage)
-			return
-		}
+	if trace.FlowDownViewer(p, projectID, req.Type) {
 		targetRole = members.RoleViewer
 	}
 	if toArtifact != nil && toArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, targetRole) {
@@ -126,20 +127,13 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	link := links.NewLink(req)
-	if err := h.LinkService.CreateLink(link); err != nil {
+	// Make the link and refresh link snapshots for both artifacts it touches
+	link, err := trace.CreateLink(req)
+	if err != nil {
 		respondInternal(w, r, "failed to create link", err)
 		return
 	}
-
-	// Refresh link snapshots for both artifacts touched by this link
-	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
-
-	h.publish(r, events.LinkCreated, fromArtifact.ProjectID, link.ID, map[string]interface{}{
-		"link_type": link.Type,
-		"from_id":   link.FromID,
-		"to_id":     link.ToID,
-	})
+	trace.PublishLinkEvent(p, events.LinkCreated, fromArtifact.ProjectID, link)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -212,7 +206,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Refresh link snapshots for both artifacts touched by this link
-	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+	h.traceabilityFor(r).RefreshLinkSnapshots(link.FromID, link.ToID)
 
 	// The one path that changes a link's type or attributes, so the one
 	// publisher of link.updated (#379 bug 132), shaped as link.created is,
@@ -289,9 +283,16 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
 		return
 	}
+	// Past the guard the link is one a row has: with none, projectID is ""
+	// and the guard refused.
+	trace, p := h.traceabilityFor(r), linkDeletePolicy(r)
+	if err := trace.CheckFlowDown(p, projectID, link.Type); err != nil {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
 	if targetProjectID != "" && targetProjectID != projectID {
 		targetRole := members.RoleEditor
-		if link.Type == links.TypeRefines && h.projectFeatureEnabled(r, projectID, release.FeatureFlowDown) {
+		if trace.FlowDownViewer(p, projectID, link.Type) {
 			targetRole = members.RoleViewer
 		}
 		if !h.requireProjectRole(w, r, targetProjectID, targetRole) {
@@ -302,20 +303,13 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.LinkService.DeleteLink(id)
-	if err != nil {
+	// Delete the link and refresh link snapshots for both artifacts it touches
+	if err := trace.DeleteLink(id, link); err != nil {
 		respondInternal(w, r, "failed to delete link", err)
 		return
 	}
-
 	if link != nil {
-		// Refresh link snapshots for both artifacts touched by this link
-		_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
-		h.publish(r, events.LinkDeleted, projectID, link.ID, map[string]interface{}{
-			"link_type": link.Type,
-			"from_id":   link.FromID,
-			"to_id":     link.ToID,
-		})
+		trace.PublishLinkEvent(p, events.LinkDeleted, projectID, link)
 	}
 
 	w.WriteHeader(http.StatusNoContent)

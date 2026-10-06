@@ -14,6 +14,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/traceability"
 )
 
 // registerArtifactHistoryRoutes wires an artifact's versions, the restore
@@ -129,7 +130,7 @@ func (h *Handler) buildRestoreMessage(oldArtifact, newArtifact *artifacts.Artifa
 
 	// Reuse the changes summary logic to show what changed
 	var addedLinks, removedLinks []*links.Link
-	changes := h.buildChangesList(oldArtifact, newArtifact, addedLinks, removedLinks)
+	changes := traceability.BuildChangesList(oldArtifact, newArtifact, addedLinks, removedLinks)
 
 	if len(changes) > 0 {
 		message += "\n\nChanges:\n"
