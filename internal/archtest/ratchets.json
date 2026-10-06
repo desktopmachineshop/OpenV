@@ -128,6 +128,16 @@
     "internal/billing/stripe": [
       "internal/billing"
     ],
+    "internal/config": [
+      "internal/billing",
+      "internal/domain/agentruns",
+      "internal/domain/embeddings",
+      "internal/domain/orgs",
+      "internal/domain/sharedproducts",
+      "internal/domain/users",
+      "internal/envparse",
+      "internal/notify"
+    ],
     "internal/domain/agentruns": [
       "internal/domain/agents",
       "internal/domain/events",

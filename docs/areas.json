@@ -477,7 +477,7 @@
     },
     {
       "name": "platform-http",
-      "description": "The server under every feature: the composition root (cmd/server's main, app, config and the core wire stages), the router, the handler deps and the HTTP plumbing (respond, errors, middleware, compression, rate limits, request log, security headers), health and meta, the database connection, baseline schema and migration ledger, env parsing and metrics, the wire contracts Go publishes, the release a deployment runs with its notes and feature gates, the site administrator's page, and the guides (README.md and CLAUDE.md) of cmd/server, internal/api, internal/domain and internal/persistence/postgres.",
+      "description": "The server under every feature: the composition root (cmd/server's main, app, config and the core wire stages), the router, the handler deps and the HTTP plumbing (respond, errors, middleware, compression, rate limits, request log, security headers), health and meta, the database connection, baseline schema and migration ledger, env parsing, the typed server configuration (internal/config) and metrics, the wire contracts Go publishes, the release a deployment runs with its notes and feature gates, the site administrator's page, and the guides (README.md and CLAUDE.md) of cmd/server, internal/api, internal/domain and internal/persistence/postgres.",
       "globs": [
         "RELEASE_NOTES.md",
         "cmd/server/*.md",
@@ -521,6 +521,7 @@
         "internal/api/routes*.go",
         "internal/api/security_headers*.go",
         "internal/api/testdata/**",
+        "internal/config/**",
         "internal/contract/**",
         "internal/domain/*.md",
         "internal/domain/release/**",
