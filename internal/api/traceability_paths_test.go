@@ -1165,6 +1165,50 @@ func TestTraceabilityPathManagedEdits(t *testing.T) {
 		`)
 	})
 
+	t.Run("TargetRole: the source's project, when the edited artifact is the link's target", func(t *testing.T) {
+		fx := newTPFixture(t, true)
+		fx.note("the edited artifact, creq in C, is the link's target; its source, req, is in P, which the supplier only views")
+		fx.step(tpAsSupplier, "PUT", "/api/v1/artifacts/{{creq}}",
+			`{"pendingLinkAdds":[{"from_id":"{{req}}","to_id":"{{creq}}","type":"decomposes-to"}]}`)
+		fx.note("the editor, who edits P, makes the same add")
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{creq}}",
+			`{"pendingLinkAdds":[{"from_id":"{{req}}","to_id":"{{creq}}","type":"decomposes-to"}]}`)
+		fx.note("the supplier cannot remove it by an edit of its target; the editor can")
+		fx.step(tpAsSupplier, "PUT", "/api/v1/artifacts/{{creq}}", `{"pendingLinkRemoves":["{{L1}}"]}`)
+		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{creq}}", `{"pendingLinkRemoves":["{{L1}}"]}`)
+		fx.expect(`
+			# the edited artifact, creq in C, is the link's target; its source, req, is in P, which the supplier only views
+			> PUT /api/v1/artifacts/creq as u-supplier {"pendingLinkAdds":[{"from_id":"req","to_id":"creq","type":"decomposes-to"}]}
+			< 200 artifact creq v2 links_snapshot absent
+			  version creq 1->2 links_snapshot absent
+			  chatter creq version-change auto=true by=- author="" "Updated to version 2"
+			  event artifact.updated creq project=proj-c org=org-1 actor=user:u-supplier {artifact_type string requirement, title string Supplier req, version int 2}
+			# the editor, who edits P, makes the same add
+			> PUT /api/v1/artifacts/creq as u-editor {"pendingLinkAdds":[{"from_id":"req","to_id":"creq","type":"decomposes-to"}]}
+			< 200 artifact creq v3 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  link created: L1 req-decomposes-to->creq suspect=false attributes={}
+			  version creq 2->3 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  chatter creq version-change auto=true by=- author="" "Updated to version 3\n\nChanges:\n- Links:\n    - decomposes-to: Req one (added)\n"
+			  version req 1->2 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  chatter req link-change auto=true by=- author="" "Auto-updated to version 2 due to link changes"
+			  event artifact.updated creq project=proj-c org=org-1 actor=user:u-editor {artifact_type string requirement, title string Supplier req, version int 3}
+			# the supplier cannot remove it by an edit of its target; the editor can
+			> PUT /api/v1/artifacts/creq as u-supplier {"pendingLinkRemoves":["L1"]}
+			< 200 artifact creq v4 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  version creq 3->4 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  chatter creq version-change auto=true by=- author="" "Updated to version 4"
+			  event artifact.updated creq project=proj-c org=org-1 actor=user:u-supplier {artifact_type string requirement, title string Supplier req, version int 4}
+			> PUT /api/v1/artifacts/creq as u-editor {"pendingLinkRemoves":["L1"]}
+			< 200 artifact creq v5 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  link deleted: L1
+			  version creq 4->5 links_snapshot=[L1 req-decomposes-to->creq suspect=false attributes={}]
+			  chatter creq version-change auto=true by=- author="" "Updated to version 5\n\nChanges:\n- Links:\n    - decomposes-to: Req one (removed)\n"
+			  version req 2->3 links_snapshot=[]
+			  chatter req link-change auto=true by=- author="" "Auto-updated to version 3 due to link changes"
+			  event artifact.updated creq project=proj-c org=org-1 actor=user:u-editor {artifact_type string requirement, title string Supplier req, version int 5}
+		`)
+	})
+
 	t.Run("RequireFlowDownFeature: refines while the feature is closed", func(t *testing.T) {
 		fx := newTPFixture(t, false)
 		fx.step(tpAsEditor, "PUT", "/api/v1/artifacts/{{creq}}",
