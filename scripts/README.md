@@ -43,8 +43,8 @@ Everything here is the tooling area of `docs/areas.json`, through
 - **R1, R3 and S14b.** The guard judges a pull request with the base's
   copy of `refactor/refactor_guard.py`, so an edit to its lists or rules takes
   effect once it merges; only `X2B_CALL_SHAPE_CHANGES`,
-  `X14B_IMPORT_EDGES`, `X11B_IMPORT_EDGES` and `BOOT_STEPS_CHANGES` are read
-  from the pull request. A golden is added to `GOLDEN_LIST`, and guard code
+  `X14B_IMPORT_EDGES`, `X11B_IMPORT_EDGES`, `X10A_IMPORT_EDGES` and
+  `BOOT_STEPS_CHANGES` are read from the pull request. A golden is added to `GOLDEN_LIST`, and guard code
   to `GUARD_CODE`, by the step that creates it, in a class T commit.
 - **I25.** `RELEASE_NOTES.md` is parsed by `release_notes.py` and by the
   server (`internal/domain/release`); both must accept the same file.

@@ -80,7 +80,11 @@ loader adds. Likewise an edge listed in `X11B_IMPORT_EDGES`, into a package
 the base has or one the commit creates: X11b's, filled in a class T commit
 ahead of it, for the `internal/api` → `internal/domain/traceability` edge
 and the new package's edges to `artifacts`, `chatter`, `links` and
-`members`. Everything else in the file may only shrink, in that PR too.
+`members`. And an edge listed in `X10A_IMPORT_EDGES`, into a package the
+base has: X10a's, filled in a class T commit ahead of it, for the edges of
+`internal/config`, the package X10a creates, to `envparse`, `billing`,
+`notify`, `orgs`, `users`, `agentruns`, `sharedproducts` and `embeddings`.
+Everything else in the file may only shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which
 must still pass K7, and the entry of a new client binary. A ceiling is
