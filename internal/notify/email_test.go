@@ -63,10 +63,7 @@ func optedOut(id, email string) *users.User {
 // TestMailerNoopWhenUnconfigured: with no SMTP host, the mailer is disabled
 // and Send is a silent no-op (email is opt-in infra — the app runs without it).
 func TestMailerNoopWhenUnconfigured(t *testing.T) {
-	for _, key := range []string{"OPENV_SMTP_HOST", "OPENV_SMTP_PORT", "OPENV_SMTP_USER", "OPENV_SMTP_PASSWORD", "OPENV_SMTP_FROM"} {
-		t.Setenv(key, "")
-	}
-	m := MailerFromEnv()
+	m := NewMailer(SMTPSettings{Port: "587"})
 	if m.Enabled() {
 		t.Fatal("mailer should be disabled with no OPENV_SMTP_HOST")
 	}
@@ -75,20 +72,15 @@ func TestMailerNoopWhenUnconfigured(t *testing.T) {
 	}
 }
 
-// TestMailerFromEnvConfigured: a host makes it enabled and derives sane
-// defaults (port 587, From falls back to the user).
-func TestMailerFromEnvConfigured(t *testing.T) {
-	t.Setenv("OPENV_SMTP_HOST", "smtp.example.com")
-	t.Setenv("OPENV_SMTP_PORT", "")
-	t.Setenv("OPENV_SMTP_USER", "bot@example.com")
-	t.Setenv("OPENV_SMTP_PASSWORD", "secret")
-	t.Setenv("OPENV_SMTP_FROM", "")
-	m := MailerFromEnv()
+// TestNewMailerConfigured: a host makes it enabled, and From falls back to
+// the user (internal/config's SMTP tests the default port).
+func TestNewMailerConfigured(t *testing.T) {
+	m := NewMailer(SMTPSettings{Host: "smtp.example.com", Port: "587", User: "bot@example.com", Password: "secret"})
 	if !m.Enabled() {
 		t.Fatal("mailer should be enabled with a host set")
 	}
 	if m.port != "587" {
-		t.Errorf("default port = %q, want 587", m.port)
+		t.Errorf("port = %q, want 587", m.port)
 	}
 	if m.from != "bot@example.com" {
 		t.Errorf("from = %q, want fallback to user", m.from)

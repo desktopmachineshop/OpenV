@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/config"
 )
 
 // initLoggingInto runs initLogging with OPENV_LOG_LEVEL set to raw and its
@@ -30,7 +32,7 @@ func initLoggingInto(t *testing.T, raw string) (string, *slog.Logger) {
 		log.SetFlags(prevFlags)
 	})
 	os.Stderr = out
-	initLogging()
+	initLogging(config.Load(os.LookupEnv))
 	os.Stderr = prevStderr
 	installed := slog.Default()
 	data, err := os.ReadFile(out.Name())

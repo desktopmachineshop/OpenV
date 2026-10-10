@@ -35,8 +35,8 @@ func (a *app) projects() {
 	// release; the defaults bound both abuse and storage cost.
 	a.sharedProductService = sharedproducts.NewDefaultService(
 		a.sharedProductRepo,
-		envInt("OPENV_SHARED_PRODUCT_DAILY_LIMIT", sharedproducts.DefaultDailyOrgLimit),
-		envInt("OPENV_SHARED_PRODUCT_POOL_LIMIT", sharedproducts.DefaultPoolLimit),
+		a.env().SharedProductDailyLimit(),
+		a.env().SharedProductPoolLimit(),
 	)
 
 	// The starter pool (REQ-118). Deployment-wide, so it runs here rather

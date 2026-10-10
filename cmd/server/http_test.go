@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/api"
+	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/metrics"
 )
@@ -177,7 +179,7 @@ func TestBuildHTTPHandlerLayerOrder(t *testing.T) {
 		t.Setenv("OPENV_MAX_BODY_MB", "32MB-"+nonce)
 		logs := captureLog(t)
 		build := func() (http.Handler, error) {
-			return buildHTTPHandler(api.NewHandler(api.HandlerDeps{}), metrics.New(), nil, nil, nil, nil, "", func() string { return "" }, "", users.EmailVerificationPolicy{})
+			return buildHTTPHandler(config.Load(os.LookupEnv), api.NewHandler(api.HandlerDeps{}), metrics.New(), nil, nil, nil, nil, "", func() string { return "" }, "", users.EmailVerificationPolicy{})
 		}
 
 		t.Setenv("CORS_ORIGIN", "*")
@@ -218,7 +220,7 @@ func newTestChain(t *testing.T) *testChain {
 	t.Setenv("SECURE_COOKIES", "")
 	t.Setenv("CROSS_SITE_COOKIES", "")
 	c := &testChain{metrics: metrics.New(), log: captureLog(t)}
-	h, err := buildHTTPHandler(api.NewHandler(api.HandlerDeps{}), c.metrics, nil, nil, nil, nil, "", func() string { return "" }, "", users.EmailVerificationPolicy{})
+	h, err := buildHTTPHandler(config.Load(os.LookupEnv), api.NewHandler(api.HandlerDeps{}), c.metrics, nil, nil, nil, nil, "", func() string { return "" }, "", users.EmailVerificationPolicy{})
 	if err != nil {
 		t.Fatalf("buildHTTPHandler: %v", err)
 	}

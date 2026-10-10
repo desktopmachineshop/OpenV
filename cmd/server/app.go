@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"os"
 
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/billing"
+	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -58,6 +60,7 @@ import (
 // wire_*.go files, in the order main() ran their code before refactor step
 // M4 split it.
 type app struct {
+	cfg                  *config.Config
 	ctx                  context.Context
 	stop                 context.CancelFunc
 	dsn                  string
@@ -163,4 +166,16 @@ type app struct {
 	billingService       *billing.Service
 	handler              *api.Handler
 	srv                  *http.Server
+}
+
+// env is the configuration the stages read every setting through: what
+// stage signals loaded from the environment (internal/config). A bare app,
+// which the in-process stage tests build without stage signals, reads the
+// environment as it is at the call instead, as the stages did before
+// refactor step X10b.
+func (a *app) env() *config.Config {
+	if a.cfg != nil {
+		return a.cfg
+	}
+	return config.Load(os.LookupEnv)
 }

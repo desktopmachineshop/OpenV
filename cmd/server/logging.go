@@ -3,24 +3,16 @@ package main
 import (
 	"log/slog"
 	"os"
-	"strings"
+
+	"github.com/openv/requirements-platform/internal/config"
 )
 
 // initLogging installs the process-wide slog default: a text handler on
-// stderr with the level taken from OPENV_LOG_LEVEL (debug|info|warn|error,
+// stderr with the level cfg reads from OPENV_LOG_LEVEL (debug|info|warn|error,
 // default info).
-func initLogging() {
-	level := slog.LevelInfo
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("OPENV_LOG_LEVEL"))) {
-	case "debug":
-		level = slog.LevelDebug
-	case "warn", "warning":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
-	case "", "info":
-		// default
-	default:
+func initLogging(cfg *config.Config) {
+	level, unrecognized := cfg.LogLevel()
+	if unrecognized {
 		// Unknown value: keep info, but say so once, naming the variable,
 		// never the value: a secret pasted into the wrong variable must not
 		// reach the log (#379, bug 222).

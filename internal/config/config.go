@@ -7,8 +7,8 @@
 // packages that read a setting themselves).
 //
 // The package reads no environment itself: cmd/server hands Load
-// os.LookupEnv. Refactor step X10a adds it, with nothing calling it yet;
-// X10b switches the boot stages to it.
+// os.LookupEnv. Refactor step X10a added it, and X10b switched the boot
+// stages to it: no stage reads the environment but through it.
 //
 // How an accessor matches today's code:
 //
@@ -37,6 +37,11 @@
 //   - Each FRONTEND_URL and PUBLIC_URL call site keeps an accessor of its
 //     own (quirk Q12), as do the server's UPLOADS_DIR and the reports' raw
 //     one.
+//
+// The helpers the accessors below name (users.SessionPolicyFromEnv,
+// notify.MailerFromEnv and the rest) are the ones the stages called before
+// X10b, which took them out of production code; oracle_test.go keeps each
+// as the oracle the tests hold its accessor to.
 //
 // Per-request reads stay per request (S8's per-request exemption; the
 // reports' UPLOADS_DIR read among them, whose parse UploadsDirRaw only
@@ -180,10 +185,18 @@ func (c *Config) onOff(name string, def bool) bool {
 
 // secret reads a credential exactly as set, never trimmed, warning once
 // when spaces or a line break sit around it, or def when it is unset or
-// empty: the server's envSecret, and notify's with an empty def.
+// empty: the server's envSecret.
 func (c *Config) secret(name, def string) string {
 	if v := envparse.Secret(name, c.getenv(name)); v != "" {
 		return v
 	}
 	return def
+}
+
+// credential reads a credential as secret does, but with no default: ""
+// when it is unset or empty. It is notify's envSecret, which had none, for
+// the mail and push channels' credentials (OPENV_SMTP_USER,
+// OPENV_SMTP_PASSWORD, OPENV_VAPID_PRIVATE_KEY).
+func (c *Config) credential(name string) string {
+	return envparse.Secret(name, c.getenv(name))
 }

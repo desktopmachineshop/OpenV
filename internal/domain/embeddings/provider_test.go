@@ -6,16 +6,16 @@ import (
 	"testing"
 )
 
-func TestProviderFromEnvDisabledByDefault(t *testing.T) {
+func TestNewProviderDisabledByDefault(t *testing.T) {
 	// No API key: cmd/server passes OPENV_EMBEDDING_API_KEY's value, empty
 	// when it is unset. A key of only spaces is no key either, as it always
 	// was, though a key is otherwise used exactly as set.
 	for _, key := range []string{"", "   ", "\n"} {
-		if ProviderFromEnv(key).Enabled() {
+		if NewProvider(key, "https://api.openai.com/v1", DefaultModel).Enabled() {
 			t.Fatalf("provider should be disabled with the API key %q", key)
 		}
 	}
-	p := ProviderFromEnv("")
+	p := NewProvider("", "https://api.openai.com/v1", DefaultModel)
 	// A disabled provider embeds nothing without error.
 	vecs, err := p.Embed([]string{"hello"})
 	if err != nil {
@@ -26,27 +26,16 @@ func TestProviderFromEnvDisabledByDefault(t *testing.T) {
 	}
 }
 
-func TestProviderFromEnvDefaults(t *testing.T) {
-	t.Setenv("OPENV_EMBEDDING_BASE_URL", "")
-	t.Setenv("OPENV_EMBEDDING_MODEL", "")
-	p := ProviderFromEnv("sk-test")
+// TestNewProviderTakesItsSettings: the base URL and model are what
+// cmd/server reads (internal/config's Embeddings tests the defaults and the
+// trimming).
+func TestNewProviderTakesItsSettings(t *testing.T) {
+	p := NewProvider("sk-test", "http://localhost:1234/v1", "custom-model")
 	if !p.Enabled() {
 		t.Fatal("provider should be enabled with an API key")
 	}
-	if p.Model() != DefaultModel {
-		t.Errorf("model = %q, want default %q", p.Model(), DefaultModel)
-	}
-	if p.baseURL != "https://api.openai.com/v1" {
-		t.Errorf("base URL default = %q", p.baseURL)
-	}
-}
-
-func TestProviderFromEnvOverrides(t *testing.T) {
-	t.Setenv("OPENV_EMBEDDING_BASE_URL", "http://localhost:1234/v1/")
-	t.Setenv("OPENV_EMBEDDING_MODEL", "custom-model")
-	p := ProviderFromEnv("sk-test")
 	if p.baseURL != "http://localhost:1234/v1" {
-		t.Errorf("base URL = %q, want trailing slash trimmed", p.baseURL)
+		t.Errorf("base URL = %q", p.baseURL)
 	}
 	if p.Model() != "custom-model" {
 		t.Errorf("model = %q", p.Model())
@@ -63,9 +52,7 @@ func TestProviderSendsTheKeyExactlyAsSet(t *testing.T) {
 		_, _ = w.Write([]byte(`{"data":[{"embedding":[0.5]}]}`))
 	}))
 	defer srv.Close()
-	t.Setenv("OPENV_EMBEDDING_BASE_URL", srv.URL)
-	t.Setenv("OPENV_EMBEDDING_MODEL", "")
-	p := ProviderFromEnv(" sk-test")
+	p := NewProvider(" sk-test", srv.URL, DefaultModel)
 	if !p.Enabled() {
 		t.Fatal("provider should be enabled with an API key")
 	}

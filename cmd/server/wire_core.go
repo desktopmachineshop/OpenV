@@ -34,7 +34,8 @@ func (a *app) core() {
 	// admin reindex endpoint backfills a project on demand. The store no-ops
 	// gracefully on a database where the vector extension was unavailable at
 	// migration time (see migration 0016).
-	embeddingProvider := embeddings.ProviderFromEnv(envSecret("OPENV_EMBEDDING_API_KEY", ""))
+	emb := a.env().Embeddings()
+	embeddingProvider := embeddings.NewProvider(emb.APIKey, emb.BaseURL, emb.Model)
 	embeddingStore := postgres.NewEmbeddingRepository(a.db)
 	a.embeddingService = embeddings.NewService(embeddingProvider, embeddingStore, a.artifactService)
 	a.artifactService.SetEmbeddingIndexer(a.embeddingService)

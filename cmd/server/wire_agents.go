@@ -40,8 +40,8 @@ func (a *app) agents() {
 	// attempt with backoff while attempts remain. OPENV_RUN_MAX_ATTEMPTS caps
 	// the chain (default 3); OPENV_RUN_AUTO_RETRY=false (or a cap of 1) opts
 	// out and the failure simply stands.
-	maxAttempts := envInt("OPENV_RUN_MAX_ATTEMPTS", agentruns.DefaultMaxAttempts)
-	autoRetry := envBool("OPENV_RUN_AUTO_RETRY", true)
+	maxAttempts := a.env().RunMaxAttempts()
+	autoRetry := a.env().RunAutoRetry()
 	a.runService.SetRetryPolicy(maxAttempts, autoRetry)
 	a.automationService = automations.NewDefaultService(a.automationRepo)
 	a.repoConnService = repoconns.NewDefaultService(a.repoConnRepo)

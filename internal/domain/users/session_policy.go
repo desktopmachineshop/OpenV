@@ -7,13 +7,7 @@ package users
 // the requirement sets, because a stolen cookie's value is exactly how long
 // it stays usable.
 
-import (
-	"log/slog"
-	"os"
-	"strings"
-	"sync"
-	"time"
-)
+import "time"
 
 // Session lifetime bounds and defaults.
 const (
@@ -27,14 +21,14 @@ const (
 	// last_seen_at. Idle expiry has day granularity, so a write per request
 	// buys nothing and costs one UPDATE on every authenticated call.
 	SessionTouchInterval = time.Minute
-
-	envSessionMaxAge = "OPENV_SESSION_MAX_AGE"
-	envSessionIdle   = "OPENV_SESSION_IDLE"
 )
 
-// SessionPolicy is the deployment's session lifetime configuration. The zero
-// value means the defaults, so a service that was never configured behaves
-// exactly as it did before the policy existed.
+// SessionPolicy is the deployment's session lifetime configuration, which
+// cmd/server reads from OPENV_SESSION_MAX_AGE and OPENV_SESSION_IDLE (Go
+// durations, each falling back to its default, which is also its ceiling:
+// internal/config's SessionPolicy). The zero value means the defaults, so a
+// service that was never configured behaves exactly as it did before the
+// policy existed.
 type SessionPolicy struct {
 	// MaxAge is the absolute lifetime, measured from session creation.
 	MaxAge time.Duration
@@ -54,54 +48,4 @@ func (p SessionPolicy) Normalized() SessionPolicy {
 		p.Idle = DefaultSessionIdle
 	}
 	return p
-}
-
-// SessionPolicyFromEnv reads OPENV_SESSION_MAX_AGE and OPENV_SESSION_IDLE
-// (Go duration strings, e.g. "12h", "45m"). Anything unparseable or out of
-// range falls back to the default, and a value above the ceiling is clamped;
-// each of those decisions logs one line, once per variable and value, so an
-// operator who typed "30d" — not a Go duration — sees why their sessions
-// still last 30 days.
-func SessionPolicyFromEnv() SessionPolicy {
-	p := SessionPolicy{
-		MaxAge: envDuration(envSessionMaxAge, DefaultSessionMaxAge),
-		Idle:   envDuration(envSessionIdle, DefaultSessionIdle),
-	}
-	slog.Info("session lifetime", "max_age", p.MaxAge, "idle", p.Idle)
-	return p
-}
-
-// envDuration parses one duration variable, clamping it to max.
-func envDuration(name string, max time.Duration) time.Duration {
-	raw := strings.TrimSpace(os.Getenv(name))
-	if raw == "" {
-		return max
-	}
-	d, err := time.ParseDuration(raw)
-	if err != nil || d <= 0 {
-		warnLifetimeOnce(name, raw, "session lifetime: ignoring unusable value", max)
-		return max
-	}
-	if d > max {
-		warnLifetimeOnce(name, raw, "session lifetime: value above the ceiling, clamping", max)
-		return max
-	}
-	return d
-}
-
-// warnedLifetimes holds the variable and value pairs already warned about,
-// so that a session lifetime read more than once warns once, as
-// internal/envparse's settings do; K7 keeps this domain package from
-// importing it.
-var warnedLifetimes sync.Map
-
-// warnLifetimeOnce logs msg, once per variable and value, with the variable
-// and the duration that applies instead. The value is left out on purpose:
-// a secret pasted into the wrong variable must not reach the log (#379, bug
-// 222).
-func warnLifetimeOnce(name, raw, msg string, using time.Duration) {
-	if _, seen := warnedLifetimes.LoadOrStore(name+"\x00"+raw, true); seen {
-		return
-	}
-	slog.Warn(msg, "var", name, "using", using)
 }

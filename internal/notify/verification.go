@@ -1,21 +1,18 @@
 package notify
 
 // Email verification for sign-ups (SEC-15 / REQ-95). The users domain owns
-// the tokens; this file owns what the deployment can do with them: decide
-// whether verification is enforced at all, build the link a person clicks,
-// render the mail, and send it with a bound on how long a request waits.
+// the tokens; this file owns what the deployment can do with them: build
+// the link a person clicks, render the mail, and send it with a bound on how
+// long a request waits. Whether verification is enforced at all is
+// cmd/server's to decide at boot (internal/config's EmailVerification).
 
 import (
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
-	"os"
 	"strings"
 	"time"
-
-	"github.com/openv/requirements-platform/internal/domain/users"
-	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // VerificationSendTimeout bounds a send made on a request path. net/smtp
@@ -26,26 +23,6 @@ const VerificationSendTimeout = 10 * time.Second
 // ErrSendTimeout is returned by SendWithTimeout when the mailer did not
 // answer in time. The message may still have been delivered.
 var ErrSendTimeout = errors.New("email: send timed out")
-
-// VerificationPolicyFromEnv decides whether password accounts must verify
-// their address: on iff the mailer can send and OPENV_EMAIL_VERIFICATION is
-// not "off". It logs one line naming the state, so an operator reading the
-// boot log knows whether their users are about to meet the wall, and a
-// warning before it for a value other than off, which leaves verification
-// as it would be unset (#379, bug 225).
-func VerificationPolicyFromEnv(m Mailer) users.EmailVerificationPolicy {
-	switch {
-	case envparse.Off("OPENV_EMAIL_VERIFICATION", os.Getenv("OPENV_EMAIL_VERIFICATION")):
-		slog.Info("email verification: disabled (OPENV_EMAIL_VERIFICATION=off)")
-		return users.EmailVerificationPolicy{}
-	case m == nil || !m.Enabled():
-		slog.Info("email verification: disabled (no OPENV_SMTP_HOST; accounts are verified at sign-up)")
-		return users.EmailVerificationPolicy{}
-	default:
-		slog.Info("email verification: required for password accounts (SMTP configured; set OPENV_EMAIL_VERIFICATION=off to disable)")
-		return users.EmailVerificationPolicy{Required: true}
-	}
-}
 
 // VerificationLink is the URL in the email: the frontend's verify page with
 // the raw token as a query parameter.

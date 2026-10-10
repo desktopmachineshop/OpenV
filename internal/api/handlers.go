@@ -126,8 +126,8 @@ type HandlerDeps struct {
 	SecureCookies    bool
 	// Mailer sends the sign-up verification email; nil or disabled means the
 	// feature is inert. EmailLinkBase is the frontend origin the emailed link
-	// points at; EmailVerification is the deployment's policy (see
-	// notify.VerificationPolicyFromEnv).
+	// points at; EmailVerification is the deployment's policy (stage notify
+	// reads it, internal/config's EmailVerification).
 	Mailer            notify.Mailer
 	EmailLinkBase     string
 	EmailVerification users.EmailVerificationPolicy
@@ -140,8 +140,9 @@ type HandlerDeps struct {
 	// MinutesAlerts tells workspace admins when leased cloud-runner minutes
 	// near or reach the month's allowance; nil means no alerts.
 	MinutesAlerts *notify.MinutesMonitor
-	// Registration is the deployment's sign-up policy ("open" or "closed",
-	// see RegistrationPolicyFromEnv); empty means open.
+	// Registration is the deployment's sign-up policy (RegistrationOpen or
+	// RegistrationClosed, which stage notify reads from OPENV_REGISTRATION);
+	// empty means open.
 	Registration string
 	// SessionPolicy must be the policy the user service was given, so the
 	// session cookie and the server agree on when a session ends (REQ-99).
@@ -155,6 +156,10 @@ type HandlerDeps struct {
 	// browsers still accept. Safari still refuses them, so prefer serving the
 	// API on the frontend's origin (docs/railway.md) and leave this off.
 	CrossSiteCookies bool
+	// RateLimits are the token buckets' settings (ratelimit.go), which stage
+	// handlers reads last, where NewHandler read them before refactor step
+	// X10b; a zero field is that bucket's default.
+	RateLimits RateLimits
 }
 
 // Handler holds references to domain services
@@ -215,19 +220,19 @@ func NewHandler(deps HandlerDeps) *Handler {
 		frontendURL:            strings.TrimRight(deps.FrontendURL, "/"),
 		secureCookies:          secureCookies,
 		cookieSameSite:         cookieSameSite,
-		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
-		interviewIPLimiter:     newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
-		interviewStreamLimiter: newRateLimiterFromEnv(envInterviewStreamBurst, envInterviewStreamRefill, defaultInterviewStreamBurst, defaultInterviewStreamRefill),
-		authIPLimiter:          newRateLimiterFromEnv(envAuthIPBurst, envAuthIPRefill, defaultAuthIPBurst, defaultAuthIPRefill),
-		authAccountLimiter:     newRateLimiterFromEnv(envAuthAccountBurst, envAuthAccountRefill, defaultAuthAccountBurst, defaultAuthAccountRefill),
-		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
-		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
-		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
-		passwordResetLimiter:   newRateLimiterFromEnv(envPasswordResetBurst, envPasswordResetRefill, defaultPasswordResetBurst, defaultPasswordResetRefill),
-		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
-		billingRefreshLimiter:  newRateLimiterFromEnv(envBillingRefreshBurst, envBillingRefreshRefill, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
-		billingWriteLimiter:    newRateLimiterFromEnv(envBillingWriteBurst, envBillingWriteRefill, defaultBillingWriteBurst, defaultBillingWriteRefill),
-		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
+		interviewMsgLimiter:    newRateLimiterOr(deps.RateLimits.InterviewMsg, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
+		interviewIPLimiter:     newRateLimiterOr(deps.RateLimits.InterviewIP, defaultInterviewIPBurst, defaultInterviewIPRefill),
+		interviewStreamLimiter: newRateLimiterOr(deps.RateLimits.InterviewStream, defaultInterviewStreamBurst, defaultInterviewStreamRefill),
+		authIPLimiter:          newRateLimiterOr(deps.RateLimits.AuthIP, defaultAuthIPBurst, defaultAuthIPRefill),
+		authAccountLimiter:     newRateLimiterOr(deps.RateLimits.AuthAccount, defaultAuthAccountBurst, defaultAuthAccountRefill),
+		registerIPLimiter:      newRateLimiterOr(deps.RateLimits.RegisterIP, defaultRegisterIPBurst, defaultRegisterIPRefill),
+		ssoIPLimiter:           newRateLimiterOr(deps.RateLimits.SSOIP, defaultSSOIPBurst, defaultSSOIPRefill),
+		verifyResendLimiter:    newRateLimiterOr(deps.RateLimits.VerifyResend, defaultVerifyResendBurst, defaultVerifyResendRefill),
+		passwordResetLimiter:   newRateLimiterOr(deps.RateLimits.PasswordReset, defaultPasswordResetBurst, defaultPasswordResetRefill),
+		invitePreviewLimiter:   newRateLimiterOr(deps.RateLimits.InvitePreview, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
+		billingRefreshLimiter:  newRateLimiterOr(deps.RateLimits.BillingRefresh, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
+		billingWriteLimiter:    newRateLimiterOr(deps.RateLimits.BillingWrite, defaultBillingWriteBurst, defaultBillingWriteRefill),
+		inviteLimiter:          newRateLimiterOr(deps.RateLimits.Invite, defaultInviteBurst, defaultInviteRefill),
 	}
 	h.HandlerDeps = deps
 	if h.BillingService != nil {
