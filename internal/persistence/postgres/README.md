@@ -19,13 +19,15 @@ long form. `go run ./internal/tools/areas which <path>` names a file's area.
 | runner-fleet | `hosted_worker_*.go`, `runner_session_*.go`, `worker_key_*.go` |
 | events-notifications | `event_*.go`, `notification_*.go`, `push_subscription_*.go` |
 | community | `shared_product_*.go`, `sharelink_*.go` |
-| platform-http | `connstring*.go`, `db*.go`, `ids*.go`, `migrat*.go`, `release_*.go`, `schema_*.go`, `timestamptz*.go`, `testdata/**`, `*.md` |
+| platform-http | `connstring*.go`, `db*.go`, `ids*.go`, `migrat*.go`, `nulls*.go`, `pgkit*.go`, `release_*.go`, `schema_*.go`, `timestamptz*.go`, `testdata/**`, `*.md` |
 
 ## Map
 
 | Glob | What it holds |
 |---|---|
 | `*_repository*.go` | one repository per domain `Repository` interface, built by `New<Name>Repository(db)`; a large one is split by concern (`org_repository_*.go`) |
+| `pgkit.go` | the persistence kit (X13): `rowScanner`, what a scan function reads a row from, and `withTx`, which runs a function in a transaction, commits when it returns nil and rolls back on an error or a panic, with no timeout of its own |
+| `nulls.go` | the NULL-argument helpers: `nullString`, `nullInt`, `nullableString` and `nullUUID` |
 | `db.go`, `connstring.go` | `Connect` and the connection string (`DATABASE_URL`, else the quoted `DB_*` parts) |
 | `db_stored_files.go`, `db_boot_tasks.go` | the stored files a delete answers (`storedFiles`) and every path, workspace and account the database names (`ReadStoredFileNames`); `RunBootTaskOnce`, a boot's once-per-database task under the boot lock (`boot_tasks`) |
 | `schema_*.go` and `InitSchema` in `db.go` | migration 0001, the baseline re-run on every boot; frozen |
@@ -77,11 +79,12 @@ throwaway server. Without it they skip, and the layout tests still run.
 Scaffold: `go run ./internal/tools/scaffold migration <name>`
 
 **Add a field to an entity.** The migration above, then every SELECT,
-INSERT and Scan of the repository that reads the table (there is no shared
-column list until X13), the domain type, and the import mapping in
-`internal/domain/exports` if an import should carry it: `TestImportFields`
-fails until `import_fields.txt` marks the field carried or dropped (see
-`internal/domain/README.md`). The repository edit has no scaffold.
+INSERT and Scan of the repository that reads the table (the artifact
+repository has them once, as `artifactColumns` and `scanArtifact`; the others
+get a columns const and a scan function as X13 reaches them), the domain
+type, and the import mapping in `internal/domain/exports` if an import should
+carry it: `TestImportFields` fails until `import_fields.txt` marks the field
+carried or dropped (see `internal/domain/README.md`). The repository edit has no scaffold.
 
 **Add a repository.** Implement the domain package's `Repository` in a new
 `<name>_repository.go` with `New<Name>Repository(db *sql.DB)`, build it in
