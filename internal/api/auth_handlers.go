@@ -102,7 +102,7 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 	if h.OIDC.Enabled() {
 		resp["oidc_provider_name"] = h.OIDC.displayName()
 	}
-	json.NewEncoder(w).Encode(resp)
+	writeJSONBare(w, resp)
 }
 
 // AuthPolicy is the narrow public answer to "can I sign myself up here?".
@@ -113,7 +113,7 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 // and the change-password form state the length the server will actually
 // enforce instead of a copy of it that can drift.
 func (h *Handler) AuthPolicy(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSONBare(w, map[string]any{
 		"registration":        h.registrationPolicy(),
 		"min_password_length": users.MinPasswordLength,
 	})
@@ -197,8 +197,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		// membership here: holding it proves the invited mailbox was read.
 		InviteToken string `json:"invite_token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if ok, retryAfter := h.registerIPLimiter.allow(clientIP(r)); !ok {
@@ -247,7 +246,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if h.EmailVerification.Required && !user.EmailVerified {
 		h.sendVerificationAsync(user, user.Email)
 	}
-	json.NewEncoder(w).Encode(registerResponse{User: user, Invitation: outcome})
+	writeJSONBare(w, registerResponse{User: user, Invitation: outcome})
 }
 
 // verifiedByInvitation marks the new account's address verified when an
@@ -283,8 +282,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// Every attempt charges the client address; only a failure charges the
@@ -307,7 +305,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setSessionCookie(w, token)
-	json.NewEncoder(w).Encode(user)
+	writeJSONBare(w, user)
 }
 
 // accountKey normalises an email into the key its failed sign-ins are
@@ -360,7 +358,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
-	json.NewEncoder(w).Encode(user)
+	writeJSONBare(w, user)
 }
 
 // GoogleLogin redirects to Google's consent screen.
@@ -490,7 +488,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	json.NewEncoder(w).Encode(out)
+	writeJSONBare(w, out)
 }
 
 // ListProjectMembers returns a project's members.
@@ -504,7 +502,7 @@ func (h *Handler) ListProjectMembers(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list project members", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // AddProjectMember invites an existing user by email.
@@ -517,8 +515,7 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 		Role  string `json:"role"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	user, err := h.UserService.FindByEmail(req.Email)
@@ -559,8 +556,7 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Role string `json:"role"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	previous, _ := h.MemberService.RoleFor(projectID, vars["userId"])

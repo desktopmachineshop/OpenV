@@ -6,7 +6,6 @@ package api
 // one — and whatever it opened — is no longer trusted.
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -32,8 +31,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		CurrentPassword string `json:"current_password"`
 		NewPassword     string `json:"new_password"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A wrong current password is a credential guess like any other, so it

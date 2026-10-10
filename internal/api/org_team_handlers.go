@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -28,7 +27,7 @@ func (h *Handler) ListOrgTeams(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list teams", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +43,7 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	team, err := h.OrgTeamService.CreateTeam(orgID, req.Name, req.Description, CurrentUserID(r))
@@ -53,8 +51,7 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(team)
+	writeJSONBareStatus(w, http.StatusCreated, team)
 }
 
 // orgTeamChecked loads a people-team and enforces the caller's org role.
@@ -79,8 +76,7 @@ func (h *Handler) UpdateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		Name        *string `json:"name"`
 		Description *string `json:"description"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.OrgTeamService.UpdateTeam(team.ID, req.Name, req.Description)
@@ -88,7 +84,7 @@ func (h *Handler) UpdateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) DeleteOrgTeam(w http.ResponseWriter, r *http.Request) {

@@ -11,7 +11,6 @@ package api
 // one.
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -39,8 +38,7 @@ func (h *Handler) GetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(defaultWorkspace{OrgID: user.DefaultOrgID})
+	writeJSONOK(w, defaultWorkspace{OrgID: user.DefaultOrgID})
 }
 
 // SetDefaultWorkspace records the caller's choice: a workspace they belong
@@ -53,8 +51,7 @@ func (h *Handler) SetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req defaultWorkspace
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	orgID := strings.TrimSpace(req.OrgID)
@@ -88,6 +85,5 @@ func (h *Handler) SetDefaultWorkspace(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to save the default workspace", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(defaultWorkspace{OrgID: orgID})
+	writeJSONOK(w, defaultWorkspace{OrgID: orgID})
 }

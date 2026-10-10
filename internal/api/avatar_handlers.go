@@ -10,7 +10,6 @@ package api
 // account with no picture.
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -110,7 +109,7 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "Failed to save picture", err)
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 // GetUserAvatar serves an account's uploaded picture to whoever may know of
@@ -174,5 +173,5 @@ func (h *Handler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "Failed to remove picture", err)
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }

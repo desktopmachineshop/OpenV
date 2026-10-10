@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -27,7 +26,7 @@ func (h *Handler) ListProjectTeamAccess(w http.ResponseWriter, r *http.Request) 
 		respondInternal(w, r, "failed to list team grants", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // GrantProjectTeamAccess grants (or updates) a team's role on a project.
@@ -40,8 +39,7 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		OrgTeamID string `json:"org_team_id"`
 		Role      string `json:"role"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// The team must live in the project's org.

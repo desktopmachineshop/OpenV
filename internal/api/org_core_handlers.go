@@ -38,7 +38,7 @@ func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list workspaces", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"orgs":       list,
 		"active_org": ActiveOrg(r),
 	})
@@ -68,7 +68,7 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 	// A paid workspace stops being billed when its paid period ends, not
 	// before: a restore inside the grace period takes this back.
 	h.BillingService.OnWorkspaceDeleted(r.Context(), org)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"deleted_at":  org.DeletedAt,
 		"purge_after": org.DeletedAt.Add(orgs.DeletionGraceDays * 24 * time.Hour),
 	})
@@ -88,8 +88,7 @@ func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Plan string `json:"plan"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	org, err := h.OrgService.SetPlan(mux.Vars(r)["id"], req.Plan)
@@ -108,8 +107,7 @@ func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(org)
+	writeJSONOK(w, org)
 }
 
 // RestoreOrg brings a soft-deleted workspace back within the grace period.
@@ -151,7 +149,7 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.BillingService.OnWorkspaceRestored(r.Context(), org)
-	json.NewEncoder(w).Encode(org)
+	writeJSONBare(w, org)
 }
 
 // CreateOrg creates a company workspace with the caller as admin.
@@ -163,8 +161,7 @@ func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if err := h.checkSharedWorkspaceCount(user.ID); err != nil {
@@ -186,8 +183,7 @@ func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(org)
+	writeJSONBareStatus(w, http.StatusCreated, org)
 }
 
 // GetOrg returns a workspace the caller belongs to.
@@ -201,7 +197,7 @@ func (h *Handler) GetOrg(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
 	}
-	json.NewEncoder(w).Encode(org)
+	writeJSONBare(w, org)
 }
 
 // UpdateOrg renames a workspace and/or sets its monthly spend budget (admin).
@@ -225,8 +221,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		// clears it so they turn on at the cut. Company plans only.
 		UpgradeWindow json.RawMessage `json:"upgrade_window"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	update, ok := h.checkOrgUpdate(w, orgID, req.MonthlyBudgetUSD, req.ReleaseChannel, req.UpgradeWindow)
@@ -278,7 +273,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(org)
+	writeJSONBare(w, org)
 }
 
 // orgUpdate is what a workspace update sets beside the name, as

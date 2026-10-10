@@ -17,7 +17,6 @@ package api
 // open; the admin one sits behind it like the rest of platform admin.
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -48,8 +47,7 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email string `json:"email"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	email := users.NormalizeEmail(req.Email)
@@ -76,8 +74,7 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 
 	go h.sendPasswordResetFor(email)
 
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]string{"sent_to": email})
+	writeJSONBareStatus(w, http.StatusAccepted, map[string]string{"sent_to": email})
 }
 
 // sendPasswordResetFor does the lookup, mint and send for RequestPasswordReset
@@ -115,8 +112,7 @@ func (h *Handler) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
 		Token       string `json:"token"`
 		NewPassword string `json:"new_password"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A 256-bit token is not guessable; this only bounds how fast one
@@ -163,8 +159,7 @@ func (h *Handler) AdminIssuePasswordReset(w http.ResponseWriter, r *http.Request
 		return
 	}
 	slog.Info("password reset: link minted by a platform admin", "admin_id", caller.ID, "user_id", id, "expires_at", expires.UTC().Format(time.RFC3339))
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSONOK(w, map[string]any{
 		"link":       notify.PasswordResetLink(h.EmailLinkBase, token),
 		"expires_at": expires.UTC().Format(time.RFC3339),
 	})
