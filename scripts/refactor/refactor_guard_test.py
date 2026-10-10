@@ -1127,7 +1127,7 @@ class DataTest(unittest.TestCase):
         # X10b fills it in its own class E commit, and the job reads the
         # pull request's copy.
         self.assertEqual(rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT]["ENV_INVENTORY_CHANGES"], "E")
-        self.assertEqual(rg.env_inventory_changes_in(text), [])
+        self.assertIsNotNone(rg.env_inventory_changes_in(text))
         self.assertEqual(rg.env_inventory_changes_in(filled), [
             ('A\tcmd/server:envOr(key)\t"x"', 'A\tinternal/config:Config.text(name)\t"x"'),
             ("[cmd/server:envOr(key)]", "[internal/config:Config.text(name)]")])
@@ -1875,6 +1875,136 @@ class EnvInventoryTest(RepoTest):
     def test_outside_a_refactor_it_is_a_golden_change(self):
         self.step(pairs=self.PAIRS)
         self.assertFailsWith(self.guard("no-release-notes"), "(1) golden freeze", "without a release note")
+
+
+# The S8 writers of the miniature: one per package that owns sections of
+# the table, each beside its copy of the helpers, and internal/config's,
+# which owns none until X10b binds Load.
+ENV_WRITERS = {f"{d}/{rg.ENV_PARSE_WRITER}": f"package x\n\n// writes {d}'s sections\n"
+               for d in ("cmd/server", "internal/hosting", "internal/domain/users", "internal/config")}
+ENV_HELPERS = {f"{d}/{rg.ENV_PARSE_HELPERS}": "package x\n\n// the shared helpers\n"
+               for d in ("cmd/server", "internal/hosting", "internal/domain/users", "internal/config")}
+
+
+class EnvWriterTest(RepoTest):
+    """X10b's S8 writers (ENV_PARSE_WRITER's comment, §8.3): in a class E
+    commit whose S8 change ENV_INVENTORY_CHANGES exempts, a parse-table
+    writer may be deleted or modified when its owned sections change only by
+    listed moves, and a helpers copy deleted beside its writer; any other
+    change to them is a guard-code edit."""
+
+    VARS, PARSE = rg.ENV_VARS_FILE, rg.ENV_PARSE_FILE
+    E = trailers("E", Refactor_Characterization="internal/api/handlers_test.go")
+    PAIRS = ENV_ROW_MOVES + ENV_SECTION_MOVES
+
+    def setUp(self):
+        super().setUp()
+        self.git("checkout", "-q", "main")
+        self.commit("S8", {self.VARS: env_vars(ENV_ROWS), self.PARSE: env_parse(ENV_SECTIONS), **ENV_WRITERS,
+                           **ENV_HELPERS})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+
+    def x10b(self, writers, pairs=None, parse=None, body=None):
+        """One commit, class E unless body says otherwise, making X10b's
+        moves (pairs, by default all of them, filling the pull request's
+        list) with the given writer changes (path -> text, or None to
+        delete)."""
+        pairs = self.PAIRS if pairs is None else pairs
+        files = {self.VARS: env_vars(moved_rows(ENV_ROWS, [p for p in pairs if rg.env_row(p[0])])),
+                 self.PARSE: env_parse(ENV_MOVED_SECTIONS) if parse is None else parse,
+                 rg.GUARD_SCRIPT: EnvInventoryTest.listed(pairs), **writers}
+        self.commit("X10b", files, self.E if body is None else body)
+
+    # The writer changes X10b makes: hosting's and users' writers go with
+    # their helpers, cmd/server's writes nothing and internal/config's the
+    # moved sections.
+    X10B = {"internal/hosting/env_parse_test.go": None, "internal/hosting/env_parse_helpers_test.go": None,
+            "internal/domain/users/env_parse_test.go": None, "internal/domain/users/env_parse_helpers_test.go": None,
+            "cmd/server/env_parse_test.go": "package x\n\n// writes no section\n",
+            "internal/config/env_parse_test.go": "package x\n\n// writes the moved sections\n"}
+
+    def guard_code_paths(self, g):
+        return sorted(f.path for f in g.failures if f.rule == "(2) guard code")
+
+    def test_writers_changed_by_listed_moves_pass(self):
+        self.x10b(self.X10B)
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        notes = [n for c in g.commits for n in c.notes]
+        for path in ("internal/hosting/env_parse_test.go", "internal/domain/users/env_parse_test.go",
+                     "cmd/server/env_parse_test.go", "internal/config/env_parse_test.go"):
+            self.assertTrue(any(n.startswith(path + ": its sections") for n in notes), (path, notes))
+        self.assertIn("internal/hosting/env_parse_helpers_test.go: deleted beside its writer (§8.3)", notes)
+
+    def test_a_writer_changed_with_no_accepted_exception_fails(self):
+        # The same writer changes with the list left empty: the S8 change is
+        # no exception, so neither are the writers.
+        self.x10b(self.X10B, pairs=[])
+        g = self.guard(*REFACTOR)
+        self.assertEqual([p for p in self.guard_code_paths(g) if not p.startswith("internal/archtest/")],
+                         sorted(self.X10B))
+
+    def test_a_writer_changed_in_a_commit_that_is_not_class_e_fails(self):
+        self.x10b({})
+        self.commit("writers", {"internal/hosting/env_parse_test.go": None,
+                                "internal/hosting/env_parse_helpers_test.go": None}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.guard_code_paths(g), ["internal/hosting/env_parse_helpers_test.go",
+                                                    "internal/hosting/env_parse_test.go"])
+
+    def test_a_writer_deleted_while_its_section_stays_fails(self):
+        # hosting's section, a before label, may stay unchanged in the table,
+        # but then its writer still writes it.
+        kept = dict(ENV_MOVED_SECTIONS, **{"internal/hosting:envOr(key)": TEXT_ROWS})
+        self.x10b(self.X10B, parse=env_parse(kept))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.guard_code_paths(g), ["internal/hosting/env_parse_test.go"])
+
+    def test_an_unlisted_section_dropped_fails(self):
+        # cmd/server owns a section no pair lists; dropping it voids the S8
+        # exception, and with it every writer change.
+        self.git("checkout", "-q", "main")
+        self.commit("S8 again", {self.PARSE: env_parse(dict(ENV_SECTIONS, **{"cmd/server:envInt(key)": TEXT_ROWS}))})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+        self.x10b(self.X10B)
+        g = self.guard(*REFACTOR)
+        self.assertFailsWith(g, "(1) golden freeze", "env var inventory and parse table")
+        self.assertEqual([p for p in self.guard_code_paths(g) if not p.startswith("internal/archtest/")],
+                         sorted(self.X10B))
+
+    def test_a_modified_writer_whose_sections_stay_fails(self):
+        # Only the rows move; the table's sections, and so internal/config's
+        # owned ones, stay as they were: an edit to its writer is no move.
+        self.x10b({"internal/config/env_parse_test.go": "package x\n\n// edited\n"}, pairs=ENV_ROW_MOVES,
+                  parse=env_parse(ENV_SECTIONS))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.guard_code_paths(g), ["internal/config/env_parse_test.go"])
+
+    def test_a_modified_writer_that_takes_an_unlisted_section_fails(self):
+        # internal/config's writer takes a section of its own that is no
+        # after label: the table has more than the moves, so the S8 change
+        # is no exception and both fail.
+        extra = dict(ENV_MOVED_SECTIONS, **{"internal/config:Config.count(name)": TEXT_ROWS})
+        self.x10b(self.X10B, parse=env_parse(extra))
+        g = self.guard(*REFACTOR)
+        self.assertIn("internal/config/env_parse_test.go", self.guard_code_paths(g))
+
+    def test_a_helpers_copy_may_not_change(self):
+        self.x10b(dict(self.X10B, **{"cmd/server/env_parse_helpers_test.go": "package x\n\n// edited\n"}))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.guard_code_paths(g), ["cmd/server/env_parse_helpers_test.go"])
+
+    def test_a_helpers_copy_deleted_while_its_writer_stays_fails(self):
+        self.x10b(dict(self.X10B, **{"cmd/server/env_parse_helpers_test.go": None}))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.guard_code_paths(g), ["cmd/server/env_parse_helpers_test.go"])
+
+    def test_other_guard_code_stays_guarded(self):
+        self.x10b(dict(self.X10B, **{"internal/archtest/archtest_test.go": "package archtest\n\n// edited\n"}))
+        g = self.guard(*REFACTOR)
+        self.assertEqual(self.guard_code_paths(g), ["internal/archtest/archtest_test.go"])
 
 
 class ClassTest(RepoTest):

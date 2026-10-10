@@ -244,7 +244,13 @@ read-column moves of S8's `internal/archtest/testdata/env_vars.txt` and
 `env_parse.txt` (plan §8.3): each listed row keeps its variable and default
 and moves its read into an `internal/config` getter, each listed section
 label moves to that getter's section with its rows unchanged, and nothing
-else in either file changes.
+else in either file changes. In the class E commits of such a pull request, S8's
+parse-table writers (`env_parse_test.go`, guard code) may change as far as
+those moves need: a writer whose sections of `env_parse.txt` all move away
+may be deleted, with its `env_parse_helpers_test.go`, and a writer may be
+edited when the sections it owns change only by listed moves (the ones it
+loses before labels, the ones it gains after labels); any other edit to them
+stays a guard-code edit.
 
 The job judges a pull request with the **base's** copy of
 `refactor_guard.py` (its *Script self-test* step tests the pull request's

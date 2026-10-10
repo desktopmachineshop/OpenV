@@ -7,16 +7,16 @@ import (
 
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/billing"
-	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/envparse"
-	"github.com/openv/requirements-platform/internal/hosting"
 	"github.com/openv/requirements-platform/internal/notify"
 )
 
 // These tests hold each accessor that stands for a helper of another
-// package to that helper as it is today: the helper reads the process
+// package to that helper as it was before refactor step X10b took it out of
+// production code (its copy in oracle_test.go, which oracle_twin_test.go
+// proves the same while the helper exists): the helper reads the process
 // environment, set with t.Setenv, and the accessor a Config loaded from it,
 // and the two must return the same value and, where the accessor logs what
 // the helper logs, the same lines. The warnings logged once per variable and
@@ -54,7 +54,7 @@ func TestSessionPolicyIsUsers(t *testing.T) {
 			setEnv(t, "OPENV_SESSION_MAX_AGE", true, "")
 			setEnv(t, "OPENV_SESSION_IDLE", true, "")
 			setEnv(t, name, in.unset, in.input)
-			want, got, wantLog, gotLog := both(t, users.SessionPolicyFromEnv, (*Config).SessionPolicy)
+			want, got, wantLog, gotLog := both(t, oracleSessionPolicyFromEnv, (*Config).SessionPolicy)
 			if got != want || gotLog != wantLog {
 				t.Errorf("%s=%s: SessionPolicy() = %+v, logging\n%s\nusers.SessionPolicyFromEnv() = %+v, logging\n%s", name, in.shown, got, gotLog, want, wantLog)
 			}
@@ -69,7 +69,7 @@ func TestRegistrationIsAPIs(t *testing.T) {
 	}
 	for _, in := range inputs("open", "closed", " Closed ", "CLOSED", "OPEN", "invite", "closed\n") {
 		setEnv(t, "OPENV_REGISTRATION", in.unset, in.input)
-		want, got, wantLog, gotLog := both(t, api.RegistrationPolicyFromEnv, (*Config).Registration)
+		want, got, wantLog, gotLog := both(t, oracleRegistrationPolicyFromEnv, (*Config).Registration)
 		if got != want || gotLog != wantLog {
 			t.Errorf("OPENV_REGISTRATION=%s: Registration() = %q, logging\n%s\napi.RegistrationPolicyFromEnv() = %q, logging\n%s", in.shown, got, gotLog, want, wantLog)
 		}
@@ -78,16 +78,15 @@ func TestRegistrationIsAPIs(t *testing.T) {
 
 func TestEmailVerificationIsNotifys(t *testing.T) {
 	quietLog(t)
-	t.Setenv("OPENV_SMTP_HOST", "smtp.example.test")
-	on := notify.MailerFromEnv()
-	t.Setenv("OPENV_SMTP_HOST", "")
-	off := notify.MailerFromEnv()
-	mailers := map[string]notify.Mailer{"nil": nil, "a nil *SMTPMailer": (*notify.SMTPMailer)(nil), "SMTP on": on, "SMTP off": off}
+	// What EmailVerification asks of the mailer is whether it can send: a
+	// mailer that can, and an SMTP mailer with no host, which cannot.
+	mailers := map[string]notify.Mailer{"nil": nil, "a nil *SMTPMailer": (*notify.SMTPMailer)(nil),
+		"SMTP on": enabledMailer{}, "SMTP off": &notify.SMTPMailer{}}
 	for mname, m := range mailers {
 		for _, in := range inputs("off", " OFF ", "Off", "on", "no") {
 			setEnv(t, "OPENV_EMAIL_VERIFICATION", in.unset, in.input)
 			want, got, wantLog, gotLog := both(t,
-				func() users.EmailVerificationPolicy { return notify.VerificationPolicyFromEnv(m) },
+				func() users.EmailVerificationPolicy { return oracleVerificationPolicyFromEnv(m) },
 				func(c *Config) users.EmailVerificationPolicy { return c.EmailVerification(m) })
 			if got != want || gotLog != wantLog {
 				t.Errorf("%s, OPENV_EMAIL_VERIFICATION=%s: EmailVerification() = %+v, logging\n%s\nnotify.VerificationPolicyFromEnv() = %+v, logging\n%s",
@@ -108,7 +107,7 @@ func TestVAPIDIsNotifys(t *testing.T) {
 				setEnv(t, "OPENV_VAPID_PUBLIC_KEY", pub.unset, pub.input)
 				setEnv(t, "OPENV_VAPID_PRIVATE_KEY", priv.unset, priv.input)
 				setEnv(t, "OPENV_VAPID_SUBJECT", sub.unset, sub.input)
-				want, got, wantLog, gotLog := both(t, notify.VAPIDFromEnv, (*Config).VAPID)
+				want, got, wantLog, gotLog := both(t, oracleVAPIDFromEnv, (*Config).VAPID)
 				if got != want || gotLog != wantLog {
 					t.Errorf("public %+v, private %+v, subject %+v: VAPID() = %+v, logging\n%s\nnotify.VAPIDFromEnv() = %+v, logging\n%s",
 						pub, priv, sub, got, gotLog, want, wantLog)
@@ -125,21 +124,13 @@ func TestNotificationTypesAreNotifys(t *testing.T) {
 		setEnv(t, "OPENV_EMAIL_NOTIFICATION_TYPES", in.unset, in.input)
 		setEnv(t, "OPENV_PUSH_NOTIFICATION_TYPES", in.unset, in.input)
 		c := Load(os.LookupEnv)
-		if got, want := c.EmailTypes(), notify.EmailTypesFromEnv(); !reflect.DeepEqual(got, want) {
+		if got, want := c.EmailTypes(), oracleEmailTypesFromEnv(); !reflect.DeepEqual(got, want) {
 			t.Errorf("OPENV_EMAIL_NOTIFICATION_TYPES=%s: EmailTypes() = %q, notify.EmailTypesFromEnv() = %q", in.shown, got, want)
 		}
-		if got, want := c.PushTypes(), notify.PushTypesFromEnv(); !reflect.DeepEqual(got, want) {
+		if got, want := c.PushTypes(), oraclePushTypesFromEnv(); !reflect.DeepEqual(got, want) {
 			t.Errorf("OPENV_PUSH_NOTIFICATION_TYPES=%s: PushTypes() = %q, notify.PushTypesFromEnv() = %q", in.shown, got, want)
 		}
 	}
-}
-
-// mailerSMTP is what notify.MailerFromEnv put in its mailer: its fields are
-// unexported, so the test reads them by reflection.
-func mailerSMTP(m *notify.SMTPMailer) SMTP {
-	v := reflect.ValueOf(m).Elem()
-	return SMTP{Host: v.FieldByName("host").String(), Port: v.FieldByName("port").String(), User: v.FieldByName("user").String(),
-		Password: v.FieldByName("pass").String(), From: v.FieldByName("from").String()}
 }
 
 func TestSMTPIsTheMailers(t *testing.T) {
@@ -147,7 +138,7 @@ func TestSMTPIsTheMailers(t *testing.T) {
 	vars := []string{"OPENV_SMTP_HOST", "OPENV_SMTP_PORT", "OPENV_SMTP_USER", "OPENV_SMTP_PASSWORD", "OPENV_SMTP_FROM"}
 	check := func(what string) {
 		t.Helper()
-		if got, want := Load(os.LookupEnv).SMTP(), mailerSMTP(notify.MailerFromEnv()); got != want {
+		if got, want := Load(os.LookupEnv).SMTP(), oracleMailerFromEnv(); got != want {
 			t.Errorf("%s: SMTP() = %+v, notify.MailerFromEnv() holds %+v", what, got, want)
 		}
 	}
@@ -178,9 +169,7 @@ func TestEmbeddingsAreTheProviders(t *testing.T) {
 			}
 			setEnv(t, name, in.unset, in.input)
 			// cmd/server hands the provider its key through envSecret.
-			p := embeddings.ProviderFromEnv(os.Getenv("OPENV_EMBEDDING_API_KEY"))
-			v := reflect.ValueOf(p).Elem()
-			want := Embeddings{APIKey: v.FieldByName("apiKey").String(), BaseURL: v.FieldByName("baseURL").String(), Model: p.Model()}
+			want := oracleProviderFromEnv(oracleServerEnvSecret("OPENV_EMBEDDING_API_KEY", ""))
 			if got := Load(os.LookupEnv).Embeddings(); got != want {
 				t.Errorf("%s=%s: Embeddings() = %+v, embeddings.ProviderFromEnv holds %+v", name, in.shown, got, want)
 			}
@@ -192,7 +181,7 @@ func TestHostedRunnerPidsLimitIsHostings(t *testing.T) {
 	quietLog(t)
 	for _, in := range inputs("64", " 512 ", "-1", "banana", "2k", "512.5", "99999999999999999999") {
 		setEnv(t, "HOSTED_RUNNER_PIDS_LIMIT", in.unset, in.input)
-		if got, want := Load(os.LookupEnv).HostedRunnerPidsLimit(), hosting.PidsLimit(); got != want {
+		if got, want := Load(os.LookupEnv).HostedRunnerPidsLimit(), oraclePidsLimit(); got != want {
 			t.Errorf("HOSTED_RUNNER_PIDS_LIMIT=%s: HostedRunnerPidsLimit() = %d, hosting.PidsLimit() = %d", in.shown, got, want)
 		}
 	}
