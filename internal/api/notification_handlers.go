@@ -57,8 +57,7 @@ func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(notificationPrefs{
+	writeJSONOK(w, notificationPrefs{
 		EmailNotifications: user.EmailNotifications,
 		PushNotifications:  user.PushNotifications,
 	})
@@ -73,8 +72,7 @@ func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req notificationPrefsUpdate
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	prefs := notificationPrefs{
@@ -95,8 +93,7 @@ func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request
 		}
 		prefs.PushNotifications = *req.PushNotifications
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(prefs)
+	writeJSONOK(w, prefs)
 }
 
 // ListNotifications answers the caller's notifications, newest first.
@@ -149,8 +146,7 @@ func (h *Handler) ListNotifications(w http.ResponseWriter, r *http.Request) {
 		last := list[len(list)-1]
 		body["next_cursor"] = formatNotificationCursor(last.CreatedAt, last.ID)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(body)
+	writeJSONOK(w, body)
 }
 
 // Notification cursors are "<RFC3339Nano>|<id>" — the ordering key of the last
@@ -181,8 +177,7 @@ func (h *Handler) MarkNotificationsRead(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		IDs []string `json:"ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if len(req.IDs) == 0 {
@@ -273,8 +268,7 @@ func (h *Handler) FlagNotification(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "notification not found")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"flagged": *body.Flagged})
+	writeJSONOK(w, map[string]interface{}{"flagged": *body.Flagged})
 }
 
 // respondNotificationAction answers a bulk action with how many rows it
@@ -286,8 +280,7 @@ func (h *Handler) respondNotificationAction(w http.ResponseWriter, r *http.Reque
 		respondInternal(w, r, "failed to count unread notifications", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONOK(w, map[string]interface{}{
 		verb:           n,
 		"unread_count": unread,
 	})
@@ -299,8 +292,7 @@ func (h *Handler) respondNotificationCount(w http.ResponseWriter, r *http.Reques
 		respondInternal(w, r, "failed to count unread notifications", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONOK(w, map[string]interface{}{
 		"updated":      updated,
 		"unread_count": unread,
 	})
