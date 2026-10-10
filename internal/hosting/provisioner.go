@@ -9,7 +9,6 @@ import (
 	"log"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
-	"github.com/openv/requirements-platform/internal/envparse"
 )
 
 // ResourceLimits caps a hosted runner container's resources. A zero value
@@ -67,16 +66,43 @@ type Provisioner interface {
 	ContainerState(containerName string) (string, error)
 }
 
-// NewProvisioner builds the deployment's provisioner. HOSTED_RUNNERS=off
-// disables the feature, and any other value leaves it on with a warning
-// (#379, bug 225); an unreachable docker daemon auto-disables it (logged
+// Settings are the hosted runners' settings, which cmd/server reads
+// (internal/config) and hands NewProvisioner. Container and PidsLimit are
+// read when NewProvisioner calls them, as it read the variables before
+// refactor step X10b: Container once the docker daemon answers, and
+// PidsLimit then and again for each runner the provisioner provisions.
+type Settings struct {
+	// Off is HOSTED_RUNNERS=off, in any case: the feature is off and docker
+	// is never dialled. Any other value leaves it on, with a warning (#379,
+	// bug 225), which the reader logs.
+	Off bool
+	// Container is what a runner container is started from.
+	Container func() Container
+	// PidsLimit is a runner container's process cap,
+	// HOSTED_RUNNER_PIDS_LIMIT: a whole number, defaultPidsLimit by default
+	// and 0 (no cap, docker's own convention) for 0 or less, the one count
+	// whose zero keeps a meaning of its own; anything else malformed falls
+	// back to the default rather than to unlimited, and warns once
+	// (internal/envparse).
+	PidsLimit func() int64
+}
+
+// Container is what a hosted runner container is started from.
+type Container struct {
+	Image   string // RUNNER_IMAGE, default openv-worker:latest
+	Network string // RUNNER_NETWORK ("" = default bridge)
+	APIURL  string // RUNNER_API_URL, default http://api:8080: the API as seen from inside the runner container
+}
+
+// NewProvisioner builds the deployment's provisioner from s. s.Off disables
+// the feature, and an unreachable docker daemon auto-disables it (logged
 // once at startup).
-func NewProvisioner() Provisioner {
-	if envparse.Off("HOSTED_RUNNERS", envOr("HOSTED_RUNNERS", "")) {
+func NewProvisioner(s Settings) Provisioner {
+	if s.Off {
 		log.Print("Hosted runners disabled (HOSTED_RUNNERS=off)")
 		return disabledProvisioner{}
 	}
-	p, err := newDockerProvisioner()
+	p, err := newDockerProvisioner(s)
 	if err != nil {
 		log.Printf("Hosted runners disabled: %v", err)
 		return disabledProvisioner{}
@@ -85,7 +111,7 @@ func NewProvisioner() Provisioner {
 	// Provision reads the process cap for each runner; reading it here too
 	// names a malformed HOSTED_RUNNER_PIDS_LIMIT in the boot log (#379,
 	// question 15) rather than at the first provision.
-	PidsLimit()
+	p.pidsLimit()
 	return p
 }
 

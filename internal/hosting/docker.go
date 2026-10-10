@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -13,29 +12,23 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
-
-	"github.com/openv/requirements-platform/internal/envparse"
 )
-
-// envOr reads a text setting, trimmed, falling back when that leaves nothing
-// (internal/envparse's rule, as the server's own settings).
-func envOr(key, fallback string) string {
-	return envparse.Text(os.Getenv(key), fallback)
-}
 
 // dockerProvisioner implements Provisioner against the local docker daemon
 // (typically via a mounted /var/run/docker.sock).
 type dockerProvisioner struct {
-	cli     *client.Client
-	image   string // RUNNER_IMAGE
-	network string // RUNNER_NETWORK ("" = default bridge)
-	apiURL  string // RUNNER_API_URL as seen from inside the runner container
+	cli       *client.Client
+	image     string       // RUNNER_IMAGE
+	network   string       // RUNNER_NETWORK ("" = default bridge)
+	apiURL    string       // RUNNER_API_URL as seen from inside the runner container
+	pidsLimit func() int64 // HOSTED_RUNNER_PIDS_LIMIT, read for each runner
 }
 
 // newDockerProvisioner connects to the docker daemon and verifies it is
 // reachable; callers treat an error as "feature disabled". The ping doubles
-// as the client's API-version negotiation.
-func newDockerProvisioner() (*dockerProvisioner, error) {
+// as the client's API-version negotiation. It reads s.Container only once
+// the daemon answers.
+func newDockerProvisioner(s Settings) (*dockerProvisioner, error) {
 	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return nil, fmt.Errorf("docker client: %w", err)
@@ -46,11 +39,13 @@ func newDockerProvisioner() (*dockerProvisioner, error) {
 		cli.Close()
 		return nil, fmt.Errorf("docker daemon unreachable: %w", err)
 	}
+	c := s.Container()
 	return &dockerProvisioner{
-		cli:     cli,
-		image:   envOr("RUNNER_IMAGE", "openv-worker:latest"),
-		network: envOr("RUNNER_NETWORK", ""),
-		apiURL:  envOr("RUNNER_API_URL", "http://api:8080"),
+		cli:       cli,
+		image:     c.Image,
+		network:   c.Network,
+		apiURL:    c.APIURL,
+		pidsLimit: s.PidsLimit,
 	}, nil
 }
 
@@ -71,20 +66,6 @@ func (p *dockerProvisioner) Enabled() bool { return true }
 // of the docker host — while leaving ordinary work room it will not need to
 // use (REQ-96, HAZ-2).
 const defaultPidsLimit int64 = 1024
-
-// PidsLimit is the per-container process cap, overridable with
-// HOSTED_RUNNER_PIDS_LIMIT, a whole number. A value of 0 or less means "no
-// cap" (docker's own convention) for an operator who has to lift it, the one
-// count whose zero keeps a meaning of its own; anything else malformed falls
-// back to the default rather than to unlimited, and warns once
-// (internal/envparse).
-func PidsLimit() int64 {
-	n := envparse.Number("HOSTED_RUNNER_PIDS_LIMIT", os.Getenv("HOSTED_RUNNER_PIDS_LIMIT"), int(defaultPidsLimit))
-	if n <= 0 {
-		return 0
-	}
-	return int64(n)
-}
 
 // hostConfigFor builds the runner container's HostConfig: the org's data
 // volume, its resource caps, and the isolation a container that runs a vendor
@@ -188,7 +169,7 @@ func (p *dockerProvisioner) Provision(orgID, containerName, workerKey string, ex
 		return fmt.Errorf("create volume %s: %w", volName, err)
 	}
 
-	spec := buildRunnerSpec(p.image, p.network, p.apiURL, orgID, workerKey, extraEnv, limits, PidsLimit())
+	spec := buildRunnerSpec(p.image, p.network, p.apiURL, orgID, workerKey, extraEnv, limits, p.pidsLimit())
 
 	created, err := p.cli.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Config:           spec.config,

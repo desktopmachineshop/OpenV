@@ -5,11 +5,9 @@ import (
 	"time"
 
 	openv "github.com/openv/requirements-platform"
-	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/release"
-	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
@@ -18,36 +16,40 @@ import (
 // registration policies, and starts the notifier, the budget monitor and the
 // hosted-minutes alerts.
 func (a *app) notify() {
+	cfg := a.env()
 	// Optional email side channel for high-signal notifications (issue #187).
 	// Strictly opt-in: with OPENV_SMTP_HOST unset the mailer is a no-op, so
 	// in-app + SSE delivery (and dev/compose) are unaffected. Deep links point
 	// at the frontend (FRONTEND_URL), falling back to PUBLIC_URL.
-	a.emailMailer = notify.MailerFromEnv()
+	smtp := cfg.SMTP()
+	a.emailMailer = notify.NewMailer(notify.SMTPSettings{
+		Host: smtp.Host, Port: smtp.Port, User: smtp.User, Password: smtp.Password, From: smtp.From,
+	})
 	// Links in mail point at the SPA, which the API itself never serves, so
 	// the last fallback is the dev frontend, not this process.
-	a.emailLinkBase = envOr("FRONTEND_URL", envOr("PUBLIC_URL", "http://localhost:3000"))
+	a.emailLinkBase = cfg.EmailLinkBase()
 	// Sign-up email verification (SEC-15 / REQ-95): enforced only when the
 	// mailer can send and the operator has not switched it off, so a stack
 	// with no SMTP is unchanged. The policy reaches the user service (new
 	// accounts start unverified), the handler (sends the link) and the auth
 	// middleware (walls unverified sessions).
-	a.emailVerification = notify.VerificationPolicyFromEnv(a.emailMailer)
+	a.emailVerification = cfg.EmailVerification(a.emailMailer)
 	a.userService.SetEmailVerificationPolicy(a.emailVerification)
 	// Session lifetime (REQ-99): an absolute deadline and an idle one, both
 	// operator-shortenable, neither extendable past the defaults.
-	a.sessionPolicy = users.SessionPolicyFromEnv()
+	a.sessionPolicy = cfg.SessionPolicy()
 	a.userService.SetSessionPolicy(a.sessionPolicy)
 	// Registration policy (REQ-95): open unless the operator closes it.
-	a.registrationPolicy = api.RegistrationPolicyFromEnv()
+	a.registrationPolicy = cfg.Registration()
 	// The email and web push side channels, one value handed to every
 	// notification producer below and in stage release (SetChannels).
-	a.notifyChannels.Email = notify.NewEmailDispatcher(a.emailMailer, a.userService, a.emailLinkBase, notify.EmailTypesFromEnv())
+	a.notifyChannels.Email = notify.NewEmailDispatcher(a.emailMailer, a.userService, a.emailLinkBase, cfg.EmailTypes())
 
 	// Optional web push side channel for the same high-signal types (REQ-109).
 	// Also strictly opt-in: with no OPENV_VAPID_* key pair the dispatcher has
 	// no sender, /api/v1/me/push/config reports enabled=false and nothing is
 	// ever sent. Deep links use the same frontend base as the emails.
-	a.vapid = notify.VAPIDFromEnv()
+	a.vapid = cfg.VAPID()
 	a.pushSubService = pushsubs.NewDefaultService(a.pushSubRepo)
 	var pushSender notify.PushSender
 	if a.vapid.Enabled() {
@@ -58,7 +60,7 @@ func (a *app) notify() {
 	}
 	// Push deep links are same-origin paths resolved by the service worker,
 	// so unlike the emails above the dispatcher needs no base URL.
-	a.notifyChannels.Push = notify.NewPushDispatcher(pushSender, a.pushSubService, a.userService, notify.PushTypesFromEnv())
+	a.notifyChannels.Push = notify.NewPushDispatcher(pushSender, a.pushSubService, a.userService, cfg.PushTypes())
 
 	// Notification fan-out: bus events become per-user inbox rows plus live
 	// SSE pushes on notify:<user_id> (issue #132), plus a best-effort email
@@ -98,18 +100,19 @@ func (a *app) notify() {
 // release reads the running release and, when there is one, announces it
 // and starts the stable-channel scheduler and the support-window watcher.
 func (a *app) release() {
+	cfg := a.env()
 	// The running release: RELEASE_NOTES.md as built into this binary. Its
 	// top dated section is what GET /api/v1/release reports and what every
 	// account is told about, once per release, when a server first boots on
 	// it. A notes file that fails to parse is logged and serves an empty
 	// release rather than keeping the API down over documentation.
-	a.deploymentKind = envOr("OPENV_DEPLOYMENT", "shared")
-	releaseFeedURL := envOr("OPENV_RELEASE_FEED_URL", "https://api.openv.app/api/v1/public/release")
+	a.deploymentKind = cfg.Deployment()
+	releaseFeedURL := cfg.ReleaseFeedURL()
 	// The commit this binary was built from, reported by /health so a running
 	// deployment can be matched to a revision (REQ-141). Railway injects
 	// RAILWAY_GIT_COMMIT_SHA; OPENV_BUILD_SHA overrides it for platforms that
 	// do not, and both being unset simply leaves the commit out of /health.
-	a.buildSHA = envOr("OPENV_BUILD_SHA", envOr("RAILWAY_GIT_COMMIT_SHA", ""))
+	a.buildSHA = cfg.BuildSHA()
 	var err error
 	a.releaseService, err = release.NewService(openv.ReleaseNotesMarkdown)
 	if err != nil {

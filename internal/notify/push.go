@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,15 +33,6 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
-)
-
-// Environment variables read by VAPIDFromEnv and PushTypesFromEnv. Named
-// constants read at the call site, following ratelimit.go / verification.go.
-const (
-	envVAPIDPublicKey  = "OPENV_VAPID_PUBLIC_KEY"
-	envVAPIDPrivateKey = "OPENV_VAPID_PRIVATE_KEY"
-	envVAPIDSubject    = "OPENV_VAPID_SUBJECT"
-	envPushTypes       = "OPENV_PUSH_NOTIFICATION_TYPES"
 )
 
 const (
@@ -78,7 +68,10 @@ const (
 
 // VAPIDConfig is the server's Voluntary Application Server Identification key
 // pair plus the contact subject sent to push services (RFC 8292). Generate a
-// pair with `make vapid-keys` (cmd/openv-vapid).
+// pair with `make vapid-keys` (cmd/openv-vapid). cmd/server reads it from
+// OPENV_VAPID_PUBLIC_KEY, OPENV_VAPID_PRIVATE_KEY (a credential, exactly as
+// set) and OPENV_VAPID_SUBJECT (internal/config's VAPID), and logs whether
+// push is on.
 type VAPIDConfig struct {
 	PublicKey  string
 	PrivateKey string
@@ -99,43 +92,11 @@ func validVAPIDSubject(s string) bool {
 	return strings.HasPrefix(s, "mailto:") || strings.HasPrefix(s, "https://")
 }
 
-// VAPIDFromEnv reads the VAPID configuration. Every variable unset is the
-// default and leaves push off; a half-configured or malformed set logs why
-// and also leaves it off, so a typo never silently degrades to "no pushes
-// and no explanation". The private key is a credential, read exactly as set
-// (#379, question 24); one of only spaces counts as missing.
-func VAPIDFromEnv() VAPIDConfig {
-	c := VAPIDConfig{
-		PublicKey:  strings.TrimSpace(os.Getenv(envVAPIDPublicKey)),
-		PrivateKey: envSecret(envVAPIDPrivateKey),
-		Subject:    strings.TrimSpace(os.Getenv(envVAPIDSubject)),
-	}
-	havePrivate := strings.TrimSpace(c.PrivateKey) != ""
-	switch {
-	case c.PublicKey == "" && !havePrivate && c.Subject == "":
-		slog.Info("push: " + envVAPIDPublicKey + " unset; web push disabled (in-app + SSE delivery unaffected)")
-	case c.PublicKey == "" || !havePrivate:
-		slog.Warn("push: VAPID key pair incomplete; web push disabled",
-			"have_public", c.PublicKey != "", "have_private", havePrivate)
-	case !validVAPIDSubject(c.Subject):
-		slog.Warn("push: " + envVAPIDSubject + " must be a mailto: or https: URI; web push disabled")
-	default:
-		slog.Info("push: web push enabled", "subject", c.Subject)
-	}
-	return c
-}
-
 // DefaultPushTypes are the higher-signal notification types that reach a
 // phone by default — deliberately the same set as DefaultEmailTypes. Chatter
 // @mentions and interview-completed stay in-app: a buzzing pocket is a
 // stronger interruption than an inbox, not a weaker one.
 func DefaultPushTypes() []string { return DefaultEmailTypes() }
-
-// PushTypesFromEnv reads the comma-separated OPENV_PUSH_NOTIFICATION_TYPES
-// override, or returns DefaultPushTypes when it is unset/empty.
-func PushTypesFromEnv() []string {
-	return typeListFromEnv(envPushTypes, DefaultPushTypes)
-}
 
 // PushSender delivers one encrypted payload to one device. Status is the push
 // service's HTTP status (0 when the request never got that far); err covers
@@ -222,7 +183,8 @@ type PushDispatcher struct {
 
 // NewPushDispatcher wires a dispatcher. sender nil (the usual case when no
 // VAPID keys are configured) leaves push off and every Dispatch a no-op.
-// eligibleTypes is the allow-list (see DefaultPushTypes / PushTypesFromEnv).
+// eligibleTypes is the allow-list (DefaultPushTypes, or the override
+// OPENV_PUSH_NOTIFICATION_TYPES, which cmd/server reads).
 // Deep links are same-origin PATHS (see PushPayload.URL), so no base URL is
 // needed here — the browser resolves them against the app's own origin.
 func NewPushDispatcher(sender PushSender, subs PushSubscriptionStore, dir UserDirectory, eligibleTypes []string) *PushDispatcher {

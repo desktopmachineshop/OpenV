@@ -9,30 +9,23 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/api"
+	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
-	"github.com/openv/requirements-platform/internal/envparse"
 	"github.com/openv/requirements-platform/internal/metrics"
 )
-
-// maxRequestBodyBytes is the cap the API places on any single request body.
-// OPENV_MAX_BODY_MB overrides the 32 MB default; attachment uploads carry a
-// tighter cap of their own (OPENV_MAX_UPLOAD_MB). A size whose bytes do not
-// fit in an int64 keeps the default, with a warning (#379, bug 224): it
-// wrapped round to a negative cap, which refused every body.
-func maxRequestBodyBytes() int64 {
-	return int64(envparse.Mebibytes("OPENV_MAX_BODY_MB", envInt("OPENV_MAX_BODY_MB", 32), 32)) * 1024 * 1024
-}
 
 // buildHTTPHandler builds the API's handler: the router with every route,
 // wrapped, outermost first, in SecurityHeaders, BodyLimit, CORS,
 // Compression, RequestLog, metrics and Auth (invariant I6, which
-// http_test.go pins). It returns api.CORSMiddleware's error for a
-// CORS_ORIGIN that would reflect any origin, before it reads the settings
-// after that one, and main exits on it.
+// http_test.go pins). It reads its settings through cfg where it uses them,
+// and returns api.CORSMiddleware's error for a CORS_ORIGIN that would
+// reflect any origin, before it reads the settings after that one, and main
+// exits on it.
 func buildHTTPHandler(
+	cfg *config.Config,
 	handler *api.Handler,
 	metricsCollector *metrics.Metrics,
 	userService *users.DefaultService,
@@ -52,7 +45,7 @@ func buildHTTPHandler(
 	// internal network in production); set OPENV_METRICS_TOKEN to require an
 	// "Authorization: Bearer <token>" header. Registered as an open path in the
 	// auth middleware so scraping is never blocked by session auth.
-	router.Handle("/metrics", metricsCollector.Handler(envSecret("OPENV_METRICS_TOKEN", ""))).Methods("GET")
+	router.Handle("/metrics", metricsCollector.Handler(cfg.MetricsToken())).Methods("GET")
 
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
 	authMiddleware.SetPoolKey(runnerPoolKey)
@@ -78,17 +71,21 @@ func buildHTTPHandler(
 	// CORS: restricted to the configured frontend origin, with credentials.
 	// A wildcard is refused at startup rather than reflected (see
 	// api.CORSMiddleware).
-	corsHandler, err := api.CORSMiddleware(envOr("CORS_ORIGIN", "http://localhost:3000"), protected)
+	corsHandler, err := api.CORSMiddleware(cfg.CORSOrigin(), protected)
 	if err != nil {
 		return nil, err
 	}
 	// Outermost: cap every request body, then stamp the browser-hardening
 	// headers on every response, including CORS preflights and rejections.
 	// HSTS follows SECURE_COOKIES, the deployment's declaration that it is
-	// only reached over TLS.
-	secureDeployment := envBool("SECURE_COOKIES", false) || envBool("CROSS_SITE_COOKIES", false)
+	// only reached over TLS. The body cap is OPENV_MAX_BODY_MB, 32 MB by
+	// default; attachment uploads carry a tighter cap of their own
+	// (OPENV_MAX_UPLOAD_MB). A size whose bytes do not fit in an int64 keeps
+	// the default, with a warning (#379, bug 224): it wrapped round to a
+	// negative cap, which refused every body.
+	secureDeployment := cfg.SecureCookies() || cfg.CrossSiteCookies()
 	rootHandler := api.SecurityHeadersMiddleware(secureDeployment)(
-		api.BodyLimitMiddleware(maxRequestBodyBytes())(corsHandler),
+		api.BodyLimitMiddleware(cfg.MaxBodyBytes())(corsHandler),
 	)
 	return rootHandler, nil
 }

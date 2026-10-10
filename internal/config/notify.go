@@ -34,8 +34,8 @@ func (c *Config) SMTP() SMTP {
 	s := SMTP{
 		Host:     strings.TrimSpace(c.getenv("OPENV_SMTP_HOST")),
 		Port:     c.text("OPENV_SMTP_PORT", "587"),
-		User:     c.secret("OPENV_SMTP_USER", ""),
-		Password: c.secret("OPENV_SMTP_PASSWORD", ""),
+		User:     c.credential("OPENV_SMTP_USER"),
+		Password: c.credential("OPENV_SMTP_PASSWORD"),
 		From:     strings.TrimSpace(c.getenv("OPENV_SMTP_FROM")),
 	}
 	if s.From == "" {
@@ -179,7 +179,7 @@ func (c *Config) typeList(name string, fallback func() []string) []string {
 func (c *Config) VAPID() notify.VAPIDConfig {
 	v := notify.VAPIDConfig{
 		PublicKey:  strings.TrimSpace(c.getenv("OPENV_VAPID_PUBLIC_KEY")),
-		PrivateKey: c.secret("OPENV_VAPID_PRIVATE_KEY", ""),
+		PrivateKey: c.credential("OPENV_VAPID_PRIVATE_KEY"),
 		Subject:    strings.TrimSpace(c.getenv("OPENV_VAPID_SUBJECT")),
 	}
 	havePrivate := strings.TrimSpace(v.PrivateKey) != ""

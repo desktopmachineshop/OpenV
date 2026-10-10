@@ -11,7 +11,7 @@ step M4, `main()` only calls stages; plan §7.1
 
 | Area (`docs/areas.json`) | Files here |
 |---|---|
-| platform-http | `main.go`, `app.go`, `config.go`, `http.go`, `jobs.go`, `logging.go`, `lookups.go`, `upload_sweep.go`, `wire_config.go`, `wire_storage.go`, `wire_jobs.go`, `wire_http.go`, `testdata/**`, `*.md` |
+| platform-http | `main.go`, `app.go`, `http.go`, `jobs.go`, `logging.go`, `lookups.go`, `upload_sweep.go`, `wire_config.go`, `wire_storage.go`, `wire_jobs.go`, `wire_http.go`, `testdata/**`, `*.md` |
 | requirements-core | `wire_core.go`, `wire_projects.go` |
 | tenancy-identity | `wire_workspace.go`, `wire_sso.go` |
 | agent-suite | `wire_agents.go` |
@@ -24,9 +24,8 @@ Test files (`*_test.go`) need no area.
 | Glob | What it holds |
 |---|---|
 | `main.go` | `main()`: the stage calls in boot order, the deferred cleanups two stages return, then listen and graceful shutdown |
-| `app.go` | the `app` struct: every value a stage builds for a later stage |
+| `app.go` | the `app` struct: every value a stage builds for a later stage, and `env`, the configuration the stages read every setting through |
 | `wire_*.go` | the stages, methods on `*app` that `main()` calls in this order: `signals`, `config` (`wire_config.go`); `connect`, `storage` (`wire_storage.go`); `core`; `workspace`, `runners` (`wire_workspace.go`); `projects`; `agents`; `realtime`; `notify`, `release` (`wire_notify.go`); `jobs`; `sso`; `billing`, `handlers`, `server` (`wire_http.go`) |
-| `config.go` | the env getters `envOr`, `envInt`, `envBool`, `envSwitch` and `envSecret`, over `internal/envparse` |
 | `http.go` | the one `mux.NewRouter()`, `/metrics`, the middleware chain (`buildHTTPHandler`) and `newServer` |
 | `jobs.go` | the background loops: `runPurgeLoop`, `runReaper`; `reconcileHostedRunners`, the boot call of `hostedworkers.Reconcile`; `removeStoredFiles`, which removes the files a committed purge took |
 | `upload_sweep.go` | `sweepUnreferencedUploads`, which stage `storage` runs once per database after the migrations unless `OPENV_UPLOAD_SWEEP=off`: the stored files no row names, and the logos and profile pictures of workspaces and accounts no row has, by the fail-safe rules at the top of the file |
@@ -34,7 +33,7 @@ Test files (`*_test.go`) need no area.
 | `logging.go` | `initLogging` and `fatal` |
 | `boot_*_test.go`, `harness*_test.go` | the S4 boot harness: the real binary booted per env profile |
 | `tour_*_test.go` | the S5 API tour, one area per `tour_<slice>_<key>_test.go`, plus its framework |
-| `env_*_test.go` | S8's parse table for this package's getters, and env edge cases |
+| `env_*_test.go` | env edge cases of the stages, and S8's parse helpers (`env_parse_helpers_test.go`, whose `envParseUnset` the stage pins use) |
 | `testdata/boot/*.txt`, `testdata/boot_steps.txt` | S4 goldens: one per boot; the order of `main()`'s wiring |
 | `testdata/tour/**` | S5 goldens: one JSON per tour area, `coverage.txt` per slice and the union |
 | `testdata/stages/**` | the fixtures of `TestBootStepsFollowStages` |
@@ -53,7 +52,8 @@ Test files (`*_test.go`) need no area.
   the trigger matcher (`jobs`).
 - **I13 env.** Every fatal check keeps its place relative to the migration
   in `storage`, and a variable is read only under today's condition, through
-  the getters in `config.go` (K8).
+  an accessor of `internal/config` (K8), which stage `signals` loads from
+  the environment.
 - **I6 middleware order** in `buildHTTPHandler`, outermost first:
   SecurityHeaders, BodyLimit, CORS, Compression, RequestLog, metrics, Auth,
   router. **I1, I2, K2:** one router, and `/metrics` is the only route
@@ -80,9 +80,11 @@ the `api.HandlerDeps` literal of stage `handlers`. A new API area also
 needs its registrar; see `internal/api/README.md`.
 Scaffold: `go run ./internal/tools/scaffold api-area <name>`
 
-**Add an env var.** Read it with a getter from `config.go` in the stage that
-uses it, under the condition it applies to. Then regenerate S8's inventory:
-`UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./cmd/server`.
+**Add an env var.** Give it an accessor in `internal/config` (and a name in
+its `names` table), and call the accessor through `a.env()` in the stage
+that uses it, under the condition it applies to. Then regenerate S8's
+inventory:
+`UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./internal/config`.
 A setting that changes what the server does gets a profile in
 `s4bProfiles` (`boot_profiles_test.go`); a new fatal check gets a boot in
 `misconfiguredBoots` (`boot_misconfigured_test.go`). Regenerate their
@@ -114,7 +116,7 @@ Each line: the guard, what it pins, and the command that runs it.
   `go test ./cmd/server -count=1 -run '^TestBuildHTTPHandlerLayerOrder$'`
 - **S8** `TestEnvParse` and `TestEnvInventory`: env names, defaults and
   parsing (I13).
-  `go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./cmd/server`
+  `go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest ./internal/config`
 - **M4's proof**: `main()` with every stage inlined, and no `defer` or early
   `return` in a stage.
   `go run ./internal/tools/movecheck -flatten main ./cmd/server`

@@ -2,8 +2,6 @@ package main
 
 import (
 	"log/slog"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
@@ -20,6 +18,7 @@ import (
 // tiers on where configured, and builds invitations, worker keys, hosted
 // workers and the transient runners.
 func (a *app) workspace() {
+	cfg := a.env()
 	// Suite services.
 	a.userService = users.NewDefaultService(a.userRepo)
 	a.memberService = members.NewDefaultService(a.memberRepo)
@@ -33,9 +32,9 @@ func (a *app) workspace() {
 	// set, the tier values apply to workspaces created after it. A failed
 	// grandfather step is fatal — booting with the tiers on and the promise
 	// unkept is the one outcome that must not happen. Self-hosted
-	// deployments are on their own plan and are left alone.
-	if raw := strings.TrimSpace(os.Getenv("OPENV_BILLING_GRANDFATHER_BEFORE")); raw != "" && !a.selfHosted {
-		cutoff, err := time.Parse(time.RFC3339, raw)
+	// deployments are on their own plan and are left alone: the date is
+	// parsed only when it is set and the install is not self-hosted.
+	if cutoff, on, err := cfg.GrandfatherBefore(); on {
 		if err != nil {
 			fatal("OPENV_BILLING_GRANDFATHER_BEFORE must be an RFC 3339 date-time", err)
 		}
@@ -59,7 +58,7 @@ func (a *app) workspace() {
 	// the shared credential its pool nodes present — because without a pool
 	// there is nothing to lease. Everything else about the feature is on by
 	// default for the workspaces on that deployment.
-	a.runnerPoolKey = envSecret("RUNNER_POOL_KEY", "")
+	a.runnerPoolKey = cfg.RunnerPoolKey()
 	if a.runnerPoolKey != "" {
 		a.runnerSessionService = runnersessions.NewDefaultService(a.runnerSessionRepo, a.workerKeyService)
 		slog.Info("transient runners enabled (runner pool configured)")
@@ -73,8 +72,18 @@ func (a *app) workspace() {
 func (a *app) runners() {
 	// Hosted runner provisioner (Docker). Disabled when HOSTED_RUNNERS=off
 	// or the docker daemon is unreachable. Boot reconcile syncs stored
-	// records with actual container state.
-	a.provisioner = hosting.NewProvisioner()
+	// records with actual container state. The provisioner reads the
+	// container's settings once docker answers, and the process cap then and
+	// for each runner it provisions.
+	cfg := a.env()
+	a.provisioner = hosting.NewProvisioner(hosting.Settings{
+		Off: cfg.HostedRunnersOff(),
+		Container: func() hosting.Container {
+			c := cfg.RunnerContainer()
+			return hosting.Container{Image: c.Image, Network: c.Network, APIURL: c.APIURL}
+		},
+		PidsLimit: func() int64 { return cfg.HostedRunnerPidsLimit() },
+	})
 	if a.provisioner.Enabled() {
 		reconcileHostedRunners(a.provisioner, a.hostedWorkerService)
 	}

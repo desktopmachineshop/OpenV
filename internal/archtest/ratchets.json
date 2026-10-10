@@ -14,6 +14,7 @@
       "internal/automation",
       "internal/billing",
       "internal/billing/stripe",
+      "internal/config",
       "internal/domain/agentruns",
       "internal/domain/agents",
       "internal/domain/artifacts",
@@ -52,7 +53,6 @@
       "internal/domain/vv",
       "internal/domain/workerkeys",
       "internal/domain/workitems",
-      "internal/envparse",
       "internal/events",
       "internal/hosting",
       "internal/metrics",
@@ -252,8 +252,7 @@
       "internal/domain/events"
     ],
     "internal/hosting": [
-      "internal/domain/orgs",
-      "internal/envparse"
+      "internal/domain/orgs"
     ],
     "internal/mcp": [
       "internal/domain/artifacts",
@@ -271,8 +270,7 @@
       "internal/domain/orgs",
       "internal/domain/pushsubs",
       "internal/domain/release",
-      "internal/domain/users",
-      "internal/envparse"
+      "internal/domain/users"
     ],
     "internal/orchestration": [
       "internal/domain/agentruns",
@@ -413,13 +411,9 @@
     "require_outside_authz": 2
   },
   "env_reads": {
-    "internal/api": 9,
-    "internal/domain/embeddings": 2,
+    "internal/api": 6,
     "internal/domain/reports": 1,
-    "internal/domain/users": 1,
-    "internal/hosting": 2,
     "internal/mcp": 1,
-    "internal/notify": 8,
     "internal/runner": 10
   },
   "helper_homes": [

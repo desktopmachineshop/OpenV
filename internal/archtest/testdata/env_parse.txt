@@ -215,187 +215,6 @@ unset	default
 "a, ,b"	"a, ,b"
 ","	","
 
-[cmd/server:envBool(key)]
-unset	default
-""	default
-"   "	default
-"TRUE"	true
-"true"	true
-"1"	true
-"0"	false
-"-5"	default
-"7"	default
-" 7 "	default
-"+7"	default
-"7x"	default
-"1e3"	default
-"2.5"	default
-"Inf"	default
-"NaN"	default
-"2h"	default
-" 2h "	default
-"-1h"	default
-"800h"	default
-"30d"	default
-"a, ,b"	default
-","	default
-
-[cmd/server:envInt(key)]
-unset	default
-""	default
-"   "	default
-"TRUE"	default
-"true"	default
-"1"	1
-"0"	default
-"-5"	default
-"7"	7
-" 7 "	7
-"+7"	7
-"7x"	default
-"1e3"	default
-"2.5"	default
-"Inf"	default
-"NaN"	default
-"2h"	default
-" 2h "	default
-"-1h"	default
-"800h"	default
-"30d"	default
-"a, ,b"	default
-","	default
-
-[cmd/server:envOr(key)]
-unset	default
-""	default
-"   "	default
-"TRUE"	"TRUE"
-"true"	"true"
-"1"	"1"
-"0"	"0"
-"-5"	"-5"
-"7"	"7"
-" 7 "	"7"
-"+7"	"+7"
-"7x"	"7x"
-"1e3"	"1e3"
-"2.5"	"2.5"
-"Inf"	"Inf"
-"NaN"	"NaN"
-"2h"	"2h"
-" 2h "	"2h"
-"-1h"	"-1h"
-"800h"	"800h"
-"30d"	"30d"
-"a, ,b"	"a, ,b"
-","	","
-
-[cmd/server:envSecret(key)]
-unset	default
-""	default
-"   "	"   "
-"TRUE"	"TRUE"
-"true"	"true"
-"1"	"1"
-"0"	"0"
-"-5"	"-5"
-"7"	"7"
-" 7 "	" 7 "
-"+7"	"+7"
-"7x"	"7x"
-"1e3"	"1e3"
-"2.5"	"2.5"
-"Inf"	"Inf"
-"NaN"	"NaN"
-"2h"	"2h"
-" 2h "	" 2h "
-"-1h"	"-1h"
-"800h"	"800h"
-"30d"	"30d"
-"a, ,b"	"a, ,b"
-","	","
-"key\n"	"key\n"
-" key"	" key"
-
-[cmd/server:envSwitch(key)]
-unset	default
-""	default
-"   "	default
-"TRUE"	true
-"true"	true
-"1"	true
-"0"	false
-"-5"	default
-"7"	default
-" 7 "	default
-"+7"	default
-"7x"	default
-"1e3"	default
-"2.5"	default
-"Inf"	default
-"NaN"	default
-"2h"	default
-" 2h "	default
-"-1h"	default
-"800h"	default
-"30d"	default
-"a, ,b"	default
-","	default
-"off"	false
-" OFF "	false
-"on"	true
-"On"	true
-
-[internal/api:newRateLimiterFromEnv(burstVar)]
-unset	default
-""	default
-"   "	default
-"TRUE"	default
-"true"	default
-"1"	1
-"0"	default
-"-5"	default
-"7"	7
-" 7 "	7
-"+7"	7
-"7x"	default
-"1e3"	default
-"2.5"	default
-"Inf"	default
-"NaN"	default
-"2h"	default
-" 2h "	default
-"-1h"	default
-"800h"	default
-"30d"	default
-"a, ,b"	default
-","	default
-
-[internal/api:newRateLimiterFromEnv(refillVar)]
-unset	default
-""	default
-"   "	default
-"TRUE"	default
-"true"	default
-"1"	1
-"0"	default
-"-5"	default
-"7"	7
-" 7 "	7
-"+7"	7
-"7x"	default
-"1e3"	1000
-"2.5"	2.5
-"Inf"	default
-"NaN"	default
-"2h"	default
-" 2h "	default
-"-1h"	default
-"800h"	default
-"30d"	default
-"a, ,b"	default
-","	default
-
 [internal/billing:ConfigFromEnv(getenv) OPENV_BILLING_MAX_SEATS]
 unset	default
 ""	default
@@ -600,14 +419,14 @@ unset	default
 "a, ,b"	"a, ,b"
 ","	","
 
-[internal/domain/users:envDuration(name) OPENV_SESSION_IDLE]
+[internal/config:Config.boolean(name)]
 unset	default
 ""	default
 "   "	default
-"TRUE"	default
-"true"	default
-"1"	default
-"0"	default
+"TRUE"	true
+"true"	true
+"1"	true
+"0"	false
 "-5"	default
 "7"	default
 " 7 "	default
@@ -617,94 +436,40 @@ unset	default
 "2.5"	default
 "Inf"	default
 "NaN"	default
-"2h"	2h0m0s
-" 2h "	2h0m0s
+"2h"	default
+" 2h "	default
 "-1h"	default
 "800h"	default
 "30d"	default
 "a, ,b"	default
 ","	default
-"719h"	default
-"167h59m"	167h59m0s
 
-[internal/domain/users:envDuration(name) OPENV_SESSION_MAX_AGE]
+[internal/config:Config.count(name)]
 unset	default
 ""	default
 "   "	default
 "TRUE"	default
 "true"	default
-"1"	default
+"1"	1
 "0"	default
 "-5"	default
-"7"	default
-" 7 "	default
-"+7"	default
+"7"	7
+" 7 "	7
+"+7"	7
 "7x"	default
 "1e3"	default
 "2.5"	default
 "Inf"	default
 "NaN"	default
-"2h"	2h0m0s
-" 2h "	2h0m0s
+"2h"	default
+" 2h "	default
 "-1h"	default
 "800h"	default
 "30d"	default
 "a, ,b"	default
 ","	default
-"719h"	719h0m0s
-"167h59m"	167h59m0s
 
-[internal/hosting:envOr(key)]
-unset	default
-""	default
-"   "	default
-"TRUE"	"TRUE"
-"true"	"true"
-"1"	"1"
-"0"	"0"
-"-5"	"-5"
-"7"	"7"
-" 7 "	"7"
-"+7"	"+7"
-"7x"	"7x"
-"1e3"	"1e3"
-"2.5"	"2.5"
-"Inf"	"Inf"
-"NaN"	"NaN"
-"2h"	"2h"
-" 2h "	"2h"
-"-1h"	"-1h"
-"800h"	"800h"
-"30d"	"30d"
-"a, ,b"	"a, ,b"
-","	","
-
-[internal/notify:envDefault(key)]
-unset	default
-""	default
-"   "	default
-"TRUE"	"TRUE"
-"true"	"true"
-"1"	"1"
-"0"	"0"
-"-5"	"-5"
-"7"	"7"
-" 7 "	"7"
-"+7"	"+7"
-"7x"	"7x"
-"1e3"	"1e3"
-"2.5"	"2.5"
-"Inf"	"Inf"
-"NaN"	"NaN"
-"2h"	"2h"
-" 2h "	"2h"
-"-1h"	"-1h"
-"800h"	"800h"
-"30d"	"30d"
-"a, ,b"	"a, ,b"
-","	","
-
-[internal/notify:envSecret(key)]
+[internal/config:Config.credential(name)]
 unset	""
 ""	""
 "   "	"   "
@@ -731,7 +496,217 @@ unset	""
 "key\n"	"key\n"
 " key"	" key"
 
-[internal/notify:typeListFromEnv(key)]
+[internal/config:Config.getenv(name)]
+unset	""
+""	""
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/config:Config.onOff(name)]
+unset	default
+""	default
+"   "	default
+"TRUE"	true
+"true"	true
+"1"	true
+"0"	false
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+"off"	false
+" OFF "	false
+"on"	true
+"On"	true
+
+[internal/config:Config.rateLimit(burstVar)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	1
+"0"	default
+"-5"	default
+"7"	7
+" 7 "	7
+"+7"	7
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+
+[internal/config:Config.rateLimit(refillVar)]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	1
+"0"	default
+"-5"	default
+"7"	7
+" 7 "	7
+"+7"	7
+"7x"	default
+"1e3"	1000
+"2.5"	2.5
+"Inf"	default
+"NaN"	default
+"2h"	default
+" 2h "	default
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+
+[internal/config:Config.secret(name)]
+unset	default
+""	default
+"   "	"   "
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	" 7 "
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	" 2h "
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+"key\n"	"key\n"
+" key"	" key"
+
+[internal/config:Config.sessionLifetime(name) OPENV_SESSION_IDLE]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	default
+"0"	default
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	2h0m0s
+" 2h "	2h0m0s
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+"719h"	default
+"167h59m"	167h59m0s
+
+[internal/config:Config.sessionLifetime(name) OPENV_SESSION_MAX_AGE]
+unset	default
+""	default
+"   "	default
+"TRUE"	default
+"true"	default
+"1"	default
+"0"	default
+"-5"	default
+"7"	default
+" 7 "	default
+"+7"	default
+"7x"	default
+"1e3"	default
+"2.5"	default
+"Inf"	default
+"NaN"	default
+"2h"	2h0m0s
+" 2h "	2h0m0s
+"-1h"	default
+"800h"	default
+"30d"	default
+"a, ,b"	default
+","	default
+"719h"	719h0m0s
+"167h59m"	167h59m0s
+
+[internal/config:Config.text(name)]
+unset	default
+""	default
+"   "	default
+"TRUE"	"TRUE"
+"true"	"true"
+"1"	"1"
+"0"	"0"
+"-5"	"-5"
+"7"	"7"
+" 7 "	"7"
+"+7"	"+7"
+"7x"	"7x"
+"1e3"	"1e3"
+"2.5"	"2.5"
+"Inf"	"Inf"
+"NaN"	"NaN"
+"2h"	"2h"
+" 2h "	"2h"
+"-1h"	"-1h"
+"800h"	"800h"
+"30d"	"30d"
+"a, ,b"	"a, ,b"
+","	","
+
+[internal/config:Config.typeList(name)]
 unset	default
 ""	default
 "   "	default

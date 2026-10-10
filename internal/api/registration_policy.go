@@ -6,36 +6,10 @@ package api
 // leaves exactly two ways in: an invitation from a workspace admin, or the
 // deployment's single sign-on provider, whose IdP is doing the admitting.
 
-import (
-	"log/slog"
-	"os"
-	"strings"
-)
-
-// Registration policy values, as accepted in OPENV_REGISTRATION.
+// Registration policy values, as accepted in OPENV_REGISTRATION, which stage
+// notify of cmd/server reads (internal/config's Registration) and hands the
+// handler as HandlerDeps.Registration.
 const (
 	RegistrationOpen   = "open"
 	RegistrationClosed = "closed"
-
-	envRegistration = "OPENV_REGISTRATION"
 )
-
-// RegistrationPolicyFromEnv reads OPENV_REGISTRATION, defaulting to open and
-// logging one line naming the state — an operator reading the boot log
-// should be able to see whether strangers can still sign themselves up.
-func RegistrationPolicyFromEnv() string {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv(envRegistration))) {
-	case RegistrationClosed:
-		slog.Info("registration: closed (new accounts arrive by workspace invitation or single sign-on)")
-		return RegistrationClosed
-	case "", RegistrationOpen:
-		slog.Info("registration: open (set OPENV_REGISTRATION=closed to require an invitation)")
-		return RegistrationOpen
-	default:
-		// The value is left out: a secret pasted into the wrong variable
-		// must not reach the log (#379, bug 222).
-		slog.Warn("registration: unrecognised OPENV_REGISTRATION value; leaving registration open",
-			"want", RegistrationOpen+" or "+RegistrationClosed)
-		return RegistrationOpen
-	}
-}

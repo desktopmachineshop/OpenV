@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/config"
 )
 
 // TestEnvSecretKeepsACredentialExactlyAsSet: every credential the server
-// reads goes through envSecret (env_vars.txt's read column says which), and
+// reads goes through internal/config's credential helpers (env_vars.txt's
+// read column says which), here those of stage config, and
 // by the maintainer's decision on #379's question 24 it is used exactly as
 // set, not trimmed as the other settings are: a WORKER_API_KEY with a line
 // break after it, or a DB_PASSWORD with a space in front, reaches its use
@@ -41,19 +45,19 @@ func TestEnvSecretKeepsACredentialExactlyAsSet(t *testing.T) {
 	t.Setenv("WORKER_API_KEY", workerKey)
 	t.Setenv("DB_PASSWORD", password)
 	for range 2 {
-		if got := envSecret("WORKER_API_KEY", ""); got != workerKey {
+		if got := config.Load(os.LookupEnv).WorkerAPIKey(); got != workerKey {
 			t.Errorf("WORKER_API_KEY read as %q, want it exactly as set", got)
 		}
 	}
-	if got := envSecret("DB_PASSWORD", "postgres"); got != password {
+	if got := config.Load(os.LookupEnv).DatabaseParts().Password; got != password {
 		t.Errorf("DB_PASSWORD read as %q, want it exactly as set", got)
 	}
 	t.Setenv("DB_PASSWORD", "")
-	if got := envSecret("DB_PASSWORD", "postgres"); got != "postgres" {
+	if got := config.Load(os.LookupEnv).DatabaseParts().Password; got != "postgres" {
 		t.Errorf("an empty DB_PASSWORD read as %q, want the default", got)
 	}
 	t.Setenv("DB_PASSWORD", spaces)
-	if got := envSecret("DB_PASSWORD", "postgres"); got != spaces {
+	if got := config.Load(os.LookupEnv).DatabaseParts().Password; got != spaces {
 		t.Errorf("a DB_PASSWORD of spaces read as %q, want it exactly as set, not the default", got)
 	}
 

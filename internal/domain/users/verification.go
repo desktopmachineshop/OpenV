@@ -20,7 +20,7 @@ const EmailVerificationTTL = 24 * time.Hour
 // EmailVerificationPolicy says whether password accounts must prove control
 // of their address before the app serves them (SEC-15 / REQ-95). Required is
 // true only when the deployment can actually send mail and the operator has
-// not switched it off (see notify.VerificationPolicyFromEnv); with it false,
+// not switched it off (internal/config's EmailVerification); with it false,
 // accounts are born verified and nothing is enforced, which keeps a default
 // self-hosted stack, CI and the E2E suite exactly as they were.
 type EmailVerificationPolicy struct {

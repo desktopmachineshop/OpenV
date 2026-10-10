@@ -111,8 +111,9 @@ Each line: the guard, what it pins, and the command that runs it.
   `go test ./internal/api -count=1 -run '^TestRunNowCopy$'`; with a
   database, `TestSchedulersShareTheRealClaim`
   (`internal/persistence/postgres/README.md`).
-- **S8** `TestEnvParse` for the getters here.
-  `go test -count=1 -run '^TestEnvParse$' ./internal/notify ./internal/billing`
+- **S8** `TestEnvParse` for billing's getter (the mail and push channels'
+  settings are read by `cmd/server` through `internal/config` since X10b).
+  `go test -count=1 -run '^TestEnvParse$' ./internal/billing ./internal/config`
 - **S4** `cmd/server/testdata/boot_steps.txt`: the subscriber order and
   where each service starts; see `cmd/server/README.md`.
 

@@ -483,7 +483,6 @@
         "RELEASE_NOTES.md",
         "cmd/server/*.md",
         "cmd/server/app.go",
-        "cmd/server/config.go",
         "cmd/server/http.go",
         "cmd/server/jobs.go",
         "cmd/server/logging.go",
