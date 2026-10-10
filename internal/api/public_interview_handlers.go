@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -49,7 +48,7 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 	if session != nil && session.Status == interviews.SessionStatusActive {
 		transcript, _ = h.InterviewService.GetTranscript(session.ID)
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"interview_name": interview.Name,
 		"session":        session,
 		"transcript":     transcript,
@@ -68,8 +67,7 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 		ParticipantName string `json:"participant_name"`
 		Content         string `json:"content"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
@@ -112,7 +110,7 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 			h.SSEHub.BroadcastSession("interview:"+session.ID, "message", note)
 		}
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"session": session,
 		"message": message,
 	})

@@ -49,7 +49,7 @@ func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list proposals", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve bool) {
@@ -91,7 +91,7 @@ func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve
 		}
 		return
 	}
-	json.NewEncoder(w).Encode(proposal)
+	writeJSONBare(w, proposal)
 }
 
 // isProposalValidationError reports whether err is a proposal-domain
@@ -144,8 +144,7 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 		Action string   `json:"action"`
 		Note   string   `json:"note"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Action != "approve" && req.Action != "reject" {
@@ -201,7 +200,7 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 		}
 		results = append(results, bulkOutcome{ID: id, OK: true})
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+	writeJSONBare(w, map[string]interface{}{"results": results})
 }
 
 func (h *Handler) RejectProposal(w http.ResponseWriter, r *http.Request) {

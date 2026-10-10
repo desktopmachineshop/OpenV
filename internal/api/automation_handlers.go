@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -32,7 +31,7 @@ func (h *Handler) ListAutomations(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list automations", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
@@ -40,8 +39,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req automations.CreateAutomationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	req.OrgID = ActiveOrg(r)
@@ -58,8 +56,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(automation)
+	writeJSONBareStatus(w, http.StatusCreated, automation)
 }
 
 func (h *Handler) GetAutomation(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +71,7 @@ func (h *Handler) GetAutomation(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRoleFor(w, r, automation.OrgID, orgs.RoleMember, missing("automation not found")) {
 		return
 	}
-	json.NewEncoder(w).Encode(automation)
+	writeJSONBare(w, automation)
 }
 
 func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
@@ -90,8 +87,7 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req automations.UpdateAutomationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A move to another scope takes the write rights of where it goes too:
@@ -134,7 +130,7 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
@@ -243,6 +239,5 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 		writeLaunchError(w, r, launchErrs400, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(run)
+	writeJSONBareStatus(w, http.StatusCreated, run)
 }

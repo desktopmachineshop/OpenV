@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -46,8 +45,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 		GuidedSessionID   *string `json:"guided_session_id"`
 		PersonaArtifactID *string `json:"persona_artifact_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if !h.validPersonaForProject(w, r, req.PersonaArtifactID, projectID) {
@@ -71,8 +69,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(interview)
+	writeJSONBareStatus(w, http.StatusCreated, interview)
 }
 
 func (h *Handler) ListInterviews(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +82,7 @@ func (h *Handler) ListInterviews(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list interviews", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, minRole string) *interviews.Interview {
@@ -141,8 +138,7 @@ func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PersonaArtifactID *string `json:"persona_artifact_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if !h.validPersonaForProject(w, r, req.PersonaArtifactID, interview.ProjectID) {
@@ -153,7 +149,7 @@ func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +162,7 @@ func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(closed)
+	writeJSONBare(w, closed)
 }
 
 func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) {
@@ -181,8 +177,7 @@ func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) 
 		InviteeLabel string     `json:"invitee_label"`
 		ExpiresAt    *time.Time `json:"expires_at"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	invite, token, err := h.InterviewService.CreateInvite(interview.ID, req.InviteeLabel, req.ExpiresAt)
@@ -190,8 +185,7 @@ func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBareStatus(w, http.StatusCreated, map[string]interface{}{
 		"invite": invite,
 		"token":  token,
 		"path":   "/interview/" + token,
@@ -208,7 +202,7 @@ func (h *Handler) ListInterviewInvites(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list invites", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) RevokeInterviewInvite(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +239,7 @@ func (h *Handler) ListInterviewSessions(w http.ResponseWriter, r *http.Request) 
 		respondInternal(w, r, "failed to list interview sessions", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // ListProjectInterviewSessions returns the most recent sessions across every
@@ -269,7 +263,7 @@ func (h *Handler) ListProjectInterviewSessions(w http.ResponseWriter, r *http.Re
 	if list == nil {
 		list = []*interviews.Session{}
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request) {
@@ -294,5 +288,5 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 		respondInternal(w, r, "failed to load transcript", err)
 		return
 	}
-	json.NewEncoder(w).Encode(transcript)
+	writeJSONBare(w, transcript)
 }

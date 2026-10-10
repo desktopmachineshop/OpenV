@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -32,7 +31,7 @@ func (h *Handler) ListAgents(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list agents", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
@@ -40,8 +39,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var def agents.Definition
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &def) {
 		return
 	}
 	// Validate before the store does, so the definition rules — an allowlist
@@ -70,8 +68,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(agent)
+	writeJSONBareStatus(w, http.StatusCreated, agent)
 }
 
 func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +84,7 @@ func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load agent", err)
 		return
 	}
-	json.NewEncoder(w).Encode(agent)
+	writeJSONBare(w, agent)
 }
 
 func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
@@ -96,8 +93,7 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	slug := mux.Vars(r)["slug"]
 	var def agents.Definition
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &def) {
 		return
 	}
 	if def.Slug == "" {
@@ -123,7 +119,7 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(agent)
+	writeJSONBare(w, agent)
 }
 
 func (h *Handler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +146,7 @@ func (h *Handler) GetAgentRaw(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "agent not found", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{"content": content})
+	writeJSONBare(w, map[string]string{"content": content})
 }
 
 func (h *Handler) SaveAgentRaw(w http.ResponseWriter, r *http.Request) {
@@ -160,8 +156,7 @@ func (h *Handler) SaveAgentRaw(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Content string `json:"content"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// The file's provider passes the same gate as a form save; a file that
@@ -175,7 +170,7 @@ func (h *Handler) SaveAgentRaw(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(agent)
+	writeJSONBare(w, agent)
 }
 
 func (h *Handler) SyncAgents(w http.ResponseWriter, r *http.Request) {
@@ -191,5 +186,5 @@ func (h *Handler) SyncAgents(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list agents", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }

@@ -63,7 +63,7 @@ func (h *Handler) ListTeams(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list crews", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +75,7 @@ func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		Description string  `json:"description"`
 		ProjectID   *string `json:"project_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A project-pinned crew must belong to a project in the same workspace.
@@ -105,8 +104,7 @@ func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(team)
+	writeJSONBareStatus(w, http.StatusCreated, team)
 }
 
 func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +119,7 @@ func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRoleFor(w, r, graph.Team.OrgID, orgs.RoleMember, missing("team not found")) {
 		return
 	}
-	json.NewEncoder(w).Encode(graph)
+	writeJSONBare(w, graph)
 }
 
 // teamWriteChecked loads a crew and enforces the crew-write guard, whose
@@ -152,8 +150,7 @@ func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		Description *string `json:"description"`
 		EntryNodeID *string `json:"entry_node_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	team, err := h.TeamService.UpdateTeam(mux.Vars(r)["id"], req.Name, req.Description, req.EntryNodeID)
@@ -161,7 +158,7 @@ func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(team)
+	writeJSONBare(w, team)
 }
 
 func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
@@ -190,8 +187,7 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 		Name      string  `json:"name"`
 		ProjectID *string `json:"project_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// The copy stays in the source's workspace and is checked where it lands
@@ -221,8 +217,7 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(team)
+	writeJSONBareStatus(w, http.StatusCreated, team)
 }
 
 // ExportCrew returns a crew as a portable, org-independent JSON document whose
@@ -283,8 +278,7 @@ func (h *Handler) ImportCrew(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var doc crewtemplates.PortableCrew
-	if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &doc) {
 		return
 	}
 	result, err := crewtemplates.Import(&doc, orgID, projectID, h.AgentService, h.TeamService)
@@ -292,8 +286,7 @@ func (h *Handler) ImportCrew(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(result)
+	writeJSONBareStatus(w, http.StatusCreated, result)
 }
 
 // ListCrewTemplates returns the built-in crew presets. Each carries its full
@@ -303,7 +296,7 @@ func (h *Handler) ListCrewTemplates(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	json.NewEncoder(w).Encode(crewtemplates.BuiltinCrewTemplates())
+	writeJSONBare(w, crewtemplates.BuiltinCrewTemplates())
 }
 
 // crewPinNotFound answers a crew pin, in a create's body or an import's
@@ -352,8 +345,7 @@ func (h *Handler) AddTeamNode(w http.ResponseWriter, r *http.Request) {
 		Department string                 `json:"department"`
 		Position   map[string]interface{} `json:"position"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	node, err := h.TeamService.AddNode(mux.Vars(r)["id"], teams.NodeSpec{
@@ -368,8 +360,7 @@ func (h *Handler) AddTeamNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(node)
+	writeJSONBareStatus(w, http.StatusCreated, node)
 }
 
 func (h *Handler) UpdateTeamNode(w http.ResponseWriter, r *http.Request) {
@@ -391,8 +382,7 @@ func (h *Handler) UpdateTeamNode(w http.ResponseWriter, r *http.Request) {
 		Department *string                `json:"department"`
 		Position   map[string]interface{} `json:"position"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.TeamService.UpdateNode(mux.Vars(r)["id"], req.Label, req.AgentID, req.UserID, req.Department, req.Position)
@@ -400,7 +390,7 @@ func (h *Handler) UpdateTeamNode(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) RemoveTeamNode(w http.ResponseWriter, r *http.Request) {
@@ -435,8 +425,7 @@ func (h *Handler) AddTeamEdge(w http.ResponseWriter, r *http.Request) {
 		EdgeType   string                 `json:"edge_type"`
 		Config     map[string]interface{} `json:"config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	edge, err := h.TeamService.AddEdge(mux.Vars(r)["id"], req.FromNodeID, req.ToNodeID, req.EdgeType, req.Config)
@@ -444,8 +433,7 @@ func (h *Handler) AddTeamEdge(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(edge)
+	writeJSONBareStatus(w, http.StatusCreated, edge)
 }
 
 func (h *Handler) UpdateTeamEdge(w http.ResponseWriter, r *http.Request) {
@@ -463,8 +451,7 @@ func (h *Handler) UpdateTeamEdge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Config map[string]interface{} `json:"config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.TeamService.UpdateEdge(mux.Vars(r)["id"], req.Config)
@@ -472,7 +459,7 @@ func (h *Handler) UpdateTeamEdge(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
@@ -527,8 +514,7 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 		ProjectID string `json:"project_id"`
 		Prompt    string `json:"prompt"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// Project-pinned crews launch with project editor rights on the pin;
@@ -591,6 +577,5 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 		writeLaunchError(w, r, launchErrs400, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(run)
+	writeJSONBareStatus(w, http.StatusCreated, run)
 }

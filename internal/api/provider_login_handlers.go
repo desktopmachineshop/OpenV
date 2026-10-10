@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -35,8 +34,7 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 		Provider string `json:"provider"`
 		Target   string `json:"target"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Target == "" {
@@ -54,8 +52,7 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(login.Sanitized())
+	writeJSONBareStatus(w, http.StatusCreated, login.Sanitized())
 }
 
 // userLoginChecked loads a login request and verifies it belongs to the
@@ -107,7 +104,7 @@ func (h *Handler) GetProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if login == nil {
 		return
 	}
-	json.NewEncoder(w).Encode(login.Sanitized())
+	writeJSONBare(w, login.Sanitized())
 }
 
 // SubmitProviderLoginCode records the user's pasted authorization code.
@@ -121,8 +118,7 @@ func (h *Handler) SubmitProviderLoginCode(w http.ResponseWriter, r *http.Request
 	var req struct {
 		Code string `json:"code"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	login, err := h.LoginService.SubmitCode(mux.Vars(r)["id"], req.Code)
@@ -130,7 +126,7 @@ func (h *Handler) SubmitProviderLoginCode(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(login.Sanitized())
+	writeJSONBare(w, login.Sanitized())
 }
 
 // CancelProviderLogin abandons a login request.
@@ -146,7 +142,7 @@ func (h *Handler) CancelProviderLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(login.Sanitized())
+	writeJSONBare(w, login.Sanitized())
 }
 
 // ClaimProviderLogin hands the oldest pending login request this worker may
@@ -168,7 +164,7 @@ func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 	// Signing a CLI in is use of the runner too — a member part-way through
 	// an OAuth flow must not have the runner pulled from under them.
 	h.touchRunnerSession(r)
-	json.NewEncoder(w).Encode(login)
+	writeJSONBare(w, login)
 }
 
 // workerLoginChecked loads a login request and verifies it belongs to the
@@ -195,8 +191,7 @@ func (h *Handler) ProgressProviderLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var req workerproto.LoginProgress
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	login, err := h.LoginService.Progress(mux.Vars(r)["id"], req.Status, req.AuthURL, req.Detail, req.PasteKind)
@@ -204,7 +199,7 @@ func (h *Handler) ProgressProviderLogin(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(login)
+	writeJSONBare(w, login)
 }
 
 // GetProviderLoginFull returns the request including any pasted code
@@ -217,5 +212,5 @@ func (h *Handler) GetProviderLoginFull(w http.ResponseWriter, r *http.Request) {
 	if login == nil {
 		return
 	}
-	json.NewEncoder(w).Encode(login)
+	writeJSONBare(w, login)
 }
