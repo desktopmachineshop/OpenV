@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -76,6 +75,5 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 	result.Base = baselines.SnapshotRef{ID: baseline.ID, Name: baseline.Name}
 	result.Target = targetRef
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	writeJSONOK(w, result)
 }

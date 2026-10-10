@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -134,9 +133,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 			attachment.FigureRef, attachment.Name()))
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(attachment)
+	writeJSON(w, http.StatusCreated, attachment)
 }
 
 // figureNotSaved answers an upload whose figure could not be saved, once
@@ -166,8 +163,7 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(attachment)
+	writeJSONOK(w, attachment)
 }
 
 // versionArtifactForFigure takes the artifact carrying a figure to a new
@@ -285,9 +281,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	if err != nil || updated == nil {
 		updated = existing
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(updated)
+	writeJSON(w, http.StatusCreated, updated)
 }
 
 // RenameAttachment gives a figure a title (REQ-157).
@@ -318,14 +312,12 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Title string `json:"title"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+	if !decodeJSONMsg(w, r, &req, "Invalid request body") {
 		return
 	}
 	title := strings.TrimSpace(req.Title)
 	if title == existing.Title {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(existing)
+		writeJSONOK(w, existing)
 		return
 	}
 
@@ -365,8 +357,7 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 		updated.Title = title
 		updated.Version = next
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updated)
+	writeJSONOK(w, updated)
 }
 
 // ListAttachmentVersions returns a figure's version history, newest first.
@@ -390,8 +381,7 @@ func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request)
 	if versions == nil {
 		versions = []*attachments.Version{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(versions)
+	writeJSONOK(w, versions)
 }
 
 // RestoreAttachmentVersion brings an older version of a figure back as a new
@@ -431,9 +421,7 @@ func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(restored)
+	writeJSON(w, http.StatusCreated, restored)
 }
 
 // DownloadAttachment serves the attachment file
@@ -538,8 +526,7 @@ func (h *Handler) ListProjectAttachments(w http.ResponseWriter, r *http.Request)
 		list = []*attachments.Attachment{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	writeJSONOK(w, list)
 }
 
 // ListArtifactAttachments lists all attachments for an artifact
@@ -556,8 +543,7 @@ func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(attachmentList)
+	writeJSONOK(w, attachmentList)
 }
 
 // unsupportedFigureMessage names what went wrong in terms an uploader can act

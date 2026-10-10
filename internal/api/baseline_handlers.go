@@ -36,7 +36,7 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 
 	var req createBaselineRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		writeJSONError(w, http.StatusBadRequest, invalidRequestBody)
 		return
 	}
 
@@ -66,9 +66,7 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 		"name": name,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(baseline)
+	writeJSON(w, http.StatusCreated, baseline)
 }
 
 // ListBaselines returns baselines for a project.
@@ -85,8 +83,7 @@ func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(baselines)
+	writeJSONOK(w, baselines)
 }
 
 // GetBaseline returns the snapshot JSON for a baseline.

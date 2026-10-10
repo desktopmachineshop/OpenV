@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -101,15 +100,13 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(allTemplates)
+	writeJSONOK(w, allTemplates)
 }
 
 // CreateTemplate saves a project as a template.
 func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
 	var req createTemplateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -128,9 +125,7 @@ func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(created)
+	writeJSON(w, http.StatusCreated, created)
 }
 
 type createProjectFromTemplateRequest struct {
@@ -149,8 +144,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	}
 
 	var req createProjectFromTemplateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -198,9 +192,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(project)
+		writeJSON(w, http.StatusCreated, project)
 		return
 	}
 
@@ -219,9 +211,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(project)
+	writeJSON(w, http.StatusCreated, project)
 }
 
 // addProjectCreatorAsOwner grants the requesting user owner membership on a
