@@ -87,6 +87,10 @@ base has: X10a's, filled in a class T commit ahead of it, for the edges of
 And an edge listed in `X10B_IMPORT_EDGES`, into a package the base has:
 X10b's, filled in a class T commit ahead of it, for the `cmd/server` →
 `internal/config` edge its switch of the boot stages adds.
+And an edge listed in `X14C_IMPORT_EDGES`, into a package the base has:
+X14c's, filled in a class T commit ahead of it, for the
+`internal/domain/reports` → `internal/domain/snapshot` edge its conversion
+of the report and V&V loaders adds.
 Everything else in the file may only shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which

@@ -1116,6 +1116,12 @@ and the class E PR X10b has it for the edges listed in
 `X10B_IMPORT_EDGES`, each into a package the base already has, filled in a
 class T commit ahead of X10b with the one edge its switch of the stages
 adds, `cmd/server` → `internal/config`, and left as it is by X10b;
+and the class E PR X14c has it for the edges listed in
+`X14C_IMPORT_EDGES`, each into a package the base already has, filled in a
+class T commit ahead of X14c with the one edge its loaders add,
+`internal/domain/reports` → `internal/domain/snapshot` (the download
+service reads through the report service and gains none), and left as it is
+by X14c;
 every other ratchet stays shrink-only. And S4's `boot_steps.txt` has a named
 golden exception for the class E steps that change it on purpose (X6, X7b,
 X7c and X10b; see the S4 note): each lists the lines it replaces, adds or

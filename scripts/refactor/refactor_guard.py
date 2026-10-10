@@ -10,8 +10,8 @@ The pull request's change is HEAD^1..HEAD, and its commits are
 HEAD^1..HEAD^2. The job runs the base's copy of this script, so a pull
 request's edits to the lists and rules below take effect once it merges;
 X2B_CALL_SHAPE_CHANGES, X14B_IMPORT_EDGES, X11B_IMPORT_EDGES,
-X10A_IMPORT_EDGES, X10B_IMPORT_EDGES, BOOT_STEPS_CHANGES and
-ENV_INVENTORY_CHANGES alone are read from the pull request's tree.
+X10A_IMPORT_EDGES, X10B_IMPORT_EDGES, X14C_IMPORT_EDGES, BOOT_STEPS_CHANGES
+and ENV_INVENTORY_CHANGES alone are read from the pull request's tree.
 
 Every pull request:
   (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 22 entries)
@@ -33,8 +33,8 @@ A pull request labelled `refactor` or `refactor:<anything>` also fails on:
     carved out of their files: see there);
   - an entry of internal/archtest/ratchets.json raised or added (in a
     commit of any class), apart from class D's new-package entries, a
-    class T commit's new rule key and, in class E, X14b's, X11b's, X10a's
-    and X10b's listed import edges;
+    class T commit's new rule key and, in class E, X14b's, X11b's, X10a's,
+    X10b's and X14c's listed import edges;
   - an entry of an S12 lint allowlist added or raised, or a ceiling in guard
     code (GUARD_CODE_CEILINGS: S12's error chains, S12b's K14 size budgets)
     raised or added, and an allowlist or ceiling map holding anything but
@@ -418,8 +418,8 @@ LINT_ALLOWLISTS = {"COMPONENTS_IMPORTING_VIEWS": "list", "EVENT_SOURCE_SITES": "
 # rules (RATCHET_RULE_CODE), such as M5's K3 allowlist, a func_lines
 # ceiling carried, at no higher value, to the same method on a new receiver
 # (ceiling_carried), and a class E commit's import_edges listed in
-# X14B_IMPORT_EDGES, X11B_IMPORT_EDGES, X10A_IMPORT_EDGES or
-# X10B_IMPORT_EDGES.
+# X14B_IMPORT_EDGES, X11B_IMPORT_EDGES, X10A_IMPORT_EDGES, X10B_IMPORT_EDGES
+# or X14C_IMPORT_EDGES.
 RATCHETS_FILE = "internal/archtest/ratchets.json"
 RATCHET_RULE_CODE = "internal/archtest/*.go"
 
@@ -565,6 +565,30 @@ X10A_IMPORT_EDGES = [
 # reads X14B_IMPORT_EDGES.
 X10B_IMPORT_EDGES = [
     ("cmd/server", "internal/config"),
+]
+
+# X14c's named exception (§8.3): the import edges X14c adds, as ("from
+# package", "to package") pairs of module-relative packages. X14c converts
+# the last three sites that decode a project snapshot into
+# exports.ProjectExport to snapshot.Load, which X14b wrote: the report
+# service's loader (loadReportExport, behind GenerateProjectReport,
+# GenerateProjectReportDOCX and LoadReportExport) and its V&V report's
+# (GenerateVVReport), both in internal/domain/reports. The download service
+# reads its snapshot through the report service's LoadReportExport and
+# imports no loader of its own, so its edges stay as they are. Its one new
+# edge is reports' into internal/domain/snapshot; the sources it hands Load
+# are the baseline and export services reports already imports, so nothing
+# else gains one. Like X10B_IMPORT_EDGES, this list is filled here, in a
+# class T commit ahead of X14c, and carved out for no class: X14c's class E
+# commit adds the edge and leaves the list as it is. In a class E commit of
+# a refactor pull request, an import_edges entry added to ratchets.json (a
+# new target in an importer's list, or a new importer's key with its list)
+# is not a raise when every edge it adds is listed here and goes into a
+# package the base already has. Every other ratchet rule stands, in class E
+# too. The guard reads the list from the pull request's copy of this file,
+# as it reads X14B_IMPORT_EDGES.
+X14C_IMPORT_EDGES = [
+    ("internal/domain/reports", "internal/domain/snapshot"),
 ]
 
 # The boot steps' named exception (§8.3): the lines of S4's boot_steps.txt a
@@ -1515,6 +1539,13 @@ def x10b_edges_in(text):
     return string_pairs_in(text, "X10B_IMPORT_EDGES")
 
 
+def x14c_edges_in(text):
+    """X14C_IMPORT_EDGES as a copy of this script holds it, a list of
+    (from package, to package) string pairs, or None when the literal is
+    missing or is not such a list."""
+    return string_pairs_in(text, "X14C_IMPORT_EDGES")
+
+
 def boot_steps_changes_in(text):
     """BOOT_STEPS_CHANGES as a copy of this script holds it, a list of
     (before, after) pairs of single lines, at most one of each pair empty, or
@@ -1823,6 +1854,8 @@ class Guard:
         self.x10a_used = set()
         self._x10b_edges = None
         self.x10b_used = set()
+        self._x14c_edges = None
+        self.x14c_used = set()
 
     # ---- helpers
 
@@ -1886,6 +1919,8 @@ class Guard:
                 self.notes.append(f"{RATCHETS_FILE}: X10a's listed import edge {importer} -> {target} (§8.3)")
             for importer, target in sorted(self.x10b_used):
                 self.notes.append(f"{RATCHETS_FILE}: X10b's listed import edge {importer} -> {target} (§8.3)")
+            for importer, target in sorted(self.x14c_used):
+                self.notes.append(f"{RATCHETS_FILE}: X14c's listed import edge {importer} -> {target} (§8.3)")
             self.check_class_mixing()
             self.check_build_identity()
         return not self.failures
@@ -2674,12 +2709,46 @@ class Guard:
         self.x10b_used.update((importer, t) for t in targets)
         return True
 
+    def x14c_edges(self):
+        """X14c's listed import edges (§8.3), a set of (from, to) pairs. The
+        list is the pull request's copy (GUARD_SCRIPT in the merge commit),
+        not this module's, which is the base's in CI."""
+        if self._x14c_edges is None:
+            listed = x14c_edges_in(self.git.text(self.merge, GUARD_SCRIPT))
+            if listed is None:
+                self.warnings.append(f"X14C_IMPORT_EDGES in {GUARD_SCRIPT} is missing or not a list of "
+                                     "(from, to) string pairs; counting no X14c exception")
+                listed = []
+            self._x14c_edges = set(listed)
+        return self._x14c_edges
+
+    def x14c_listed(self, kp, new):
+        """Whether an import_edges entry a class E commit adds is X14c's
+        (§8.3): every edge it adds (a new target in an importer's list, or
+        each target of a new importer's key) is listed in X14C_IMPORT_EDGES
+        and goes into a package the base already has."""
+        importer = kp[1]
+        if len(kp) == 3:
+            targets = [kp[2]]
+        else:
+            new_edges = new.get("import_edges", {}) if isinstance(new, dict) else {}
+            targets = new_edges.get(importer) if isinstance(new_edges, dict) else None
+        if not isinstance(targets, list) or not targets:
+            return False
+        listed = self.x14c_edges()
+        if not all(isinstance(t, str) and (importer, t) in listed and self.git.is_dir(self.base, t)
+                   for t in targets):
+            return False
+        self.x14c_used.update((importer, t) for t in targets)
+        return True
+
     def ratchet_exception(self, c, parent, old, new, growth):
         kp, kind, _ = growth
         if c.klass == "E" and kind == "added" and len(kp) in (2, 3) and kp[0] == "import_edges":
-            # X14b's, X11b's, X10a's and X10b's named exceptions (§8.3)
+            # X14b's, X11b's, X10a's, X10b's and X14c's named exceptions (§8.3)
             return (self.x14b_listed(kp, new) or self.x11b_listed(c, parent, kp, new)
-                    or self.x10a_listed(kp, new) or self.x10b_listed(kp, new))
+                    or self.x10a_listed(kp, new) or self.x10b_listed(kp, new)
+                    or self.x14c_listed(kp, new))
         if kind == "added" and len(kp) == 2 and kp[0] == "func_lines" and ceiling_carried(kp[1], old, new):
             return True  # the same method on its new receiver, at no higher ceiling (M15b)
         if kind == "added" and len(kp) == 1 and c.klass == "T" and any(
