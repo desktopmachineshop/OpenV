@@ -98,6 +98,9 @@ X10A_IMPORT_EDGES = [
 X10B_IMPORT_EDGES = [
 ]
 
+X14C_IMPORT_EDGES = [
+]
+
 BOOT_STEPS_CHANGES = [
 ]
 
@@ -1084,6 +1087,22 @@ class DataTest(unittest.TestCase):
         self.assertNotIn("X10B_IMPORT_EDGES", rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT])
         self.assertIsNone(rg.x10b_edges_in(text.replace('("cmd/server", "internal/config"),',
                                                         '("cmd/server", "internal/config", "z"),')))
+
+    def test_own_x14c_block_lists_x14cs_edge(self):
+        with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
+            text = f.read()
+        self.assertIsNotNone(rg.find_block(text, "X14C_IMPORT_EDGES"))
+        # Filled here, in class T, with exactly the edge X14c adds: the report
+        # service's into internal/domain/snapshot, which X14b's loader lives in.
+        self.assertEqual(rg.X14C_IMPORT_EDGES, [
+            ("internal/domain/reports", "internal/domain/snapshot"),
+        ])
+        # The job reads the list from the pull request's copy of this file,
+        # which no class may edit as data: X14c's class E commit leaves it.
+        self.assertEqual(rg.x14c_edges_in(text), rg.X14C_IMPORT_EDGES)
+        self.assertNotIn("X14C_IMPORT_EDGES", rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT])
+        self.assertIsNone(rg.x14c_edges_in(text.replace('("internal/domain/reports", "internal/domain/snapshot"),',
+                                                        '("internal/domain/reports", "internal/domain/snapshot", "z"),')))
 
     def test_own_boot_steps_block_is_found(self):
         with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
@@ -3033,6 +3052,181 @@ class RatchetTest(RepoTest):
         self.x10b("E", self.x10b_switches_its_stages, listed=x10a_only)
         g = self.guard("refactor")
         self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.cmd/server.internal/config")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    # X14c's named exception (§8.3): in class E, an import edge listed in
+    # X14C_IMPORT_EDGES, into a package the base has, is not a raise. The
+    # list is filled in class T ahead of X14c, so these tests fill it on the
+    # base, and X14c's commit leaves it. On the base the report service
+    # already has an import_edges key; X14c adds internal/domain/snapshot to
+    # it. The download service, which reads its snapshot through the report
+    # service, keeps its edges and gains none.
+
+    X14C_EDGES = [("internal/domain/reports", "internal/domain/snapshot")]
+    X14C_LISTED = GUARD_PY.replace("X14C_IMPORT_EDGES = [\n]", "X14C_IMPORT_EDGES = [\n" + "".join(
+        f'    ("{a}", "{b}"),\n' for a, b in X14C_EDGES) + "]")
+    X14C_LOADERS = {"internal/domain/reports/report.go": "package reports\n"}
+
+    @staticmethod
+    def x14c_on_base(r):
+        r["import_edges"]["internal/domain/reports"] = ["internal/domain/baselines", "internal/domain/exports"]
+        r["import_edges"]["internal/domain/downloads"] = ["internal/domain/exports", "internal/domain/reports"]
+
+    @staticmethod
+    def x14c_loads_through_snapshot(r):
+        r["import_edges"]["internal/domain/reports"].append("internal/domain/snapshot")
+
+    def x14c(self, klass, change, files=None, listed=None, on_base=None):
+        """X14c's shape: internal/domain/snapshot (on_base, by default) and
+        the report and download services' import_edges keys on the base, with
+        X14C_IMPORT_EDGES filled there (listed, by default X14c's edge, or
+        none when listed is False), then one commit of the given class that
+        changes ratchets.json from there and adds files (by default the
+        report service's loader)."""
+        self.packages_on_base(*(["internal/domain/snapshot"] if on_base is None else on_base))
+        self.git("checkout", "-q", "main")
+        base = self.ratchets(self.x14c_on_base)
+        if listed is not False:
+            base["scripts/refactor/refactor_guard.py"] = listed or self.X14C_LISTED
+        self.commit("base", base)
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+
+        def from_base(r):
+            self.x14c_on_base(r)
+            change(r)
+        out = self.ratchets(from_base)
+        out.update(self.X14C_LOADERS if files is None else files)
+        self.commit("X14c", out, trailers(klass, Refactor_Characterization="internal/api/handlers_test.go")
+                    if klass == "E" else trailers(klass))
+
+    def test_x14c_listed_edge_passes_in_class_e(self):
+        self.x14c("E", self.x14c_loads_through_snapshot)
+        g = self.guard("refactor")
+        self.assertPasses(g)
+        self.assertIn(f"{rg.RATCHETS_FILE}: X14c's listed import edge internal/domain/reports -> "
+                      "internal/domain/snapshot (§8.3)", g.notes)
+
+    def test_x14c_listed_edge_of_a_new_importer_key_passes_in_class_e(self):
+        def change(r):
+            r["import_edges"]["internal/domain/reports"] = ["internal/domain/snapshot"]
+        self.git("checkout", "-q", "main")
+        self.commit("list", {"scripts/refactor/refactor_guard.py": self.X14C_LISTED})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+        self.packages_on_base("internal/domain/snapshot")
+        out = self.ratchets(change)
+        out.update(self.X14C_LOADERS)
+        self.commit("X14c", out, trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        self.assertPasses(self.guard("refactor"))
+
+    def test_x14c_unlisted_edge_of_its_importer_fails(self):
+        def change(r):
+            self.x14c_loads_through_snapshot(r)
+            r["import_edges"]["internal/domain/reports"].append("internal/domain/links")
+        self.x14c("E", change)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/links")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14c_listed_edge_from_another_importer_fails(self):
+        # The download service reaches its snapshot through the report
+        # service: an edge of its own into snapshot is not X14c's.
+        def change(r):
+            self.x14c_loads_through_snapshot(r)
+            r["import_edges"]["internal/domain/downloads"].append("internal/domain/snapshot")
+        self.x14c("E", change)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/downloads.internal/domain/snapshot")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14c_listed_edge_into_a_package_the_base_lacks_fails(self):
+        # Like X10b's, X14c's edge goes only into a package the base has:
+        # one the commit creates does not count.
+        self.x14c("E", self.x14c_loads_through_snapshot, on_base=[],
+                  files={**self.X14C_LOADERS, "internal/domain/snapshot/load.go": "package snapshot\n"})
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/snapshot")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14c_edge_fails_while_the_pull_requests_list_is_empty(self):
+        self.addCleanup(setattr, rg, "X14C_IMPORT_EDGES", rg.X14C_IMPORT_EDGES)
+        rg.X14C_IMPORT_EDGES = list(self.X14C_EDGES)  # the running script's copy, not the pull request's
+        self.x14c("E", self.x14c_loads_through_snapshot, listed=False)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/snapshot")
+
+    def test_x14c_list_that_does_not_parse_counts_as_empty(self):
+        self.x14c("E", self.x14c_loads_through_snapshot, listed=self.X14C_LISTED.replace('"),', '")+1,'))
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/snapshot")
+        self.assertTrue(any("X14C_IMPORT_EDGES" in w for w in g.warnings), g.warnings)
+
+    def test_x14c_list_edited_in_class_e_fails(self):
+        self.commit("X14c list", {"scripts/refactor/refactor_guard.py": self.X14C_LISTED},
+                    trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
+
+    def test_x14c_list_edited_in_class_t_passes(self):
+        self.commit("X14c list", {"scripts/refactor/refactor_guard.py": self.X14C_LISTED}, trailers("T"))
+        self.assertPasses(self.guard("refactor", "refactor:tooling"))
+
+    def assert_x14c_edge_fails_in(self, klass, *labels):
+        self.x14c(klass, self.x14c_loads_through_snapshot)
+        g = self.guard("refactor", *labels)
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/snapshot")
+
+    def test_x14c_listed_edge_fails_in_class_c(self):
+        self.assert_x14c_edge_fails_in("C", "refactor:test")
+
+    def test_x14c_listed_edge_fails_in_class_t(self):
+        self.assert_x14c_edge_fails_in("T", "refactor:tooling")
+
+    def test_x14c_listed_edge_fails_in_class_a(self):
+        self.assert_x14c_edge_fails_in("A", "refactor:move")
+
+    def test_x14c_exception_loosens_no_other_ratchet(self):
+        def change(r):
+            self.x14c_loads_through_snapshot(r)
+            r["counts"]["raw_json_encodes"] = 250
+            r["file_lines"]["internal/domain/reports/report.go"] = 2500
+        self.x14c("E", change)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "counts.raw_json_encodes (249 -> 250)")
+        self.assertFailsWith(g, "(2) ratchets", "file_lines.internal/domain/reports/report.go")
+        self.assertEqual(len(g.failures), 2, [f.render() for f in g.failures])
+
+    def test_x14c_list_does_not_admit_x14bs_edge(self):
+        # X14b's edge is the API's into the same package; X14c's list does not
+        # carry it.
+        self.x14c("E", lambda r: (self.x14c_loads_through_snapshot(r),
+                                  r["import_edges"]["internal/api"].append("internal/domain/snapshot")))
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets", "adds ratchets.json entry import_edges.internal/api.internal/domain/snapshot")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x14b_list_does_not_admit_x14cs_edge(self):
+        x14b_only = GUARD_PY.replace("X14B_IMPORT_EDGES = [\n]",
+                                     'X14B_IMPORT_EDGES = [\n    ("internal/api", "internal/domain/snapshot"),\n]')
+        self.x14c("E", self.x14c_loads_through_snapshot, listed=x14b_only)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/snapshot")
+        self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
+
+    def test_x10b_list_does_not_admit_x14cs_edge(self):
+        x10b_only = GUARD_PY.replace("X10B_IMPORT_EDGES = [\n]",
+                                     'X10B_IMPORT_EDGES = [\n    ("cmd/server", "internal/config"),\n]')
+        self.x14c("E", self.x14c_loads_through_snapshot, listed=x10b_only)
+        g = self.guard("refactor")
+        self.assertFailsWith(g, "(2) ratchets",
+                             "adds ratchets.json entry import_edges.internal/domain/reports.internal/domain/snapshot")
         self.assertEqual(len(g.failures), 1, [f.render() for f in g.failures])
 
     def test_x14b_list_does_not_admit_x11bs_new_package(self):

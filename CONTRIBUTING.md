@@ -235,7 +235,10 @@ edges of `internal/config`, the package X10a creates, into packages the
 base has; in a class E commit, an `import_edges` entry that adds only those
 is not a raise. `X10B_IMPORT_EDGES`, a fourth, is filled the same way, in a
 class T commit ahead of X10b, with exactly the one edge X10b's switch of the
-boot stages adds, `cmd/server`'s into `internal/config`. X6, X7b, X7c and X10b each fill `BOOT_STEPS_CHANGES`,
+boot stages adds, `cmd/server`'s into `internal/config`. `X14C_IMPORT_EDGES`,
+a fifth, is filled the same way, in a class T commit ahead of X14c, with
+exactly the one edge X14c's conversion of the report and V&V loaders adds,
+`internal/domain/reports`' into `internal/domain/snapshot`. X6, X7b, X7c and X10b each fill `BOOT_STEPS_CHANGES`,
 the other named golden exception, with the `cmd/server/testdata/boot_steps.txt`
 lines they replace, add or remove: a change to that file made in class E
 commits that is exactly those changes, in list order, is not a golden change.
@@ -260,8 +263,9 @@ entry is still judged by that entry. A step that needs a new exception lands
 it in an earlier pull request, as S12b landed the class T rule for
 TypeScript the build erases before X5 uses it. `X2B_CALL_SHAPE_CHANGES`, `X14B_IMPORT_EDGES`,
 `BOOT_STEPS_CHANGES` and `ENV_INVENTORY_CHANGES` are the lists the job reads from the pull request, since X2b,
-X14b, the boot-steps steps and X10b fill them in their own; it reads `X11B_IMPORT_EDGES`, `X10A_IMPORT_EDGES` and `X10B_IMPORT_EDGES` there
-too, though X11b's, X10a's and X10b's own pull requests leave them as the base has them. `make check` does the same with the merge base's
+X14b, the boot-steps steps and X10b fill them in their own; it reads `X11B_IMPORT_EDGES`, `X10A_IMPORT_EDGES`, `X10B_IMPORT_EDGES` and
+`X14C_IMPORT_EDGES` there too, though X11b's, X10a's, X10b's and X14c's own pull
+requests leave them as the base has them. `make check` does the same with the merge base's
 copy.
 
 ### Goldens are regenerated only for a behavior change

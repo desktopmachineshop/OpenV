@@ -677,8 +677,8 @@ adds its entries there in a class T commit. The job, and `make check`, run
 the base's copy of the script, so those entries take effect once that pull
 request merges (`X2B_CALL_SHAPE_CHANGES`, `X14B_IMPORT_EDGES`,
 `X11B_IMPORT_EDGES`, `X10A_IMPORT_EDGES`, `X10B_IMPORT_EDGES`,
-`BOOT_STEPS_CHANGES` and `ENV_INVENTORY_CHANGES` are read from the pull
-request). The job's next step, not the script, fails a refactor whose
+`X14C_IMPORT_EDGES`, `BOOT_STEPS_CHANGES` and `ENV_INVENTORY_CHANGES` are
+read from the pull request). The job's next step, not the script, fails a refactor whose
 `ratchets.json` can be tightened.
 
 ## areas
