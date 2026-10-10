@@ -639,6 +639,29 @@ ENV_CONFIG_READ = "internal/config:"
 ENV_INVENTORY_CHANGES = [
 ]
 
+# The S8 parse-table writers X10b's moves change (§8.3): each package that
+# had a getter carries an env_parse_test.go, whose TestEnvParse writes the
+# sections of env_parse.txt keyed with its directory and a colon (its
+# <package>: sections, which checkEnvParse owns), beside a copy of
+# env_parse_helpers_test.go. They are guard code (S8), but the moves cannot
+# be made without them: a getter that moves into internal/config leaves its
+# package's sections stale, which S8's own test refuses, and the getter's new
+# section is written by internal/config's writer. So in a class E commit of
+# a pull request whose S8 change ENV_INVENTORY_CHANGES exempts
+# (env_inventory_exempt), a writer may change when its net effect on the
+# table is exactly listed moves: a deleted writer owned, in the base's table,
+# only sections that are before labels of the list, and owns none in the
+# pull request's; a modified writer's owned sections changed, those it no
+# longer owns being before labels and those it newly owns after labels, the
+# rest as they were (which env_parse_moved already holds). A helpers copy
+# may only be deleted, and only where its writer is gone too. The check
+# reads the table, not the writer's Go source: the writer's TestEnvParse
+# compares the sections it owns with the table, so in a pull request whose
+# tests pass the table is what the writer writes, and an edit to the source
+# that changes nothing in the table is no move and stays a guard-code edit.
+ENV_PARSE_WRITER = "env_parse_test.go"
+ENV_PARSE_HELPERS = "env_parse_helpers_test.go"
+
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
 # (quirk Q20), and S12b's K14 size budgets for production TypeScript with
 # their grandfathered ceilings and §10's count of files over 1,000 lines.
@@ -2229,6 +2252,8 @@ class Guard:
                 continue
             if s == "M" and c.klass == "E" and p in (ENV_VARS_FILE, ENV_PARSE_FILE) and self.env_inventory_exempt():
                 continue  # S8's goldens, also archtest's: only the read-column moves listed (§8.3)
+            if c.klass == "E" and step == "S8" and self.env_writer_moved(c, s, p):
+                continue  # an S8 writer whose effect is only the read-column moves listed (§8.3)
             if c.klass in ("C", "T") and not golden_modified:
                 continue
             why = (f"a class {c.klass} commit" if c.klass not in ("C", "T")
@@ -2237,6 +2262,45 @@ class Guard:
             self.fail("(2) guard code", f"{verb} guard code ({step}) in {why}",
                       "change guard code only in its own class C or T commit that changes no golden, green against "
                       "the production code of its parent (R3)", commit=c, path=p)
+
+    def env_writer_moved(self, c, s, path):
+        """Whether class E commit c's change s to S8 writer file path is one
+        X10b's listed moves need (ENV_PARSE_WRITER's comment): the pull
+        request's S8 change is exempt, and the writer's owned sections of
+        env_parse.txt, the base's against the pull request's, changed only by
+        listed moves, or path is a helpers copy deleted where its writer is
+        gone."""
+        name, owner = os.path.basename(path), os.path.dirname(path)
+        if name not in (ENV_PARSE_WRITER, ENV_PARSE_HELPERS):
+            return False
+        listed = self.env_inventory_exempt()
+        if not listed:
+            return False
+        if name == ENV_PARSE_HELPERS:
+            writer = f"{owner}/{ENV_PARSE_WRITER}"
+            gone = self.git.show(self.base, writer) is not None and self.git.show(c.sha, writer) is None
+            if s == "D" and gone:
+                c.notes.append(f"{path}: deleted beside its writer (§8.3)")
+                return True
+            return False
+        befores = {env_label(b) for b, _ in listed if env_label(b) is not None}
+        afters = {env_label(a) for _, a in listed if env_label(a) is not None}
+        old_text, new_text = self.git.text(self.base, ENV_PARSE_FILE), self.git.text(self.merge, ENV_PARSE_FILE)
+        if old_text is None or new_text is None:
+            return False
+        prefix = owner + ":"
+        old = {k for k in env_parse_table(old_text)[1] if k.startswith(prefix)}
+        new = {k for k in env_parse_table(new_text)[1] if k.startswith(prefix)}
+        if s == "D":
+            ok = bool(old) and old <= befores and not new
+        elif s == "M":
+            ok = old != new and (old - new) <= befores and (new - old) <= afters
+        else:
+            ok = False
+        if ok:
+            c.notes.append(f"{path}: its sections of {ENV_PARSE_FILE} change only by the moves ENV_INVENTORY_CHANGES "
+                           f"lists ({len(old - new)} gone, {len(new - old)} new; §8.3)")
+        return ok
 
     def check_ratchets(self, c):
         if not any(p == RATCHETS_FILE for _, p in c.changes) or not self.on_base(RATCHETS_FILE):
