@@ -3,6 +3,7 @@ package hosting
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -208,11 +209,16 @@ func TestNewProvisionerDisabledByEnv(t *testing.T) {
 	}
 }
 
+// pidsLimitRuns numbers the runs of
+// TestNewProvisionerNamesAMalformedPidsLimitAtBoot in this process.
+var pidsLimitRuns atomic.Int64
+
 // With hosted runners on, NewProvisioner reads HOSTED_RUNNER_PIDS_LIMIT once,
 // so that a malformed one is named in the boot log (#379, question 15), not
 // first when a workspace's runner is provisioned. A stand-in docker daemon
 // answers the ping.
 func TestNewProvisionerNamesAMalformedPidsLimitAtBoot(t *testing.T) {
+	run := pidsLimitRuns.Add(1)
 	daemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Api-Version", "1.47")
 		w.WriteHeader(http.StatusOK)
@@ -222,9 +228,10 @@ func TestNewProvisionerNamesAMalformedPidsLimitAtBoot(t *testing.T) {
 	for _, name := range []string{"DOCKER_API_VERSION", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY", "HOSTED_RUNNERS"} {
 		t.Setenv(name, "")
 	}
-	// A value no other test sets: internal/envparse warns once per variable
-	// and value for the life of the process.
-	const value = "lots (TestNewProvisionerNamesAMalformedPidsLimitAtBoot)"
+	// A value no other test, and no earlier run of this one (go test
+	// -count=2), sets: internal/envparse warns once per variable and value
+	// for the life of the process.
+	value := fmt.Sprintf("lots (TestNewProvisionerNamesAMalformedPidsLimitAtBoot, run %d)", run)
 	t.Setenv("HOSTED_RUNNER_PIDS_LIMIT", value)
 	// slog.SetDefault also points the log package at the new handler, and
 	// setting the old one back does not undo that, so both are restored.
