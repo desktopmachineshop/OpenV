@@ -48,6 +48,7 @@ DELETE /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
+GET /api/v1/admin/metrics/users: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/admin/users: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/admin/workspaces: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/agent-runs: s5d, s5e; 2xx or 3xx in s5d, s5e
@@ -352,4 +353,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 341 of 341 routes reached (100.0%), 337 with a 2xx or 3xx answer (98.8%); the floor is 90%, 307 routes
+the tour: 342 of 342 routes reached (100.0%), 338 with a 2xx or 3xx answer (98.8%); the floor is 90%, 308 routes

@@ -8,6 +8,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
 )
@@ -59,7 +60,17 @@ type AuthMiddleware struct {
 	poolKey string
 	// emailVerification is the deployment's sign-up verification policy.
 	emailVerification users.EmailVerificationPolicy
+	// activity records each signed-in user's day for the platform admin's
+	// user dashboard; nil records nothing.
+	activity usermetrics.Service
 }
+
+// SetActivityRecorder wires the daily activity recorder (wiring-time only).
+func (m *AuthMiddleware) SetActivityRecorder(s usermetrics.Service) { m.activity = s }
+
+// CountryHeader is the two-letter country Cloudflare adds to a request it
+// proxies; it is all the user dashboard knows of where a user is.
+const CountryHeader = "CF-IPCountry"
 
 // SetEmailVerificationPolicy wires the sign-up verification policy
 // (wiring-time only).
@@ -172,6 +183,9 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 					annotateRequestLog(r.Context(), "", user.ID, "user")
 					writeJSONErrorCode(w, http.StatusForbidden, "email not verified", ErrCodeEmailUnverified)
 					return
+				}
+				if m.activity != nil {
+					m.activity.RecordActivity(user.ID, r.Header.Get(CountryHeader))
 				}
 				activeOrg := m.resolveActiveOrg(r, cookie.Value, user)
 				ctx := context.WithValue(r.Context(), ctxUser, user)

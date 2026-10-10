@@ -96,4 +96,4 @@ PUT /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 PUT /api/v1/test-runs/{id}: 200, 400, 403, 404, 409; test_runs_results
 PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
 
-s5b: 84 of 341 routes reached (24.6%), 84 with a 2xx or 3xx answer (24.6%)
+s5b: 84 of 342 routes reached (24.6%), 84 with a 2xx or 3xx answer (24.6%)

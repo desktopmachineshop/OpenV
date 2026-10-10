@@ -36,6 +36,7 @@ DELETE /api/v1/teams/{id}
 DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/work-items/{id}
+GET /api/v1/admin/metrics/users
 GET /api/v1/admin/users
 GET /api/v1/admin/workspaces
 GET /api/v1/agent-runs

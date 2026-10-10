@@ -26,6 +26,7 @@ DELETE /api/v1/orgs/{id}/runner-session: 200, 400; runner_keys_connector, tiers_
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: 204, 400, 403; runner_keys_connector
 DELETE /api/v1/projects/{id}/members/{userId}: 204, 403; members_teams
 DELETE /api/v1/projects/{id}/team-access/{teamId}: 204, 403; members_teams
+GET /api/v1/admin/metrics/users: 200, 403; mail_password_admin
 GET /api/v1/admin/users: 200, 403; mail_password_admin
 GET /api/v1/admin/workspaces: 200, 401, 403; mail_password_admin
 GET /api/v1/auth/config: 200; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, sessions_auth
@@ -121,4 +122,4 @@ PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 409; billing, tiers_secure_runne
 PUT /api/v1/projects/{id}/members/{userId}: 204, 400, 403, 404; members_teams
 PUT /api/v1/projects/{id}/team-access: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
 
-s5c: 109 of 341 routes reached (32.0%), 105 with a 2xx or 3xx answer (30.8%)
+s5c: 110 of 342 routes reached (32.2%), 106 with a 2xx or 3xx answer (31.0%)

@@ -73,3 +73,30 @@ export interface AdminUser {
   is_admin: boolean;
   created_at: string;
 }
+
+// GET /api/v1/admin/metrics/users: the platform admin's user dashboard.
+export interface UserDashboardPoint {
+  day: string;
+  count: number;
+}
+
+export interface UserDashboard {
+  generated_at: string;
+  total_users: number;
+  new_users_7d: number;
+  new_users_30d: number;
+  new_users_prev_30d: number;
+  dau: number;
+  wau: number;
+  mau: number;
+  stickiness: number;
+  lost_users: number;
+  newly_lost_30d: number;
+  lost_after_days: number;
+  signups: UserDashboardPoint[];
+  active: UserDashboardPoint[];
+  auth_providers: { name: string; count: number }[];
+  countries: { country: string; users: number; active_30d: number }[];
+  unknown_country: number;
+  cohorts: { month: string; size: number; retained: number[] }[];
+}

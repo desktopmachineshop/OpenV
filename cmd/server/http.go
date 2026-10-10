@@ -50,6 +50,9 @@ func buildHTTPHandler(
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
 	authMiddleware.SetPoolKey(runnerPoolKey)
 	authMiddleware.SetEmailVerificationPolicy(emailVerification)
+	if handler.UserMetricsService != nil {
+		authMiddleware.SetActivityRecorder(handler.UserMetricsService)
+	}
 	// Request logging wraps outside auth so rejected requests are logged too;
 	// auth annotates the log line with the resolved org/user. The metrics HTTP
 	// middleware sits between them, recording every request (including rejected

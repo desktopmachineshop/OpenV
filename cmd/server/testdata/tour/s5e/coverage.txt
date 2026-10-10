@@ -49,6 +49,7 @@ DELETE /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
+GET /api/v1/admin/metrics/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/workspaces: 200, 401, 403; phantom_matrix
 GET /api/v1/agent-runs: 200, 401, 404; phantom_matrix, real_id_reads
@@ -353,4 +354,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 341 of 341 routes reached (100.0%), 160 with a 2xx or 3xx answer (46.9%)
+s5e: 342 of 342 routes reached (100.0%), 161 with a 2xx or 3xx answer (47.1%)

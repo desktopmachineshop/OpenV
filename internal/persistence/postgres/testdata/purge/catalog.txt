@@ -69,6 +69,7 @@ shared_products scope - not reached
 templates scope org_id deleted
 test_results scope - cascade from test_runs
 test_runs scope project_id deleted
+user_activity_days scope - not reached
 user_repo_paths scope - cascade from repo_connections
 users scope - not reached
 work_item_activity scope - cascade from work_items

@@ -41,6 +41,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
@@ -108,6 +109,9 @@ type HandlerDeps struct {
 	// PushSubService stores per-device web push subscriptions (REQ-109).
 	// nil leaves the endpoints answering "not available".
 	PushSubService pushsubs.Service
+	// UserMetricsService records daily user activity and answers the
+	// platform admin's user dashboard. nil records nothing.
+	UserMetricsService usermetrics.Service
 	// VAPID is the web push key pair; the zero value disables push and is
 	// what /api/v1/me/push/config reports as enabled=false.
 	VAPID       notify.VAPIDConfig

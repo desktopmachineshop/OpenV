@@ -21,6 +21,7 @@ func (h *Handler) registerAdminRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/admin/workspaces", h.AdminListWorkspaces).Methods("GET")
 	router.HandleFunc("/api/v1/admin/users", h.AdminListUsers).Methods("GET")
 	router.HandleFunc("/api/v1/admin/users/{id}/admin", h.AdminSetUserAdmin).Methods("PUT")
+	router.HandleFunc("/api/v1/admin/metrics/users", h.AdminUserMetrics).Methods("GET")
 }
 
 // adminWorkspace is one row of the workspace listing.
@@ -129,4 +130,22 @@ func (h *Handler) AdminSetUserAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toAdminUser(u))
+}
+
+// AdminUserMetrics answers the user dashboard: sign-ups, active and lost
+// users, sign-in methods, countries and monthly retention.
+func (h *Handler) AdminUserMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized) == nil {
+		return
+	}
+	if h.UserMetricsService == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "user metrics are not available")
+		return
+	}
+	d, err := h.UserMetricsService.Dashboard()
+	if err != nil {
+		respondInternal(w, r, "failed to build the user dashboard", err)
+		return
+	}
+	respondJSON(w, http.StatusOK, d)
 }

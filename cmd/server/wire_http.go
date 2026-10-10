@@ -93,6 +93,7 @@ func (a *app) handlers() {
 		RunnerSessionService: a.runnerSessionService,
 		NotificationService:  a.notificationService,
 		PushSubService:       a.pushSubService,
+		UserMetricsService:   a.userMetricsService,
 		VAPID:                a.vapid,
 		Provisioner:          a.provisioner,
 		OrgSeeder: func(orgID string) error {

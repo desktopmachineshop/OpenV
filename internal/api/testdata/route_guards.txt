@@ -42,6 +42,7 @@ DELETE /api/v1/teams/{id}: session, scoped-write
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
+GET /api/v1/admin/metrics/users: platform-admin
 GET /api/v1/admin/users: platform-admin
 GET /api/v1/admin/workspaces: platform-admin
 GET /api/v1/agent-runs: session, project:viewer
