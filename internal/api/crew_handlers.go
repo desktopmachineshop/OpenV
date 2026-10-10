@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -240,9 +239,8 @@ func (h *Handler) ExportCrew(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to export crew", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", crewExportFilename(graph.Team.Name)))
-	json.NewEncoder(w).Encode(portable)
+	writeJSONOK(w, portable)
 }
 
 // ImportCrew creates a crew in the active workspace from a portable crew
