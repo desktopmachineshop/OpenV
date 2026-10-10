@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -55,7 +54,7 @@ func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load queue stats", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"workers": workers,
 		"queue":   queue,
 	})
@@ -111,5 +110,5 @@ func (h *Handler) GetOrgUsage(w http.ResponseWriter, r *http.Request) {
 	if spend, err := h.RunService.MonthlySpend(orgID, monthStart); err == nil {
 		summary.MonthToDateCostUSD = spend
 	}
-	json.NewEncoder(w).Encode(summary)
+	writeJSONBare(w, summary)
 }

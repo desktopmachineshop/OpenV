@@ -49,8 +49,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workerproto.ClaimRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A transient runner's idle clock measures work, not polling: claiming a
@@ -105,7 +104,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to issue run token", err)
 		return
 	}
-	json.NewEncoder(w).Encode(workerproto.ClaimResponse{
+	writeJSONBare(w, workerproto.ClaimResponse{
 		Agent:    agent,
 		Auth:     h.resolveRunAuth(run, agent),
 		Run:      run,
@@ -190,8 +189,7 @@ func (h *Handler) ReleaseAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workerproto.ReleaseRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if err := h.RunService.ReleaseClaim(run.ID, req.WorkerID); err != nil {
@@ -210,7 +208,7 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	entries, partialText, err := decodeRunLogBody(r.Body)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		writeJSONError(w, http.StatusBadRequest, invalidRequestBody)
 		return
 	}
 	run, err := h.RunService.AppendLogs(mux.Vars(r)["id"], entries, partialText)
@@ -218,7 +216,7 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to append run logs", err)
 		return
 	}
-	json.NewEncoder(w).Encode(workerproto.LogsResponse{
+	writeJSONBare(w, workerproto.LogsResponse{
 		CancelRequested: run.CancelRequested,
 		Status:          run.Status,
 	})
@@ -256,8 +254,7 @@ func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req agentruns.FinishRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	run, err := h.RunService.Finish(mux.Vars(r)["id"], req)
@@ -273,7 +270,7 @@ func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to record run result", err)
 		return
 	}
-	json.NewEncoder(w).Encode(run)
+	writeJSONBare(w, run)
 }
 
 // DelegateRun lets a running team agent invoke one of its delegates-to
@@ -293,8 +290,7 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 		RoleLabel string `json:"role_label"`
 		Prompt    string `json:"prompt"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// Validate the one caller-supplied Launch input up front so the only
@@ -348,8 +344,7 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 		writeLaunchError(w, r, launchErrsDelegate, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"run_id": child.ID, "status": child.Status})
+	writeJSONBareStatus(w, http.StatusCreated, map[string]string{"run_id": child.ID, "status": child.Status})
 }
 
 type teamNodeRef struct {
@@ -379,7 +374,7 @@ func (h *Handler) DelegateStatus(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "not your delegated run")
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"run_id":     child.ID,
 		"status":     child.Status,
 		"final_text": child.FinalText,

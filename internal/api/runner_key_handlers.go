@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -31,11 +30,11 @@ func (h *Handler) GetMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if key == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"key_record": nil, "online": false})
+		writeJSONBare(w, map[string]interface{}{"key_record": nil, "online": false})
 		return
 	}
 	online := key.LastUsedAt != nil && time.Since(*key.LastUsedAt) < workerOnlineWindow
-	json.NewEncoder(w).Encode(map[string]interface{}{"key_record": key, "online": online})
+	writeJSONBare(w, map[string]interface{}{"key_record": key, "online": online})
 }
 
 // CreateMyRunnerKey mints (or rotates) the caller's personal runner key.
@@ -55,8 +54,7 @@ func (h *Handler) CreateMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBareStatus(w, http.StatusCreated, map[string]interface{}{
 		"key_record": key,
 		"key":        plaintext,
 	})

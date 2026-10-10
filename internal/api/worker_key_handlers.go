@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,7 +24,7 @@ func (h *Handler) ListWorkerKeys(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list worker keys", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // CreateWorkerKey mints a key; the plaintext is returned once.
@@ -37,8 +36,7 @@ func (h *Handler) CreateWorkerKey(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	key, plaintext, err := h.WorkerKeyService.Create(orgID, req.Name, CurrentUserID(r), nil)
@@ -46,8 +44,7 @@ func (h *Handler) CreateWorkerKey(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBareStatus(w, http.StatusCreated, map[string]interface{}{
 		"key_record": key,
 		"key":        plaintext,
 	})

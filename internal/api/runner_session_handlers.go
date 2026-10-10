@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -40,8 +39,7 @@ func (h *Handler) RegisterPoolNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workerproto.PoolNodeRegistration
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	node, err := h.RunnerSessionService.RegisterNode(req.Pool, req.Name, req.Providers)
@@ -49,8 +47,7 @@ func (h *Handler) RegisterPoolNode(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusBadRequest, "failed to register pool node", err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(node)
+	writeJSONBareStatus(w, http.StatusCreated, node)
 }
 
 // PoolNodeHeartbeat records a beat and returns the node's assignment, if it
@@ -77,7 +74,7 @@ func (h *Handler) PoolNodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			assignment.UserName = user.Name
 		}
 	}
-	json.NewEncoder(w).Encode(workerproto.PoolHeartbeatResponse{
+	writeJSONBare(w, workerproto.PoolHeartbeatResponse{
 		Assignment: assignment,
 		Node:       node,
 	})
@@ -90,8 +87,7 @@ func (h *Handler) ReleasePoolNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workerproto.PoolNodeRelease
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if err := h.RunnerSessionService.ReleaseNode(mux.Vars(r)["id"], req.SessionID); err != nil {
@@ -157,7 +153,7 @@ func (h *Handler) GetRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.runnerSessionsEnabled() {
-		json.NewEncoder(w).Encode(map[string]interface{}{"enabled": false, "session": nil})
+		writeJSONBare(w, map[string]interface{}{"enabled": false, "session": nil})
 		return
 	}
 	user := CurrentUser(r)
@@ -166,7 +162,7 @@ func (h *Handler) GetRunnerSession(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load runner session", err)
 		return
 	}
-	json.NewEncoder(w).Encode(h.runnerSessionPayload(session))
+	writeJSONBare(w, h.runnerSessionPayload(session))
 }
 
 // StartRunnerSession leases a pool node to the member, 201. Clicking twice
@@ -192,8 +188,7 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, runnersessions.ErrNoNodes) {
 			// Not an error the member did anything wrong: every runner in
 			// the pool is busy or the pool is empty.
-			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(h.runnerSessionPayload(nil))
+			writeJSONBareStatus(w, http.StatusServiceUnavailable, h.runnerSessionPayload(nil))
 			return
 		}
 		respondInternal(w, r, "failed to start a runner session", err)
@@ -203,7 +198,7 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 	if created {
 		w.WriteHeader(http.StatusCreated)
 	}
-	json.NewEncoder(w).Encode(h.runnerSessionPayload(session))
+	writeJSONBare(w, h.runnerSessionPayload(session))
 }
 
 // ExtendRunnerSession pushes the member's lease deadlines out.
@@ -234,7 +229,7 @@ func (h *Handler) ExtendRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.MinutesAlerts.Check(orgID)
-	json.NewEncoder(w).Encode(h.runnerSessionPayload(extended))
+	writeJSONBare(w, h.runnerSessionPayload(extended))
 }
 
 // EndRunnerSession hands the member's node back to the pool early. The
@@ -252,14 +247,14 @@ func (h *Handler) EndRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if session == nil {
-		json.NewEncoder(w).Encode(h.runnerSessionPayload(nil))
+		writeJSONBare(w, h.runnerSessionPayload(nil))
 		return
 	}
 	if _, err := h.RunnerSessionService.End(session.ID, runnersessions.EndReasonUser); err != nil {
 		respondInternal(w, r, "failed to end the runner session", err)
 		return
 	}
-	json.NewEncoder(w).Encode(h.runnerSessionPayload(nil))
+	writeJSONBare(w, h.runnerSessionPayload(nil))
 }
 
 // GetRunnerPool reports pool occupancy and the workspace's live leases
@@ -270,7 +265,7 @@ func (h *Handler) GetRunnerPool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.runnerSessionsEnabled() {
-		json.NewEncoder(w).Encode(map[string]interface{}{"enabled": false})
+		writeJSONBare(w, map[string]interface{}{"enabled": false})
 		return
 	}
 	counts, err := h.RunnerSessionService.Counts(runnersessions.DefaultPool)
@@ -283,7 +278,7 @@ func (h *Handler) GetRunnerPool(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list runner sessions", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"enabled":  true,
 		"pool":     counts,
 		"sessions": sessions,
