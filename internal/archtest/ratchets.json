@@ -207,6 +207,7 @@
       "internal/domain/links",
       "internal/domain/products",
       "internal/domain/reports/doc",
+      "internal/domain/snapshot",
       "internal/domain/vv"
     ],
     "internal/domain/settings": [

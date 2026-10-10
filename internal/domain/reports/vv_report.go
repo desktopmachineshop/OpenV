@@ -2,7 +2,6 @@ package reports
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -32,35 +31,19 @@ func (s *DefaultService) GenerateVVReport(projectID string, baselineID string, l
 		return nil, "", errors.New("project_id is required")
 	}
 
-	var data exports.ProjectExport
+	data, from, err := s.loadSnapshot(projectID, baselineID)
+	if err != nil {
+		return nil, "", err
+	}
 	var baselineName string
-
-	if baselineID != "" && baselineID != "live" {
-		// Scoped load: a baseline from another project is baselines.ErrNotFound,
-		// so a foreign baseline ID cannot pull another project's snapshot into
-		// this project's report.
-		baseline, err := s.baselineService.GetProjectBaseline(projectID, baselineID)
-		if err != nil {
-			return nil, "", err
-		}
-		baselineName = baseline.Name
-		if err := json.Unmarshal(baseline.Snapshot, &data); err != nil {
-			return nil, "", fmt.Errorf("failed to parse baseline snapshot: %w", err)
-		}
-	} else {
-		jsonData, _, err := s.exportService.ExportProject(projectID, exports.FormatJSON)
-		if err != nil {
-			return nil, "", err
-		}
-		if err := json.Unmarshal(jsonData, &data); err != nil {
-			return nil, "", fmt.Errorf("failed to parse export data: %w", err)
-		}
+	if from != nil {
+		baselineName = from.Name
 	}
 
-	coverage := computeCoverage.compute(&data, latest)
-	gaps := vv.GapAnalysis(&data, coverage)
+	coverage := computeCoverage.compute(data, latest)
+	gaps := vv.GapAnalysis(data, coverage)
 
-	pdf, err := buildVVReportPDF(&data, baselineName, coverage, gaps, runs)
+	pdf, err := buildVVReportPDF(data, baselineName, coverage, gaps, runs)
 	if err != nil {
 		return nil, "", err
 	}
