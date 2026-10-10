@@ -1,6 +1,7 @@
 # Codebase refactor: smaller hubs, one way to do each thing, nothing users can see
 
 Status: proposed 2026-09-25, against `master` at `d11dee8` (release 0.15.0).
+Remaining work and how it is run: [codebase-refactor-remaining.md](codebase-refactor-remaining.md) (10 October 2026).
 Evidence base: the architecture analysis in
 [`docs/assessments/2026-09-25-codebase-architecture/`](../assessments/2026-09-25-codebase-architecture/README.md).
 Section marks prefixed with A (A§4.1, A§9.2, …) point into that analysis; a

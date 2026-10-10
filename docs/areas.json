@@ -618,6 +618,7 @@
         "docs/env-vars.md",
         "docs/operations.md",
         "docs/plans/codebase-refactor.md",
+        "docs/plans/codebase-refactor-remaining.md",
         "docs/railway.md",
         "docs/requirements-maintenance.md",
         "frontend/.dockerignore",
