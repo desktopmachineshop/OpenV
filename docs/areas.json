@@ -533,6 +533,8 @@
         "internal/persistence/postgres/db*.go",
         "internal/persistence/postgres/ids*.go",
         "internal/persistence/postgres/migrat*.go",
+        "internal/persistence/postgres/nulls*.go",
+        "internal/persistence/postgres/pgkit*.go",
         "internal/persistence/postgres/release_*.go",
         "internal/persistence/postgres/schema_*.go",
         "internal/persistence/postgres/testdata/**",

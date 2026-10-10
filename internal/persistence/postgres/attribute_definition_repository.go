@@ -192,11 +192,3 @@ func marshalEnumValues(values []string) ([]byte, error) {
 	}
 	return json.Marshal(values)
 }
-
-// nullableString maps a *string to a driver NULL when nil/empty.
-func nullableString(s *string) interface{} {
-	if s == nil || *s == "" {
-		return nil
-	}
-	return *s
-}

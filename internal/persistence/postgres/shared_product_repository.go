@@ -300,14 +300,6 @@ func requireOneRow(res sql.Result) error {
 	return nil
 }
 
-// nullUUID keeps an empty id out of a UUID column.
-func nullUUID(id string) interface{} {
-	if strings.TrimSpace(id) == "" {
-		return nil
-	}
-	return id
-}
-
 // isUniqueViolation reports whether err is a postgres unique-constraint
 // failure (SQLSTATE 23505), without importing the driver's error type.
 func isUniqueViolation(err error) bool {

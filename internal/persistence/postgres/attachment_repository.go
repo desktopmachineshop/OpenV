@@ -577,17 +577,3 @@ func (r *AttachmentRepository) Restore(attachmentID string, version int, by *str
 	}
 	return restored, nil
 }
-
-func nullString(s string) interface{} {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nullInt(n int) interface{} {
-	if n == 0 {
-		return nil
-	}
-	return n
-}
