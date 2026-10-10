@@ -31,62 +31,7 @@ import { HelpSidebar } from './HelpSidebar';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
-import { TODO_LIST_FEATURE } from '../features';
-import type { FeatureKey } from '../generated/contract';
-
-interface NavItem {
-  to: string;
-  label: string;
-  end?: boolean;
-  /** Hide the entry until this gated feature is on for the workspace. */
-  feature?: FeatureKey;
-}
-
-// The sidebar is grouped by what the user is doing: defining the product,
-// verifying it, planning the work, and running agents (issue #97).
-const navSections: { label?: string; items: NavItem[] }[] = [
-  {
-    label: 'Define',
-    items: [
-      { to: '', label: 'Overview', end: true },
-      { to: 'guided', label: 'Guided Definition' },
-      { to: 'requirements', label: 'Requirements' },
-      { to: 'interviews', label: 'Interviews' },
-    ],
-  },
-  {
-    label: 'Verify',
-    items: [
-      { to: 'vv', label: 'V&V' },
-      { to: 'evidence', label: 'Evidence' },
-      { to: 'matrix', label: 'Traceability' },
-      { to: 'impact', label: 'Impact' },
-      { to: 'review', label: 'Review Queue' },
-    ],
-  },
-  {
-    label: 'Plan',
-    items: [
-      { to: 'board', label: 'Board' },
-      { to: 'todos', label: 'To-dos', feature: TODO_LIST_FEATURE },
-    ],
-  },
-  {
-    label: 'Agents',
-    items: [
-      { to: 'agents', label: 'Agents' },
-      { to: 'crew', label: 'Crew' },
-      { to: 'automations', label: 'Automations' },
-      { to: 'agent-runs', label: 'Runs' },
-    ],
-  },
-  {
-    items: [
-      { to: 'activity', label: 'Activity' },
-      { to: 'settings', label: 'Settings' },
-    ],
-  },
-];
+import { navSections } from '../pages';
 
 // ProjectLayout syncs the URL param into the store and renders the app
 // shell (left nav + top bar) around the active module.
