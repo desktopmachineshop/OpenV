@@ -370,7 +370,7 @@ var movedReads = map[string]string{
 	"cmd/server:envSecret(key)":                     "internal/config:Config.secret(name)",
 	"internal/hosting:envOr(key)":                   "internal/config:Config.text(name)",
 	"internal/notify:envDefault(key)":               "internal/config:Config.text(name)",
-	"internal/notify:envSecret(key)":                "internal/config:Config.secret(name)",
+	"internal/notify:envSecret(key)":                "internal/config:Config.credential(name)",
 	"internal/notify:typeListFromEnv(key)":          "internal/config:Config.typeList(name)",
 	"internal/api:newRateLimiterFromEnv(burstVar)":  "internal/config:Config.rateLimit(burstVar)",
 	"internal/api:newRateLimiterFromEnv(refillVar)": "internal/config:Config.rateLimit(refillVar)",
