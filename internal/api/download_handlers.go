@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -53,8 +52,7 @@ func (h *Handler) DownloadOptions(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to read download options", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(opts)
+	writeJSONOK(w, opts)
 }
 
 // DownloadJSON serves the project as the JSON an import reads back.
