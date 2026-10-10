@@ -2,9 +2,11 @@ package reports
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/json"
 	"errors"
-	"regexp"
+	"io"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -407,28 +409,55 @@ func TestVVReportFailureRunsNoCoverage(t *testing.T) {
 	}
 }
 
-// pdfDates are the creation and modification dates gofpdf stamps on a PDF.
-var pdfDates = regexp.MustCompile(`/(Creation|Mod)Date \(D:\d+\)`)
-
-// stableVVPDF generates the V&V report until two runs agree, so a clock that
-// ticks between them (the dates in the PDF, the minute on its header) does not
-// make the comparison flaky.
-func stableVVPDF(t *testing.T, s *DefaultService, baselineID string) []byte {
+// pdfStreams is what a PDF draws, in a form that does not depend on the order
+// gofpdf writes its objects in (it ranges over maps, so two runs of the same
+// report put the fonts in a different order): every stream of it inflated, and
+// the lot sorted. The dates it stamps in its Info dictionary are no stream.
+func pdfStreams(t *testing.T, pdf []byte) string {
 	t.Helper()
-	var last []byte
+	var streams []string
+	for rest := pdf; ; {
+		i := bytes.Index(rest, []byte("stream\n"))
+		if i < 0 {
+			break
+		}
+		rest = rest[i+len("stream\n"):]
+		j := bytes.Index(rest, []byte("endstream"))
+		if j < 0 {
+			t.Fatal("a PDF stream with no end")
+		}
+		body := rest[:j]
+		rest = rest[j+len("endstream"):]
+		if r, err := zlib.NewReader(bytes.NewReader(body)); err == nil {
+			if inflated, err := io.ReadAll(r); err == nil {
+				body = inflated
+			}
+		}
+		streams = append(streams, string(body))
+	}
+	sort.Strings(streams)
+	return strings.Join(streams, "\x00")
+}
+
+// stableVVPDF generates the V&V report until two runs agree on what they draw,
+// so a clock that ticks between them (the minute on its header) does not make
+// the comparison flaky.
+func stableVVPDF(t *testing.T, s *DefaultService, baselineID string) string {
+	t.Helper()
+	var last string
 	for i := 0; i < 8; i++ {
 		pdf, _, err := s.GenerateVVReport("p-1", baselineID, nil, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		pdf = pdfDates.ReplaceAll(pdf, nil)
-		if bytes.Equal(pdf, last) {
-			return pdf
+		drawn := pdfStreams(t, pdf)
+		if drawn == last {
+			return drawn
 		}
-		last = pdf
+		last = drawn
 	}
 	t.Fatal("the V&V report never came out the same twice")
-	return nil
+	return ""
 }
 
 // TestVVReportNamesTheBaselineItReads: the baseline's name is the one thing
@@ -441,10 +470,10 @@ func TestVVReportNamesTheBaselineItReads(t *testing.T) {
 	one := stableVVPDF(t, s, "b-1")
 	b.baseline.Name = "Release 2"
 	two := stableVVPDF(t, s, "b-1")
-	if bytes.Equal(live, one) {
+	if live == one {
 		t.Error("a baseline's V&V report prints no baseline line")
 	}
-	if bytes.Equal(one, two) {
+	if one == two {
 		t.Error("a baseline's V&V report does not print its name")
 	}
 }
