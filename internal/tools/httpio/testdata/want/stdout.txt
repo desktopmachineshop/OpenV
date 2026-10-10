@@ -1,0 +1,31 @@
+api/bare.go:15: writeJSONBare (E)
+api/handlers.go:35: decodeJSON (if decode 400)
+api/handlers.go:41: writeJSON (H S E)
+api/handlers.go:53: writeJSONOK (H E)
+api/handlers.go:66: writeJSONBareStatus (S E)
+api/handlers.go:69: writeJSONBareStatus (S E)
+api/handlers.go:80: decodeJSONMsg (if decode 400)
+api/handlers.go:86: writeJSON (H S E)
+api/handlers.go:95: decodeJSON (if decode 400)
+api/handlers.go:108: writeJSONOK (H E)
+api/handlers.go:116: invalidRequestBody (literal; the message of writeJSONError after a JSON decode, but the condition is err != nil && err != io.EOF, not err != nil)
+api/handlers.go:121: writeJSON (H S E)
+api/handlers.go:128: invalidRequestBody (literal; the message of writeJSONError in `if err != nil || len(data) == 0`, which is not a JSON decode's error check)
+api/handlers.go:131: writeJSONBare (E)
+api/httperr.go:18: writeJSON (H S E)
+api/left.go:16: left: the Content-Type is set at line 14, not next to the encode
+api/left.go:19: left: the Content-Type is set at line 14, not next to the encode
+api/left.go:27: left: the Content-Type is set at line 24, not next to the encode
+api/left.go:33: left: the Content-Type is "application/json; charset=utf-8", not application/json
+api/left.go:40: left: the status is written at line 38, not next to the encode
+api/left.go:48: left: a comment at line 46 sits inside the sequence
+api/left.go:55: left: the argument map[string]string{"type": w.Header().Get("Content-Type")} reads the writer, and would be evaluated before the header or status is written
+api/left.go:63: left: the argument body() calls the function value body, which would run before the header or status is written
+api/left.go:68: left: Encode's error is used
+api/left.go:75: left: the encoder is not used as json.NewEncoder(w).Encode(v)
+api/left.go:83: left: the writer is &buf, not a parameter
+api/left.go:90: left: the writer out is not an http.ResponseWriter parameter
+api/left.go:97: left: an SSE handler (stream), which X1 does not touch
+api/left.go:105: invalidRequestBody (literal; the message of writeJSONErrorCode after a JSON decode, but the error branch answers with writeJSONErrorCode, not writeJSONError)
+api/respond.go:43: kept: the constant invalidRequestBody's own value, the one literal the ratchet keeps
+total: encodes 23 (writeJSON 4, writeJSONOK 2, writeJSONBare 2, writeJSONBareStatus 2; left 13), "invalid request body" literals 6 (decodeJSON 2, invalidRequestBody 3; left 0), decodeJSONMsg 1, kept 1

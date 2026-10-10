@@ -339,6 +339,16 @@ GUARD_CODE = [
     # commit, never in a commit they prove. The tool's sources and tests
     # only: its testdata/ is frozen data like every other.
     ("M14", ["scripts/refactor/embed_deps.sh", "internal/tools/embeddeps/*.go"]),
+    # X1's codemod: scripts/refactor/httpio.sh and the httpio rewriter it
+    # drives (internal/api's JSON writes and decodes through respond.go's
+    # helpers). Each X1 pull request after X1a is a class R commit of exactly
+    # what the script writes on the commit's parent, which the class R check
+    # re-runs, so the script and the tool, whose tests prove that every shape
+    # it rewrites answers byte for byte as the helper call does, are that
+    # commit's proof: a refactor pull request changes them only in a class C
+    # or T commit. The tool's sources and tests only: its testdata/ is
+    # frozen data like every other.
+    ("X1", ["scripts/refactor/httpio.sh", "internal/tools/httpio/*.go"]),
     # S10's notification content: the Go test that drives every delivery
     # path and writes the per-type goldens, its recording harness, the
     # completeness test beside the type constants, and the vitest that pins

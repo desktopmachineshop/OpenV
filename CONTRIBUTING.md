@@ -153,7 +153,8 @@ On a **refactor** pull request, also:
    `internal/tools/splittools` (S14e), F1's generator
    `frontend/scripts/tsdeclmove.mjs` with its tests (S14f), M14's generator
    `scripts/refactor/embed_deps.sh` with the `internal/tools/embeddeps`
-   rewriter it drives, and this guard)
+   rewriter it drives, X1's codemod `scripts/refactor/httpio.sh` with the
+   `internal/tools/httpio` rewriter it drives, and this guard)
    may be modified or deleted only in a
    class C or T commit that modifies or deletes no golden. The plan asks such
    an edit to be green against the production code of its parent; since a C
