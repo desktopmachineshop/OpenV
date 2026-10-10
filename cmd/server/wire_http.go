@@ -46,8 +46,9 @@ func (a *app) billing() {
 	}
 }
 
-// handlers builds the API handler and closes the construction cycles with
-// the proposal appliers and the guided nudges.
+// handlers builds the API handler, hands the proposal service the appliers
+// stage agents built, and closes the construction cycle with the guided
+// nudges.
 func (a *app) handlers() {
 	cfg := a.env()
 	a.handler = api.NewHandler(api.HandlerDeps{
@@ -121,11 +122,11 @@ func (a *app) handlers() {
 		RateLimits: handlerRateLimits(cfg.RateLimits()),
 	})
 
-	// Close the construction cycle: the proposal appliers run the handler's
-	// own domain writes (events, link-snapshot auto-versioning) when a human
-	// approves a proposal. Done before the server starts serving.
-	a.proposalService.SetAppliers(a.handler.ProposalAppliers())
-	// Same cycle, other direction: a wizard nudge parked while a copilot run
+	// The proposal appliers stage agents built from the services run when a
+	// human approves a proposal; handed over here, after NewHandler, where
+	// they always have been, and before the server starts serving.
+	a.proposalService.SetAppliers(a.proposalAppliers)
+	// Close the construction cycle: a wizard nudge parked while a copilot run
 	// was in flight is launched by the handler when the hooks see that run
 	// finish.
 	a.hooks.SetGuidedNudgeLauncher(a.handler)
