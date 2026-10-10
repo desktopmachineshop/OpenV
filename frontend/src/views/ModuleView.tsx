@@ -1,8 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport, LinkedArtifact, Project, projectAPI } from '../api/client';
-import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
+import { artifactAPI, linkAPI, attachmentAPI, agentsAPI, Artifact, Link, Attachment } from '../api/client';
+import type { ArtifactContextAction } from '../components/ArtifactList';
 import { DropZone, planMove } from '../utils/artifactDrag';
 import { matchesFieldFilters, matchesSearch } from '../utils/artifactFilter';
 import { AttachmentViewer } from '../components/AttachmentViewer';
@@ -24,7 +24,7 @@ import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { DownloadWizard } from '../components/DownloadWizard';
-import { useAlert, useConfirm, usePrompt } from '../components/ui';
+import { useAlert, useConfirm } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
@@ -44,24 +44,18 @@ import { DocumentHeader } from './moduleView/DocumentHeader';
 import { PhoneActionsSheet } from './moduleView/PhoneActionsSheet';
 import { FilterPanel } from './moduleView/FilterPanel';
 import { TreePane } from './moduleView/TreePane';
+import { useBaselineView } from './moduleView/useBaselineView';
+import { useModuleData } from './moduleView/useModuleData';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
-  const prompt = usePrompt();
   const alertDialog = useAlert();
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingArtifact, setEditingArtifact] = useState<Artifact | undefined>();
   const [error, setError] = useState<string>('');
-  const [allLinks, setAllLinks] = useState<Link[]>([]);
-  // Flow-down (REQ-145): the far end of every link crossing into another
-  // project, and the parent project's requirements a requirement here may
-  // refine.
-  const [linkedArtifacts, setLinkedArtifacts] = useState<LinkedArtifact[]>([]);
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
-  const [parentProject, setParentProject] = useState<Project | null>(null);
-  const [parentArtifacts, setParentArtifacts] = useState<Artifact[]>([]);
   const [searchText, setSearchText] = useState<string>('');
   const [searchExact, setSearchExact] = useState<boolean>(false);
   const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
@@ -73,27 +67,10 @@ export const ModuleView: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string>('');
   const [showFilterPanel, setShowFilterPanel] = useState<boolean>(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  // Every figure in the project, as opposed to the selected artifact's. It is
-  // what lets a "##" citation be offered while writing and opened while
-  // reading, neither of which can wait to find out which artifact holds the
-  // figure in question.
-  const [projectAttachments, setProjectAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null);
   // How far the figure currently uploading has got. Null both when nothing is
   // uploading and when the browser cannot measure the body.
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
-  const [baselines, setBaselines] = useState<Baseline[]>([]);
-  const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
-  const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
-  // A baseline snapshot is a whole project export — close to a megabyte of
-  // JSON for a real project — so on a phone it can take seconds to arrive.
-  // Without this the tree renders empty the moment a baseline is selected and
-  // only fills in when the fetch lands, which looks exactly like a project
-  // that lost all its requirements.
-  const [baselineLoading, setBaselineLoading] = useState(false);
-  // Per-requirement quality scores keyed by artifact id (issue #217); drives
-  // the score badge on requirement rows.
-  const [qualityScores, setQualityScores] = useState<Record<string, QualityRowInfo>>({});
   const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
   const [expandAllToken, setExpandAllToken] = useState<number>(0);
   const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
@@ -198,7 +175,32 @@ export const ModuleView: React.FC = () => {
   // selection (mirrors AgentRunsPage's ?run= pattern).
   const urlArtifactId = searchParams.get('artifact');
 
-  const isBaselineView = activeBaselineId !== 'live';
+  const {
+    baselines,
+    activeBaselineId,
+    setActiveBaselineId,
+    baselineData,
+    setBaselineData,
+    baselineLoading,
+    isBaselineView,
+    loadBaselines,
+    handleBaselineChange,
+    handleCaptureBaseline,
+    handleDeleteBaseline,
+  } = useBaselineView({
+    projectId,
+    setError,
+    // Switching between live and a baseline drops the selection and leaves
+    // any edit, create form or version preview. handleSelectArtifact is
+    // declared below; this runs only from the baseline select.
+    leaveSelection: () => {
+      handleSelectArtifact(null);
+      setIsEditing(false);
+      setIsCreating(false);
+      setEditingArtifact(undefined);
+      setPreviewVersion(null);
+    },
+  });
 
   // Start a column resize: record where the drag began so the move handler can
   // work in deltas. preventDefault keeps the browser from starting a text
@@ -261,115 +263,19 @@ export const ModuleView: React.FC = () => {
     };
   }, [isResizing]);
 
-  const loadArtifacts = useCallback(async () => {
-    try {
-      // The module tree is assembled client-side from parent_id, so it needs
-      // the complete artifact set; artifactAPI.list pages through the
-      // limit/offset API (1000 per request) until it has everything. UI
-      // follow-up for issue #136: lazy-load subtrees instead.
-      const response = await artifactAPI.list(projectId);
-      setArtifacts(response.data || []);
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to load artifacts:', error);
-      setArtifacts([]);
-      setError(`Failed to load artifacts: ${apiErrorMessage(error)}`);
-    }
-  }, [projectId, setArtifacts]);
-
-  const loadLinks = useCallback(async () => {
-    try {
-      const response = await linkAPI.list(projectId);
-      setAllLinks(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to load links:', error);
-      setAllLinks([]);
-    }
-    // Best-effort: without it a cross-project link shows a bare id.
-    try {
-      const linked = await projectAPI.linkedArtifacts(projectId);
-      setLinkedArtifacts(linked.data || []);
-    } catch {
-      setLinkedArtifacts([]);
-    }
-  }, [projectId]);
-
-  // The parent project and its requirements, for the refines picker.
-  useEffect(() => {
-    let cancelled = false;
-    setParentProject(null);
-    setParentArtifacts([]);
-    if (!projectId) return;
-    (async () => {
-      try {
-        const me = await projectAPI.get(projectId);
-        const parentId = me.data?.parent_project_id;
-        if (!parentId || cancelled) return;
-        const [parent, reqs] = await Promise.all([
-          projectAPI.get(parentId),
-          artifactAPI.list(parentId, 'requirement'),
-        ]);
-        if (cancelled) return;
-        setParentProject(parent.data);
-        setParentArtifacts(reqs.data || []);
-      } catch {
-        // A member of the child project may not read the parent; the picker
-        // then offers local targets only.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId]);
-
-  // Load rule-based quality scores for the project's requirements. Best-effort:
-  // a failure just leaves the badges absent, so it never blocks the tree.
-  const loadQuality = useCallback(async () => {
-    if (!projectId) return;
-    try {
-      const response = await qualityAPI.project(projectId);
-      const map: Record<string, QualityRowInfo> = {};
-      (response.data.entries || []).forEach((entry) => {
-        map[entry.artifact_id] = {
-          score: entry.score,
-          band: entry.band,
-          findingCount: entry.findings.length,
-        };
-      });
-      setQualityScores(map);
-    } catch (error: any) {
-      console.error('Failed to load quality scores:', error);
-      setQualityScores({});
-    }
-  }, [projectId]);
-
-  const loadBaselines = useCallback(async () => {
-    if (!projectId) return;
-    try {
-      const response = await baselineAPI.list(projectId);
-      setBaselines(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to load baselines:', error);
-      setBaselines([]);
-    }
-  }, [projectId]);
-
-  const loadProjectAttachments = useCallback(async () => {
-    if (!projectId) {
-      setProjectAttachments([]);
-      return;
-    }
-    try {
-      const response = await attachmentAPI.listByProject(projectId);
-      setProjectAttachments(response.data || []);
-    } catch (error: any) {
-      // A citation that cannot be resolved falls back to the selected
-      // artifact's own figures and then to an explanatory message, so this is
-      // a degraded menu rather than a broken screen.
-      console.error('Failed to load the project figures:', error);
-      setProjectAttachments([]);
-    }
-  }, [projectId]);
+  const {
+    allLinks,
+    setAllLinks,
+    linkedArtifacts,
+    parentProject,
+    parentArtifacts,
+    projectAttachments,
+    setProjectAttachments,
+    qualityScores,
+    loadArtifacts,
+    loadLinks,
+    loadQuality,
+  } = useModuleData({ projectId, setArtifacts, setError, loadBaselines, setActiveBaselineId, setBaselineData });
 
   const loadAttachments = useCallback(async (artifactId: string) => {
     try {
@@ -380,19 +286,6 @@ export const ModuleView: React.FC = () => {
       setAttachments([]);
     }
   }, []);
-
-  // Load project data on mount and whenever the project changes
-  useEffect(() => {
-    if (projectId) {
-      loadArtifacts();
-      loadLinks();
-      loadBaselines();
-      loadQuality();
-      loadProjectAttachments();
-      setActiveBaselineId('live');
-      setBaselineData(null);
-    }
-  }, [projectId, loadArtifacts, loadLinks, loadBaselines, loadQuality, loadProjectAttachments]);
 
   // Load attachments when artifact is selected or when editing
   useEffect(() => {
@@ -658,93 +551,6 @@ export const ModuleView: React.FC = () => {
       console.error('Failed to create link:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to create link: ${errorMsg}`);
-    }
-  };
-
-  const handleBaselineChange = async (baselineId: string) => {
-    setActiveBaselineId(baselineId);
-    handleSelectArtifact(null);
-    setIsEditing(false);
-    setIsCreating(false);
-    setEditingArtifact(undefined);
-    setPreviewVersion(null);
-
-    if (baselineId === 'live') {
-      setBaselineData(null);
-      setBaselineLoading(false);
-      return;
-    }
-
-    setBaselineData(null);
-    setBaselineLoading(true);
-    try {
-      const response = await baselineAPI.get(baselineId);
-      setBaselineData(response.data);
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to load baseline:', error);
-      const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to load baseline: ${errorMsg}`);
-      // Fall back to the live project rather than leaving the reader on a
-      // baseline view with nothing in it, which they would read as a baseline
-      // that captured nothing.
-      setActiveBaselineId('live');
-    } finally {
-      setBaselineLoading(false);
-    }
-  };
-
-  const handleCaptureBaseline = async () => {
-    if (!projectId) {
-      // A click that does nothing and says nothing is indistinguishable from
-      // a broken button.
-      setError('No project is open, so there is nothing to capture.');
-      return;
-    }
-    const name = await prompt({
-      title: 'Capture baseline',
-      label: 'Baseline name',
-      placeholder: 'e.g. Design freeze — rev A',
-    });
-    if (name === null) return;
-    if (!name.trim()) {
-      setError('Baseline name is required');
-      return;
-    }
-
-    try {
-      await baselineAPI.create(projectId, name.trim());
-      await loadBaselines();
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to capture baseline:', error);
-      const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to capture baseline: ${errorMsg}`);
-    }
-  };
-
-  const handleDeleteBaseline = async (baselineId: string) => {
-    if (baselineId === 'live') return;
-    const ok = await confirm({
-      title: 'Delete baseline',
-      message: 'Delete this baseline? This cannot be undone.',
-      confirmLabel: 'Delete',
-      danger: true,
-    });
-    if (!ok) {
-      return;
-    }
-
-    try {
-      await baselineAPI.delete(baselineId);
-      await loadBaselines();
-      setActiveBaselineId('live');
-      setBaselineData(null);
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to delete baseline:', error);
-      const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to delete baseline: ${errorMsg}`);
     }
   };
 
