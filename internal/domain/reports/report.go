@@ -36,6 +36,7 @@ import (
 	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/reports/doc"
+	"github.com/openv/requirements-platform/internal/domain/snapshot"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
 
@@ -67,36 +68,51 @@ func NewService(exportService exports.Service, baselineService baselines.Service
 	return &DefaultService{exportService: exportService, baselineService: baselineService}
 }
 
+// loadSnapshot reads the project's snapshot through snapshot.Load, from a
+// captured baseline or the live project ("live" is the live project, as an
+// empty baselineID is), and returns the baseline it read, nil for the live
+// project. A baseline is read scoped to the project: one from another
+// project is baselines.ErrNotFound, so a foreign baseline ID cannot pull
+// another project's snapshot into this project's report. Read errors are
+// returned as they are; JSON that does not decode is named by its source.
+func (s *DefaultService) loadSnapshot(projectID string, baselineID string) (*exports.ProjectExport, *snapshot.Baseline, error) {
+	if baselineID == "live" {
+		baselineID = ""
+	}
+	data, from, err := snapshot.Load(projectID, baselineID, snapshot.Options{
+		Baseline: func(projectID, baselineID string) (*snapshot.Baseline, error) {
+			b, err := s.baselineService.GetProjectBaseline(projectID, baselineID)
+			if err != nil {
+				return nil, err
+			}
+			return &snapshot.Baseline{ID: b.ID, Name: b.Name, CreatedAt: b.CreatedAt, Snapshot: b.Snapshot}, nil
+		},
+		Live: func(projectID string) ([]byte, error) {
+			raw, _, err := s.exportService.ExportProject(projectID, exports.FormatJSON)
+			return raw, err
+		},
+	})
+	var bad *snapshot.DecodeError
+	if errors.As(err, &bad) {
+		if from != nil {
+			return nil, from, fmt.Errorf("failed to parse baseline snapshot: %w", err)
+		}
+		return nil, nil, fmt.Errorf("failed to parse export data: %w", err)
+	}
+	return data, from, err
+}
+
 // loadReportExport resolves the project export snapshot for a report, either
 // from a captured baseline or the live project.
 func (s *DefaultService) loadReportExport(projectID string, baselineID string) (*exports.ProjectExport, Snapshot, error) {
-	var data exports.ProjectExport
 	snap := Snapshot{ExportedAt: time.Now()}
-
-	if baselineID != "" && baselineID != "live" {
-		// Scoped load: a baseline from another project is baselines.ErrNotFound,
-		// so a foreign baseline ID cannot pull another project's snapshot into
-		// this project's report.
-		baseline, err := s.baselineService.GetProjectBaseline(projectID, baselineID)
-		if err != nil {
-			return nil, snap, err
-		}
-		snap.BaselineID = baseline.ID
-		snap.BaselineName = baseline.Name
-		snap.CapturedAt = baseline.CreatedAt
-		if err := json.Unmarshal(baseline.Snapshot, &data); err != nil {
-			return nil, snap, fmt.Errorf("failed to parse baseline snapshot: %w", err)
-		}
-	} else {
-		jsonData, _, err := s.exportService.ExportProject(projectID, exports.FormatJSON)
-		if err != nil {
-			return nil, snap, err
-		}
-		if err := json.Unmarshal(jsonData, &data); err != nil {
-			return nil, snap, fmt.Errorf("failed to parse export data: %w", err)
-		}
+	data, from, err := s.loadSnapshot(projectID, baselineID)
+	if from != nil {
+		snap.BaselineID = from.ID
+		snap.BaselineName = from.Name
+		snap.CapturedAt = from.CreatedAt
 	}
-	return &data, snap, nil
+	return data, snap, err
 }
 
 // GenerateProjectReport builds the specification PDF for a project or
