@@ -261,32 +261,27 @@ func TestClientIPTrustFromEnv(t *testing.T) {
 	}
 }
 
-// A rate limit's settings follow internal/envparse's rule (#379, question
-// 15): a refill of Inf used to parse as +Inf, which refilled every bucket at
-// once and switched the limit off, and a burst with spaces round it was
-// ignored. Now Inf keeps the default refill, so the limit still throttles,
-// and the burst is trimmed.
-func TestRateLimiterFromEnvKeepsThrottlingOnAnInfiniteRefill(t *testing.T) {
-	const burstVar, refillVar = "OPENV_TEST_ONLY_BURST", "OPENV_TEST_ONLY_REFILL_PER_HOUR"
-	for _, refill := range []string{"Inf", "+Inf", "Infinity", "NaN", "0", "-1"} {
-		t.Setenv(burstVar, " 2 ")
-		t.Setenv(refillVar, refill)
-		clock := newFakeClock()
-		l := withClock(newRateLimiterFromEnv(burstVar, refillVar, 5, 20), clock)
-		if l.burst != 2 || l.refillPerHour != 20 {
-			t.Errorf("burst %q, refill %q: burst %v, refill %v; want 2 and the default 20", " 2 ", refill, l.burst, l.refillPerHour)
-		}
-		l.allow("k")
-		l.allow("k")
-		clock.advance(time.Second)
-		if ok, _ := l.allow("k"); ok {
-			t.Errorf("refill %q: a third request a second after a burst of 2 was allowed, so the limit is off", refill)
-		}
+// NewHandler's buckets take the settings HandlerDeps.RateLimits carries,
+// which stage handlers of cmd/server reads (internal/config's RateLimits,
+// whose tests hold a refill of Inf to the default, so the limit still
+// throttles), and a zero field takes the bucket's default.
+func TestRateLimiterOrTakesItsSettingsAndDefaults(t *testing.T) {
+	clock := newFakeClock()
+	l := withClock(newRateLimiterOr(RateLimit{Burst: 2, RefillPerHour: 20}, 5, 20), clock)
+	if l.burst != 2 || l.refillPerHour != 20 {
+		t.Errorf("burst 2, refill 20: burst %v, refill %v", l.burst, l.refillPerHour)
 	}
-	// A finite rate in any float form still counts.
-	t.Setenv(refillVar, "1e3")
-	if l := newRateLimiterFromEnv(burstVar, refillVar, 5, 20); l.refillPerHour != 1000 {
-		t.Errorf("refill 1e3 = %v, want 1000", l.refillPerHour)
+	l.allow("k")
+	l.allow("k")
+	clock.advance(time.Second)
+	if ok, _ := l.allow("k"); ok {
+		t.Error("a third request a second after a burst of 2 was allowed, so the limit is off")
+	}
+	if l := newRateLimiterOr(RateLimit{}, 5, 20); l.burst != 5 || l.refillPerHour != 20 {
+		t.Errorf("no settings: burst %v, refill %v; want the defaults 5 and 20", l.burst, l.refillPerHour)
+	}
+	if l := newRateLimiterOr(RateLimit{RefillPerHour: 1000}, 5, 20); l.burst != 5 || l.refillPerHour != 1000 {
+		t.Errorf("refill 1000 alone: burst %v, refill %v; want the default 5 and 1000", l.burst, l.refillPerHour)
 	}
 }
 

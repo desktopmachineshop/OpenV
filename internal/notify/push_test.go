@@ -169,20 +169,10 @@ func TestVAPIDConfigEnabled(t *testing.T) {
 	}
 }
 
-// TestPushTypesFromEnv: the default allow-list matches email's, and the
-// override is parsed the same way.
-func TestPushTypesFromEnv(t *testing.T) {
+// TestDefaultPushTypes: the default allow-list matches email's.
+func TestDefaultPushTypes(t *testing.T) {
 	if got, want := len(DefaultPushTypes()), len(DefaultEmailTypes()); got != want {
 		t.Fatalf("default push types = %d, want the %d email types", got, want)
-	}
-	t.Setenv(envPushTypes, " run_failed , ,mention ")
-	got := PushTypesFromEnv()
-	if len(got) != 2 || got[0] != notifications.TypeRunFailed || got[1] != notifications.TypeMention {
-		t.Fatalf("PushTypesFromEnv() = %v, want [run_failed mention]", got)
-	}
-	t.Setenv(envPushTypes, " , ")
-	if got := PushTypesFromEnv(); len(got) != len(DefaultPushTypes()) {
-		t.Fatalf("a separators-only override must fall back to the default, got %v", got)
 	}
 }
 

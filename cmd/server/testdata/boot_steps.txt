@@ -33,7 +33,7 @@ func main()
   defer value stop
   call internal/domain/orgs.SetSelfHosted
   call internal/domain/orgs.SetDefaultPlan
-  call internal/domain/orgs.ParseLimits
+  call (*internal/config.Config).DeploymentLimits
   if
     call os.Exit
   call internal/domain/orgs.SetDeploymentLimits
@@ -52,8 +52,8 @@ func main()
   call (*internal/domain/artifacts.DefaultService).SetLinkSuspector
   call (*internal/domain/artifacts.DefaultService).SetEmbeddingIndexer
   call (*internal/domain/templates.DefaultService).SeedDefaults
+  call (*internal/config.Config).GrandfatherBefore
   if
-    call time.Parse
     if
       call os.Exit
     call (*internal/domain/orgs.DefaultService).GrandfatherBefore
@@ -131,7 +131,7 @@ func main()
           call (*internal/domain/invitations.DefaultService).PurgeExpired
           if
             call (internal/domain/runnersessions.Service).Sweep
-  call internal/billing.ConfigFromEnv
+  call (*internal/config.Config).Billing
   if
     call os.Exit
   switch

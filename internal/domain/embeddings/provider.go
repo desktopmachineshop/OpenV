@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -24,37 +23,22 @@ type HTTPProvider struct {
 	http    *http.Client
 }
 
-// ProviderFromEnv builds an HTTPProvider from apiKey, the value of
-// OPENV_EMBEDDING_API_KEY, and the rest of the OPENV_EMBEDDING_*
-// environment. With no API key the
-// provider is DISABLED (Enabled()==false) and every Embed is a no-op
-// error-free skip — the intended default for dev and any deployment that has
-// not opted into embeddings, so semantic-search infra costs a default install
-// nothing. This mirrors notify.MailerFromEnv.
-//
-// The key is a credential, which cmd/server reads exactly as set, naming it
-// in the log when spaces or a line break sit around it (#379, question 24;
-// internal/envparse, which K7 keeps this domain package from importing). A
+// NewProvider builds an HTTPProvider from the OPENV_EMBEDDING_* settings,
+// which cmd/server reads (internal/config's Embeddings) and hands it: apiKey,
+// OPENV_EMBEDDING_API_KEY, a credential read exactly as set; baseURL,
+// OPENV_EMBEDDING_BASE_URL with no trailing slash (default
+// https://api.openai.com/v1); and model, OPENV_EMBEDDING_MODEL (default
+// DefaultModel). With no API key the provider is DISABLED (Enabled()==false)
+// and every Embed is a no-op error-free skip — the intended default for dev
+// and any deployment that has not opted into embeddings, so semantic-search
+// infra costs a default install nothing. This mirrors notify.NewMailer. A
 // key that is only spaces is none, as it always was: it must not switch
-// embeddings on and send artifact text to the provider.
-//
-// Recognized variables:
-//
-//	OPENV_EMBEDDING_API_KEY   API key (read by the caller; blank => embeddings disabled)
-//	OPENV_EMBEDDING_BASE_URL  API base URL (default https://api.openai.com/v1)
-//	OPENV_EMBEDDING_MODEL     model id (default text-embedding-3-small)
+// embeddings on and send artifact text to the provider. It logs one line
+// saying which.
 //
 // The wire protocol is always OpenAI-compatible; there is no provider
 // setting.
-func ProviderFromEnv(apiKey string) *HTTPProvider {
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENV_EMBEDDING_BASE_URL")), "/")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
-	model := strings.TrimSpace(os.Getenv("OPENV_EMBEDDING_MODEL"))
-	if model == "" {
-		model = DefaultModel
-	}
+func NewProvider(apiKey, baseURL, model string) *HTTPProvider {
 	p := &HTTPProvider{
 		baseURL: baseURL,
 		apiKey:  apiKey,

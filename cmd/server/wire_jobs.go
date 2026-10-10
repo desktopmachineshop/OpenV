@@ -14,7 +14,7 @@ func (a *app) jobs() {
 	// OPENV_BUDGET_ENFORCE=true, new launches are refused once a workspace has
 	// hit 100% of its monthly budget. Fails open on lookup errors so a budget
 	// hiccup never blocks work.
-	if envBool("OPENV_BUDGET_ENFORCE", false) {
+	if a.env().BudgetEnforce() {
 		a.runService.SetBudgetGuard(budgetGuard(a.orgService, a.runService))
 		slog.Info("workspace budget enforcement enabled: launches soft-block at 100% of budget")
 	}

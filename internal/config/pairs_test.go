@@ -458,7 +458,7 @@ func spelled(word string, n int64) string {
 // the log), and the session lifetime's, the body cap's and the off
 // switches' come once per variable and value, however often the setting is
 // read. The session lifetime's are users.SessionPolicyFromEnv's, line for
-// line.
+// line (its copy in oracle_test.go).
 func TestFixedWarningsNameTheVariable(t *testing.T) {
 	run := configWarningRuns.Add(1)
 	tag := fmt.Sprintf("sk_live_x10a_run%d", run)
@@ -488,7 +488,7 @@ func TestFixedWarningsNameTheVariable(t *testing.T) {
 	unusable, above := "30d-"+tag, fmt.Sprintf("%dh", 100000+run)
 	setEnv(t, "OPENV_SESSION_MAX_AGE", false, unusable)
 	setEnv(t, "OPENV_SESSION_IDLE", false, above)
-	users.SessionPolicyFromEnv()
+	oracleSessionPolicyFromEnv()
 	wantLog := log.String()
 	log.Reset()
 	c := Load(os.LookupEnv)

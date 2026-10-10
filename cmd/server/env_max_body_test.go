@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 
+	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/envparse"
 )
 
@@ -30,7 +32,7 @@ func TestMaxBodyMBTooBigForBytesKeepsTheDefault(t *testing.T) {
 
 	t.Setenv("OPENV_MAX_BODY_MB", tooBig)
 	for range 3 {
-		if got := maxRequestBodyBytes(); got != 32<<20 {
+		if got := config.Load(os.LookupEnv).MaxBodyBytes(); got != 32<<20 {
 			t.Errorf("OPENV_MAX_BODY_MB=%s: cap %d, want the default %d", tooBig, got, 32<<20)
 		}
 	}
@@ -43,7 +45,7 @@ func TestMaxBodyMBTooBigForBytesKeepsTheDefault(t *testing.T) {
 
 	log.Reset()
 	t.Setenv("OPENV_MAX_BODY_MB", strconv.FormatInt(envparse.MaxMebibytes, 10))
-	if got, want := maxRequestBodyBytes(), envparse.MaxMebibytes<<20; got != want {
+	if got, want := config.Load(os.LookupEnv).MaxBodyBytes(), envparse.MaxMebibytes<<20; got != want {
 		t.Errorf("OPENV_MAX_BODY_MB=%d: cap %d, want %d", envparse.MaxMebibytes, got, want)
 	}
 	if log.Len() != 0 {

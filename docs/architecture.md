@@ -141,8 +141,9 @@ Each stage is a method in a `wire_*.go` file and wires one concern:
 | `sso` | `wire_sso.go` | Google and OIDC sign-in |
 | `billing`, `handlers`, `server` | `wire_http.go` | billing; `api.NewHandler` with every dependency, the proposal appliers; the HTTP server |
 
-Beside them: `config.go` holds the env getters, `http.go` builds the
-middleware chain (`buildHTTPHandler`) and the server, `jobs.go` the reaper
+Beside them: `app.go` holds `env`, the `internal/config` configuration
+stage `signals` loads, which every stage reads its settings through;
+`http.go` builds the middleware chain (`buildHTTPHandler`) and the server, `jobs.go` the reaper
 and purge loops and the boot call of the hosted-runner reconcile (whose rule
 is `hostedworkers.Reconcile`), `lookups.go` the closures that join
 two domains (a project's workspace and the budget guard, whose rules are

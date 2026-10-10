@@ -200,7 +200,7 @@ func TestVerifyEmailOutcomes(t *testing.T) {
 
 func TestResendVerification(t *testing.T) {
 	h, svc, mailer := newVerifyHandler(t, true)
-	h.verifyResendLimiter = newRateLimiterFromEnv("OPENV_TEST_UNSET_BURST", "OPENV_TEST_UNSET_REFILL", 2, 1)
+	h.verifyResendLimiter = newRateLimiter(2, 1)
 
 	do := func(cookie, contentType string) *httptest.ResponseRecorder {
 		r := jsonReq(http.MethodPost, "/api/v1/auth/verify-email/resend", `{}`, cookie)

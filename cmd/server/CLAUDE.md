@@ -8,5 +8,5 @@ Before you finish a change here, run:
 Don't:
 - add, regroup or reorder stages; new wiring joins the stage that owns its concern (I17, R9)
 - put a `defer` in a stage, or move a fatal check across `storage`'s migration (I13)
-- read an env var except through the getters in `config.go` (K8)
+- read an env var except through an `internal/config` accessor, `a.env()` (K8)
 - hand-edit `testdata/`; regenerate with the command the failing test prints

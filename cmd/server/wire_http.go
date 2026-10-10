@@ -2,11 +2,11 @@ package main
 
 import (
 	"log/slog"
-	"os"
 
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/billing/stripe"
+	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
@@ -23,7 +23,8 @@ func (a *app) billing() {
 	// a self-hosted deployment a key is ignored with a warning rather than
 	// refused, so a copied env template cannot lock somebody out of their
 	// own install — and such a deployment must never dial a provider.
-	billingCfg, err := billing.ConfigFromEnv(os.Getenv)
+	cfg := a.env()
+	billingCfg, err := cfg.Billing()
 	if err != nil {
 		fatal("billing configuration is not usable", err)
 	}
@@ -48,6 +49,7 @@ func (a *app) billing() {
 // handlers builds the API handler and closes the construction cycles with
 // the proposal appliers and the guided nudges.
 func (a *app) handlers() {
+	cfg := a.env()
 	a.handler = api.NewHandler(api.HandlerDeps{
 		ArtifactService:      a.artifactService,
 		LinkService:          a.linkService,
@@ -76,7 +78,7 @@ func (a *app) handlers() {
 		GuidedService:        a.guidedService,
 		InterviewService:     a.interviewService,
 		ShareLinkService:     a.shareLinkService,
-		FrontendURL:          envOr("FRONTEND_URL", envOr("PUBLIC_URL", "http://localhost:3000")),
+		FrontendURL:          cfg.HandlerFrontendURL(),
 		AgentService:         a.agentService,
 		RunService:           a.runService,
 		AutomationService:    a.automationService,
@@ -102,10 +104,10 @@ func (a *app) handlers() {
 		SSEHub:            a.sseHub,
 		GoogleOAuth:       a.googleOAuth,
 		OIDC:              a.oidcConfig,
-		SecureCookies:     envBool("SECURE_COOKIES", false),
-		CrossSiteCookies:  envBool("CROSS_SITE_COOKIES", false),
-		PublicAPIURL:      envOr("PUBLIC_URL", "http://localhost:"+a.port),
-		ConnectorDistDir:  envOr("CONNECTOR_DIST_DIR", "./dist"),
+		SecureCookies:     cfg.SecureCookies(),
+		CrossSiteCookies:  cfg.CrossSiteCookies(),
+		PublicAPIURL:      cfg.PublicAPIURL(),
+		ConnectorDistDir:  cfg.ConnectorDistDir(),
 		Mailer:            a.emailMailer,
 		EmailLinkBase:     a.emailLinkBase,
 		EmailVerification: a.emailVerification,
@@ -114,6 +116,9 @@ func (a *app) handlers() {
 		MinutesAlerts:     a.minutesMonitor,
 		Registration:      a.registrationPolicy,
 		SessionPolicy:     a.sessionPolicy,
+		// Last: NewHandler read the rate limits itself, after every field
+		// above, before refactor step X10b.
+		RateLimits: handlerRateLimits(cfg.RateLimits()),
 	})
 
 	// Close the construction cycle: the proposal appliers run the handler's
@@ -129,10 +134,33 @@ func (a *app) handlers() {
 // server builds the router, the middleware chain and the HTTP server.
 func (a *app) server() {
 	// Router + middleware: the chain is buildHTTPHandler's (http.go).
-	rootHandler, err := buildHTTPHandler(a.handler, a.metricsCollector, a.userService, a.runService, a.orgService, a.workerKeyService, a.workerKey, a.bootstrapOrgID, a.runnerPoolKey, a.emailVerification)
+	rootHandler, err := buildHTTPHandler(a.env(), a.handler, a.metricsCollector, a.userService, a.runService, a.orgService, a.workerKeyService, a.workerKey, a.bootstrapOrgID, a.runnerPoolKey, a.emailVerification)
 	if err != nil {
 		fatal("invalid CORS_ORIGIN", err)
 	}
 
 	a.srv = newServer(a.ctx, a.port, rootHandler)
+}
+
+// handlerRateLimits hands the API handler the rate limits r holds, bucket
+// for bucket.
+func handlerRateLimits(r config.RateLimits) api.RateLimits {
+	limit := func(l config.RateLimit) api.RateLimit {
+		return api.RateLimit{Burst: l.Burst, RefillPerHour: l.RefillPerHour}
+	}
+	return api.RateLimits{
+		InterviewMsg:    limit(r.InterviewMsg),
+		InterviewIP:     limit(r.InterviewIP),
+		InterviewStream: limit(r.InterviewStream),
+		AuthIP:          limit(r.AuthIP),
+		AuthAccount:     limit(r.AuthAccount),
+		RegisterIP:      limit(r.RegisterIP),
+		SSOIP:           limit(r.SSOIP),
+		VerifyResend:    limit(r.VerifyResend),
+		PasswordReset:   limit(r.PasswordReset),
+		InvitePreview:   limit(r.InvitePreview),
+		BillingRefresh:  limit(r.BillingRefresh),
+		BillingWrite:    limit(r.BillingWrite),
+		Invite:          limit(r.Invite),
+	}
 }

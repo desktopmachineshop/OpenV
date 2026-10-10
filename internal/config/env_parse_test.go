@@ -56,6 +56,9 @@ func TestEnvParse(t *testing.T) {
 		"internal/config:Config.secret(name)": envParseRows(t, []string{"key\n", " key"}, func() string {
 			return envParseResult(probed(unset).secret(envParseProbe, "fallback"), "fallback")
 		}),
+		"internal/config:Config.credential(name)": envParseRows(t, []string{"key\n", " key"}, func() string {
+			return envParseResult(probed(unset).credential(envParseProbe), "\x00no fallback")
+		}),
 		"internal/config:Config.getenv(name)": envParseRows(t, nil, func() string {
 			return strconv.Quote(probed(unset).getenv(envParseProbe))
 		}),

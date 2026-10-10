@@ -3,7 +3,6 @@ package hosting
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 	"reflect"
 	"slices"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"github.com/moby/moby/api/types/container"
@@ -189,52 +187,46 @@ func TestDisabledProvisionerRefusesEverything(t *testing.T) {
 	}
 }
 
-// TestNewProvisionerDisabledByEnv: HOSTED_RUNNERS=off short-circuits before
-// any docker connection is attempted, in any case and, like every setting
-// (#379, question 15), with spaces round it, which used to send the server
-// on to dial docker.
-func TestNewProvisionerDisabledByEnv(t *testing.T) {
+// TestNewProvisionerOff: with hosted runners off (HOSTED_RUNNERS=off, which
+// cmd/server reads through internal/config) NewProvisioner short-circuits
+// before any docker connection is attempted, and reads none of the other
+// settings.
+func TestNewProvisionerOff(t *testing.T) {
 	var logged bytes.Buffer
 	log.SetOutput(&logged)
 	t.Cleanup(func() { log.SetOutput(os.Stderr) })
-	for _, off := range []string{"off", "OFF", " off "} {
-		logged.Reset()
-		t.Setenv("HOSTED_RUNNERS", off)
-		if p := NewProvisioner(); p.Enabled() {
-			t.Errorf("NewProvisioner() enabled with HOSTED_RUNNERS=%q", off)
-		}
-		if !strings.Contains(logged.String(), "Hosted runners disabled (HOSTED_RUNNERS=off)") {
-			t.Errorf("HOSTED_RUNNERS=%q did not switch hosted runners off before docker; logged %q", off, logged.String())
-		}
+	read := 0
+	p := NewProvisioner(Settings{
+		Off:       true,
+		Container: func() Container { read++; return Container{} },
+		PidsLimit: func() int64 { read++; return defaultPidsLimit },
+	})
+	if p.Enabled() {
+		t.Error("NewProvisioner(Settings{Off: true}) is enabled")
+	}
+	if !strings.Contains(logged.String(), "Hosted runners disabled (HOSTED_RUNNERS=off)") {
+		t.Errorf("hosted runners off did not switch them off before docker; logged %q", logged.String())
+	}
+	if read != 0 {
+		t.Errorf("hosted runners off: NewProvisioner read %d settings, want none", read)
 	}
 }
 
-// pidsLimitRuns numbers the runs of
-// TestNewProvisionerNamesAMalformedPidsLimitAtBoot in this process.
-var pidsLimitRuns atomic.Int64
-
-// With hosted runners on, NewProvisioner reads HOSTED_RUNNER_PIDS_LIMIT once,
-// so that a malformed one is named in the boot log (#379, question 15), not
-// first when a workspace's runner is provisioned. A stand-in docker daemon
-// answers the ping.
-func TestNewProvisionerNamesAMalformedPidsLimitAtBoot(t *testing.T) {
-	run := pidsLimitRuns.Add(1)
+// With hosted runners on, NewProvisioner reads the container's settings
+// once docker answers, then the process cap once, after the line saying
+// hosted runners are on, so that a malformed HOSTED_RUNNER_PIDS_LIMIT is
+// named in the boot log (#379, question 15), not first when a workspace's
+// runner is provisioned. A stand-in docker daemon answers the ping.
+func TestNewProvisionerReadsItsSettingsOnceDockerAnswers(t *testing.T) {
 	daemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Api-Version", "1.47")
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(daemon.Close)
 	t.Setenv("DOCKER_HOST", "tcp://"+daemon.Listener.Addr().String())
-	for _, name := range []string{"DOCKER_API_VERSION", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY", "HOSTED_RUNNERS"} {
+	for _, name := range []string{"DOCKER_API_VERSION", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY"} {
 		t.Setenv(name, "")
 	}
-	// A value no other test, and no earlier run of this one (go test
-	// -count=2), sets: internal/envparse warns once per variable and value
-	// for the life of the process.
-	value := fmt.Sprintf("lots (TestNewProvisionerNamesAMalformedPidsLimitAtBoot, run %d)", run)
-	t.Setenv("HOSTED_RUNNER_PIDS_LIMIT", value)
-	// slog.SetDefault also points the log package at the new handler, and
-	// setting the old one back does not undo that, so both are restored.
 	var logged bytes.Buffer
 	prev, prevOut, prevFlags := slog.Default(), log.Writer(), log.Flags()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
@@ -244,90 +236,28 @@ func TestNewProvisionerNamesAMalformedPidsLimitAtBoot(t *testing.T) {
 		log.SetFlags(prevFlags)
 	})
 
-	p := NewProvisioner()
-	if d, ok := p.(*dockerProvisioner); ok {
-		t.Cleanup(func() { d.cli.Close() })
-	} else {
+	var reads []string
+	p := NewProvisioner(Settings{
+		Container: func() Container {
+			reads = append(reads, "container")
+			return Container{Image: "openv-worker:x10b", Network: "x10b-net", APIURL: "http://api.x10b:8080"}
+		},
+		PidsLimit: func() int64 {
+			reads = append(reads, "pids after: "+logged.String())
+			return 64
+		},
+	})
+	d, ok := p.(*dockerProvisioner)
+	if !ok {
 		t.Fatalf("NewProvisioner() = %T with a docker daemon answering; log:\n%s", p, logged.String())
 	}
-	if n := strings.Count(logged.String(), "var=HOSTED_RUNNER_PIDS_LIMIT "); n != 1 {
-		t.Errorf("NewProvisioner named HOSTED_RUNNER_PIDS_LIMIT %d times, want once; log:\n%s", n, logged.String())
+	t.Cleanup(func() { d.cli.Close() })
+	if len(reads) != 2 || reads[0] != "container" || !strings.Contains(reads[1], "Hosted runners enabled (image openv-worker:x10b)") {
+		t.Errorf("NewProvisioner read %q; want the container's settings, then the process cap once the line saying hosted runners are on is logged", reads)
 	}
-	if strings.Contains(logged.String(), value) {
-		t.Errorf("a warning printed the value:\n%s", logged.String())
-	}
-}
-
-// hostedRunnersRuns numbers the runs of the test below within one test
-// binary: internal/envparse names a variable once per value for the life of
-// the process, so each run (go test -count=2) spells its value differently.
-var hostedRunnersRuns atomic.Int64
-
-// spelled is word with the case of its i-th letter flipped where bit i of n
-// is set, so n = 0 is word as written.
-func spelled(word string, n int64) string {
-	b := []byte(word)
-	for i := range b {
-		if n&(1<<i) != 0 {
-			b[i] ^= 'a' - 'A'
-		}
-	}
-	return string(b)
-}
-
-// Only off switches hosted runners off (#379, bug 225). Any other value,
-// false among them, leaves them on, as before, but is no longer passed over
-// in silence: the log names the variable and the value it takes once,
-// however often it is read, never the value it has. A blank value is silent.
-// A stand-in docker daemon answers the ping.
-func TestHostedRunnersWarnsOnAValueItDoesNotTake(t *testing.T) {
-	daemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Api-Version", "1.47")
-		w.WriteHeader(http.StatusOK)
-	}))
-	t.Cleanup(daemon.Close)
-	t.Setenv("DOCKER_HOST", "tcp://"+daemon.Listener.Addr().String())
-	for _, name := range []string{"DOCKER_API_VERSION", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY", "HOSTED_RUNNER_PIDS_LIMIT"} {
-		t.Setenv(name, "")
-	}
-	var logged bytes.Buffer
-	prev, prevOut, prevFlags := slog.Default(), log.Writer(), log.Flags()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
-	t.Cleanup(func() {
-		slog.SetDefault(prev)
-		log.SetOutput(prevOut)
-		log.SetFlags(prevFlags)
-	})
-	provision := func() {
-		t.Helper()
-		p := NewProvisioner()
-		d, ok := p.(*dockerProvisioner)
-		if !ok {
-			t.Fatalf("NewProvisioner() = %T with HOSTED_RUNNERS=%q and a docker daemon answering; log:\n%s",
-				p, os.Getenv("HOSTED_RUNNERS"), logged.String())
-		}
-		d.cli.Close()
-	}
-
-	value := spelled("false", hostedRunnersRuns.Add(1)-1)
-	t.Setenv("HOSTED_RUNNERS", value)
-	provision()
-	provision()
-	warning := `level=WARN msg="ignoring a malformed setting; its default applies" var=HOSTED_RUNNERS want="off (any case), or unset"`
-	if n := strings.Count(logged.String(), "var=HOSTED_RUNNERS "); n != 1 || !strings.Contains(logged.String(), warning) {
-		t.Errorf("HOSTED_RUNNERS=%q read twice: want the one warning\n%s\ngot:\n%s", value, warning, logged.String())
-	}
-	if strings.Contains(logged.String(), value) {
-		t.Errorf("the warning printed the value:\n%s", logged.String())
-	}
-
-	for _, blank := range []string{"", "   "} {
-		logged.Reset()
-		t.Setenv("HOSTED_RUNNERS", blank)
-		provision()
-		if strings.Contains(logged.String(), "level=WARN") {
-			t.Errorf("HOSTED_RUNNERS=%q warned:\n%s", blank, logged.String())
-		}
+	if d.image != "openv-worker:x10b" || d.network != "x10b-net" || d.apiURL != "http://api.x10b:8080" || d.pidsLimit() != 64 {
+		t.Errorf("the provisioner holds image %q, network %q, API URL %q and process cap %d; want the settings it was given",
+			d.image, d.network, d.apiURL, d.pidsLimit())
 	}
 }
 
@@ -379,39 +309,5 @@ func TestHostConfigForNoPidsCap(t *testing.T) {
 	cfg := hostConfigFor("v", ResourceLimits{}, 0)
 	if cfg.Resources.PidsLimit != nil {
 		t.Errorf("PidsLimit = %v, want unset", *cfg.Resources.PidsLimit)
-	}
-}
-
-func TestPidsLimit(t *testing.T) {
-	// The pids cgroup counts THREADS, not processes. A node CLI's libuv pool
-	// and V8 workers, a toolchain build and a test run all draw on the same
-	// allowance, so a cap sized as if it were a process count (256) sat close
-	// enough to a real workload's ceiling to abort runs — visible only as a
-	// fork failure deep inside a vendor CLI. It still has to stop a fork bomb,
-	// so it is raised, not removed.
-	if defaultPidsLimit != 1024 {
-		t.Errorf("defaultPidsLimit = %d, want 1024", defaultPidsLimit)
-	}
-	cases := []struct {
-		env  string
-		want int64
-	}{
-		{"", defaultPidsLimit},
-		{"64", 64},
-		{" 512 ", 512},
-		{"0", 0},
-		{"-1", 0},
-		{"banana", defaultPidsLimit}, // never silently unlimited
-		{"   ", defaultPidsLimit},
-		{"2k", defaultPidsLimit},
-		{"1e3", defaultPidsLimit},
-		{"512.5", defaultPidsLimit},
-	}
-	for _, tc := range cases {
-		// An empty value takes the same path as an unset one.
-		t.Setenv("HOSTED_RUNNER_PIDS_LIMIT", tc.env)
-		if got := PidsLimit(); got != tc.want {
-			t.Errorf("HOSTED_RUNNER_PIDS_LIMIT=%q: PidsLimit() = %d, want %d", tc.env, got, tc.want)
-		}
 	}
 }

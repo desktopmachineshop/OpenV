@@ -38,13 +38,6 @@ import (
 // separate bucket still bounds connection floods without letting stream
 // churn consume the intro budget.
 const (
-	envInterviewMsgBurst     = "OPENV_INTERVIEW_MSG_BURST"
-	envInterviewMsgRefill    = "OPENV_INTERVIEW_MSG_REFILL_PER_HOUR"
-	envInterviewIPBurst      = "OPENV_INTERVIEW_IP_BURST"
-	envInterviewIPRefill     = "OPENV_INTERVIEW_IP_REFILL_PER_HOUR"
-	envInterviewStreamBurst  = "OPENV_INTERVIEW_STREAM_BURST"
-	envInterviewStreamRefill = "OPENV_INTERVIEW_STREAM_REFILL_PER_HOUR"
-
 	defaultInterviewMsgBurst     = 5
 	defaultInterviewMsgRefill    = 20.0
 	defaultInterviewIPBurst      = 20
@@ -58,17 +51,11 @@ const (
 // the workspace's subscription from the provider, so it is bounded per
 // workspace to keep a stuck client from spending the provider's rate limit.
 const (
-	envBillingRefreshBurst  = "OPENV_BILLING_REFRESH_BURST"
-	envBillingRefreshRefill = "OPENV_BILLING_REFRESH_REFILL_PER_HOUR"
-
 	defaultBillingRefreshBurst  = 10
 	defaultBillingRefreshRefill = 120.0
 
 	// The purchase writes — checkout, plan change, portal — each create a
 	// provider object, so a compromised admin session cannot spam them.
-	envBillingWriteBurst  = "OPENV_BILLING_WRITE_BURST"
-	envBillingWriteRefill = "OPENV_BILLING_WRITE_REFILL_PER_HOUR"
-
 	defaultBillingWriteBurst  = 5
 	defaultBillingWriteRefill = 20.0
 )
@@ -115,22 +102,6 @@ const (
 // and a shared office address, where several colleagues open their links the
 // same morning, would run the sign-in bucket down for everyone.
 const (
-	envAuthIPBurst             = "OPENV_AUTH_IP_BURST"
-	envAuthIPRefill            = "OPENV_AUTH_IP_REFILL_PER_HOUR"
-	envAuthAccountBurst        = "OPENV_AUTH_ACCOUNT_BURST"
-	envAuthAccountRefill       = "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR"
-	envRegisterIPBurst         = "OPENV_REGISTER_IP_BURST"
-	envRegisterIPRefill        = "OPENV_REGISTER_IP_REFILL_PER_HOUR"
-	envSSOIPBurst              = "OPENV_SSO_IP_BURST"
-	envSSOIPRefill             = "OPENV_SSO_IP_REFILL_PER_HOUR"
-	envVerifyResendBurst       = "OPENV_VERIFY_RESEND_BURST"
-	envVerifyResendRefill      = "OPENV_VERIFY_RESEND_REFILL_PER_HOUR"
-	envPasswordResetBurst      = "OPENV_PASSWORD_RESET_BURST"
-	envPasswordResetRefill     = "OPENV_PASSWORD_RESET_REFILL_PER_HOUR"
-	envInvitePreviewBurst      = "OPENV_INVITE_PREVIEW_BURST"
-	envInvitePreviewRefill     = "OPENV_INVITE_PREVIEW_REFILL_PER_HOUR"
-	envInviteBurst             = "OPENV_INVITE_BURST"
-	envInviteRefill            = "OPENV_INVITE_REFILL_PER_HOUR"
 	defaultAuthIPBurst         = 30
 	defaultAuthIPRefill        = 120.0
 	defaultAuthAccountBurst    = 5
@@ -193,14 +164,36 @@ func newRateLimiter(burst int, refillPerHour float64) *rateLimiter {
 	}
 }
 
-// newRateLimiterFromEnv builds a limiter from a pair of environment
-// variables, a burst (a count) and a refill per hour (a rate), each falling
-// back to its default when unset or malformed (internal/envparse's rule): a
-// refill of Inf would switch the limiter off, so it is malformed too.
-func newRateLimiterFromEnv(burstVar, refillVar string, defBurst int, defRefill float64) *rateLimiter {
-	burst := envparse.Count(burstVar, os.Getenv(burstVar), defBurst)
-	refill := envparse.Rate(refillVar, os.Getenv(refillVar), defRefill)
-	return newRateLimiter(burst, refill)
+// RateLimit is one of NewHandler's token buckets: its burst, a count, and
+// its refill per hour, a positive finite rate. cmd/server reads each from
+// its pair of environment variables, each falling back to its default when
+// unset or malformed (internal/envparse's rule: a refill of Inf would switch
+// the limiter off, so it is malformed too), and hands them over in
+// HandlerDeps.RateLimits. A zero field is the bucket's default.
+type RateLimit struct {
+	Burst         int
+	RefillPerHour float64
+}
+
+// RateLimits are NewHandler's thirteen token buckets, in the order it builds
+// them.
+type RateLimits struct {
+	InterviewMsg, InterviewIP, InterviewStream RateLimit
+	AuthIP, AuthAccount, RegisterIP, SSOIP     RateLimit
+	VerifyResend, PasswordReset, InvitePreview RateLimit
+	BillingRefresh, BillingWrite, Invite       RateLimit
+}
+
+// newRateLimiterOr builds a limiter from l, a field of which that is zero
+// taking its default.
+func newRateLimiterOr(l RateLimit, defBurst int, defRefill float64) *rateLimiter {
+	if l.Burst == 0 {
+		l.Burst = defBurst
+	}
+	if l.RefillPerHour == 0 {
+		l.RefillPerHour = defRefill
+	}
+	return newRateLimiter(l.Burst, l.RefillPerHour)
 }
 
 // allow consumes one token for key when available. It returns whether the

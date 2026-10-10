@@ -2,7 +2,6 @@ package users
 
 import (
 	"errors"
-	"os"
 	"testing"
 	"time"
 )
@@ -185,33 +184,6 @@ func TestChangePasswordRefusesAnSSOAccount(t *testing.T) {
 	}
 	if err := svc.ChangePassword(user.ID, "", "new-password", ""); !errors.Is(err, ErrNoPassword) {
 		t.Errorf("SSO account returned %v, want ErrNoPassword", err)
-	}
-}
-
-func TestSessionPolicyFromEnvClampsAndDefaults(t *testing.T) {
-	cases := []struct {
-		name             string
-		maxAge, idle     string
-		wantMax, wantIdl time.Duration
-	}{
-		{"unset uses the defaults", "", "", DefaultSessionMaxAge, DefaultSessionIdle},
-		{"an operator may shorten", "12h", "45m", 12 * time.Hour, 45 * time.Minute},
-		{"above the ceiling is clamped", "8760h", "8760h", DefaultSessionMaxAge, DefaultSessionIdle},
-		{"unparseable falls back", "30d", "week", DefaultSessionMaxAge, DefaultSessionIdle},
-		{"non-positive falls back", "0s", "-4h", DefaultSessionMaxAge, DefaultSessionIdle},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(envSessionMaxAge, tc.maxAge)
-			os.Setenv(envSessionIdle, tc.idle)
-			defer os.Unsetenv(envSessionMaxAge)
-			defer os.Unsetenv(envSessionIdle)
-
-			p := SessionPolicyFromEnv()
-			if p.MaxAge != tc.wantMax || p.Idle != tc.wantIdl {
-				t.Errorf("policy = %v/%v, want %v/%v", p.MaxAge, p.Idle, tc.wantMax, tc.wantIdl)
-			}
-		})
 	}
 }
 

@@ -15,7 +15,6 @@ import (
 	"mime"
 	"net"
 	"net/smtp"
-	"os"
 	"strings"
 	"unicode"
 
@@ -42,34 +41,39 @@ type SMTPMailer struct {
 	send func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
 }
 
-// MailerFromEnv builds an SMTPMailer from the OPENV_SMTP_* environment. With
-// OPENV_SMTP_HOST unset the returned mailer is disabled (Enabled()==false) and
-// every Send is a silent no-op — the intended default for dev and any
-// deployment that has not opted into email.
+// SMTPSettings are the mail channel's settings, the OPENV_SMTP_* variables,
+// which cmd/server reads (internal/config's SMTP) and hands NewMailer:
 //
-// Recognized variables:
+//	Host      OPENV_SMTP_HOST, the SMTP server host (empty => email disabled)
+//	Port      OPENV_SMTP_PORT, the SMTP port (default 587)
+//	User      OPENV_SMTP_USER, the username for PLAIN auth (empty => no auth)
+//	Password  OPENV_SMTP_PASSWORD, the password for PLAIN auth
+//	From      OPENV_SMTP_FROM, the envelope/From address (empty => User)
 //
-//	OPENV_SMTP_HOST      SMTP server host (empty => email disabled)
-//	OPENV_SMTP_PORT      SMTP port (default 587)
-//	OPENV_SMTP_USER      username for PLAIN auth (empty => no auth)
-//	OPENV_SMTP_PASSWORD  password for PLAIN auth
-//	OPENV_SMTP_FROM      envelope/From address (default: OPENV_SMTP_USER)
-func MailerFromEnv() *SMTPMailer {
-	host := strings.TrimSpace(os.Getenv("OPENV_SMTP_HOST"))
+// User and Password are credentials, used exactly as set (#379, question 24).
+type SMTPSettings struct {
+	Host, Port, User, Password, From string
+}
+
+// NewMailer builds an SMTPMailer from s. With no host the returned mailer is
+// disabled (Enabled()==false) and every Send is a silent no-op — the
+// intended default for dev and any deployment that has not opted into
+// email. It logs one line saying which.
+func NewMailer(s SMTPSettings) *SMTPMailer {
 	m := &SMTPMailer{
-		host: host,
-		port: envDefault("OPENV_SMTP_PORT", "587"),
-		user: envSecret("OPENV_SMTP_USER"),
-		pass: envSecret("OPENV_SMTP_PASSWORD"),
-		from: strings.TrimSpace(os.Getenv("OPENV_SMTP_FROM")),
+		host: s.Host,
+		port: s.Port,
+		user: s.User,
+		pass: s.Password,
+		from: s.From,
 	}
 	if m.from == "" {
 		m.from = m.user
 	}
-	if host == "" {
+	if m.host == "" {
 		slog.Info("email: OPENV_SMTP_HOST unset; email notifications disabled (in-app + SSE delivery unaffected)")
 	} else {
-		slog.Info("email: SMTP delivery enabled", "host", host, "port", m.port, "from", fromForLog(m.from, m.user))
+		slog.Info("email: SMTP delivery enabled", "host", m.host, "port", m.port, "from", fromForLog(m.from, m.user))
 	}
 	return m
 }
@@ -184,7 +188,8 @@ type EmailDispatcher struct {
 }
 
 // NewEmailDispatcher wires a dispatcher. eligibleTypes is the allow-list of
-// notification types that email (see DefaultEmailTypes / EmailTypesFromEnv).
+// notification types that email (DefaultEmailTypes, or the override
+// OPENV_EMAIL_NOTIFICATION_TYPES, which cmd/server reads).
 // linkBase is the externally reachable frontend base URL used to build deep
 // links.
 func NewEmailDispatcher(mailer Mailer, dir UserDirectory, linkBase string, eligibleTypes []string) *EmailDispatcher {
@@ -217,33 +222,6 @@ func DefaultEmailTypes() []string {
 		notifications.TypeAccessChanged,
 		notifications.TypeMembershipChanged,
 	}
-}
-
-// EmailTypesFromEnv reads the comma-separated OPENV_EMAIL_NOTIFICATION_TYPES
-// override, or returns DefaultEmailTypes when it is unset/empty.
-func EmailTypesFromEnv() []string {
-	return typeListFromEnv("OPENV_EMAIL_NOTIFICATION_TYPES", DefaultEmailTypes)
-}
-
-// typeListFromEnv parses a comma-separated notification-type allow-list from
-// one environment variable, falling back to fallback() when it is unset,
-// empty, or all separators. Shared by the email and push side channels so
-// both overrides behave identically.
-func typeListFromEnv(key string, fallback func() []string) []string {
-	raw := strings.TrimSpace(os.Getenv(key))
-	if raw == "" {
-		return fallback()
-	}
-	var out []string
-	for _, p := range strings.Split(raw, ",") {
-		if t := strings.TrimSpace(p); t != "" {
-			out = append(out, t)
-		}
-	}
-	if len(out) == 0 {
-		return fallback()
-	}
-	return out
 }
 
 // Eligible reports whether a type is on the email allow-list. Exported for
@@ -375,11 +353,4 @@ func refString(ref map[string]interface{}, key string) string {
 		return s
 	}
 	return fmt.Sprintf("%v", v)
-}
-
-func envDefault(key, fallback string) string {
-	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
-		return v
-	}
-	return fallback
 }

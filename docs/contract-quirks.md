@@ -419,7 +419,7 @@ the Phase 3 consolidations that give quirks their names.
   of `cmd/server/testdata/tour/s5c/self_hosted_cross_site_sso.json`). The raw
   `UPLOADS_DIR` read is not pinned by a response, but
   `internal/archtest/testdata/env_vars.txt` (S8) lists it beside the
-  server's `envOr` with `"./uploads"`, and `FRONTEND_URL` and `PUBLIC_URL`
+  server's read (`internal/config`'s `UploadsDir`) with `"./uploads"`, and `FRONTEND_URL` and `PUBLIC_URL`
   each with their constant and their computed fallback; S8's `per-request`
   exemption keeps the report's read where it is.
 
