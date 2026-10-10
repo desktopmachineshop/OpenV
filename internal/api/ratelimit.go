@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"math"
 	"net"
 	"net/http"
@@ -428,8 +427,6 @@ func writeRateLimited(w http.ResponseWriter, message string, retryAfter time.Dur
 	if seconds < 1 {
 		seconds = 1
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Retry-After", strconv.Itoa(seconds))
-	w.WriteHeader(http.StatusTooManyRequests)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": message})
 }

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -102,10 +101,8 @@ func (h *Handler) DuplicateCandidates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
 	if h.EmbeddingService == nil || !h.EmbeddingService.Enabled() {
-		json.NewEncoder(w).Encode(duplicatesResponse{
+		writeJSONOK(w, duplicatesResponse{
 			Enabled: false,
 			Note:    "semantic-search embeddings are not configured; duplicate detection is unavailable",
 			Pairs:   []duplicatePair{},
@@ -116,7 +113,7 @@ func (h *Handler) DuplicateCandidates(w http.ResponseWriter, r *http.Request) {
 	found, err := h.EmbeddingService.DuplicatePairs(projectID, embeddings.MaxDuplicatePairs)
 	if err != nil {
 		if errors.Is(err, embeddings.ErrDisabled) || errors.Is(err, embeddings.ErrVectorUnavailable) {
-			json.NewEncoder(w).Encode(duplicatesResponse{
+			writeJSONOK(w, duplicatesResponse{
 				Enabled: false,
 				Note:    "the vector store is unavailable on this database; duplicate detection is disabled",
 				Pairs:   []duplicatePair{},
@@ -139,5 +136,5 @@ func (h *Handler) DuplicateCandidates(w http.ResponseWriter, r *http.Request) {
 			Similarity:    p.Similarity(),
 		})
 	}
-	json.NewEncoder(w).Encode(duplicatesResponse{Enabled: true, Pairs: pairs})
+	writeJSONOK(w, duplicatesResponse{Enabled: true, Pairs: pairs})
 }
