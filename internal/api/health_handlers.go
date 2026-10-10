@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -28,6 +27,5 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	if h.BuildSHA != "" {
 		body["commit"] = h.BuildSHA
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(body)
+	writeJSONOK(w, body)
 }

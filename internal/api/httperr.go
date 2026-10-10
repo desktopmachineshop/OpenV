@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -68,18 +67,14 @@ const (
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.
 func writeJSONErrorCode(w http.ResponseWriter, status int, message, code string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(errorBody{Error: message, Code: code})
+	writeJSON(w, status, errorBody{Error: message, Code: code})
 }
 
 // writeJSONError writes a JSON {"error": message} body with the given status.
 // It does no logging; use respondError when there is an underlying error that
 // should reach the server log.
 func writeJSONError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(errorBody{Error: message})
+	writeJSON(w, status, errorBody{Error: message})
 }
 
 // respondError logs the real error with request context and writes a

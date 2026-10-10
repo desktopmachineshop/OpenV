@@ -6,7 +6,6 @@ package api
 // dedicated instances read the public feed to learn of a newer stable.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -36,8 +35,7 @@ func (h *Handler) registerReleaseRoutes(router *mux.Router) {
 func (h *Handler) GetPublicBuild(w http.ResponseWriter, r *http.Request) {
 	body := map[string]string{"commit": h.BuildSHA}
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(body)
+	writeJSONOK(w, body)
 }
 
 // releaseResponse is the current release plus every earlier one.
@@ -82,8 +80,7 @@ func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
 	// The version is what an open tab polls; a fresh answer every time is
 	// the point.
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSONOK(w, resp)
 }
 
 // GetPublicRelease is the open release feed: the release this service runs,
@@ -101,8 +98,7 @@ func (h *Handler) GetPublicRelease(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(feed)
+	writeJSONOK(w, feed)
 }
 
 // staticRelease adapts a parsed notes value, for tests and for a server
