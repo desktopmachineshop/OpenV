@@ -65,7 +65,7 @@ writes no production code. For each step it:
    batch. The maintainer can still review any PR before it merges, and any
    PR they comment on waits for them. Merging never includes *Promote to
    release*.
-5. **Records.** After each merge batch, one Haiku worker ticks the tracking
+5. **Records.** After each merge, one Haiku worker ticks the tracking
    issue, adds window moves to `.git-blame-ignore-revs`, and records OpenV
    evidence and a baseline (§8.5 of the refactor plan).
 
