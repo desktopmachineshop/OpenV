@@ -60,7 +60,7 @@ state, and a JSON export restores into a self-hosted OpenV.
 ### Prerequisites
 - Docker & Docker Compose
 - Node.js 20+ (for local development without Docker)
-- Go 1.25+ (for backend development)
+- Go 1.26+ (for backend development)
 - PostgreSQL 15+ (for local development)
 
 ### Running with Docker Compose
