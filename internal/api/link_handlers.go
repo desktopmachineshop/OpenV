@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -34,8 +33,7 @@ var (
 // CreateLink creates a new link
 func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	var req links.CreateLinkRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -135,9 +133,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 	trace.PublishLinkEvent(p, events.LinkCreated, fromArtifact.ProjectID, link)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(link)
+	writeJSON(w, http.StatusCreated, link)
 }
 
 // GetLink retrieves a link by ID
@@ -153,8 +149,7 @@ func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(link)
+	writeJSONOK(w, link)
 }
 
 // ListLinks lists links by project
@@ -175,8 +170,7 @@ func (h *Handler) ListLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(links)
+	writeJSONOK(w, links)
 }
 
 // UpdateLink updates a link
@@ -184,8 +178,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	var req links.UpdateLinkRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -217,8 +210,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		"to_id":     link.ToID,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(link)
+	writeJSONOK(w, link)
 }
 
 // ConfirmLink handles PUT /api/v1/links/{id}/confirm: an editor vouches
@@ -258,8 +250,7 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(link)
+	writeJSONOK(w, link)
 }
 
 // DeleteLink deletes a link. The delete auto-versions both ends, so it needs

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -26,8 +25,7 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 		ArtifactID string `json:"artifact_id"`
 		Message    string `json:"message"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -71,8 +69,7 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 		"message": entry.Message,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(entry)
+	writeJSONOK(w, entry)
 }
 
 // ListChatterEntries lists chatter entries for an artifact
@@ -95,8 +92,7 @@ func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 
 	h.decorateChatterEntries(h.projectIDForArtifact(artifactID), entries)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(entries)
+	writeJSONOK(w, entries)
 }
 
 // decorateChatterEntries fills in the display-only fields of a notes feed:

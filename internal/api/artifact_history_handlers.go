@@ -38,8 +38,7 @@ func (h *Handler) GetArtifactVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(versions)
+	writeJSONOK(w, versions)
 }
 
 // artifactHistory answers the project a read of an artifact is guarded by
@@ -72,8 +71,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Version int `json:"version"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -120,8 +118,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		"restored_version": restoredFromVersion,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(artifact)
+	writeJSONOK(w, artifact)
 }
 
 // buildRestoreMessage creates a message describing what version was restored
@@ -199,8 +196,7 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(allLinks)
+		writeJSONOK(w, allLinks)
 		return
 	}
 
@@ -245,6 +241,5 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(linksSnapshot)
+	writeJSONOK(w, linksSnapshot)
 }

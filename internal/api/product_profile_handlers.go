@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -26,7 +25,7 @@ func (h *Handler) GetProductProfile(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load product profile", err)
 		return
 	}
-	json.NewEncoder(w).Encode(profile)
+	writeJSONBare(w, profile)
 }
 
 func (h *Handler) UpdateProductProfile(w http.ResponseWriter, r *http.Request) {
@@ -35,8 +34,7 @@ func (h *Handler) UpdateProductProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req products.UpdateProfileRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	profile, err := h.ProductService.UpdateProfile(projectID, req)
@@ -44,5 +42,5 @@ func (h *Handler) UpdateProductProfile(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(profile)
+	writeJSONBare(w, profile)
 }

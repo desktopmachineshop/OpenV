@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -37,8 +36,7 @@ func (h *Handler) GetProjectQuality(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to export project", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(quality.LintProject(export, h.qualityRuleSetFor(projectID)))
+	writeJSONOK(w, quality.LintProject(export, h.qualityRuleSetFor(projectID)))
 }
 
 // GetArtifactQuality lints a single artifact. It returns 400 for a type the
@@ -59,8 +57,7 @@ func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
 	}
 	rs := h.qualityRuleSetFor(artifact.ProjectID)
 	refs, known := h.linkedRefsFor(artifact.ID)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(struct {
+	writeJSONOK(w, struct {
 		quality.ArtifactScore
 		RuleSet quality.RuleSet `json:"rule_set"`
 	}{

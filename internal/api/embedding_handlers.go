@@ -42,9 +42,7 @@ func (h *Handler) ReindexEmbeddings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.EmbeddingService == nil || !h.EmbeddingService.Enabled() {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"enabled": false,
 			"note":    "semantic-search embedding is not configured; nothing to reindex",
 		})
@@ -60,9 +58,7 @@ func (h *Handler) ReindexEmbeddings(w http.ResponseWriter, r *http.Request) {
 		slog.Info("api: reindex-embeddings complete", "project_id", projectID, "artifacts", n)
 	}()
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
 		"enabled": true,
 		"note":    "reindex started; embeddings are being recomputed in the background",
 	})
