@@ -354,20 +354,50 @@ var notConfig = map[string]string{
 	"OPENV_PUSH_ENDPOINT_HOSTS os.Getenv":                     "read on every request, and stays so; exemption per-request",
 }
 
-// rowOf is the inventory row ac claims: its variable read the way ac says,
-// the one whose default is (computed) when ac.computed and the one whose
-// default is not otherwise (FRONTEND_URL and PUBLIC_URL have one of each).
-func rowOf(rows []inventoryRow, ac accessorCase) (inventoryRow, bool) {
-	var found []inventoryRow
+// movedReads are the read columns of today's server reads, each with the
+// internal/config getter that reads the same variable once refactor step
+// X10b switches the stages to this package: S8's scan then shows the
+// variable read through that getter, with the same default, and
+// env_parse.txt pins the getter in a section of its own with the same rows
+// (ENV_INVENTORY_CHANGES, scripts/refactor/refactor_guard.py, lists each
+// move). Billing's reads stay billing.ConfigFromEnv's, and the reads Load
+// makes are no rows of S8's.
+var movedReads = map[string]string{
+	"cmd/server:envOr(key)":                         "internal/config:Config.text(name)",
+	"cmd/server:envInt(key)":                        "internal/config:Config.count(name)",
+	"cmd/server:envBool(key)":                       "internal/config:Config.boolean(name)",
+	"cmd/server:envSwitch(key)":                     "internal/config:Config.onOff(name)",
+	"cmd/server:envSecret(key)":                     "internal/config:Config.secret(name)",
+	"internal/hosting:envOr(key)":                   "internal/config:Config.text(name)",
+	"internal/notify:envDefault(key)":               "internal/config:Config.text(name)",
+	"internal/notify:envSecret(key)":                "internal/config:Config.secret(name)",
+	"internal/notify:typeListFromEnv(key)":          "internal/config:Config.typeList(name)",
+	"internal/api:newRateLimiterFromEnv(burstVar)":  "internal/config:Config.rateLimit(burstVar)",
+	"internal/api:newRateLimiterFromEnv(refillVar)": "internal/config:Config.rateLimit(refillVar)",
+	"internal/domain/users:envDuration(name)":       "internal/config:Config.sessionLifetime(name)",
+	"os.Getenv": "internal/config:Config.getenv(name)",
+}
+
+// rowsOf are the inventory rows ac claims: its variable read the way ac
+// says, or through the internal/config getter that read moves to
+// (movedReads), the one whose default is (computed) when ac.computed and
+// the one whose default is not otherwise (FRONTEND_URL and PUBLIC_URL have
+// one of each). ok is false unless there is one such row or one of each
+// read; while X10b moves the reads, a variable can have both.
+func rowsOf(rows []inventoryRow, ac accessorCase) (found []inventoryRow, ok bool) {
+	perRead := map[string]int{}
 	for _, r := range rows {
-		if r.name == ac.name && r.read == ac.read && (r.def == "(computed)") == ac.computed {
+		if r.name == ac.name && (r.read == ac.read || r.read == movedReads[ac.read]) && (r.def == "(computed)") == ac.computed {
 			found = append(found, r)
+			perRead[r.read]++
 		}
 	}
-	if len(found) != 1 {
-		return inventoryRow{}, false
+	for _, n := range perRead {
+		if n != 1 {
+			return nil, false
+		}
 	}
-	return found[0], true
+	return found, len(found) > 0
 }
 
 // TestEveryInventoryRowIsClaimed holds the package to S8's inventory: every
@@ -382,13 +412,15 @@ func TestEveryInventoryRowIsClaimed(t *testing.T) {
 	caseNames := map[string]bool{}
 	for _, ac := range accessorCases() {
 		caseNames[ac.name] = true
-		r, ok := rowOf(rows, ac)
+		found, ok := rowsOf(rows, ac)
 		if !ok {
-			t.Errorf("the case for %s (%s) names no one row of env_vars.txt read by %s with a default that is (computed): %v",
-				ac.name, ac.accessor, ac.read, ac.computed)
+			t.Errorf("the case for %s (%s) names no one row of env_vars.txt read by %s (or %s) with a default that is (computed): %v",
+				ac.name, ac.accessor, ac.read, movedReads[ac.read], ac.computed)
 			continue
 		}
-		claimed[r] = append(claimed[r], ac.accessor)
+		for _, r := range found {
+			claimed[r] = append(claimed[r], ac.accessor)
+		}
 	}
 	excused := map[inventoryRow]string{}
 	for k, reason := range notConfig {
@@ -457,18 +489,20 @@ func TestAccessorDefaultsAreTheInventorys(t *testing.T) {
 		if !reflect.DeepEqual(got, ac.def) {
 			t.Errorf("%s with %s unset = %s (%T), want the default %s (%T)", ac.accessor, ac.name, render(got), got, render(ac.def), ac.def)
 		}
-		r, ok := rowOf(rows, ac)
-		if !ok || r.def == "-" || r.def == "(computed)" {
-			continue
-		}
-		// Where the accessor parses further than the read, the read's own
-		// default is the inventory's.
-		what, d := ac.accessor, ac.def
-		if ac.pinned != nil {
-			what, d = "the read under "+ac.accessor, ac.pinned(loadFrom(ac.with))
-		}
-		if got := renderDefault(d); got != r.def {
-			t.Errorf("%s defaults to %s; env_vars.txt says the server's %s read defaults to %s", what, got, ac.read, r.def)
+		found, _ := rowsOf(rows, ac)
+		for _, r := range found {
+			if r.def == "-" || r.def == "(computed)" {
+				continue
+			}
+			// Where the accessor parses further than the read, the read's
+			// own default is the inventory's.
+			what, d := ac.accessor, ac.def
+			if ac.pinned != nil {
+				what, d = "the read under "+ac.accessor, ac.pinned(loadFrom(ac.with))
+			}
+			if got := renderDefault(d); got != r.def {
+				t.Errorf("%s defaults to %s; env_vars.txt says the server's %s read defaults to %s", what, got, r.read, r.def)
+			}
 		}
 	}
 }
