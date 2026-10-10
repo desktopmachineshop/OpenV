@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -84,7 +83,7 @@ func (h *Handler) GetHostedRunner(w http.ResponseWriter, r *http.Request) {
 		}
 		online = h.keyOnline(orgID, record.WorkerKeyID)
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"record":          record,
 		"enabled":         h.hostedRunnersEnabled(),
 		"container_state": containerState,
@@ -111,8 +110,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ProviderKeys map[string]string `json:"provider_keys"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	existing, err := h.HostedWorkerService.Get(orgID)
@@ -167,8 +165,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(record)
+	writeJSONBareStatus(w, http.StatusCreated, record)
 }
 
 // hostedRunnerChecked loads the org's hosted runner record after enforcing
@@ -205,7 +202,7 @@ func (h *Handler) StartHostedRunner(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 // StopHostedRunner stops the hosted runner container (admin).
@@ -224,7 +221,7 @@ func (h *Handler) StopHostedRunner(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 // DeleteHostedRunner removes the hosted runner container (and optionally its

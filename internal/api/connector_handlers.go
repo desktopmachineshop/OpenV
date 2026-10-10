@@ -37,7 +37,7 @@ func (h *Handler) CreateConnectorPairing(w http.ResponseWriter, r *http.Request)
 	if apiURL == "" {
 		apiURL = "http://localhost:8080"
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"code":       code,
 		"expires_at": expires,
 		"api_url":    apiURL,
@@ -79,7 +79,7 @@ func (h *Handler) ExchangeConnectorPairing(w http.ResponseWriter, r *http.Reques
 	if apiURL == "" {
 		apiURL = "http://localhost:8080"
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"worker_key": plaintext,
 		"api_url":    apiURL,
 		"org_id":     key.OrgID,
