@@ -84,6 +84,9 @@ and the new package's edges to `artifacts`, `chatter`, `links` and
 base has: X10a's, filled in a class T commit ahead of it, for the edges of
 `internal/config`, the package X10a creates, to `envparse`, `billing`,
 `notify`, `orgs`, `users`, `agentruns`, `sharedproducts` and `embeddings`.
+And an edge listed in `X10B_IMPORT_EDGES`, into a package the base has:
+X10b's, filled in a class T commit ahead of it, for the `cmd/server` →
+`internal/config` edge its switch of the boot stages adds.
 Everything else in the file may only shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which
