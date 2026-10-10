@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -17,7 +16,7 @@ func (h *Handler) registerMetaRoutes(router *mux.Router) {
 
 // MetaArtifactTypes serves the artifact type catalog.
 func (h *Handler) MetaArtifactTypes(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(artifacts.TypeCatalog())
+	writeJSONBare(w, artifacts.TypeCatalog())
 }
 
 // linkTypeRuleDTO mirrors the frontend's LinkTypeRule shape.
@@ -44,5 +43,5 @@ func (h *Handler) MetaLinkTypes(w http.ResponseWriter, r *http.Request) {
 			Description:      rule.Description,
 		})
 	}
-	json.NewEncoder(w).Encode(out)
+	writeJSONBare(w, out)
 }

@@ -61,7 +61,7 @@ func (h *Handler) StartProjectReview(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Body != nil {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
-			writeJSONError(w, http.StatusBadRequest, "invalid request body")
+			writeJSONError(w, http.StatusBadRequest, invalidRequestBody)
 			return
 		}
 	}
@@ -106,6 +106,5 @@ func (h *Handler) StartProjectReview(w http.ResponseWriter, r *http.Request) {
 		"types":             result.Types,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	writeJSONOK(w, result)
 }

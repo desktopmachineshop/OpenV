@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -322,6 +321,5 @@ func writeSearchResponse(w http.ResponseWriter, modeUsed string, hits []*artifac
 	if hits == nil {
 		hits = []*artifacts.SearchHit{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(searchResponse{ModeUsed: modeUsed, Hits: hits})
+	writeJSONOK(w, searchResponse{ModeUsed: modeUsed, Hits: hits})
 }

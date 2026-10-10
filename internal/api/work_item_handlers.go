@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -27,8 +26,7 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workitems.CreateWorkItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	req.ProjectID = projectID
@@ -52,8 +50,7 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(item)
+	writeJSONBareStatus(w, http.StatusCreated, item)
 }
 
 // noteBelongsToProject reports whether a chatter entry exists and hangs off
@@ -80,7 +77,7 @@ func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list work items", err)
 		return
 	}
-	json.NewEncoder(w).Encode(items)
+	writeJSONBare(w, items)
 }
 
 func (h *Handler) GetWorkItem(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +89,7 @@ func (h *Handler) GetWorkItem(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleViewer, missing("work item not found")) {
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"item":     item,
 		"activity": activity,
 	})
@@ -109,8 +106,7 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workitems.UpdateWorkItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// An update that sends no assignee_type keeps the item's. One that
@@ -129,7 +125,7 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) DeleteWorkItem(w http.ResponseWriter, r *http.Request) {
@@ -160,8 +156,7 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req workitems.MoveRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	moved, err := h.WorkItemService.Move(id, req, Actor(r))
@@ -169,7 +164,7 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(moved)
+	writeJSONBare(w, moved)
 }
 
 func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
@@ -185,8 +180,7 @@ func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Content string `json:"content"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	activity, err := h.WorkItemService.AddComment(id, req.Content, Actor(r))
@@ -194,6 +188,5 @@ func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(activity)
+	writeJSONBareStatus(w, http.StatusCreated, activity)
 }

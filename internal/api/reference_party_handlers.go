@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -50,8 +49,7 @@ func (h *Handler) GetProjectParties(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load parties", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(partiesResponse{Parties: parties})
+	writeJSONOK(w, partiesResponse{Parties: parties})
 }
 
 // UpdateProjectParties replaces the project's own parties: {"parties":
@@ -67,8 +65,7 @@ func (h *Handler) UpdateProjectParties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req partiesResponse
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if _, err := h.SettingsService.SetProjectParties(projectID, req.Parties); err != nil {
@@ -84,6 +81,5 @@ func (h *Handler) UpdateProjectParties(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load parties", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(partiesResponse{Parties: parties})
+	writeJSONOK(w, partiesResponse{Parties: parties})
 }

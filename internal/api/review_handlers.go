@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -49,8 +48,7 @@ func (h *Handler) ReviewQueue(w http.ResponseWriter, r *http.Request) {
 		inReview = []*artifacts.Artifact{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONOK(w, map[string]interface{}{
 		"suspect_links":       suspectLinks,
 		"in_review_artifacts": inReview,
 	})

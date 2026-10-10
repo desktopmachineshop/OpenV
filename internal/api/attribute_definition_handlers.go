@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -67,8 +66,7 @@ func (h *Handler) MetaAttributeDefinitions(w http.ResponseWriter, r *http.Reques
 		respondInternal(w, r, "failed to load attribute definitions", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(defs)
+	writeJSONOK(w, defs)
 }
 
 // ListAttributeDefinitions returns the raw (non-merged) definitions for a
@@ -106,8 +104,7 @@ func (h *Handler) ListAttributeDefinitions(w http.ResponseWriter, r *http.Reques
 		respondInternal(w, r, "failed to list attribute definitions", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(defs)
+	writeJSONOK(w, defs)
 }
 
 // requireAttributeDefinitionWrite enforces the write gate for a definition's
@@ -135,8 +132,7 @@ func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var req attributes.CreateDefinitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if !h.requireAttributeDefinitionWrite(w, r, req.OrgID, req.ProjectID, notFound{}) {
@@ -147,9 +143,7 @@ func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		writeAttributeDefinitionError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(def)
+	writeJSON(w, http.StatusCreated, def)
 }
 
 // UpdateAttributeDefinition replaces a definition's editable fields. The write
@@ -173,8 +167,7 @@ func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var req attributes.UpdateDefinitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	def, err := h.AttributeService.UpdateDefinition(id, req)
@@ -182,8 +175,7 @@ func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		writeAttributeDefinitionError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(def)
+	writeJSONOK(w, def)
 }
 
 // DeleteAttributeDefinition removes a definition. Values already stored in

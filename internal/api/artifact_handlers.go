@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -34,8 +33,7 @@ func (h *Handler) registerArtifactRoutes(router *mux.Router) {
 // CreateArtifact creates a new artifact
 func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	var req artifacts.CreateArtifactRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -97,9 +95,7 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	})
 	h.noteCopiedFrom(r, artifact, req.CopiedFrom)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(artifact)
+	writeJSON(w, http.StatusCreated, artifact)
 }
 
 // noteCopiedFrom opens a copied artifact's feed with the one line its
@@ -178,8 +174,7 @@ func (h *Handler) GetArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(artifact)
+	writeJSONOK(w, artifact)
 }
 
 // Artifact listing pagination bounds. Artifacts render as a parent_id tree in
@@ -245,8 +240,7 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("X-Total-Count", strconv.Itoa(total))
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(page)
+	writeJSONOK(w, page)
 }
 
 // UpdateArtifact updates an artifact
@@ -254,8 +248,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	var req artifacts.UpdateArtifactRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -366,8 +359,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		"version":       artifact.Version,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(artifact)
+	writeJSONOK(w, artifact)
 }
 
 // ChangeArtifactStatus handles PUT /api/v1/artifacts/{id}/status: one review
@@ -386,8 +378,7 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -437,8 +428,7 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("api: failed to create chatter entry for status change", "artifact_id", id, "error", err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updated)
+	writeJSONOK(w, updated)
 }
 
 // DeleteArtifact deletes an artifact

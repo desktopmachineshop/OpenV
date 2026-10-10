@@ -63,8 +63,7 @@ type qualityRulesResponse struct {
 }
 
 func writeQualityRules(w http.ResponseWriter, rules *settings.QualityRules) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(qualityRulesResponse{QualityRules: rules, Catalog: qualityCatalog()})
+	writeJSONOK(w, qualityRulesResponse{QualityRules: rules, Catalog: qualityCatalog()})
 }
 
 // decodeRuleSet reads a rule set from the request body. An empty body or an
@@ -73,7 +72,7 @@ func writeQualityRules(w http.ResponseWriter, rules *settings.QualityRules) {
 func decodeRuleSet(w http.ResponseWriter, r *http.Request) (quality.RuleSet, bool) {
 	var rs quality.RuleSet
 	if err := json.NewDecoder(r.Body).Decode(&rs); err != nil && err != io.EOF {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		writeJSONError(w, http.StatusBadRequest, invalidRequestBody)
 		return quality.RuleSet{}, false
 	}
 	return rs, true

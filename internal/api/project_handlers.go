@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -47,8 +46,7 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req projects.CreateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -66,9 +64,7 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(project)
+	writeJSON(w, http.StatusCreated, project)
 }
 
 // GetProject retrieves a project by ID. The guard comes first, so that a
@@ -84,8 +80,7 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(project)
+	writeJSONOK(w, project)
 }
 
 // ListProjects lists the projects visible to the caller within the active
@@ -100,8 +95,7 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	// personal org, so "" here means even that failed.
 	activeOrg := ActiveOrg(r)
 	if activeOrg == "" {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]*projects.Project{})
+		writeJSONOK(w, []*projects.Project{})
 		return
 	}
 
@@ -156,8 +150,7 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(projectList)
+	writeJSONOK(w, projectList)
 }
 
 // UpdateProject updates a project
@@ -169,8 +162,7 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req projects.UpdateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.ParentProjectID != nil && !h.projectFeatureEnabled(r, id, release.FeatureFlowDown) {
@@ -198,8 +190,7 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(project)
+	writeJSONOK(w, project)
 }
 
 // parentNotFound answers a flow-down parent no row has, or one the caller
@@ -224,8 +215,7 @@ func (h *Handler) ListChildProjects(w http.ResponseWriter, r *http.Request) {
 	if children == nil {
 		children = []*projects.Project{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(children)
+	writeJSONOK(w, children)
 }
 
 // ListLinkedArtifacts answers the far end of every link crossing out of the
@@ -245,8 +235,7 @@ func (h *Handler) ListLinkedArtifacts(w http.ResponseWriter, r *http.Request) {
 	if linked == nil {
 		linked = []*exports.LinkedArtifact{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(linked)
+	writeJSONOK(w, linked)
 }
 
 // DeleteProject deletes a project and everything that belongs to it alone
