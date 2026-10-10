@@ -59,10 +59,12 @@ writes no production code. For each step it:
    `master` and untouched, and a check that no golden changed outside a
    named exception. Fix rounds go back to the **same** worker, so it keeps
    its context and nothing is re-read.
-4. **Merges or queues.** Class C and T PRs merge once green and reviewed.
-   Class E PRs are marked ready and wait for the maintainer, the second
-   reviewer, who approves them in batches. Bug fixes merge once green and
-   reviewed, with their release note.
+4. **Merges.** Every PR, class E included, merges once CI is green on its
+   head and the orchestrator's review has nothing open: the maintainer
+   delegated merging on 10 October 2026, in place of reviewing each class E
+   batch. The maintainer can still review any PR before it merges, and any
+   PR they comment on waits for them. Merging never includes *Promote to
+   release*.
 5. **Records.** After each merge batch, one Haiku worker ticks the tracking
    issue, adds window moves to `.git-blame-ignore-revs`, and records OpenV
    evidence and a baseline (§8.5 of the refactor plan).
@@ -83,16 +85,19 @@ needs, not by its size:
   on one more area, a repository with no transactions under 300 lines, a
   guard exception copied from an existing one, and bookkeeping.
 
-**Order.** The queue in §3 runs top to bottom. When the next step depends
-on a class E PR still waiting for the maintainer, the orchestrator takes
-the next step in the queue that is ready, and comes back.
+**Order.** The queue in §3 runs top to bottom, one step at a time: a step
+starts only after the one before it has merged.
 
 ## 3. The queue
 
-PR counts assume the refactor plan's allowance (§6.1) of 2 to 4 commits of
-the same class in one PR, each verifiable on its own. That brings X1 and
-X13 from 29 PRs to 13. If the maintainer prefers one PR per sub-ID, the
-order and models stay the same.
+One PR per sub-ID (maintainer decision, 10 October 2026): X1 is the
+codemod plus 8 area PRs, and X13 is 20 repository PRs.
+
+### Wave 0: unblock CI
+
+| # | Step | Class | Model | Why that model | Depends |
+|---|---|---|---|---|---|
+| 0 | **Go 1.26.9** and `golang.org/x/net` v0.60.0 | maintenance | Sonnet | A minor Go upgrade needs the whole suite read for behavior changes; the *Vulnerability scan* job fails on every PR until it lands (10 standard-library advisories with no fix in Go 1.25) | – |
 
 ### Wave 1: finish what is in flight
 
@@ -104,8 +109,6 @@ order and models stay the same.
 | 4 | **X14c guard** `X14C_IMPORT_EDGES` | T | Haiku | Copy of `X14B_IMPORT_EDGES` with one edge | – |
 | 5 | **X14c** Reports, V&V and downloads load through `snapshot.Load` | E | Sonnet | Same conversion as X14b's 4 sites | 4 |
 
-Maintainer batch 4: X10b, X11c, X14c.
-
 ### Wave 2: start the two long backend tails
 
 | # | Step | Class | Model | Why that model | Depends |
@@ -113,8 +116,6 @@ Maintainer batch 4: X10b, X11c, X14c.
 | 6 | **X1 tool** `scripts/refactor/httpio` with its test | T | Opus | Matches exact statement sequences through `go/ast`, never reorders, reports what it does not recognise | – |
 | 7 | **X1a** Helpers in `respond.go`, first area | E | Sonnet | Helper bodies are specified exactly; this proves the tool on one area | 6 |
 | 8 | **X13a** `pgkit.go`, `nulls.go`, `withTx`; artifact repository | E | Opus | Sets the pattern 19 PRs copy; `withTx` must keep each transaction's rollback behavior | – |
-
-Maintainer batch 5: X1a, X13a.
 
 ### Wave 3: frontend
 
@@ -127,20 +128,16 @@ tracking issue first and merge only while no other open PR changes it.
 | 10 | **X17** `pages.ts` registry, `navSections` derived | E | Sonnet | Parity tests pin it; App.tsx JSX untouched | – |
 | 11 | **X18a** Step descriptors and `WizardAnswers` serializer | E | Opus | Encodes the wizard's quirks as data; any miss changes stored answers | S16b, F5 |
 
-Maintainer batch 6: X16a, X17, X18a.
-
 ### Wave 4: the tails, then the second halves
 
 | # | Step | Class | Model | Depends |
 |---|---|---|---|---|
-| 12 | **X1b–X1h** codemod over the other 7 areas, 2 areas per PR (4 PRs) | E | Haiku; Sonnet for any area where the tool reports more than a few unrecognised sites | 7 merged |
-| 13 | **X13** project, V&V and link repositories (2 PRs) | E | Sonnet (transactions, large files) | 8 merged |
-| 14 | **X13** interview, workitem, guided, embedding repositories (1 PR) | E | Sonnet (large files) | 8 merged |
-| 15 | **X13** the 12 small repositories, 4 per PR (3 PRs) | E | Haiku | 8 merged |
+| 12 | **X1b–X1h** codemod over the other 7 areas, one area per PR (7 PRs) | E | Haiku; Sonnet for any area where the tool reports more than a few unrecognised sites | 7 merged |
+| 13 | **X13** project, V&V and link repositories (3 PRs) | E | Sonnet (transactions, large files) | 8 merged |
+| 14 | **X13** interview, workitem, guided, embedding repositories (4 PRs) | E | Sonnet (large files) | 8 merged |
+| 15 | **X13** the 12 small repositories, one per PR (12 PRs) | E | Haiku | 8 merged |
 | 16 | **X16b** column resize, sibling ordering and panel mode hooks | E · window | Opus | 9 merged |
 | 17 | **X18b** `useGuidedSession` | E | Sonnet | 11 merged |
-
-Maintainer batches 7 and 8: these, in the order they turn green.
 
 ### Wave 5: close out
 
@@ -151,12 +148,13 @@ Maintainer batches 7 and 8: these, in the order they turn green.
 | 20 | **Bug 226** Size limits that do not fit in bytes | fix | Sonnet | Maintainer's decision on the fix |
 | 21 | **Stop point 3** Baseline, the last tracking-issue update | – | Haiku | All of the above |
 
-That is about 26 PRs: 8 in waves 1 and 2, 3 in wave 3, 12 in wave 4 and
-3 in wave 5, plus 2 blame follow-ups for the ModuleView windows.
+That is about 43 PRs: 1 in wave 0, 8 in waves 1 and 2, 3 in wave 3, 28 in
+wave 4 and 3 in wave 5, plus 2 blame follow-ups for the ModuleView
+windows.
 
 ## 4. What only the maintainer can do
 
-- Approve each class E batch as its second reviewer (§6.7).
+- Review any PR before it merges, if wanted: merging is delegated (§2).
 - Decide bug 226's fix, which the tracking issue records as the agent's
   recommendation.
 - Make the *Refactor guard* job required, and protect `master` with
