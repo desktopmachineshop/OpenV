@@ -154,6 +154,8 @@ func main()
   call (*github.com/gorilla/mux.Router).Handle -> (*github.com/gorilla/mux.Route).Methods
   call (*internal/api.AuthMiddleware).SetPoolKey
   call (*internal/api.AuthMiddleware).SetEmailVerificationPolicy
+  if
+    call (*internal/api.AuthMiddleware).SetActivityRecorder
   call internal/api.CORSMiddleware
   if
     call os.Exit

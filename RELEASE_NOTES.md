@@ -11,6 +11,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **OpenV now keeps a daily record of who uses it, for the people who run
+  it.** Each day you use OpenV while signed in is noted, with the country
+  your connection comes from as Cloudflare reports it, so the platform's
+  administrators can see sign-ups, active and returning users, and where
+  people use OpenV from, on a new Users section of the Platform admin
+  page. Your IP address is not kept, and the record goes with your
+  account.
+
 - **OpenV now runs on a newer Go release with the latest security fixes.**
   The server and the hosted runners are rebuilt on Go 1.26.9 and an updated
   network library, which closes a set of publicly reported weaknesses in

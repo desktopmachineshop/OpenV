@@ -11,6 +11,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
+	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
 	"github.com/openv/requirements-platform/internal/hosting"
@@ -22,6 +23,7 @@ import (
 func (a *app) workspace() {
 	// Suite services.
 	a.userService = users.NewDefaultService(a.userRepo)
+	a.userMetricsService = usermetrics.NewDefaultService(a.userMetricsRepo)
 	a.memberService = members.NewDefaultService(a.memberRepo)
 	a.orgService = orgs.NewDefaultService(a.orgRepo)
 

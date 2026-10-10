@@ -6,7 +6,7 @@
 
 import { client } from './http';
 import type { Org } from './types/orgs';
-import type { AdminUser, AdminWorkspace, ReleaseInfo } from './types/platform';
+import type { AdminUser, AdminWorkspace, ReleaseInfo, UserDashboard } from './types/platform';
 import type { WorkspacePlan } from '../generated/contract';
 
 export const releaseAPI = {
@@ -32,6 +32,7 @@ export const PLANS: { value: string; label: string; legacy?: boolean }[] = [
 export const adminAPI = {
   workspaces: () => client.get<AdminWorkspace[]>('/api/v1/admin/workspaces'),
   users: () => client.get<AdminUser[]>('/api/v1/admin/users'),
+  userMetrics: () => client.get<UserDashboard>('/api/v1/admin/metrics/users'),
   setPlan: (orgId: string, plan: string) => client.put<Org>(`/api/v1/orgs/${orgId}/plan`, { plan }),
   setAdmin: (userId: string, isAdmin: boolean) =>
     client.put<AdminUser>(`/api/v1/admin/users/${userId}/admin`, { is_admin: isAdmin }),

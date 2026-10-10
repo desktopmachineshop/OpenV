@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { AdminUser, AdminWorkspace, PLANS, adminAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from '../components/Navbar';
+import { UserDashboard } from '../components/admin/UserDashboard';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
@@ -170,6 +171,8 @@ export const PlatformAdmin: React.FC = () => {
             {notice}
           </div>
         )}
+
+        <UserDashboard compact={compact} />
 
         <section className="card" style={{ padding: compact ? 14 : 20, marginBottom: 16 }}>
           <h2 style={{ margin: '0 0 10px', fontSize: 18 }}>Workspaces</h2>

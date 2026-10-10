@@ -88,4 +88,4 @@ PUT /api/v1/links/{id}: 200, 400, 404; links_managed_edits
 PUT /api/v1/links/{id}/confirm: 200, 404; links_managed_edits
 PUT /api/v1/projects/{id}: 200, 400; projects_templates
 
-s5a: 76 of 341 routes reached (22.3%), 76 with a 2xx or 3xx answer (22.3%)
+s5a: 76 of 342 routes reached (22.2%), 76 with a 2xx or 3xx answer (22.2%)

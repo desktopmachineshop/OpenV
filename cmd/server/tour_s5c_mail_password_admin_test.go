@@ -391,6 +391,17 @@ func mailPasswordAdminTour(tr *tour) {
 	tr.step("every live workspace with its member count, oldest first: the deleted one is left out", admin,
 		"GET /api/v1/admin/workspaces")
 	tr.step("every account, as someone who is not a platform admin", o, "GET /api/v1/admin/users")
+	// Each daily series is 90 {day, count} points, a two-digit count at most
+	// in a tour, which keeps the answer clear of the compressor's floor.
+	dashboardSeriesMin := 2 + 90*len(`{"day":"2026-01-01","count":0}`) + 89
+	dashboardSeriesMax := 2 + 90*len(`{"day":"2026-01-01","count":99}`) + 89
+	tr.step("the user dashboard, as someone who is not a platform admin", o, "GET /api/v1/admin/metrics/users")
+	tr.step("the user dashboard: totals, active and lost users, sign-in methods, countries and cohorts", admin,
+		"GET /api/v1/admin/metrics/users",
+		elide("/generated_at", "<now>", len(`"2026-01-01T00:00:00Z"`), len(`"2026-01-01T00:00:00Z"`), "the time the dashboard was built"),
+		elide("/signups", "<90 days of sign-ups>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"),
+		elide("/active", "<90 days of active users>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"),
+		elide("/cohorts", "<six monthly cohorts>", len("[]"), tourNoMore, "monthly rows ending this month, so their months move with the calendar"))
 	setAdmin := func(title string, a *tourActor, id, body string) *tourResult {
 		return tr.step(title, a, "PUT /api/v1/admin/users/{id}/admin", at("id", id), jsonBody(body))
 	}

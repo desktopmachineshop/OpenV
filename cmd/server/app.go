@@ -41,6 +41,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
+	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
@@ -99,6 +100,7 @@ type app struct {
 	runnerSessionRepo    *postgres.RunnerSessionRepository
 	notificationRepo     *postgres.NotificationRepository
 	pushSubRepo          *postgres.PushSubscriptionRepository
+	userMetricsRepo      *postgres.UserMetricsRepository
 	attributeDefRepo     *postgres.AttributeDefinitionRepository
 	sharedProductRepo    *postgres.SharedProductRepository
 	bus                  *eventbus.DefaultBus
@@ -153,6 +155,7 @@ type app struct {
 	notifyChannels       notify.Channels
 	vapid                notify.VAPIDConfig
 	pushSubService       *pushsubs.DefaultService
+	userMetricsService   *usermetrics.DefaultService
 	notificationService  *notifications.DefaultService
 	minutesMonitor       *notify.MinutesMonitor
 	deploymentKind       string
