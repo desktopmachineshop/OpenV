@@ -113,10 +113,10 @@ func NewDefaultService(repo Repository, appliers Appliers) *DefaultService {
 }
 
 // SetAppliers wires (or rewires) the callbacks that execute approved
-// proposals. It exists so the composition root can construct the service
-// before the HTTP handler that supplies the appliers, then inject them once
-// the handler is built — breaking the construction cycle (the handler needs
-// the proposal service, the appliers need the handler).
+// proposals. The composition root constructs the service with none, builds
+// the appliers from the domain services, and injects them once the HTTP
+// handler is built, at the statement where the appliers once closed a
+// construction cycle through the handler (refactor plan X11c).
 func (s *DefaultService) SetAppliers(appliers Appliers) {
 	s.appliers = appliers
 }

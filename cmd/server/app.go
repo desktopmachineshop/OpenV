@@ -147,6 +147,7 @@ type app struct {
 	loginService         *providers.DefaultLoginService
 	teamService          *teams.DefaultService
 	proposalService      *proposals.DefaultService
+	proposalAppliers     proposals.Appliers
 	metricsCollector     *metrics.Metrics
 	sseHub               *api.SSEHub
 	hooks                *orchestration.Hooks

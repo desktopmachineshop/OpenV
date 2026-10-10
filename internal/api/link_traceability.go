@@ -97,15 +97,15 @@ func (h *Handler) traceabilityFor(r *http.Request) *traceability.Service {
 	}
 }
 
-// appliedTraceability is the link write service for the proposal appliers,
-// which run with no request: no caller to ask, and events stamped as
+// trace is the link write service for the proposal appliers, which run
+// with no request and no Handler: no caller to ask, and events stamped as
 // publishApplied stamps them.
-func (h *Handler) appliedTraceability() *traceability.Service {
+func (ap *appliers) trace() *traceability.Service {
 	return &traceability.Service{
-		Artifacts: h.ArtifactService,
-		Links:     h.LinkService,
-		Notes:     h.ChatterService,
-		Publish:   h.publishAppliedAs,
+		Artifacts: ap.ArtifactService,
+		Links:     ap.LinkService,
+		Notes:     ap.ChatterService,
+		Publish:   ap.publishAppliedAs,
 	}
 }
 

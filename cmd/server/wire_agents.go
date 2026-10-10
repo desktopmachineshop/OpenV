@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 
+	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
@@ -54,11 +55,19 @@ func (a *app) agents() {
 		return err == nil && ok
 	})
 
-	// Proposal appliers execute approved agent writes via the real services.
-	// They are wired after the HTTP handler is built (handler.ProposalAppliers
-	// below): the appliers run the handler's own domain writes — events,
-	// link-snapshot auto-versioning — but the handler needs this service, so
-	// the callbacks are injected once the cycle can be closed.
+	// Proposal appliers execute approved agent writes via the real services,
+	// as the HTTP handlers write: events, link-snapshot auto-versioning. They
+	// are built here from the services, but handed to the proposal service in
+	// stage handlers, after the HTTP handler is built, where they always have
+	// been (refactor plan X11c).
+	a.proposalAppliers = api.NewProposalAppliers(api.ProposalApplierDeps{
+		ArtifactService: a.artifactService,
+		LinkService:     a.linkService,
+		ChatterService:  a.chatterService,
+		ProjectService:  a.projectService,
+		VVService:       a.vvService,
+		Bus:             a.bus,
+	})
 	a.proposalService = proposals.NewDefaultService(a.proposalRepo, proposals.Appliers{})
 
 	// When a run's last proposal is reviewed, finalize the run: an

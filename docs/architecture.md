@@ -134,12 +134,12 @@ Each stage is a method in a `wire_*.go` file and wires one concern:
 | `core` | `wire_core.go` | artifacts, links, embeddings, projects, attachments, baselines, chatter, exports, reports, downloads, templates |
 | `workspace`, `runners` | `wire_workspace.go` | users, members, workspaces and the tiers, invitations, runner keys, hosted runners, the transient pool; the legacy key |
 | `projects` | `wire_projects.go` | attributes, V&V and evidence, work items, the product profile, project settings, guided sessions, interviews, share links, the community pool |
-| `agents` | `wire_agents.go` | agents, runs and their retry policy, automations, repository connections, providers and their sign-ins, crews, proposals |
+| `agents` | `wire_agents.go` | agents, runs and their retry policy, automations, repository connections, providers and their sign-ins, crews, proposals and their appliers |
 | `realtime` | `wire_realtime.go` | the metrics collector, the SSE hub and the orchestration hooks, subscribed to runs and the bus |
 | `notify`, `release` | `wire_notify.go` | mail, sign-up verification, the session and registration policies, notifications, web push, the minutes monitor; the running release, its announcer and the stable scheduler |
 | `jobs` | `wire_jobs.go` | the budget guard, trigger matcher, scheduler, workspace purge and reaper loops |
 | `sso` | `wire_sso.go` | Google and OIDC sign-in |
-| `billing`, `handlers`, `server` | `wire_http.go` | billing; `api.NewHandler` with every dependency, the proposal appliers; the HTTP server |
+| `billing`, `handlers`, `server` | `wire_http.go` | billing; `api.NewHandler` with every dependency, then the proposal service's appliers; the HTTP server |
 
 Beside them: `app.go` holds `env`, the `internal/config` configuration
 stage `signals` loads, which every stage reads its settings through;
@@ -581,10 +581,12 @@ through these tools at run time, so authorization is enforced per call.
 ### Proposal review
 Agents with `write_mode: proposal` (the default) never write directly. Each
 intended write becomes a proposal row; approved proposals are applied through
-the real domain services via the handler's appliers
+the real domain services via the appliers
 (`internal/api/proposal_appliers.go`), which the composition root's
-`handlers` stage hands the proposal service (`cmd/server/wire_http.go`), so
-validation and eventing behave exactly as for human edits.
+`agents` stage builds from those services (`cmd/server/wire_agents.go`) and
+its `handlers` stage hands the proposal service after `api.NewHandler`
+(`cmd/server/wire_http.go`), so validation and eventing behave exactly as
+for human edits, and the appliers need no handler.
 
 ### Crews (agent org charts)
 Agents can be arranged in **crews** — org charts with a typed edge set
