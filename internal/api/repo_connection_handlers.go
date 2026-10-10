@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -41,7 +40,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 			respondInternal(w, r, "failed to list repo connections", err)
 			return
 		}
-		json.NewEncoder(w).Encode(list)
+		writeJSONBare(w, list)
 		return
 	}
 
@@ -52,7 +51,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 			respondInternal(w, r, "failed to list repo connections", err)
 			return
 		}
-		json.NewEncoder(w).Encode(list)
+		writeJSONBare(w, list)
 		return
 	}
 
@@ -61,7 +60,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list repo connections", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // SetMyRepoPath stores the caller's per-user local path for a repo
@@ -83,8 +82,7 @@ func (h *Handler) SetMyRepoPath(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		LocalPath string `json:"local_path"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	user := CurrentUser(r)
@@ -93,7 +91,7 @@ func (h *Handler) SetMyRepoPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	conn.MyLocalPath = strings.TrimSpace(req.LocalPath)
-	json.NewEncoder(w).Encode(conn)
+	writeJSONBare(w, conn)
 }
 
 func (h *Handler) CreateRepoConnection(w http.ResponseWriter, r *http.Request) {
@@ -102,8 +100,7 @@ func (h *Handler) CreateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req repoconns.CreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	req.ProjectID = projectID
@@ -112,8 +109,7 @@ func (h *Handler) CreateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(conn)
+	writeJSONBareStatus(w, http.StatusCreated, conn)
 }
 
 func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
@@ -127,8 +123,7 @@ func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req repoconns.UpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.RepoConnService.Update(id, req)
@@ -136,7 +131,7 @@ func (h *Handler) UpdateRepoConnection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) DeleteRepoConnection(w http.ResponseWriter, r *http.Request) {

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -34,8 +33,7 @@ func (h *Handler) StartGuidedSession(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ProjectID string `json:"project_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
@@ -46,8 +44,7 @@ func (h *Handler) StartGuidedSession(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(session)
+	writeJSONBareStatus(w, http.StatusCreated, session)
 }
 
 func (h *Handler) ListGuidedSessions(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +57,7 @@ func (h *Handler) ListGuidedSessions(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list guided sessions", err)
 		return
 	}
-	json.NewEncoder(w).Encode(sessions)
+	writeJSONBare(w, sessions)
 }
 
 func (h *Handler) GetGuidedSession(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +65,7 @@ func (h *Handler) GetGuidedSession(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		return
 	}
-	json.NewEncoder(w).Encode(session)
+	writeJSONBare(w, session)
 }
 
 func (h *Handler) SaveGuidedStep(w http.ResponseWriter, r *http.Request) {
@@ -80,8 +77,7 @@ func (h *Handler) SaveGuidedStep(w http.ResponseWriter, r *http.Request) {
 		Step    int                    `json:"step"`
 		Answers map[string]interface{} `json:"answers"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.GuidedService.SaveStep(session.ID, req.Step, req.Answers)
@@ -89,7 +85,7 @@ func (h *Handler) SaveGuidedStep(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 // MaterializeGuidedDrafts creates the session's draft artifacts and their
@@ -110,8 +106,7 @@ func (h *Handler) MaterializeGuidedDrafts(w http.ResponseWriter, r *http.Request
 	var req struct {
 		Drafts []guided.DraftSpec `json:"drafts"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	h.dropRefusedDraftLinks(r, session, req.Drafts)
@@ -120,7 +115,7 @@ func (h *Handler) MaterializeGuidedDrafts(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"artifact_ids": ids})
+	writeJSONBare(w, map[string]interface{}{"artifact_ids": ids})
 }
 
 // dropRefusedDraftLinks takes out of each draft the links a managed edit
@@ -189,7 +184,7 @@ func (h *Handler) CommitGuidedSession(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(result.Session)
+	writeJSONBare(w, result.Session)
 }
 
 // publishGuidedApprovals records each draft a guided commit approved in the
@@ -223,5 +218,5 @@ func (h *Handler) AbandonGuidedSession(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(abandoned)
+	writeJSONBare(w, abandoned)
 }

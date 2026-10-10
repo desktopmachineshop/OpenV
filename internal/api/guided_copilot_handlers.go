@@ -82,7 +82,7 @@ func (h *Handler) ListGuidedChatMessages(w http.ResponseWriter, r *http.Request)
 		respondInternal(w, r, "failed to load chat transcript", err)
 		return
 	}
-	json.NewEncoder(w).Encode(transcript)
+	writeJSONBare(w, transcript)
 }
 
 func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) {
@@ -102,8 +102,7 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 		// the thing the reader is looking at.
 		ArtifactID string `json:"artifact_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
@@ -124,7 +123,7 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 			h.SSEHub.BroadcastSession("guided:"+session.ID, "message", note)
 		}
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBare(w, map[string]interface{}{
 		"message":       message,
 		"runner_online": h.guidedRunnerOnline(session),
 	})
@@ -146,13 +145,12 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 		State      map[string]interface{} `json:"state"`
 		ArtifactID string                 `json:"artifact_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	runnerOnline := h.guidedRunnerOnline(session)
 	reply := func(status string) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSONBare(w, map[string]interface{}{
 			"status":        status,
 			"runner_online": runnerOnline,
 		})
@@ -209,8 +207,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 		State map[string]interface{} `json:"state"`
 		Event string                 `json:"event"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// The response tells the chat panel whether a reply is coming, so it can
@@ -219,7 +216,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 	// runner_online=false means turns are queuing with nobody to answer.
 	runnerOnline := h.guidedRunnerOnline(session)
 	reply := func(status string) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSONBare(w, map[string]interface{}{
 			"status":        status,
 			"runner_online": runnerOnline,
 		})

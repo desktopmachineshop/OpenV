@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -78,8 +77,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 		Prompt     string `json:"prompt"`
 		WorkItemID string `json:"work_item_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A launch in a project takes its editor; one with none runs in the
@@ -116,8 +114,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 		writeLaunchError(w, r, launchErrs402, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(run)
+	writeJSONBareStatus(w, http.StatusCreated, run)
 }
 
 // DraftTestCases launches the seeded test-case-author agent scoped to a set of
@@ -145,8 +142,7 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RequirementIDs []string `json:"requirement_ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// Normalize: drop blanks/dupes so a sloppy client can't launch a run with
@@ -207,8 +203,7 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 		writeLaunchError(w, r, launchErrs402, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(run)
+	writeJSONBareStatus(w, http.StatusCreated, run)
 }
 
 func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
@@ -266,7 +261,7 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list agent runs", err)
 		return
 	}
-	json.NewEncoder(w).Encode(runs)
+	writeJSONBare(w, runs)
 }
 
 func (h *Handler) GetAgentRun(w http.ResponseWriter, r *http.Request) {
@@ -281,7 +276,7 @@ func (h *Handler) GetAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireRunAccess(w, r, run, members.RoleViewer) {
 		return
 	}
-	json.NewEncoder(w).Encode(run)
+	writeJSONBare(w, run)
 }
 
 func (h *Handler) GetAgentRunTree(w http.ResponseWriter, r *http.Request) {
@@ -302,7 +297,7 @@ func (h *Handler) GetAgentRunTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A child may sit outside the root's scope (readableRunTree).
-	json.NewEncoder(w).Encode(h.readableRunTree(r, tree))
+	writeJSONBare(w, h.readableRunTree(r, tree))
 }
 
 func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
@@ -326,7 +321,7 @@ func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	if logs == nil {
 		logs = []agentruns.LogEntry{}
 	}
-	json.NewEncoder(w).Encode(logs)
+	writeJSONBare(w, logs)
 }
 
 // StreamAgentRun serves the SSE live tail for a run.
@@ -384,7 +379,7 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to cancel run", err)
 		return
 	}
-	json.NewEncoder(w).Encode(cancelled)
+	writeJSONBare(w, cancelled)
 }
 
 // RetryAgentRun re-enqueues a terminal run as a NEW run with the same org,
@@ -418,6 +413,5 @@ func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to retry run", err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(retried)
+	writeJSONBareStatus(w, http.StatusCreated, retried)
 }

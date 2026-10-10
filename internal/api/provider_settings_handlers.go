@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"sort"
@@ -36,7 +35,7 @@ func (h *Handler) ListProviderSettings(w http.ResponseWriter, r *http.Request) {
 			offered = append(offered, setting)
 		}
 	}
-	json.NewEncoder(w).Encode(offered)
+	writeJSONBare(w, offered)
 }
 
 func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +43,7 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var setting providers.ProviderSetting
-	if err := json.NewDecoder(r.Body).Decode(&setting); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &setting) {
 		return
 	}
 	setting.OrgID = ActiveOrg(r)
@@ -61,7 +59,7 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
-	json.NewEncoder(w).Encode(setting)
+	writeJSONBare(w, setting)
 }
 
 // RecordProviderDetection stores the worker's provider availability report.
@@ -74,8 +72,7 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req workerproto.DetectionReport
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	names := make([]string, 0, len(req))
