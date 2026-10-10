@@ -14,7 +14,6 @@ package api
 // there.
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -79,8 +78,7 @@ func (h *Handler) ListShareLinks(w http.ResponseWriter, r *http.Request) {
 	for _, l := range list {
 		out = append(out, shareLinkResponse{Link: l})
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	writeJSONOK(w, out)
 }
 
 // CreateShareLink mints a link: {"role": "public"|"reviewer", "label",
@@ -99,8 +97,7 @@ func (h *Handler) CreateShareLink(w http.ResponseWriter, r *http.Request) {
 		Label     string     `json:"label"`
 		ExpiresAt *time.Time `json:"expires_at"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	link, token, err := h.ShareLinkService.Create(projectID, req.Role, req.Label, CurrentUserID(r), req.ExpiresAt)
@@ -112,9 +109,7 @@ func (h *Handler) CreateShareLink(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to create share link", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(shareLinkResponse{Link: link, Token: token, URL: h.shareURL(token)})
+	writeJSON(w, http.StatusCreated, shareLinkResponse{Link: link, Token: token, URL: h.shareURL(token)})
 }
 
 // RevokeShareLink stops a link opening anything (owner of its project).
@@ -245,8 +240,7 @@ func (h *Handler) OpenShareLink(w http.ResponseWriter, r *http.Request) {
 		view.Counts = artifactCounts(snapshot)
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(view)
+	writeJSONOK(w, view)
 }
 
 // AcceptShareLink takes a reviewer link up for the signed-in account:
@@ -261,8 +255,7 @@ func (h *Handler) AcceptShareLink(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if !h.allowPublicShare(w, r) {
@@ -290,8 +283,7 @@ func (h *Handler) AcceptShareLink(w http.ResponseWriter, r *http.Request) {
 		}
 		role = members.RoleReviewer
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"project_id": project.ID, "project_name": project.Name, "role": role})
+	writeJSONOK(w, map[string]string{"project_id": project.ID, "project_name": project.Name, "role": role})
 }
 
 // --- Social previews -------------------------------------------------------
@@ -510,8 +502,7 @@ func (h *Handler) ListOpenSourceProjects(w http.ResponseWriter, r *http.Request)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].SnapshotAt.After(out[j].SnapshotAt) })
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	writeJSONOK(w, out)
 }
 
 // openSourceProject resolves a project that is public by its workspace's
@@ -562,8 +553,7 @@ func (h *Handler) GetOpenSourceProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(view)
+	writeJSONOK(w, view)
 }
 
 // OpenSourceProjectPage is the unfurlable page for a public project.

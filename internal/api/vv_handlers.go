@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -42,8 +41,7 @@ func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req vv.CreateRunRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A run's baseline is one of its project's, answered as every route
@@ -61,8 +59,7 @@ func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(run)
+	writeJSONBareStatus(w, http.StatusCreated, run)
 }
 
 func (h *Handler) ListTestRuns(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +72,7 @@ func (h *Handler) ListTestRuns(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list test runs", err)
 		return
 	}
-	json.NewEncoder(w).Encode(runs)
+	writeJSONBare(w, runs)
 }
 
 func (h *Handler) GetTestRun(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +84,7 @@ func (h *Handler) GetTestRun(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
-	json.NewEncoder(w).Encode(run)
+	writeJSONBare(w, run)
 }
 
 func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
@@ -103,8 +100,7 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.VVService.UpdateRunStatus(id, req.Status)
@@ -121,7 +117,7 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	json.NewEncoder(w).Encode(updated)
+	writeJSONBare(w, updated)
 }
 
 func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
@@ -161,8 +157,7 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req vv.UpsertResultRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// An agent run recording a result is stamped with its run id, which also
@@ -176,7 +171,7 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 		respondResultError(w, r, err)
 		return
 	}
-	json.NewEncoder(w).Encode(result)
+	writeJSONBare(w, result)
 }
 
 // respondResultError answers a refused result, and an agent launched to record
@@ -223,7 +218,7 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list test results", err)
 		return
 	}
-	json.NewEncoder(w).Encode(results)
+	writeJSONBare(w, results)
 }
 
 // LaunchTestRunAgent starts an agent run that executes a test run's
@@ -254,8 +249,7 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 		AgentSlug   string   `json:"agent_slug"`
 		TestCaseIDs []string `json:"test_case_ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if strings.TrimSpace(req.AgentSlug) == "" {
@@ -307,8 +301,7 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 			"execution_method": vv.ExecutionMethod(tc.Attributes),
 		})
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSONBareStatus(w, http.StatusCreated, map[string]interface{}{
 		"run":       agentRun,
 		"executing": len(runnable),
 		"skipped":   skippedOut,
@@ -380,7 +373,7 @@ func (h *Handler) GetCoverage(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	json.NewEncoder(w).Encode(h.coverageWithFlowDown(export, latest, nil))
+	writeJSONBare(w, h.coverageWithFlowDown(export, latest, nil))
 }
 
 // coverageWithFlowDown computes a project's coverage and rolls in the
@@ -451,7 +444,7 @@ func (h *Handler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	json.NewEncoder(w).Encode(vv.BuildMatrix(export, latest))
+	writeJSONBare(w, vv.BuildMatrix(export, latest))
 }
 
 func (h *Handler) GetGaps(w http.ResponseWriter, r *http.Request) {
@@ -460,7 +453,7 @@ func (h *Handler) GetGaps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	coverage := h.coverageWithFlowDown(export, latest, nil)
-	json.NewEncoder(w).Encode(vv.GapAnalysis(export, coverage))
+	writeJSONBare(w, vv.GapAnalysis(export, coverage))
 }
 
 // GetImpact returns the change-impact set for one artifact: the artifacts
@@ -500,7 +493,7 @@ func (h *Handler) GetImpact(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "artifact not found in project")
 		return
 	}
-	json.NewEncoder(w).Encode(vv.ComputeImpact(export, artifactID, r.URL.Query().Get("direction")))
+	writeJSONBare(w, vv.ComputeImpact(export, artifactID, r.URL.Query().Get("direction")))
 }
 
 // GetVVReport generates the V&V status PDF for a project or baseline.

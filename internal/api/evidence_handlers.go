@@ -3,7 +3,6 @@ package api
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -158,8 +157,7 @@ func (h *Handler) CreateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req evidence.CreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	var createdBy *string
@@ -194,8 +192,7 @@ func (h *Handler) UpdateEvidenceBundle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req evidence.UpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	bundle, err := h.EvidenceService.Update(id, req)
@@ -435,8 +432,7 @@ func (h *Handler) CiteEvidence(w http.ResponseWriter, r *http.Request) {
 		BundleID string `json:"bundle_id"`
 		Note     string `json:"note"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.BundleID == "" {
