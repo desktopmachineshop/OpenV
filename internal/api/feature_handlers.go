@@ -7,7 +7,6 @@ package api
 // company workspace may switch their own account to the next stable early.
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -127,7 +126,7 @@ func (h *Handler) GetOrgFeatures(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "workspace not found")
 		return
 	}
-	json.NewEncoder(w).Encode(h.resolveFeatures(org, CurrentUser(r).ID))
+	writeJSONBare(w, h.resolveFeatures(org, CurrentUser(r).ID))
 }
 
 // SetMyStablePreview turns the next stable release on or off early for the
@@ -141,8 +140,7 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Enabled bool `json:"enabled"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	org, err := h.OrgService.Get(orgID)
@@ -162,5 +160,5 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to update preview", err)
 		return
 	}
-	json.NewEncoder(w).Encode(h.resolveFeatures(org, CurrentUser(r).ID))
+	writeJSONBare(w, h.resolveFeatures(org, CurrentUser(r).ID))
 }

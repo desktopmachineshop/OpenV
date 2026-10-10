@@ -6,7 +6,6 @@ package api
 // account ever registered has it, and from here it is handed on.
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"sort"
@@ -53,8 +52,7 @@ func (h *Handler) AdminListWorkspaces(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, row)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	writeJSONOK(w, out)
 }
 
 // adminUser is one row of the people listing: what an admin needs to pick
@@ -92,8 +90,7 @@ func (h *Handler) AdminListUsers(w http.ResponseWriter, r *http.Request) {
 		}
 		return out[i].Name < out[j].Name
 	})
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	writeJSONOK(w, out)
 }
 
 // AdminSetUserAdmin grants or removes platform-admin standing: {"is_admin"}
@@ -107,8 +104,7 @@ func (h *Handler) AdminSetUserAdmin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		IsAdmin bool `json:"is_admin"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	id := mux.Vars(r)["id"]
@@ -128,8 +124,7 @@ func (h *Handler) AdminSetUserAdmin(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toAdminUser(u))
+	writeJSONOK(w, toAdminUser(u))
 }
 
 // AdminUserMetrics answers the user dashboard: sign-ups, active and lost
