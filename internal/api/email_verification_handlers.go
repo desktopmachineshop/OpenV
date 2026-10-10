@@ -10,7 +10,6 @@ package api
 // credentials.
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -27,8 +26,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// A 256-bit token is not guessable; this only bounds how fast one
@@ -58,7 +56,7 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// own link instead: with the sign-up (invite_token), by POSTing the
 	// token while signed in as the invited address, or through a provider
 	// that asserts the address as verified.
-	json.NewEncoder(w).Encode(user)
+	writeJSONBare(w, user)
 }
 
 // ResendVerification mails a fresh link to the account's current address.
@@ -77,8 +75,7 @@ func (h *Handler) ChangeVerificationEmail(w http.ResponseWriter, r *http.Request
 	if !requireJSONBody(w, r) {
 		return
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if strings.TrimSpace(req.Email) == "" {
@@ -125,8 +122,7 @@ func (h *Handler) sendVerificationFor(w http.ResponseWriter, r *http.Request, em
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]string{"sent_to": sentTo})
+	writeJSONBareStatus(w, http.StatusAccepted, map[string]string{"sent_to": sentTo})
 }
 
 // errVerificationSend wraps a mailer failure so the caller can tell "the

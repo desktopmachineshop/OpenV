@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -138,7 +137,7 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 	if prev.LogoPath != "" && prev.LogoPath != dest {
 		_ = os.Remove(prev.LogoPath)
 	}
-	json.NewEncoder(w).Encode(org)
+	writeJSONBare(w, org)
 }
 
 // GetOrgLogo serves the workspace logo to any member; 404 when none is set.
@@ -200,5 +199,5 @@ func (h *Handler) DeleteOrgLogo(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "Failed to remove logo", err)
 		return
 	}
-	json.NewEncoder(w).Encode(org)
+	writeJSONBare(w, org)
 }

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -50,7 +49,7 @@ func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list workspace members", err)
 		return
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // AddOrgMember adds a member by email (admin). An address that already has
@@ -70,8 +69,7 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 		Role  string `json:"role"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	outcome, err := h.addOrInviteToOrg(r, orgID, req.Email, req.Role)
@@ -90,8 +88,7 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Role string `json:"role"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	// Read the role before changing it: "you are now an admin" is what the

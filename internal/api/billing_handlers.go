@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -73,8 +72,7 @@ func (h *Handler) CheckoutOrgBilling(w http.ResponseWriter, r *http.Request) {
 		Interval string `json:"interval"`
 		Currency string `json:"currency"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	user := CurrentUser(r)
@@ -98,8 +96,7 @@ func (h *Handler) ChangeOrgBillingPlan(w http.ResponseWriter, r *http.Request) {
 		Plan     string `json:"plan"`
 		Interval string `json:"interval"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	updated, err := h.BillingService.ChangePlan(r.Context(), org, req.Plan, req.Interval)
@@ -231,8 +228,7 @@ func (h *Handler) RefreshOrgBilling(w http.ResponseWriter, r *http.Request) {
 		SessionID string `json:"session_id"`
 	}
 	if r.Body != nil && r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		if !decodeJSON(w, r, &req) {
 			return
 		}
 	}

@@ -27,7 +27,6 @@ package api
 // headers where a credential must not sit.
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -99,8 +98,7 @@ func (h *Handler) CreateOrgInvitation(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 		Role  string `json:"role"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	outcome, err := h.addOrInviteToOrg(r, orgID, req.Email, req.Role)
@@ -118,12 +116,10 @@ func (h *Handler) CreateOrgInvitation(w http.ResponseWriter, r *http.Request) {
 // the outcomes the other answered 201/202 for).
 func writeAddOrInviteOutcome(w http.ResponseWriter, outcome *memberOrInvitation) {
 	if outcome.Member != nil {
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(outcome.Member)
+		writeJSONBareStatus(w, http.StatusCreated, outcome.Member)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(outcome.Invitation)
+	writeJSONBareStatus(w, http.StatusAccepted, outcome.Invitation)
 }
 
 // memberOrInvitation is what bringing an address into a workspace produced:
@@ -345,7 +341,7 @@ func (h *Handler) ListOrgInvitations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.InvitationService == nil {
-		json.NewEncoder(w).Encode([]*invitations.Invitation{})
+		writeJSONBare(w, []*invitations.Invitation{})
 		return
 	}
 	list, err := h.InvitationService.ListPending(orgID)
@@ -356,7 +352,7 @@ func (h *Handler) ListOrgInvitations(w http.ResponseWriter, r *http.Request) {
 	if list == nil {
 		list = []*invitations.Invitation{}
 	}
-	json.NewEncoder(w).Encode(list)
+	writeJSONBare(w, list)
 }
 
 // RevokeOrgInvitation deletes a pending invitation (admin).
@@ -392,8 +388,7 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if h.InvitationService == nil {
@@ -424,7 +419,7 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to read the invitation", err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSONBare(w, map[string]any{
 		"email":      inv.Email,
 		"org_name":   inv.OrgName,
 		"role":       inv.Role,
@@ -451,8 +446,7 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token string `json:"token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	user := h.sessionUser(r)
@@ -492,7 +486,7 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 	h.publishInvitationAccepted(user.ID, acc)
 	// role is what the account holds now, which is the invited role only
 	// when it was not already a member: an invitation never rewrites a role.
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSONBare(w, map[string]any{
 		"org_id":         acc.Invitation.OrgID,
 		"org_name":       acc.Invitation.OrgName,
 		"role":           acc.Role,

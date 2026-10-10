@@ -541,9 +541,7 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 		"op":     op,
 		"run_id": run.ID,
 	})
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
 		"proposed":    true,
 		"proposal_id": proposal.ID,
 		"note":        "This write is pending human review and has not been applied yet.",
