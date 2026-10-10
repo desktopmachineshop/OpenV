@@ -410,8 +410,8 @@
   "counts": {
     "handle_func_outside_registrars": 1,
     "handler_literals_in_tests": 0,
-    "invalid_request_body_literals": 27,
-    "raw_json_encodes": 82,
+    "invalid_request_body_literals": 18,
+    "raw_json_encodes": 53,
     "require_outside_authz": 2
   },
   "env_reads": {
