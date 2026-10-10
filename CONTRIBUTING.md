@@ -239,6 +239,12 @@ boot stages adds, `cmd/server`'s into `internal/config`. X6, X7b, X7c and X10b e
 the other named golden exception, with the `cmd/server/testdata/boot_steps.txt`
 lines they replace, add or remove: a change to that file made in class E
 commits that is exactly those changes, in list order, is not a golden change.
+X10b fills `ENV_INVENTORY_CHANGES`, a third named golden exception, with the
+read-column moves of S8's `internal/archtest/testdata/env_vars.txt` and
+`env_parse.txt` (plan §8.3): each listed row keeps its variable and default
+and moves its read into an `internal/config` getter, each listed section
+label moves to that getter's section with its rows unchanged, and nothing
+else in either file changes.
 
 The job judges a pull request with the **base's** copy of
 `refactor_guard.py` (its *Script self-test* step tests the pull request's
@@ -246,9 +252,9 @@ own copy), so a pull request's edits to the lists and rules take effect only
 once it merges: a pull request that drops a guard-code or protected-path
 entry is still judged by that entry. A step that needs a new exception lands
 it in an earlier pull request, as S12b landed the class T rule for
-TypeScript the build erases before X5 uses it. `X2B_CALL_SHAPE_CHANGES`, `X14B_IMPORT_EDGES` and
-`BOOT_STEPS_CHANGES` are the lists the job reads from the pull request, since X2b, X14b and the boot-steps
-steps fill them in their own; it reads `X11B_IMPORT_EDGES`, `X10A_IMPORT_EDGES` and `X10B_IMPORT_EDGES` there
+TypeScript the build erases before X5 uses it. `X2B_CALL_SHAPE_CHANGES`, `X14B_IMPORT_EDGES`,
+`BOOT_STEPS_CHANGES` and `ENV_INVENTORY_CHANGES` are the lists the job reads from the pull request, since X2b,
+X14b, the boot-steps steps and X10b fill them in their own; it reads `X11B_IMPORT_EDGES`, `X10A_IMPORT_EDGES` and `X10B_IMPORT_EDGES` there
 too, though X11b's, X10a's and X10b's own pull requests leave them as the base has them. `make check` does the same with the merge base's
 copy.
 
