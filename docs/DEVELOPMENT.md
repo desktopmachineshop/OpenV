@@ -2,12 +2,12 @@
 
 ## Toolchain
 
-The project targets **Go 1.25** (`go.mod`) and **Node 24** (frontend, Vite).
+The project targets **Go 1.26** (`go.mod`) and **Node 24** (frontend, Vite).
 The standard development toolchain is **Docker only** — neither Go nor Node
 needs to be installed on the host. Every build target in the `Makefile` runs
-inside `golang:1.25`, and the frontend image builds on `node:24-alpine`.
+inside `golang:1.26`, and the frontend image builds on `node:24-alpine`.
 
-If you do have a local Go 1.25+ / Node 24+ install, the commands below work
+If you do have a local Go 1.26+ / Node 24+ install, the commands below work
 directly on the host too, but Docker is the supported path.
 
 ## Running the stack
@@ -34,10 +34,10 @@ Compile-check or build via the Go container:
 
 ```bash
 # Compile everything
-docker run --rm -v "$(pwd):/app" -w /app golang:1.25 go build ./...
+docker run --rm -v "$(pwd):/app" -w /app golang:1.26 go build ./...
 
 # Run the test suite (also available as `make test`)
-docker run --rm -v "$(pwd):/app" -w /app golang:1.25 go test ./...
+docker run --rm -v "$(pwd):/app" -w /app golang:1.26 go test ./...
 ```
 
 To run a changed API server, rebuild the image and restart the service:
@@ -206,7 +206,7 @@ See `docs/agents.md` for how the runners are used.
 ## Tests and CI
 
 ```bash
-make test   # go test ./... inside golang:1.25
+make test   # go test ./... inside golang:1.26
 ```
 
 CI runs on GitHub Actions (`.github/workflows/ci.yml`): Go vet/test scoped

@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **OpenV now runs on a newer Go release with the latest security fixes.**
+  The server and the hosted runners are rebuilt on Go 1.26.9 and an updated
+  network library, which closes a set of publicly reported weaknesses in
+  how the web server handles requests and secure connections. Nothing
+  changes in how you use OpenV.
+
 ### Bug fixes
 
 - **An agent that looks up a baseline now gets its name and when it was

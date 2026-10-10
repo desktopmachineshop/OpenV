@@ -5,7 +5,7 @@
 # `worker` cross-compiles Windows binaries via Docker; use `worker-unix` on
 # Linux/macOS hosts. See docs/agents.md.
 
-GO_IMAGE := golang:1.25
+GO_IMAGE := golang:1.26
 # Keep in step with the `Install govulncheck` step in
 # .github/workflows/ci.yml so `make vuln` and CI scan with the same tool.
 GOVULNCHECK_VERSION := v1.8.0
