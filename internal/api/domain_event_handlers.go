@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -94,5 +93,5 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 	// Decorate only what survived the visibility filter: naming an event
 	// dereferences the IDs it carries, so events the caller may not see are
 	// never looked up.
-	json.NewEncoder(w).Encode(h.decorateEvents(list))
+	writeJSONBare(w, h.decorateEvents(list))
 }

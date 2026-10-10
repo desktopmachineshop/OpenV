@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net"
 	"net/http"
 	"net/url"
@@ -93,8 +92,7 @@ func (h *Handler) GetPushConfig(w http.ResponseWriter, r *http.Request) {
 	if cfg.Enabled {
 		cfg.PublicKey = h.VAPID.PublicKey
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(cfg)
+	writeJSONOK(w, cfg)
 }
 
 // ListPushSubscriptions answers the caller's own devices. The encryption keys
@@ -123,8 +121,7 @@ func writePushSubscriptions(w http.ResponseWriter, list []*pushsubs.Subscription
 	if list == nil {
 		list = []*pushsubs.Subscription{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"subscriptions": list})
+	writeJSONOK(w, map[string]interface{}{"subscriptions": list})
 }
 
 // CreatePushSubscription stores one device's subscription for the caller.
@@ -141,8 +138,7 @@ func (h *Handler) CreatePushSubscription(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var req pushSubscriptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	endpoint := strings.TrimSpace(req.Endpoint)
@@ -167,9 +163,7 @@ func (h *Handler) CreatePushSubscription(w http.ResponseWriter, r *http.Request)
 		respondInternal(w, r, "failed to store push subscription", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(sub)
+	writeJSON(w, http.StatusCreated, sub)
 }
 
 // truncateRunes cuts s to at most max runes. Slicing bytes instead would cut
@@ -279,8 +273,7 @@ func (h *Handler) DeletePushSubscription(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Endpoint string `json:"endpoint"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	endpoint := strings.TrimSpace(req.Endpoint)
