@@ -33,6 +33,51 @@ func NewArtifactRepository(db *sql.DB) *ArtifactRepository {
 	return &ArtifactRepository{db: db}
 }
 
+// artifactColumns are the artifact's fifteen columns, in the order
+// scanArtifact reads them: every read of a whole artifact selects them and
+// every insert of one writes them.
+const artifactColumns = `id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at`
+
+// scanArtifact reads one row of artifactColumns. ref is NULL on rows the 0018
+// backfill never touched (soft-deleted artifacts), so it scans through a
+// NullString and reads as ""; NULL attributes read as nil.
+func scanArtifact(row rowScanner) (*artifacts.Artifact, error) {
+	artifact := new(artifacts.Artifact)
+	var attributesJSON []byte
+	var ref sql.NullString
+
+	err := row.Scan(
+		&artifact.ID,
+		&artifact.ProjectID,
+		&artifact.ParentID,
+		&artifact.Type,
+		&ref,
+		&artifact.Title,
+		&artifact.Body,
+		&artifact.SortOrder,
+		&artifact.Status,
+		&attributesJSON,
+		&artifact.Version,
+		&artifact.ValidFrom,
+		&artifact.ValidTo,
+		&artifact.CreatedAt,
+		&artifact.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	artifact.Ref = ref.String
+
+	if attributesJSON != nil {
+		err = json.Unmarshal(attributesJSON, &artifact.Attributes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return artifact, nil
+}
+
 // Save inserts a new artifact, assigning its stable ref (e.g. "REQ-12")
 // when the caller did not supply one. Assignment and insert share one
 // transaction so a failed insert never burns a counter value into a
@@ -44,7 +89,7 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 	}
 
 	query := `
-		INSERT INTO artifacts (id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at)
+		INSERT INTO artifacts (` + artifactColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
 
@@ -52,40 +97,32 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	return withTx(ctx, r.db, nil, func(tx *sql.Tx) error {
+		if err := ensureRef(ctx, tx, artifact); err != nil {
+			return err
+		}
 
-	if err := ensureRef(ctx, tx, artifact); err != nil {
+		_, err := tx.ExecContext(
+			ctx,
+			query,
+			artifact.ID,
+			artifact.ProjectID,
+			artifact.ParentID,
+			artifact.Type,
+			artifact.Ref,
+			artifact.Title,
+			artifact.Body,
+			artifact.SortOrder,
+			artifact.Status,
+			attributesJSON,
+			artifact.Version,
+			artifact.ValidFrom,
+			artifact.ValidTo,
+			artifact.CreatedAt,
+			artifact.UpdatedAt,
+		)
 		return err
-	}
-
-	_, err = tx.ExecContext(
-		ctx,
-		query,
-		artifact.ID,
-		artifact.ProjectID,
-		artifact.ParentID,
-		artifact.Type,
-		artifact.Ref,
-		artifact.Title,
-		artifact.Body,
-		artifact.SortOrder,
-		artifact.Status,
-		attributesJSON,
-		artifact.Version,
-		artifact.ValidFrom,
-		artifact.ValidTo,
-		artifact.CreatedAt,
-		artifact.UpdatedAt,
-	)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	})
 }
 
 // ensureRef fills artifact.Ref inside tx. An empty ref draws the next
@@ -126,14 +163,8 @@ func ensureRef(ctx context.Context, tx *sql.Tx, artifact *artifacts.Artifact) er
 
 // FindByID retrieves an artifact by ID
 func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
-	artifact := &artifacts.Artifact{}
-	var attributesJSON []byte
-	// ref is NULL on rows the 0018 backfill never touched (soft-deleted
-	// artifacts), so it scans through a NullString everywhere.
-	var ref sql.NullString
-
 	query := `
-		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + artifactColumns + `
 		FROM artifacts
 		WHERE id = $1 AND valid_to IS NULL
 	`
@@ -141,38 +172,12 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&artifact.ID,
-		&artifact.ProjectID,
-		&artifact.ParentID,
-		&artifact.Type,
-		&ref,
-		&artifact.Title,
-		&artifact.Body,
-		&artifact.SortOrder,
-		&artifact.Status,
-		&attributesJSON,
-		&artifact.Version,
-		&artifact.ValidFrom,
-		&artifact.ValidTo,
-		&artifact.CreatedAt,
-		&artifact.UpdatedAt,
-	)
-
+	artifact, err := scanArtifact(r.db.QueryRowContext(ctx, query, id))
 	if err != nil {
 		if noRow(err) {
 			return nil, artifacts.ErrNotFound
 		}
 		return nil, err
-	}
-
-	artifact.Ref = ref.String
-
-	if attributesJSON != nil {
-		err = json.Unmarshal(attributesJSON, &artifact.Attributes)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return artifact, nil
@@ -181,7 +186,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 // FindByProjectID retrieves all artifacts for a project
 func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + artifactColumns + `
 		FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
@@ -205,7 +210,7 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 // FindByProjectAndType retrieves artifacts by project and type
 func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + artifactColumns + `
 		FROM artifacts
 		WHERE project_id = $1 AND type = $2 AND valid_to IS NULL
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
@@ -232,7 +237,7 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 // index over live rows.
 func (r *ArtifactRepository) FindByProjectAndStatus(projectID string, status string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + artifactColumns + `
 		FROM artifacts
 		WHERE project_id = $1 AND status = $2 AND valid_to IS NULL
 		ORDER BY updated_at DESC, id ASC
@@ -256,7 +261,7 @@ func (r *ArtifactRepository) FindByProjectAndStatus(projectID string, status str
 // sort_order/created_at values collide.
 func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType string, owner string, limit, offset int) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + artifactColumns + `
 		FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
 		AND ($2 = '' OR type = $2)
@@ -295,45 +300,15 @@ func (r *ArtifactRepository) CountByProject(projectID string, artifactType strin
 	return count, err
 }
 
-// collectArtifacts scans rows produced by the standard 15-column artifact
-// SELECT into a slice.
+// collectArtifacts scans rows of artifactColumns into a slice, nil when there
+// are none.
 func collectArtifacts(rows *sql.Rows) ([]*artifacts.Artifact, error) {
 	var artifactList []*artifacts.Artifact
 	for rows.Next() {
-		artifact := new(artifacts.Artifact)
-		var attributesJSON []byte
-		var ref sql.NullString
-
-		err := rows.Scan(
-			&artifact.ID,
-			&artifact.ProjectID,
-			&artifact.ParentID,
-			&artifact.Type,
-			&ref,
-			&artifact.Title,
-			&artifact.Body,
-			&artifact.SortOrder,
-			&artifact.Status,
-			&attributesJSON,
-			&artifact.Version,
-			&artifact.ValidFrom,
-			&artifact.ValidTo,
-			&artifact.CreatedAt,
-			&artifact.UpdatedAt,
-		)
-
+		artifact, err := scanArtifact(rows)
 		if err != nil {
 			return nil, err
 		}
-		artifact.Ref = ref.String
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &artifact.Attributes)
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		artifactList = append(artifactList, artifact)
 	}
 
@@ -347,64 +322,57 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		return err
 	}
 
-	ctx, cancel := stmtCtx()
-	defer cancel()
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// The ref normally rides along unchanged from the loaded current version
-	// — a ref is stable across an artifact's history, a restored version's
-	// included. The one exception is a type change that no longer matches the
-	// old ref's prefix: DefaultService.UpdateArtifact and
-	// RestoreArtifactVersion clear Ref in that case, and ensureRef mints a
-	// fresh one from the new type's counter here, exactly as Save does for a
-	// brand-new artifact.
-	if err := ensureRef(ctx, tx, artifact); err != nil {
-		return err
-	}
-
 	// Mark the current version as archived
 	archiveQuery := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
-	_, err = tx.ExecContext(ctx, archiveQuery, artifact.ValidFrom, artifact.ID)
-	if err != nil {
-		return err
-	}
 
 	// Insert the new version. NULLIF keeps a still-unset ref NULL rather than
 	// "" so the partial unique index never sees two empty-string refs in one
 	// project (should ensureRef somehow leave it empty).
 	insertQuery := `
-		INSERT INTO artifacts (id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at)
+		INSERT INTO artifacts (` + artifactColumns + `)
 		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
-	_, err = tx.ExecContext(
-		ctx,
-		insertQuery,
-		artifact.ID,
-		artifact.ProjectID,
-		artifact.ParentID,
-		artifact.Type,
-		artifact.Ref,
-		artifact.Title,
-		artifact.Body,
-		artifact.SortOrder,
-		artifact.Status,
-		attributesJSON,
-		artifact.Version,
-		artifact.ValidFrom,
-		artifact.ValidTo,
-		artifact.CreatedAt,
-		artifact.UpdatedAt,
-	)
-	if err != nil {
-		return err
-	}
 
-	return tx.Commit()
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	return withTx(ctx, r.db, nil, func(tx *sql.Tx) error {
+		// The ref normally rides along unchanged from the loaded current version
+		// — a ref is stable across an artifact's history, a restored version's
+		// included. The one exception is a type change that no longer matches the
+		// old ref's prefix: DefaultService.UpdateArtifact and
+		// RestoreArtifactVersion clear Ref in that case, and ensureRef mints a
+		// fresh one from the new type's counter here, exactly as Save does for a
+		// brand-new artifact.
+		if err := ensureRef(ctx, tx, artifact); err != nil {
+			return err
+		}
+
+		if _, err := tx.ExecContext(ctx, archiveQuery, artifact.ValidFrom, artifact.ID); err != nil {
+			return err
+		}
+
+		_, err := tx.ExecContext(
+			ctx,
+			insertQuery,
+			artifact.ID,
+			artifact.ProjectID,
+			artifact.ParentID,
+			artifact.Type,
+			artifact.Ref,
+			artifact.Title,
+			artifact.Body,
+			artifact.SortOrder,
+			artifact.Status,
+			attributesJSON,
+			artifact.Version,
+			artifact.ValidFrom,
+			artifact.ValidTo,
+			artifact.CreatedAt,
+			artifact.UpdatedAt,
+		)
+		return err
+	})
 }
 
 // Delete soft-deletes an artifact. valid_to is a TIMESTAMP holding a UTC
@@ -529,7 +497,7 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 // row has (ids.go).
 func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + artifactColumns + `
 		FROM artifacts
 		WHERE id = $1
 		ORDER BY version DESC
