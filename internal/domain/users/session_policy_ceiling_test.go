@@ -2,20 +2,32 @@ package users
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// sessionCeilingRuns numbers the runs of TestSessionPolicyFromEnvAtTheCeiling
+// within one test binary: a lifetime is warned about once per variable and
+// value for the life of the process, so each run (go test -count=2) spells
+// its values above the ceiling differently.
+var sessionCeilingRuns atomic.Int64
 
 // TestSessionPolicyFromEnvAtTheCeiling pins the session lifetime's clamp at
 // its ceilings, a characterization pin for refactor step X10b (#379, plan
 // X10): a value even a nanosecond above 720h, or 168h, clamps to the ceiling
 // with a warning naming the variable, and the ceiling itself, or a value
 // below it, is kept with none. The other variable, unset, keeps its default
-// with no warning. The warning's wording is not pinned.
+// with no warning. The warning's wording is not pinned. Each value above the
+// ceiling is one unit more with each run in the process (the first run's is
+// the nanosecond, second or minute above), so that it is new to the warn-once
+// cache every time.
 func TestSessionPolicyFromEnvAtTheCeiling(t *testing.T) {
+	run := sessionCeilingRuns.Add(1)
 	var logged bytes.Buffer
 	prev, prevOut, prevFlags := slog.Default(), log.Writer(), log.Flags()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
@@ -30,14 +42,14 @@ func TestSessionPolicyFromEnvAtTheCeiling(t *testing.T) {
 		want        time.Duration
 		warns       bool
 	}{
-		{envSessionMaxAge, "720h0m1s", DefaultSessionMaxAge, true},
-		{envSessionMaxAge, " 720h0m2s ", DefaultSessionMaxAge, true},
-		{envSessionMaxAge, "720h1ns", DefaultSessionMaxAge, true},
+		{envSessionMaxAge, fmt.Sprintf("720h0m%ds", run), DefaultSessionMaxAge, true},
+		{envSessionMaxAge, fmt.Sprintf(" 720h%dm0s ", run), DefaultSessionMaxAge, true},
+		{envSessionMaxAge, fmt.Sprintf("720h%dns", run), DefaultSessionMaxAge, true},
 		{envSessionMaxAge, "720h", DefaultSessionMaxAge, false},
 		{envSessionMaxAge, "43200m", DefaultSessionMaxAge, false},
 		{envSessionMaxAge, "719h59m59s", 719*time.Hour + 59*time.Minute + 59*time.Second, false},
-		{envSessionIdle, "168h0m1s", DefaultSessionIdle, true},
-		{envSessionIdle, "168h1ns", DefaultSessionIdle, true},
+		{envSessionIdle, fmt.Sprintf("168h0m%ds", run), DefaultSessionIdle, true},
+		{envSessionIdle, fmt.Sprintf("168h%dns", run), DefaultSessionIdle, true},
 		{envSessionIdle, "168h", DefaultSessionIdle, false},
 		{envSessionIdle, "167h59m59s", 167*time.Hour + 59*time.Minute + 59*time.Second, false},
 	}

@@ -147,10 +147,14 @@ func TestBillingConfigIsFatalWhateverTheKeyOrHosting(t *testing.T) {
 // wire_sso.go): without the switch the accessor is nil and reads nothing
 // else, so a credential with spaces around it is not even warned about.
 func TestSSOSettingsOnlyWithTheirSwitch(t *testing.T) {
+	// Secrets no earlier run of this test (go test -count=2) set: a warning
+	// comes once per variable and value for the life of the process.
+	run := configWarningRuns.Add(1)
+	oidcSecret, googleSecret := fmt.Sprintf(" oidc-secret-x10a-run%d\n", run), fmt.Sprintf(" google-secret-x10a-run%d\n", run)
 	fields := map[string]string{
-		"OPENV_OIDC_CLIENT_ID": "oidc-client", "OPENV_OIDC_CLIENT_SECRET": " oidc-secret-x10a\n", "OPENV_OIDC_NAME": "Okta",
+		"OPENV_OIDC_CLIENT_ID": "oidc-client", "OPENV_OIDC_CLIENT_SECRET": oidcSecret, "OPENV_OIDC_NAME": "Okta",
 		"OPENV_OIDC_REDIRECT_URL": "https://api.example.test/cb", "OPENV_OIDC_SCOPES": "openid  email",
-		"GOOGLE_CLIENT_SECRET": " google-secret-x10a\n", "PUBLIC_URL": "https://api.example.test", "FRONTEND_URL": "https://app.example.test",
+		"GOOGLE_CLIENT_SECRET": googleSecret, "PUBLIC_URL": "https://api.example.test", "FRONTEND_URL": "https://app.example.test",
 		"PORT": "9090",
 	}
 	for _, issuer := range []string{"\x00unset", "", "   "} {
@@ -184,12 +188,12 @@ func TestSSOSettingsOnlyWithTheirSwitch(t *testing.T) {
 	}
 	log := captureLog(t)
 	c := loadFrom(env)
-	wantOIDC := &OIDC{Issuer: "https://idp.example.test", ClientID: "oidc-client", ClientSecret: " oidc-secret-x10a\n",
+	wantOIDC := &OIDC{Issuer: "https://idp.example.test", ClientID: "oidc-client", ClientSecret: oidcSecret,
 		RedirectURL: "https://api.example.test/cb", Scopes: []string{"openid", "email"}, ProviderName: "Okta", FrontendURL: "https://app.example.test"}
 	if got := c.OIDC(); !reflect.DeepEqual(got, wantOIDC) {
 		t.Errorf("OIDC() = %+v, want %+v", got, wantOIDC)
 	}
-	wantGoogle := &GoogleOAuth{ClientID: "google-client", ClientSecret: " google-secret-x10a\n",
+	wantGoogle := &GoogleOAuth{ClientID: "google-client", ClientSecret: googleSecret,
 		RedirectURL: "https://api.example.test" + googleRedirectPath, FrontendURL: "https://app.example.test"}
 	if got := c.GoogleOAuth(); !reflect.DeepEqual(got, wantGoogle) {
 		t.Errorf("GoogleOAuth() = %+v, want %+v", got, wantGoogle)
@@ -403,8 +407,12 @@ func TestMaxBodyBytes(t *testing.T) {
 // variable and never the value, however often the setting is read (stage
 // config and stage server both read SECURE_COOKIES, for one).
 func TestEnvparseWarnsOncePerValue(t *testing.T) {
+	// Values no earlier run of this test (go test -count=2) set: a warning
+	// comes once per variable and value for the life of the process.
+	run := configWarningRuns.Add(1)
 	log := captureLog(t)
-	c := loadFrom(map[string]string{"SECURE_COOKIES": "yes-x10a", "OPENV_RUN_MAX_ATTEMPTS": "zero-x10a", "WORKER_API_KEY": " key-x10a"})
+	c := loadFrom(map[string]string{"SECURE_COOKIES": fmt.Sprintf("yes-x10a-run%d", run),
+		"OPENV_RUN_MAX_ATTEMPTS": fmt.Sprintf("zero-x10a-run%d", run), "WORKER_API_KEY": fmt.Sprintf(" key-x10a-run%d", run)})
 	for i := 0; i < 3; i++ {
 		c.SecureCookies()
 		c.RunMaxAttempts()
@@ -415,13 +423,19 @@ func TestEnvparseWarnsOncePerValue(t *testing.T) {
 			t.Errorf("%s malformed and read three times: warned %d times, want once:\n%s", name, n, log)
 		}
 	}
+	// A different value of the same variable is a new pair, and warns.
+	loadFrom(map[string]string{"SECURE_COOKIES": fmt.Sprintf("no-x10a-run%d", run)}).SecureCookies()
+	if n := strings.Count(log.String(), "var=SECURE_COOKIES"); n != 2 {
+		t.Errorf("SECURE_COOKIES read with a second malformed value: warned %d times in all, want twice:\n%s", n, log)
+	}
 	if strings.Contains(log.String(), "x10a") {
 		t.Errorf("a warning carries a value:\n%s", log)
 	}
 }
 
-// configWarningRuns numbers the runs of TestFixedWarningsNameTheVariable
-// within one test binary: a warning comes once per variable and value for
+// configWarningRuns numbers the runs of the tests that read a malformed or
+// padded setting (TestFixedWarningsNameTheVariable among them) within one
+// test binary: a warning comes once per variable and value for
 // the life of the process, so each run (go test -count=2) sets values of
 // its own.
 var configWarningRuns atomic.Int64

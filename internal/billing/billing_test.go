@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -120,18 +121,26 @@ func TestConfigFromEnv(t *testing.T) {
 	}
 }
 
+// secretKeyRuns numbers the runs of
+// TestConfigFromEnvKeepsTheSecretKeyExactlyAsSet in this process.
+var secretKeyRuns atomic.Int64
+
 // The secret key is a credential, used exactly as set (#379, question 24):
 // a line break after it stays, with one warning naming STRIPE_SECRET_KEY and
 // never the key, where it used to be trimmed off in silence. A key of only
 // spaces still leaves billing off, as it always did.
 func TestConfigFromEnvKeepsTheSecretKeyExactlyAsSet(t *testing.T) {
+	// A key no earlier run of this test (go test -count=2) set:
+	// internal/envparse warns once per variable and value for the life of
+	// the process.
+	key := fmt.Sprintf("sk_test_do_not_log_run%d\n", secretKeyRuns.Add(1))
 	var log bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&log, nil)))
 	t.Cleanup(func() { slog.SetDefault(prev) })
 
-	cfg, err := ConfigFromEnv(envOf(map[string]string{"STRIPE_SECRET_KEY": "sk_test_do_not_log\n"}))
-	if err != nil || cfg.SecretKey != "sk_test_do_not_log\n" || !cfg.Enabled() {
+	cfg, err := ConfigFromEnv(envOf(map[string]string{"STRIPE_SECRET_KEY": key}))
+	if err != nil || cfg.SecretKey != key || !cfg.Enabled() {
 		t.Fatalf("key %q, enabled %v, err %v: want the key exactly as set, and billing on", cfg.SecretKey, cfg.Enabled(), err)
 	}
 	if !strings.Contains(log.String(), "used exactly as set") || !strings.Contains(log.String(), "var=STRIPE_SECRET_KEY") {
