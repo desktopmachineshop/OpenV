@@ -52,6 +52,7 @@ func (s *envScan) run() (*envResult, error) {
 		return nil, err
 	}
 	res := &envResult{}
+	unused := s.unusedAccessors()
 	for _, f := range s.order {
 		if len(f.gets) > 0 || len(f.bound) > 0 {
 			res.getters = append(res.getters, f)
@@ -63,6 +64,9 @@ func (s *envScan) run() (*envResult, error) {
 				res.environ = append(res.environ, r)
 			case r.name.unknown != "":
 				res.unknown = append(res.unknown, r)
+			case unused[f]:
+				// An accessor of a live snapshot that nothing outside its
+				// package uses reads nothing anyone sees.
 			default:
 				for _, t := range r.name.alts {
 					if t.firstParam() < 0 {

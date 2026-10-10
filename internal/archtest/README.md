@@ -684,6 +684,18 @@ when the value is only compared with a string constant
 (`os.Getenv !=""`); the default is the argument that pairs with the
 name, the i-th name parameter with the i-th other parameter, printed when it
 is a constant. The rate-limit variables and their defaults are included.
+`internal/config` is an env snapshot (`envSnapshots`): `Load` records a
+table of variables through the lookup it is handed, and `Config.lookup`
+reads one back. While no call hands `Load` an env reader, the snapshot
+reads nothing; once `cmd/server` hands it `os.LookupEnv` (X10b), a call of
+`Config.lookup` is a read of the variable it names, so each accessor's
+variable has the row of the helper it calls (`internal/config:Config.text(name)`)
+with the default it passes, `Load`'s own reads of its table are no rows,
+and `Config.getenv` handed as a value binds as `os.Getenv` does. Only an
+accessor that code outside `internal/config` uses, by a call or as a
+function value, directly or through the package's other functions, gives
+rows: one nothing uses reads nothing anyone sees. A read X10b moves keeps
+its variable and its default; only its read column moves.
 Where each read sits (file and line, function, the binaries that link it) is
 not frozen: `go test -v -run '^TestEnvInventory$' ./internal/archtest` logs
 the report, and `ENV_INVENTORY_REPORT=<file>` writes it there.
@@ -722,7 +734,8 @@ getter that reassigns its name parameter or takes its address, a function
 literal's parameter, a mutable table, values, calls through an interface
 method a getter implements, a getter no followed call reaches, reads at
 package initialisation, stale exemptions and a Windows-only read, which it
-refuses.
+refuses. `TestEnvScanSnapshot` proves the snapshot rule on a fixture with
+`internal/config`'s shape, with `Load` unbound and bound.
 
 **Why.** I13 and K8: the platform's configuration surface is its
 environment, which no other guard sees whole. A refactor that renames a

@@ -40,6 +40,30 @@ var envSinks = map[string]string{
 	"os.Environ": "environ", "syscall.Environ": "environ",
 }
 
+// envSnapshot is an env snapshot (refactor plan X10, internal/config): a
+// loader whose function-typed parameter records every variable of a table,
+// and the method that reads one recorded variable back by its name. While no
+// call binds the loader's parameter to an env reader, the snapshot reads
+// nothing. Once one does, a call of the reader is a read of the variable it
+// names, made where the snapshot's accessors read it back, so each variable
+// keeps the row a getter gives it, with the default its accessor passes; the
+// loader's own reads of its table are no rows, since every variable it
+// records is read back where it is used; and the value method, used as a
+// value, is an env reader that reads as os.Getenv does (Config.getenv,
+// handed to billing.ConfigFromEnv).
+type envSnapshot struct {
+	loader string // package:Func of the loader
+	param  string // the loader's function-typed parameter that reads the environment
+	reader string // package:Receiver.Method that reads one recorded variable by name
+	value  string // package:Receiver.Method that, as a value, reads as os.Getenv does
+}
+
+// envSnapshots are the module's env snapshots: internal/config's, which
+// cmd/server hands os.LookupEnv from refactor step X10b on.
+var envSnapshots = []envSnapshot{
+	{loader: "internal/config:Load", param: "lookup", reader: "internal/config:Config.lookup", value: "internal/config:Config.getenv"},
+}
+
 // envMaxPasses bounds the getter fixpoint; the module settles in a few.
 const envMaxPasses = 12
 
@@ -152,10 +176,12 @@ type envScan struct {
 	// those that implement it (see ifaceGetters).
 	methods map[string][]*envFunc
 	ifaces  map[*types.Func][]string
+	// byKey finds a function by its key, for envSnapshots.
+	byKey map[string]*envFunc
 }
 
 func newEnvScan(prog *envProgram) *envScan {
-	s := &envScan{prog: prog, funcs: map[*types.Func]*envFunc{}, ifaces: map[*types.Func][]string{}}
+	s := &envScan{prog: prog, funcs: map[*types.Func]*envFunc{}, ifaces: map[*types.Func][]string{}, byKey: map[string]*envFunc{}}
 	for _, p := range prog.pkgs {
 		for _, f := range p.files {
 			for _, d := range f.Decls {
@@ -174,6 +200,7 @@ func newEnvScan(prog *envProgram) *envScan {
 					ef.params = append(ef.params, sig.Params().At(i))
 				}
 				s.funcs[obj] = ef
+				s.byKey[ef.key] = ef
 				s.order = append(s.order, ef)
 			}
 		}
@@ -235,6 +262,101 @@ func (s *envScan) settle() error {
 	return fmt.Errorf("the getter summaries did not settle in %d passes: a getter calls itself with a growing name", envMaxPasses)
 }
 
+// snapshotForm is the env reader a call binds snap's loader parameter to,
+// or "" while none does.
+func (s *envScan) snapshotForm(snap envSnapshot) string {
+	l := s.byKey[snap.loader]
+	if l == nil {
+		return ""
+	}
+	for i, p := range l.params {
+		if p.Name() == snap.param {
+			return l.bound[i]
+		}
+	}
+	return ""
+}
+
+// snapshotOf is the snapshot in which the function g plays the role that
+// role names (its reader or its value method), and whether there is one.
+func snapshotOf(g *envFunc, role func(envSnapshot) string) (envSnapshot, bool) {
+	for _, snap := range envSnapshots {
+		if g != nil && role(snap) == g.key {
+			return snap, true
+		}
+	}
+	return envSnapshot{}, false
+}
+
+// unusedAccessors are the functions of each live env snapshot's package
+// that no function outside the package refers to, directly or through the
+// package's other functions: an accessor nothing uses, whose reads reach no
+// one, gives no row. A reference is a call or a function value (an accessor
+// handed on as a func, as cmd/server hands hosting the pids limit's).
+func (s *envScan) unusedAccessors() map[*envFunc]bool {
+	unused := map[*envFunc]bool{}
+	for _, snap := range envSnapshots {
+		if s.snapshotForm(snap) == "" {
+			continue
+		}
+		pkg, _, _ := strings.Cut(snap.loader, ":")
+		refs := map[*envFunc][]*envFunc{}
+		used, todo := map[*envFunc]bool{}, []*envFunc(nil)
+		for _, f := range s.order {
+			ast.Inspect(f.decl.Body, func(n ast.Node) bool {
+				var g *envFunc
+				switch x := n.(type) {
+				case *ast.Ident:
+					if fn, ok := s.objectOf(f.pkg, x).(*types.Func); ok {
+						g = s.funcs[fn]
+					}
+				case *ast.SelectorExpr:
+					if fn, ok := s.objectOf(f.pkg, x).(*types.Func); ok {
+						g = s.funcs[fn]
+					}
+				}
+				if g == nil || g.pkg.name != pkg {
+					return true
+				}
+				if f.pkg.name == pkg {
+					refs[f] = append(refs[f], g)
+				} else if !used[g] {
+					used[g] = true
+					todo = append(todo, g)
+				}
+				return true
+			})
+		}
+		for len(todo) > 0 {
+			g := todo[len(todo)-1]
+			todo = todo[:len(todo)-1]
+			for _, h := range refs[g] {
+				if !used[h] {
+					used[h] = true
+					todo = append(todo, h)
+				}
+			}
+		}
+		for _, f := range s.order {
+			if f.pkg.name == pkg && !used[f] {
+				unused[f] = true
+			}
+		}
+	}
+	return unused
+}
+
+// isSnapshotLoad reports whether v is the parameter of f through which an
+// env snapshot's loader records its table.
+func isSnapshotLoad(f *envFunc, v *types.Var) bool {
+	for _, snap := range envSnapshots {
+		if snap.loader == f.key && v.Name() == snap.param {
+			return true
+		}
+	}
+	return false
+}
+
 // walk returns the reads in f's body, closures included, given what is
 // known so far, and reports whether a call bound a new function-typed
 // parameter to an env reader.
@@ -254,6 +376,15 @@ func (s *envScan) walk(f *envFunc) (reads []envRead, bound bool) {
 				}
 				return true
 			}
+			if snap, ok := snapshotOf(s.funcs[obj], func(x envSnapshot) string { return x.reader }); ok {
+				g := s.funcs[obj]
+				g.called = true
+				if form := s.snapshotForm(snap); form != "" && len(call.Args) > 0 && len(g.params) > 0 {
+					reads = append(reads, envRead{fn: f, node: call, read: g.key + "(" + g.params[0].Name() + ")" + shape,
+						sink: form, name: s.eval(f, call.Args[0], 0)})
+				}
+				return true
+			}
 			if g := s.funcs[obj]; g != nil {
 				g.called = true
 				bound = s.bind(f, g, call) || bound
@@ -269,7 +400,7 @@ func (s *envScan) walk(f *envFunc) (reads []envRead, bound bool) {
 						", so the scan cannot tell which function reads the name: call the getter directly")})
 			}
 		case *types.Var:
-			if i := paramIndex(f.params, obj); i >= 0 && f.bound[i] != "" && len(call.Args) > 0 {
+			if i := paramIndex(f.params, obj); i >= 0 && f.bound[i] != "" && len(call.Args) > 0 && !isSnapshotLoad(f, obj) {
 				reads = append(reads, envRead{fn: f, node: call, read: f.key + "(" + obj.Name() + ")" + shape,
 					sink: f.bound[i], name: s.eval(f, call.Args[0], 0)})
 			}
@@ -410,6 +541,9 @@ func (s *envScan) readerForm(f *envFunc, e ast.Expr) string {
 	case *types.Func:
 		if sink := envSinks[qualified(obj)]; sink == "getenv" || sink == "lookup" {
 			return qualified(obj)
+		}
+		if snap, ok := snapshotOf(s.funcs[obj], func(x envSnapshot) string { return x.value }); ok && s.snapshotForm(snap) != "" {
+			return "os.Getenv"
 		}
 	case *types.Var:
 		if i := paramIndex(f.params, obj); i >= 0 {

@@ -101,6 +101,9 @@ X10B_IMPORT_EDGES = [
 BOOT_STEPS_CHANGES = [
 ]
 
+ENV_INVENTORY_CHANGES = [
+]
+
 OTHER = 1
 """
 
@@ -1107,6 +1110,57 @@ class DataTest(unittest.TestCase):
                 self.assertIsNone(rg.boot_steps_changes_in(f"BOOT_STEPS_CHANGES = [\n    {bad},\n]\n"))
         self.assertIsNone(rg.boot_steps_changes_in("OTHER = 1\n"))
 
+    def test_own_env_inventory_block_is_found(self):
+        with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
+            text = f.read()
+        span = rg.find_block(text, "ENV_INVENTORY_CHANGES")
+        self.assertIsNotNone(span)
+        lines = text.split("\n")
+        filled = "\n".join(lines[:span[0]] + ["ENV_INVENTORY_CHANGES = [", "    (",
+                                              '        "A\\tcmd/server:envOr(key)\\t\\"x\\"",',
+                                              '        "A\\tinternal/config:Config.text(name)\\t\\"x\\"",', "    ),",
+                                              '    ("[cmd/server:envOr(key)]", "[internal/config:Config.text(name)]"),',
+                                              "]"] + lines[span[1] + 1:])
+        self.assertNotEqual(filled, text)
+        self.assertEqual(rg.blank_blocks(filled, ["ENV_INVENTORY_CHANGES"]),
+                         rg.blank_blocks(text, ["ENV_INVENTORY_CHANGES"]))
+        # X10b fills it in its own class E commit, and the job reads the
+        # pull request's copy.
+        self.assertEqual(rg.GUARD_CODE_CARVE_OUTS[rg.GUARD_SCRIPT]["ENV_INVENTORY_CHANGES"], "E")
+        self.assertEqual(rg.env_inventory_changes_in(text), [])
+        self.assertEqual(rg.env_inventory_changes_in(filled), [
+            ('A\tcmd/server:envOr(key)\t"x"', 'A\tinternal/config:Config.text(name)\t"x"'),
+            ("[cmd/server:envOr(key)]", "[internal/config:Config.text(name)]")])
+        # Two rows or two labels, nothing else: read as missing.
+        for bad in ('("A\\tr\\t-", "[x]")', '("[x]", "A\\tr\\t-")', '("A\\tr", "A\\tr")', '("", "")',
+                    '("A\\tr\\t-\\tz", "A\\tq\\t-\\tz")', '("# A\\tr\\t-", "# A\\tq\\t-")', '("[]", "[x]")',
+                    '("[x]", "[y]", "[z]")', '("[x]", 1)', '("[x]", "[y]")+1'):
+            with self.subTest(bad=bad):
+                self.assertIsNone(rg.env_inventory_changes_in(f"ENV_INVENTORY_CHANGES = [\n    {bad},\n]\n"))
+        self.assertIsNone(rg.env_inventory_changes_in("OTHER = 1\n"))
+
+    def test_env_pair_problem(self):
+        ok = [('A\tcmd/server:envOr(key)\t"x"', 'A\tinternal/config:Config.text(name)\t"x"'),
+              ("A\tos.Getenv\t-", "A\tinternal/config:Config.getenv(name)\t-"),
+              ("[cmd/server:envOr(key)]", "[internal/config:Config.text(name)]"),
+              ("[internal/domain/users:envDuration(name) B]", "[internal/config:Config.sessionLifetime(name) B]")]
+        for before, after in ok:
+            with self.subTest(before=before):
+                self.assertIsNone(rg.env_pair_problem(before, after))
+        bad = {('A\tcmd/server:envOr(key)\t"x"', 'B\tinternal/config:Config.text(name)\t"x"'): "changes the variable",
+               ('A\tcmd/server:envOr(key)\t"x"', 'A\tinternal/config:Config.text(name)\t"y"'): "changes the default",
+               ('A\tcmd/server:envOr(key)\t"x"', 'A\tinternal/api:envOr(key)\t"x"'): "does not move the read",
+               ('A\tinternal/config:Config.text(name)\t"x"', 'A\tinternal/config:Config.text(name)\t"x"'):
+                   "does not move the read",
+               ("[cmd/server:envOr(key)]", "[internal/api:x(key)]"): "does not move the section",
+               ("[internal/domain/users:envDuration(name) B]", "[internal/config:Config.sessionLifetime(name) C]"):
+                   "to another variable",
+               ("[internal/domain/users:envDuration(name) B]", "[internal/config:Config.sessionLifetime(name)]"):
+                   "to another variable"}
+        for (before, after), why in bad.items():
+            with self.subTest(before=before, after=after):
+                self.assertIn(why, rg.env_pair_problem(before, after))
+
     def test_line_changes_made(self):
         made = rg.line_changes_made
         old = b"a\n  if\nb\n  if\nc\n"
@@ -1557,6 +1611,269 @@ class BootStepsTest(RepoTest):
 
     def test_outside_a_refactor_it_is_a_golden_change(self):
         self.step(self.X6_STEPS, self.X6_PAIRS)
+        self.assertFailsWith(self.guard("no-release-notes"), "(1) golden freeze", "without a release note")
+
+
+# S8's goldens in miniature, before and after X10b moves four reads into
+# internal/config: two text reads into one helper, an os.Getenv read whose
+# section stays for another variable, and a per-variable section.
+ENV_HEADER = "# The inventory.\n#   NAME read default\n"
+ENV_EXEMPTIONS = "\n# The exemptions.\nper-request\tplacement\tD_VAR\tread on every request\n"
+ENV_ROWS = ['A_VAR\tcmd/server:envOr(key)\t"x"', "B_VAR\tcmd/server:envOr(key)\t(computed)",
+            'C_VAR\tinternal/hosting:envOr(key)\t""', "D_VAR\tos.Getenv\t-", "E_VAR\tos.Getenv\t-",
+            "S_VAR\tinternal/domain/users:envDuration(name)\t168h0m0s"]
+ENV_ROW_MOVES = [(ENV_ROWS[0], 'A_VAR\tinternal/config:Config.text(name)\t"x"'),
+                 (ENV_ROWS[1], "B_VAR\tinternal/config:Config.text(name)\t(computed)"),
+                 (ENV_ROWS[2], 'C_VAR\tinternal/config:Config.text(name)\t""'),
+                 (ENV_ROWS[4], "E_VAR\tinternal/config:Config.getenv(name)\t-"),
+                 (ENV_ROWS[5], "S_VAR\tinternal/config:Config.sessionLifetime(name)\t168h0m0s")]
+TEXT_ROWS = ["unset\tdefault", '"7"\t"7"', '" 7 "\t"7"']
+ENV_SECTIONS = {'!=""': ['unset\tfalse', '"7"\ttrue', '" 7 "\ttrue'], "cmd/server:envOr(key)": TEXT_ROWS, "internal/hosting:envOr(key)": TEXT_ROWS,
+                "os.Getenv": ['unset\t""', '"7"\t"7"', '" 7 "\t" 7 "'],
+                "internal/domain/users:envDuration(name) S_VAR": ["unset\tdefault", '"2h"\t2h0m0s', '"7"\tdefault']}
+ENV_SECTION_MOVES = [("[cmd/server:envOr(key)]", "[internal/config:Config.text(name)]"),
+                     ("[internal/hosting:envOr(key)]", "[internal/config:Config.text(name)]"),
+                     ("[os.Getenv]", "[internal/config:Config.getenv(name)]"),
+                     ("[internal/domain/users:envDuration(name) S_VAR]",
+                      "[internal/config:Config.sessionLifetime(name) S_VAR]")]
+ENV_PARSE_HEADER = "# What each read returns.\n"
+
+
+def env_vars(rows, header=ENV_HEADER, exemptions=ENV_EXEMPTIONS):
+    """An env_vars.txt as TestEnvInventory writes it: header, sorted rows,
+    then the exemptions."""
+    return header + "\n".join(sorted(set(rows))) + "\n" + exemptions
+
+
+def env_parse(sections, header=ENV_PARSE_HEADER):
+    """An env_parse.txt as its writers render it."""
+    out = header
+    for i, k in enumerate(sorted(sections)):
+        out += ("\n" if i or header else "") + "[" + k + "]\n" + "".join(r + "\n" for r in sections[k])
+    return out
+
+
+def moved_rows(rows, moves):
+    gone = {b for b, _ in moves}
+    return [r for r in rows if r not in gone] + [a for _, a in moves]
+
+
+ENV_MOVED_SECTIONS = {'!=""': ENV_SECTIONS['!=""'], "internal/config:Config.text(name)": TEXT_ROWS, "os.Getenv": ENV_SECTIONS["os.Getenv"],
+                      "internal/config:Config.getenv(name)": ENV_SECTIONS["os.Getenv"],
+                      "internal/config:Config.sessionLifetime(name) S_VAR":
+                          ENV_SECTIONS["internal/domain/users:envDuration(name) S_VAR"]}
+
+
+class EnvInventoryTest(RepoTest):
+    """X10b's named exception for S8's goldens (§8.3): in class E commits of a
+    refactor pull request, a change to env_vars.txt and env_parse.txt made of
+    exactly the read-column moves ENV_INVENTORY_CHANGES lists, each into an
+    internal/config getter with the same variable and default, is not a
+    golden change."""
+
+    VARS, PARSE = rg.ENV_VARS_FILE, rg.ENV_PARSE_FILE
+    E = trailers("E", Refactor_Characterization="internal/api/handlers_test.go")
+    PAIRS = ENV_ROW_MOVES + ENV_SECTION_MOVES
+    HEAD_VARS = env_vars(moved_rows(ENV_ROWS, ENV_ROW_MOVES))
+    HEAD_PARSE = env_parse(ENV_MOVED_SECTIONS)
+
+    def setUp(self):
+        super().setUp()
+        self.git("checkout", "-q", "main")
+        self.commit("S8", {self.VARS: env_vars(ENV_ROWS), self.PARSE: env_parse(ENV_SECTIONS)})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+
+    @staticmethod
+    def listed(pairs):
+        """The guard script with ENV_INVENTORY_CHANGES holding pairs."""
+        return GUARD_PY.replace("ENV_INVENTORY_CHANGES = [\n]", "ENV_INVENTORY_CHANGES = [\n" +
+                                "".join(f"    ({b!r}, {a!r}),\n" for b, a in pairs) + "]")
+
+    def step(self, vars_text=None, parse_text=None, pairs=None, body=None):
+        """One commit, class E unless body says otherwise, that writes the
+        S8 goldens (by default X10b's moved ones) and, when pairs is given,
+        fills the pull request's ENV_INVENTORY_CHANGES with them."""
+        files = {self.VARS: self.HEAD_VARS if vars_text is None else vars_text,
+                 self.PARSE: self.HEAD_PARSE if parse_text is None else parse_text}
+        if pairs is not None:
+            files[rg.GUARD_SCRIPT] = self.listed(pairs)
+        self.commit("S8 moves", files, self.E if body is None else body)
+
+    def assertGoldenFails(self, g, warning=None):
+        self.assertFailsWith(g, "(1) golden freeze", "env var inventory and parse table")
+        self.assertFalse([n for n in g.notes if "ENV_INVENTORY_CHANGES" in n], g.notes)
+        if warning:
+            self.assertTrue(any(warning in w for w in g.warnings), g.warnings)
+
+    def test_listed_moves_pass_in_class_e(self):
+        self.step(pairs=self.PAIRS)
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertIn(f"{self.VARS} and {self.PARSE}: only the read-column moves ENV_INVENTORY_CHANGES lists "
+                      "(5 row(s), 4 section(s); §8.3)", g.notes)
+        self.assertEqual(g.warnings, [])
+
+    def test_rows_alone_pass_while_the_parse_table_stays(self):
+        # Only the rows listed move; with no section listed, env_parse.txt
+        # stays as it is.
+        self.step(vars_text=env_vars(moved_rows(ENV_ROWS, ENV_ROW_MOVES[:1])), parse_text=env_parse(ENV_SECTIONS),
+                  pairs=ENV_ROW_MOVES[:1])
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertIn(f"{self.VARS} and {self.PARSE}: only the read-column moves ENV_INVENTORY_CHANGES lists "
+                      "(1 row(s), 0 section(s); §8.3)", g.notes)
+
+    def test_the_exception_is_empty_until_filled(self):
+        self.step()
+        g = self.guard(*REFACTOR)
+        self.assertGoldenFails(g)
+        self.assertEqual(g.warnings, [])
+
+    def test_a_changed_default_fails(self):
+        before, after = ENV_ROW_MOVES[0]
+        changed = after.replace('"x"', '"y"')
+        self.step(vars_text=self.HEAD_VARS.replace(after, changed), pairs=[(before, changed)] + self.PAIRS[1:])
+        self.assertGoldenFails(self.guard(*REFACTOR), "changes the default")
+
+    def test_a_changed_name_fails(self):
+        before, after = ENV_ROW_MOVES[0]
+        changed = after.replace("A_VAR", "Z_VAR")
+        self.step(vars_text=env_vars(moved_rows(ENV_ROWS, [(before, changed)] + ENV_ROW_MOVES[1:])),
+                  pairs=[(before, changed)] + self.PAIRS[1:])
+        self.assertGoldenFails(self.guard(*REFACTOR), "changes the variable")
+
+    def test_a_read_moved_outside_internal_config_fails(self):
+        before, after = ENV_ROW_MOVES[0]
+        elsewhere = 'A_VAR\tinternal/api:envOr(key)\t"x"'
+        self.step(vars_text=env_vars(moved_rows(ENV_ROWS, [(before, elsewhere)] + ENV_ROW_MOVES[1:])),
+                  pairs=[(before, elsewhere)] + self.PAIRS[1:])
+        self.assertGoldenFails(self.guard(*REFACTOR), "does not move the read")
+
+    def test_an_added_row_fails(self):
+        self.step(vars_text=env_vars(moved_rows(ENV_ROWS, ENV_ROW_MOVES) + ["F_VAR\tos.Getenv\t-"]),
+                  pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_row_moved_in_without_its_old_row_going_fails(self):
+        # The read stays where it was and internal/config reads it too: an
+        # added read, not a move.
+        self.step(vars_text=env_vars(ENV_ROWS + [a for _, a in ENV_ROW_MOVES]), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_dropped_row_fails(self):
+        self.step(vars_text=env_vars([r for r in moved_rows(ENV_ROWS, ENV_ROW_MOVES) if not r.startswith("D_VAR")]),
+                  pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_an_unlisted_move_fails(self):
+        self.step(pairs=ENV_ROW_MOVES[1:] + ENV_SECTION_MOVES)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_listed_move_left_unmade_fails(self):
+        self.step(vars_text=env_vars(moved_rows(ENV_ROWS, ENV_ROW_MOVES[1:])), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_before_row_the_base_lacks_fails(self):
+        ghost = ('G_VAR\tcmd/server:envOr(key)\t"g"', 'G_VAR\tinternal/config:Config.text(name)\t"g"')
+        self.step(vars_text=env_vars(moved_rows(ENV_ROWS, ENV_ROW_MOVES) + [ghost[1]]), pairs=self.PAIRS + [ghost])
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_changed_header_line_fails(self):
+        self.step(vars_text=self.HEAD_VARS.replace("#   NAME read default", "#   NAME read"), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_changed_exemption_fails(self):
+        self.step(vars_text=self.HEAD_VARS.replace("read on every request", "read at boot"), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_changed_parse_result_fails(self):
+        changed = dict(ENV_MOVED_SECTIONS)
+        changed["internal/config:Config.text(name)"] = ["unset\tdefault", '"7"\t"7"', '" 7 "\t" 7 "']
+        self.step(parse_text=env_parse(changed), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_merged_sections_that_differ_fail(self):
+        # Two reads with different results cannot share a getter's section.
+        sections = dict(ENV_SECTIONS, **{"internal/hosting:envOr(key)": ['unset\t""', '"7"\t"7"', '" 7 "\t"7"']})
+        self.git("checkout", "-q", "main")
+        self.commit("S8 again", {self.PARSE: env_parse(sections)})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+        self.step(pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_changed_parse_header_fails(self):
+        self.step(parse_text=env_parse(ENV_MOVED_SECTIONS, header="# What each read gives.\n"), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_section_dropped_without_a_pair_fails(self):
+        sections = {k: v for k, v in ENV_MOVED_SECTIONS.items() if k != '!=""'}
+        self.step(parse_text=env_parse(sections), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_section_kept_after_its_move_must_stay_unchanged(self):
+        sections = dict(ENV_MOVED_SECTIONS, **{"os.Getenv": ['unset\t""', '"7"\t"7"']})
+        self.step(parse_text=env_parse(sections), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_section_moved_to_another_variable_fails(self):
+        pairs = ENV_ROW_MOVES + ENV_SECTION_MOVES[:3] + [
+            ("[internal/domain/users:envDuration(name) S_VAR]", "[internal/config:Config.sessionLifetime(name) T_VAR]")]
+        sections = {k.replace(" S_VAR", " T_VAR"): v for k, v in ENV_MOVED_SECTIONS.items()}
+        self.step(parse_text=env_parse(sections), pairs=pairs)
+        self.assertGoldenFails(self.guard(*REFACTOR), "to another variable")
+
+    def test_a_table_out_of_its_writers_order_fails(self):
+        self.step(parse_text=self.HEAD_PARSE.replace("\n[", "\n\n[", 1), pairs=self.PAIRS)
+        self.assertGoldenFails(self.guard(*REFACTOR), "differs from the base")
+
+    def test_a_list_filled_in_its_own_class_e_commit_passes(self):
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(self.PAIRS)}, self.E)
+        self.step()
+        self.assertPasses(self.guard(*REFACTOR))
+
+    def test_the_list_edited_outside_class_e_fails(self):
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(self.PAIRS)}, trailers("B"))
+        self.assertFailsWith(self.guard("refactor"), "(2) guard code", "refactor_guard.py")
+
+    def assert_listed_moves_fail_in(self, klass, *labels):
+        self.git("checkout", "-q", "main")
+        self.commit("list", {rg.GUARD_SCRIPT: self.listed(self.PAIRS)})
+        self.git("checkout", "-q", "pr")
+        self.git("reset", "-q", "--hard", "main")
+        self.step(body=trailers(klass))
+        g = self.guard(*REFACTOR, *labels)
+        self.assertGoldenFails(g, "not class E")
+
+    def test_listed_moves_fail_in_class_c(self):
+        self.assert_listed_moves_fail_in("C", "refactor:test")
+
+    def test_listed_moves_fail_in_class_t(self):
+        self.assert_listed_moves_fail_in("T", "refactor:tooling")
+
+    def test_listed_moves_fail_in_class_a(self):
+        self.assert_listed_moves_fail_in("A", "refactor:move")
+
+    def test_the_list_is_the_pull_requests_not_the_running_scripts(self):
+        self.addCleanup(setattr, rg, "ENV_INVENTORY_CHANGES", rg.ENV_INVENTORY_CHANGES)
+        rg.ENV_INVENTORY_CHANGES = list(self.PAIRS)
+        self.step()
+        self.assertGoldenFails(self.guard(*REFACTOR))
+
+    def test_a_malformed_list_counts_as_empty(self):
+        self.step(pairs=self.PAIRS + [("[os.Getenv]", "A_VAR\tinternal/config:Config.getenv(name)\t-")])
+        self.assertGoldenFails(self.guard(*REFACTOR), "missing or not a list")
+
+    def test_nothing_else_loosens(self):
+        self.step(pairs=self.PAIRS)
+        self.commit("more", {"internal/api/testdata/routes.txt": "GET /a\nGET /b\n"}, self.E)
+        g = self.guard(*REFACTOR)
+        self.assertEqual(sorted(f.path for f in g.failures if f.rule == "(1) golden freeze"),
+                         ["internal/api/testdata/routes.txt"], [f.render() for f in g.failures])
+
+    def test_outside_a_refactor_it_is_a_golden_change(self):
+        self.step(pairs=self.PAIRS)
         self.assertFailsWith(self.guard("no-release-notes"), "(1) golden freeze", "without a release note")
 
 

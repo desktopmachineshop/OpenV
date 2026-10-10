@@ -93,9 +93,13 @@ var helperSections = map[string]func(parseRow) string{
 // notRerun are the sections of env_parse.txt that pin reads the server does
 // not make, by key prefix, with the reason.
 var notRerun = map[string]string{
-	"cmd/agentd:":    agentdSetting,
-	"cmd/openv-mcp:": mcpSetting,
-	`!=""`:           runnerRead + " (only the runner's probes compare a value with \"\")",
+	// From X10b on: this package's TestEnvParse writes these sections by
+	// running these very helpers, and TestAccessorsRerunS8 reruns them per
+	// accessor.
+	"internal/config:": "this package's own parse helpers, written by its TestEnvParse",
+	"cmd/agentd:":      agentdSetting,
+	"cmd/openv-mcp:":   mcpSetting,
+	`!=""`:             runnerRead + " (only the runner's probes compare a value with \"\")",
 }
 
 // TestParseHelpersRerunS8 reruns env_parse.txt's sections of the getters
@@ -130,17 +134,29 @@ func TestParseHelpersRerunS8(t *testing.T) {
 		}
 	}
 	for key := range helperSections {
-		if _, ok := sections[key]; !ok {
-			t.Errorf("helperSections reruns [%s], which env_parse.txt no longer has", key)
+		base, name, _ := strings.Cut(key, " ")
+		moved := strings.TrimSpace(movedReads[base] + " " + name)
+		if _, ok := sections[key]; !ok && (movedReads[base] == "" || sections[moved] == nil) {
+			t.Errorf("helperSections reruns [%s], which env_parse.txt no longer has, nor the section [%s] its read moves to", key, moved)
 		}
 	}
 }
 
 // sectionKey is the section of env_parse.txt that pins ac's read: the read
-// column's own, or the variable's where the parse depends on it.
+// column's own, or the variable's where the parse depends on it; once X10b
+// moves the read into this package (movedReads) and the section with it,
+// the getter's section it moved to.
 func sectionKey(sections map[string][]parseRow, ac accessorCase) string {
-	if _, ok := sections[ac.read]; ok {
-		return ac.read
+	for _, read := range []string{ac.read, movedReads[ac.read]} {
+		if read == "" {
+			continue
+		}
+		if _, ok := sections[read]; ok {
+			return read
+		}
+		if _, ok := sections[read+" "+ac.name]; ok {
+			return read + " " + ac.name
+		}
 	}
 	return ac.read + " " + ac.name
 }

@@ -10,8 +10,8 @@ The pull request's change is HEAD^1..HEAD, and its commits are
 HEAD^1..HEAD^2. The job runs the base's copy of this script, so a pull
 request's edits to the lists and rules below take effect once it merges;
 X2B_CALL_SHAPE_CHANGES, X14B_IMPORT_EDGES, X11B_IMPORT_EDGES,
-X10A_IMPORT_EDGES, X10B_IMPORT_EDGES and BOOT_STEPS_CHANGES alone are read
-from the pull request's tree.
+X10A_IMPORT_EDGES, X10B_IMPORT_EDGES, BOOT_STEPS_CHANGES and
+ENV_INVENTORY_CHANGES alone are read from the pull request's tree.
 
 Every pull request:
   (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 22 entries)
@@ -22,14 +22,15 @@ Every pull request:
       they are goldens outside the list that `vitest -u` rewrites in place.
 
 A pull request labelled `refactor` or `refactor:<anything>` also fails on:
-  - a golden M or D in any case (X2b's listed route_guards.txt lines and the
-    boot_steps.txt lines BOOT_STEPS_CHANGES lists aside, in class E), and
-    the behavior-change label;
+  - a golden M or D in any case (X2b's listed route_guards.txt lines, the
+    boot_steps.txt lines BOOT_STEPS_CHANGES lists and the S8 read-column
+    moves ENV_INVENTORY_CHANGES lists aside, in class E), and the
+    behavior-change label;
   - (2) an M or D under FROZEN_DATA or PROTECTED_PATHS;
   - an M or D on GUARD_CODE except in a class C or T commit that modifies or
     deletes no golden (LINT_ALLOWLISTS, X2B_CALL_SHAPE_CHANGES,
-    X14B_IMPORT_EDGES and BOOT_STEPS_CHANGES are carved out of their files:
-    see there);
+    X14B_IMPORT_EDGES, BOOT_STEPS_CHANGES and ENV_INVENTORY_CHANGES are
+    carved out of their files: see there);
   - an entry of internal/archtest/ratchets.json raised or added (in a
     commit of any class), apart from class D's new-package entries, a
     class T commit's new rule key and, in class E, X14b's, X11b's, X10a's
@@ -605,6 +606,39 @@ BOOT_STEPS_CHANGES = [
      "(*internal/notify.SupportWindowWatcher).Start"),
 ]
 
+# X10b's named exception for S8's goldens (§8.3; decided by the orchestrator
+# under the maintainer's delegation, 10 October 2026): X10b's done-when, no
+# stage reads the environment except through internal/config, moves every
+# read site S8's inventory names, and the S8 scan keeps each variable's name
+# and default visible through internal/config's helpers (envSnapshots,
+# internal/archtest/env_scan_test.go), so only the read column may move.
+# The list holds (before, after) pairs of whole lines, of two forms:
+#   - a row of env_vars.txt, NAME<TAB>read<TAB>default, moved to the row of
+#     the same NAME and default whose read is an internal/config getter
+#     (internal/config:Config.text(name)): the base's rows, with every listed
+#     before row taken out and every listed after row put in, sorted and
+#     each once as the inventory writes them, are the head's rows, and every
+#     other line of the file (the header, the exemptions) is the base's;
+#   - a section label of env_parse.txt, [read] or [read NAME], moved to the
+#     label of an internal/config getter's section with the same NAME, if
+#     any: the head's section under the after label holds the base's rows
+#     under the before label, row for row; the before section may stay,
+#     unchanged, or go; every other section is the base's, and the header
+#     is the base's. A result row never changes.
+# Several reads may move to one getter, so several pairs may share an after
+# line, whose rows (or row) are then the same. A pair that changes a NAME or
+# a default, moves a read anywhere but into internal/config, or a label to
+# another variable, and any other change to either file, leaves both as
+# golden changes; so does a change made in a commit that is not class E. X10b
+# fills the list in its own class E commit (an edit to this list alone is
+# not a guard-code edit in class E). The guard reads it from the pull
+# request's copy of this file, as it reads BOOT_STEPS_CHANGES.
+ENV_VARS_FILE = "internal/archtest/testdata/env_vars.txt"
+ENV_PARSE_FILE = "internal/archtest/testdata/env_parse.txt"
+ENV_CONFIG_READ = "internal/config:"
+ENV_INVENTORY_CHANGES = [
+]
+
 # Shrink-only numbers inside guard code: S12's ceiling on inline error chains
 # (quirk Q20), and S12b's K14 size budgets for production TypeScript with
 # their grandfathered ceilings and §10's count of files over 1,000 lines.
@@ -629,7 +663,8 @@ GUARD_CODE_CEILINGS = {
 # constant.
 GUARD_CODE_CARVE_OUTS = {
     LINT_ALLOWLIST_FILE: {name: "*" for name in LINT_ALLOWLISTS},
-    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E", "X14B_IMPORT_EDGES": "E", "BOOT_STEPS_CHANGES": "E"},
+    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E", "X14B_IMPORT_EDGES": "E", "BOOT_STEPS_CHANGES": "E",
+                   "ENV_INVENTORY_CHANGES": "E"},
     **{path: {name: "*" for name in names} for path, names in GUARD_CODE_CEILINGS.items()},
 }
 
@@ -1306,6 +1341,120 @@ def line_changes_made(old, new, pairs):
             return False
 
 
+def env_row(line):
+    """A row of env_vars.txt as (NAME, read, default), or None: three
+    non-empty tab-separated fields on one line, not a comment."""
+    fields = line.split("\t")
+    if "\n" in line or line.startswith("#") or len(fields) != 3 or not all(fields):
+        return None
+    return tuple(fields)
+
+
+def env_label(line):
+    """The key of a section label of env_parse.txt, [key], or None."""
+    if "\n" in line or len(line) < 3 or not (line.startswith("[") and line.endswith("]")):
+        return None
+    return line[1:-1]
+
+
+def env_inventory_changes_in(text):
+    """ENV_INVENTORY_CHANGES as a copy of this script holds it, a list of
+    (before, after) pairs each of two env_vars.txt rows or two env_parse.txt
+    section labels, or None when the literal is missing or is not such a
+    list."""
+    pairs = string_pairs_in(text, "ENV_INVENTORY_CHANGES")
+    if pairs is None:
+        return None
+    for before, after in pairs:
+        rows = env_row(before) is not None and env_row(after) is not None
+        labels = env_label(before) is not None and env_label(after) is not None
+        if not (rows or labels):
+            return None
+    return pairs
+
+
+def env_pair_problem(before, after):
+    """Why a pair of ENV_INVENTORY_CHANGES is not a read-column move into
+    internal/config, or None."""
+    if env_row(before):
+        (name, read, default), (name2, read2, default2) = env_row(before), env_row(after)
+        if name != name2:
+            return f"{before!r} -> {after!r} changes the variable"
+        if default != default2:
+            return f"{before!r} -> {after!r} changes the default"
+        if read == read2 or not read2.startswith(ENV_CONFIG_READ):
+            return f"{before!r} -> {after!r} does not move the read into an {ENV_CONFIG_READ} getter"
+        return None
+    old, new = env_label(before).split(" ", 1), env_label(after).split(" ", 1)
+    if old[1:] != new[1:]:
+        return f"{before!r} -> {after!r} moves the section to another variable"
+    if old[0] == new[0] or not new[0].startswith(ENV_CONFIG_READ):
+        return f"{before!r} -> {after!r} does not move the section to an {ENV_CONFIG_READ} getter's"
+    return None
+
+
+def env_vars_moved(old, new, pairs):
+    """Whether env_vars.txt new is old with the rows pairs lists moved: old's
+    rows (the one run of row lines, between the header and the exemptions),
+    less each before row, plus each after row, sorted and each once, in
+    place of old's rows, and every other line as old has it. Each before row
+    must be one of old's."""
+    a = old.split("\n")
+    rows = [i for i, line in enumerate(a) if env_row(line)]
+    if not rows or rows != list(range(rows[0], rows[-1] + 1)):
+        return False
+    have = set(a[rows[0]:rows[-1] + 1])
+    if any(before not in have for before, _ in pairs):
+        return False
+    moved = (have - {before for before, _ in pairs}) | {after for _, after in pairs}
+    return "\n".join(a[:rows[0]] + sorted(moved) + a[rows[-1] + 1:]) == new
+
+
+def env_parse_table(text):
+    """env_parse.txt as (header, {key: rows}) and whether text is the table
+    as its writers render it: the header, then each section in key order, a
+    blank line before each, its label and its rows."""
+    header, sections, key = [], {}, None
+    for line in text.split("\n"):
+        if env_label(line) is not None:
+            key = env_label(line)
+            sections[key] = []
+        elif key is None:
+            header.append(line)
+        elif line:
+            sections[key].append(line)
+    while header and header[-1] == "":
+        header.pop()
+    head = "\n".join(header) + "\n" if header else ""
+    out = head
+    for i, k in enumerate(sorted(sections)):
+        out += ("\n" if i or head else "") + "[" + k + "]\n" + "".join(r + "\n" for r in sections[k])
+    return head, sections, out == text
+
+
+def env_parse_moved(old, new, pairs):
+    """Whether env_parse.txt new is old with the sections pairs lists moved:
+    the same header; under each after label, the rows of the base's section
+    under its before label; every other section of new one of old's,
+    unchanged; and every section of old that new lacks a before label."""
+    old_head, old_sections, _ = env_parse_table(old)
+    new_head, new_sections, canonical = env_parse_table(new)
+    if not canonical or old_head != new_head:
+        return False
+    moved = {}
+    for before, after in pairs:
+        src, dst = env_label(before), env_label(after)
+        if src not in old_sections or moved.get(dst, old_sections[src]) != old_sections[src]:
+            return False
+        moved[dst] = old_sections[src]
+    for key, rows in new_sections.items():
+        if rows != moved.get(key, old_sections.get(key)) or (key in moved and key in old_sections
+                                                             and old_sections[key] != rows):
+            return False
+    sources = {env_label(before) for before, _ in pairs}
+    return all(key in new_sections or key in sources for key in old_sections)
+
+
 def allowlist_growth(old_text, new_text):
     """[(allowlist, description)] for every entry added or raised."""
     return [(name, desc) for name, _, desc in allowlist_growth_keyed(old_text, new_text)]
@@ -1589,6 +1738,49 @@ class Guard:
             return None
         return listed
 
+    def env_inventory_exempt(self):
+        """The listed pairs when the change to S8's env_vars.txt and
+        env_parse.txt is exactly the read-column moves ENV_INVENTORY_CHANGES
+        lists (env_vars_moved, env_parse_moved), each a move into an
+        internal/config getter that keeps its variable and default, made in
+        class E commits of a refactor pull request (§8.3); otherwise None.
+        The list is the pull request's copy (GUARD_SCRIPT in the merge
+        commit), not this module's, which is the base's in CI."""
+        if not hasattr(self, "_env_exempt"):
+            self._env_exempt = self._env_inventory_exempt()
+        return self._env_exempt
+
+    def _env_inventory_exempt(self):
+        if not self.refactor:
+            return None
+        listed = env_inventory_changes_in(self.git.text(self.merge, GUARD_SCRIPT))
+        if listed is None:
+            self.warnings.append(f"ENV_INVENTORY_CHANGES in {GUARD_SCRIPT} is missing or not a list of (before, after) "
+                                 "pairs, each two env_vars.txt rows or two env_parse.txt section labels; counting no "
+                                 "S8 read-column exception")
+            return None
+        if not listed:
+            return None
+        problems = [why for why in (env_pair_problem(b, a) for b, a in listed) if why]
+        if problems:
+            for why in problems:
+                self.warnings.append(f"ENV_INVENTORY_CHANGES: {why}; counting the S8 goldens' change as a golden change")
+            return None
+        rows = [(b, a) for b, a in listed if env_row(b)]
+        labels = [(b, a) for b, a in listed if env_label(b) is not None]
+        for path, moved, pairs in ((ENV_VARS_FILE, env_vars_moved, rows), (ENV_PARSE_FILE, env_parse_moved, labels)):
+            old, new = self.git.text(self.base, path), self.git.text(self.merge, path)
+            if old is None or new is None or not moved(old, new, pairs):
+                self.warnings.append(f"{path} differs from the base by more than, or other than, the {len(pairs)} "
+                                     "read-column move(s) ENV_INVENTORY_CHANGES lists for it; counting the S8 goldens' "
+                                     "change as a golden change")
+                return None
+            if not self.changed_only_in_class_e(path):
+                self.warnings.append(f"{path} is changed in a commit that is not class E: ENV_INVENTORY_CHANGES "
+                                     "exempts class E commits only; counting it as a golden change")
+                return None
+        return listed
+
     def release_note_added(self):
         try:
             rn = load_release_notes()
@@ -1622,6 +1814,13 @@ class Guard:
                      ("removed", sum(1 for _, a in listed if not a))]
             self.notes.append(f"{BOOT_STEPS_FILE}: only the line changes BOOT_STEPS_CHANGES lists, made in its order ("
                               + ", ".join(f"{n} {kind}" for kind, n in kinds if n) + "; §8.3)")
+        env_files = (ENV_VARS_FILE, ENV_PARSE_FILE)
+        listed = any(p in env_files for _, p, _ in changed) and self.env_inventory_exempt()
+        if listed:
+            changed = [x for x in changed if x[1] not in env_files]
+            rows = sum(1 for b, _ in listed if env_row(b))
+            self.notes.append(f"{ENV_VARS_FILE} and {ENV_PARSE_FILE}: only the read-column moves ENV_INVENTORY_CHANGES "
+                              f"lists ({rows} row(s), {len(listed) - rows} section(s); §8.3)")
         if self.refactor and self.behavior_change:
             self.fail("(1) golden freeze", f"the pull request carries both a refactor label and "
                       f"'{BEHAVIOR_CHANGE_LABEL}'", "a refactor changes no behavior: remove the refactor labels "
@@ -2028,6 +2227,8 @@ class Guard:
                 continue  # deleted earlier in this pull request and re-added as the base has it
             if s == "M" and self.carved_out_only(c, p):
                 continue
+            if s == "M" and c.klass == "E" and p in (ENV_VARS_FILE, ENV_PARSE_FILE) and self.env_inventory_exempt():
+                continue  # S8's goldens, also archtest's: only the read-column moves listed (§8.3)
             if c.klass in ("C", "T") and not golden_modified:
                 continue
             why = (f"a class {c.klass} commit" if c.klass not in ("C", "T")
