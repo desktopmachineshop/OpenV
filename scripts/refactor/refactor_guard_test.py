@@ -730,6 +730,27 @@ class DataTest(unittest.TestCase):
                 self.assertIsNone(rg.guard_code_step(path))
         self.assertTrue(rg.matches("internal/tools/splittools/testdata/d11dee8/tools.go", [p for _, p in rg.FROZEN_DATA]))
 
+    def test_x1_row_covers_httpio(self):
+        # X1's codemod is guard code of its own row: the script a class R
+        # commit names and the rewriter it drives, with the tests that prove
+        # the rewrite answers byte for byte as before; a Go file added beside
+        # them is covered with no edit to the row. The fixture and goldens
+        # under testdata/ are frozen data instead, and the production code
+        # the script rewrites is no guard code.
+        files = subprocess.run(["git", "ls-files", "internal/tools/httpio"], cwd=REPO, capture_output=True,
+                               text=True, check=True).stdout.split()
+        sources = [f for f in files if f.endswith(".go") and "/testdata/" not in f]
+        self.assertTrue(sources)
+        for path in sources + ["scripts/refactor/httpio.sh", "internal/tools/httpio/new.go"]:
+            with self.subTest(path=path):
+                self.assertEqual(rg.guard_code_step(path), "X1")
+        for path in ("internal/tools/httpio/testdata/fixture/handlers.go",
+                     "internal/tools/httpio/testdata/want/stdout.txt", "internal/api/respond.go",
+                     "scripts/refactor/httpio_extra.sh"):
+            with self.subTest(path=path):
+                self.assertIsNone(rg.guard_code_step(path))
+        self.assertTrue(rg.matches("internal/tools/httpio/testdata/fixture/handlers.go", [p for _, p in rg.FROZEN_DATA]))
+
     def test_s12b_row_covers_its_guards_and_goldens(self):
         # S12b's cascade test sits in src/arch among S12's guards, so its row
         # comes before S12's and names it; bundle-check and its test are its
