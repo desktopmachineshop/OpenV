@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -75,8 +74,7 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 		writeSharedProductError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	writeJSONOK(w, products)
 }
 
 // PublishSharedProduct shares one product with every workspace.
@@ -101,8 +99,7 @@ func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req sharedProductRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -118,9 +115,7 @@ func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
 		writeSharedProductError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(product)
+	writeJSON(w, http.StatusCreated, product)
 }
 
 // ReportSharedProduct flags an entry for review. Any signed-in person may
@@ -182,8 +177,7 @@ func (h *Handler) changeSharedProductVote(w http.ResponseWriter, r *http.Request
 		writeSharedProductError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(counts)
+	writeJSONOK(w, counts)
 }
 
 // DeleteSharedProduct removes an entry outright. Platform admins only: this
