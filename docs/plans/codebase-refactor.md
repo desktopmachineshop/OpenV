@@ -1112,6 +1112,10 @@ class T commit ahead of X10a with the edges of the package it creates,
 `internal/config` (to `envparse`, `billing`, `notify`, and the domain
 packages `orgs`, `users`, `agentruns`, `sharedproducts` and `embeddings`,
 whose parsers and defaults its accessors use), and left as it is by X10a;
+and the class E PR X10b has it for the edges listed in
+`X10B_IMPORT_EDGES`, each into a package the base already has, filled in a
+class T commit ahead of X10b with the one edge its switch of the stages
+adds, `cmd/server` → `internal/config`, and left as it is by X10b;
 every other ratchet stays shrink-only. And S4's `boot_steps.txt` has a named
 golden exception for the class E steps that change it on purpose (X6, X7b,
 X7c and X10b; see the S4 note): each lists the lines it replaces, adds or
