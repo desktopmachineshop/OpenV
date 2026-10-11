@@ -15,7 +15,7 @@ step's scope, guard or verification class.
 | 0 Safety net | Done. S16 is just in time: S16a, b, c, i, j and k are merged; S16d–S16h wait for F8. |
 | 1 Same-package moves | Done (M1–M15, F1–F7, N1–N3, D1). F8 is rolling. |
 | 2 Leaf packages | Done (P1–P4; P5 dropped). |
-| 3 One mechanism each | X2–X9, X12 and X15 done. X1, X13, X16 (hooks) and X17 done. X10, X11 and X14 part done. X18 part done (X18a). D2 not started. X19 dropped. |
+| 3 One mechanism each | X2–X9, X12 and X15 done. X1, X13, X16 (hooks) and X17 done. X10, X11 and X14 part done. X18 part done (X18a). D2 done. X19 dropped. |
 | 4 | Dropped. |
 
 What is left, measured on `master`:
@@ -30,7 +30,7 @@ What is left, measured on `master`:
 | **X16a, X16b** | ModuleView hooks | Done: prep (#528), X16a (#597), X16b (#628 characterization, #629 hooks). `ModuleView.tsx` is 1,223 lines (component 1,187); the 400-line shell target is not reached by the hooks alone, the rest being JSX and the attachment, create and link handlers |
 | **X17** | Page registry `src/pages.ts` | Done: the characterization (#599), the registry with `navSections` derived (#600), and the `scaffold page` template with its docs |
 | **X18a–X18c** | Wizard descriptors and typed answers | Not started; `GuidedWizard.tsx` is 1,635 lines, target 400 or fewer |
-| **D2** | `docs/architecture.md` after Phase 3 | Waits for X13 (X15 and X17 done) |
+| **D2** | `docs/architecture.md` after Phase 3 | Done: the page covers the package graph, the archtest rules, the contract pipeline, the persistence kit and the frontend as they stand after X18c's steps 1 to 6; archtest's "architecture doc" rule keeps every package named. It needs a pass when the rest of X18c lands |
 
 Open items from the tracking issue (#379) that are not plan steps:
 

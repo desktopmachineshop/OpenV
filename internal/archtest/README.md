@@ -194,8 +194,8 @@ this keeps it so.
 its entry in `client_domain_deps`. A new binary fails until its entry, with
 the domain packages it links, is added by hand in review
 (`TestClientBinaryDiscovery` proves this on a fixture). `cmd/agentd` links 7
-(agentruns, agents, events, providers, repoconns, runnersessions, users;
-artifacts went with P4b), `cmd/openv-mcp` links artifacts, and
+(agentruns, agents, events, providers, repoconns, runnersessions, tokens;
+artifacts went with P4b, and `tokens` took the place of users in P2b), `cmd/openv-mcp` links artifacts, and
 `cmd/openv-connector` and `cmd/openv-vapid` link none. The walk is the
 same as `go list -deps`, over every build variant.
 
