@@ -8,6 +8,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 )
 
+// The columns the guided session repository reads whole, in the order its scan
+// functions read them (refactor plan X13). Save, Update and the nudge
+// statements keep their own.
+const (
+	guidedSessionColumns     = `id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, pending_nudge, created_by, created_at, updated_at`
+	guidedChatMessageColumns = `id, session_id, role, content, created_at`
+)
+
 // GuidedRepository implements the guided.Repository interface
 type GuidedRepository struct {
 	db *sql.DB
@@ -143,13 +151,13 @@ func marshalSessionJSON(s *guided.Session) ([]byte, []byte, error) {
 	return answersJSON, draftIDsJSON, nil
 }
 
-// scanGuidedSession scans one guided session row
-func scanGuidedSession(scan func(dest ...interface{}) error) (*guided.Session, error) {
+// scanGuidedSession scans one row of guidedSessionColumns
+func scanGuidedSession(row rowScanner) (*guided.Session, error) {
 	session := &guided.Session{}
 	var projectID sql.NullString
 	var answersJSON, draftIDsJSON, pendingNudgeJSON []byte
 
-	err := scan(
+	err := row.Scan(
 		&session.ID,
 		&projectID,
 		&session.Status,
@@ -199,13 +207,13 @@ func scanGuidedSession(scan func(dest ...interface{}) error) (*guided.Session, e
 // FindByID retrieves a guided session by ID
 func (r *GuidedRepository) FindByID(id string) (*guided.Session, error) {
 	query := `
-		SELECT id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, pending_nudge, created_by, created_at, updated_at
+		SELECT ` + guidedSessionColumns + `
 		FROM guided_sessions
 		WHERE id = $1
 	`
 
 	row := r.db.QueryRow(query, id)
-	session, err := scanGuidedSession(row.Scan)
+	session, err := scanGuidedSession(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, guided.ErrSessionNotFound
@@ -225,10 +233,19 @@ func (r *GuidedRepository) SaveChatMessage(m *guided.ChatMessage) error {
 	return err
 }
 
+// scanGuidedChatMessage scans one row of guidedChatMessageColumns
+func scanGuidedChatMessage(row rowScanner) (*guided.ChatMessage, error) {
+	m := &guided.ChatMessage{}
+	if err := row.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ListChatMessages retrieves a session's copilot messages, oldest first
 func (r *GuidedRepository) ListChatMessages(sessionID string) ([]*guided.ChatMessage, error) {
 	rows, err := r.db.Query(`
-		SELECT id, session_id, role, content, created_at
+		SELECT `+guidedChatMessageColumns+`
 		FROM guided_session_messages
 		WHERE session_id = $1
 		ORDER BY created_at
@@ -243,8 +260,8 @@ func (r *GuidedRepository) ListChatMessages(sessionID string) ([]*guided.ChatMes
 
 	messages := []*guided.ChatMessage{}
 	for rows.Next() {
-		m := &guided.ChatMessage{}
-		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
+		m, err := scanGuidedChatMessage(rows)
+		if err != nil {
 			return nil, err
 		}
 		messages = append(messages, m)
@@ -256,7 +273,7 @@ func (r *GuidedRepository) ListChatMessages(sessionID string) ([]*guided.ChatMes
 // ListByProject retrieves all guided sessions for a project, newest first
 func (r *GuidedRepository) ListByProject(projectID string) ([]*guided.Session, error) {
 	query := `
-		SELECT id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, pending_nudge, created_by, created_at, updated_at
+		SELECT ` + guidedSessionColumns + `
 		FROM guided_sessions
 		WHERE project_id = $1
 		ORDER BY created_at DESC
@@ -273,7 +290,7 @@ func (r *GuidedRepository) ListByProject(projectID string) ([]*guided.Session, e
 
 	var sessions []*guided.Session
 	for rows.Next() {
-		session, err := scanGuidedSession(rows.Scan)
+		session, err := scanGuidedSession(rows)
 		if err != nil {
 			return nil, err
 		}
