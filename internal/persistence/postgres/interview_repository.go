@@ -2,9 +2,32 @@ package postgres
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 )
+
+// The columns the interview repository reads whole, in the order its scan
+// functions read them and its INSERTs write them (refactor plan X13).
+const (
+	interviewColumns = `id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at`
+	inviteColumns    = `id, interview_id, token_hash, invitee_label, expires_at, revoked, created_at`
+	// interviewSessionColumns is named for the table: sessionColumns is the
+	// runner session repository's.
+	interviewSessionColumns = `id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at`
+	messageColumns          = `id, session_id, role, content, created_at`
+)
+
+// prefixedInterviewSessionColumns is interviewSessionColumns qualified by a
+// table alias, for the query that joins interview_sessions to interviews and
+// so cannot use bare names.
+func prefixedInterviewSessionColumns(alias string) string {
+	cols := strings.Split(interviewSessionColumns, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
+}
 
 // InterviewRepository implements the interviews.Repository interface
 type InterviewRepository struct {
@@ -19,7 +42,7 @@ func NewInterviewRepository(db *sql.DB) *InterviewRepository {
 // SaveInterview inserts a new interview
 func (r *InterviewRepository) SaveInterview(i *interviews.Interview) error {
 	query := `
-		INSERT INTO interviews (id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at)
+		INSERT INTO interviews (` + interviewColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
@@ -66,10 +89,10 @@ func (r *InterviewRepository) UpdateInterview(i *interviews.Interview) error {
 	return err
 }
 
-// scanInterview scans one interview row
-func scanInterview(scan func(dest ...interface{}) error) (*interviews.Interview, error) {
+// scanInterview scans one row of interviewColumns
+func scanInterview(row rowScanner) (*interviews.Interview, error) {
 	interview := &interviews.Interview{}
-	err := scan(
+	err := row.Scan(
 		&interview.ID,
 		&interview.ProjectID,
 		&interview.GuidedSessionID,
@@ -92,13 +115,13 @@ func scanInterview(scan func(dest ...interface{}) error) (*interviews.Interview,
 // FindInterviewByID retrieves an interview by ID
 func (r *InterviewRepository) FindInterviewByID(id string) (*interviews.Interview, error) {
 	query := `
-		SELECT id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at
+		SELECT ` + interviewColumns + `
 		FROM interviews
 		WHERE id = $1
 	`
 
 	row := r.db.QueryRow(query, id)
-	interview, err := scanInterview(row.Scan)
+	interview, err := scanInterview(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, interviews.ErrInterviewNotFound
@@ -112,7 +135,7 @@ func (r *InterviewRepository) FindInterviewByID(id string) (*interviews.Intervie
 // ListInterviewsByProject retrieves all interviews for a project, newest first
 func (r *InterviewRepository) ListInterviewsByProject(projectID string) ([]*interviews.Interview, error) {
 	query := `
-		SELECT id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at
+		SELECT ` + interviewColumns + `
 		FROM interviews
 		WHERE project_id = $1
 		ORDER BY created_at DESC
@@ -129,7 +152,7 @@ func (r *InterviewRepository) ListInterviewsByProject(projectID string) ([]*inte
 
 	var interviewList []*interviews.Interview
 	for rows.Next() {
-		interview, err := scanInterview(rows.Scan)
+		interview, err := scanInterview(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +165,7 @@ func (r *InterviewRepository) ListInterviewsByProject(projectID string) ([]*inte
 // SaveInvite inserts a new interview invite
 func (r *InterviewRepository) SaveInvite(inv *interviews.Invite) error {
 	query := `
-		INSERT INTO interview_invites (id, interview_id, token_hash, invitee_label, expires_at, revoked, created_at)
+		INSERT INTO interview_invites (` + inviteColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
@@ -160,10 +183,10 @@ func (r *InterviewRepository) SaveInvite(inv *interviews.Invite) error {
 	return err
 }
 
-// scanInvite scans one invite row
-func scanInvite(scan func(dest ...interface{}) error) (*interviews.Invite, error) {
+// scanInvite scans one row of inviteColumns
+func scanInvite(row rowScanner) (*interviews.Invite, error) {
 	invite := &interviews.Invite{}
-	err := scan(
+	err := row.Scan(
 		&invite.ID,
 		&invite.InterviewID,
 		&invite.TokenHash,
@@ -183,13 +206,13 @@ func scanInvite(scan func(dest ...interface{}) error) (*interviews.Invite, error
 // FindInviteByID retrieves an invite by ID (nil, nil when none)
 func (r *InterviewRepository) FindInviteByID(id string) (*interviews.Invite, error) {
 	query := `
-		SELECT id, interview_id, token_hash, invitee_label, expires_at, revoked, created_at
+		SELECT ` + inviteColumns + `
 		FROM interview_invites
 		WHERE id = $1
 	`
 
 	row := r.db.QueryRow(query, id)
-	invite, err := scanInvite(row.Scan)
+	invite, err := scanInvite(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, nil
@@ -202,13 +225,13 @@ func (r *InterviewRepository) FindInviteByID(id string) (*interviews.Invite, err
 
 func (r *InterviewRepository) FindInviteByTokenHash(tokenHash string) (*interviews.Invite, error) {
 	query := `
-		SELECT id, interview_id, token_hash, invitee_label, expires_at, revoked, created_at
+		SELECT ` + inviteColumns + `
 		FROM interview_invites
 		WHERE token_hash = $1
 	`
 
 	row := r.db.QueryRow(query, tokenHash)
-	invite, err := scanInvite(row.Scan)
+	invite, err := scanInvite(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, nil
@@ -222,7 +245,7 @@ func (r *InterviewRepository) FindInviteByTokenHash(tokenHash string) (*intervie
 // ListInvitesByInterview retrieves all invites for an interview, newest first
 func (r *InterviewRepository) ListInvitesByInterview(interviewID string) ([]*interviews.Invite, error) {
 	query := `
-		SELECT id, interview_id, token_hash, invitee_label, expires_at, revoked, created_at
+		SELECT ` + inviteColumns + `
 		FROM interview_invites
 		WHERE interview_id = $1
 		ORDER BY created_at DESC
@@ -239,7 +262,7 @@ func (r *InterviewRepository) ListInvitesByInterview(interviewID string) ([]*int
 
 	var invites []*interviews.Invite
 	for rows.Next() {
-		invite, err := scanInvite(rows.Scan)
+		invite, err := scanInvite(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +282,7 @@ func (r *InterviewRepository) RevokeInvite(id string) error {
 // SaveSession inserts a new interview session
 func (r *InterviewRepository) SaveSession(s *interviews.Session) error {
 	query := `
-		INSERT INTO interview_sessions (id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at)
+		INSERT INTO interview_sessions (` + interviewSessionColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
@@ -314,10 +337,10 @@ func (r *InterviewRepository) SetParticipantName(sessionID, name string) error {
 	return err
 }
 
-// scanInterviewSession scans one interview session row
-func scanInterviewSession(scan func(dest ...interface{}) error) (*interviews.Session, error) {
+// scanInterviewSession scans one row of interviewSessionColumns
+func scanInterviewSession(row rowScanner) (*interviews.Session, error) {
 	session := &interviews.Session{}
-	err := scan(
+	err := row.Scan(
 		&session.ID,
 		&session.InterviewID,
 		&session.InviteID,
@@ -336,13 +359,13 @@ func scanInterviewSession(scan func(dest ...interface{}) error) (*interviews.Ses
 // FindSessionByID retrieves an interview session by ID
 func (r *InterviewRepository) FindSessionByID(id string) (*interviews.Session, error) {
 	query := `
-		SELECT id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at
+		SELECT ` + interviewSessionColumns + `
 		FROM interview_sessions
 		WHERE id = $1
 	`
 
 	row := r.db.QueryRow(query, id)
-	session, err := scanInterviewSession(row.Scan)
+	session, err := scanInterviewSession(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, interviews.ErrSessionNotFound
@@ -356,7 +379,7 @@ func (r *InterviewRepository) FindSessionByID(id string) (*interviews.Session, e
 // FindActiveSessionByInvite retrieves the active session for an invite; nil, nil when none
 func (r *InterviewRepository) FindActiveSessionByInvite(inviteID string) (*interviews.Session, error) {
 	query := `
-		SELECT id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at
+		SELECT ` + interviewSessionColumns + `
 		FROM interview_sessions
 		WHERE invite_id = $1 AND status = 'active'
 		ORDER BY started_at DESC
@@ -364,7 +387,7 @@ func (r *InterviewRepository) FindActiveSessionByInvite(inviteID string) (*inter
 	`
 
 	row := r.db.QueryRow(query, inviteID)
-	session, err := scanInterviewSession(row.Scan)
+	session, err := scanInterviewSession(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, nil
@@ -379,7 +402,7 @@ func (r *InterviewRepository) FindActiveSessionByInvite(inviteID string) (*inter
 // whatever its status; nil, nil when the invite has none
 func (r *InterviewRepository) FindLatestSessionByInvite(inviteID string) (*interviews.Session, error) {
 	query := `
-		SELECT id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at
+		SELECT ` + interviewSessionColumns + `
 		FROM interview_sessions
 		WHERE invite_id = $1
 		ORDER BY started_at DESC
@@ -387,7 +410,7 @@ func (r *InterviewRepository) FindLatestSessionByInvite(inviteID string) (*inter
 	`
 
 	row := r.db.QueryRow(query, inviteID)
-	session, err := scanInterviewSession(row.Scan)
+	session, err := scanInterviewSession(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, nil
@@ -401,7 +424,7 @@ func (r *InterviewRepository) FindLatestSessionByInvite(inviteID string) (*inter
 // ListSessionsByInterview retrieves all sessions for an interview, newest first
 func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*interviews.Session, error) {
 	query := `
-		SELECT id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at
+		SELECT ` + interviewSessionColumns + `
 		FROM interview_sessions
 		WHERE interview_id = $1
 		ORDER BY started_at DESC
@@ -418,7 +441,7 @@ func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*in
 
 	var sessions []*interviews.Session
 	for rows.Next() {
-		session, err := scanInterviewSession(rows.Scan)
+		session, err := scanInterviewSession(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -432,7 +455,7 @@ func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*in
 // interview in a project, newest first, at most limit rows.
 func (r *InterviewRepository) ListSessionsByProject(projectID string, limit int) ([]*interviews.Session, error) {
 	query := `
-		SELECT s.id, s.interview_id, s.invite_id, s.participant_name, s.status, s.summary, s.started_at, s.ended_at
+		SELECT ` + prefixedInterviewSessionColumns("s") + `
 		FROM interview_sessions s
 		JOIN interviews i ON i.id = s.interview_id
 		WHERE i.project_id = $1
@@ -451,7 +474,7 @@ func (r *InterviewRepository) ListSessionsByProject(projectID string, limit int)
 
 	var sessions []*interviews.Session
 	for rows.Next() {
-		session, err := scanInterviewSession(rows.Scan)
+		session, err := scanInterviewSession(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -464,7 +487,7 @@ func (r *InterviewRepository) ListSessionsByProject(projectID string, limit int)
 // SaveMessage inserts a new interview message
 func (r *InterviewRepository) SaveMessage(m *interviews.Message) error {
 	query := `
-		INSERT INTO interview_messages (id, session_id, role, content, created_at)
+		INSERT INTO interview_messages (` + messageColumns + `)
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
@@ -483,7 +506,7 @@ func (r *InterviewRepository) SaveMessage(m *interviews.Message) error {
 // ListMessagesBySession retrieves the transcript for a session, oldest first
 func (r *InterviewRepository) ListMessagesBySession(sessionID string) ([]*interviews.Message, error) {
 	query := `
-		SELECT id, session_id, role, content, created_at
+		SELECT ` + messageColumns + `
 		FROM interview_messages
 		WHERE session_id = $1
 		ORDER BY created_at ASC
@@ -500,14 +523,7 @@ func (r *InterviewRepository) ListMessagesBySession(sessionID string) ([]*interv
 
 	var messages []*interviews.Message
 	for rows.Next() {
-		message := new(interviews.Message)
-		err := rows.Scan(
-			&message.ID,
-			&message.SessionID,
-			&message.Role,
-			&message.Content,
-			&message.CreatedAt,
-		)
+		message, err := scanMessage(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -515,4 +531,20 @@ func (r *InterviewRepository) ListMessagesBySession(sessionID string) ([]*interv
 	}
 
 	return messages, rows.Err()
+}
+
+// scanMessage scans one row of messageColumns
+func scanMessage(row rowScanner) (*interviews.Message, error) {
+	message := new(interviews.Message)
+	err := row.Scan(
+		&message.ID,
+		&message.SessionID,
+		&message.Role,
+		&message.Content,
+		&message.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
 }
