@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -358,5 +359,35 @@ func TestHostConfigForNoPidsCap(t *testing.T) {
 	cfg := hostConfigFor("v", ResourceLimits{}, 0)
 	if cfg.Resources.PidsLimit != nil {
 		t.Errorf("PidsLimit = %v, want unset", *cfg.Resources.PidsLimit)
+	}
+}
+
+// A runner memory size stored before a limit too large for bytes was refused
+// (#638, bug 226) must not wrap when it becomes the container's Memory: it is
+// clamped to the largest size that fits, so the cap stays positive.
+func TestOversizedStoredRunnerMemoryDoesNotWrap(t *testing.T) {
+	for _, stored := range []float64{float64(orgs.MaxMB) + 1, 1e19, 1e30, math.Inf(1)} {
+		rl := ResourceLimitsForOrg(&orgs.Org{
+			BilledPlan: orgs.PlanFree,
+			Limits:     map[string]interface{}{orgs.LimitRunnerMemoryMB: stored},
+		})
+		if rl.MemoryMB != orgs.MaxMB {
+			t.Errorf("stored %v: MemoryMB = %d, want it clamped to %d", stored, rl.MemoryMB, int64(orgs.MaxMB))
+		}
+		cfg := hostConfigFor("v", rl, defaultPidsLimit)
+		if want := int64(orgs.MaxMB) * 1024 * 1024; cfg.Resources.Memory != want || cfg.Resources.Memory <= 0 {
+			t.Errorf("stored %v: Memory = %d, want %d", stored, cfg.Resources.Memory, want)
+		}
+	}
+	// The largest size that fits is kept as it is, and zero is still no cap.
+	rl := ResourceLimitsForOrg(&orgs.Org{BilledPlan: orgs.PlanFree,
+		Limits: map[string]interface{}{orgs.LimitRunnerMemoryMB: float64(orgs.MaxMB)}})
+	if rl.MemoryMB != orgs.MaxMB {
+		t.Errorf("the largest size that fits became %d", rl.MemoryMB)
+	}
+	rl = ResourceLimitsForOrg(&orgs.Org{BilledPlan: orgs.PlanFree,
+		Limits: map[string]interface{}{orgs.LimitRunnerMemoryMB: float64(0)}})
+	if rl.MemoryMB != 0 || hostConfigFor("v", rl, 0).Resources.Memory != 0 {
+		t.Errorf("an explicit 0 must stay docker's no cap, got MemoryMB %d", rl.MemoryMB)
 	}
 }

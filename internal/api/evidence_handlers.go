@@ -92,7 +92,9 @@ func (h *Handler) evidenceStorageLimitBytes(orgID string) int64 {
 		return 0
 	}
 	if v, ok := orgs.LimitFloat(org.EffectiveLimits(), orgs.LimitEvidenceStorageMB); ok && v > 0 {
-		return int64(v) * 1024 * 1024
+		// Clamped, so a size stored before a limit too large for bytes was
+		// refused (#638, bug 226) is a very large cap, not a wrapped one.
+		return orgs.MBToBytes(v)
 	}
 	return 0
 }

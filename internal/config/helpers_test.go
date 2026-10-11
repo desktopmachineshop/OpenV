@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/api"
@@ -207,7 +208,7 @@ func TestBillingIsConfigFromEnv(t *testing.T) {
 }
 
 func TestDeploymentLimitsAreParseLimits(t *testing.T) {
-	for _, in := range inputs(`{"max_projects":7}`, ` {"max_projects":7} `, `{"max_projects":-1}`, `{"no_such_limit":1}`, `[]`, `{}`,
+	for _, in := range inputs(`{"max_projects":7}`, ` {"max_projects":7} `, `{"max_projects":-1}`, `{"evidence_storage_mb":9223372036854775807}`, `{"no_such_limit":1}`, `[]`, `{}`,
 		`{"zz_no_such_limit":1,"max_members":"five","aa_no_such_limit":2,"max_projects":-1}`) {
 		setEnv(t, "OPENV_LIMITS", in.unset, in.input)
 		// Stage config reads it through envOr, which trims.
@@ -216,6 +217,17 @@ func TestDeploymentLimitsAreParseLimits(t *testing.T) {
 		if !reflect.DeepEqual(got, want) || errText(gotErr) != errText(wantErr) {
 			t.Errorf("OPENV_LIMITS=%s: DeploymentLimits() = %v, %v; orgs.ParseLimits = %v, %v", in.shown, got, gotErr, want, wantErr)
 		}
+	}
+}
+
+// A size limit too large to count in bytes stops the boot like a negative one,
+// naming the limit (#638, bug 226): OPENV_LIMITS is the one place a limit is
+// written from outside, the API having no endpoint that sets them.
+func TestDeploymentLimitsRefuseASizeTooLargeForBytes(t *testing.T) {
+	setEnv(t, "OPENV_LIMITS", false, `{"max_upload_mb": 9223372036854775807}`)
+	got, err := Load(os.LookupEnv).DeploymentLimits()
+	if err == nil || got != nil || !strings.Contains(err.Error(), `limit "max_upload_mb" must not exceed`) {
+		t.Errorf("DeploymentLimits() = %v, %v; want an error naming max_upload_mb", got, err)
 	}
 }
 

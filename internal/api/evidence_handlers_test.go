@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/evidence"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/envparse"
 )
 
@@ -198,5 +199,40 @@ func TestEvidenceDownloadsAreNeverRenderable(t *testing.T) {
 	// what they got against the record.
 	if got.Get("X-Evidence-SHA256") != "deadbeef" {
 		t.Errorf("the digest did not travel with the download: %q", got.Get("X-Evidence-SHA256"))
+	}
+}
+
+// An evidence_storage_mb stored before a size too large for bytes was refused
+// (#638, bug 226) is a very large cap, not a wrapped one: the multiply used to
+// give a negative or tiny allowance that refused every upload. In-range sizes
+// and 0 (unlimited) are read as before.
+func TestEvidenceStorageLimitBytesDoesNotWrap(t *testing.T) {
+	const mib = 1024 * 1024
+	for _, tc := range []struct {
+		name   string
+		stored interface{}
+		want   int64
+	}{
+		{"unlimited", float64(0), 0},
+		{"a plan size", float64(2048), 2048 * mib},
+		{"a fraction truncates", 1.5, mib},
+		{"largest that fits", float64(orgs.MaxMB), int64(orgs.MaxMB) * mib},
+		{"one past the largest", float64(orgs.MaxMB) + 1, int64(orgs.MaxMB) * mib},
+		{"huge", 1e30, int64(orgs.MaxMB) * mib},
+		{"wrapped to a tiny cap before", float64(1 << 44), int64(orgs.MaxMB) * mib},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newTestHandler(t, func(h *Handler) {
+				h.OrgService = &limitReadOrgs{org: &orgs.Org{ID: "w", BilledPlan: orgs.PlanFree,
+					Limits: map[string]interface{}{orgs.LimitEvidenceStorageMB: tc.stored}}}
+			})
+			got := h.evidenceStorageLimitBytes("w")
+			if got != tc.want {
+				t.Errorf("evidenceStorageLimitBytes = %d, want %d", got, tc.want)
+			}
+			if tc.want > 0 && got <= 0 {
+				t.Errorf("the cap wrapped to %d", got)
+			}
+		})
 	}
 }

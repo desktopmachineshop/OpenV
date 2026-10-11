@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **A size limit that is far too large is now refused instead of silently
+  becoming a tiny cap.** A deployment that set a storage, upload or
+  hosted-runner memory limit to a number too big to count in bytes could end
+  up with a cap that was negative or a few bytes, so uploads were refused or
+  the runner container failed to start. OpenV now stops with a message
+  naming the limit and the largest size it accepts, and a size of that kind
+  already stored for a workspace is treated as the largest size that fits.
+
 ## 0.17.1 — 2026-10-10
 
 ### Maintenance updates
