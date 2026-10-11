@@ -673,17 +673,20 @@ beside a shell that still holds the rest of their render code:
   built over, since the answers are stored data. `useGuidedSession` holds
   the session being worked on, the newest committed one, the step and the
   furthest step reached, and the calls that start, reopen, save, abandon and
-  commit one. Steps 1 to 6 are render functions beside them
-  (`renderFramingStep` in `FramingStep.tsx`, then `renderPersonaStep`,
-  `renderNeedsStep`, `renderRequirementsStep`, `renderNfrStep` and
-  `renderHazardStep`, with `stepStyles.ts`). Each is a plain function that
-  returns the step's elements and takes the form state as props, not a
+  commit one. The seven steps and the review are render functions beside
+  them (`renderFramingStep` in `FramingStep.tsx`, then `renderPersonaStep`,
+  `renderNeedsStep`, `renderRequirementsStep`, `renderNfrStep`,
+  `renderHazardStep`, `renderStubsStep` and `renderReviewStep`, with
+  `stepStyles.ts`), and so are the screens before and after a session
+  (`renderStartScreen`, `renderCommittedScreen`). Each is a plain function
+  that returns its elements and takes the form state as props, not a
   component and with no hooks: the wizard calls it where the block stood, so
-  React reconciles the same tree and keeps the DOM as it was. The shell,
-  `views/GuidedWizard.tsx`, still holds the form state, `renderStepContent`
-  (which calls those six and holds step 7, the verification stubs, inline),
-  the review step and the assistant mounted in the hidden sheet
-  (`components/wizard/`).
+  React reconciles the same tree and keeps the DOM as it was.
+  `AssistantSheet` is the one component: the assistant's bottom sheet on a
+  phone or tablet, which keeps the panel mounted while the sheet is closed. The shell, `views/GuidedWizard.tsx`,
+  still holds the form state, `renderStepContent` (a switch over those
+  functions), the handlers that apply suggestions, advance and save a step,
+  and the desktop `GuidedChatPanel` (`components/wizard/`).
 
 ## Request path
 
