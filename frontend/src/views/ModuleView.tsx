@@ -3,22 +3,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, agentsAPI, Artifact, Link, Attachment } from '../api/client';
 import type { ArtifactContextAction } from '../components/ArtifactList';
-import { DropZone, planMove } from '../utils/artifactDrag';
 import { matchesFieldFilters, matchesSearch } from '../utils/artifactFilter';
 import { AttachmentViewer } from '../components/AttachmentViewer';
 import { artifactRefOfFigure, isFigureRef } from '../components/artifactReferences';
-import {
-  PanelMode,
-  loadPanelMode,
-  nextPanelMode,
-  panelIsOpen,
-  panelModeLabel,
-  panelStripLabel,
-  panelStripWidth,
-  panelTakesSpace,
-  revealAfterModeChange,
-  savePanelMode,
-} from '../components/panelMode';
+import { nextPanelMode, panelModeLabel, panelStripLabel, panelStripWidth } from '../components/panelMode';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
@@ -30,13 +18,7 @@ import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
 import { ARTIFACT_OWNERS_FEATURE } from '../features';
 import { ARTIFACT_STEPPING_FEATURE } from '../components/ArtifactStepper';
-import {
-  compareArtifacts,
-  documentOrder,
-  normalizeParentId,
-  sequencePosition,
-  stepArtifact,
-} from '../utils/artifactSequence';
+import { documentOrder, sequencePosition, stepArtifact } from '../utils/artifactSequence';
 import { overlayIsOpen, readingStepFor } from '../hooks/readingKeys';
 import { useHorizontalSwipe } from '../hooks/useSwipe';
 import { Toolbar } from './moduleView/Toolbar';
@@ -46,6 +28,9 @@ import { FilterPanel } from './moduleView/FilterPanel';
 import { TreePane } from './moduleView/TreePane';
 import { useBaselineView } from './moduleView/useBaselineView';
 import { useModuleData } from './moduleView/useModuleData';
+import { useColumnResize } from './moduleView/useColumnResize';
+import { usePanelEscape, usePanelMode } from './moduleView/usePanelMode';
+import { useSiblingOrdering } from './moduleView/useSiblingOrdering';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
@@ -83,17 +68,17 @@ export const ModuleView: React.FC = () => {
   // A first visit on a small laptop (under 1200px) starts the notes column
   // auto-hidden: pinned, it would leave the document a sliver between the
   // tree and the notes. A saved choice always wins.
-  const [notesMode, setNotesMode] = useState<PanelMode>(() =>
-    loadPanelMode(
-      'artifact-notes',
-      typeof window !== 'undefined' && window.innerWidth < 1200 ? 'autohide' : 'pinned'
-    )
+  const {
+    mode: notesMode,
+    setHovered: setNotesHovered,
+    revealed: notesRevealed,
+    setRevealed: setNotesRevealed,
+    open: notesOpen,
+    pinned: notesPinned,
+    cycleMode: cycleNotesMode,
+  } = usePanelMode('artifact-notes', () =>
+    typeof window !== 'undefined' && window.innerWidth < 1200 ? 'autohide' : 'pinned'
   );
-  const [notesHovered, setNotesHovered] = useState(false);
-  // An explicit "show it to me" from the edge strip. Hover alone never opens a
-  // hidden notes panel, so this is the only way back from that mode, and it
-  // stays open until dismissed rather than vanishing when the pointer moves.
-  const [notesRevealed, setNotesRevealed] = useState(false);
   // Phones and tablets cannot fit three columns: the module stacks and shows
   // one pane at a time — the tree, the selected artifact's document, or the
   // notes — chosen with a segmented control under the toolbar. Selecting an
@@ -119,38 +104,10 @@ export const ModuleView: React.FC = () => {
   // The download wizard, opened from the one Download button above.
   const [downloadOpen, setDownloadOpen] = useState(false);
 
-  // Resizable columns state
-  const [leftColumnWidth, setLeftColumnWidth] = useState<number>(() => {
-    const saved = localStorage.getItem('openv-leftColumnWidth');
-    return saved ? parseInt(saved) : 400;
-  });
-  const [rightColumnWidth, setRightColumnWidth] = useState<number>(() => {
-    const saved = localStorage.getItem('openv-rightColumnWidth');
-    return saved ? parseInt(saved) : 320;
-  });
-  const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
   // The document pane. A step has to start the next artifact at its top: the
   // pane keeps its scroll position across a selection change, so otherwise the
   // next requirement opens at whatever offset the last one was left at.
   const documentPaneRef = React.useRef<HTMLDivElement | null>(null);
-  // The tree column as drawn: the saved width, clamped so the document keeps
-  // at least 420px beside the project sidebar and a pinned notes column. The
-  // saved value is untouched — a wider window gets it back.
-  const notesTakesSpace = panelTakesSpace(notesMode);
-  const leftColumnDrawn = Math.max(
-    200,
-    Math.min(leftColumnWidth, viewport.width - 260 - (notesTakesSpace ? rightColumnWidth + 10 : 10) - 420)
-  );
-  // Drag origin for a column resize: the pointer position and column width at
-  // mousedown. Resizing is a delta from that origin rather than an absolute
-  // position derived from clientX, so the divider stays under the cursor no
-  // matter what sits to the left of the columns (the 200px project sidebar,
-  // page padding, the handle itself) instead of snapping on grab (issue: the
-  // divider jumped ~a sidebar's width left on the first mouse move).
-  const resizeOrigin = React.useRef<{ side: 'left' | 'right'; startX: number; startWidth: number } | null>(null);
-  // Latest width during a drag, so mouseup can persist it without the effect
-  // having to re-subscribe on every mousemove.
-  const liveWidths = React.useRef({ left: leftColumnWidth, right: rightColumnWidth });
 
   // Read the project from the URL first so a hard refresh doesn't flash
   // "No Project Selected" while ProjectLayout syncs the store.
@@ -202,66 +159,12 @@ export const ModuleView: React.FC = () => {
     },
   });
 
-  // Start a column resize: record where the drag began so the move handler can
-  // work in deltas. preventDefault keeps the browser from starting a text
-  // selection or native drag under the cursor.
-  const startResize = (side: 'left' | 'right') => (e: React.MouseEvent) => {
-    e.preventDefault();
-    resizeOrigin.current = {
-      side,
-      startX: e.clientX,
-      startWidth: side === 'left' ? leftColumnDrawn : rightColumnWidth,
-    };
-    setIsResizing(side);
-  };
-
-  // Handle column resizing. Depends only on isResizing: the handlers read the
-  // in-flight width from a ref, so the listeners are attached once per drag
-  // rather than being torn down and re-added on every mousemove.
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const origin = resizeOrigin.current;
-      if (!origin) return;
-
-      // The left column grows as the pointer moves right; the right column
-      // grows as it moves left.
-      const delta = origin.side === 'left' ? e.clientX - origin.startX : origin.startX - e.clientX;
-      const [min, max] = origin.side === 'left' ? [200, 800] : [250, 600];
-      const newWidth = Math.max(min, Math.min(max, origin.startWidth + delta));
-
-      liveWidths.current[origin.side] = newWidth;
-      if (origin.side === 'left') {
-        setLeftColumnWidth(newWidth);
-      } else {
-        setRightColumnWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      const origin = resizeOrigin.current;
-      if (origin?.side === 'right') {
-        localStorage.setItem('openv-rightColumnWidth', liveWidths.current.right.toString());
-      } else if (origin?.side === 'left') {
-        localStorage.setItem('openv-leftColumnWidth', liveWidths.current.left.toString());
-      }
-      resizeOrigin.current = null;
-      setIsResizing(null);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isResizing]);
+  // The tree and notes columns' widths and their drag handles. Called where
+  // the drag effect stood, ahead of the project loads.
+  const { rightColumnWidth, isResizing, leftColumnDrawn, startResize } = useColumnResize({
+    viewportWidth: viewport.width,
+    notesTakesSpace: notesPinned,
+  });
 
   const {
     allLinks,
@@ -554,135 +457,19 @@ export const ModuleView: React.FC = () => {
     }
   };
 
-  /**
-   * Save a sibling group in a given order, re-parenting `reparentId` on the way
-   * when the move changed its parent.
-   *
-   * Renumbering the whole group is the same approach the ▲▼ buttons and paste
-   * already use: sort orders are plain integers with no guaranteed gaps, so
-   * rewriting 1..n is simpler than finding room between two of them.
-   */
-  const saveSiblingOrder = async (
-    ordered: Artifact[],
-    parentId: string | null,
-    reparentId?: string
-  ) => {
-    const updates = ordered
-      .map((artifact, index) => ({ artifact, newOrder: index + 1 }))
-      .filter(
-        ({ artifact, newOrder }) =>
-          (artifact.sort_order ?? 0) !== newOrder || artifact.id === reparentId
-      );
-    if (updates.length === 0) return;
-
-    try {
-      const responses = await Promise.all(
-        updates.map(({ artifact, newOrder }) =>
-          artifactAPI.update(artifact.id, {
-            // Only the moved artifact changes parent; its new siblings keep
-            // theirs, which is the same value.
-            parent_id: artifact.id === reparentId ? parentId : artifact.parent_id ?? null,
-            type: artifact.type,
-            title: artifact.title,
-            body: artifact.body,
-            attributes: artifact.attributes,
-            sort_order: newOrder,
-          })
-        )
-      );
-
-      const updatedMap = new Map<string, Artifact>(
-        responses.map((response) => [response.data.id, response.data])
-      );
-      setArtifacts(artifacts.map((item) => updatedMap.get(item.id) || item));
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to move artifacts:', error);
-      setError(`Failed to move artifacts: ${apiErrorMessage(error, 'Unknown error')}`);
-    }
-  };
-
-  const handleReorderArtifact = async (
-    sourceId: string,
-    targetId: string,
-    mode: 'swap' | DropZone
-  ) => {
-    if (isBaselineView) return;
-
-    // The ▲▼ buttons swap two siblings in place; they never re-parent.
-    if (mode === 'swap') {
-      const source = artifacts.find((item) => item.id === sourceId);
-      const target = artifacts.find((item) => item.id === targetId);
-      if (!source || !target) return;
-      if (normalizeParentId(source.parent_id) !== normalizeParentId(target.parent_id)) return;
-
-      const siblings = artifacts
-        .filter((item) => normalizeParentId(item.parent_id) === normalizeParentId(source.parent_id))
-        .sort(compareArtifacts);
-      const sourceIndex = siblings.findIndex((item) => item.id === sourceId);
-      const targetIndex = siblings.findIndex((item) => item.id === targetId);
-      if (sourceIndex === -1 || targetIndex === -1) return;
-
-      const reordered = [...siblings];
-      reordered[sourceIndex] = siblings[targetIndex];
-      reordered[targetIndex] = siblings[sourceIndex];
-      await saveSiblingOrder(reordered, normalizeParentId(source.parent_id));
-      return;
-    }
-
-    // A drag: the planner decides where it lands and refuses the moves that
-    // must not happen (into its own subtree, or changing nothing).
-    const plan = planMove(artifacts, sourceId, targetId, mode);
-    if (!plan) return;
-    await saveSiblingOrder(plan.ordered, plan.parentId, plan.reparents ? sourceId : undefined);
-  };
+  // The ▲▼ swap, a drag or Move to…, and the placement of a new artifact
+  // beside another: each renumbers a sibling group and saves what changed.
+  const { handleReorderArtifact, placeAmongSiblings } = useSiblingOrdering({
+    artifacts,
+    setArtifacts,
+    setError,
+    isBaselineView,
+  });
 
   // Copying holds an artifact's CONTENT, not its identity: type, title, body
   // and attributes. Links and figures stay with the original — a pasted copy
   // that inherited "verifies REQ-12" would assert a verification nobody made.
   const [clipboard, setClipboard] = useState<Artifact | null>(null);
-
-  /**
-   * Move `created` to sit immediately before or after `anchorId` within its
-   * sibling group, by renumbering that group 1..n.
-   *
-   * Renumbering the whole group is what drag-to-reorder already does: sort
-   * orders are plain integers, so there is not always a gap to slot into, and
-   * rewriting 1..n is both simpler and always correct. Returns the artifacts
-   * that changed, so the caller can fold them into state in one go.
-   */
-  const placeAmongSiblings = async (
-    created: Artifact,
-    anchorId: string,
-    position: 'before' | 'after',
-    pool: Artifact[]
-  ): Promise<Artifact[]> => {
-    const siblings = pool
-      .filter((a) => (a.parent_id ?? null) === (created.parent_id ?? null) && a.id !== created.id)
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    const at = siblings.findIndex((a) => a.id === anchorId);
-    if (at === -1) return [];
-
-    const ordered = [...siblings];
-    ordered.splice(position === 'before' ? at : at + 1, 0, created);
-    const updates = ordered
-      .map((a, index) => ({ artifact: a, newOrder: index + 1 }))
-      .filter(({ artifact: a, newOrder }) => (a.sort_order ?? 0) !== newOrder);
-
-    const responses = await Promise.all(
-      updates.map(({ artifact: a, newOrder }) =>
-        artifactAPI.update(a.id, {
-          parent_id: a.parent_id ?? null,
-          type: a.type,
-          title: a.title,
-          body: a.body,
-          attributes: a.attributes,
-          sort_order: newOrder,
-        })
-      )
-    );
-    return responses.map((r) => r.data);
-  };
 
   /**
    * Create `source`'s content as a sibling of `target`, positioned immediately
@@ -732,29 +519,9 @@ export const ModuleView: React.FC = () => {
   // to hang on — and an artifact reference selects that artifact.
   const [figureInView, setFigureInView] = useState<Attachment | null>(null);
 
-  const notesOpen = panelIsOpen(notesMode, notesHovered, notesRevealed);
-  const notesPinned = panelTakesSpace(notesMode);
-
-  const cycleNotesMode = () => {
-    const next = nextPanelMode(notesMode);
-    setNotesMode(next);
-    savePanelMode('artifact-notes', next);
-    setNotesHovered(false);
-    // Keep the panel on screen while its mode is being chosen, so the button
-    // doing the choosing does not disappear mid-cycle (issue #362).
-    setNotesRevealed(revealAfterModeChange(next));
-  };
-
   // Escape dismisses a revealed notes panel, the same key that closes every
   // other thing this view floats over the document.
-  useEffect(() => {
-    if (!notesRevealed) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setNotesRevealed(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [notesRevealed]);
+  usePanelEscape(notesRevealed, setNotesRevealed);
 
   const handleReferenceClick = (ref: string) => {
     if (isFigureRef(ref)) {
