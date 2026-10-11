@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/links"
 )
@@ -18,6 +19,95 @@ func NewLinkRepository(db *sql.DB) *LinkRepository {
 	return &LinkRepository{db: db}
 }
 
+// linkColumns are the link's eleven columns, in the order scanLink reads
+// them: FindByID and the two per-version reads select them, and Save inserts
+// them.
+const linkColumns = `id, from_id, to_id, type, suspect, attributes, version, valid_from, valid_to, created_at, updated_at`
+
+// liveLinkColumns are linkColumns without valid_to, for the reads of live
+// links (valid_to IS NULL), in the order scanLiveLink reads them; the link's
+// ValidTo stays nil.
+const liveLinkColumns = `id, from_id, to_id, type, suspect, attributes, version, valid_from, created_at, updated_at`
+
+// prefixedLinkColumns is linkColumns qualified by a table alias, for the
+// per-version reads, which cannot use bare names.
+func prefixedLinkColumns(alias string) string { return prefixLinkColumns(linkColumns, alias) }
+
+// prefixedLiveLinkColumns is liveLinkColumns qualified by a table alias, for
+// the read that joins links to artifacts.
+func prefixedLiveLinkColumns(alias string) string { return prefixLinkColumns(liveLinkColumns, alias) }
+
+func prefixLinkColumns(columns, alias string) string {
+	cols := strings.Split(columns, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
+}
+
+// scanLink reads one row of linkColumns.
+func scanLink(row rowScanner) (*links.Link, error) {
+	link := new(links.Link)
+	var attributesJSON []byte
+
+	err := row.Scan(
+		&link.ID,
+		&link.FromID,
+		&link.ToID,
+		&link.Type,
+		&link.Suspect,
+		&attributesJSON,
+		&link.Version,
+		&link.ValidFrom,
+		&link.ValidTo,
+		&link.CreatedAt,
+		&link.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := decodeLinkAttributes(link, attributesJSON); err != nil {
+		return nil, err
+	}
+	return link, nil
+}
+
+// scanLiveLink reads one row of liveLinkColumns.
+func scanLiveLink(row rowScanner) (*links.Link, error) {
+	link := new(links.Link)
+	var attributesJSON []byte
+
+	err := row.Scan(
+		&link.ID,
+		&link.FromID,
+		&link.ToID,
+		&link.Type,
+		&link.Suspect,
+		&attributesJSON,
+		&link.Version,
+		&link.ValidFrom,
+		&link.CreatedAt,
+		&link.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := decodeLinkAttributes(link, attributesJSON); err != nil {
+		return nil, err
+	}
+	return link, nil
+}
+
+// decodeLinkAttributes reads the attributes column into the link: NULL leaves
+// them nil, and a value that is not a JSON object fails with the decoder's
+// error as it came.
+func decodeLinkAttributes(link *links.Link, attributesJSON []byte) error {
+	if attributesJSON == nil {
+		return nil
+	}
+	return json.Unmarshal(attributesJSON, &link.Attributes)
+}
+
 // Save inserts a new link
 func (r *LinkRepository) Save(link *links.Link) error {
 	attributesJSON, err := json.Marshal(link.Attributes)
@@ -26,7 +116,7 @@ func (r *LinkRepository) Save(link *links.Link) error {
 	}
 
 	query := `
-		INSERT INTO links (id, from_id, to_id, type, suspect, attributes, version, valid_from, valid_to, created_at, updated_at)
+		INSERT INTO links (` + linkColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
@@ -50,41 +140,18 @@ func (r *LinkRepository) Save(link *links.Link) error {
 
 // FindByID retrieves a link by ID (current version only)
 func (r *LinkRepository) FindByID(id string) (*links.Link, error) {
-	link := &links.Link{}
-	var attributesJSON []byte
-
 	query := `
-		SELECT id, from_id, to_id, type, suspect, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT ` + linkColumns + `
 		FROM links
 		WHERE id = $1 AND valid_to IS NULL
 	`
 
-	err := r.db.QueryRow(query, id).Scan(
-		&link.ID,
-		&link.FromID,
-		&link.ToID,
-		&link.Type,
-		&link.Suspect,
-		&attributesJSON,
-		&link.Version,
-		&link.ValidFrom,
-		&link.ValidTo,
-		&link.CreatedAt,
-		&link.UpdatedAt,
-	)
-
+	link, err := scanLink(r.db.QueryRow(query, id))
 	if err != nil {
 		if noRow(err) {
 			return nil, errors.New("link not found")
 		}
 		return nil, err
-	}
-
-	if attributesJSON != nil {
-		err = json.Unmarshal(attributesJSON, &link.Attributes)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return link, nil
@@ -94,7 +161,7 @@ func (r *LinkRepository) FindByID(id string) (*links.Link, error) {
 // each with its valid_from.
 func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 	query := `
-		SELECT id, from_id, to_id, type, suspect, attributes, version, valid_from, created_at, updated_at
+		SELECT ` + liveLinkColumns + `
 		FROM links
 		WHERE from_id = $1 AND valid_to IS NULL
 		ORDER BY created_at DESC
@@ -111,31 +178,9 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 
 	var linkList []*links.Link
 	for rows.Next() {
-		link := new(links.Link)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&link.ID,
-			&link.FromID,
-			&link.ToID,
-			&link.Type,
-			&link.Suspect,
-			&attributesJSON,
-			&link.Version,
-			&link.ValidFrom,
-			&link.CreatedAt,
-			&link.UpdatedAt,
-		)
-
+		link, err := scanLiveLink(rows)
 		if err != nil {
 			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &link.Attributes)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		linkList = append(linkList, link)
@@ -148,7 +193,7 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 // each with its valid_from.
 func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 	query := `
-		SELECT id, from_id, to_id, type, suspect, attributes, version, valid_from, created_at, updated_at
+		SELECT ` + liveLinkColumns + `
 		FROM links
 		WHERE to_id = $1 AND valid_to IS NULL
 		ORDER BY created_at DESC
@@ -165,31 +210,9 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 
 	var linkList []*links.Link
 	for rows.Next() {
-		link := new(links.Link)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&link.ID,
-			&link.FromID,
-			&link.ToID,
-			&link.Type,
-			&link.Suspect,
-			&attributesJSON,
-			&link.Version,
-			&link.ValidFrom,
-			&link.CreatedAt,
-			&link.UpdatedAt,
-		)
-
+		link, err := scanLiveLink(rows)
 		if err != nil {
 			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &link.Attributes)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		linkList = append(linkList, link)
@@ -207,7 +230,7 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 // every link it lists.
 func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	query := `
-		SELECT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.valid_from, l.created_at, l.updated_at
+		SELECT ` + prefixedLiveLinkColumns("l") + `
 		FROM links l
 		INNER JOIN artifacts fa ON l.from_id = fa.id AND fa.valid_to IS NULL
 		INNER JOIN artifacts ta ON l.to_id = ta.id AND ta.valid_to IS NULL
@@ -226,31 +249,9 @@ func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 
 	var linkList []*links.Link
 	for rows.Next() {
-		link := new(links.Link)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&link.ID,
-			&link.FromID,
-			&link.ToID,
-			&link.Type,
-			&link.Suspect,
-			&attributesJSON,
-			&link.Version,
-			&link.ValidFrom,
-			&link.CreatedAt,
-			&link.UpdatedAt,
-		)
-
+		link, err := scanLiveLink(rows)
 		if err != nil {
 			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &link.Attributes)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		linkList = append(linkList, link)
@@ -374,7 +375,7 @@ func (r *LinkRepository) Delete(id string) error {
 // its valid_to.
 func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.valid_from, l.valid_to, l.created_at, l.updated_at
+		SELECT DISTINCT ` + prefixedLinkColumns("l") + `
 		FROM links l
 		WHERE l.from_id = $1
 		AND EXISTS (
@@ -397,32 +398,9 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 
 	var linkList []*links.Link
 	for rows.Next() {
-		link := new(links.Link)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&link.ID,
-			&link.FromID,
-			&link.ToID,
-			&link.Type,
-			&link.Suspect,
-			&attributesJSON,
-			&link.Version,
-			&link.ValidFrom,
-			&link.ValidTo,
-			&link.CreatedAt,
-			&link.UpdatedAt,
-		)
-
+		link, err := scanLink(rows)
 		if err != nil {
 			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &link.Attributes)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		linkList = append(linkList, link)
@@ -437,7 +415,7 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 // valid_to.
 func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.valid_from, l.valid_to, l.created_at, l.updated_at
+		SELECT DISTINCT ` + prefixedLinkColumns("l") + `
 		FROM links l
 		WHERE l.to_id = $1
 		AND EXISTS (
@@ -460,32 +438,9 @@ func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*link
 
 	var linkList []*links.Link
 	for rows.Next() {
-		link := new(links.Link)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&link.ID,
-			&link.FromID,
-			&link.ToID,
-			&link.Type,
-			&link.Suspect,
-			&attributesJSON,
-			&link.Version,
-			&link.ValidFrom,
-			&link.ValidTo,
-			&link.CreatedAt,
-			&link.UpdatedAt,
-		)
-
+		link, err := scanLink(rows)
 		if err != nil {
 			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &link.Attributes)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		linkList = append(linkList, link)
