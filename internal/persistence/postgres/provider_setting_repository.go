@@ -46,10 +46,15 @@ func (r *ProviderSettingRepository) Upsert(p *providers.ProviderSetting) error {
 	).Scan(&p.ID)
 }
 
-func scanProviderSetting(scan func(dest ...interface{}) error) (*providers.ProviderSetting, error) {
+// providerSettingColumns is the list FindByProvider and List read, in the order
+// scanProviderSetting reads it (refactor plan X13).
+const providerSettingColumns = `id, COALESCE(org_id::text, ''), provider, auth_mode, api_key_env, default_model, enabled, last_detected, updated_at`
+
+// scanProviderSetting scans one row of providerSettingColumns.
+func scanProviderSetting(row rowScanner) (*providers.ProviderSetting, error) {
 	p := new(providers.ProviderSetting)
 	var lastDetected []byte
-	err := scan(
+	err := row.Scan(
 		&p.ID, &p.OrgID, &p.Provider, &p.AuthMode, &p.APIKeyEnv, &p.DefaultModel, &p.Enabled,
 		&lastDetected, &p.UpdatedAt,
 	)
@@ -69,12 +74,12 @@ func scanProviderSetting(scan func(dest ...interface{}) error) (*providers.Provi
 // (nil, nil) when absent.
 func (r *ProviderSettingRepository) FindByProvider(orgID, provider string) (*providers.ProviderSetting, error) {
 	row := r.db.QueryRow(`
-		SELECT id, COALESCE(org_id::text, ''), provider, auth_mode, api_key_env, default_model, enabled, last_detected, updated_at
+		SELECT `+providerSettingColumns+`
 		FROM provider_settings
 		WHERE org_id = NULLIF($1, '')::uuid AND provider = $2
 	`, orgID, provider)
 
-	p, err := scanProviderSetting(row.Scan)
+	p, err := scanProviderSetting(row)
 	if noRow(err) {
 		return nil, nil
 	}
@@ -87,7 +92,7 @@ func (r *ProviderSettingRepository) FindByProvider(orgID, provider string) (*pro
 // List returns an org's stored provider settings.
 func (r *ProviderSettingRepository) List(orgID string) ([]*providers.ProviderSetting, error) {
 	rows, err := r.db.Query(`
-		SELECT id, COALESCE(org_id::text, ''), provider, auth_mode, api_key_env, default_model, enabled, last_detected, updated_at
+		SELECT `+providerSettingColumns+`
 		FROM provider_settings
 		WHERE org_id = NULLIF($1, '')::uuid
 		ORDER BY provider
@@ -102,7 +107,7 @@ func (r *ProviderSettingRepository) List(orgID string) ([]*providers.ProviderSet
 
 	var result []*providers.ProviderSetting
 	for rows.Next() {
-		p, err := scanProviderSetting(rows.Scan)
+		p, err := scanProviderSetting(rows)
 		if err != nil {
 			return nil, err
 		}
