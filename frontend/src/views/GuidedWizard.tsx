@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   artifactAPI,
   baselineAPI,
@@ -63,13 +63,20 @@ import { renderNeedsStep } from './guidedWizard/NeedsStep';
 import { renderRequirementsStep } from './guidedWizard/RequirementsStep';
 import { renderNfrStep } from './guidedWizard/NfrStep';
 import { renderHazardStep } from './guidedWizard/HazardStep';
-import { helpText } from './guidedWizard/stepStyles';
+import { renderStubsStep } from './guidedWizard/StubsStep';
+import { renderReviewStep } from './guidedWizard/ReviewStep';
+import { renderStartScreen } from './guidedWizard/StartScreen';
+import { renderCommittedScreen } from './guidedWizard/CommittedScreen';
+import { AssistantSheet } from './guidedWizard/AssistantSheet';
 
 // Entry types (PersonaEntry, NeedEntry, ...) live in wizardEntries.ts. Every
 // entry carries a stable client-generated id, and cross-references (need ->
 // persona, requirement -> need) are by id, never by array index. The steps
 // are data in guidedWizard/steps.ts, and the saved answers are typed and
-// written by guidedWizard/wizardAnswers.ts.
+// written by guidedWizard/wizardAnswers.ts. The session is guidedWizard/
+// useGuidedSession.ts; each step, the start and committed screens and the
+// phone's assistant sheet are views in guidedWizard/, given the state they
+// read and its setters. The form's state and its handlers stay here.
 
 // ---------------------------------------------------------------------------
 
@@ -530,89 +537,24 @@ export const GuidedWizard: React.FC = () => {
   }
 
   if (!session) {
-    return (
-      <div style={{ padding: 24, maxWidth: 700, margin: '0 auto' }}>
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <h2 style={{ color: 'var(--text)', marginBottom: 12 }}>Guided requirements definition</h2>
-          {latestCommitted ? (
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
-              A guided definition has already been completed for this project. Reopen it to refine or
-              extend the committed set — existing entries stay linked to their artifacts, and anything
-              you add becomes new draft artifacts to review and commit.
-            </p>
-          ) : (
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
-              A step-by-step flow that walks you from product framing through personas, user needs,
-              requirements, hazards and verification stubs — creating traceable draft artifacts as you go.
-              You review and commit everything at the end.
-            </p>
-          )}
-          <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
-          {latestCommitted ? (
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button
-                className="button"
-                style={{ background: 'var(--accent)' }}
-                onClick={() => modifySession(latestCommitted)}
-                disabled={busy}
-              >
-                {busy ? 'Opening…' : 'Modify guided definition'}
-              </button>
-              <button className="button-secondary" onClick={startSession} disabled={busy}>
-                Start over from scratch
-              </button>
-            </div>
-          ) : (
-            <button className="button" style={{ background: 'var(--accent)' }} onClick={startSession} disabled={busy}>
-              {busy ? 'Starting…' : 'Start guided definition'}
-            </button>
-          )}
-        </div>
-      </div>
-    );
+    return renderStartScreen({ latestCommitted, error, setError, busy, modifySession, startSession });
   }
 
   if (committed) {
-    return (
-      <div style={{ padding: 24, maxWidth: 700, margin: '0 auto' }}>
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>✓</div>
-          <h2 style={{ color: 'var(--success)', marginBottom: 12 }}>Requirements committed</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>
-            All draft artifacts are now live. You can baseline this initial set to keep an immutable
-            snapshot for traceability.
-          </p>
-          <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            {baselineCreated ? (
-              <span style={{ color: 'var(--success)', fontSize: 14, alignSelf: 'center' }}>
-                ✓ Baseline "Initial requirements" created
-              </span>
-            ) : (
-              <button className="button" onClick={handleCreateBaseline} disabled={busy}>
-                {busy ? 'Creating…' : 'Create baseline'}
-              </button>
-            )}
-            <Link to="../requirements" className="button-secondary" style={{ textDecoration: 'none' }}>
-              Go to Requirements
-            </Link>
-            <button
-              className="button-secondary"
-              onClick={() => {
-                const committedSession = session;
-                setCommitted(false);
-                setLatestCommitted(committedSession);
-                setSession(null);
-                if (committedSession) modifySession(committedSession);
-              }}
-              disabled={busy}
-            >
-              Modify guided definition
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return renderCommittedScreen({
+      baselineCreated,
+      error,
+      setError,
+      busy,
+      handleCreateBaseline,
+      onModify: () => {
+        const committedSession = session;
+        setCommitted(false);
+        setLatestCommitted(committedSession);
+        setSession(null);
+        if (committedSession) modifySession(committedSession);
+      },
+    });
   }
 
   const renderStepContent = () => {
@@ -629,119 +571,10 @@ export const GuidedWizard: React.FC = () => {
         return renderNfrStep({ nfrs, setNfrs, openNfrCategories, setOpenNfrCategories });
       case 6:
         return renderHazardStep({ hazards, setHazards, openHazardCategories, setOpenHazardCategories });
-      case 7: {
-        const candidates = testCandidates();
-        return (
-          <div className="card">
-            <h3>Verification stubs (optional)</h3>
-            <div style={helpText}>
-              Requirements with verification method <strong>test</strong> are listed below. Checked
-              requirements get a draft test case ("Verify: …") linked with a <em>verifies</em>
-              relationship, filed under a section matching the requirement it verifies.
-            </div>
-            {candidates.length === 0 ? (
-              <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
-                No requirements with method "test" were created — nothing to stub. Use Skip or Next.
-              </div>
-            ) : (
-              candidates.map((c) => (
-                <label
-                  key={c.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 10px',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: 4,
-                    marginBottom: 6,
-                    cursor: stubCreated[c.id] ? 'default' : 'pointer',
-                    fontWeight: 400,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    style={{ width: 'auto' }}
-                    checked={stubCreated[c.id] ? true : stubSelected[c.id] ?? true}
-                    disabled={!!stubCreated[c.id]}
-                    onChange={(e) => setStubSelected({ ...stubSelected, [c.id]: e.target.checked })}
-                  />
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{c.title}</span>
-                  {c.category && (
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.category}</span>
-                  )}
-                  {stubCreated[c.id] && <span style={{ fontSize: 12, color: 'var(--success)' }}>✓ stub created</span>}
-                </label>
-              ))
-            )}
-          </div>
-        );
-      }
-      case 8: {
-        const grouped: Record<string, Artifact[]> = {};
-        draftArtifacts.forEach((a) => {
-          (grouped[a.type] = grouped[a.type] || []).push(a);
-        });
-        return (
-          <div className="card">
-            <h3>Review &amp; commit</h3>
-            <div style={helpText}>
-              These draft artifacts were created during this flow. Discard any you don't want, then commit
-              to make them all live.
-            </div>
-            {draftsLoading ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading drafts…</div>
-            ) : draftArtifacts.length === 0 ? (
-              <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 12 }}>
-                No new drafts to approve. Commit to save this definition.
-              </div>
-            ) : (
-              Object.keys(grouped)
-                .sort()
-                .map((type) => (
-                  <div key={type} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
-                      {type} ({grouped[type].length})
-                    </div>
-                    <div className="table-scroll">
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <tbody>
-                        {grouped[type].map((a) => (
-                          <tr key={a.id} style={{ borderBottom: '1px solid var(--surface-hover)' }}>
-                            <td style={{ padding: '6px 8px', fontSize: 13, color: 'var(--text)' }}>{a.title}</td>
-                            <td style={{ padding: '6px 8px', width: 80, textAlign: 'right' }}>
-                              <button
-                                onClick={() => discardDraft(a)}
-                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', fontSize: 12, padding: 2 }}
-                              >
-                                Discard
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    </div>
-                  </div>
-                ))
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-              <button className="button-secondary" onClick={handleBack} disabled={busy}>
-                ← Back
-              </button>
-              {/* A reopened definition that adds nothing has no drafts, and
-                  still needs its commit to close the session. */}
-              <button className="button" onClick={handleCommit} disabled={busy}>
-                {busy
-                  ? 'Committing…'
-                  : draftArtifacts.length === 0
-                    ? 'Commit definition'
-                    : `Commit ${draftArtifacts.length} artifact${draftArtifacts.length === 1 ? '' : 's'}`}
-              </button>
-            </div>
-          </div>
-        );
-      }
+      case 7:
+        return renderStubsStep({ candidates: testCandidates(), stubSelected, stubCreated, setStubSelected });
+      case 8:
+        return renderReviewStep({ draftArtifacts, draftsLoading, busy, discardDraft, handleBack, handleCommit });
       default:
         return null;
     }
@@ -796,88 +629,17 @@ export const GuidedWizard: React.FC = () => {
           </StepShell>
         </div>
         {compact ? (
-          <>
-            {assistantOpen && (
-              <div
-                onClick={() => setAssistantOpen(false)}
-                style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 949 }}
-              />
-            )}
-            <div
-              role="dialog"
-              aria-label="V&V Assistant"
-              aria-hidden={!assistantOpen}
-              className="safe-area-bottom"
-              style={{
-                position: 'fixed',
-                left: 0,
-                right: 0,
-                bottom: visual.keyboardInset,
-                height: Math.round(visual.height * (visual.keyboardInset > 0 ? 0.95 : 0.75)),
-                display: assistantOpen ? 'flex' : 'none',
-                flexDirection: 'column',
-                background: 'var(--surface)',
-                borderTop: '1px solid var(--border)',
-                borderRadius: '12px 12px 0 0',
-                boxShadow: '0 -4px 16px rgba(0,0,0,0.2)',
-                zIndex: 950,
-              }}
-            >
-              <button
-                type="button"
-                aria-label="Close assistant"
-                onClick={() => setAssistantOpen(false)}
-                style={{
-                  alignSelf: 'flex-end',
-                  width: 44,
-                  height: 44,
-                  background: 'none',
-                  border: 'none',
-                  fontSize: 20,
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                ✕
-              </button>
-              <div style={{ flex: 1, minHeight: 0 }}>
-                <GuidedChatPanel
-                  ref={chatRef}
-                  embedded
-                  sessionId={session.id}
-                  step={step}
-                  getState={buildAnswers}
-                  applied={appliedSuggestions}
-                  onApplySuggestions={handleApplySuggestions}
-                />
-              </div>
-            </div>
-            {!assistantOpen && (
-              <button
-                type="button"
-                onClick={() => setAssistantOpen(true)}
-                title="Open the V&V Assistant"
-                style={{
-                  position: 'fixed',
-                  right: 16,
-                  bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
-                  minHeight: 48,
-                  padding: '0 18px',
-                  borderRadius: 24,
-                  border: 'none',
-                  background: 'var(--accent)',
-                  color: 'var(--accent-fg)',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                  cursor: 'pointer',
-                  zIndex: 940,
-                }}
-              >
-                💬 Assistant
-              </button>
-            )}
-          </>
+          <AssistantSheet
+            assistantOpen={assistantOpen}
+            setAssistantOpen={setAssistantOpen}
+            visual={visual}
+            chatRef={chatRef}
+            sessionId={session.id}
+            step={step}
+            getState={buildAnswers}
+            applied={appliedSuggestions}
+            onApplySuggestions={handleApplySuggestions}
+          />
         ) : (
           <GuidedChatPanel
             ref={chatRef}
