@@ -64,6 +64,7 @@ var rules = []rule{
 	{"build context", "build-context", "", "none: the Dockerfile's COPY list is the allowlist", checkBuildContext},
 	{"build by package path", "build-by-package-path", "", "none: name the package (go build ./cmd/<name>); buildPathRecords in buildpath_test.go lists the records that may quote a file-path build", checkBuildByPackagePath},
 	{"API spec drift", "api-spec-drift", "api_spec_undocumented_routes", inRatchets("api_spec_undocumented_routes", ceilingHow), checkAPISpecRoutes},
+	{"architecture doc", "architecture-doc", "", "none: name the package in docs/architecture.md", checkArchitectureDoc},
 }
 
 // TestArchitecture runs every rule against the module and compares the

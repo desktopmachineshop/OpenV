@@ -662,6 +662,27 @@ who may call it.
 **Regenerate.** Lower the ceiling as routes are documented or removed; the
 regenerate command does it.
 
+## Architecture doc
+
+**Enforces.** Every package under `cmd/` and `internal/` (the root package
+excepted) is named in `docs/architecture.md` as a code span holding its
+module-relative directory, such as `internal/domain/links`: in the package
+inventory, or the Programs table for a program. A package that only holds
+tests counts, and a path that is only a prefix of another's does not name it
+(`internal/domain/reports` is not named by `internal/domain/reports/doc`).
+Prose, a link text and a span with other words in it do not count.
+`TestArchitectureDocRule` proves the rule on a fixture (step D2).
+
+**Why.** The doc is written by hand from the `go list` graph, and nothing
+else tells a pull request that adds a package that the page describing the
+packages has fallen behind.
+
+**Fix.** Add a row for the package to the inventory in
+`docs/architecture.md`, with a line saying what it holds. There is no
+allowlist.
+
+**Regenerate.** Nothing to regenerate.
+
 ## Env var inventory (S8)
 
 **Enforces.** `TestEnvInventory` lists every environment variable the
