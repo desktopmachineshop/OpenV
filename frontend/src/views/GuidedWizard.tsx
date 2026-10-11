@@ -12,7 +12,6 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { StepShell } from '../components/wizard/StepShell';
 import { ErrorBanner, useConfirm } from '../components/ui';
-import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
 import {
   ASSISTANT_EDITS_FEATURE,
@@ -30,18 +29,10 @@ import {
   NfrEntry,
   HazardEntry,
   FUNCTIONAL_TEST_CATEGORY,
-  HAZARD_CATEGORIES,
-  NFR_CATEGORIES,
   SUBSECTION_SPECS,
   subSectionKey,
-  newEntryId,
 } from '../components/wizard/wizardEntries';
-import {
-  SEVERITIES,
-  SuggestionDraft,
-  VERIFICATION_METHODS,
-  applySuggestionToDraft,
-} from '../components/wizard/wizardSuggestions';
+import { SuggestionDraft, applySuggestionToDraft } from '../components/wizard/wizardSuggestions';
 import {
   DraftSpec,
   EntryStep,
@@ -66,14 +57,19 @@ import {
   withStubAnswers,
 } from './guidedWizard/wizardAnswers';
 import { useGuidedSession } from './guidedWizard/useGuidedSession';
+import { renderFramingStep } from './guidedWizard/FramingStep';
+import { renderPersonaStep } from './guidedWizard/PersonaStep';
+import { renderNeedsStep } from './guidedWizard/NeedsStep';
+import { renderRequirementsStep } from './guidedWizard/RequirementsStep';
+import { renderNfrStep } from './guidedWizard/NfrStep';
+import { renderHazardStep } from './guidedWizard/HazardStep';
+import { helpText } from './guidedWizard/stepStyles';
 
 // Entry types (PersonaEntry, NeedEntry, ...) live in wizardEntries.ts. Every
 // entry carries a stable client-generated id, and cross-references (need ->
 // persona, requirement -> need) are by id, never by array index. The steps
 // are data in guidedWizard/steps.ts, and the saved answers are typed and
 // written by guidedWizard/wizardAnswers.ts.
-
-const helpText: React.CSSProperties = { fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 };
 
 // ---------------------------------------------------------------------------
 
@@ -622,490 +618,17 @@ export const GuidedWizard: React.FC = () => {
   const renderStepContent = () => {
     switch (step) {
       case 1:
-        return (
-          <div className="card">
-            <h3>Product framing</h3>
-            <div style={helpText}>
-              Frame the product in a few sentences. This is saved to the product profile and shown on the
-              overview page.
-            </div>
-            <div className="form-group">
-              <label>Vision</label>
-              <textarea rows={3} value={vision} onChange={(e) => setVision(e.target.value)} placeholder="What does the world look like once this product succeeds?" />
-            </div>
-            <div className="form-group">
-              <label>Problem statement</label>
-              <textarea rows={3} value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="What problem are we solving, for whom, and why now?" />
-            </div>
-            <div className="form-group">
-              <label>Target users</label>
-              <textarea rows={3} value={targetUsers} onChange={(e) => setTargetUsers(e.target.value)} placeholder="Who are the primary users and buyers?" />
-            </div>
-          </div>
-        );
+        return renderFramingStep({ vision, problem, targetUsers, setVision, setProblem, setTargetUsers });
       case 2:
-        return (
-          <div>
-            <div className="card" style={{ marginBottom: 12 }}>
-              <h3>Personas</h3>
-              <div style={{ ...helpText, marginBottom: 0 }}>
-                Describe the key people who will use the product. Each persona becomes a draft artifact
-                that user needs link back to. Personas already created are marked with a green dot.
-              </div>
-            </div>
-            <RepeatingCardList<PersonaEntry>
-              items={personas}
-              onChange={setPersonas}
-              makeNew={() => ({ id: newEntryId(), name: '', role: '', goals: '', pains: '' })}
-              itemKey={(p) => p.id}
-              addLabel="Add persona"
-              emptyText="No personas yet — add the first one."
-              renderItem={(p, i, update) => (
-                <div>
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
-                    {p.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                    <input
-                      value={p.name}
-                      onChange={(e) => update({ name: e.target.value })}
-                      placeholder="Persona name (e.g. Maya the Machinist)"
-                      style={{ fontWeight: 600 }}
-                      disabled={!!p.artifact_id}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: 12 }}>Role</label>
-                    <input value={p.role} onChange={(e) => update({ role: e.target.value })} placeholder="Their job / context" disabled={!!p.artifact_id} />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ fontSize: 12 }}>Goals</label>
-                    <textarea rows={2} value={p.goals} onChange={(e) => update({ goals: e.target.value })} placeholder="What are they trying to achieve?" disabled={!!p.artifact_id} />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: 12 }}>Pain points</label>
-                    <textarea rows={2} value={p.pains} onChange={(e) => update({ pains: e.target.value })} placeholder="What frustrates them today?" disabled={!!p.artifact_id} />
-                  </div>
-                </div>
-              )}
-              canRemove={(p) => !p.artifact_id}
-            />
-          </div>
-        );
-      case 3: {
-        const usablePersonas = personas.filter((p) => p.name.trim());
-        const orphanNeeds = needs.filter((n) => !personas.some((p) => p.id === n.persona_id && p.name.trim()));
-        return (
-          <div>
-            <div className="card" style={{ marginBottom: 12 }}>
-              <h3>User needs</h3>
-              <div style={{ ...helpText, marginBottom: 0 }}>
-                For each persona, capture needs as "As <em>persona</em>, I need <em>capability</em> so
-                that <em>outcome</em>". Each need becomes a draft artifact linked to its persona.
-              </div>
-            </div>
-            {usablePersonas.length === 0 && (
-              <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
-                No personas defined — go back to step 2 to add at least one persona.
-              </div>
-            )}
-            {personas.map((p) =>
-              p.name.trim() ? (
-                <div key={p.id} className="card" style={{ marginBottom: 12 }}>
-                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>{p.name}</div>
-                  {needs.map((n) =>
-                    n.persona_id === p.id ? (
-                      <div key={n.id} style={{ border: '1px solid var(--border-soft)', borderRadius: 4, padding: 10, marginBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
-                          {n.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                          <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>I need</span>
-                          <input
-                            value={n.capability}
-                            onChange={(e) => setNeeds(needs.map((x) => (x.id === n.id ? { ...x, capability: e.target.value } : x)))}
-                            placeholder="capability"
-                            style={{ padding: '6px 8px', fontSize: 13 }}
-                            disabled={!!n.artifact_id}
-                          />
-                          <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>so that</span>
-                          <input
-                            value={n.outcome}
-                            onChange={(e) => setNeeds(needs.map((x) => (x.id === n.id ? { ...x, outcome: e.target.value } : x)))}
-                            placeholder="outcome"
-                            style={{ padding: '6px 8px', fontSize: 13 }}
-                            disabled={!!n.artifact_id}
-                          />
-                          {!n.artifact_id && (
-                            <button
-                              onClick={() => setNeeds(needs.filter((x) => x.id !== n.id))}
-                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
-                              title="Remove need"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
-                          As {p.name.trim()}, I need {n.capability || '…'} so that {n.outcome || '…'}
-                        </div>
-                      </div>
-                    ) : null
-                  )}
-                  <button
-                    className="button-secondary"
-                    style={{ padding: '6px 12px', fontSize: 13 }}
-                    onClick={() => setNeeds([...needs, { id: newEntryId(), persona_id: p.id, capability: '', outcome: '' }])}
-                  >
-                    + Add need for {p.name}
-                  </button>
-                </div>
-              ) : null
-            )}
-            {orphanNeeds.length > 0 && (
-              <div className="card" style={{ marginBottom: 12, border: '1px solid var(--tint-yellow-border)', background: 'var(--tint-yellow)' }}>
-                <div style={{ fontWeight: 600, color: 'var(--warning-text)', marginBottom: 4 }}>Needs without a persona</div>
-                <div style={{ fontSize: 12, color: 'var(--warning-text)', marginBottom: 10 }}>
-                  The persona these needs belonged to was removed or unnamed. Reassign each need to a
-                  persona, or remove it.
-                </div>
-                {orphanNeeds.map((n) => (
-                  <div key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                    {n.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                    <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>
-                      I need {n.capability || '…'} so that {n.outcome || '…'}
-                    </span>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const personaId = e.target.value;
-                        if (personaId) setNeeds(needs.map((x) => (x.id === n.id ? { ...x, persona_id: personaId } : x)));
-                      }}
-                      style={{ padding: '6px 8px', fontSize: 13, width: 200 }}
-                      disabled={usablePersonas.length === 0}
-                    >
-                      <option value="">Assign to persona…</option>
-                      {usablePersonas.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                    {!n.artifact_id && (
-                      <button
-                        onClick={() => setNeeds(needs.filter((x) => x.id !== n.id))}
-                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
-                        title="Remove need"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      }
-      case 4: {
-        const usableNeeds = needs.filter((n) => n.capability.trim());
-        const orphanReqs = requirements.filter((r) => !needs.some((n) => n.id === r.need_id && n.capability.trim()));
-        return (
-          <div>
-            <div className="card" style={{ marginBottom: 12 }}>
-              <h3>Requirements</h3>
-              <div style={{ ...helpText, marginBottom: 0 }}>
-                Turn each user need into one or more testable "The system shall …" requirements with a fit
-                criterion and a verification method.
-              </div>
-            </div>
-            {usableNeeds.length === 0 && (
-              <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
-                No user needs defined — go back to step 3.
-              </div>
-            )}
-            {needs.map((n) => {
-              if (!n.capability.trim()) return null;
-              const personaName = personas.find((p) => p.id === n.persona_id)?.name.trim() || 'a user';
-              return (
-                <div key={n.id} className="card" style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    Need: <em>As {personaName}, I need {n.capability} so that {n.outcome || '…'}</em>
-                  </div>
-                  {requirements.map((r) =>
-                    r.need_id === n.id ? (
-                      <div key={r.id} style={{ border: '1px solid var(--border-soft)', borderRadius: 4, padding: 10, marginBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          {r.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                          <input
-                            value={r.text}
-                            onChange={(e) => setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, text: e.target.value } : x)))}
-                            placeholder="The system shall …"
-                            style={{ padding: '6px 8px', fontSize: 13 }}
-                            disabled={!!r.artifact_id}
-                          />
-                          {!r.artifact_id && (
-                            <button
-                              onClick={() => setRequirements(requirements.filter((x) => x.id !== r.id))}
-                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
-                              title="Remove requirement"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <textarea
-                            rows={2}
-                            value={r.fit_criterion}
-                            onChange={(e) => setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, fit_criterion: e.target.value } : x)))}
-                            placeholder="Fit criterion — how do we know it is met?"
-                            style={{ fontSize: 13, minHeight: 50, flex: 1 }}
-                            disabled={!!r.artifact_id}
-                          />
-                          <div style={{ width: 170 }}>
-                            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Verification method</label>
-                            <select
-                              value={r.verification_method}
-                              onChange={(e) => setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, verification_method: e.target.value } : x)))}
-                              style={{ padding: '6px 8px', fontSize: 13 }}
-                              disabled={!!r.artifact_id}
-                            >
-                              {VERIFICATION_METHODS.map((m) => (
-                                <option key={m} value={m}>{m}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null
-                  )}
-                  <button
-                    className="button-secondary"
-                    style={{ padding: '6px 12px', fontSize: 13 }}
-                    onClick={() =>
-                      setRequirements([
-                        ...requirements,
-                        { id: newEntryId(), need_id: n.id, text: 'The system shall ', fit_criterion: '', verification_method: 'test' },
-                      ])
-                    }
-                  >
-                    + Add requirement
-                  </button>
-                </div>
-              );
-            })}
-            {orphanReqs.length > 0 && (
-              <div className="card" style={{ marginBottom: 12, border: '1px solid var(--tint-yellow-border)', background: 'var(--tint-yellow)' }}>
-                <div style={{ fontWeight: 600, color: 'var(--warning-text)', marginBottom: 4 }}>Requirements without a user need</div>
-                <div style={{ fontSize: 12, color: 'var(--warning-text)', marginBottom: 10 }}>
-                  The need these requirements derived from was removed or left empty. Reattach each
-                  requirement to a need, or remove it.
-                </div>
-                {orphanReqs.map((r) => (
-                  <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                    {r.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                    <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{r.text || '…'}</span>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const needId = e.target.value;
-                        if (needId) setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, need_id: needId } : x)));
-                      }}
-                      style={{ padding: '6px 8px', fontSize: 13, width: 220 }}
-                      disabled={usableNeeds.length === 0}
-                    >
-                      <option value="">Attach to need…</option>
-                      {usableNeeds.map((n) => (
-                        <option key={n.id} value={n.id}>{n.capability}</option>
-                      ))}
-                    </select>
-                    {!r.artifact_id && (
-                      <button
-                        onClick={() => setRequirements(requirements.filter((x) => x.id !== r.id))}
-                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
-                        title="Remove requirement"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      }
+        return renderPersonaStep({ personas, setPersonas });
+      case 3:
+        return renderNeedsStep({ personas, needs, setNeeds });
+      case 4:
+        return renderRequirementsStep({ personas, needs, requirements, setRequirements });
       case 5:
-        return (
-          <div>
-            <div className="card" style={{ marginBottom: 12 }}>
-              <h3>Non-functional requirements &amp; constraints</h3>
-              <div style={{ ...helpText, marginBottom: 0 }}>
-                Expand the quality attributes that matter for this product and add requirements under
-                each — every attribute you use becomes its own section in the requirements module.
-              </div>
-            </div>
-            {NFR_CATEGORIES.map((cat) => {
-              const catEntries = nfrs.filter((n) => n.category === cat);
-              const open = openNfrCategories[cat] ?? catEntries.length > 0;
-              return (
-                <div key={cat} className="card" style={{ marginBottom: 10, padding: 14 }}>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-                    onClick={() => setOpenNfrCategories({ ...openNfrCategories, [cat]: !open })}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={open}
-                      onChange={() => setOpenNfrCategories({ ...openNfrCategories, [cat]: !open })}
-                      style={{ width: 'auto' }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span style={{ fontWeight: 600, color: 'var(--text)', flex: 1 }}>{cat}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {catEntries.length > 0 ? `${catEntries.length} requirement${catEntries.length > 1 ? 's' : ''}` : ''}
-                    </span>
-                  </div>
-                  {open && (
-                    <div style={{ marginTop: 10 }}>
-                      {catEntries.map((n) => (
-                        <div key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          {n.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                          <input
-                            value={n.text}
-                            onChange={(e) => setNfrs(nfrs.map((x) => (x.id === n.id ? { ...x, text: e.target.value } : x)))}
-                            placeholder={`The system shall … (${cat.toLowerCase()})`}
-                            style={{ padding: '6px 8px', fontSize: 13 }}
-                            disabled={!!n.artifact_id}
-                          />
-                          <select
-                            value={n.verification_method}
-                            onChange={(e) => setNfrs(nfrs.map((x) => (x.id === n.id ? { ...x, verification_method: e.target.value } : x)))}
-                            style={{ padding: '6px 8px', fontSize: 13, width: 150 }}
-                            disabled={!!n.artifact_id}
-                          >
-                            {VERIFICATION_METHODS.map((m) => (
-                              <option key={m} value={m}>{m}</option>
-                            ))}
-                          </select>
-                          {!n.artifact_id && (
-                            <button
-                              onClick={() => setNfrs(nfrs.filter((x) => x.id !== n.id))}
-                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
-                              title="Remove"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        className="button-secondary"
-                        style={{ padding: '5px 10px', fontSize: 12 }}
-                        onClick={() =>
-                          setNfrs([...nfrs, { id: newEntryId(), category: cat, text: '', fit_criterion: '', verification_method: 'test' }])
-                        }
-                      >
-                        + Add {cat.toLowerCase()} requirement
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      case 6: {
-        const hazardHints: Record<string, string> = {
-          Safety: 'harm to people when the product fails or is misused',
-          Technical: 'design or implementation risks that threaten the product working at all',
-          Security: 'malicious use, data exposure, or abuse of the product',
-          Programme: 'schedule, cost, dependency, or resourcing risks to delivery',
-          Operational: 'in-service risks — environment, wear, support, or user error',
-        };
-        return (
-          <div>
-            <div className="card" style={{ marginBottom: 12 }}>
-              <h3>Hazards &amp; risks (optional)</h3>
-              <div style={{ ...helpText, marginBottom: 0 }}>
-                Work through the risk categories that apply — each becomes its own section in the
-                requirements module. Skip this step if none apply.
-              </div>
-            </div>
-            {HAZARD_CATEGORIES.map((cat) => {
-              const catEntries = hazards.filter((h) => h.category === cat);
-              const open = openHazardCategories[cat] ?? catEntries.length > 0;
-              return (
-                <div key={cat} className="card" style={{ marginBottom: 10, padding: 14 }}>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-                    onClick={() => setOpenHazardCategories({ ...openHazardCategories, [cat]: !open })}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={open}
-                      onChange={() => setOpenHazardCategories({ ...openHazardCategories, [cat]: !open })}
-                      style={{ width: 'auto' }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{cat}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>{hazardHints[cat]}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {catEntries.length > 0 ? `${catEntries.length} hazard${catEntries.length > 1 ? 's' : ''}` : ''}
-                    </span>
-                  </div>
-                  {open && (
-                    <div style={{ marginTop: 10 }}>
-                      {catEntries.map((h) => (
-                        <div key={h.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          {h.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                          <input
-                            value={h.hazard}
-                            onChange={(e) => setHazards(hazards.map((x) => (x.id === h.id ? { ...x, hazard: e.target.value } : x)))}
-                            placeholder={`${cat} hazard (what could go wrong)`}
-                            style={{ padding: '6px 8px', fontSize: 13 }}
-                            disabled={!!h.artifact_id}
-                          />
-                          <input
-                            value={h.harm}
-                            onChange={(e) => setHazards(hazards.map((x) => (x.id === h.id ? { ...x, harm: e.target.value } : x)))}
-                            placeholder="Potential harm / impact"
-                            style={{ padding: '6px 8px', fontSize: 13 }}
-                            disabled={!!h.artifact_id}
-                          />
-                          <select
-                            value={h.severity}
-                            onChange={(e) => setHazards(hazards.map((x) => (x.id === h.id ? { ...x, severity: e.target.value } : x)))}
-                            style={{ padding: '6px 8px', fontSize: 13, width: 130 }}
-                            disabled={!!h.artifact_id}
-                          >
-                            {SEVERITIES.map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                          {!h.artifact_id && (
-                            <button
-                              onClick={() => setHazards(hazards.filter((x) => x.id !== h.id))}
-                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
-                              title="Remove"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        className="button-secondary"
-                        style={{ padding: '5px 10px', fontSize: 12 }}
-                        onClick={() =>
-                          setHazards([...hazards, { id: newEntryId(), category: cat, hazard: '', harm: '', severity: HAZARD_STEP.defaultSeverity }])
-                        }
-                      >
-                        + Add {cat.toLowerCase()} hazard
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      }
+        return renderNfrStep({ nfrs, setNfrs, openNfrCategories, setOpenNfrCategories });
+      case 6:
+        return renderHazardStep({ hazards, setHazards, openHazardCategories, setOpenHazardCategories });
       case 7: {
         const candidates = testCandidates();
         return (
