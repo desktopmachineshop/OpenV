@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/links"
 )
@@ -28,22 +27,6 @@ const linkColumns = `id, from_id, to_id, type, suspect, attributes, version, val
 // links (valid_to IS NULL), in the order scanLiveLink reads them; the link's
 // ValidTo stays nil.
 const liveLinkColumns = `id, from_id, to_id, type, suspect, attributes, version, valid_from, created_at, updated_at`
-
-// prefixedLinkColumns is linkColumns qualified by a table alias, for the
-// per-version reads, which cannot use bare names.
-func prefixedLinkColumns(alias string) string { return prefixLinkColumns(linkColumns, alias) }
-
-// prefixedLiveLinkColumns is liveLinkColumns qualified by a table alias, for
-// the read that joins links to artifacts.
-func prefixedLiveLinkColumns(alias string) string { return prefixLinkColumns(liveLinkColumns, alias) }
-
-func prefixLinkColumns(columns, alias string) string {
-	cols := strings.Split(columns, ", ")
-	for i, c := range cols {
-		cols[i] = alias + "." + c
-	}
-	return strings.Join(cols, ", ")
-}
 
 // scanLink reads one row of linkColumns.
 func scanLink(row rowScanner) (*links.Link, error) {
@@ -230,7 +213,7 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 // every link it lists.
 func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	query := `
-		SELECT ` + prefixedLiveLinkColumns("l") + `
+		SELECT ` + prefixColumns(liveLinkColumns, "l") + `
 		FROM links l
 		INNER JOIN artifacts fa ON l.from_id = fa.id AND fa.valid_to IS NULL
 		INNER JOIN artifacts ta ON l.to_id = ta.id AND ta.valid_to IS NULL
@@ -375,7 +358,7 @@ func (r *LinkRepository) Delete(id string) error {
 // its valid_to.
 func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT ` + prefixedLinkColumns("l") + `
+		SELECT DISTINCT ` + prefixColumns(linkColumns, "l") + `
 		FROM links l
 		WHERE l.from_id = $1
 		AND EXISTS (
@@ -415,7 +398,7 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 // valid_to.
 func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT ` + prefixedLinkColumns("l") + `
+		SELECT DISTINCT ` + prefixColumns(linkColumns, "l") + `
 		FROM links l
 		WHERE l.to_id = $1
 		AND EXISTS (

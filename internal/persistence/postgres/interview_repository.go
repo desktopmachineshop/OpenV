@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 )
@@ -17,17 +16,6 @@ const (
 	interviewSessionColumns = `id, interview_id, invite_id, participant_name, status, summary, started_at, ended_at`
 	messageColumns          = `id, session_id, role, content, created_at`
 )
-
-// prefixedInterviewSessionColumns is interviewSessionColumns qualified by a
-// table alias, for the query that joins interview_sessions to interviews and
-// so cannot use bare names.
-func prefixedInterviewSessionColumns(alias string) string {
-	cols := strings.Split(interviewSessionColumns, ", ")
-	for i, c := range cols {
-		cols[i] = alias + "." + c
-	}
-	return strings.Join(cols, ", ")
-}
 
 // InterviewRepository implements the interviews.Repository interface
 type InterviewRepository struct {
@@ -455,7 +443,7 @@ func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*in
 // interview in a project, newest first, at most limit rows.
 func (r *InterviewRepository) ListSessionsByProject(projectID string, limit int) ([]*interviews.Session, error) {
 	query := `
-		SELECT ` + prefixedInterviewSessionColumns("s") + `
+		SELECT ` + prefixColumns(interviewSessionColumns, "s") + `
 		FROM interview_sessions s
 		JOIN interviews i ON i.id = s.interview_id
 		WHERE i.project_id = $1

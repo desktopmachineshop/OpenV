@@ -73,7 +73,7 @@ func (r *MemberRepository) Find(projectID, userID string) (*members.Member, erro
 // (#379 bug 94).
 func (r *MemberRepository) ListByProject(projectID string) ([]*members.Member, error) {
 	rows, err := r.db.Query(`
-		SELECT `+prefixLinkColumns(memberColumns, "pm")+`, u.name, u.email, u.avatar_url
+		SELECT `+prefixColumns(memberColumns, "pm")+`, u.name, u.email, u.avatar_url
 		FROM project_members pm
 		JOIN users u ON u.id = pm.user_id
 		WHERE pm.project_id = $1

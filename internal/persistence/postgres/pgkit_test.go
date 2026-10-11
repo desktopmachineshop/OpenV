@@ -264,3 +264,27 @@ func TestWithTxBeginsAsBeginDoes(t *testing.T) {
 		t.Errorf("withTx(context.Background(), db, nil, fn) began %q, db.Begin() %q", got, begin)
 	}
 }
+
+// TestPrefixColumns qualifies each column of a list by the alias and joins
+// them with the list's own separator, one column and several alike.
+func TestPrefixColumns(t *testing.T) {
+	for _, c := range []struct{ columns, alias, want string }{
+		{"id", "x", "x.id"},
+		{"id, title, created_at", "a", "a.id, a.title, a.created_at"},
+	} {
+		if got := prefixColumns(c.columns, c.alias); got != c.want {
+			t.Errorf("prefixColumns(%q, %q) = %q, want %q", c.columns, c.alias, got, c.want)
+		}
+	}
+}
+
+// The literal tests the class E trailers name (link, interview and V&V)
+// call the three helpers X13 folded into prefixColumns by their old names.
+// Those tests are the characterization and stay byte for byte, so the names
+// live here, in test code only, as one-line wrappers over prefixColumns.
+func prefixedLinkColumns(alias string) string     { return prefixColumns(linkColumns, alias) }
+func prefixedLiveLinkColumns(alias string) string { return prefixColumns(liveLinkColumns, alias) }
+func prefixedInterviewSessionColumns(alias string) string {
+	return prefixColumns(interviewSessionColumns, alias)
+}
+func prefixedResultColumns(alias string) string { return prefixColumns(resultColumns, alias) }

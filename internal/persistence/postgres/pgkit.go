@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 // The persistence kit (refactor plan X13): what every repository's reads and
@@ -15,6 +16,19 @@ import (
 // *sql.Rows positioned on a row.
 type rowScanner interface {
 	Scan(dest ...interface{}) error
+}
+
+// prefixColumns qualifies each column of a columns const (linkColumns, say)
+// by a table alias, for the queries that join tables and so cannot use bare
+// names: "id, title" under alias "a" is "a.id, a.title". The list is split on
+// ", " and joined the same way, so a qualified list keeps the spacing of its
+// const.
+func prefixColumns(columns, alias string) string {
+	cols := strings.Split(columns, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
 }
 
 // withTx runs fn in a transaction begun on db with ctx and opts, and commits
