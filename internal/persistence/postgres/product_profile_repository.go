@@ -17,10 +17,14 @@ func NewProductProfileRepository(db *sql.DB) *ProductProfileRepository {
 	return &ProductProfileRepository{db: db}
 }
 
+// productProfileColumns is the list Get selects and Upsert writes, in the
+// order Get reads it (refactor plan X13).
+const productProfileColumns = `project_id, vision, problem_statement, target_users, constraints, success_metrics, settings, created_at, updated_at`
+
 // Get retrieves a product profile by project ID; returns nil, nil when none exists
 func (r *ProductProfileRepository) Get(projectID string) (*products.ProductProfile, error) {
 	query := `
-		SELECT project_id, vision, problem_statement, target_users, constraints, success_metrics, settings, created_at, updated_at
+		SELECT ` + productProfileColumns + `
 		FROM product_profiles
 		WHERE project_id = $1
 	`
@@ -98,7 +102,7 @@ func (r *ProductProfileRepository) Upsert(p *products.ProductProfile) error {
 	}
 
 	query := `
-		INSERT INTO product_profiles (project_id, vision, problem_statement, target_users, constraints, success_metrics, settings, created_at, updated_at)
+		INSERT INTO product_profiles (` + productProfileColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (project_id) DO UPDATE SET
 			vision = EXCLUDED.vision,
