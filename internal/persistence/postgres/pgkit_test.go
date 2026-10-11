@@ -27,6 +27,15 @@ type sqlRecorder struct {
 	failOn     string
 	failBegin  bool
 	failCommit bool
+	// answers makes a query whose text contains a recAnswer's contains answer
+	// one row of its values, ahead of the defaults.
+	answers []recAnswer
+}
+
+// recAnswer is one row the recorder answers a query with.
+type recAnswer struct {
+	contains string
+	values   []driver.Value
 }
 
 var (
@@ -101,6 +110,11 @@ func (c *recConn) QueryContext(_ context.Context, query string, _ []driver.Named
 	c.rec.record("QUERY " + query)
 	if c.rec.failOn != "" && strings.Contains(query, c.rec.failOn) {
 		return nil, errRecordedStatement
+	}
+	for _, a := range c.rec.answers {
+		if strings.Contains(query, a.contains) {
+			return &recRows{values: [][]driver.Value{a.values}}, nil
+		}
 	}
 	if strings.Contains(query, "RETURNING next_num - 1") {
 		return &recRows{values: [][]driver.Value{{int64(1)}}}, nil

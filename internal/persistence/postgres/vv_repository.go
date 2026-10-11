@@ -1,9 +1,11 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -75,17 +77,17 @@ func (r *VVRepository) UpdateRun(run *vv.TestRun) error {
 const runBaselineDeleted = `test_runs.baseline_id IS NOT NULL AND NOT EXISTS (
 			SELECT 1 FROM baselines b WHERE b.id = test_runs.baseline_id AND b.project_id = test_runs.project_id)`
 
-// FindRunByID retrieves a test run by ID
-func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
-	query := `
-		SELECT id, project_id, name, description, baseline_id, ` + runBaselineDeleted + `,
-			status, started_at, completed_at, created_by, created_at, updated_at
-		FROM test_runs
-		WHERE id = $1
-	`
+// testRunColumns are the run's twelve columns, in the order scanTestRun reads
+// them: every read of a whole run selects them, the sixth being
+// runBaselineDeleted's computed column. (runColumns and scanRun name the
+// agent run's.)
+const testRunColumns = `id, project_id, name, description, baseline_id, ` + runBaselineDeleted + `,
+			status, started_at, completed_at, created_by, created_at, updated_at`
 
-	run := &vv.TestRun{}
-	err := r.db.QueryRow(query, id).Scan(
+// scanTestRun reads one row of testRunColumns.
+func scanTestRun(row rowScanner) (*vv.TestRun, error) {
+	run := new(vv.TestRun)
+	err := row.Scan(
 		&run.ID,
 		&run.ProjectID,
 		&run.Name,
@@ -99,7 +101,21 @@ func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
 		&run.CreatedAt,
 		&run.UpdatedAt,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return run, nil
+}
 
+// FindRunByID retrieves a test run by ID
+func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
+	query := `
+		SELECT ` + testRunColumns + `
+		FROM test_runs
+		WHERE id = $1
+	`
+
+	run, err := scanTestRun(r.db.QueryRow(query, id))
 	if err != nil {
 		if noRow(err) {
 			return nil, vv.ErrRunNotFound
@@ -113,8 +129,7 @@ func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
 // ListRunsByProject retrieves all test runs for a project, newest first
 func (r *VVRepository) ListRunsByProject(projectID string) ([]*vv.TestRun, error) {
 	query := `
-		SELECT id, project_id, name, description, baseline_id, ` + runBaselineDeleted + `,
-			status, started_at, completed_at, created_by, created_at, updated_at
+		SELECT ` + testRunColumns + `
 		FROM test_runs
 		WHERE project_id = $1
 		ORDER BY started_at DESC
@@ -131,21 +146,7 @@ func (r *VVRepository) ListRunsByProject(projectID string) ([]*vv.TestRun, error
 
 	var runs []*vv.TestRun
 	for rows.Next() {
-		run := new(vv.TestRun)
-		err := rows.Scan(
-			&run.ID,
-			&run.ProjectID,
-			&run.Name,
-			&run.Description,
-			&run.BaselineID,
-			&run.BaselineDeleted,
-			&run.Status,
-			&run.StartedAt,
-			&run.CompletedAt,
-			&run.CreatedBy,
-			&run.CreatedAt,
-			&run.UpdatedAt,
-		)
+		run, err := scanTestRun(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -175,30 +176,24 @@ func lockRun(tx *sql.Tx, runID string) (string, error) {
 // asks for a run in progress to be completed or aborted instead, and says a
 // closed one is already so, since it can be neither.
 func (r *VVRepository) DeleteRun(id string) error {
-	tx, err := r.db.Begin()
-	if err != nil {
+	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		status, err := lockRun(tx, id)
+		if err != nil {
+			return err
+		}
+		var holdsResults bool
+		if err := tx.QueryRow(`SELECT EXISTS (SELECT 1 FROM test_results WHERE run_id = $1)`, id).Scan(&holdsResults); err != nil {
+			return err
+		}
+		if holdsResults && status == vv.RunStatusInProgress {
+			return fmt.Errorf("%w: complete or abort it instead of deleting it", vv.ErrRunHasResults)
+		}
+		if holdsResults {
+			return fmt.Errorf("%w: this one is already %s", vv.ErrRunHasResults, status)
+		}
+		_, err = tx.Exec(`DELETE FROM test_runs WHERE id = $1`, id)
 		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	status, err := lockRun(tx, id)
-	if err != nil {
-		return err
-	}
-	var holdsResults bool
-	if err := tx.QueryRow(`SELECT EXISTS (SELECT 1 FROM test_results WHERE run_id = $1)`, id).Scan(&holdsResults); err != nil {
-		return err
-	}
-	if holdsResults && status == vv.RunStatusInProgress {
-		return fmt.Errorf("%w: complete or abort it instead of deleting it", vv.ErrRunHasResults)
-	}
-	if holdsResults {
-		return fmt.Errorf("%w: this one is already %s", vv.ErrRunHasResults, status)
-	}
-	if _, err := tx.Exec(`DELETE FROM test_runs WHERE id = $1`, id); err != nil {
-		return err
-	}
-	return tx.Commit()
+	})
 }
 
 // AddResult stores a new result. It never overwrites one (migration 0049):
@@ -220,84 +215,94 @@ func (r *VVRepository) AddResult(result *vv.TestResult) error {
 		return err
 	}
 
-	tx, err := r.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
+	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		status, err := lockRun(tx, result.RunID)
+		if err != nil {
+			return err
+		}
+		if err := vv.CheckAcceptsResults(status); err != nil {
+			return err
+		}
 
-	status, err := lockRun(tx, result.RunID)
-	if err != nil {
-		return err
-	}
-	if err := vv.CheckAcceptsResults(status); err != nil {
-		return err
-	}
-
-	// The newest result is the one this supersedes, and this one must be
-	// newer still, since the reads take the newest by its stamp. The service
-	// stamps a result before the lock, so one that waited for it, or one
-	// stamped on an instance whose clock runs behind, can carry a stamp at
-	// or before the current one's: kept, the case would answer the result
-	// this supersedes while its citations moved here. Such a stamp moves to
-	// a microsecond, the column's precision, after the current one's, and
-	// the time executed with it when it is that same stamp. The comparison
-	// is the column's own, of the values as stored.
-	var superseded sql.NullString
-	var current sql.NullTime
-	var behind bool
-	err = tx.QueryRow(`
+		// The newest result is the one this supersedes, and this one must be
+		// newer still, since the reads take the newest by its stamp. The service
+		// stamps a result before the lock, so one that waited for it, or one
+		// stamped on an instance whose clock runs behind, can carry a stamp at
+		// or before the current one's: kept, the case would answer the result
+		// this supersedes while its citations moved here. Such a stamp moves to
+		// a microsecond, the column's precision, after the current one's, and
+		// the time executed with it when it is that same stamp. The comparison
+		// is the column's own, of the values as stored.
+		var superseded sql.NullString
+		var current sql.NullTime
+		var behind bool
+		err = tx.QueryRow(`
 		SELECT id, updated_at, updated_at >= $3::timestamp FROM test_results
 		WHERE run_id = $1 AND test_case_id = $2
 		ORDER BY updated_at DESC, id DESC
 		LIMIT 1
 	`, result.RunID, result.TestCaseID, result.UpdatedAt).Scan(&superseded, &current, &behind)
-	if err != nil && !noRow(err) {
-		return err
-	}
-	if behind {
-		at := current.Time.Add(time.Microsecond)
-		if result.ExecutedAt != nil && result.ExecutedAt.Equal(result.UpdatedAt) {
-			result.ExecutedAt = &at
-		}
-		result.CreatedAt, result.UpdatedAt = at, at
-	}
-
-	if _, err := tx.Exec(`
-		INSERT INTO test_results (id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`,
-		result.ID,
-		result.RunID,
-		result.TestCaseID,
-		result.TestCaseVersion,
-		result.Status,
-		result.Notes,
-		evidenceJSON,
-		result.ExecutedAt,
-		result.ExecutedBy,
-		result.ExecutedByAgentRunID,
-		result.CreatedAt,
-		result.UpdatedAt,
-	); err != nil {
-		return err
-	}
-
-	if superseded.Valid {
-		if _, err := tx.Exec(`UPDATE evidence_citations SET test_result_id = $1 WHERE test_result_id = $2`,
-			result.ID, superseded.String); err != nil {
+		if err != nil && !noRow(err) {
 			return err
 		}
-	}
-	return tx.Commit()
+		if behind {
+			at := current.Time.Add(time.Microsecond)
+			if result.ExecutedAt != nil && result.ExecutedAt.Equal(result.UpdatedAt) {
+				result.ExecutedAt = &at
+			}
+			result.CreatedAt, result.UpdatedAt = at, at
+		}
+
+		if _, err := tx.Exec(`
+		INSERT INTO test_results (`+resultColumns+`)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`,
+			result.ID,
+			result.RunID,
+			result.TestCaseID,
+			result.TestCaseVersion,
+			result.Status,
+			result.Notes,
+			evidenceJSON,
+			result.ExecutedAt,
+			result.ExecutedBy,
+			result.ExecutedByAgentRunID,
+			result.CreatedAt,
+			result.UpdatedAt,
+		); err != nil {
+			return err
+		}
+
+		if superseded.Valid {
+			if _, err := tx.Exec(`UPDATE evidence_citations SET test_result_id = $1 WHERE test_result_id = $2`,
+				result.ID, superseded.String); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
-// scanResult scans one test result row
-func scanResult(rows *sql.Rows) (*vv.TestResult, error) {
+// resultColumns are the result's twelve columns, in the order scanResult reads
+// them: the reads of whole results select them, and AddResult inserts them.
+const resultColumns = `id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at`
+
+// prefixedResultColumns is resultColumns qualified by a table alias, for the
+// query that joins test_results to test_runs and so cannot use bare names.
+func prefixedResultColumns(alias string) string {
+	cols := strings.Split(resultColumns, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
+}
+
+// scanResult reads one row of resultColumns.
+func scanResult(row rowScanner) (*vv.TestResult, error) {
 	result := new(vv.TestResult)
 	var evidenceJSON []byte
 
-	err := rows.Scan(
+	err := row.Scan(
 		&result.ID,
 		&result.RunID,
 		&result.TestCaseID,
@@ -350,7 +355,7 @@ func (r *VVRepository) FindResultByCase(runID, testCaseID string) (*vv.TestResul
 // latest recorded first.
 func (r *VVRepository) ListResultsByRun(runID string) ([]*vv.TestResult, error) {
 	return r.listResults(`
-		SELECT id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at
+		SELECT `+resultColumns+`
 		FROM (
 			SELECT DISTINCT ON (test_case_id) *
 			FROM test_results
@@ -365,7 +370,7 @@ func (r *VVRepository) ListResultsByRun(runID string) ([]*vv.TestResult, error) 
 // ones later results superseded included, the latest recorded first.
 func (r *VVRepository) ListResultHistoryByRun(runID string) ([]*vv.TestResult, error) {
 	return r.listResults(`
-		SELECT id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at
+		SELECT `+resultColumns+`
 		FROM test_results
 		WHERE run_id = $1
 		ORDER BY updated_at DESC, id DESC
@@ -399,7 +404,7 @@ func (r *VVRepository) listResults(query string, args ...interface{}) ([]*vv.Tes
 func (r *VVRepository) LatestResultPerCase(projectID string) (map[string]*vv.TestResult, error) {
 	query := `
 		SELECT DISTINCT ON (tr.test_case_id)
-			tr.id, tr.run_id, tr.test_case_id, tr.test_case_version, tr.status, tr.notes, tr.evidence, tr.executed_at, tr.executed_by, tr.executed_by_agent_run_id, tr.created_at, tr.updated_at
+			` + prefixedResultColumns("tr") + `
 		FROM test_results tr
 		JOIN test_runs runs ON runs.id = tr.run_id
 		WHERE runs.project_id = $1 AND runs.status IN ('in-progress', 'completed')
