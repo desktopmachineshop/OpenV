@@ -818,8 +818,8 @@ const COPIES: Copy[] = [
     vocabulary: 'wizard_step_labels',
     kind: 'mirror',
     ordered: true,
-    where: 'views/GuidedWizard.tsx STEP_LABELS',
-    read: () => listOf('views/GuidedWizard.tsx', 'STEP_LABELS'),
+    where: 'views/guidedWizard/steps.ts STEP_LABELS',
+    read: () => listOf('views/guidedWizard/steps.ts', 'STEP_LABELS'),
   },
 ];
 
