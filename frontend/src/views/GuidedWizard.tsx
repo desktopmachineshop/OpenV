@@ -6,7 +6,7 @@ import {
   guidedAPI,
   productProfileAPI,
   Artifact,
-  GuidedSession,
+  ProductProfile,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
@@ -61,11 +61,11 @@ import {
 import {
   WizardAnswers,
   readWizardAnswers,
-  seedReopenedAnswers,
   serializeWizardAnswers,
   withEntryStepAnswers,
   withStubAnswers,
 } from './guidedWizard/wizardAnswers';
+import { useGuidedSession } from './guidedWizard/useGuidedSession';
 
 // Entry types (PersonaEntry, NeedEntry, ...) live in wizardEntries.ts. Every
 // entry carries a stable client-generated id, and cross-references (need ->
@@ -83,8 +83,6 @@ export const GuidedWizard: React.FC = () => {
   const projectId = params.projectId || storeProjectId;
   const confirm = useConfirm();
 
-  const [session, setSession] = useState<GuidedSession | null>(null);
-  const [latestCommitted, setLatestCommitted] = useState<GuidedSession | null>(null);
   const chatRef = useRef<GuidedChatPanelHandle>(null);
   // Phones and tablets: the assistant is a bottom sheet behind a floating
   // button instead of a column beside the steps. It stays mounted while the
@@ -96,12 +94,6 @@ export const GuidedWizard: React.FC = () => {
   // offset follow the visual viewport, since position: fixed anchors to the
   // layout viewport, which the keyboard does not shrink on iOS.
   const visual = useVisualViewport();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState(1);
-  const [maxReached, setMaxReached] = useState(1);
-  const [committed, setCommitted] = useState(false);
   const [baselineCreated, setBaselineCreated] = useState(false);
 
   // Step 1
@@ -158,85 +150,37 @@ export const GuidedWizard: React.FC = () => {
     setSectionIds(read.sectionIds);
   }, []);
 
-  useEffect(() => {
-    if (!projectId) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await guidedAPI.list(projectId);
-        if (cancelled) return;
-        const sessions = res.data || [];
-        const active = sessions.find((s) => s.status === 'in-progress' || s.status === 'in_progress');
-        // Sessions arrive newest first, so this is the most recent commit.
-        setLatestCommitted(sessions.find((s) => s.status === 'committed') || null);
-        if (active) {
-          setSession(active);
-          const current = Math.min(Math.max(active.current_step || 1, 1), REVIEW_STEP);
-          setStep(current);
-          setMaxReached(current);
-          hydrateFromAnswers(active.answers || {});
-        }
-        setError('');
-      } catch (err: any) {
-        if (!cancelled) setError(`Failed to load guided sessions: ${apiErrorMessage(err)}`);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, hydrateFromAnswers]);
-
-  const startSession = async () => {
-    if (!projectId) return;
-    setBusy(true);
-    try {
-      const res = await guidedAPI.start(projectId);
-      setSession(res.data);
-      setStep(1);
-      setMaxReached(1);
-      hydrateFromAnswers(res.data.answers || {});
-      // Pre-fill step 1 from the product profile if available.
-      try {
-        const profile = await productProfileAPI.get(projectId);
-        if (!res.data.answers?.step_1) {
-          setVision(profile.data.vision || '');
-          setProblem(profile.data.problem_statement || '');
-          setTargetUsers(profile.data.target_users || '');
-        }
-      } catch {
-        // profile optional
-      }
-      setError('');
-    } catch (err: any) {
-      setError(`Failed to start session: ${apiErrorMessage(err)}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Reopen a committed definition: a new in-progress session seeded with the
-  // committed answers. Entries that already materialized keep their artifact
-  // links (shown locked); anything added becomes a fresh draft to commit.
-  const modifySession = async (from: GuidedSession) => {
-    if (!projectId) return;
-    setBusy(true);
-    try {
-      const res = await guidedAPI.start(projectId);
-      const seeded = await guidedAPI.saveStep(res.data.id, 1, seedReopenedAnswers(from.answers || {}));
-      setSession(seeded.data);
-      hydrateFromAnswers(seeded.data.answers || {});
-      setStep(1);
-      setMaxReached(STEP_LABELS.length);
-      setError('');
-    } catch (err: any) {
-      setError(`Failed to reopen definition: ${apiErrorMessage(err)}`);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const {
+    session,
+    setSession,
+    latestCommitted,
+    setLatestCommitted,
+    loading,
+    error,
+    setError,
+    busy,
+    setBusy,
+    step,
+    setStep,
+    maxReached,
+    committed,
+    setCommitted,
+    startSession,
+    modifySession,
+    saveStep,
+    goTo,
+    goBack: handleBack,
+    abandonSession,
+    handleCommit,
+  } = useGuidedSession({
+    projectId,
+    hydrateFromAnswers,
+    fillFraming: (profile: ProductProfile) => {
+      setVision(profile.vision || '');
+      setProblem(profile.problem_statement || '');
+      setTargetUsers(profile.target_users || '');
+    },
+  });
 
   const buildAnswers = (): WizardAnswers =>
     serializeWizardAnswers(
@@ -352,16 +296,8 @@ export const GuidedWizard: React.FC = () => {
     return results;
   };
 
-  const persist = async (nextStep: number, answersOverride?: WizardAnswers) => {
-    if (!session) return;
-    const answers = answersOverride || buildAnswers();
-    // Never regress the session's saved step: clicking Next while revisiting
-    // an earlier step must not lose reload progress (mirrors the
-    // copilot-apply path above).
-    const stepToSave = Math.max(session.current_step || 0, nextStep) || 1;
-    const res = await guidedAPI.saveStep(session.id, stepToSave, answers);
-    setSession(res.data);
-  };
+  const persist = (nextStep: number, answersOverride?: WizardAnswers) =>
+    saveStep(nextStep, answersOverride || buildAnswers());
 
   const loadDrafts = useCallback(async () => {
     if (!projectId) return;
@@ -374,6 +310,9 @@ export const GuidedWizard: React.FC = () => {
     } finally {
       setDraftsLoading(false);
     }
+    // setError is useGuidedSession's state setter, which React keeps stable,
+    // so the array stays [projectId], as it was in this component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   useEffect(() => {
@@ -383,11 +322,6 @@ export const GuidedWizard: React.FC = () => {
   // -------------------------------------------------------------------------
   // Per-step Next handlers (materialize + save + advance)
   // -------------------------------------------------------------------------
-
-  const goTo = (nextStep: number) => {
-    setStep(nextStep);
-    setMaxReached((m) => Math.max(m, nextStep));
-  };
 
   // Create any missing section headings and return the updated key→artifact
   // map. Sub-sections ("nfrs:Performance", "hazards:Safety") nest under their
@@ -526,10 +460,6 @@ export const GuidedWizard: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
-  };
-
   // Escape hatch: drop the current in-progress session and return to the
   // Start/Modify landing. Materialized drafts stay in the project.
   const handleAbandon = async () => {
@@ -542,32 +472,7 @@ export const GuidedWizard: React.FC = () => {
       danger: true,
     });
     if (!ok) return;
-    setBusy(true);
-    try {
-      await guidedAPI.abandon(session.id);
-      setSession(null);
-      setStep(1);
-      setMaxReached(1);
-      setError('');
-    } catch (err: any) {
-      setError(`Failed to abandon session: ${apiErrorMessage(err)}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleCommit = async () => {
-    if (!session) return;
-    setBusy(true);
-    setError('');
-    try {
-      await guidedAPI.commit(session.id);
-      setCommitted(true);
-    } catch (err: any) {
-      setError(`Failed to commit: ${apiErrorMessage(err)}`);
-    } finally {
-      setBusy(false);
-    }
+    await abandonSession();
   };
 
   const handleCreateBaseline = async () => {
