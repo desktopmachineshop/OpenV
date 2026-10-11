@@ -35,63 +35,43 @@ import {
   SUBSECTION_SPECS,
   subSectionKey,
   newEntryId,
-  normalizeWizardAnswers,
 } from '../components/wizard/wizardEntries';
 import {
   SEVERITIES,
   SuggestionDraft,
   VERIFICATION_METHODS,
   applySuggestionToDraft,
-  buildAnswersFrom,
 } from '../components/wizard/wizardSuggestions';
 import {
-  wizardHazardText,
-  wizardNeedText,
-  wizardNfrText,
-  wizardPersonaText,
-  wizardRequirementText,
-  wizardTestStubText,
-} from '../components/wizard/artifactTemplates';
+  DraftSpec,
+  EntryStep,
+  HAZARD_STEP,
+  NEED_STEP,
+  NFR_STEP,
+  PERSONA_STEP,
+  REQUIREMENT_STEP,
+  REVIEW_STEP,
+  SECTION_SPECS,
+  STEP_LABELS,
+  STUB_STEP,
+  isSkippable,
+  nudgeEvent,
+  planEntryDrafts,
+} from './guidedWizard/steps';
+import {
+  WizardAnswers,
+  readWizardAnswers,
+  seedReopenedAnswers,
+  serializeWizardAnswers,
+  withEntryStepAnswers,
+  withStubAnswers,
+} from './guidedWizard/wizardAnswers';
 
-// ---------------------------------------------------------------------------
-// Types for wizard answers
-// ---------------------------------------------------------------------------
 // Entry types (PersonaEntry, NeedEntry, ...) live in wizardEntries.ts. Every
 // entry carries a stable client-generated id, and cross-references (need ->
-// persona, requirement -> need) are by id, never by array index.
-
-interface DraftSpec {
-  type: string;
-  title: string;
-  body: string;
-  parent_id?: string;
-  sort_order?: number;
-  attributes?: Record<string, any>;
-  links?: { type: string; to_id: string }[];
-}
-
-// Section headings the wizard materializes artifacts under, in module order.
-// NFR, hazard and verification categories become sub-headings under their
-// step's section.
-const SECTION_SPECS: Record<string, { title: string; sort: number }> = {
-  personas: { title: 'Personas', sort: 10 },
-  needs: { title: 'User Needs', sort: 20 },
-  requirements: { title: 'Requirements', sort: 30 },
-  nfrs: { title: 'Non-Functional Requirements & Constraints', sort: 40 },
-  hazards: { title: 'Hazards & Risks', sort: 50 },
-  tests: { title: 'Verification Tests', sort: 60 },
-};
-
-const STEP_LABELS = [
-  'Product framing',
-  'Personas',
-  'User needs',
-  'Requirements',
-  'NFRs & constraints',
-  'Hazards',
-  'Verification stubs',
-  'Review & commit',
-];
+// persona, requirement -> need) are by id, never by array index. The steps
+// are data in guidedWizard/steps.ts, and the saved answers are typed and
+// written by guidedWizard/wizardAnswers.ts.
 
 const helpText: React.CSSProperties = { fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 };
 
@@ -160,26 +140,22 @@ export const GuidedWizard: React.FC = () => {
   const projectEditsOn = useFeature(ASSISTANT_EDITS_FEATURE);
 
   const hydrateFromAnswers = useCallback((answers: Record<string, any>) => {
-    const s1 = answers.step_1 || {};
-    setVision(s1.vision || '');
-    setProblem(s1.problem_statement || '');
-    setTargetUsers(s1.target_users || '');
-    // Normalize to id-based entries; sessions saved before stable ids existed
-    // (index-based persona_index/need_index references) are migrated here.
-    const norm = normalizeWizardAnswers(answers);
-    setPersonas(norm.personas);
-    setNeeds(norm.needs);
-    setRequirements(norm.requirements);
-    setNfrs(norm.nfrs);
-    setHazards(norm.hazards);
-    const applied: Record<string, boolean> = {};
-    norm.appliedSuggestionKeys.forEach((k) => {
-      applied[k] = true;
-    });
-    setAppliedSuggestions(applied);
-    setStubSelected((answers.step_7?.selected as Record<string, boolean>) || {});
-    setStubCreated((answers.step_7?.created as Record<string, string>) || {});
-    setSectionIds((answers.section_ids as Record<string, string>) || {});
+    // Entries are normalized to id-based ones; sessions saved before stable
+    // ids existed (index-based persona_index/need_index references) are
+    // migrated here.
+    const read = readWizardAnswers(answers);
+    setVision(read.vision);
+    setProblem(read.problem);
+    setTargetUsers(read.targetUsers);
+    setPersonas(read.entries.personas);
+    setNeeds(read.entries.needs);
+    setRequirements(read.entries.requirements);
+    setNfrs(read.entries.nfrs);
+    setHazards(read.entries.hazards);
+    setAppliedSuggestions(read.applied);
+    setStubSelected(read.stubs.selected);
+    setStubCreated(read.stubs.created);
+    setSectionIds(read.sectionIds);
   }, []);
 
   useEffect(() => {
@@ -196,7 +172,7 @@ export const GuidedWizard: React.FC = () => {
         setLatestCommitted(sessions.find((s) => s.status === 'committed') || null);
         if (active) {
           setSession(active);
-          const current = Math.min(Math.max(active.current_step || 1, 1), 8);
+          const current = Math.min(Math.max(active.current_step || 1, 1), REVIEW_STEP);
           setStep(current);
           setMaxReached(current);
           hydrateFromAnswers(active.answers || {});
@@ -249,21 +225,7 @@ export const GuidedWizard: React.FC = () => {
     setBusy(true);
     try {
       const res = await guidedAPI.start(projectId);
-      // Seed with the id-normalized form of the committed answers, so old
-      // index-based sessions are migrated once, at reopen time. Applied
-      // copilot suggestion keys refer to the old session's transcript, so
-      // they are reset for the new one.
-      const norm = normalizeWizardAnswers(from.answers || {});
-      const seededAnswers: Record<string, any> = {
-        ...(from.answers || {}),
-        step_2: { personas: norm.personas },
-        step_3: { needs: norm.needs },
-        step_4: { requirements: norm.requirements },
-        step_5: { nfrs: norm.nfrs },
-        step_6: { hazards: norm.hazards },
-        copilot_applied: [],
-      };
-      const seeded = await guidedAPI.saveStep(res.data.id, 1, seededAnswers);
+      const seeded = await guidedAPI.saveStep(res.data.id, 1, seedReopenedAnswers(from.answers || {}));
       setSession(seeded.data);
       hydrateFromAnswers(seeded.data.answers || {});
       setStep(1);
@@ -276,8 +238,8 @@ export const GuidedWizard: React.FC = () => {
     }
   };
 
-  const buildAnswers = (): Record<string, any> =>
-    buildAnswersFrom(
+  const buildAnswers = (): WizardAnswers =>
+    serializeWizardAnswers(
       {
         vision,
         problem,
@@ -292,8 +254,7 @@ export const GuidedWizard: React.FC = () => {
       },
       appliedSuggestions,
       session,
-      stubSelected,
-      stubCreated
+      { selected: stubSelected, created: stubCreated }
     );
 
   // Apply a batch of suggestions in order against one working copy, then
@@ -376,7 +337,7 @@ export const GuidedWizard: React.FC = () => {
     if (newlyApplied) {
       setAppliedSuggestions(nextApplied);
       if (session) {
-        const answers = buildAnswersFrom(d, nextApplied, session, stubSelected, stubCreated);
+        const answers = serializeWizardAnswers(d, nextApplied, session, { selected: stubSelected, created: stubCreated });
         // Keep the session's saved step: don't regress current_step when a
         // suggestion is applied while revisiting an earlier step.
         const stepToSave = Math.max(session.current_step || 0, step) || 1;
@@ -391,7 +352,7 @@ export const GuidedWizard: React.FC = () => {
     return results;
   };
 
-  const persist = async (nextStep: number, answersOverride?: Record<string, any>) => {
+  const persist = async (nextStep: number, answersOverride?: WizardAnswers) => {
     if (!session) return;
     const answers = answersOverride || buildAnswers();
     // Never regress the session's saved step: clicking Next while revisiting
@@ -416,7 +377,7 @@ export const GuidedWizard: React.FC = () => {
   }, [projectId]);
 
   useEffect(() => {
-    if (step === 8 && session) loadDrafts();
+    if (step === REVIEW_STEP && session) loadDrafts();
   }, [step, session, loadDrafts]);
 
   // -------------------------------------------------------------------------
@@ -459,6 +420,33 @@ export const GuidedWizard: React.FC = () => {
     return map;
   };
 
+  // Next on an entry step (2 to 6): materialise each entry that has no
+  // artifact yet under its section, then save the step's entries and their
+  // ids over the answers. The headings come first, one call each, then the
+  // drafts in one call.
+  const saveEntryStep = async <E extends { artifact_id?: string }>(
+    d: EntryStep<E>,
+    entries: E[],
+    setEntries: (next: E[]) => void
+  ) => {
+    if (!session) return;
+    const updated = entries.slice();
+    const plan = planEntryDrafts(d, updated, { personas, needs });
+    let sections = sectionIds;
+    if (plan.drafts.length > 0) {
+      sections = await ensureSections(Array.from(new Set(plan.sectionKeys)));
+      plan.drafts.forEach((draft, j) => (draft.parent_id = sections[plan.sectionKeys[j]]));
+      const res = await guidedAPI.materializeDrafts(session.id, plan.drafts);
+      (res.data.artifact_ids || []).forEach((id, j) => {
+        const i = plan.entryIndex[j];
+        if (i !== undefined) updated[i] = { ...updated[i], artifact_id: id };
+      });
+      setEntries(updated);
+    }
+    await persist(d.step + 1, withEntryStepAnswers(buildAnswers(), d, updated, sections));
+    goTo(d.step + 1);
+  };
+
   const handleNext = async () => {
     if (!session || !projectId) return;
     setBusy(true);
@@ -466,10 +454,7 @@ export const GuidedWizard: React.FC = () => {
     // Nudge the copilot immediately — before the save round-trips — so its
     // thinking indicator appears the moment the user advances.
     if (step <= 7) {
-      chatRef.current?.nudge(
-        step + 1,
-        `saved step ${step} ("${STEP_LABELS[step - 1]}") and moved on to step ${step + 1} ("${STEP_LABELS[step]}")`
-      );
+      chatRef.current?.nudge(step + 1, nudgeEvent('saved', step));
     }
     try {
       if (step === 1) {
@@ -480,165 +465,17 @@ export const GuidedWizard: React.FC = () => {
         });
         await persist(2);
         goTo(2);
-      } else if (step === 2) {
-        const updated = personas.slice();
-        const newIdx: number[] = [];
-        const drafts: DraftSpec[] = [];
-        updated.forEach((p, i) => {
-          if (!p.artifact_id && p.name.trim()) {
-            newIdx.push(i);
-            drafts.push({
-              type: 'persona',
-              ...wizardPersonaText(p),
-            });
-          }
-        });
-        let sections = sectionIds;
-        if (drafts.length > 0) {
-          sections = await ensureSections(['personas']);
-          drafts.forEach((d) => (d.parent_id = sections.personas));
-          const res = await guidedAPI.materializeDrafts(session.id, drafts);
-          (res.data.artifact_ids || []).forEach((id, j) => {
-            if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
-          });
-          setPersonas(updated);
-        }
-        const answers = buildAnswers();
-        answers.section_ids = sections;
-        answers.step_2 = { personas: updated };
-        answers.step_2_ids = updated.map((p) => p.artifact_id).filter(Boolean);
-        await persist(3, answers);
-        goTo(3);
-      } else if (step === 3) {
-        const updated = needs.slice();
-        const newIdx: number[] = [];
-        const drafts: DraftSpec[] = [];
-        updated.forEach((n, i) => {
-          if (!n.artifact_id && n.capability.trim()) {
-            const persona = personas.find((p) => p.id === n.persona_id);
-            newIdx.push(i);
-            drafts.push({
-              type: 'user-need',
-              ...wizardNeedText(n, persona),
-              links: persona?.artifact_id ? [{ type: 'relates-to', to_id: persona.artifact_id }] : [],
-            });
-          }
-        });
-        let sections = sectionIds;
-        if (drafts.length > 0) {
-          sections = await ensureSections(['needs']);
-          drafts.forEach((d) => (d.parent_id = sections.needs));
-          const res = await guidedAPI.materializeDrafts(session.id, drafts);
-          (res.data.artifact_ids || []).forEach((id, j) => {
-            if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
-          });
-          setNeeds(updated);
-        }
-        const answers = buildAnswers();
-        answers.section_ids = sections;
-        answers.step_3 = { needs: updated };
-        answers.step_3_ids = updated.map((n) => n.artifact_id).filter(Boolean);
-        await persist(4, answers);
-        goTo(4);
-      } else if (step === 4) {
-        const updated = requirements.slice();
-        const newIdx: number[] = [];
-        const drafts: DraftSpec[] = [];
-        updated.forEach((r, i) => {
-          if (!r.artifact_id && r.text.trim()) {
-            const need = needs.find((nd) => nd.id === r.need_id);
-            newIdx.push(i);
-            drafts.push({
-              type: 'requirement',
-              ...wizardRequirementText(r),
-              attributes: { verification_method: r.verification_method },
-              links: need?.artifact_id ? [{ type: 'derives-from', to_id: need.artifact_id }] : [],
-            });
-          }
-        });
-        let sections = sectionIds;
-        if (drafts.length > 0) {
-          sections = await ensureSections(['requirements']);
-          drafts.forEach((d) => (d.parent_id = sections.requirements));
-          const res = await guidedAPI.materializeDrafts(session.id, drafts);
-          (res.data.artifact_ids || []).forEach((id, j) => {
-            if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
-          });
-          setRequirements(updated);
-        }
-        const answers = buildAnswers();
-        answers.section_ids = sections;
-        answers.step_4 = { requirements: updated };
-        answers.step_4_ids = updated.map((r) => r.artifact_id).filter(Boolean);
-        await persist(5, answers);
-        goTo(5);
-      } else if (step === 5) {
-        const updated = nfrs.slice();
-        const newIdx: number[] = [];
-        const drafts: DraftSpec[] = [];
-        // The category is the section the draft lands in, so it is no longer
-        // spelled into the title as well.
-        const draftSections: string[] = [];
-        updated.forEach((n, i) => {
-          if (!n.artifact_id && n.text.trim()) {
-            newIdx.push(i);
-            draftSections.push(subSectionKey('nfrs', n.category));
-            drafts.push({
-              type: 'requirement',
-              ...wizardNfrText(n),
-              attributes: { verification_method: n.verification_method, category: n.category },
-            });
-          }
-        });
-        let sections = sectionIds;
-        if (drafts.length > 0) {
-          sections = await ensureSections(Array.from(new Set(draftSections)));
-          drafts.forEach((d, j) => (d.parent_id = sections[draftSections[j]]));
-          const res = await guidedAPI.materializeDrafts(session.id, drafts);
-          (res.data.artifact_ids || []).forEach((id, j) => {
-            if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
-          });
-          setNfrs(updated);
-        }
-        const answers = buildAnswers();
-        answers.section_ids = sections;
-        answers.step_5 = { nfrs: updated };
-        answers.step_5_ids = updated.map((n) => n.artifact_id).filter(Boolean);
-        await persist(6, answers);
-        goTo(6);
-      } else if (step === 6) {
-        const updated = hazards.slice();
-        const newIdx: number[] = [];
-        const drafts: DraftSpec[] = [];
-        const draftCategories: string[] = [];
-        updated.forEach((h, i) => {
-          if (!h.artifact_id && h.hazard.trim()) {
-            newIdx.push(i);
-            draftCategories.push(h.category);
-            drafts.push({
-              type: 'hazard',
-              ...wizardHazardText(h),
-              attributes: { severity: h.severity, category: h.category },
-            });
-          }
-        });
-        let sections = sectionIds;
-        if (drafts.length > 0) {
-          const keys = draftCategories.map((c) => subSectionKey('hazards', c));
-          sections = await ensureSections(Array.from(new Set(keys)));
-          drafts.forEach((d, j) => (d.parent_id = sections[keys[j]]));
-          const res = await guidedAPI.materializeDrafts(session.id, drafts);
-          (res.data.artifact_ids || []).forEach((id, j) => {
-            if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
-          });
-          setHazards(updated);
-        }
-        const answers = buildAnswers();
-        answers.section_ids = sections;
-        answers.step_6 = { hazards: updated };
-        await persist(7, answers);
-        goTo(7);
-      } else if (step === 7) {
+      } else if (step === PERSONA_STEP.step) {
+        await saveEntryStep(PERSONA_STEP, personas, setPersonas);
+      } else if (step === NEED_STEP.step) {
+        await saveEntryStep(NEED_STEP, needs, setNeeds);
+      } else if (step === REQUIREMENT_STEP.step) {
+        await saveEntryStep(REQUIREMENT_STEP, requirements, setRequirements);
+      } else if (step === NFR_STEP.step) {
+        await saveEntryStep(NFR_STEP, nfrs, setNfrs);
+      } else if (step === HAZARD_STEP.step) {
+        await saveEntryStep(HAZARD_STEP, hazards, setHazards);
+      } else if (step === STUB_STEP.step) {
         const candidates = testCandidates();
         const toCreate = candidates.filter(
           (c) => (stubSelected[c.id] ?? true) && !stubCreated[c.id]
@@ -653,8 +490,8 @@ export const GuidedWizard: React.FC = () => {
           );
           sections = await ensureSections(Array.from(new Set(keys)));
           const drafts: DraftSpec[] = toCreate.map((c, j) => ({
-            type: 'test-case',
-            ...wizardTestStubText(c),
+            type: STUB_STEP.artifactType,
+            ...STUB_STEP.template(c),
             parent_id: sections[keys[j]],
             links: [{ type: 'verifies', to_id: c.id }],
           }));
@@ -664,10 +501,7 @@ export const GuidedWizard: React.FC = () => {
           });
           setStubCreated(createdMap);
         }
-        const answers = buildAnswers();
-        answers.section_ids = sections;
-        answers.step_7 = { selected: stubSelected, created: createdMap };
-        await persist(8, answers);
+        await persist(8, withStubAnswers(buildAnswers(), sections, { selected: stubSelected, created: createdMap }));
         goTo(8);
       }
     } catch (err: any) {
@@ -681,10 +515,7 @@ export const GuidedWizard: React.FC = () => {
     if (!session) return;
     setBusy(true);
     setError('');
-    chatRef.current?.nudge(
-      step + 1,
-      `skipped step ${step} ("${STEP_LABELS[step - 1]}") and moved on to step ${step + 1} ("${STEP_LABELS[step]}")`
-    );
+    chatRef.current?.nudge(step + 1, nudgeEvent('skipped', step));
     try {
       await persist(step + 1);
       goTo(step + 1);
@@ -1357,7 +1188,7 @@ export const GuidedWizard: React.FC = () => {
                         className="button-secondary"
                         style={{ padding: '5px 10px', fontSize: 12 }}
                         onClick={() =>
-                          setHazards([...hazards, { id: newEntryId(), category: cat, hazard: '', harm: '', severity: 'moderate' }])
+                          setHazards([...hazards, { id: newEntryId(), category: cat, hazard: '', harm: '', severity: HAZARD_STEP.defaultSeverity }])
                         }
                       >
                         + Add {cat.toLowerCase()} hazard
@@ -1524,9 +1355,9 @@ export const GuidedWizard: React.FC = () => {
             onNext={handleNext}
             backDisabled={step === 1}
             busy={busy}
-            hideNav={step === 8}
+            hideNav={step === REVIEW_STEP}
             extraAction={
-              step === 6 || step === 7 ? (
+              isSkippable(step) ? (
                 <button className="button-secondary" onClick={handleSkip} disabled={busy}>
                   Skip
                 </button>
