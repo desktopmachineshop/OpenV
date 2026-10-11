@@ -839,6 +839,7 @@ refactor never runs it.
 
 ```
 node frontend/scripts/scaffold.mjs [-n] [--root <frontend dir>] api-module <area>
+node frontend/scripts/scaffold.mjs [-n] [--root <frontend dir>] page <name>
 ```
 
 The frontend half of `scaffold`, with the same names and refusals:
@@ -849,9 +850,15 @@ for the same name, and `src/api/types/<area>.ts`, and appends one
 existing ones (`frontend/src/api/README.md`). The module is named in lower
 camel case (`work-items` gives `workItems.ts` and `workItemsAPI`). A name
 another module of `src/api` exports is refused, since the barrel would
-export it twice. Step X17 adds `page`. Its test scaffolds into a copy of
-`src/` and type-checks `client.ts` and everything it reaches with the
-repo's TypeScript.
+export it twice. `page` writes a stub view in `src/views/<Name>.tsx`, a
+`lazy()` constant and a `<Route>` (the last child of the project's route) in
+`App.tsx`, and a `src/pages.ts` entry (project scope, lazy, not public, no
+help topic), and refuses a view file, route path or entry that exists or a
+name `App.tsx` already binds. It adds no menu entry. The tests scaffold
+into a copy of `src/` and type-check the result with the repo's TypeScript:
+`client.ts` and everything it reaches for `api-module`, `App.tsx` for
+`page`, whose output is also run through `src/arch/pagesParity.test.ts` in
+the copy.
 
 ## make check and make check-fast
 

@@ -15,7 +15,7 @@ step's scope, guard or verification class.
 | 0 Safety net | Done. S16 is just in time: S16a, b, c, i, j and k are merged; S16d–S16h wait for F8. |
 | 1 Same-package moves | Done (M1–M15, F1–F7, N1–N3, D1). F8 is rolling. |
 | 2 Leaf packages | Done (P1–P4; P5 dropped). |
-| 3 One mechanism each | X2–X9, X12 and X15 done. X1 done. X10, X11, X13, X14 and X16 part done. X17, X18 and D2 not started. X19 dropped. |
+| 3 One mechanism each | X2–X9, X12 and X15 done. X1 done. X10, X11, X13, X14 and X16 part done. X17 done. X18 and D2 not started. X19 dropped. |
 | 4 | Dropped. |
 
 What is left, measured on `master`:
@@ -28,9 +28,9 @@ What is left, measured on `master`:
 | **X1** | Response and decode helpers, and the `scripts/refactor/httpio` codemod | Done (#584–#594); ratchets `raw_json_encodes` 0, `invalid_request_body_literals` 1 |
 | **X13** | Persistence kit, then columns const and scanner per repository | X13a done (#595 and #596): `pgkit.go`, `nulls.go` and the artifact repository; 19 repositories left without a columns const, and 20 hand-rolled transactions to move onto `withTx` |
 | **X16a, X16b** | ModuleView hooks | Prep merged (#528); X16a done (#597); `ModuleView.tsx` is 1,456 lines, target a shell of 400 or fewer; X16b left |
-| **X17** | Page registry `src/pages.ts` | Not started |
+| **X17** | Page registry `src/pages.ts` | Done: the characterization (#599), the registry with `navSections` derived (#600), and the `scaffold page` template with its docs |
 | **X18a–X18c** | Wizard descriptors and typed answers | Not started; `GuidedWizard.tsx` is 1,635 lines, target 400 or fewer |
-| **D2** | `docs/architecture.md` after Phase 3 | Waits for X13, X15 (done) and X17 |
+| **D2** | `docs/architecture.md` after Phase 3 | Waits for X13 (X15 and X17 done) |
 
 Open items from the tracking issue (#379) that are not plan steps:
 

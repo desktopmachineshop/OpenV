@@ -32,10 +32,11 @@ Every area has files here, matched by these `docs/areas.json` globs
 |---|---|
 | `index.tsx`, `App.tsx` | the entry with the eager stylesheet imports in order; the hand-written `<Route>` table (K13), each view eager or `lazy()` |
 | `index.css`, `theme.css`, `theme.ts`, `appShortcuts.ts` | global styles, the theme and its storage key, keyboard shortcuts |
+| `pages.ts` | the page registry (X17): one entry per routed page (path, eager or lazy, public, help topic, menu position); `navSections` is derived from it |
 | `features.ts`, `sseEvents.ts` | the feature gates with no module of their own to sit beside; the SSE event names, held to `generated/contract.ts` |
 | `views/*.tsx` | the pages; a split view keeps its path and export, with its panes in `views/moduleView/` or `views/projectSettings/` |
 | `components/**` | shared components; `components/ui/**` is the UI kit, and `components/agents/`, `components/crews/`, `components/kanban/`, `components/org/` and `components/wizard/` hold one feature each |
-| `components/ProjectLayout.tsx`, `components/navSections.ts`, `components/helpTopics.ts` | the project shell: its `navSections` list, the menu state, the help topic per path |
+| `components/ProjectLayout.tsx`, `components/navSections.ts`, `components/helpTopics.ts` | the project shell: the menu (its list is `navSections` from `pages.ts`), the menu state, the help topic per path |
 | `hooks/**`, `state/**`, `utils/**`, `config/**` | `useFeature` and other hooks, the store and the active-workspace storage, helpers, the link-rule UI config |
 | `landing/**`, `site/**`, `manual/**`, `push/**` | the front page, the public site, the user manual's chapters, web push |
 | `test/mockApi.ts` | `mockApi`: stubs every method of `api/client` for a `vi.mock` (F2) |
@@ -67,16 +68,23 @@ Every area has files here, matched by these `docs/areas.json` globs
 **Add a page.**
 1. The view in `views/`, then its `<Route>` in `App.tsx`, through `lazy()`
    unless it must be eager.
-2. Keep the parallel lists in step by hand: for a project page, its
-   `navSections` entry in `components/ProjectLayout.tsx`; the topic in
-   `components/helpTopics.ts`; a chapter in `manual/index.ts` if it has
-   one; `utils/publicPaths.ts` if it needs no session; and its screen in
-   `e2e/tools/phone-audit.js`.
-3. Claim its file in `docs/areas.json` if no glob does, then regenerate the
+2. Its entry in `pages.ts`, which records the route (path, eager or lazy,
+   public) and the page's help topic or why it has none. For a page the
+   project menu lists, give the entry a `nav` (group, label) in the position
+   the menu should show it: the menu is derived from `PAGES`, so
+   `ProjectLayout.tsx` is not edited. `projectPath()` builds the page's URL.
+3. Keep the lists the registry does not generate in step by hand; the parity
+   test fails if they disagree: the topic in `components/helpTopics.ts`
+   (the entry's `help: { topic }`); `utils/publicPaths.ts` if it needs no
+   session (the entry's `public`). A chapter in `manual/index.ts` if it has
+   one, and its screen in `e2e/tools/phone-audit.js`.
+4. Claim its file in `docs/areas.json` if no glob does, then regenerate the
    route tree and the bundle shape:
    `cd frontend && npx vitest run src/arch -u` and
    `cd frontend && npm run build && UPDATE_BUNDLE_SHAPE=1 node scripts/bundle-check.mjs`.
-Scaffold: `node frontend/scripts/scaffold.mjs page <name>` (X17, in N3's tool)
+Scaffold: `node frontend/scripts/scaffold.mjs [-n] page <name>` writes the
+stub view, the lazy `<Route>` and the `pages.ts` entry (no menu entry and no
+help topic; steps 2 and 3 above), and prints what is left.
 
 **Add an API call.** In `api/`; see `api/README.md`.
 
@@ -99,6 +107,10 @@ Each line: the guard, what it pins, and the command that runs it.
 - **S12** `arch/routeTree.test.ts`, `arch/publicAccess.test.ts`,
   `arch/deepLinks.test.ts`, `arch/inventories.test.ts`: the route tree, public
   paths, backend deep links, storage keys and query params (I19, I22).
+- **X17** `arch/pagesParity.test.ts`: `pages.ts` against the routes of
+  `App.tsx` (both ways, and each entry's URL matching its route), eager or
+  lazy per entry, `isPublicPath`, `helpTopicForPath`, and `navSections`
+  against the list it replaced (I19, I21).
 - **S12** `arch/clientRoutes.test.ts`, `arch/clientSurface.test.ts`,
   `arch/interceptors.test.ts`: every call a server route, the barrel's
   export surface, the axios interceptors (I22, I23).
