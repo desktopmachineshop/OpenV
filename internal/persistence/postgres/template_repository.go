@@ -16,6 +16,30 @@ func NewTemplateRepository(db *sql.DB) *TemplateRepository {
 	return &TemplateRepository{db: db}
 }
 
+// templateColumns is the list GetByID and GetByKey select, in the order
+// scanTemplate reads it (refactor plan X13). List selects one without the
+// snapshot and Create writes one with a bare org_id, so each stays its own
+// literal.
+const templateColumns = `id, COALESCE(org_id::text, ''), template_key, name, description, snapshot, is_default, created_at`
+
+// scanTemplate scans one row of templateColumns.
+func scanTemplate(row rowScanner) (*templates.Template, error) {
+	item := &templates.Template{}
+	if err := row.Scan(
+		&item.ID,
+		&item.OrgID,
+		&item.Key,
+		&item.Name,
+		&item.Description,
+		&item.Snapshot,
+		&item.IsDefault,
+		&item.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
 // Create inserts a new template. An empty OrgID stores NULL (global built-in).
 func (r *TemplateRepository) Create(template *templates.Template) error {
 	query := `
@@ -78,22 +102,13 @@ func (r *TemplateRepository) List(orgID string) ([]*templates.Template, error) {
 // GetByID returns a template by ID.
 func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 	query := `
-		SELECT id, COALESCE(org_id::text, ''), template_key, name, description, snapshot, is_default, created_at
+		SELECT ` + templateColumns + `
 		FROM templates
 		WHERE id = $1
 	`
 
-	item := &templates.Template{}
-	if err := r.db.QueryRow(query, id).Scan(
-		&item.ID,
-		&item.OrgID,
-		&item.Key,
-		&item.Name,
-		&item.Description,
-		&item.Snapshot,
-		&item.IsDefault,
-		&item.CreatedAt,
-	); err != nil {
+	item, err := scanTemplate(r.db.QueryRow(query, id))
+	if err != nil {
 		if noRow(err) {
 			return nil, templates.ErrNotFound
 		}
@@ -106,22 +121,13 @@ func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 // GetByKey returns a template by key.
 func (r *TemplateRepository) GetByKey(key string) (*templates.Template, error) {
 	query := `
-		SELECT id, COALESCE(org_id::text, ''), template_key, name, description, snapshot, is_default, created_at
+		SELECT ` + templateColumns + `
 		FROM templates
 		WHERE template_key = $1
 	`
 
-	item := &templates.Template{}
-	if err := r.db.QueryRow(query, key).Scan(
-		&item.ID,
-		&item.OrgID,
-		&item.Key,
-		&item.Name,
-		&item.Description,
-		&item.Snapshot,
-		&item.IsDefault,
-		&item.CreatedAt,
-	); err != nil {
+	item, err := scanTemplate(r.db.QueryRow(query, key))
+	if err != nil {
 		if noRow(err) {
 			return nil, templates.ErrNotFound
 		}
