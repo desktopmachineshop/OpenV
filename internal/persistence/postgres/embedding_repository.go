@@ -24,6 +24,12 @@ type EmbeddingRepository struct {
 	db *sql.DB
 }
 
+// embeddingColumns is the list GetByArtifact reads, in the order scanEmbedding
+// reads it (refactor plan X13): the embedding's metadata, not its vector. Upsert
+// writes its own list, and the two searches read their own, joined to the
+// artifact, so they keep theirs.
+const embeddingColumns = `artifact_id, artifact_version, model, content_hash`
+
 // NewEmbeddingRepository creates a new embedding repository.
 func NewEmbeddingRepository(db *sql.DB) *EmbeddingRepository {
 	return &EmbeddingRepository{db: db}
@@ -95,12 +101,12 @@ func (r *EmbeddingRepository) GetByArtifact(artifactID string) (*embeddings.Embe
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
-	e := &embeddings.Embedding{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT artifact_id, artifact_version, model, content_hash
+	row := r.db.QueryRowContext(ctx, `
+		SELECT `+embeddingColumns+`
 		FROM artifact_embeddings
 		WHERE artifact_id = $1
-	`, artifactID).Scan(&e.ArtifactID, &e.ArtifactVersion, &e.Model, &e.ContentHash)
+	`, artifactID)
+	e, err := scanEmbedding(row)
 	if noRow(err) {
 		return nil, nil
 	}
@@ -108,6 +114,30 @@ func (r *EmbeddingRepository) GetByArtifact(artifactID string) (*embeddings.Embe
 		return nil, err
 	}
 	return e, nil
+}
+
+// scanEmbedding scans one row of embeddingColumns.
+func scanEmbedding(row rowScanner) (*embeddings.Embedding, error) {
+	e := &embeddings.Embedding{}
+	if err := row.Scan(&e.ArtifactID, &e.ArtifactVersion, &e.Model, &e.ContentHash); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+// scanNearestHit scans one row of NearestByEmbedding's select list.
+func scanNearestHit(row rowScanner) (embeddings.NearestHit, error) {
+	var h embeddings.NearestHit
+	err := row.Scan(&h.ArtifactID, &h.ProjectID, &h.Type, &h.Title, &h.Body, &h.Distance)
+	return h, err
+}
+
+// scanDuplicatePair scans one row of DuplicateCandidates' select list.
+func scanDuplicatePair(row rowScanner) (embeddings.DuplicatePair, error) {
+	var p embeddings.DuplicatePair
+	err := row.Scan(&p.ArtifactID, &p.ArtifactTitle, &p.ArtifactType,
+		&p.OtherID, &p.OtherTitle, &p.OtherType, &p.Distance)
+	return p, err
 }
 
 // NearestByEmbedding runs the cosine-distance kNN query behind semantic search
@@ -150,8 +180,8 @@ func (r *EmbeddingRepository) NearestByEmbedding(projectIDs []string, query []fl
 
 	hits := []embeddings.NearestHit{}
 	for rows.Next() {
-		var h embeddings.NearestHit
-		if err := rows.Scan(&h.ArtifactID, &h.ProjectID, &h.Type, &h.Title, &h.Body, &h.Distance); err != nil {
+		h, err := scanNearestHit(rows)
+		if err != nil {
 			return nil, err
 		}
 		hits = append(hits, h)
@@ -217,9 +247,8 @@ func (r *EmbeddingRepository) DuplicateCandidates(projectID string, maxDistance 
 	seen := map[string]bool{}
 	pairs := []embeddings.DuplicatePair{}
 	for rows.Next() {
-		var p embeddings.DuplicatePair
-		if err := rows.Scan(&p.ArtifactID, &p.ArtifactTitle, &p.ArtifactType,
-			&p.OtherID, &p.OtherTitle, &p.OtherType, &p.Distance); err != nil {
+		p, err := scanDuplicatePair(rows)
+		if err != nil {
 			return nil, err
 		}
 		// Collapse symmetric pairs on the unordered {id,otherID} key. Rows are
