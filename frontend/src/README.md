@@ -18,7 +18,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 | verification | `components/EvidencePicker*`, `utils/evidence*`, `views/EvidenceView*`, `views/ImpactView*`, `views/TestRunView*`, `views/TraceabilityMatrix*`, `views/VVDashboard*`, `views/testRunCitations*`, `views/vvGapLabels*` |
 | documents | `components/Attachment*`, `components/DownloadWizard*`, `components/Image*`, `components/StlPreview*`, `components/attachment*`, `utils/baselines*`, `utils/downloadSelection*`, `views/BaselineCompare*` |
 | tenancy-identity | `components/Avatar*`, `components/CreateOrgModal*`, `components/OrgSwitcher*`, `components/User*`, `components/org/OrgLimits*`, `components/org/OrgMembers*`, `components/org/OrgTeams*`, `components/org/OrgUsage*`, `utils/activeOrg*`, `views/Login*`, `views/OrgSettings*`, `views/ResetPassword*`, `views/VerifyEmail*` |
-| agent-suite | `components/ChatMarkdown*`, `components/agents/**`, `components/crews/**`, `components/org/OrgProviders*`, `components/wizard/**`, `views/Agent*`, `views/AutomationsPage*`, `views/CrewBuilder*`, `views/GuidedWizard*`, `views/Interview*`, `views/WorkspaceRuns*` |
+| agent-suite | `components/ChatMarkdown*`, `components/agents/**`, `components/crews/**`, `components/org/OrgProviders*`, `components/wizard/**`, `views/Agent*`, `views/AutomationsPage*`, `views/CrewBuilder*`, `views/GuidedWizard*`, `views/guidedWizard/**`, `views/Interview*`, `views/WorkspaceRuns*` |
 | runner-fleet | `components/RunnerConnectPrompt*`, `components/org/*Runner*`, `components/org/WorkerKeys*` |
 | events-notifications | `components/NotificationBell*`, `push/**`, `views/ActivityLog*` |
 | community | `components/SharedProductVotes*`, `utils/randomProduct*`, `views/SharedProjectView*` |
@@ -34,7 +34,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 | `index.css`, `theme.css`, `theme.ts`, `appShortcuts.ts` | global styles, the theme and its storage key, keyboard shortcuts |
 | `pages.ts` | the page registry (X17): one entry per routed page (path, eager or lazy, public, help topic, menu position); `navSections` is derived from it |
 | `features.ts`, `sseEvents.ts` | the feature gates with no module of their own to sit beside; the SSE event names, held to `generated/contract.ts` |
-| `views/*.tsx` | the pages; a split view keeps its path and export, with its panes in `views/moduleView/` or `views/projectSettings/` |
+| `views/*.tsx` | the pages; a split view keeps its path and export, with its panes in `views/moduleView/`, `views/projectSettings/` or `views/guidedWizard/` |
 | `components/**` | shared components; `components/ui/**` is the UI kit, and `components/agents/`, `components/crews/`, `components/kanban/`, `components/org/` and `components/wizard/` hold one feature each |
 | `components/ProjectLayout.tsx`, `components/navSections.ts`, `components/helpTopics.ts` | the project shell: the menu (its list is `navSections` from `pages.ts`), the menu state, the help topic per path |
 | `hooks/**`, `state/**`, `utils/**`, `config/**` | `useFeature` and other hooks, the store and the active-workspace storage, helpers, the link-rule UI config |

@@ -346,6 +346,7 @@
         "frontend/src/views/AutomationsPage*",
         "frontend/src/views/CrewBuilder*",
         "frontend/src/views/GuidedWizard*",
+        "frontend/src/views/guidedWizard/**",
         "frontend/src/views/Interview*",
         "frontend/src/views/WorkspaceRuns*",
         "internal/api/agent_*.go",
