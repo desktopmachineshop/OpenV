@@ -11,6 +11,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
+// The columns the work item repository reads whole, in the order its scan
+// functions read them (refactor plan X13). Save, Update and Delete keep their
+// own statements.
+const (
+	workItemColumns = `id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at`
+	activityColumns = `id, work_item_id, kind, actor, content, payload, created_at`
+)
+
 // WorkItemRepository implements the workitems.Repository interface.
 // The board column lives in the board_column SQL column.
 type WorkItemRepository struct {
@@ -95,12 +103,12 @@ func (r *WorkItemRepository) Update(item *workitems.WorkItem) error {
 	return err
 }
 
-// scanWorkItem scans a single work item row
-func scanWorkItem(scan func(dest ...interface{}) error) (*workitems.WorkItem, error) {
+// scanWorkItem scans one row of workItemColumns
+func scanWorkItem(row rowScanner) (*workitems.WorkItem, error) {
 	item := &workitems.WorkItem{}
 	var artifactIDsJSON []byte
 
-	err := scan(
+	err := row.Scan(
 		&item.ID,
 		&item.ProjectID,
 		&item.Title,
@@ -149,13 +157,13 @@ func scanArtifactIDs(itemID string, data []byte) []string {
 // FindByID retrieves a work item by ID
 func (r *WorkItemRepository) FindByID(id string) (*workitems.WorkItem, error) {
 	query := `
-		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
+		SELECT ` + workItemColumns + `
 		FROM work_items
 		WHERE id = $1
 	`
 
 	row := r.db.QueryRow(query, id)
-	item, err := scanWorkItem(row.Scan)
+	item, err := scanWorkItem(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, workitems.ErrNotFound
@@ -171,7 +179,7 @@ func (r *WorkItemRepository) FindByID(id string) (*workitems.WorkItem, error) {
 // then sort_order, then created_at.
 func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkItem, error) {
 	query := `
-		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
+		SELECT ` + workItemColumns + `
 		FROM work_items
 		WHERE project_id = $1
 		ORDER BY array_position($2::text[], board_column::text) ASC, sort_order ASC, created_at ASC
@@ -188,7 +196,7 @@ func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkI
 
 	var items []*workitems.WorkItem
 	for rows.Next() {
-		item, err := scanWorkItem(rows.Scan)
+		item, err := scanWorkItem(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +218,7 @@ func (r *WorkItemRepository) ListBySourceChatterIDs(chatterIDs []string) ([]*wor
 	}
 
 	query := `
-		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
+		SELECT ` + workItemColumns + `
 		FROM work_items
 		WHERE source_chatter_id = ANY($1)
 		ORDER BY created_at ASC, id ASC
@@ -224,7 +232,7 @@ func (r *WorkItemRepository) ListBySourceChatterIDs(chatterIDs []string) ([]*wor
 
 	var items []*workitems.WorkItem
 	for rows.Next() {
-		item, err := scanWorkItem(rows.Scan)
+		item, err := scanWorkItem(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +261,7 @@ func (r *WorkItemRepository) SaveActivity(a *workitems.Activity) error {
 	}
 
 	query := `
-		INSERT INTO work_item_activity (id, work_item_id, kind, actor, content, payload, created_at)
+		INSERT INTO work_item_activity (` + activityColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
@@ -271,10 +279,38 @@ func (r *WorkItemRepository) SaveActivity(a *workitems.Activity) error {
 	return err
 }
 
+// scanActivity scans one row of activityColumns
+func scanActivity(row rowScanner) (*workitems.Activity, error) {
+	activity := new(workitems.Activity)
+	var payloadJSON []byte
+
+	err := row.Scan(
+		&activity.ID,
+		&activity.WorkItemID,
+		&activity.Kind,
+		&activity.Actor,
+		&activity.Content,
+		&payloadJSON,
+		&activity.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	activity.Payload = map[string]interface{}{}
+	if len(payloadJSON) > 0 {
+		if err := json.Unmarshal(payloadJSON, &activity.Payload); err != nil {
+			return nil, err
+		}
+	}
+
+	return activity, nil
+}
+
 // ListActivity retrieves the activity feed for a work item, oldest first
 func (r *WorkItemRepository) ListActivity(workItemID string) ([]*workitems.Activity, error) {
 	query := `
-		SELECT id, work_item_id, kind, actor, content, payload, created_at
+		SELECT ` + activityColumns + `
 		FROM work_item_activity
 		WHERE work_item_id = $1
 		ORDER BY created_at ASC
@@ -291,27 +327,9 @@ func (r *WorkItemRepository) ListActivity(workItemID string) ([]*workitems.Activ
 
 	var activities []*workitems.Activity
 	for rows.Next() {
-		activity := new(workitems.Activity)
-		var payloadJSON []byte
-
-		err := rows.Scan(
-			&activity.ID,
-			&activity.WorkItemID,
-			&activity.Kind,
-			&activity.Actor,
-			&activity.Content,
-			&payloadJSON,
-			&activity.CreatedAt,
-		)
+		activity, err := scanActivity(rows)
 		if err != nil {
 			return nil, err
-		}
-
-		activity.Payload = map[string]interface{}{}
-		if len(payloadJSON) > 0 {
-			if err := json.Unmarshal(payloadJSON, &activity.Payload); err != nil {
-				return nil, err
-			}
 		}
 
 		activities = append(activities, activity)
