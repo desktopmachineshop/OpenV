@@ -16,12 +16,31 @@ func NewRepoConnectionRepository(db *sql.DB) *RepoConnectionRepository {
 	return &RepoConnectionRepository{db: db}
 }
 
+// repoConnectionColumns is the list both reads select and Save writes, in the
+// order scanRepoConnection reads it (refactor plan X13). It runs over two lines,
+// the second indented as the statements around it are, so each statement
+// assembled from it is the literal it replaced, byte for byte.
+const repoConnectionColumns = `id, project_id, name, remote_url, default_branch,
+			credential_strategy, created_at, updated_at`
+
+// scanRepoConnection scans one row of repoConnectionColumns.
+func scanRepoConnection(row rowScanner) (*repoconns.RepoConnection, error) {
+	c := new(repoconns.RepoConnection)
+	err := row.Scan(
+		&c.ID, &c.ProjectID, &c.Name, &c.RemoteURL, &c.DefaultBranch,
+		&c.CredentialStrategy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 // Save inserts a new repo connection.
 func (r *RepoConnectionRepository) Save(c *repoconns.RepoConnection) error {
 	_, err := r.db.Exec(`
 		INSERT INTO repo_connections (
-			id, project_id, name, remote_url, default_branch,
-			credential_strategy, created_at, updated_at
+			`+repoConnectionColumns+`
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`,
@@ -48,17 +67,12 @@ func (r *RepoConnectionRepository) Update(c *repoconns.RepoConnection) error {
 // FindByID retrieves a repo connection, returning (nil, nil) when absent.
 func (r *RepoConnectionRepository) FindByID(id string) (*repoconns.RepoConnection, error) {
 	row := r.db.QueryRow(`
-		SELECT id, project_id, name, remote_url, default_branch,
-			credential_strategy, created_at, updated_at
+		SELECT `+repoConnectionColumns+`
 		FROM repo_connections
 		WHERE id = $1
 	`, id)
 
-	c := new(repoconns.RepoConnection)
-	err := row.Scan(
-		&c.ID, &c.ProjectID, &c.Name, &c.RemoteURL, &c.DefaultBranch,
-		&c.CredentialStrategy, &c.CreatedAt, &c.UpdatedAt,
-	)
+	c, err := scanRepoConnection(row)
 	if noRow(err) {
 		return nil, nil
 	}
@@ -71,8 +85,7 @@ func (r *RepoConnectionRepository) FindByID(id string) (*repoconns.RepoConnectio
 // ListByProject returns a project's repo connections.
 func (r *RepoConnectionRepository) ListByProject(projectID string) ([]*repoconns.RepoConnection, error) {
 	rows, err := r.db.Query(`
-		SELECT id, project_id, name, remote_url, default_branch,
-			credential_strategy, created_at, updated_at
+		SELECT `+repoConnectionColumns+`
 		FROM repo_connections
 		WHERE project_id = $1
 		ORDER BY created_at
@@ -87,11 +100,7 @@ func (r *RepoConnectionRepository) ListByProject(projectID string) ([]*repoconns
 
 	var result []*repoconns.RepoConnection
 	for rows.Next() {
-		c := new(repoconns.RepoConnection)
-		err := rows.Scan(
-			&c.ID, &c.ProjectID, &c.Name, &c.RemoteURL, &c.DefaultBranch,
-			&c.CredentialStrategy, &c.CreatedAt, &c.UpdatedAt,
-		)
+		c, err := scanRepoConnection(rows)
 		if err != nil {
 			return nil, err
 		}

@@ -16,6 +16,11 @@ func NewMemberRepository(db *sql.DB) *MemberRepository {
 	return &MemberRepository{db: db}
 }
 
+// memberColumns is the list Find selects and Upsert writes (refactor plan
+// X13). ListByProject selects it qualified by the alias pm, ahead of the
+// account's columns.
+const memberColumns = `project_id, user_id, role, created_at`
+
 // Upsert inserts or updates a membership. A project no row has, or a
 // project id that is not a UUID, is members.ErrUnknownProject; an account no
 // row has, or an account id that is not a UUID, is members.ErrUnknownUser.
@@ -26,7 +31,7 @@ func (r *MemberRepository) Upsert(m *members.Member) error {
 		return members.ErrUnknownProject
 	}
 	_, err := r.db.Exec(`
-		INSERT INTO project_members (project_id, user_id, role, created_at)
+		INSERT INTO project_members (`+memberColumns+`)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role
 	`, m.ProjectID, m.UserID, m.Role, m.CreatedAt)
@@ -49,7 +54,7 @@ func (r *MemberRepository) Remove(projectID, userID string) error {
 func (r *MemberRepository) Find(projectID, userID string) (*members.Member, error) {
 	m := new(members.Member)
 	err := r.db.QueryRow(`
-		SELECT project_id, user_id, role, created_at
+		SELECT `+memberColumns+`
 		FROM project_members WHERE project_id = $1 AND user_id = $2
 	`, projectID, userID).Scan(&m.ProjectID, &m.UserID, &m.Role, &m.CreatedAt)
 	if noRow(err) {
@@ -68,7 +73,7 @@ func (r *MemberRepository) Find(projectID, userID string) (*members.Member, erro
 // (#379 bug 94).
 func (r *MemberRepository) ListByProject(projectID string) ([]*members.Member, error) {
 	rows, err := r.db.Query(`
-		SELECT pm.project_id, pm.user_id, pm.role, pm.created_at, u.name, u.email, u.avatar_url
+		SELECT `+prefixLinkColumns(memberColumns, "pm")+`, u.name, u.email, u.avatar_url
 		FROM project_members pm
 		JOIN users u ON u.id = pm.user_id
 		WHERE pm.project_id = $1
