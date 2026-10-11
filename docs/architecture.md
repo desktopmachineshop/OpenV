@@ -6,8 +6,24 @@ architecture tests see (`internal/archtest`, whose `ratchets.json` freezes
 every import edge); the areas are those of the area index,
 [`areas.json`](areas.json). Where this page and the code disagree, the code
 wins: the archtest, the route goldens and the boot goldens are what a pull
-request is held to. How the code is changing, and why, is the refactor plan,
-[`plans/codebase-refactor.md`](plans/codebase-refactor.md).
+request is held to. A test in `internal/archtest` keeps this page naming
+every package of the module. How the code is changing, and why, is the
+refactor plan, [`plans/codebase-refactor.md`](plans/codebase-refactor.md).
+
+Detail lives in the area guides, the READMEs beside the code, and this page
+links to them instead of repeating them:
+[`cmd/server`](../cmd/server/README.md),
+[`internal/api`](../internal/api/README.md),
+[`internal/persistence/postgres`](../internal/persistence/postgres/README.md),
+[`internal/domain`](../internal/domain/README.md),
+[`internal/runner`](../internal/runner/README.md), which covers
+`internal/mcp` too,
+[`internal/notify`](../internal/notify/README.md) with the other background
+services, [`internal/archtest`](../internal/archtest/README.md),
+[`internal/contract`](../internal/contract/README.md),
+[`frontend/src`](../frontend/src/README.md),
+[`frontend/src/api`](../frontend/src/api/README.md),
+[`e2e`](../e2e/README.md) and [`scripts`](../scripts/README.md).
 
 ## System at a glance
 
@@ -49,10 +65,14 @@ Every environment variable these read is in [env-vars.md](env-vars.md).
 
 ## Areas
 
-The area index gives every tracked file one of twelve areas, a slice of the
-product through every layer; `go run ./internal/tools/areas which <path>`
-answers for a path, and `internal/tools/areas` and
-`frontend/src/arch/areas.test.ts` keep the index complete.
+The area index, [`areas.json`](areas.json), gives every tracked file that is
+not a test file one of twelve areas, a slice of the product through every
+layer, and no file two. It also holds the glossary of the words the UI and
+the code use differently (workspace and org, crew and team, runner and
+worker). `go run ./internal/tools/areas which <path>` names the area of a
+path, or the one a new file would join; `internal/tools/areas` and
+`frontend/src/arch/areas.test.ts` keep the index complete and each glob
+live. A new file joins an area through a glob in `areas.json`.
 
 | Area | Holds |
 |---|---|
@@ -71,54 +91,175 @@ answers for a path, and `internal/tools/areas` and
 
 ## Backend packages
 
-76 packages: the five programs, the root package, 43 domain packages, the
-API, the persistence layer, 11 service packages, the runner and the MCP
-package, and the tools and guards
-(`internal/tools/*`, `internal/archtest`, `internal/vocabparity`), which
-ship nothing. Their production imports are 233 edges, every one listed in
-`internal/archtest/ratchets.json` (`import_edges`), so a new one is a
-decision made in review.
+`go list . ./cmd/... ./internal/...` names 85 packages: the root package,
+the five programs, 47 packages under `internal/domain`, the API, the
+persistence layer, the configuration (`internal/config`, `internal/envparse`),
+ten service packages, the runner and the MCP packages, the types-only leaf
+`internal/workerproto`, 11 refactor tools under `internal/tools`, and three
+that hold only tests (`internal/archtest`, `internal/contract`,
+`internal/vocabparity`). The 82 with production code import one another through
+264 production edges, every one listed in `internal/archtest/ratchets.json`
+(`import_edges`), so a new one is a decision made in review. Imports made by
+test files are not edges.
 
 ```mermaid
 flowchart TD
   server[cmd/server] --> api[internal/api]
+  server --> cfg[internal/config]
   server --> pg[internal/persistence/postgres]
-  server --> svc["services: events, notify, scheduler, automation,<br/>orchestration, billing, hosting, metrics, seeds, envparse"]
-  server --> dom["internal/domain/* (43)"]
+  server --> svc["services: events, notify, scheduler, automation,<br/>orchestration, billing, hosting, metrics, seeds"]
+  server --> dom["internal/domain/* (47)"]
   api --> dom
   api --> svc
+  api --> wp[internal/workerproto]
+  cfg --> svc
+  cfg --> dom
   pg --> dom
   svc --> dom
+  dom --> wp
   agentd[cmd/agentd] --> runner[internal/runner]
-  runner --> mcp[internal/mcp]
+  runner --> names[internal/mcp/toolnames]
+  runner --> wp
   runner --> dom
-  mcpbin[cmd/openv-mcp] --> mcp
+  mcpbin[cmd/openv-mcp] --> mcp[internal/mcp]
+  mcp --> names
   mcp --> dom
 ```
 
 The layering (K7), which `internal/archtest` enforces on every pull request:
 
-- a package under `internal/domain` imports only other domain packages
-  (and the types-only leaves, of which there are none yet), so no domain
-  rule depends on the API, the database code or the composition root;
+- a package under `internal/domain` imports only other domain packages and
+  the types-only leaves (`typesLeaves`: `internal/workerproto`, whose worker
+  wire bodies `agentruns` aliases), so no domain rule depends on the API, the
+  database code or the composition root;
+- a types-only leaf imports no package of the module;
 - `internal/persistence/postgres` imports only the domain;
 - `internal/api` never imports the persistence layer;
 - the client programs link as little of the domain as they can: `agentd`
-  links seven domain packages, `openv-mcp` one (`artifacts`), and the
-  connector and the VAPID tool none (`client_domain_deps`).
+  links seven domain packages (`agentruns`, `agents`, `events`, `providers`,
+  `repoconns`, `runnersessions`, `tokens`), `openv-mcp` one (`artifacts`),
+  and the connector and the VAPID tool none (`client_domain_deps`). The names
+  and bodies the clients share with the server live in two leaves,
+  `internal/workerproto` and `internal/mcp/toolnames`, so a client does not
+  link a domain package to read them.
 
 A domain package declares what it needs as an interface, a port, and
 `cmd/server` wires the implementation (as `artifacts` does with
-`LinkSuspector`, which `links` implements).
+`LinkSuspector`, which `links` implements). There are no layering exceptions
+and no domain package imports `reflect`.
 
 | Layer | Packages | Role |
 |---|---|---|
 | Composition root | `cmd/server` | builds everything, in a fixed order, and serves |
+| Configuration | `internal/config`, `internal/envparse` | the settings every stage reads, and the one rule for reading one |
 | API | `internal/api` | routes, middleware, authorization, request and response shapes |
 | Domain | `internal/domain/*` | entities, rules, `Service` and `Repository` interfaces, mostly a `DefaultService` each |
 | Persistence | `internal/persistence/postgres` | one repository per aggregate, the schema and its migrations |
-| Services | `internal/events` (the bus), `notify` (mail, push, announcements, the stable scheduler), `scheduler` (cron automations), `automation` (event triggers), `orchestration` (crew hooks), `billing` and `billing/stripe`, `hosting` (Docker provisioner), `metrics`, `seeds`, `envparse` (how a setting is read) | the work that is not a request |
-| Agent execution | `internal/runner`, `internal/mcp` | the runner's adapters, pool and worker client; the MCP tool table and its API client |
+| Services | `internal/events`, `internal/notify`, `internal/scheduler`, `internal/automation`, `internal/orchestration`, `internal/billing`, `internal/hosting`, `internal/metrics`, `internal/seeds` | the work that is not a request |
+| Agent execution | `internal/runner`, `internal/mcp`, `internal/workerproto` | the runner's adapters, pool and worker client; the MCP tool table and its API client; the worker wire |
+
+### Package inventory
+
+Every package under `internal/`, once. The domain packages are grouped by
+the area that owns them; the area guide of
+[`internal/domain`](../internal/domain/README.md) has their files.
+
+**Application and infrastructure**
+
+| Package | Holds |
+|---|---|
+| `internal/api` | the handlers, the single route table, middleware, authorization guards and the SSE hub |
+| `internal/config` | the server's configuration (X10): `Load` records every variable the boot stages read through the lookup it is given, and an accessor per setting parses it as the stage always did |
+| `internal/envparse` | the one rule for reading a setting from the environment, with its warnings |
+| `internal/persistence/postgres` | the repositories, the frozen baseline schema and the numbered migrations |
+| `internal/events` | the in-process event bus: stores each domain event, then calls its subscribers in order |
+| `internal/notify` | the notifier, mail, web push, the release announcer, the stable scheduler, the budget and minutes monitors |
+| `internal/scheduler` | the cron automations that are due, with catch-up at start |
+| `internal/automation` | the trigger matcher: launches the automations whose event filter matches |
+| `internal/orchestration` | the run hooks: board moves, crew follow-ups and hand-offs, interview sessions |
+| `internal/billing` | the subscription mirror: the entitlement each workspace gets from the provider's view |
+| `internal/billing/stripe` | the Stripe client behind `billing.Provider` |
+| `internal/hosting` | provisions hosted-runner containers on the local Docker daemon |
+| `internal/metrics` | the Prometheus registry and the HTTP middleware that feeds it |
+| `internal/seeds` | the default agents of a workspace and the community pool's built-in demo products |
+| `internal/runner` | what `agentd` runs: the vendor-CLI adapters, the worker loop and API client, the pool node, CLI sign-in |
+| `internal/mcp` | the MCP tool table, built from one constructor per area, and the client that calls the API |
+| `internal/mcp/toolnames` | the names an agent's tool allowlist uses for the MCP server; a leaf the runner, `seeds` and `mcp` share |
+| `internal/workerproto` | the bodies of the worker wire (claim, start, log, finish, release, sign-in relay, pool); a types-only leaf |
+
+**Domain, by area**
+
+| Area | Package | Holds |
+|---|---|---|
+| requirements-core | `internal/domain/artifacts` | the artifact, its types and statuses, the catalogue and transitions, versions |
+| | `internal/domain/attributes` | typed attribute definitions per workspace and project |
+| | `internal/domain/chatter` | the notes thread of an artifact |
+| | `internal/domain/embeddings` | vector embeddings of artifact text for nearest-neighbour search |
+| | `internal/domain/links` | link types and rules, the link service, suspect marking |
+| | `internal/domain/mentions` | resolves `@name` in a note to a project member |
+| | `internal/domain/products` | the product profile |
+| | `internal/domain/projects` | projects and their settings |
+| | `internal/domain/quality` | the rule-based linter over a requirement's wording |
+| | `internal/domain/settings` | workspace and project preferences: the quality rule set, reference parties |
+| | `internal/domain/traceability` | the link write service the four link-write paths share |
+| | `internal/domain/workitems` | the kanban work items |
+| verification | `internal/domain/evidence` | evidence bundles |
+| | `internal/domain/vv` | verification methods, test runs and results, coverage, gaps, change impact |
+| documents | `internal/domain/attachments` | attachments and figures |
+| | `internal/domain/baselines` | baselines and their comparison |
+| | `internal/domain/downloads` | assembles one project download |
+| | `internal/domain/exports` | JSON, CSV, ReqIF and XLSX export, and import |
+| | `internal/domain/reports` | the PDF specification, the Word document and the V&V report |
+| | `internal/domain/reports/doc` | the document model every report is built from |
+| | `internal/domain/snapshot` | the project snapshot (`ProjectExport`) and `Load`, the one way to read it |
+| | `internal/domain/templates` | project templates |
+| tenancy-identity | `internal/domain/invitations` | workspace invitations |
+| | `internal/domain/members` | project membership and the role ladder |
+| | `internal/domain/orgs` | workspaces, plans and limits, people-teams |
+| | `internal/domain/tokens` | the random tokens the platform mints, and their stored hash |
+| | `internal/domain/users` | accounts, sessions, verification and reset |
+| | `internal/domain/usermetrics` | the platform admin's user dashboard |
+| agent-suite | `internal/domain/agentruns` | runs, the queue, the budget guard and routing |
+| | `internal/domain/agents` | agent definitions |
+| | `internal/domain/automations` | automation rules |
+| | `internal/domain/crewtemplates` | a crew as a portable document |
+| | `internal/domain/guided` | guided sessions |
+| | `internal/domain/interviews` | interviews and their invites |
+| | `internal/domain/proposals` | agent proposals and their review |
+| | `internal/domain/providers` | provider settings and sign-ins, the known providers |
+| | `internal/domain/repoconns` | repository connections |
+| | `internal/domain/teams` | crews (the code says team) |
+| runner-fleet | `internal/domain/hostedworkers` | a workspace's hosted runner |
+| | `internal/domain/runnersessions` | the transient pool and its leases |
+| | `internal/domain/workerkeys` | runner keys |
+| events-notifications | `internal/domain/events` | the domain event types |
+| | `internal/domain/notifications` | in-app notifications |
+| | `internal/domain/pushsubs` | web push subscriptions |
+| community | `internal/domain/sharedproducts` | the community pool of demo products |
+| | `internal/domain/sharelinks` | share links |
+| platform-http | `internal/domain/release` | the release notes the binary carries, the feature registry |
+
+**Refactor tools and guards**
+
+| Package | Holds |
+|---|---|
+| `internal/tools/areas` | `which <path>`: the area of a file, from `areas.json` |
+| `internal/tools/declhash` | hashes every declaration, to prove a pure move |
+| `internal/tools/declmove` | performs a pure move from a committed spec |
+| `internal/tools/movecheck` | shows where declarations live, and how a move changed that |
+| `internal/tools/stageextract` | generates the boot stages of `cmd/server` |
+| `internal/tools/splittools` | generates the MCP tool constructors |
+| `internal/tools/embeddeps` | rewrites `Handler` to embed `HandlerDeps` |
+| `internal/tools/httpio` | the codemod that moved JSON responses and decodes onto the `respond.go` helpers |
+| `internal/tools/liftmigrations` | lifts each migration into its own file |
+| `internal/tools/envdoc` | writes `docs/env-vars.md` from the env var inventory |
+| `internal/tools/scaffold` | writes the first files of a common change |
+| `internal/archtest` | the architecture rules ([below](#architecture-rules)); tests only |
+| `internal/contract` | the generated Go-to-TypeScript contract ([below](#the-contract-pipeline)); tests only |
+| `internal/vocabparity` | the vocabularies the frontend copies, as `contracts/vocab.json`; tests only |
+
+The tools ship nothing; [`internal/tools/README.md`](../internal/tools/README.md)
+says which class of refactor each proves or generates.
 
 ### Composition root: `cmd/server`
 
@@ -129,7 +270,7 @@ Each stage is a method in a `wire_*.go` file and wires one concern:
 
 | Stage | File | Wires |
 |---|---|---|
-| `signals`, `config` | `wire_config.go` | the signal context; the database URL, port and directories, `WORKER_API_KEY`, the plan and limit settings |
+| `signals`, `config` | `wire_config.go` | the configuration, the logger and the signal context; the database URL, port and directories, `WORKER_API_KEY`, the plan and limit settings |
 | `connect`, `storage` | `wire_storage.go` | the pool (whose close `main` defers); `MigrateAndBackfill` under the boot lock; every repository and the event bus |
 | `core` | `wire_core.go` | artifacts, links, embeddings, projects, attachments, baselines, chatter, exports, reports, downloads, templates |
 | `workspace`, `runners` | `wire_workspace.go` | users, members, workspaces and the tiers, invitations, runner keys, hosted runners, the transient pool; the legacy key |
@@ -152,28 +293,45 @@ two domains (a project's workspace and the budget guard, whose rules are
 the order of every call `main()` makes; new wiring goes in the stage that
 owns its concern.
 
+### Configuration: `internal/config`
+
+`signals` calls `config.Load(os.LookupEnv)` once. `Load` reads nothing
+itself: it records, for every variable the boot stages read, the raw value
+and whether it is set, through the lookup it is handed. An accessor per
+setting then parses and validates it on each call with the parser, default
+and condition the stage used before X10, so a malformed value warns where it
+always did (`internal/envparse` is the rule). Since X10b no boot stage reads
+the environment but through `*config.Config`. What stays outside it, by
+design: reads that happen per request, `OPENV_MCP_TOOLS` (the MCP server's),
+and the runner's and `agentd`'s own settings. [env-vars.md](env-vars.md)
+lists every variable; the archtest's direct-env-read ceilings and the S8
+inventory ([below](#architecture-rules)) keep new reads from appearing
+elsewhere.
+
 ### API layer: `internal/api`
 
-- `handlers.go` holds only the dependencies: `HandlerDeps`, `Handler` and
-  `NewHandler`, which builds the rate limiters and reads the per-request
-  settings once at boot.
+- `handlers.go` holds only the dependencies: `HandlerDeps`, `Handler` (which
+  embeds it) and `NewHandler`, which builds the rate limiters and reads the
+  per-request settings once at boot.
 - `routes.go` is `RegisterRoutes`, the ordered list of registrar calls.
   gorilla/mux serves the first route that matches, so that order is the
   contract, pinned by `testdata/route_handlers.txt`; `agent_handlers.go`,
   `org_handlers.go` and `suite_handlers.go` hold only the ordered
   sub-registrar lists of their surfaces.
 - 70 area files, `<area>_handlers.go`, each with its `register<Area>Routes`
-  and its handlers: 19 for requirements-core, 17 for agent-suite (with
-  `proposal_appliers.go`, `ai_map.go` and the guided outline), 19 for
-  tenancy-identity (with `authz.go`, `authmiddleware.go`, `cookies.go`,
-  `limits.go` and `registration_policy.go`), 8 for documents, 7 for
-  runner-fleet, and the rest for verification, events, community and
-  billing. `go run ./internal/tools/areas which <file>` names a file's area.
+  and its handlers, spread over ten of the twelve areas
+  (17 files for requirements-core, 14 each for tenancy-identity and
+  agent-suite).
+  `proposal_appliers.go`, `ai_map.go` and the guided outline sit with
+  agent-suite, `authz.go`, `authmiddleware.go`, `cookies.go`, `limits.go`
+  and `registration_policy.go` with tenancy-identity.
+  `go run ./internal/tools/areas which <file>` names a file's area.
 - Shared homes (K3), so a helper is found where its kind lives:
-  `respond.go` (JSON out), `httperr.go` (error writers; internals go to the
-  log, a fixed message to the client), `authz.go` (every `require*` guard),
-  `limits.go` (the plan read-only gate, over `orgs.LimitEnforcer`'s
-  counts), `publish.go` (domain
+  `respond.go` (JSON in and out: `respondJSON`, the `writeJSON` family,
+  `decodeJSON`), `httperr.go` (error writers; internals go to the log, a
+  fixed message to the client), `errmap.go` (per-area error tables),
+  `authz.go` (every `require*` guard but two), `limits.go` (the plan
+  read-only gate, over `orgs.LimitEnforcer`'s counts), `publish.go` (domain
   events), `sse.go` (the SSE hub), and the `middleware_*.go`,
   `compression.go`, `ratelimit.go`, `requestlog.go` and
   `security_headers.go` plumbing.
@@ -183,9 +341,13 @@ owns its concern.
   `internal/domain/traceability`, each with the `Policy`
   `link_traceability.go` gives it; their `require*` guards stay in the
   handlers.
+- The JSON export, the AI map, the baseline diff and the open-source
+  showcase read a project's snapshot through `snapshot.Load`, as `reports`
+  does; `project_snapshot.go` supplies the two sources the handlers pass it,
+  a stored baseline and the live export.
 
 The route inventory, `testdata/routes.txt`, lists every method and path
-(341); `docs/api-spec.md` documents them, and an archtest ratchet counts the
+(342); `docs/api-spec.md` documents them, and an archtest ratchet counts the
 ones it does not.
 
 ### Domain: `internal/domain/*`
@@ -194,15 +356,18 @@ One package per concept, most with an entity, a `Service` interface, a
 `DefaultService` and a `Repository` interface that the persistence layer
 implements. Packages that grew several concerns split them into narrow
 interfaces (`orgs.Service` is `Workspaces`, `Membership`, `BillingStore`,
-`ChannelSettings` and `Alerts`). The busiest dependencies inside the
-domain: `artifacts` (nine other domain packages import it), `exports` (the project
-snapshot that reports, baselines, templates, downloads, quality and V&V
-read),
-`events` and `agentruns`. `traceability` is the link write service: the
-checks, writes, `links_snapshot` refreshes, link events and change
-summaries that the API's four link-write paths share, each path under a
-`Policy` of its own, which keeps where they differ explicit (quirks Q3 and
-Q4).
+`ChannelSettings` and `Alerts`). Only 22 domain packages import another
+package of the module.
+The busiest dependencies inside the domain: `artifacts` (eleven other domain
+packages import it), then `snapshot` and `links` (six each) and `tokens`
+(six, the leaf of the identity and invite packages). `snapshot` holds the
+project snapshot that reports, baselines, templates, downloads, quality and
+V&V read, and `Load`, the one function that reads it, from a baseline or the
+live project; `exports` writes and reads the file formats around it.
+`traceability` is the link write service: the checks, writes,
+`links_snapshot` refreshes, link events and change summaries that the API's
+four link-write paths share, each path under a `Policy` of its own, which
+keeps where they differ explicit (quirks Q3 and Q4).
 
 ### Persistence: `internal/persistence/postgres`
 
@@ -215,6 +380,57 @@ database. [data-model.md](data-model.md) describes the tables; the S3
 goldens under `testdata/` (`schema/`, `freeze/`, `purge/`) are the exact
 schema, ledger and purge catalogue, checked against a real server.
 
+#### The persistence kit (X13)
+
+`pgkit.go` and `nulls.go` hold what every repository's reads, writes and
+transactions share. A repository adopts them one at a time.
+
+- **Columns const and scan function.** An entity has one `xColumns` const,
+  its SQL column list in the order its scan function reads it
+  (`artifactColumns`, `linkColumns`), and one `scanX(row rowScanner)`. Every
+  `SELECT` of the entity, and the matching `INSERT`'s column list, is
+  assembled from the const, so a field is added in one place. `rowScanner` is
+  the interface both `*sql.Row` and `*sql.Rows` satisfy
+  (`Scan(dest ...interface{})`), so one scan function serves `QueryRow` and a
+  loop over `Query`. A column that may be `NULL` is read through the const's
+  own `COALESCE` or a nullable holder in the scan function, as the statement
+  it replaced did. An assembled statement equals the literal it replaced,
+  byte for byte: the `*_repository_sql_test.go` files hold each to that with
+  a recording `database/sql` driver (`sqlRecorder` in `pgkit_test.go`, no
+  server), and the `*_repository_columns_test.go` files pin the column reads
+  and writes against a real database. Which of `nil` and `[]` an empty list
+  returns, and what a missing row answers, stay per method (Q2).
+- **The qualifying rule.** A repository gets a columns const and scan
+  function when it reads one entity's column list in more than one place.
+  One that has a single read, only aggregates, or lists that differ read to
+  read does not, and the baseline, event, notification, project-info,
+  release, settings and user-metrics repositories do not (32 of the 39
+  repository files have a const).
+- **Qualifying a list by alias.** `prefixColumns(columns, alias)` prefixes
+  each column of a const for a join: it splits on `", "`, so `"id, title"`
+  under `a` is `"a.id, a.title"`, and it accepts only a list of bare column
+  names. A const holding an expression with a comma inside it
+  (`COALESCE(release_channel, '')`) would be cut in the middle, so
+  `orgColumns` keeps a hand-written `orgColumnsQualified` beside it. A
+  qualified list is built where the join is written
+  (`prefixColumns(linkColumns, "l")`), not kept as a second const;
+  `attachment_repository.go`'s `prefixedFigureColumns` is the one older
+  helper still to fold in.
+- **`withTx(ctx, db, opts, fn)`.** Begins a transaction, runs `fn`, commits
+  when it returns nil, rolls back on an error or a panic, and answers the
+  begin's, `fn`'s or the commit's error as it came. It adds no timeout: a
+  caller bounds the transaction through `ctx`, and `db.Begin()` is
+  `withTx(context.Background(), db, nil, ...)`. The artifact and V&V
+  repositories use it; the other repositories' hand-rolled `db.Begin()`
+  sites moved only where `withTx` is exactly equivalent, and those that wrap
+  the begin or commit error or return success without committing keep their
+  own shape. The migration runner keeps its own transactions.
+- **`nulls.go`.** `nullString`, `nullInt`, `nullableString` and `nullUUID`
+  turn an empty Go value into a driver `NULL` for a statement's argument.
+
+`scanOrg` and `scanAttachment` still take a row type of their own instead of
+`rowScanner`.
+
 ### Agent execution: `cmd/agentd`, `internal/runner`, `internal/mcp`
 
 `internal/runner` holds one adapter per vendor CLI (`claudecode.go`,
@@ -226,28 +442,248 @@ table (`Tools()` in `tools.go`, built from one constructor per area in the
 `tools_<area>.go` files and filtered by `OPENV_MCP_TOOLS`) and the client
 that calls the API; `openv-mcp` serves it over stdio, the runner configures it for
 each run, and `internal/seeds` reads its tool names for the default agents.
-The API's side of the wire is `worker_protocol_handlers.go` and the runner
-key, session and status handler files.
+The bodies the runner and the API exchange are `internal/workerproto`; the
+tool names the runner, `seeds` and `mcp` agree on are
+`internal/mcp/toolnames`. The API's side of the wire is
+`worker_protocol_handlers.go` and the runner key, session and status handler
+files.
+
+## Architecture rules
+
+`go test ./internal/archtest` runs in well under a second and is part of
+every `go test` and of `make check-fast`. It reads the module's syntax only
+(nothing is built or type-checked, so it gives the same answer on every
+host), and compares what it finds with `internal/archtest/ratchets.json`.
+Every number and list in that file is a **ratchet**: a ceiling that may only
+fall or an allowlist that may only shrink. A pull request may lower or
+remove an entry; a refactor never raises or adds one, and a refactor pull
+request must commit the tightened file
+(`UPDATE_RATCHETS=1 go test ./internal/archtest`, which only lowers or
+removes entries and refuses to write while a rule fails). Outside a refactor,
+adding an entry is an architecture decision made in review. Each failure
+names the rule, the allowlist, the regenerate command and the README section
+(the first column below links each rule's section of
+[`internal/archtest/README.md`](../internal/archtest/README.md)).
+
+| Rule | Enforces | Ratchet in `ratchets.json` |
+|---|---|---|
+| [Import edges](../internal/archtest/README.md#import-edges) | every production import between the module's packages is listed | `import_edges`: 264 edges |
+| [K7 layering](../internal/archtest/README.md#k7-layering) | the layering above | `layering_exceptions`: empty |
+| [Client binaries](../internal/archtest/README.md#client-binaries) | the domain packages each client program links may only shrink; a new program needs an entry | `client_domain_deps` |
+| [Domain reflection](../internal/archtest/README.md#domain-reflection) | no domain package imports `reflect` | `domain_reflect`: empty |
+| [K14 file size](../internal/archtest/README.md#k14-file-size) | a production file has at most 800 lines | `file_lines`: 4 grandfathered files (`reqif.go` and three `reports` files) |
+| [K14 function size](../internal/archtest/README.md#k14-function-size) | a function has at most 100 lines | `func_lines`: 28 grandfathered functions |
+| [No init functions](../internal/archtest/README.md#no-init-functions) | no `func init()` (K9) | a ban |
+| [Side-effecting package variables](../internal/archtest/README.md#side-effecting-package-variables) | a package-level `var` is initialised by pure calls only | `side_effect_vars`: 5, all pure in fact |
+| [One router](../internal/archtest/README.md#one-router) | one `mux.NewRouter()`, in `cmd/server`; no sub-routers, prefixes or custom 404 and 405 handlers | a ban |
+| [HandleFunc outside registrars](../internal/archtest/README.md#handlefunc-outside-registrars) | routes are registered in an area's `register<Area>Routes` (K1) | `counts.handle_func_outside_registrars`: 1 (`/metrics`) |
+| [Handler literals in tests](../internal/archtest/README.md#handler-literals-in-tests) | tests build handlers with `newTestHandler` (K6) | `counts.handler_literals_in_tests`: 0 |
+| [Raw JSON encodes](../internal/archtest/README.md#raw-json-encodes) | `internal/api` writes JSON through `respond.go` (K4) | `counts.raw_json_encodes`: 0 |
+| [Invalid request body literals](../internal/archtest/README.md#invalid-request-body-literals) | request bodies decode through `decodeJSON` (K4) | `counts.invalid_request_body_literals`: 1 |
+| [require helpers outside authz](../internal/archtest/README.md#require-helpers-outside-authz) | guards live in `authz.go` (K3) | `counts.require_outside_authz`: 2 |
+| [K3 helper homes](../internal/archtest/README.md#k3-helper-homes) | an unexported helper in an area handler file is used only there | `helper_homes`: 25 |
+| [K5 raw HandlerDeps reads](../internal/archtest/README.md#k5-raw-handlerdeps-reads) | only `handlers.go` reads `FrontendURL`, `SecureCookies` and `CrossSiteCookies` raw | a ban |
+| [Direct env reads](../internal/archtest/README.md#direct-env-reads) | `os.Getenv` and kin, per package (K8) | `env_reads`: 18 reads in `internal/api`, `internal/mcp`, `internal/runner` and `internal/domain/reports` |
+| [R8 decode errors](../internal/archtest/README.md#r8-decode-errors) | a handler does not write a JSON decode error of a protected wire type to the response | the alias list in `decode_test.go` only grows |
+| [Build context](../internal/archtest/README.md#build-context) | every package, embed and `go.mod` a Go image links is inside its Dockerfile's `COPY` list | the `COPY` list |
+| [Build by package path](../internal/archtest/README.md#build-by-package-path) | no doc, script or workflow builds a single `.go` file under `cmd/` | a ban |
+| [API spec drift](../internal/archtest/README.md#api-spec-drift) | counts the routes of `routes.txt` that `docs/api-spec.md` has no row for | `api_spec_undocumented_routes`: 36 of 342 |
+| [Architecture doc](../internal/archtest/README.md#architecture-doc) | this page names every package under `cmd/` and `internal/` | a ban |
+
+Beside those, `TestEnvInventory` (S8, not a rule of `TestArchitecture`)
+type-checks the module and freezes every environment variable it reads, the
+way it reads it and its default, in `internal/archtest/testdata/env_vars.txt`,
+and `env_parse.txt` records what each read column returns for the same
+inputs. `internal/tools/envdoc`'s `TestEnvVarsDoc` holds `docs/env-vars.md`
+to that inventory. The frontend has the same kind of guard in
+`frontend/src/arch/`, and `scripts/refactor/refactor_guard.py` (the Refactor
+guard job) is what holds a refactor pull request to all of them; it is
+described in [`scripts/README.md`](../scripts/README.md).
+
+## The contract pipeline
+
+Go owns what the API says. There is no OpenAPI document: the contract is
+four things, each generated from Go or checked against it, and the frontend
+is held to them by tests and the type checker. A change that moves any of
+them is a behavior change; the generated files and goldens are on the
+Refactor guard's golden list, so a refactor pull request may not touch them.
+
+1. **Routes.** The router is built from the registrars, in an order that
+   decides what a request matches. Four goldens in `internal/api/testdata/`
+   record it: `routes.txt` (every method and path, 342), `route_handlers.txt`
+   (registration order and the handler each binds), `route_overlaps.txt` and
+   `route_guards.txt` (the `require*` guards each handler visibly calls).
+   `TestRouteInventoryIsBackwardCompatible` and `TestRouteBinding` write and
+   check them (`UPDATE_ROUTES=1 go test ./internal/api -run
+   'TestRouteInventory|TestRouteBinding'`). On the frontend,
+   `src/arch/clientRoutes.test.ts` requires every `METHOD PATH` an
+   `src/api` module sends to be a line of `routes.txt`, and
+   `clientSurface.test.ts` pins the client barrel's export surface.
+   `docs/api-spec.md` is written by hand, one table row per route; the API
+   spec drift ratchet counts the routes it lacks, and the count only falls.
+2. **Events.** `contracts/sse-events.json` (the SSE event names, the stream
+   each goes on, the headers a stream writes) and
+   `internal/api/testdata/event_payload_types.txt` (each domain event's
+   payload keys and Go types) are written by `TestSSEContract` and
+   `TestEventPayloadTypes` (`UPDATE_GOLDEN=1`). `src/arch/sseListeners.test.ts`
+   checks every `EventSource` listener against the first.
+3. **Vocabularies.** Two generators read the Go catalogues. `internal/contract`
+   writes `frontend/src/generated/contract.ts`, one `as const` list per
+   vocabulary and the union type derived from it (`FeatureKey`,
+   `DomainEventType`, `SseEventName`, `ApiErrorCode`, `LinkType`,
+   `ArtifactTypeValue`, `ArtifactStatusValue`, `WorkspacePlan`, `VvGapKey`,
+   `AgentProvider`), and `internal/contract/testdata/contract.json` with the
+   same values. `internal/vocabparity` writes `contracts/vocab.json`, which
+   `src/arch/vocabParity.test.ts` compares with every hand-written
+   TypeScript copy, tolerating only the differences in
+   `contracts/vocab-allowed-diffs.json`. `TestContractAgreesWithS13` holds
+   the two outputs equal.
+4. **Wire shapes.** `internal/contract` also writes
+   `frontend/src/generated/wire.ts`, one `Wire<Name>` interface for each of
+   the Go types the API sends most (`Artifact`, `Link`, `Project`, `Org`,
+   `User`, `Run`, `Agent`, `Attachment`, `Baseline`, `Notification`, `Event`,
+   and `WireBilling`, which `Org` carries), following `encoding/json`'s
+   rules, and checks each against a marshalled sample. `src/api/wireCompat.ts`
+   is type-only and imported by nothing, so the build erases it, and
+   `tsc --noEmit` requires each hand-written response type in `src/api/types/`
+   to name only keys its `Wire` twin writes, with types that accept the
+   twin's values; its `COMPAT_EXCEPTIONS` lists today's differences with a
+   reason.
+
+To regenerate after a deliberate change:
+
+| Changed | Run | Then |
+|---|---|---|
+| a vocabulary, or a Go type behind `wire.ts` | `UPDATE_CONTRACTS=1 go test ./internal/contract/...` | `cd frontend && npx tsc --noEmit`, which names each copy or hand-written key that no longer fits |
+| a vocabulary the frontend copies | `UPDATE_GOLDEN=1 go test ./internal/vocabparity -run '^TestVocabulary$'` | `cd frontend && npx vitest run src/arch/vocabParity.test.ts` |
+| routes | `UPDATE_ROUTES=1 go test ./internal/api -run 'TestRouteInventory\|TestRouteBinding'` | a row in `docs/api-spec.md`; `cd frontend && npx vitest run src/arch` |
+| an SSE event or a domain event payload | `UPDATE_GOLDEN=1 go test ./internal/api -run '^(TestSSEContract\|TestEventPayloadTypes)$'` | `cd frontend && npx vitest run src/arch/sseListeners.test.ts` |
+
+`make check-fast` runs `go test ./internal/vocabparity ./internal/contract`,
+the `TestSSE` and `TestEventPayload` tests of `internal/api`, and the
+frontend type check; `make check` and CI's backend and frontend jobs run all
+of them, `go test` for the Go side and `tsc`, lint and `vitest` for the
+frontend. Only the value `1` regenerates; any other value compares.
 
 ## Frontend: `frontend/src`
 
-- `App.tsx` is the router; `views/` holds the pages, with the module view's
-  panes in `views/moduleView/` and the project settings' tabs in
-  `views/projectSettings/`; `components/` holds the rest of the UI, the
-  guided wizard's modules in `components/wizard/`.
-- `api/client.ts` is a barrel: it re-exports the area modules `api/<area>.ts`
-  and their types `api/types/<area>.ts`; `api/http.ts` holds the one axios
-  instance and its two interceptors (the active workspace header; the
-  sign-in and verify-email redirects). Code outside `src/api` imports only
-  `api/client` (K12).
+The React app Vite builds into the frontend image. Everything it imports
+lives under `frontend/`; [`frontend/src/README.md`](../frontend/src/README.md)
+has the map, invariants and recipes.
+
+- `index.tsx` imports the eager stylesheets in a fixed order; `App.tsx` is
+  the hand-written `<Route>` table (K13), each view eager or through
+  `lazy()`. `views/` holds the pages, with a split view's parts in
+  `views/moduleView/`, `views/projectSettings/` and `views/guidedWizard/`;
+  `components/` holds the rest of the UI, the guided wizard's modules in
+  `components/wizard/`.
+- `generated/contract.ts` and `generated/wire.ts` are the Go-generated
+  contract ([above](#the-contract-pipeline)); never edited by hand.
 - `state/` holds the zustand store and the active-workspace storage;
-  `hooks/` the shared hooks (`useFeature` reads the feature gates).
-- `test/mockApi.ts` is the auto-stubbing mock of the client that view tests
+  `test/mockApi.ts` is the auto-stubbing mock of the client that view tests
   use (F2): every method of every `*API` object becomes a `vi.fn`, and an
   override naming a method the client lacks throws.
 - `arch/` holds the frontend's architecture tests: the area index, the
-  client's surface and routes, CSS order and size budgets, deep links, SSE
-  listeners, error chains and vocabulary parity with Go.
+  client's surface and routes, the route tree and page registry, CSS order
+  and size budgets, deep links, SSE listeners, error chains and vocabulary
+  parity with Go.
+
+### The API client: `src/api`
+
+`api/client.ts` is a barrel, and code outside `src/api` imports only it and
+three small modules (`api/errors`, `api/baseURL`, `api/contentDisposition`;
+K12), so a test's `vi.mock('../api/client')` still stubs every call.
+
+| Module | Holds |
+|---|---|
+| `http.ts` | the one axios instance and its two interceptors (the `X-Org-ID` header out; the sign-in and verify-email redirects back), `uploadConfig`, `downloadBlob` |
+| `artifacts.ts`, `projects.ts`, `attachments.ts`, `vv.ts`, `guided.ts`, `agents.ts`, `account.ts`, `orgs.ts`, `billing.ts`, `runners.ts`, `community.ts`, `notifications.ts`, `platform.ts` | one module per area: its `xxxAPI` objects, helpers and constants |
+| `types/<area>.ts` | that area's request and response types, which the build erases |
+| `errors.ts` | reading an error answer: `apiErrorMessage`, `apiErrorCode`, `limitRefusal`, `legacyErrorText` (Q20) |
+| `wireCompat.ts` | type-only checks of `types/` against `generated/wire.ts` |
+
+The barrel loads `http.ts` first, then re-exports the area modules and their
+types. A new endpoint call goes in its area's module, with the path exactly
+as the server registers it; `arch/clientRoutes.test.ts` fails until the route
+exists. Details and recipes: [`frontend/src/api/README.md`](../frontend/src/api/README.md).
+
+### The page registry: `src/pages.ts`
+
+`pages.ts` (X17) records every routed page once, in 45 `PAGES` entries (22
+beneath `/projects/:projectId`, 23 of the site): its path as `App.tsx`
+writes it, whether `App.tsx` loads its view eagerly, lazily or only
+redirects, whether it renders without a session, its help topic or the
+reason it has none, and for a project page the menu lists, a `nav` (group,
+label, `end`, and a `feature` that hides it until that gate is on). It
+records what `App.tsx` already does and does not render a route, so the
+route table stays hand-written. What it does drive is the project menu:
+`navSections` is derived from the entries that carry a `nav`, grouped
+`Define`, `Verify`, `Plan` and `Agents` and then a headerless tail, in the
+order the entries appear, and `ProjectLayout` draws it. `pagePattern(page)`
+gives a page's full route pattern, and `projectPath(projectId, path?)` builds
+the URL of a project's page for new code.
+`arch/pagesParity.test.ts` holds the registry to `App.tsx` (an entry for every
+route and a route for every entry, eager or lazy, each entry's URL matching
+its own route), to `utils/publicPaths.ts` and to `components/helpTopics.ts`,
+which still repeat a page by hand, and `components/navSections.test.ts` holds
+`navSections` to the menu it replaced. `node frontend/scripts/scaffold.mjs
+page <name>` writes the stub view, the lazy route and the registry entry.
+
+### Hooks
+
+Shared hooks live in `src/hooks/`:
+
+- `useEventStream` (X15) is the one module allowed to open an `EventSource`
+  (ESLint's `EVENT_SOURCE_HOOK`; the list of other sites is empty). Its
+  callers, `RunDetailPanel`, `GuidedChatPanel`, `InterviewChat` and
+  `NotificationBell`, each pass their reconnect policy as named parameters,
+  and the keys of the listeners they pass are typed `SseEventName`, so
+  `arch/sseListeners.test.ts` can read them.
+- `useApiResource` (X15) loads what a view shows: fetch on mount and
+  when the active workspace or a dependency changes, a cancelled flag, no
+  cache. It is built and tested; no view uses it yet.
+- `useFeature` reads the feature gates (its key is typed `FeatureKey`), with
+  `useViewport`, `useVisualViewport`, `useSwipe`, `useUploadLimit` and the
+  reading-key helpers beside it.
+
+The two heaviest views have been split into hooks, helpers and step functions
+beside a shell that still holds the rest of their render code:
+
+- **ModuleView**, `views/moduleView/` (X16). `useModuleData` loads the
+  project's artifacts, links, cross-project link ends, parent project,
+  quality scores and figures; `useBaselineView` holds the baseline list, the
+  switch between live and a baseline, and capture and delete;
+  `useColumnResize` the two resizable columns and their remembered widths;
+  `useSiblingOrdering` the swap, drag and "Move to" renumbering of siblings
+  (keeping its three comparators); `usePanelMode` and `usePanelEscape` a side
+  panel's pinned, auto-hidden or hidden mode, its hover and reveal, and
+  Escape to dismiss. `DocumentHeader`, `FilterPanel`, `PhoneActionsSheet`,
+  `Toolbar` and `TreePane` are props-only panes, and `shared.ts` the types
+  they share, so no pane imports the API layer. `ModuleView.tsx` is still
+  the shell that composes them, and `arch/sizeBudget.test.ts` holds it to size
+  ceilings that only fall.
+- **GuidedWizard**, `views/guidedWizard/` (X18). `steps.ts` is the step
+  descriptor table: each step's label, whether it can be skipped, how it
+  builds its draft artifacts and today's quirks as data (title truncation
+  at 120 characters for needs and requirements, 100 for NFRs and never for
+  personas, hazards and stubs; a hazard's `moderate` severity; no ids key for
+  hazards; Skip on steps 6 and 7 never materialising; the nudge before the
+  save). `wizardAnswers.ts` is the typed `WizardAnswers` serializer and
+  reader, which keeps unknown keys and the key order of the session it is
+  built over, since the answers are stored data. `useGuidedSession` holds
+  the session being worked on, the newest committed one, the step and the
+  furthest step reached, and the calls that start, reopen, save, abandon and
+  commit one. Steps 1 to 6 are render functions beside them
+  (`renderFramingStep` in `FramingStep.tsx`, then `renderPersonaStep`,
+  `renderNeedsStep`, `renderRequirementsStep`, `renderNfrStep` and
+  `renderHazardStep`, with `stepStyles.ts`). Each is a plain function that
+  returns the step's elements and takes the form state as props, not a
+  component and with no hooks: the wizard calls it where the block stood, so
+  React reconciles the same tree and keeps the DOM as it was. The shell,
+  `views/GuidedWizard.tsx`, still holds the form state, `renderStepContent`
+  (which calls those six and holds step 7, the verification stubs, inline),
+  the review step and the assistant mounted in the hidden sheet
+  (`components/wizard/`).
 
 ## Request path
 
@@ -293,10 +729,12 @@ text and paths never reach a client.
   routes and their guards (`internal/api/testdata/`), the schema and stored
   data (`internal/persistence/postgres/testdata/`), the boot and its order
   (`cmd/server/testdata/boot*`), an end-to-end API tour per area
-  (`cmd/server/testdata/tour/`) and the env var inventory
-  (`internal/archtest/testdata/`).
+  (`cmd/server/testdata/tour/`), the env var inventory
+  (`internal/archtest/testdata/`) and the generated contract
+  (`internal/contract/testdata/`, `contracts/`).
 - **Architecture.** `internal/archtest` (import edges, layering, size
-  budgets, bans and count ratchets; see its README) and `frontend/src/arch`.
+  budgets, bans, count ratchets and the doc checks; see its README and
+  [Architecture rules](#architecture-rules)) and `frontend/src/arch`.
 - **Frontend.** vitest with `test/mockApi.ts`; `tsc`, eslint, the build and
   the bundle check.
 - **End to end.** Playwright specs under `e2e/tests/`.
