@@ -17,10 +17,34 @@ func NewChatterRepository(db *sql.DB) *ChatterRepository {
 	return &ChatterRepository{db: db}
 }
 
+// chatterColumns is the list the reads select and the INSERT writes, in the
+// order scanChatter reads it (refactor plan X13).
+const chatterColumns = `id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at`
+
+// scanChatter scans one row of chatterColumns.
+func scanChatter(row rowScanner) (*chatter.ChatterEntry, error) {
+	entry := new(chatter.ChatterEntry)
+	err := row.Scan(
+		&entry.ID,
+		&entry.ArtifactID,
+		&entry.Message,
+		&entry.IsAutoEntry,
+		&entry.EntryType,
+		&entry.CreatedBy,
+		&entry.AuthorName,
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
 // Save saves a chatter entry to the database
 func (r *ChatterRepository) Save(entry *chatter.ChatterEntry) error {
 	query := `
-		INSERT INTO chatter (id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at)
+		INSERT INTO chatter (` + chatterColumns + `)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
@@ -49,23 +73,12 @@ func (r *ChatterRepository) Save(entry *chatter.ChatterEntry) error {
 // FindByID retrieves one chatter entry.
 func (r *ChatterRepository) FindByID(id string) (*chatter.ChatterEntry, error) {
 	query := `
-		SELECT id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at
+		SELECT ` + chatterColumns + `
 		FROM chatter
 		WHERE id = $1
 	`
 
-	entry := new(chatter.ChatterEntry)
-	err := r.db.QueryRow(query, id).Scan(
-		&entry.ID,
-		&entry.ArtifactID,
-		&entry.Message,
-		&entry.IsAutoEntry,
-		&entry.EntryType,
-		&entry.CreatedBy,
-		&entry.AuthorName,
-		&entry.CreatedAt,
-		&entry.UpdatedAt,
-	)
+	entry, err := scanChatter(r.db.QueryRow(query, id))
 	if noRow(err) {
 		return nil, chatter.ErrNotFound
 	}
@@ -77,7 +90,7 @@ func (r *ChatterRepository) FindByID(id string) (*chatter.ChatterEntry, error) {
 
 func (r *ChatterRepository) FindByArtifactID(artifactID string) ([]*chatter.ChatterEntry, error) {
 	query := `
-		SELECT id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at
+		SELECT ` + chatterColumns + `
 		FROM chatter
 		WHERE artifact_id = $1
 		ORDER BY created_at DESC
@@ -94,19 +107,7 @@ func (r *ChatterRepository) FindByArtifactID(artifactID string) ([]*chatter.Chat
 
 	var entries []*chatter.ChatterEntry
 	for rows.Next() {
-		entry := new(chatter.ChatterEntry)
-
-		err := rows.Scan(
-			&entry.ID,
-			&entry.ArtifactID,
-			&entry.Message,
-			&entry.IsAutoEntry,
-			&entry.EntryType,
-			&entry.CreatedBy,
-			&entry.AuthorName,
-			&entry.CreatedAt,
-			&entry.UpdatedAt,
-		)
+		entry, err := scanChatter(rows)
 
 		if err != nil {
 			return nil, err
