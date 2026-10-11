@@ -12,10 +12,21 @@ type ProjectRepository struct {
 	db *sql.DB
 }
 
-// cols is the column list every read shares. The description column takes
-// NULL, which no write here stores; it reads as "" rather than failing the
-// scan, and with it every list the row falls in (#379 bug 87).
-const cols = "SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at"
+// projectColumns are the project's eight columns, in the order scanProject
+// reads them: every read of a whole project selects them. The workspace,
+// description and parent columns take NULL, which no write here stores for
+// the description; they read as "" rather than failing the scan, and with
+// it every list the row falls in (#379 bug 87).
+const projectColumns = `id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at`
+
+// scanProject reads one row of projectColumns.
+func scanProject(row rowScanner) (*projects.Project, error) {
+	project := &projects.Project{}
+	if err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt); err != nil {
+		return nil, err
+	}
+	return project, nil
+}
 
 // NewProjectRepository creates a new project repository
 func NewProjectRepository(db *sql.DB) *ProjectRepository {
@@ -38,11 +49,10 @@ func (r *ProjectRepository) Create(project *projects.Project) error {
 // GetByID retrieves a project by ID: projects.ErrNotFound for an id no
 // project has, a malformed one included (#379 bug 88).
 func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects WHERE id = $1`
+	query := `SELECT ` + projectColumns + ` FROM projects WHERE id = $1`
 	row := r.db.QueryRow(query, id)
 
-	project := &projects.Project{}
-	err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
+	project, err := scanProject(row)
 	if err != nil {
 		if noRow(err) {
 			return nil, projects.ErrNotFound
@@ -55,7 +65,7 @@ func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 
 // GetAll retrieves all projects
 func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects ORDER BY created_at DESC`
+	query := `SELECT ` + projectColumns + ` FROM projects ORDER BY created_at DESC`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
@@ -64,8 +74,7 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 
 	projectList := make([]*projects.Project, 0)
 	for rows.Next() {
-		project := &projects.Project{}
-		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
+		project, err := scanProject(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
@@ -85,7 +94,7 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 // projects. Mirrors EventRepository.List's org predicate. A malformed orgID
 // is a workspace no row has, which lists [] (#379 bug 88).
 func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, COALESCE(description, ''), agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at
+	query := `SELECT ` + projectColumns + `
 		FROM projects WHERE org_id = NULLIF($1, '')::uuid ORDER BY created_at DESC`
 	rows, err := r.db.Query(query, orgID)
 	if malformedID(err) {
@@ -98,8 +107,7 @@ func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error)
 
 	projectList := make([]*projects.Project, 0)
 	for rows.Next() {
-		project := &projects.Project{}
-		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
+		project, err := scanProject(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
@@ -117,7 +125,7 @@ func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error)
 // a settings page lists them in the order they were attached. A malformed id
 // is a parent no row has, which lists [] (#379 bug 88).
 func (r *ProjectRepository) ListChildren(id string) ([]*projects.Project, error) {
-	query := cols + ` FROM projects WHERE parent_project_id = NULLIF($1, '')::uuid ORDER BY created_at ASC`
+	query := `SELECT ` + projectColumns + ` FROM projects WHERE parent_project_id = NULLIF($1, '')::uuid ORDER BY created_at ASC`
 	rows, err := r.db.Query(query, id)
 	if malformedID(err) {
 		return make([]*projects.Project, 0), nil
@@ -129,8 +137,8 @@ func (r *ProjectRepository) ListChildren(id string) ([]*projects.Project, error)
 
 	projectList := make([]*projects.Project, 0)
 	for rows.Next() {
-		project := &projects.Project{}
-		if err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt); err != nil {
+		project, err := scanProject(rows)
+		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
 		projectList = append(projectList, project)
