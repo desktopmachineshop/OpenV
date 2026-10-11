@@ -1,0 +1,66 @@
+<div style="padding: 12px; max-width: 1560px; margin: 0px auto;">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 10px; flex-wrap: wrap;">
+<h2 style="color: var(--text); margin: 0px; font-size: 20px;">Guided requirements definition</h2>
+<button title="Drop this session and return to the start page (created drafts are kept)" style="background: none; border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer; width: auto; white-space: nowrap;">Abandon session</button>
+</div>
+<div style="display: flex; gap: 20px; align-items: flex-start;">
+<div style="flex: 1 1 0%; min-width: 0px; padding-bottom: 72px;">
+<div>
+<div style="background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin-bottom: 16px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<div style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">Step 1 of 8</div>
+<select aria-label="Go to step" style="flex: 1 1 0%; min-width: 0px; min-height: 44px; font-weight: 600;">
+<option value="1">Product framing</option>
+<option value="2" disabled="">Personas</option>
+<option value="3" disabled="">User needs</option>
+<option value="4" disabled="">Requirements</option>
+<option value="5" disabled="">NFRs &amp; constraints</option>
+<option value="6" disabled="">Hazards</option>
+<option value="7" disabled="">Verification stubs</option>
+<option value="8" disabled="">Review &amp; commit</option>
+</select>
+</div>
+<div role="progressbar" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1" aria-valuetext="Product framing" style="height: 4px; background: var(--neutral-soft); border-radius: 2px; margin-top: 10px; overflow: hidden;">
+<div style="width: 12.5%; height: 100%; background: var(--accent);">
+</div>
+</div>
+</div>
+<div class="card">
+<h3>Product framing</h3>
+<div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">Frame the product in a few sentences. This is saved to the product profile and shown on the overview page.</div>
+<div class="form-group">
+<label>Vision</label>
+<textarea rows="3" placeholder="What does the world look like once this product succeeds?">Safe floors</textarea>
+</div>
+<div class="form-group">
+<label>Problem statement</label>
+<textarea rows="3" placeholder="What problem are we solving, for whom, and why now?">Live spindles</textarea>
+</div>
+<div class="form-group">
+<label>Target users</label>
+<textarea rows="3" placeholder="Who are the primary users and buyers?">Machinists</textarea>
+</div>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; gap: 10px; flex-wrap: wrap;">
+<button class="button-secondary" disabled="" style="opacity: 0.5; min-height: 44px;">← Back</button>
+<div style="display: flex; gap: 10px;">
+<button class="button" style="background: var(--accent); opacity: 1; min-height: 44px;">Next →</button>
+</div>
+</div>
+</div>
+</div>
+<div style="position: fixed; inset: 0px; background: var(--overlay); z-index: 949;">
+</div>
+<div role="dialog" aria-label="V&amp;V Assistant" aria-hidden="false" class="safe-area-bottom" style="position: fixed; left: 0px; right: 0px; bottom: 0px; height: 600px; display: flex; flex-direction: column; background: var(--surface); border-top: 1px solid var(--border); border-radius: 12px 12px 0 0; box-shadow: 0 -4px 16px rgba(0,0,0,0.2); z-index: 950;">
+<button type="button" aria-label="Close assistant" style="align-self: flex-end; width: 44px; height: 44px; background: none; border: medium; font-size: 20px; color: var(--text-muted); cursor: pointer;">✕</button>
+<div style="flex: 1 1 0%; min-height: 0px;">
+<div data-assistant="" data-embedded="true" data-session="gs-1" data-step="1" data-applied="">
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- control 1: select = "1" -->
+<!-- control 2: textarea = "Safe floors" -->
+<!-- control 3: textarea = "Live spindles" -->
+<!-- control 4: textarea = "Machinists" -->
