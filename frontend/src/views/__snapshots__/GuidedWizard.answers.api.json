@@ -1,0 +1,941 @@
+[
+  {
+    "call": "guidedAPI.list",
+    "args": [
+      "p1"
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      3,
+      "saved step 2 (\"Personas\") and moved on to step 3 (\"User needs\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "persona",
+          "title": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+          "body": "**Role:** Maintenance planner\n\n**Goals:**\nPlan downtime\n\n**Pain points:**\nSurprise breakdowns",
+          "parent_id": "art-h"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      3,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "personas": "art-h"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": ""
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis"
+            }
+          ]
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        },
+        "step_3_ids": [],
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        }
+      }
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      4,
+      "saved step 3 (\"User needs\") and moved on to step 4 (\"Requirements\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "User Needs",
+          "body": "",
+          "sort_order": 20
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "user-need",
+          "title": "As Sam the Shop Lead, I need a list of every spindle that is live right now so that I can clear the floor before repairs",
+          "body": "As Sam the Shop Lead, I need a list of every spindle that is live right now so that I can clear the floor before repairs",
+          "links": [
+            {
+              "type": "relates-to",
+              "to_id": "art-a"
+            }
+          ],
+          "parent_id": "art-2"
+        },
+        {
+          "type": "user-need",
+          "title": "As a user, I need to know who is on shift so that …",
+          "body": "As a user, I need to know who is on shift so that …",
+          "links": [],
+          "parent_id": "art-2"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      4,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "personas": "art-h",
+          "needs": "art-2"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs",
+              "artifact_id": "art-3"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": "",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-3",
+          "art-4"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis"
+            }
+          ]
+        },
+        "step_4_ids": [],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      5,
+      "saved step 4 (\"Requirements\") and moved on to step 5 (\"NFRs & constraints\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "heading",
+          "title": "Requirements",
+          "body": "",
+          "sort_order": 30
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.materializeDrafts",
+    "args": [
+      "gs-1",
+      [
+        {
+          "type": "requirement",
+          "title": "The system shall list who is on shift",
+          "body": "The system shall list who is on shift",
+          "attributes": {
+            "verification_method": "analysis"
+          },
+          "links": [],
+          "parent_id": "art-5"
+        }
+      ]
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      5,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "personas": "art-h",
+          "needs": "art-2",
+          "requirements": "art-5"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs",
+              "artifact_id": "art-3"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": "",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-3",
+          "art-4"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-6"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-6"
+        ],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      6,
+      "saved step 5 (\"NFRs & constraints\") and moved on to step 6 (\"Hazards\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      6,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "personas": "art-h",
+          "needs": "art-2",
+          "requirements": "art-5"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs",
+              "artifact_id": "art-3"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": "",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-3",
+          "art-4"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-6"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-6"
+        ],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      7,
+      "skipped step 6 (\"Hazards\") and moved on to step 7 (\"Verification stubs\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      7,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "needs": "art-2",
+          "personas": "art-h",
+          "requirements": "art-5"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs",
+              "artifact_id": "art-3"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": "",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-3",
+          "art-4"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-6"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-6"
+        ],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      7,
+      "saved step 6 (\"Hazards\") and moved on to step 7 (\"Verification stubs\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      7,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "personas": "art-h",
+          "needs": "art-2",
+          "requirements": "art-5"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs",
+              "artifact_id": "art-3"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": "",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-3",
+          "art-4"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-6"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-6"
+        ],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "call": "assistant.nudge",
+    "args": [
+      8,
+      "saved step 7 (\"Verification stubs\") and moved on to step 8 (\"Review & commit\")"
+    ]
+  },
+  {
+    "call": "guidedAPI.saveStep",
+    "args": [
+      "gs-1",
+      8,
+      {
+        "copilot_applied": [
+          "m-0:1"
+        ],
+        "legacy_note": "written by an older client",
+        "section_ids": {
+          "personas": "art-h",
+          "needs": "art-2",
+          "requirements": "art-5"
+        },
+        "step_1": {
+          "vision": "Every shop floor runs its machines safely.",
+          "problem_statement": "Operators cannot tell which spindles are live.",
+          "target_users": "Machinists and shop leads."
+        },
+        "step_2": {
+          "personas": [
+            {
+              "id": "p-1",
+              "name": "Sam the Shop Lead",
+              "role": "Supervisor",
+              "goals": "Keep the floor safe",
+              "pains": "No overview",
+              "artifact_id": "art-a"
+            },
+            {
+              "id": "p-2",
+              "name": "Pat the Planner, who schedules every maintenance window for the night shift across both halls and signs off each restart after",
+              "role": "Maintenance planner",
+              "goals": "Plan downtime",
+              "pains": "Surprise breakdowns",
+              "artifact_id": "art-1"
+            },
+            {
+              "id": "p-3",
+              "name": "",
+              "role": "",
+              "goals": "",
+              "pains": ""
+            }
+          ]
+        },
+        "step_2_ids": [
+          "art-a",
+          "art-1"
+        ],
+        "step_3": {
+          "needs": [
+            {
+              "id": "n-1",
+              "persona_id": "p-1",
+              "capability": "a list of every spindle that is live right now",
+              "outcome": "I can clear the floor before repairs",
+              "artifact_id": "art-3"
+            },
+            {
+              "id": "n-2",
+              "persona_id": "p-3",
+              "capability": "to know who is on shift",
+              "outcome": "",
+              "artifact_id": "art-4"
+            },
+            {
+              "id": "n-3",
+              "persona_id": "p-1",
+              "capability": "",
+              "outcome": ""
+            }
+          ]
+        },
+        "step_3_ids": [
+          "art-3",
+          "art-4"
+        ],
+        "step_4": {
+          "requirements": [
+            {
+              "id": "r-1",
+              "need_id": "n-3",
+              "text": "The system shall list who is on shift",
+              "fit_criterion": "",
+              "verification_method": "analysis",
+              "artifact_id": "art-6"
+            }
+          ]
+        },
+        "step_4_ids": [
+          "art-6"
+        ],
+        "step_5": {
+          "nfrs": []
+        },
+        "step_5_ids": [],
+        "step_6": {
+          "hazards": []
+        },
+        "step_7": {
+          "selected": {},
+          "created": {}
+        },
+        "zz_later": {
+          "kept": true,
+          "order": [
+            "b",
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "call": "artifactAPI.list",
+    "args": [
+      "p1"
+    ]
+  }
+]
