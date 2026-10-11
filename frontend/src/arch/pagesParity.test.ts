@@ -113,10 +113,17 @@ describe('the registry agrees with components/helpTopics.ts', () => {
     }
   });
 
-  it('exempts only the pages known to have no topic', () => {
-    expect(
-      PAGES.filter((p) => p.scope === 'project' && 'fallback' in p.help).map((p) => p.path)
-    ).toEqual(['', 'evidence', 'impact', 'review', 'todos', 'team', 'team/network']);
+  // A page without a topic is stated, not an oversight, and the menu's pages
+  // are the ones a reader opens help on: all but these have a topic. A page
+  // outside the menu (a scaffolded one, before it has a topic) may be exempt.
+  it('exempts only the pages known to have no topic from the menu', () => {
+    expect(PAGES.filter((p) => p.nav && 'fallback' in p.help).map((p) => p.path)).toEqual([
+      '',
+      'evidence',
+      'impact',
+      'review',
+      'todos',
+    ]);
   });
 });
 

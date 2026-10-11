@@ -4,6 +4,7 @@
 // scaffolds are internal/tools/scaffold).
 //
 //   node frontend/scripts/scaffold.mjs [-n] api-module <area>
+//   node frontend/scripts/scaffold.mjs [-n] page <name>
 //
 // api-module writes src/api/<area>.ts, an <area>API object whose one stub
 // method calls `client` from http.ts, and src/api/types/<area>.ts, its
@@ -11,10 +12,21 @@
 // `export * from './<area>';` to client.ts, each after the last line of its
 // kind, as frontend/src/api/README.md ("Add an area module") asks. The stub
 // calls GET /api/v1/projects/{id}/<area>, the route
-// `go run ./internal/tools/scaffold api-area <area>` registers. Refactor
-// step X17 adds `page`.
+// `go run ./internal/tools/scaffold api-area <area>` registers.
 //
-// <area> is lower-case words of letters and digits joined by '-' or '_', as
+// page adds a lazy project page, the shape frontend/src/README.md ("Add a
+// page") recommends: src/views/<Name>.tsx, a stub view; a `lazy()` constant
+// after the last one in App.tsx and a `<Route path="<name>">` as the last
+// child of the /projects/:projectId route, whose JSX is otherwise left as it
+// is; and a src/pages.ts entry (scope project, load lazy, not public, no
+// help topic), after the project's other pages the menu does not list. It
+// adds no menu entry: a page that joins the menu gets its `nav` by hand,
+// with the menu tests that pin the list (the printed steps say which).
+// Refused: a view file, a route path or a registry entry that exists, or a
+// name App.tsx already binds. The routes and the registry then agree, as
+// src/arch/pagesParity.test.ts holds them to.
+//
+// <name> is lower-case words of letters and digits joined by '-' or '_', as
 // the Go scaffold takes, and both spellings give the same result: lower
 // camel case for the module and its object (work-items: workItems.ts,
 // workItemsAPI), upper camel case for its type (WorkItemsItem), kebab case
@@ -41,7 +53,10 @@ export const FRONTEND_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.
 // frontend/src/api/README.md names it (the test holds them equal).
 export const REGENERATE_SURFACE = 'cd frontend && npx vitest run src/arch -u';
 
-const USAGE = 'usage: node frontend/scripts/scaffold.mjs [-n] [--root <frontend dir>] api-module <area>';
+const USAGE = [
+  'usage: node frontend/scripts/scaffold.mjs [-n] [--root <frontend dir>] api-module <area>',
+  '       node frontend/scripts/scaffold.mjs [-n] [--root <frontend dir>] page <name>',
+].join('\n');
 const NAME = /^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$/;
 
 export class Refusal extends Error {}
@@ -164,13 +179,106 @@ export function planApiModule(root, area) {
   };
 }
 
+/** The index of the line ending the statement that starts at lines[start]: the first at or after it that ends with ';'. */
+const statementEnd = (lines, start) => {
+  let i = start;
+  while (i < lines.length && !lines[i].trimEnd().endsWith(';')) i++;
+  return i;
+};
+
+/** What page writes: the view stub, and new text for App.tsx and pages.ts. */
+export function planPage(root, name) {
+  const n = parseName(name);
+  const view = `src/views/${n.pascal}.tsx`;
+  const app = 'src/App.tsx';
+  const registry = 'src/pages.ts';
+  if (fs.existsSync(path.join(root, view))) throw new Refusal(`frontend/${view} already exists; scaffold never overwrites a file`);
+
+  const appOld = fs.readFileSync(path.join(root, app), 'utf8');
+  if (new RegExp(`\\b${n.pascal}\\b`).test(appOld)) {
+    throw new Refusal(`frontend/${app} already uses the name ${n.pascal}; pick another name`);
+  }
+  if (appOld.includes(`path="${n.kebab}"`)) throw new Refusal(`frontend/${app} already has a route with path "${n.kebab}"`);
+  const pagesOld = fs.readFileSync(path.join(root, registry), 'utf8');
+  if (new RegExp(`scope: 'project',\\s*path: '${n.kebab}'`).test(pagesOld)) {
+    throw new Refusal(`frontend/${registry} already has a project page with path '${n.kebab}'`);
+  }
+
+  // The lazy() constant goes after the last one, whole statement included.
+  const lines = appOld.split('\n');
+  const lazyAt = lastIndex(lines, /^const \w+ = lazy\(/);
+  if (lazyAt < 0) throw new Refusal(`frontend/${app} has no const … = lazy( declaration to append after; add the view's by hand`);
+  const lazyLines = [
+    `const ${n.pascal} = lazy(() =>`,
+    `  import('./views/${n.pascal}').then((m) => ({ default: m.${n.pascal} }))`,
+    ');',
+  ];
+  // The route goes last among the children of the project's layout route.
+  const layoutAt = lines.findIndex((l) => l.includes('<Route path="/projects/:projectId" element={<ProjectLayout />}>'));
+  const closeAt = layoutAt < 0 ? -1 : lines.findIndex((l, i) => i > layoutAt && /^\s*<\/Route>\s*$/.test(l));
+  if (closeAt < 0) throw new Refusal(`frontend/${app} has no /projects/:projectId route with children to append to; add the <Route> by hand`);
+  const routeLine = `${lines[closeAt].match(/^\s*/)[0]}  <Route path="${n.kebab}" element={<${n.pascal} />} />`;
+  // The later insertion first, so the earlier index still holds.
+  lines.splice(closeAt, 0, routeLine);
+  lines.splice(statementEnd(lines, lazyAt) + 1, 0, ...lazyLines);
+
+  // The registry entry goes after the project's last page, before the site's.
+  const pLines = pagesOld.split('\n');
+  const siteAt = pLines.findIndex((l) => /^\s*\{ scope: 'site'/.test(l));
+  if (siteAt < 1 || pLines[siteAt - 1].trim() !== '') {
+    throw new Refusal(`frontend/${registry} has no blank line before its first site page to insert at; add the entry by hand`);
+  }
+  const entry = `  { scope: 'project', path: '${n.kebab}', load: 'lazy', public: false, help: NOT_WRITTEN },`;
+  pLines.splice(siteAt - 1, 0, entry);
+
+  const viewText = [
+    `// TODO: say what the ${n.text} page shows.`,
+    "import React from 'react';",
+    "import { useParams } from 'react-router-dom';",
+    '',
+    `export const ${n.pascal}: React.FC = () => {`,
+    '  const { projectId } = useParams<{ projectId: string }>();',
+    '  return (',
+    "    <div style={{ padding: 20 }}>",
+    `      <h2 style={{ color: 'var(--text)', margin: 0 }}>${n.pascal.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</h2>`,
+    `      <p style={{ color: 'var(--text-muted)' }}>TODO: the ${n.text} page of project {projectId}.</p>`,
+    '    </div>',
+    '  );',
+    '};',
+    '',
+  ].join('\n');
+
+  return {
+    creates: [[view, viewText]],
+    edits: [
+      { path: app, old: appOld, text: lines.join('\n'), added: [...lazyLines, routeLine] },
+      { path: registry, old: pagesOld, text: pLines.join('\n'), added: [entry] },
+    ],
+    note:
+      `The page is at /projects/:projectId/${n.kebab}, lazy and not public, and not in the menu. ` +
+      "App.tsx's JSX is otherwise as it was.",
+    steps: [
+      `The route tree and the bundle shape change: regenerate the route tree snapshot, ${REGENERATE_SURFACE}, then the lazy ` +
+        'page list: cd frontend && npm run build && UPDATE_BUNDLE_SHAPE=1 node scripts/bundle-check.mjs',
+      `The registry entry says the page has no help topic. For one, add the '${n.kebab}' topic to HELP_TOPICS in ` +
+        `components/helpTopics.ts and make the entry help: { topic: '${n.kebab}' }; pagesParity.test.ts checks the two agree.`,
+      `For a menu entry, give the entry in src/pages.ts a nav: { group, label }, in the position the menu should show it; the ` +
+        "menu then differs from the list FORMER_NAV_SECTIONS keeps in src/arch/pagesParity.test.ts and from FULL_MENU in " +
+        'components/ProjectLayout.nav.test.tsx, so update both in the same pull request.',
+      'Eager rather than lazy: import the view at the top of App.tsx in place of the lazy() constant, and set load: \'eager\' in the entry.',
+      `A chapter in manual/index.ts if the page has one; the page's screen in e2e/tools/phone-audit.js; utils/publicPaths.ts and public: true if it needs no session.`,
+      `The calls the page makes: the add-endpoint skill. Release note: a page a member can reach is a new feature, so its pull request adds a bullet under "### New features" in RELEASE_NOTES.md and registers a feature key (docs/release-policy.md).`,
+    ],
+  };
+}
+
 /** Writes the plan: new files first, each refused if it exists by then. */
 function apply(root, plan) {
   for (const [rel, text] of plan.creates) {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), text, { flag: 'wx' });
   }
-  fs.writeFileSync(path.join(root, plan.edit.path), plan.edit.text);
+  for (const edit of plan.edits ?? [plan.edit]) fs.writeFileSync(path.join(root, edit.path), edit.text);
 }
 
 /** Says whether an area of docs/areas.json claims a frontend file, asking
@@ -198,13 +306,16 @@ export function main(argv = process.argv.slice(2), { log = console, areaOf = are
       else pos.push(argv[i]);
     }
     if (pos.length !== 2) throw new UsageError('want a kind and a name');
-    if (pos[0] === 'page') throw new UsageError('scaffold page arrives with refactor step X17 (the page registry)');
-    if (pos[0] !== 'api-module') throw new UsageError(`unknown kind "${pos[0]}"`);
-    const plan = planApiModule(root, pos[1]);
+    const planners = { 'api-module': planApiModule, page: planPage };
+    if (!Object.hasOwn(planners, pos[0])) throw new UsageError(`unknown kind "${pos[0]}"`);
+    const plan = planners[pos[0]](root, pos[1]);
+    const edits = plan.edits ?? [plan.edit];
     if (!dryRun) apply(root, plan);
     const out = [];
     for (const [rel, text] of plan.creates) out.push(dryRun ? `would create frontend/${rel}:\n${indent(text)}` : `created frontend/${rel}`);
-    out.push(dryRun ? `would add to frontend/${plan.edit.path}:\n${indent(plan.edit.added.join('\n'))}` : `edited frontend/${plan.edit.path}`);
+    for (const edit of edits) {
+      out.push(dryRun ? `would add to frontend/${edit.path}:\n${indent(edit.added.join('\n'))}` : `edited frontend/${edit.path}`);
+    }
     out.push('', plan.note, '', 'Left to do:');
     const steps = [...plan.creates.map(([rel]) => areaOf(root, rel)), ...plan.steps];
     steps.forEach((s, i) => out.push(`  ${i + 1}. ${s}`));
