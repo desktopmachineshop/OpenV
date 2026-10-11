@@ -3545,7 +3545,7 @@ class CeilingTest(RepoTest):
         self.assertEqual(files["views/Login.tsx"], 708 + 70)
         components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
         self.assertEqual(len(components), 40)  # #379 bug 168 moved AgentRunsPage's table out, within budget
-        self.assertEqual(components["ModuleView"], 1405 + 140)  # F7 moved the panes out, X16a the data and baseline hooks
+        self.assertEqual(components["ModuleView"], 1187 + 118)  # F7 moved the panes out, X16a the data and baseline hooks, X16b resize, ordering and panel mode
 
 
 class ReAddTest(RepoTest):

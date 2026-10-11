@@ -15,7 +15,7 @@ step's scope, guard or verification class.
 | 0 Safety net | Done. S16 is just in time: S16a, b, c, i, j and k are merged; S16d–S16h wait for F8. |
 | 1 Same-package moves | Done (M1–M15, F1–F7, N1–N3, D1). F8 is rolling. |
 | 2 Leaf packages | Done (P1–P4; P5 dropped). |
-| 3 One mechanism each | X2–X9, X12 and X15 done. X1 done. X10, X11, X13, X14 and X16 part done. X17 done. X18 and D2 not started. X19 dropped. |
+| 3 One mechanism each | X2–X9, X12 and X15 done. X1, X13, X16 (hooks) and X17 done. X10, X11 and X14 part done. X18 part done (X18a). D2 not started. X19 dropped. |
 | 4 | Dropped. |
 
 What is left, measured on `master`:
@@ -26,8 +26,8 @@ What is left, measured on `master`:
 | **X11c** | Build the appliers in `wire_agents.go`; `SetAppliers` stays at today's statement | X11a (#526) and X11b (#569) merged; add S5b's guided tour to its guard column |
 | **X14c** | The 3 snapshot sites left by X14b: reports, V&V and downloads | Needs a guard exception for `internal/domain/reports → internal/domain/snapshot` first |
 | **X1** | Response and decode helpers, and the `scripts/refactor/httpio` codemod | Done (#584–#594); ratchets `raw_json_encodes` 0, `invalid_request_body_literals` 1 |
-| **X13** | Persistence kit, then columns const and scanner per repository | X13a done (#595 and #596): `pgkit.go`, `nulls.go` and the artifact repository; 19 repositories left without a columns const, and 20 hand-rolled transactions to move onto `withTx` |
-| **X16a, X16b** | ModuleView hooks | Prep merged (#528); X16a done (#597); `ModuleView.tsx` is 1,456 lines, target a shell of 400 or fewer; X16b left |
+| **X13** | Persistence kit, then columns const and scanner per repository | Done: X13a (#595, #596); project, V&V, link, interview, work item, guided, embedding (#605–#618); provider setting, chatter, product profile (#619–#624); template, repo connection and member batched (#625, #626); one `prefixColumns` (#627). Seven repositories need no const under the qualifying rule (one read, aggregates only, or lists that differ): project_info, release, settings, event, baseline, user_metrics, notification. Transactions moved onto `withTx` only where exactly equivalent. Left as small follow-ups: `prefixedFigureColumns` in `attachment_repository.go` |
+| **X16a, X16b** | ModuleView hooks | Done: prep (#528), X16a (#597), X16b (#628 characterization, #629 hooks). `ModuleView.tsx` is 1,223 lines (component 1,187); the 400-line shell target is not reached by the hooks alone, the rest being JSX and the attachment, create and link handlers |
 | **X17** | Page registry `src/pages.ts` | Done: the characterization (#599), the registry with `navSections` derived (#600), and the `scaffold page` template with its docs |
 | **X18a–X18c** | Wizard descriptors and typed answers | Not started; `GuidedWizard.tsx` is 1,635 lines, target 400 or fewer |
 | **D2** | `docs/architecture.md` after Phase 3 | Waits for X13 (X15 and X17 done) |
