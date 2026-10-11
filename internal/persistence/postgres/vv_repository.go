@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -287,16 +286,6 @@ func (r *VVRepository) AddResult(result *vv.TestResult) error {
 // them: the reads of whole results select them, and AddResult inserts them.
 const resultColumns = `id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at`
 
-// prefixedResultColumns is resultColumns qualified by a table alias, for the
-// query that joins test_results to test_runs and so cannot use bare names.
-func prefixedResultColumns(alias string) string {
-	cols := strings.Split(resultColumns, ", ")
-	for i, c := range cols {
-		cols[i] = alias + "." + c
-	}
-	return strings.Join(cols, ", ")
-}
-
 // scanResult reads one row of resultColumns.
 func scanResult(row rowScanner) (*vv.TestResult, error) {
 	result := new(vv.TestResult)
@@ -404,7 +393,7 @@ func (r *VVRepository) listResults(query string, args ...interface{}) ([]*vv.Tes
 func (r *VVRepository) LatestResultPerCase(projectID string) (map[string]*vv.TestResult, error) {
 	query := `
 		SELECT DISTINCT ON (tr.test_case_id)
-			` + prefixedResultColumns("tr") + `
+			` + prefixColumns(resultColumns, "tr") + `
 		FROM test_results tr
 		JOIN test_runs runs ON runs.id = tr.run_id
 		WHERE runs.project_id = $1 AND runs.status IN ('in-progress', 'completed')

@@ -26,7 +26,7 @@ long form. `go run ./internal/tools/areas which <path>` names a file's area.
 | Glob | What it holds |
 |---|---|
 | `*_repository*.go` | one repository per domain `Repository` interface, built by `New<Name>Repository(db)`; a large one is split by concern (`org_repository_*.go`) |
-| `pgkit.go` | the persistence kit (X13): `rowScanner`, what a scan function reads a row from, and `withTx`, which runs a function in a transaction, commits when it returns nil and rolls back on an error or a panic, with no timeout of its own |
+| `pgkit.go` | the persistence kit (X13): `rowScanner`, what a scan function reads a row from; `prefixColumns`, which qualifies a columns const by a table alias; and `withTx`, which runs a function in a transaction, commits when it returns nil and rolls back on an error or a panic, with no timeout of its own |
 | `nulls.go` | the NULL-argument helpers: `nullString`, `nullInt`, `nullableString` and `nullUUID` |
 | `db.go`, `connstring.go` | `Connect` and the connection string (`DATABASE_URL`, else the quoted `DB_*` parts) |
 | `db_stored_files.go`, `db_boot_tasks.go` | the stored files a delete answers (`storedFiles`) and every path, workspace and account the database names (`ReadStoredFileNames`); `RunBootTaskOnce`, a boot's once-per-database task under the boot lock (`boot_tasks`) |
