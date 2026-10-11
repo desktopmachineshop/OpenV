@@ -38,7 +38,10 @@ func ResourceLimitsForOrg(o *orgs.Org) ResourceLimits {
 	}
 	var rl ResourceLimits
 	if v := read(orgs.LimitRunnerMemoryMB); v > 0 {
-		rl.MemoryMB = int64(v)
+		// Clamped so MemoryMB * 1024 * 1024 in hostConfigFor cannot wrap
+		// for a size stored before a limit too large for bytes was
+		// refused (#638, bug 226).
+		rl.MemoryMB = orgs.ClampMB(v)
 	}
 	if v := read(orgs.LimitRunnerCPUs); v > 0 {
 		rl.NanoCPUs = int64(v * 1e9)

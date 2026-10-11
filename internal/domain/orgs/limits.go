@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -104,6 +105,44 @@ const (
 	// monthly budget; a member's own runs and costs are always theirs to see.
 	LimitWorkspaceBudget = "workspace_budget"
 )
+
+// bytesPerMB is the size of the mebibyte every *_mb limit is counted in.
+const bytesPerMB = 1024 * 1024
+
+// MaxMB is the largest size limit, in MiB, whose byte count fits in an int64.
+// A size limit above it wraps to a negative or tiny cap the moment it is
+// multiplied into bytes, so ParseLimits refuses one (#638, bug 226) and the
+// readers clamp one that was stored before that refusal (MBToBytes, ClampMB).
+const MaxMB = math.MaxInt64 / bytesPerMB
+
+// IsSizeLimit reports whether key is a size limit: a catalogued limit counted
+// in MiB (Unit == UnitMB). It is read off the catalogue rather than from a
+// "_mb" suffix, so a new size limit is covered by declaring its unit and a
+// key that merely ends in "_mb" without being catalogued is not.
+func IsSizeLimit(key string) bool {
+	def, ok := Describe(key)
+	return ok && def.Unit == UnitMB
+}
+
+// ClampMB reads a size limit of v MiB as whole MiB, held to [0, MaxMB]: the
+// fraction is truncated, and anything above MaxMB (+Inf included) is MaxMB.
+// Zero, a negative number and NaN are 0, which every reader treats as "no
+// cap" or "unset" as it did before.
+func ClampMB(v float64) int64 {
+	switch {
+	case !(v > 0): // zero, negative and NaN
+		return 0
+	case v >= MaxMB:
+		return MaxMB
+	}
+	return int64(v)
+}
+
+// MBToBytes is the byte count of a size limit of v MiB, clamped so it cannot
+// wrap: the largest whole number of MiB that fits, in bytes, for anything
+// above MaxMB, and 0 for zero, a negative number or NaN. Every in-range value
+// gives what int64(v) * 1024 * 1024 always did.
+func MBToBytes(v float64) int64 { return ClampMB(v) * bytesPerMB }
 
 // Kind says what shape a limit's value takes. A resource limit and a count
 // limit are both numbers where 0 means unlimited; a flag is a bool, and it
@@ -300,7 +339,8 @@ func (p *DeploymentPolicy) ReadOnlyRemedy(over []string) string {
 // is deliberate: a typo in OPENV_LIMITS that silently did nothing would look
 // exactly like a limit that does not work. The keys are checked in order, so
 // of several it cannot honour the error names the first, the same one on
-// every boot (#379, bug 223).
+// every boot (#379, bug 223). A size limit too large to count in bytes is
+// refused like a negative one (#638, bug 226).
 func ParseLimits(raw string) (map[string]interface{}, error) {
 	if raw == "" {
 		return nil, nil
@@ -330,6 +370,9 @@ func ParseLimits(raw string) (map[string]interface{}, error) {
 		}
 		if number < 0 {
 			return nil, fmt.Errorf("limit %q must not be negative (0 means unlimited)", key)
+		}
+		if IsSizeLimit(key) && number > MaxMB {
+			return nil, fmt.Errorf("limit %q must not exceed %d (MiB; a larger size does not fit in a byte count)", key, int64(MaxMB))
 		}
 		out[key] = number
 	}

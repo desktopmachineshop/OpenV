@@ -3,7 +3,10 @@ package orgs
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -649,6 +652,121 @@ func TestTheReadOnlyRemedyNamesTheSettingOnASelfHostedDeployment(t *testing.T) {
 		setting := "raise " + strings.Join(want, " and ") + " in OPENV_LIMITS"
 		if !strings.Contains(msg, setting) || !strings.Contains(msg, "exportable") {
 			t.Errorf("%s: a self-hosted read-only remedy does not say %q: %s", over, setting, msg)
+		}
+	}
+}
+
+// A size limit whose bytes do not fit in an int64 wraps to a negative or tiny
+// cap where it is multiplied, so it is refused at parse like a negative one,
+// with the limit named (#638, bug 226). The largest value that fits is
+// accepted, as is a fraction in range.
+func TestParseLimitsRefusesASizeTooLargeForBytes(t *testing.T) {
+	largest := strconv.FormatInt(MaxMB, 10)
+	for _, key := range []string{LimitEvidenceStorageMB, LimitMaxUploadMB, LimitRunnerMemoryMB} {
+		got, err := ParseLimits(`{"` + key + `": ` + largest + `}`)
+		if err != nil {
+			t.Errorf("%s at the largest size that fits (%s) was refused: %v", key, largest, err)
+		} else if got[key] != float64(MaxMB) {
+			t.Errorf("%s parsed as %v, want %d", key, got[key], int64(MaxMB))
+		}
+		if _, err := ParseLimits(`{"` + key + `": 1.5}`); err != nil {
+			t.Errorf("%s of 1.5 (a fraction in range) was refused: %v", key, err)
+		}
+		for _, raw := range []string{`8796093022208`, `9223372036854775807`, `1e30`, `8796093022207.5`} {
+			_, err := ParseLimits(`{"` + key + `": ` + raw + `}`)
+			if err == nil {
+				t.Errorf("%s of %s was accepted", key, raw)
+				continue
+			}
+			if !strings.HasPrefix(err.Error(), `limit "`+key+`" must not exceed `+largest) {
+				t.Errorf("%s of %s: error %q does not name the limit and its largest size", key, raw, err)
+			}
+		}
+	}
+	// Of several refused keys the first in key order is named, as before.
+	_, err := ParseLimits(`{"runner_memory_mb": 1e30, "evidence_storage_mb": 1e30}`)
+	if err == nil || !strings.HasPrefix(err.Error(), `limit "evidence_storage_mb" must not exceed`) {
+		t.Errorf("two oversized sizes gave %v, want evidence_storage_mb named first", err)
+	}
+	// A negative size is still refused with today's message.
+	if _, err := ParseLimits(`{"max_upload_mb": -1}`); err == nil || !strings.Contains(err.Error(), `limit "max_upload_mb" must not be negative (0 means unlimited)`) {
+		t.Errorf("a negative size gave %v", err)
+	}
+}
+
+// Only a size is bound by the byte count. A count or a number of minutes is
+// never multiplied into bytes, so a large one is accepted as it always was.
+// (A count or minutes that large reads back through LimitInt, which is a
+// separate conversion this fix does not change.)
+func TestParseLimitsKeepsAHugeNonSizeLimit(t *testing.T) {
+	for _, key := range []string{LimitMaxMembers, LimitMaxProjects, LimitHostedRunnerMinutesMonth, LimitRunnerSessionMinutes, LimitRunnerCPUs} {
+		if IsSizeLimit(key) {
+			t.Errorf("%s is not a size limit", key)
+		}
+		if _, err := ParseLimits(`{"` + key + `": 1e12}`); err != nil {
+			t.Errorf("%s of 1e12 was refused: %v", key, err)
+		}
+	}
+}
+
+// A size limit is identified by its unit in the catalogue, so a new one is
+// bound by the byte count by declaring UnitMB, whatever its key ends in.
+func TestIsSizeLimitFollowsTheCatalogueUnit(t *testing.T) {
+	var sizes []string
+	for _, def := range Catalog() {
+		if IsSizeLimit(def.Key) != (def.Unit == UnitMB) {
+			t.Errorf("IsSizeLimit(%q) disagrees with its unit %q", def.Key, def.Unit)
+		}
+		if strings.HasSuffix(def.Key, "_mb") != IsSizeLimit(def.Key) {
+			t.Errorf("%s: the _mb suffix and the unit disagree", def.Key)
+		}
+		if IsSizeLimit(def.Key) {
+			sizes = append(sizes, def.Key)
+		}
+	}
+	if want := []string{LimitEvidenceStorageMB, LimitMaxUploadMB, LimitRunnerMemoryMB}; !slices.Equal(sizes, want) {
+		t.Errorf("size limits = %v, want %v", sizes, want)
+	}
+	if IsSizeLimit("not_a_limit_mb") || IsSizeLimit("") {
+		t.Error("an uncatalogued key was taken for a size limit")
+	}
+}
+
+// MBToBytes and ClampMB never wrap: the boundaries are 0, 1, the largest size
+// that fits, one past it, +Inf and NaN. In-range values give what
+// int64(v) * 1024 * 1024 always did.
+func TestMBToBytesBoundaries(t *testing.T) {
+	const mib = 1024 * 1024
+	maxBytes := int64(MaxMB) * mib
+	if maxBytes <= 0 || math.MaxInt64-maxBytes >= mib {
+		t.Fatalf("MaxMB = %d: %d bytes is not the largest whole MiB that fits an int64", int64(MaxMB), maxBytes)
+	}
+	for _, tc := range []struct {
+		name   string
+		in     float64
+		wantMB int64
+		want   int64
+	}{
+		{"zero", 0, 0, 0},
+		{"negative", -5, 0, 0},
+		{"negative zero", math.Copysign(0, -1), 0, 0},
+		{"NaN", math.NaN(), 0, 0},
+		{"a fraction", 0.5, 0, 0},
+		{"one", 1, 1, mib},
+		{"one and a half truncates", 1.5, 1, mib},
+		{"a plan size", 8192, 8192, 8192 * mib},
+		{"largest that fits", MaxMB, MaxMB, maxBytes},
+		{"one past the largest", float64(MaxMB) + 1, MaxMB, maxBytes},
+		{"far past", 1e30, MaxMB, maxBytes},
+		{"the largest int64", math.MaxInt64, MaxMB, maxBytes},
+		{"+Inf", math.Inf(1), MaxMB, maxBytes},
+		{"-Inf", math.Inf(-1), 0, 0},
+	} {
+		if got := ClampMB(tc.in); got != tc.wantMB {
+			t.Errorf("%s: ClampMB(%v) = %d, want %d", tc.name, tc.in, got, tc.wantMB)
+		}
+		if got := MBToBytes(tc.in); got != tc.want {
+			t.Errorf("%s: MBToBytes(%v) = %d, want %d", tc.name, tc.in, got, tc.want)
 		}
 	}
 }

@@ -78,7 +78,10 @@ func (h *Handler) uploadLimitBytes(orgID string) int64 {
 				if mb <= 0 {
 					return maxUploadCeilingMB * bytesPerMB
 				}
-				return min(int64(mb), int64(maxUploadCeilingMB)) * bytesPerMB
+				// Clamped before the ceiling, so a size stored before a
+				// limit too large for bytes was refused (#638, bug 226)
+				// meets the ceiling instead of wrapping below it.
+				return min(orgs.ClampMB(mb), int64(maxUploadCeilingMB)) * bytesPerMB
 			}
 		}
 	}

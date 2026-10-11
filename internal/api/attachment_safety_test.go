@@ -305,3 +305,26 @@ func TestFigureSniffAcceptsTheCatalogueAndTheImageSniffDoesNot(t *testing.T) {
 		t.Error("the figure sniff let a PDF through as a PNG; it would be served inline")
 	}
 }
+
+// A max_upload_mb stored before a size too large for bytes was refused
+// (#638, bug 226) must meet the 8192 MB ceiling, not wrap below it: int64 of
+// such a float is the smallest int64, which the ceiling's min kept.
+func TestAnOversizedStoredUploadLimitStaysAtTheCeiling(t *testing.T) {
+	prevSelfHosted, prevLayer := orgs.SelfHosted(), orgs.DeploymentLimits()
+	t.Cleanup(func() {
+		orgs.SetSelfHosted(prevSelfHosted)
+		orgs.SetDeploymentLimits(prevLayer)
+	})
+	orgs.SetSelfHosted(false)
+	orgs.SetDeploymentLimits(nil)
+	t.Setenv(envMaxUploadMB, "")
+	for _, stored := range []float64{float64(orgs.MaxMB) + 1, 1e19, 1e30, math.Inf(1)} {
+		h := newTestHandler(t, func(h *Handler) {
+			h.OrgService = &limitReadOrgs{org: &orgs.Org{ID: "w", BilledPlan: orgs.PlanFree,
+				Limits: map[string]interface{}{orgs.LimitMaxUploadMB: stored}}}
+		})
+		if got, want := h.uploadLimitBytes("w"), maxUploadCeilingMB*bytesPerMB; got != want {
+			t.Errorf("stored %v: upload cap = %d bytes, want the %d MB ceiling", stored, got, maxUploadCeilingMB)
+		}
+	}
+}
