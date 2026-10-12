@@ -19,6 +19,29 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   naming the limit and the largest size it accepts, and a size of that kind
   already stored for a workspace is treated as the largest size that fits.
 
+- **Saving a link no longer wipes what you did not send, and it keeps to the
+  link rules.** Changing only a link's attributes used to blank its type, and
+  changing only its type used to clear its attributes, which dropped the link
+  from traceability and coverage without a word. A link update now changes
+  only the fields you send. A new type is checked against the same link rules
+  as creating a link, and is refused with the same message when it breaks
+  one, and an empty type is refused.
+
+- **A project with an unknown agent sign-in mode is now refused with a clear
+  message.** Creating or updating a project with an `agent_auth` other than
+  `user-account` or `api-key` used to answer as if the server had failed.
+  It now answers 400 and names the field and the two values it takes.
+
+- **Revoking a runner key that does not exist now says so.** Revoking a
+  workspace runner key the workspace does not have, or one that belongs to
+  another workspace, used to answer 400 as if the request were malformed. It
+  now answers 404, the same as for any other item that is not there.
+
+- **The guided wizard no longer accepts a step it does not have.** Saving a
+  step numbered below 1 or past the last step used to be stored, which could
+  leave a session reopening on a step the wizard cannot show. The step save
+  now answers 400 and names the valid range, 1 to 8.
+
 ## 0.17.1 — 2026-10-10
 
 ### Maintenance updates
