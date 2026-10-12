@@ -413,9 +413,7 @@ transactions share. A repository adopts them one at a time.
   (`COALESCE(release_channel, '')`) would be cut in the middle, so
   `orgColumns` keeps a hand-written `orgColumnsQualified` beside it. A
   qualified list is built where the join is written
-  (`prefixColumns(linkColumns, "l")`), not kept as a second const;
-  `attachment_repository.go`'s `prefixedFigureColumns` is the one older
-  helper still to fold in.
+  (`prefixColumns(linkColumns, "l")`), not kept as a second const.
 - **`withTx(ctx, db, opts, fn)`.** Begins a transaction, runs `fn`, commits
   when it returns nil, rolls back on an error or a panic, and answers the
   begin's, `fn`'s or the commit's error as it came. It adds no timeout: a
@@ -639,9 +637,6 @@ Shared hooks live in `src/hooks/`:
   `NotificationBell`, each pass their reconnect policy as named parameters,
   and the keys of the listeners they pass are typed `SseEventName`, so
   `arch/sseListeners.test.ts` can read them.
-- `useApiResource` (X15) loads what a view shows: fetch on mount and
-  when the active workspace or a dependency changes, a cancelled flag, no
-  cache. It is built and tested; no view uses it yet.
 - `useFeature` reads the feature gates (its key is typed `FeatureKey`), with
   `useViewport`, `useVisualViewport`, `useSwipe`, `useUploadLimit` and the
   reading-key helpers beside it.
