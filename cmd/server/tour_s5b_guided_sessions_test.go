@@ -127,6 +127,10 @@ func guidedSessionsTour(tr *tour) {
 		jsonBody(`{"step":2,"answers":{"step_2":{"personas":[{"id":"p-1","name":"Maker Mo"}]},"budget_eur":900}}`))
 	tr.step("save step 3 with no answers: only current_step moves", o, "PUT /api/v1/guided-sessions/{id}/step",
 		at("id", "{{s}}"), jsonBody(`{"step":3}`))
+	tr.step("save step 0: below the wizard's steps, 400 naming the range", o, "PUT /api/v1/guided-sessions/{id}/step",
+		at("id", "{{s}}"), jsonBody(`{"step":0,"answers":{"step_9":{}}}`), note("nothing is stored"))
+	tr.step("save step 9: past the wizard's last step, 400 naming the range", o, "PUT /api/v1/guided-sessions/{id}/step",
+		at("id", "{{s}}"), jsonBody(`{"step":9,"answers":{"step_9":{}}}`), note("nothing is stored"))
 	tr.step("read S back: the answers as stored", o, "GET /api/v1/guided-sessions/{id}", at("id", "{{s}}"))
 
 	// Drafts.

@@ -1559,7 +1559,7 @@
     },
     {
       "n": 40,
-      "title": "retype the derives-from link to one its rule refuses: stored as sent",
+      "title": "retype the derives-from link to one its rule refuses: 400, nothing stored",
       "actor": "owner",
       "route": "PUT /api/v1/links/{id}",
       "request": {
@@ -1571,8 +1571,66 @@
         "body": "{\"type\":\"verifies\",\"attributes\":{\"note\":\"retyped\"}}"
       },
       "notes": [
-        "UpdateLink checks no link rule; POST /api/v1/links answers 400 for verifies from a requirement"
+        "a changed type is checked as POST /api/v1/links checks it: verifies from a requirement answers 400"
       ],
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 106,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"link type 'verifies' cannot originate from artifact type 'requirement' (allowed: [test-case])\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "link type 'verifies' cannot originate from artifact type 'requirement' (allowed: [test-case])"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 41,
+      "title": "send an empty type: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/links/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/links/<l_derives>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 35,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"type must not be empty\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "type must not be empty"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 42,
+      "title": "retype it to one the rules allow, attributes left out: they are kept",
+      "actor": "owner",
+      "route": "PUT /api/v1/links/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/links/<l_derives>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"relates-to\"}"
+      },
       "status": 200,
       "content_type": "application/json",
       "headers": [],
@@ -1580,23 +1638,23 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"note\":\"retyped\"},\"version\":2,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 40>\"}"
+        "{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"relates-to\",\"suspect\":false,\"attributes\":{\"rationale\":\"Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified.\"},\"version\":2,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 42>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<l_derives>",
         "from_id": "<req>",
         "to_id": "<need>",
-        "type": "verifies",
+        "type": "relates-to",
         "suspect": false,
         "attributes": {
-          "note": "retyped"
+          "rationale": "Every answer the user needs traced becomes a requirement, so the need is met exactly when that requirement is verified."
         },
         "version": 2,
         "valid_from": "<time@step 7>",
         "valid_to": null,
         "created_at": "<time@step 7>",
-        "updated_at": "<time@step 40>"
+        "updated_at": "<time@step 42>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
@@ -1607,15 +1665,68 @@
           "entity": "<l_derives>",
           "payload": {
             "from_id": "string \"<req>\"",
-            "link_type": "string \"verifies\"",
+            "link_type": "string \"relates-to\"",
             "to_id": "string \"<need>\""
           }
         }
       ]
     },
     {
-      "n": 41,
-      "title": "retype it back; attributes left out become null",
+      "n": 43,
+      "title": "change only the attributes: the type is kept",
+      "actor": "owner",
+      "route": "PUT /api/v1/links/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/links/<l_derives>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"attributes\":{\"note\":\"annotated\"}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"relates-to\",\"suspect\":false,\"attributes\":{\"note\":\"annotated\"},\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 43>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<l_derives>",
+        "from_id": "<req>",
+        "to_id": "<need>",
+        "type": "relates-to",
+        "suspect": false,
+        "attributes": {
+          "note": "annotated"
+        },
+        "version": 3,
+        "valid_from": "<time@step 7>",
+        "valid_to": null,
+        "created_at": "<time@step 7>",
+        "updated_at": "<time@step 43>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "link.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<l_derives>",
+          "payload": {
+            "from_id": "string \"<req>\"",
+            "link_type": "string \"relates-to\"",
+            "to_id": "string \"<need>\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 44,
+      "title": "retype it back, attributes left out: they are kept",
       "actor": "owner",
       "route": "PUT /api/v1/links/{id}",
       "request": {
@@ -1633,7 +1744,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}"
+        "{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"note\":\"annotated\"},\"version\":4,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 44>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1642,12 +1753,14 @@
         "to_id": "<need>",
         "type": "derives-from",
         "suspect": false,
-        "attributes": null,
-        "version": 3,
+        "attributes": {
+          "note": "annotated"
+        },
+        "version": 4,
         "valid_from": "<time@step 7>",
         "valid_to": null,
         "created_at": "<time@step 7>",
-        "updated_at": "<time@step 41>"
+        "updated_at": "<time@step 44>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
@@ -1665,7 +1778,7 @@
       ]
     },
     {
-      "n": 42,
+      "n": 45,
       "title": "update a link that does not exist",
       "actor": "owner",
       "route": "PUT /api/v1/links/{id}",
@@ -1694,7 +1807,7 @@
       "events": []
     },
     {
-      "n": 43,
+      "n": 46,
       "title": "update a link with a malformed body",
       "actor": "owner",
       "route": "PUT /api/v1/links/{id}",
@@ -1723,7 +1836,7 @@
       "events": []
     },
     {
-      "n": 44,
+      "n": 47,
       "title": "delete the satisfies link: link.deleted",
       "actor": "owner",
       "route": "DELETE /api/v1/links/{id}",
@@ -1753,7 +1866,7 @@
       ]
     },
     {
-      "n": 45,
+      "n": 48,
       "title": "delete it again",
       "actor": "owner",
       "route": "DELETE /api/v1/links/{id}",
@@ -1781,7 +1894,7 @@
       "events": []
     },
     {
-      "n": 46,
+      "n": 49,
       "title": "delete a link that does not exist",
       "actor": "owner",
       "route": "DELETE /api/v1/links/{id}",
@@ -1806,7 +1919,7 @@
       "events": []
     },
     {
-      "n": 47,
+      "n": 50,
       "title": "read the deleted link",
       "actor": "owner",
       "route": "GET /api/v1/links/{id}",
@@ -1830,7 +1943,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 48,
+      "n": 51,
       "title": "the design item's version 3, written when its last link went: an empty snapshot, []",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -1856,7 +1969,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 49,
+      "n": 52,
       "title": "managed edit of the design item: add satisfies and verifies to the requirement, remove the verifies link from the test case",
       "actor": "owner",
       "route": "PUT /api/v1/artifacts/{id}",
@@ -1878,7 +1991,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1901,19 +2014,19 @@
               "suspect": false,
               "attributes": {},
               "version": 1,
-              "valid_from": "<time@step 49>",
+              "valid_from": "<time@step 52>",
               "valid_to": null,
-              "created_at": "<time@step 49>",
-              "updated_at": "<time@step 49>"
+              "created_at": "<time@step 52>",
+              "updated_at": "<time@step 52>"
             }
           ],
           "status": "draft"
         },
         "version": 4,
-        "valid_from": "<time@step 49>",
+        "valid_from": "<time@step 52>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
-        "updated_at": "<time@step 49>"
+        "updated_at": "<time@step 52>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
@@ -1931,7 +2044,7 @@
       ]
     },
     {
-      "n": 50,
+      "n": 53,
       "title": "the design item's note lists the link made, not the skipped add and removal",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
@@ -1947,7 +2060,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
+        "[{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 47>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1958,8 +2071,8 @@
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
-          "created_at": "<time@step 49>",
-          "updated_at": "<time@step 49>"
+          "created_at": "<time@step 52>",
+          "updated_at": "<time@step 52>"
         },
         {
           "id": "<uuid:6>",
@@ -1968,8 +2081,8 @@
           "is_auto_entry": true,
           "entry_type": "link-change",
           "author_name": "",
-          "created_at": "<time@step 44>",
-          "updated_at": "<time@step 44>"
+          "created_at": "<time@step 47>",
+          "updated_at": "<time@step 47>"
         },
         {
           "id": "<uuid:7>",
@@ -1985,7 +2098,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 51,
+      "n": 54,
       "title": "the design item's current links: only the satisfies link was made",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2000,7 +2113,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}]"
+        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2012,16 +2125,16 @@
           "suspect": false,
           "attributes": {},
           "version": 1,
-          "valid_from": "<time@step 49>",
+          "valid_from": "<time@step 52>",
           "valid_to": null,
-          "created_at": "<time@step 49>",
-          "updated_at": "<time@step 49>"
+          "created_at": "<time@step 52>",
+          "updated_at": "<time@step 52>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 52,
+      "n": 55,
       "title": "the design item read back: its links_snapshot through jsonb, keys in alphabetical order",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}",
@@ -2036,7 +2149,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 52>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 52>\",\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2053,14 +2166,14 @@
           "links_snapshot": [
             {
               "attributes": {},
-              "created_at": "<time@step 49>",
+              "created_at": "<time@step 52>",
               "from_id": "<di>",
               "id": "<l_managed>",
               "suspect": false,
               "to_id": "<req>",
               "type": "satisfies",
-              "updated_at": "<time@step 49>",
-              "valid_from": "<time@step 49>",
+              "updated_at": "<time@step 52>",
+              "valid_from": "<time@step 52>",
               "valid_to": null,
               "version": 1
             }
@@ -2068,15 +2181,15 @@
           "status": "draft"
         },
         "version": 4,
-        "valid_from": "<time@step 49>",
+        "valid_from": "<time@step 52>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
-        "updated_at": "<time@step 49>"
+        "updated_at": "<time@step 52>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 53,
+      "n": 56,
       "title": "the test case's current links: the verifies link, which the edit did not remove",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2115,7 +2228,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 54,
+      "n": 57,
       "title": "the test case's version 3 lists the verifies link",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2155,7 +2268,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 55,
+      "n": 58,
       "title": "the test case has no version 4: the managed edit left it alone",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2180,7 +2293,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 56,
+      "n": 59,
       "title": "the test case's notes: nothing from the managed edit",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
@@ -2224,7 +2337,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 57,
+      "n": 60,
       "title": "managed edit of the design item: remove its only link",
       "actor": "owner",
       "route": "PUT /api/v1/artifacts/{id}",
@@ -2246,7 +2359,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 57>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 57>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 52>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 52>\",\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":5,\"valid_from\":\"<time@step 60>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 60>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2263,14 +2376,14 @@
           "links_snapshot": [
             {
               "attributes": {},
-              "created_at": "<time@step 49>",
+              "created_at": "<time@step 52>",
               "from_id": "<di>",
               "id": "<l_managed>",
               "suspect": false,
               "to_id": "<req>",
               "type": "satisfies",
-              "updated_at": "<time@step 49>",
-              "valid_from": "<time@step 49>",
+              "updated_at": "<time@step 52>",
+              "valid_from": "<time@step 52>",
               "valid_to": null,
               "version": 1
             }
@@ -2278,10 +2391,10 @@
           "status": "draft"
         },
         "version": 5,
-        "valid_from": "<time@step 57>",
+        "valid_from": "<time@step 60>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
-        "updated_at": "<time@step 57>"
+        "updated_at": "<time@step 60>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
@@ -2299,7 +2412,7 @@
       ]
     },
     {
-      "n": 58,
+      "n": 61,
       "title": "the design item's current links: none",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2321,7 +2434,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 59,
+      "n": 62,
       "title": "its version 5 still lists the removed link (Q4)",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2337,7 +2450,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"}]"
+        "[{\"id\":\"<l_managed>\",\"from_id\":\"<di>\",\"to_id\":\"<req>\",\"type\":\"satisfies\",\"suspect\":false,\"attributes\":{},\"version\":1,\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2349,16 +2462,16 @@
           "suspect": false,
           "attributes": {},
           "version": 1,
-          "valid_from": "<time@step 49>",
+          "valid_from": "<time@step 52>",
           "valid_to": null,
-          "created_at": "<time@step 49>",
-          "updated_at": "<time@step 49>"
+          "created_at": "<time@step 52>",
+          "updated_at": "<time@step 52>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 60,
+      "n": 63,
       "title": "a managed edit whose entries all fall away: an add with no type, the removal of no link",
       "actor": "owner",
       "route": "PUT /api/v1/artifacts/{id}",
@@ -2380,7 +2493,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 49>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 49>\",\"valid_from\":\"<time@step 49>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":6,\"valid_from\":\"<time@step 60>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 60>\"}"
+        "{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Design one\",\"body\":\"A trace table keyed by answer.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":{},\"created_at\":\"<time@step 52>\",\"from_id\":\"<di>\",\"id\":\"<l_managed>\",\"suspect\":false,\"to_id\":\"<req>\",\"type\":\"satisfies\",\"updated_at\":\"<time@step 52>\",\"valid_from\":\"<time@step 52>\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":6,\"valid_from\":\"<time@step 63>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 63>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2397,14 +2510,14 @@
           "links_snapshot": [
             {
               "attributes": {},
-              "created_at": "<time@step 49>",
+              "created_at": "<time@step 52>",
               "from_id": "<di>",
               "id": "<l_managed>",
               "suspect": false,
               "to_id": "<req>",
               "type": "satisfies",
-              "updated_at": "<time@step 49>",
-              "valid_from": "<time@step 49>",
+              "updated_at": "<time@step 52>",
+              "valid_from": "<time@step 52>",
               "valid_to": null,
               "version": 1
             }
@@ -2412,10 +2525,10 @@
           "status": "draft"
         },
         "version": 6,
-        "valid_from": "<time@step 60>",
+        "valid_from": "<time@step 63>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
-        "updated_at": "<time@step 60>"
+        "updated_at": "<time@step 63>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
@@ -2433,7 +2546,7 @@
       ]
     },
     {
-      "n": 61,
+      "n": 64,
       "title": "the design item's notes: the removal, then a version with nothing listed",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
@@ -2449,7 +2562,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:10>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 6\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 60>\",\"updated_at\":\"<time@step 60>\"},{\"id\":\"<uuid:11>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 5\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (removed)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 57>\",\"updated_at\":\"<time@step 57>\"},{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
+        "[{\"id\":\"<uuid:10>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 6\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<uuid:11>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 5\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (removed)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 60>\",\"updated_at\":\"<time@step 60>\"},{\"id\":\"<uuid:5>\",\"artifact_id\":\"<di>\",\"message\":\"Updated to version 4\\n\\nChanges:\\n- Links:\\n    - satisfies: Req one (added)\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 47>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<di>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2460,8 +2573,8 @@
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
-          "created_at": "<time@step 60>",
-          "updated_at": "<time@step 60>"
+          "created_at": "<time@step 63>",
+          "updated_at": "<time@step 63>"
         },
         {
           "id": "<uuid:11>",
@@ -2470,8 +2583,8 @@
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
-          "created_at": "<time@step 57>",
-          "updated_at": "<time@step 57>"
+          "created_at": "<time@step 60>",
+          "updated_at": "<time@step 60>"
         },
         {
           "id": "<uuid:5>",
@@ -2480,8 +2593,8 @@
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
-          "created_at": "<time@step 49>",
-          "updated_at": "<time@step 49>"
+          "created_at": "<time@step 52>",
+          "updated_at": "<time@step 52>"
         },
         {
           "id": "<uuid:6>",
@@ -2490,8 +2603,8 @@
           "is_auto_entry": true,
           "entry_type": "link-change",
           "author_name": "",
-          "created_at": "<time@step 44>",
-          "updated_at": "<time@step 44>"
+          "created_at": "<time@step 47>",
+          "updated_at": "<time@step 47>"
         },
         {
           "id": "<uuid:7>",
@@ -2511,7 +2624,7 @@
       }
     },
     {
-      "n": 62,
+      "n": 65,
       "title": "the supplier's managed add of a refines link into P is skipped (Q3)",
       "actor": "supplier",
       "route": "PUT /api/v1/artifacts/{id}",
@@ -2533,7 +2646,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<creq>\",\"project_id\":\"<c>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Supplier req\",\"body\":\"The subsystem shall trace its part of every answer.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}],\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 62>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 62>\"}"
+        "{\"id\":\"<creq>\",\"project_id\":\"<c>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Supplier req\",\"body\":\"The subsystem shall trace its part of every answer.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}],\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 65>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 65>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2564,10 +2677,10 @@
           "status": "draft"
         },
         "version": 3,
-        "valid_from": "<time@step 62>",
+        "valid_from": "<time@step 65>",
         "valid_to": null,
         "created_at": "<time@before step 1>",
-        "updated_at": "<time@step 62>"
+        "updated_at": "<time@step 65>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
@@ -2585,7 +2698,7 @@
       ]
     },
     {
-      "n": 63,
+      "n": 66,
       "title": "C's requirement: still the one refines link",
       "actor": "supplier",
       "route": "GET /api/v1/artifacts/{id}/links",
@@ -2621,7 +2734,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 64,
+      "n": 67,
       "title": "C's requirement's notes",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
@@ -2637,7 +2750,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:12>\",\"artifact_id\":\"<creq>\",\"message\":\"Updated to version 3\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<uuid:13>\",\"artifact_id\":\"<creq>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
+        "[{\"id\":\"<uuid:12>\",\"artifact_id\":\"<creq>\",\"message\":\"Updated to version 3\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<uuid:13>\",\"artifact_id\":\"<creq>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2648,8 +2761,8 @@
           "is_auto_entry": true,
           "entry_type": "version-change",
           "author_name": "",
-          "created_at": "<time@step 62>",
-          "updated_at": "<time@step 62>"
+          "created_at": "<time@step 65>",
+          "updated_at": "<time@step 65>"
         },
         {
           "id": "<uuid:13>",
@@ -2665,7 +2778,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 65,
+      "n": 68,
       "title": "the requirement's notes: one auto-version per link write touching it (Q4)",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
@@ -2681,32 +2794,42 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:14>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 11 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 57>\",\"updated_at\":\"<time@step 57>\"},{\"id\":\"<uuid:15>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 10 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 49>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<uuid:16>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 9 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:17>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 8 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 41>\",\"updated_at\":\"<time@step 41>\"},{\"id\":\"<uuid:18>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 7 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 40>\",\"updated_at\":\"<time@step 40>\"},{\"id\":\"<uuid:19>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 6 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 39>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<uuid:1>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 5 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<uuid:2>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 4 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<uuid:3>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<uuid:4>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
+        "[{\"id\":\"<uuid:14>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 12 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 60>\",\"updated_at\":\"<time@step 60>\"},{\"id\":\"<uuid:15>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 11 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<uuid:16>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 10 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 47>\"},{\"id\":\"<uuid:17>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 9 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"},{\"id\":\"<uuid:18>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 8 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 43>\",\"updated_at\":\"<time@step 43>\"},{\"id\":\"<uuid:19>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 7 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 42>\",\"updated_at\":\"<time@step 42>\"},{\"id\":\"<uuid:20>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 6 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 39>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<uuid:1>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 5 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<uuid:2>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 4 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 9>\",\"updated_at\":\"<time@step 9>\"},{\"id\":\"<uuid:3>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 3 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 8>\"},{\"id\":\"<uuid:4>\",\"artifact_id\":\"<req>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 7>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
           "id": "<uuid:14>",
           "artifact_id": "<req>",
+          "message": "Auto-updated to version 12 due to link changes",
+          "is_auto_entry": true,
+          "entry_type": "link-change",
+          "author_name": "",
+          "created_at": "<time@step 60>",
+          "updated_at": "<time@step 60>"
+        },
+        {
+          "id": "<uuid:15>",
+          "artifact_id": "<req>",
           "message": "Auto-updated to version 11 due to link changes",
           "is_auto_entry": true,
           "entry_type": "link-change",
           "author_name": "",
-          "created_at": "<time@step 57>",
-          "updated_at": "<time@step 57>"
+          "created_at": "<time@step 52>",
+          "updated_at": "<time@step 52>"
         },
         {
-          "id": "<uuid:15>",
+          "id": "<uuid:16>",
           "artifact_id": "<req>",
           "message": "Auto-updated to version 10 due to link changes",
           "is_auto_entry": true,
           "entry_type": "link-change",
           "author_name": "",
-          "created_at": "<time@step 49>",
-          "updated_at": "<time@step 49>"
+          "created_at": "<time@step 47>",
+          "updated_at": "<time@step 47>"
         },
         {
-          "id": "<uuid:16>",
+          "id": "<uuid:17>",
           "artifact_id": "<req>",
           "message": "Auto-updated to version 9 due to link changes",
           "is_auto_entry": true,
@@ -2716,27 +2839,27 @@
           "updated_at": "<time@step 44>"
         },
         {
-          "id": "<uuid:17>",
+          "id": "<uuid:18>",
           "artifact_id": "<req>",
           "message": "Auto-updated to version 8 due to link changes",
           "is_auto_entry": true,
           "entry_type": "link-change",
           "author_name": "",
-          "created_at": "<time@step 41>",
-          "updated_at": "<time@step 41>"
+          "created_at": "<time@step 43>",
+          "updated_at": "<time@step 43>"
         },
         {
-          "id": "<uuid:18>",
+          "id": "<uuid:19>",
           "artifact_id": "<req>",
           "message": "Auto-updated to version 7 due to link changes",
           "is_auto_entry": true,
           "entry_type": "link-change",
           "author_name": "",
-          "created_at": "<time@step 40>",
-          "updated_at": "<time@step 40>"
+          "created_at": "<time@step 42>",
+          "updated_at": "<time@step 42>"
         },
         {
-          "id": "<uuid:19>",
+          "id": "<uuid:20>",
           "artifact_id": "<req>",
           "message": "Auto-updated to version 6 due to link changes",
           "is_auto_entry": true,
@@ -2793,14 +2916,14 @@
       }
     },
     {
-      "n": 66,
-      "title": "the requirement's version 11, its last auto-version: incoming, then outgoing",
+      "n": 69,
+      "title": "the requirement's version 12, its last auto-version: incoming, then outgoing",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
       "request": {
         "method": "GET",
         "path": "/api/v1/artifacts/<req>/links",
-        "query": "version=11"
+        "query": "version=12"
       },
       "status": 200,
       "content_type": "application/json",
@@ -2809,7 +2932,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"note\":\"annotated\"},\"version\":4,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 44>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2848,25 +2971,27 @@
           "to_id": "<need>",
           "type": "derives-from",
           "suspect": false,
-          "attributes": null,
-          "version": 3,
+          "attributes": {
+            "note": "annotated"
+          },
+          "version": 4,
           "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
-          "updated_at": "<time@step 41>"
+          "updated_at": "<time@step 44>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 67,
-      "title": "and no version 12: the notes' numbers are the versions made",
+      "n": 70,
+      "title": "and no version 13: the notes' numbers are the versions made",
       "actor": "owner",
       "route": "GET /api/v1/artifacts/{id}/links",
       "request": {
         "method": "GET",
         "path": "/api/v1/artifacts/<req>/links",
-        "query": "version=12"
+        "query": "version=13"
       },
       "status": 404,
       "content_type": "application/json",
@@ -2884,7 +3009,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 68,
+      "n": 71,
       "title": "P's links at the end",
       "actor": "owner",
       "route": "GET /api/v1/links",
@@ -2900,7 +3025,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":null,\"version\":3,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<l_refines>\",\"from_id\":\"<creq>\",\"to_id\":\"<req>\",\"type\":\"refines\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\"},{\"id\":\"<l_verifies>\",\"from_id\":\"<tc>\",\"to_id\":\"<req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":{\"method\":\"test\",\"witness\":\"\\u003cqa\\u003e \\u0026 co\"},\"version\":2,\"valid_from\":\"<time@step 8>\",\"valid_to\":null,\"created_at\":\"<time@step 8>\",\"updated_at\":\"<time@step 39>\"},{\"id\":\"<l_derives>\",\"from_id\":\"<req>\",\"to_id\":\"<need>\",\"type\":\"derives-from\",\"suspect\":false,\"attributes\":{\"note\":\"annotated\"},\"version\":4,\"valid_from\":\"<time@step 7>\",\"valid_to\":null,\"created_at\":\"<time@step 7>\",\"updated_at\":\"<time@step 44>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2939,12 +3064,14 @@
           "to_id": "<need>",
           "type": "derives-from",
           "suspect": false,
-          "attributes": null,
-          "version": 3,
+          "attributes": {
+            "note": "annotated"
+          },
+          "version": 4,
           "valid_from": "<time@step 7>",
           "valid_to": null,
           "created_at": "<time@step 7>",
-          "updated_at": "<time@step 41>"
+          "updated_at": "<time@step 44>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"

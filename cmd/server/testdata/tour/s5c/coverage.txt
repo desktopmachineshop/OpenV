@@ -23,7 +23,7 @@ DELETE /api/v1/orgs/{id}/logo: 200, 403, 404; workspaces_logo
 DELETE /api/v1/orgs/{id}/members/{userId}: 204, 400, 403, 404; members_teams, sessions_auth, tiers_secure_runner_sessions
 DELETE /api/v1/orgs/{id}/my-runner-key: 204; runner_keys_connector
 DELETE /api/v1/orgs/{id}/runner-session: 200, 400; runner_keys_connector, tiers_secure_runner_sessions
-DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: 204, 400, 403; runner_keys_connector
+DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: 204, 403, 404; runner_keys_connector
 DELETE /api/v1/projects/{id}/members/{userId}: 204, 403; members_teams
 DELETE /api/v1/projects/{id}/team-access/{teamId}: 204, 403; members_teams
 GET /api/v1/admin/metrics/users: 200, 403; mail_password_admin

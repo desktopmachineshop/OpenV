@@ -519,7 +519,7 @@
     },
     {
       "n": 15,
-      "title": "revoke a key no workspace has: 400 with the domain's error",
+      "title": "revoke a key no workspace has: 404, as for an id no row has",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
@@ -527,7 +527,7 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/worker-keys/<phantom>"
       },
-      "status": 400,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
@@ -545,7 +545,7 @@
     },
     {
       "n": 16,
-      "title": "revoke an id that is not a UUID: the 400 of a key no workspace has",
+      "title": "revoke an id that is not a UUID: the 404 of a key no workspace has",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
@@ -553,7 +553,7 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/worker-keys/not-a-key"
       },
-      "status": 400,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
@@ -579,7 +579,7 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/worker-keys/<elsewhere.key>"
       },
-      "status": 400,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
