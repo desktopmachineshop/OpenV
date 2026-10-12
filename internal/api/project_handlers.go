@@ -53,6 +53,10 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	project := projects.NewProject(req)
 	project.OrgID = orgID
 	if err := h.ProjectService.CreateProject(project); err != nil {
+		if errors.Is(err, projects.ErrInvalidAgentAuth) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		respondInternal(w, r, "failed to create project", err)
 		return
 	}
@@ -181,7 +185,8 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 			// Gone since the guard read it: as for an id no row has (#379
 			// bug 88; it answered 500).
 			unknownProject.write(w)
-		case errors.Is(err, projects.ErrParentNotFound), errors.Is(err, projects.ErrParentOtherOrg),
+		case errors.Is(err, projects.ErrInvalidAgentAuth),
+			errors.Is(err, projects.ErrParentNotFound), errors.Is(err, projects.ErrParentOtherOrg),
 			errors.Is(err, projects.ErrParentIsSelf), errors.Is(err, projects.ErrParentIsDescendant):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		default:

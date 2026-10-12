@@ -34,8 +34,8 @@ import (
 //     204 with no run queued; a workspace route answers the handler's 401,
 //     since a key is no member, and stamps last_used_at all the same),
 //     revocation (twice: 204 both times), each revocation refusal in the
-//     handler's order (an unknown id, an id that is not a UUID, which
-//     answers as an unknown one, a key of another workspace, a member), and
+//     handler's order (an unknown id, an id that is not a UUID, a key of
+//     another workspace, each a 404 as for an id no row has, then a member), and
 //     a revoked key refused by the middleware
 //     ("invalid token");
 //   - the member's personal runner key: none, minted ("<name>'s runner"),
@@ -212,9 +212,9 @@ func runnerKeysConnectorTour(tr *tour) {
 		at("id", "{{w}}", "keyId", "{{spare.key}}"))
 	tr.step("revoke it again: 204 all the same", o, "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
 		at("id", "{{w}}", "keyId", "{{spare.key}}"))
-	tr.step("revoke a key no workspace has: 400 with the domain's error", o,
+	tr.step("revoke a key no workspace has: 404, as for an id no row has", o,
 		"DELETE /api/v1/orgs/{id}/worker-keys/{keyId}", at("id", "{{w}}", "keyId", "{{phantom}}"))
-	tr.step("revoke an id that is not a UUID: the 400 of a key no workspace has", o,
+	tr.step("revoke an id that is not a UUID: the 404 of a key no workspace has", o,
 		"DELETE /api/v1/orgs/{id}/worker-keys/{keyId}", at("id", "{{w}}", "keyId", "not-a-key"))
 	tr.step("revoke, under W, a key of the owner's personal workspace: not W's, so not found", o,
 		"DELETE /api/v1/orgs/{id}/worker-keys/{keyId}", at("id", "{{w}}", "keyId", "{{elsewhere.key}}"))

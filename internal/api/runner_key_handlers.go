@@ -77,7 +77,7 @@ func (h *Handler) RevokeMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.WorkerKeyService.Revoke(orgID, key.ID); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeRevokeKeyError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

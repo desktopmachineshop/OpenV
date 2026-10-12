@@ -76,3 +76,46 @@ func TestParentAssignment(t *testing.T) {
 		t.Fatalf("looped ancestors = %+v, %v", chain, err)
 	}
 }
+
+// copyingRepo reads a copy, as a database does, so that what a service
+// changes in the project it read is stored only by an Update.
+type copyingRepo struct{ memRepo }
+
+func (c *copyingRepo) GetByID(id string) (*Project, error) {
+	p, err := c.memRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	cp := *p
+	return &cp, nil
+}
+
+// TestAnUnknownAgentAuthIsRefusedWithItsSentinel: creating or updating with
+// an agent_auth the service does not take answers ErrInvalidAgentAuth (the
+// API answers 400 for it, #643) and stores nothing; the two modes it takes,
+// and an empty one, pass.
+func TestAnUnknownAgentAuthIsRefusedWithItsSentinel(t *testing.T) {
+	repo := &copyingRepo{memRepo{byID: map[string]*Project{"p": {ID: "p", OrgID: "org", Name: "Keep", AgentAuth: AgentAuthUserAccount}}}}
+	svc := NewService(repo)
+
+	if err := svc.CreateProject(&Project{ID: "new", AgentAuth: "bogus"}); !errors.Is(err, ErrInvalidAgentAuth) {
+		t.Fatalf("create: err = %v, want ErrInvalidAgentAuth", err)
+	}
+	if _, ok := repo.byID["new"]; ok {
+		t.Error("a refused create stored the project")
+	}
+	if _, err := svc.UpdateProject("p", UpdateProjectRequest{Name: "Renamed", AgentAuth: "bogus"}); !errors.Is(err, ErrInvalidAgentAuth) {
+		t.Fatalf("update: err = %v, want ErrInvalidAgentAuth", err)
+	}
+	if got := repo.byID["p"]; got.Name != "Keep" || got.AgentAuth != AgentAuthUserAccount {
+		t.Errorf("a refused update stored %+v", got)
+	}
+	for _, mode := range []string{"", AgentAuthUserAccount, AgentAuthAPIKey} {
+		if err := svc.CreateProject(&Project{ID: "ok-" + mode, AgentAuth: mode}); err != nil {
+			t.Errorf("create with agent_auth %q: %v", mode, err)
+		}
+		if _, err := svc.UpdateProject("p", UpdateProjectRequest{AgentAuth: mode}); err != nil {
+			t.Errorf("update with agent_auth %q: %v", mode, err)
+		}
+	}
+}

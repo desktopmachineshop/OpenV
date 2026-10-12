@@ -170,7 +170,7 @@ func avCreate(t *testing.T, svc *links.DefaultService, l *links.Link) {
 
 func avUpdate(t *testing.T, svc *links.DefaultService, id string) {
 	t.Helper()
-	if _, err := svc.UpdateLink(id, links.UpdateLinkRequest{Type: "verifies"}); err != nil {
+	if _, err := svc.UpdateLink(id, links.UpdateLinkRequest{Type: strPtr("verifies")}); err != nil {
 		t.Fatalf("UpdateLink(%s): %v", id, err)
 	}
 }
@@ -242,7 +242,7 @@ func TestDeleteLinkRecordsNothing(t *testing.T) {
 	if !slices.Equal(repo.deleted, []string{"link-1"}) {
 		t.Errorf("deleted %q, want [link-1]", repo.deleted)
 	}
-	if _, err := svc.UpdateLink("link-1", links.UpdateLinkRequest{Type: "verifies"}); err == nil {
+	if _, err := svc.UpdateLink("link-1", links.UpdateLinkRequest{Type: strPtr("verifies")}); err == nil {
 		t.Error("UpdateLink of a link the repository no longer finds succeeded; want its error")
 	}
 	avWant(t, "after UpdateLink of the deleted link", repo.recorded, "link-1 tc-1 1", "link-1 req-1 3")
@@ -340,7 +340,7 @@ func TestLinkVersionRecordsNeedTheWriteToSucceed(t *testing.T) {
 	repo.saveErr = nil
 	avCreate(t, svc, avLink("link-1", "tc-1", "req-1"))
 	repo.updateErr = refused
-	if _, err := svc.UpdateLink("link-1", links.UpdateLinkRequest{Type: "verifies"}); !errors.Is(err, refused) {
+	if _, err := svc.UpdateLink("link-1", links.UpdateLinkRequest{Type: strPtr("verifies")}); !errors.Is(err, refused) {
 		t.Errorf("UpdateLink with Update refused = %v, want %v", err, refused)
 	}
 	avWant(t, "a refused UpdateLink", repo.recorded, "link-1 tc-1 1", "link-1 req-1 3")

@@ -187,18 +187,18 @@
         ],
         "body": "{\"name\":\"Tour bogus\",\"agent_auth\":\"bogus\"} trailing"
       },
-      "status": 500,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 37,
+      "content_length": 63,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to create project\"}"
+        "{\"error\":\"agent_auth must be \\\"user-account\\\" or \\\"api-key\\\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to create project"
+        "error": "agent_auth must be \"user-account\" or \"api-key\""
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -216,18 +216,18 @@
         ],
         "body": "{\"name\":\"Tour bogus\",\"agent_auth\":\"bogus\"}"
       },
-      "status": 500,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 37,
+      "content_length": 63,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to create project\"}"
+        "{\"error\":\"agent_auth must be \\\"user-account\\\" or \\\"api-key\\\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to create project"
+        "error": "agent_auth must be \"user-account\" or \"api-key\""
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

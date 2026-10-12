@@ -173,7 +173,7 @@ func TestTheRequirementsStampTimesInUTC(t *testing.T) {
 				rtStamp(t, "a new link's updated_at", stored("updated_at"), link.UpdatedAt, made, madeBy)
 
 				start()
-				updated, err := linkSvc.UpdateLink(link.ID, links.UpdateLinkRequest{Type: "verifies",
+				updated, err := linkSvc.UpdateLink(link.ID, links.UpdateLinkRequest{Type: ptr("verifies"),
 					Attributes: map[string]interface{}{"note": "on the bench"}})
 				if err != nil {
 					t.Fatal(err)

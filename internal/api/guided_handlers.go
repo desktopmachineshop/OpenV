@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -78,6 +79,12 @@ func (h *Handler) SaveGuidedStep(w http.ResponseWriter, r *http.Request) {
 		Answers map[string]interface{} `json:"answers"`
 	}
 	if !decodeJSON(w, r, &req) {
+		return
+	}
+	// The wizard has the steps guidedStepLabels names, numbered from 1; a
+	// step outside them would leave the session on one it cannot render.
+	if req.Step < 1 || req.Step > len(guidedStepLabels) {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("step must be between 1 and %d", len(guidedStepLabels)))
 		return
 	}
 	updated, err := h.GuidedService.SaveStep(session.ID, req.Step, req.Answers)

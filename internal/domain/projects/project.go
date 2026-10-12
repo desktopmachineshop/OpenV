@@ -79,6 +79,10 @@ type Removed struct {
 	CancelledRuns []string
 }
 
+// ErrInvalidAgentAuth refuses an agent_auth that is not one of the modes
+// above; the API answers 400 for it.
+var ErrInvalidAgentAuth = fmt.Errorf("agent_auth must be %q or %q", AgentAuthUserAccount, AgentAuthAPIKey)
+
 // Errors a parent assignment can fail with; the API answers 400 for each.
 var (
 	ErrParentNotFound     = errors.New("parent project not found")
@@ -144,7 +148,7 @@ func (s *DefaultService) CreateProject(project *Project) error {
 		project.AgentAuth = AgentAuthUserAccount
 	}
 	if !ValidAgentAuth(project.AgentAuth) {
-		return fmt.Errorf("invalid agent_auth %q", project.AgentAuth)
+		return ErrInvalidAgentAuth
 	}
 	return s.repository.Create(project)
 }
@@ -181,7 +185,7 @@ func (s *DefaultService) UpdateProject(id string, req UpdateProjectRequest) (*Pr
 	}
 	if req.AgentAuth != "" {
 		if !ValidAgentAuth(req.AgentAuth) {
-			return nil, fmt.Errorf("invalid agent_auth %q", req.AgentAuth)
+			return nil, ErrInvalidAgentAuth
 		}
 		project.AgentAuth = req.AgentAuth
 	}

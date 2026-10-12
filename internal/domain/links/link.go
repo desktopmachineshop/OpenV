@@ -1,6 +1,7 @@
 package links
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -55,11 +56,19 @@ type CreateLinkRequest struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }
 
-// UpdateLinkRequest is the payload for updating a link
+// UpdateLinkRequest is the payload for updating a link. It is a partial
+// update: a field left out keeps the stored value, and a field that is
+// present replaces it. Type is a pointer so that a type left out (nil) is
+// told from one sent empty, which is refused; a nil Attributes is a field
+// left out (a JSON null reads the same), and an empty map clears them.
 type UpdateLinkRequest struct {
-	Type       string                 `json:"type"`
+	Type       *string                `json:"type"`
 	Attributes map[string]interface{} `json:"attributes"`
 }
+
+// ErrEmptyType refuses an update that sets the link's type to the empty
+// string; a link always has a type.
+var ErrEmptyType = errors.New("type must not be empty")
 
 // NewLink creates a new link with generated ID
 func NewLink(req CreateLinkRequest) *Link {
@@ -220,15 +229,23 @@ func (s *DefaultService) GetLinksForArtifactVersion(artifactID string, version i
 	return s.repo.FindByFromIDForVersion(artifactID, version)
 }
 
-// UpdateLink updates a link and records version associations
+// UpdateLink updates a link and records version associations. Only the
+// fields the request carries change (see UpdateLinkRequest).
 func (s *DefaultService) UpdateLink(id string, req UpdateLinkRequest) (*Link, error) {
 	link, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
 
-	link.Type = req.Type
-	link.Attributes = req.Attributes
+	if req.Type != nil {
+		if *req.Type == "" {
+			return nil, ErrEmptyType
+		}
+		link.Type = *req.Type
+	}
+	if req.Attributes != nil {
+		link.Attributes = req.Attributes
+	}
 	link.Version++
 	link.UpdatedAt = time.Now().UTC() // a TIMESTAMP holding a UTC wall clock (#379 bug 162)
 

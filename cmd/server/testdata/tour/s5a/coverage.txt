@@ -72,7 +72,7 @@ POST /api/v1/attribute-definitions: 201, 400, 403, 404; artifacts_attributes
 POST /api/v1/auth/share/accept: 200, 400, 401, 404, 429; share_links_public
 POST /api/v1/chatter: 200, 400, 403, 404; review_chatter_search
 POST /api/v1/links: 201, 400, 403; links_managed_edits, projects_templates
-POST /api/v1/projects: 201, 400, 500; projects_templates
+POST /api/v1/projects: 201, 400; projects_templates
 POST /api/v1/projects/import: 201, 400, 401; exports_imports
 POST /api/v1/projects/{id}/baselines: 201, 400, 404; baselines_documents
 POST /api/v1/projects/{id}/reindex-embeddings: 200, 403, 404; review_chatter_search

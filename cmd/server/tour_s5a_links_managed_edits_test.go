@@ -163,14 +163,22 @@ func linksManagedEditsTour(tr *tour) {
 	tr.step("confirm a link that does not exist", owner, "PUT /api/v1/links/{id}/confirm", at("id", "{{phantom}}"))
 	tr.step("the link once confirmed", owner, "GET /api/v1/links/{id}", at("id", "{{l_derives}}"))
 
-	// Update: type and attributes replaced as sent, auto-versions both ends,
-	// publishes link.updated with the type the link has now (#379 bug 132).
+	// Update: a partial update (a field left out keeps its value), a changed
+	// type checked against the link rules as create checks it, auto-versions
+	// both ends, publishes link.updated with the type the link has now (#379
+	// bug 132).
 	tr.step("give the verifies link attributes", owner, "PUT /api/v1/links/{id}", at("id", "{{l_verifies}}"),
 		jsonBody(`{"type":"verifies","attributes":{"method":"test","witness":"<qa> & co"}}`))
-	tr.step("retype the derives-from link to one its rule refuses: stored as sent", owner, "PUT /api/v1/links/{id}",
+	tr.step("retype the derives-from link to one its rule refuses: 400, nothing stored", owner, "PUT /api/v1/links/{id}",
 		at("id", "{{l_derives}}"), jsonBody(`{"type":"verifies","attributes":{"note":"retyped"}}`),
-		note("UpdateLink checks no link rule; POST /api/v1/links answers 400 for verifies from a requirement"))
-	tr.step("retype it back; attributes left out become null", owner, "PUT /api/v1/links/{id}",
+		note("a changed type is checked as POST /api/v1/links checks it: verifies from a requirement answers 400"))
+	tr.step("send an empty type: 400", owner, "PUT /api/v1/links/{id}",
+		at("id", "{{l_derives}}"), jsonBody(`{"type":""}`))
+	tr.step("retype it to one the rules allow, attributes left out: they are kept", owner, "PUT /api/v1/links/{id}",
+		at("id", "{{l_derives}}"), jsonBody(`{"type":"relates-to"}`))
+	tr.step("change only the attributes: the type is kept", owner, "PUT /api/v1/links/{id}",
+		at("id", "{{l_derives}}"), jsonBody(`{"attributes":{"note":"annotated"}}`))
+	tr.step("retype it back, attributes left out: they are kept", owner, "PUT /api/v1/links/{id}",
 		at("id", "{{l_derives}}"), jsonBody(`{"type":"derives-from"}`))
 	tr.step("update a link that does not exist", owner, "PUT /api/v1/links/{id}", at("id", "{{phantom}}"),
 		jsonBody(`{"type":"verifies"}`))
@@ -244,9 +252,9 @@ func linksManagedEditsTour(tr *tour) {
 	// Q4: every auto-version note names the version read before it plus 1.
 	tr.step("the requirement's notes: one auto-version per link write touching it (Q4)", owner, "GET /api/v1/chatter",
 		query("artifact_id={{req}}"))
-	tr.step("the requirement's version 11, its last auto-version: incoming, then outgoing", owner,
-		"GET /api/v1/artifacts/{id}/links", at("id", "{{req}}"), query("version=11"))
-	tr.step("and no version 12: the notes' numbers are the versions made", owner, "GET /api/v1/artifacts/{id}/links",
-		at("id", "{{req}}"), query("version=12"))
+	tr.step("the requirement's version 12, its last auto-version: incoming, then outgoing", owner,
+		"GET /api/v1/artifacts/{id}/links", at("id", "{{req}}"), query("version=12"))
+	tr.step("and no version 13: the notes' numbers are the versions made", owner, "GET /api/v1/artifacts/{id}/links",
+		at("id", "{{req}}"), query("version=13"))
 	tr.step("P's links at the end", owner, "GET /api/v1/links", query("project_id={{p}}"))
 }
