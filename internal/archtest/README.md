@@ -13,7 +13,7 @@ The architecture rules build nothing; the
 ## Running
 
 ```sh
-go test ./internal/archtest                             # every rule, in well under a second
+go test ./internal/archtest                             # every rule and the env inventory, about 3 s warm (the rules alone about a second)
 go test ./internal/archtest -v                          # also logs each rule's baseline
 go test ./internal/archtest -run 'TestArchitecture/K7'  # one rule; subtest names use _ for spaces
 ```
@@ -143,8 +143,8 @@ README: internal/archtest/README.md#k7-layering
 
 **Enforces.** The production import graph between the module's packages is
 frozen: every edge, importer to imported, from non-test files, must be
-listed in `import_edges`. At `d11dee8` there are 227 edges between 63
-packages. Imports made only by test files are not edges.
+listed in `import_edges`. At `278fc94` there are 264 edges between 82
+packages with production code (227 between 63 at `d11dee8`). Imports made only by test files are not edges.
 
 **Why.** K7: the layering can only improve if nothing new appears
 unnoticed, and a class D move adds no edge except into the package it
@@ -213,15 +213,16 @@ until then the stale entry lets it come back.
 ## Domain reflection
 
 **Enforces.** The domain packages that import `reflect` may only shrink.
-Today that is `internal/domain/links`, which calls `artifacts` through an
-`interface{}` field and reflection.
+Today none does, so `domain_reflect` is empty: `internal/domain/links`
+called `artifacts` through an `interface{}` field and reflection until X9
+(#525, #532) replaced it with a typed `ArtifactVersions` port.
 
 **Why.** Reflection hides a dependency from the compiler and from the edge
-list. X9 replaces it with a typed port and removes the entry.
+list.
 
 **Fix.** Declare a typed interface on the consumer side.
 
-**Regenerate.** After X9, run the regenerate command.
+**Regenerate.** Nothing to do: the list stays empty.
 
 ## K14 file size
 
@@ -252,7 +253,7 @@ once the file is within 800 lines.
 lines, from its `func` line to its closing brace. The 34 over it at
 `d11dee8` were grandfathered in `func_lines`, keyed `package:Func` or
 `package:Receiver.Method`, with the same headroom (`cmd/server:main`, then
-853 lines, could reach 938, until M4 cut it to about 50); 30 remain. The
+853 lines, could reach 938, until M4 cut it to about 50); 28 remain. The
 key names no file, so a function keeps its
 ceiling when it moves within its package; a renamed function is a new one.
 A method that moves to another receiver in its package keeps its ceiling
@@ -379,31 +380,28 @@ dependency is one option, not sixty edits.
 
 **Enforces.** Counts `json.NewEncoder(...)` calls in `internal/api` and its
 subpackages outside `respond.go`. The ceiling `counts.raw_json_encodes` is
-249 at `d11dee8`, every one `json.NewEncoder(w).Encode(...)`.
+0 since X1 (249 at `d11dee8`, every one `json.NewEncoder(w).Encode(...)`).
 
 **Why.** K4: responses are written through the helpers in `respond.go`
-(X1 adds `writeJSON` and `writeJSONBare`), so headers are decided in one
+(X1 added `writeJSON`, `writeJSONOK`, `writeJSONBare` and `writeJSONBareStatus`), so headers are decided in one
 place.
 
 **Fix.** Write through `respondJSON` (`respond.go`, where M5 moved it) or
 the X1 writers. Encodes inside `respond.go`
 are not counted.
 
-**Regenerate.** X1 takes the count to 0; lower the ceiling as it falls.
+**Regenerate.** Nothing to regenerate: the ceiling is 0.
 
 ## Invalid request body literals
 
 **Enforces.** Counts the string literal `"invalid request body"` in
-`internal/api`. The ceiling `counts.invalid_request_body_literals` is 106
-at `d11dee8`.
+`internal/api`. The ceiling `counts.invalid_request_body_literals` is 1
+(106 at `d11dee8`): the `invalidRequestBody` constant in `respond.go`.
 
-**Why.** K4: bodies are read through X1's `decodeJSON`, which holds the one
-literal that remains (106 to 1).
+**Why.** K4: bodies are read through X1's `decodeJSON` and `decodeJSONMsg`,
+which hold the one literal that remains.
 
 **Fix.** Decode through the shared helper rather than writing the literal.
-A new decode needed before X1 lands introduces `decodeJSON` in
-`respond.go` and converts at least one existing call site in the same PR,
-so the count does not rise.
 
 **Regenerate.** Lower the ceiling as the count falls.
 
@@ -431,8 +429,8 @@ production file of the package fails, unless `helper_homes` lists it,
 keyed `package:Func` or `package:Receiver.Method` as `func_lines` keys it,
 so a helper keeps its entry when it moves between area files. `register<Area>Routes` is K1's,
 not a helper, and is left out; so are exported names, `handlers.go`, which
-is not an area file, and test files. The allowlist is the 33 helpers the
-tree had when M5 added the rule, which M5 shrinks by the ones it moves.
+is not an area file, and test files. The allowlist was the 33 helpers the
+tree had when M5 added the rule; 25 remain.
 
 The rule reads syntax only: a function counts as used where its bare name
 appears (a call or a function value), and a method where a selector names
@@ -497,9 +495,12 @@ neighbours.
 production code under `internal/`, per package, against `env_reads`; a
 package not listed may make none. A reference is a call or a function value
 (`var getenv = os.Getenv`, `os.Expand(s, os.Getenv)`); a call counts once.
-At `d11dee8` there are 44, all calls, in 8 packages: 39
-`Getenv`/`LookupEnv` calls on 38 lines (`runner/geminicli.go:187` has two)
-and 5 `os.Environ` calls in `internal/runner`. `TestEnvReadForms` proves
+Today there are 18, in 4 packages (`internal/api` 6, `internal/runner` 10,
+`internal/domain/reports` 1, `internal/mcp` 1): 17 `Getenv`/`LookupEnv`/`ExpandEnv`
+references on 16 lines and 1 `os.Environ` reference. At `d11dee8` there were
+44, all calls, in 8 packages: 39 `Getenv`/`LookupEnv` calls on 38 lines
+(`runner/geminicli.go:187` has two) and 5 `os.Environ` calls in
+`internal/runner`. `TestEnvReadForms` proves
 the forms on a fixture.
 
 **Why.** K8: configuration is read in `internal/config` and
@@ -511,7 +512,7 @@ stop reads spreading while X10 moves them out.
 composition root. A read that must happen at run time is argued as an S8
 exemption, in review.
 
-**Regenerate.** Lower the ceilings as X10 moves reads out.
+**Regenerate.** Lower the ceilings as reads move out.
 
 ## R8 decode errors
 
@@ -541,8 +542,7 @@ service's `GenerateProjectReport` and `GenerateProjectReportDOCX` (through
 `Options` (through `reports.LoadReportExport`); and
 `internal/domain/snapshot.Load`, the loader X14b writes, which X14a added
 ahead of it, keyed by its package because `Load` is a common name
-(`runnersessions.PoolCounts.Load`, `sync.Map`'s, the planned
-`config.Load`). Four paths that decode a `ProjectExport` are not on it. The export
+(`runnersessions.PoolCounts.Load`, `sync.Map`'s, `config.Load`). Four paths that decode a `ProjectExport` are not on it. The export
 service's `ImportProject` and `ImportProjectWithOverrides`, and the
 template service's `CreateProjectFromTemplate`, which calls the latter,
 return `exports.ErrMalformedImport` with a description of the refusal in
@@ -645,7 +645,7 @@ method, alone or with others (`GET/HEAD`), and whose second cell is a code
 span holding its path exactly, variable names included (`/api/v1/orgs/{id}`);
 a brace group with a comma stands for each of its alternatives
 (`/download/{json,csv}`). Prose does not count. The ceiling was 36 of 341
-when D1 added the rule: the 15 deprecated `/api/v1/teams*` and
+when D1 added the rule, and is still 36 of 342: the 15 deprecated `/api/v1/teams*` and
 `/api/v1/team-*` aliases of the crew routes, the four attribute-definition
 routes, the OIDC sign-in pair and 15 others.
 `TestAPISpecRule` proves the parse on a fixture.
@@ -691,7 +691,7 @@ freezes the list in `testdata/env_vars.txt`: one row per variable, the way
 it is read and its default. It is a test of its own, not a rule of
 `TestArchitecture`, and it never reads `UPDATE_RATCHETS`. Unlike the rules
 above it type-checks: it runs `go list -export -deps` once and checks every
-module package with `go/types` (about 1.5 s warm; a cold build cache
+module package with `go/types` (about 2 s warm; a cold build cache
 compiles export data first).
 
 A getter is found by data flow, not by its name: any function whose string
@@ -780,8 +780,7 @@ argued in review.
 ```sh
 UPDATE_GOLDEN=1 go test ./internal/archtest -count=1 -run '^TestEnvInventory$'
 UPDATE_GOLDEN=1 go test -count=1 -run '^(TestEnvInventory|TestEnvParse)$' ./internal/archtest \
-  ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/api ./internal/billing \
-  ./internal/domain/users ./internal/hosting ./internal/notify
+  ./cmd/agentd ./cmd/openv-mcp ./cmd/server ./internal/billing ./internal/config
 ```
 
 The first rewrites `env_vars.txt` (it refuses while the scan fails); the
