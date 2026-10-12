@@ -50,13 +50,14 @@ func (h *Handler) CreateWorkerKey(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// RevokeWorkerKey revokes one of the workspace's keys by id.
 func (h *Handler) RevokeWorkerKey(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if !h.requireOrgRole(w, r, vars["id"], orgs.RoleAdmin) {
 		return
 	}
 	if err := h.WorkerKeyService.Revoke(vars["id"], vars["keyId"]); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeRevokeKeyError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

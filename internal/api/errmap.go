@@ -16,6 +16,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
+	"github.com/openv/requirements-platform/internal/domain/workerkeys"
 )
 
 // writeAttributeDefinitionError maps domain validation errors to 400s. Any
@@ -96,6 +97,17 @@ func (h *Handler) writeEvidenceError(w http.ResponseWriter, r *http.Request, ver
 	default:
 		respondInternal(w, r, verb, err)
 	}
+}
+
+// writeRevokeKeyError answers a failed key revocation: a key no row has, or
+// one that belongs to another workspace, is a 404 as for any id no row has
+// (I3); any other failure keeps its 400.
+func writeRevokeKeyError(w http.ResponseWriter, err error) {
+	if errors.Is(err, workerkeys.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSONError(w, http.StatusBadRequest, err.Error())
 }
 
 // writeInvitationError maps the domain's user-facing failures onto statuses.
