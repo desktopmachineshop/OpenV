@@ -269,8 +269,8 @@ their own project, workers pass within their org, a workspace key up to
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address). `400 weak_password` for a password under 8 characters, as a password change and a reset answer it; an invalid or already registered address is a `400` with no code. Sign-in's refusal stays one generic `401` whatever the password, so it never tells which accounts exist | open |
-| POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
-| POST | `/api/v1/auth/logout` | End session, clear cookie | open |
+| POST | `/api/v1/auth/login` | Password login `{email, password}`, sets the session cookie and answers the user; one generic `401` whatever is wrong, `429` when throttled | open |
+| POST | `/api/v1/auth/logout` | End session, clear cookie; `204` | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
 | GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, whether `password_reset_email` can be offered (a mailer is configured), and the `registration` policy | open |
 | GET | `/api/v1/auth/policy` | The registration policy alone, plus the server's password rule: `{"registration":"open"\|"closed","min_password_length":8}`. Clients state `min_password_length` in their password forms rather than a copy of it, so the form and the server can never disagree | open |
@@ -282,48 +282,48 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/me/avatar` | Remove the uploaded picture; returns the user with `has_avatar:false` and an empty `avatar_url` (an identity provider's picture returns at the next sign-in) | user |
 | GET | `/api/v1/users/{id}/avatar` | An account's uploaded picture (served as its stored type, `Content-Disposition: inline`, cached a day — the URL changes on every upload), to the account itself, a member of a workspace it is a member of, and a platform admin; `404` when none is uploaded, and the same `404` to anyone else, so the answer does not say whether the account exists or has a picture | user |
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
-| POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
-| POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
+| POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `400` when the server does not require verification; `409` already verified; `429` throttled; `502` mail failed) | user (cookie only, JSON body) |
+| POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}` (`400` for a blank one); the account's address changes when that link is confirmed. Answers as the resend does, and `409` also for an address another account holds | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/password-reset` | Email a password reset link `{email}` (REQ-158). Answers `202 {sent_to}` for **every** well-formed address, known or not, and does the lookup and the send after answering, so neither the status nor the timing says whether an account exists; an address with no account, or an SSO-only one, is simply sent nothing. `409 {"code":"reset_email_unavailable"}` on a deployment with no mailer (server configuration, not account state); `429` per client address and per address asked for. The link is valid for one hour and works once | open |
 | POST | `/api/v1/auth/password-reset/confirm` | Spend a reset link `{token, new_password}`: sets the password and ends **every** session of the account, and marks the address verified when the link was emailed (it reached that inbox). `204`; `400 weak_password` (checked before the link is spent, so a weak password does not cost it), `400 reset_invalid` (unknown, spent or expired). No session is created: the person signs in with the new password | open |
 | GET | `/api/v1/auth/google` | Start Google OIDC flow | open |
 | GET | `/api/v1/auth/google/callback` | OIDC callback, creates/logs in user | open |
 | GET | `/api/v1/users` | List users (for member pickers) | user |
 | GET | `/api/v1/projects/{id}/members` | List project members | viewer |
-| POST | `/api/v1/projects/{id}/members` | Add member with role | owner |
-| PUT | `/api/v1/projects/{id}/members/{userId}` | Change member role | owner |
-| DELETE | `/api/v1/projects/{id}/members/{userId}` | Remove member | owner |
+| POST | `/api/v1/projects/{id}/members` | Add an existing account `{email, role}` (`viewer`, `reviewer`, `editor` or `owner`) → `201` with no body; `404` when no account has the address (they must sign up first), `400` for another role. Adding a member again sets the role, as `PUT` does | owner |
+| PUT | `/api/v1/projects/{id}/members/{userId}` | Change member role `{role}` → `204`; `400` for a role not on the ladder | owner |
+| DELETE | `/api/v1/projects/{id}/members/{userId}` | Remove member → `204` | owner |
 
 ### Organizations (workspaces)
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/orgs` | List the caller's orgs (`?deleted=true` lists their soft-deleted ones) | user |
-| POST | `/api/v1/orgs` | Create a company workspace | user |
+| GET | `/api/v1/orgs` | List the caller's orgs as `{orgs: [...], active_org}` (`?deleted=true` lists their soft-deleted ones) | user |
+| POST | `/api/v1/orgs` | Create a company workspace `{name}` → `201` with the workspace; `400` for a name it refuses, `403` `limit_reached` at the account's shared-workspace maximum | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
-| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). Every part is checked before any is written, so a request refused for one part changes nothing. The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
-| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards), `default-workspace` (choosing the workspace a sign-in lands in), `figure-titles` (renaming a figure). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
+| PUT | `/api/v1/orgs/{id}` | Update `{name?, monthly_budget_usd?, release_channel?, upgrade_window?}`; a key left out is left as it was, and no other key is read (the workspace's limits are not writable here: `GET /orgs/{id}/limits` is the only route that serves them). A blank `name` changes nothing. `monthly_budget_usd` is a number or `null` for "no budget" (`400` for anything else or an amount the budget rules refuse, `403` `limit_reached` while the plan lacks the `workspace_budget` flag). `release_channel` is `nightly`, `stable`, or `""` for the plan's default (`400` on a plan that always runs nightly). `upgrade_window` is `{day 1-28, hour 0-23, timezone}` or `null` for "at the cut" (`400` for bad values or a plan that cannot choose). Every part is checked before any is written, so a request refused for one part changes nothing. The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and the window as `upgrade_day`, `upgrade_hour` and `upgrade_timezone` | org admin |
+| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. `features` holds a key for every entry of the registry in `internal/domain/release/features.go`, which the frontend's generated `FEATURE_KEYS` lists: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards), `default-workspace` (choosing the workspace a sign-in lands in), `figure-titles` (renaming a figure), `password-reset`, `antigravity-cli`, `todo-list`, `figure-revert`, `attachment-formats`, `figure-citations`, `search-by-ref`, `note-tagging`, `project-review-round`, `review-queue-decisions`, `artifact-stepping`, `workspace-billing`, `workspace-automations` and `workspace-runs`. Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
 | PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace, and `409` with `code: "already_subscribed"` for a granted plan (`enterprise`, `open_source`) while the workspace holds a live subscription, which is cancelled first (REQ-168). A move from a plan that always runs nightly (`single`, `business_lite`, `self_host`, `open_source`, legacy `free`) onto one whose admins choose the channel (`business`, `enterprise`, legacy `team`) writes `nightly` as the channel override where none is set, as a checkout does, so the workspace keeps the features it uses (`release_channel: "nightly"`, unlocked); otherwise the override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
 | PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly; `404` `workspace not found` for an account with no membership of the workspace, as for one no row has, and `403` for a platform admin outside it, whom the guard lets by, since the preview is kept on the membership | org member |
-| DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge, which then removes its stored files (every version of its figures, its evidence files and its logo) from the uploads directory; one that cannot be removed is logged. Personal workspaces are refused. | org admin |
-| POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period; returns the workspace as restored. `403` for a member who is not its admin, `404` `workspace not found` for an account that is no member, as for a workspace no row has | org admin (of the deleted org) |
-| POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace; `404` for a workspace that does not exist | org member |
+| DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge, which then removes its stored files (every version of its figures, its evidence files and its logo) from the uploads directory; one that cannot be removed is logged. Personal workspaces are refused (`400`). Answers `{deleted_at, purge_after}`. | org admin |
+| POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period; returns the workspace as restored. `403` for a member who is not its admin, `404` `workspace not found` for an account that is no member, as for a workspace no row has, `400` for a workspace that is not deleted | org admin (of the deleted org) |
+| POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace → `204`; `404` for a workspace that does not exist, `400` for a request with no session cookie | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
-| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` with the membership when the address has an account **whose owner has proved it** and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed, reason?}` when it has no account — or, where the deployment requires email verification, has one that has **not** verified that address — and was invited instead, so the membership waits for somebody to read the mailbox. `400` for a personal workspace. `POST /orgs/{id}/invitations` answers the same outcomes with the same statuses and bodies | org admin |
+| POST | `/api/v1/orgs/{id}/members` | Add member by email `{email, role?}` (`role` is `admin` or `member`, default `member`; `400` for another role or a malformed address). `201` with the membership when the address has an account **whose owner has proved it** and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed, reason?}` when it has no account — or, where the deployment requires email verification, has one that has **not** verified that address — and was invited instead, so the membership waits for somebody to read the mailbox. `400` for a personal workspace, `403` `limit_reached` at the workspace's member maximum. `POST /orgs/{id}/invitations` answers the same outcomes with the same statuses and bodies | org admin |
 | GET | `/api/v1/orgs/{id}/invitations` | Pending invitations to the workspace | org admin |
-| POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role}` into the workspace, taking the same branch **and the same statuses** as `POST /members`: `201` with the membership when the address already has an account that has verified it, `409` when it is already a member, `202 {invitation, link, emailed, reason?}` when it has no account (or an unverified one, where verification is required). `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `emailed` is `true` when SMTP is configured and the send was **queued**: the mail goes out off the request path, so no admin waits on a relay, and a failure is logged rather than reported. Re-inviting an address replaces whatever unaccepted invitation it holds — keeping its `id`, so an id a client already holds stays valid — except, on a deployment that can send mail, within an hour of an **unchanged** one (same role, still valid) whose link was **actually delivered**, which is returned as-is with `emailed:false`, a `reason`, and no `link`, so a repeated click cannot mail the same person again. An invitation whose send failed, or never happened, has nothing in anybody's inbox and is minted and sent again (without SMTP the link in the response is the delivery, so a fresh one is always minted). Throttled per inviting account (`429`) | org admin |
+| POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role?}` (default `member`) into the workspace, taking the same branch **and the same statuses** as `POST /members`: `201` with the membership when the address already has an account that has verified it, `409` when it is already a member, `202 {invitation, link, emailed, reason?}` when it has no account (or an unverified one, where verification is required). `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `emailed` is `true` when SMTP is configured and the send was **queued**: the mail goes out off the request path, so no admin waits on a relay, and a failure is logged rather than reported. Re-inviting an address replaces whatever unaccepted invitation it holds — keeping its `id`, so an id a client already holds stays valid — except, on a deployment that can send mail, within an hour of an **unchanged** one (same role, still valid) whose link was **actually delivered**, which is returned as-is with `emailed:false`, a `reason`, and no `link`, so a repeated click cannot mail the same person again. An invitation whose send failed, or never happened, has nothing in anybody's inbox and is minted and sent again (without SMTP the link in the response is the delivery, so a fresh one is always minted). Throttled per inviting account (`429`) | org admin |
 | DELETE | `/api/v1/orgs/{id}/invitations/{invId}` | Revoke a pending invitation (its link stops working) | org admin |
-| PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role `{role}` (`admin`, `member`). `400` for any other role, for an account that is not a member, and for demoting the workspace's last admin | org admin |
-| DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members). `400` for the workspace's last admin and, as for a role change, for an account that is not a member, including the second of two removals of one member at once; nothing is removed and no event is published | org admin / self |
+| PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role `{role}` (`admin`, `member`) → `204`. `400` for any other role, for an account that is not a member, and for demoting the workspace's last admin | org admin |
+| DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member → `204` (self-removal = leave, allowed for members). `400` for the workspace's last admin and, as for a role change, for an account that is not a member, including the second of two removals of one member at once; nothing is removed and no event is published | org admin / self |
 | GET | `/api/v1/orgs/{id}/teams` | List people-teams | org member |
-| POST | `/api/v1/orgs/{id}/teams` | Create people-team | org admin |
-| PUT | `/api/v1/org-teams/{id}` | Rename/edit team | org admin |
+| POST | `/api/v1/orgs/{id}/teams` | Create people-team `{name, description?}` → `201`; `400` for a name it refuses, `403` `limit_reached` while the plan lacks the `teams` flag | org admin |
+| PUT | `/api/v1/org-teams/{id}` | Rename/edit team `{name?, description?}`; a key left out is left as it was | org admin |
 | DELETE | `/api/v1/org-teams/{id}` | Delete team | org admin |
 | POST | `/api/v1/org-teams/{id}/members/{userId}` | Add user to team | org admin |
 | DELETE | `/api/v1/org-teams/{id}/members/{userId}` | Remove user from team | org admin |
 | GET | `/api/v1/projects/{id}/team-access` | List team grants on a project | viewer |
-| PUT | `/api/v1/projects/{id}/team-access` | Grant/update a team's project role `{org_team_id, role}`: `400` for a team of another workspace, `404` `team not found` for one no row has or of a workspace the caller is no member of | owner |
-| DELETE | `/api/v1/projects/{id}/team-access/{teamId}` | Revoke a team grant | owner |
+| PUT | `/api/v1/projects/{id}/team-access` | Grant/update a team's project role `{org_team_id, role}` → `201` with no body: `400` for a team of another workspace or a role not on the ladder, `403` `limit_reached` while the plan lacks the `teams` flag, `404` `team not found` for one no row has or of a workspace the caller is no member of | owner |
+| DELETE | `/api/v1/projects/{id}/team-access/{teamId}` | Revoke a team grant → `204` | owner |
 | GET | `/api/v1/orgs/{id}/quality-rules` | Workspace requirement quality rules (house style every project inherits) | org member |
 | PUT | `/api/v1/orgs/{id}/quality-rules` | Set the house style; an empty body clears it back to the platform defaults | org admin |
 | GET | `/api/v1/orgs/{id}/logo` | The workspace logo image (served as its stored type, `Content-Disposition: inline`); `404` when none is set | org member |
@@ -335,57 +335,57 @@ their own project, workers pass within their org, a workspace key up to
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/orgs/{id}/worker-keys` | List workspace worker keys | org admin |
-| POST | `/api/v1/orgs/{id}/worker-keys` | Mint a workspace key (value returned once) | org admin |
-| DELETE | `/api/v1/orgs/{id}/worker-keys/{keyId}` | Revoke a key | org admin |
-| GET | `/api/v1/orgs/{id}/my-runner-key` | My personal runner key status | org member |
-| POST | `/api/v1/orgs/{id}/my-runner-key` | Mint/rotate my personal runner key | org member |
-| DELETE | `/api/v1/orgs/{id}/my-runner-key` | Revoke my personal runner key | org member |
-| POST | `/api/v1/orgs/{id}/connector-pairing` | Mint a one-time connector pairing code (10-min TTL) | org member |
-| POST | `/api/v1/public/connector/pair` | Exchange pairing code for a personal runner key | token |
-| GET/HEAD | `/api/v1/public/connector/download` | Download the Agent Connector bundle (`?os=windows\|linux`) | open |
-| GET | `/api/v1/orgs/{id}/hosted-runner` | Hosted runner status | org admin |
-| POST | `/api/v1/orgs/{id}/hosted-runner` | Provision the workspace's hosted runner container | org admin |
-| POST | `/api/v1/orgs/{id}/hosted-runner/start` | Start the container | org admin |
-| POST | `/api/v1/orgs/{id}/hosted-runner/stop` | Stop the container | org admin |
-| DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
+| POST | `/api/v1/orgs/{id}/worker-keys` | Mint a workspace key `{name?}` (default `worker`) → `201 {key_record, key}`; `key` is the value, returned once | org admin |
+| DELETE | `/api/v1/orgs/{id}/worker-keys/{keyId}` | Revoke a key → `204`; `400` for a key the workspace does not hold | org admin |
+| GET | `/api/v1/orgs/{id}/my-runner-key` | My personal runner key status: `{key_record, online}`, `key_record` `null` with none | org member |
+| POST | `/api/v1/orgs/{id}/my-runner-key` | Mint/rotate my personal runner key → `201 {key_record, key}`; the previous key is revoked | org member |
+| DELETE | `/api/v1/orgs/{id}/my-runner-key` | Revoke my personal runner key → `204`, also when there is none | org member |
+| POST | `/api/v1/orgs/{id}/connector-pairing` | Mint a one-time connector pairing code (10-min TTL): `{code, expires_at, api_url, deep_link, start_link, open_link}` | org member |
+| POST | `/api/v1/public/connector/pair` | Exchange a pairing code `{code}` for a personal runner key: `{worker_key, api_url, org_id, org_name, user_name}`; `400` without a code, `403` for a code that is unknown, spent or expired | token |
+| GET/HEAD | `/api/v1/public/connector/download` | Download the Agent Connector bundle (`?os=windows\|linux\|darwin`, default `windows`; `400` `unknown os` for another, `404` when the deployment has no bundle for it) | open |
+| GET | `/api/v1/orgs/{id}/hosted-runner` | Hosted runner status: `{record, enabled, container_state, online}` | org admin |
+| POST | `/api/v1/orgs/{id}/hosted-runner` | Provision the workspace's hosted runner container; the body may carry `{provider_keys: {anthropic?, openai?, gemini?}}`, handed to the container as its provider API keys. `201` with the record; `400` when hosted runners are not enabled on the deployment, `403` `limit_reached` while the plan lacks `hosted_automation`, `409` when the workspace already has one | org admin |
+| POST | `/api/v1/orgs/{id}/hosted-runner/start` | Start the container → the record; `404` `no hosted runner for this workspace` | org admin |
+| POST | `/api/v1/orgs/{id}/hosted-runner/stop` | Stop the container → the record; `404` as for start | org admin |
+| DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) → `204`; `404` as for start | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
 | GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and a `pool_load` band — `green` / `amber` / `red` / `unavailable`, never a count) | org member |
-| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner: `201` with a new lease; the lease the caller already holds is returned with `200` and the same payload, rather than a second node or a `409`; `503` when the pool is full | org member |
-| POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
-| DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |
+| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner: `201` with a new lease; the lease the caller already holds is returned with `200` and the same payload, rather than a second node or a `409`; `503` when the pool is full; every runner-session route but `GET` answers `400` on a deployment with transient runners off | org member |
+| POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start); `404` when I hold no lease | org member |
+| DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) → `200` with the payload of a lease-less `GET` | org member |
 | GET | `/api/v1/orgs/{id}/runner-pool` | Pool occupancy and the workspace's live leases | org admin |
-| POST | `/api/v1/runner-pool/nodes` | Register a pool node | pool key |
+| POST | `/api/v1/runner-pool/nodes` | Register a pool node `{pool, name, providers}` → `201` with the node | pool key |
 | POST | `/api/v1/runner-pool/nodes/{id}/heartbeat` | Heartbeat; returns the node's lease (credential once) | pool key |
-| POST | `/api/v1/runner-pool/nodes/{id}/release` | Report a lease wiped; return to the idle pool. `404` `pool node is not registered` for a node the pool has no record of, as the heartbeat answers; the runner does not retry it, and registers again when its heartbeat gets that `404` | pool key |
+| POST | `/api/v1/runner-pool/nodes/{id}/release` | Report a lease wiped `{session_id}`; return to the idle pool → `204`. `404` `pool node is not registered` for a node the pool has no record of, as the heartbeat answers; the runner does not retry it, and registers again when its heartbeat gets that `404` | pool key |
 
 ### Projects, baselines, templates
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner). An agent run's token and a runner key are refused (`403`) before the body is read; then `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum | user |
+| POST | `/api/v1/projects` | Create project in active workspace `{name, description?, agent_auth?}` → `201` (creator becomes owner); `agent_auth` is `user-account` (the default) or `api-key`. An agent run's token and a runner key are refused (`403`) before the body is read; then `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum | user |
 | GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can); an agent run's token, its own project alone | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
-| PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `400` for a parent in another workspace, the project itself or one of its descendants, and `400` `parent project not found` for one no row has or the caller cannot reach) | editor |
+| PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `403` with the remedy on a workspace whose channel has not received `flow-down`, whenever the key is sent; `400` for a parent in another workspace, the project itself or one of its descendants, and `400` `parent project not found` for one no row has or the caller cannot reach) | editor |
 | DELETE | `/api/v1/projects/{id}` | Delete project and, in one transaction, all that belongs to it alone: every version of its artifacts with their chatter, attachment records and links (those to and from other projects' artifacts too), work items, crews, test runs, baselines, evidence, interviews, guided sessions, project attribute definitions, automations, proposals, share links, members and team grants. Its agent runs stay, with no project, for the workspace's usage; a queued one is cancelled and a claimed or running one asked to stop, as `POST /api/v1/agent-runs/{id}/cancel` does, one awaiting approval is cancelled (its proposals go with the project), and each one's run token is refused from then on. They stop naming what the delete removes (the card, guided or interview session, automation, crew and crew node of the project); what they name outside it stays. Its activity-log events stay; its child projects are detached to the top level. Once the delete has committed, the stored files of its attachments (every version) and evidence are removed from the uploads directory; one that cannot be removed is logged and does not fail the delete | owner |
 | GET | `/api/v1/projects/{id}/children` | The projects filed under this one | viewer |
 | GET | `/api/v1/projects/{id}/linked-artifacts` | The far end of every link crossing out of the project: `[{id, project_id, project_name, ref, type, title, status}]`, so a parent requirement a local one refines, or the child requirements refining a local one, can be named without rights on those projects | viewer |
 | GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
-| PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
+| PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name; `403` with the remedy while the workspace's channel has not received `artifact-owners`. Answers as `GET` does, the default party first | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
-| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token and a runner key are refused (`403`). Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
+| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF): the request body is the document itself, and the answer is `201 {status, message, project_id}`; `400` for a document that does not parse. An agent run's token and a runner key are refused (`403`). Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
 | GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`), the specification with the default content but without V&V status: the route reads no test evidence, so the status the download carries by default would be wrong here. The download routes are the supported path | viewer |
 | GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults. The fields are the attribute keys the artifacts carry: a baseline that kept the attribute definitions (REQ-5) labels a defined key as its definition did and lists the defined keys before the discovered ones, while the live project and an older baseline word each key themselves; a definition no artifact carries is not a field | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
-| POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline (see below for what the snapshot holds); publishes `baseline.captured` `{name}` | editor |
+| POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline `{name?}` (the body may be left out; the name defaults to `Baseline <date> <time>`) → `201` with the baseline (see below for what the snapshot holds); publishes `baseline.captured` `{name}` | editor |
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
-| DELETE | `/api/v1/baselines/{id}` | Delete baseline; publishes `baseline.deleted` `{name}`, the name it had, so the activity log records it (REQ-5). `403` for an editor or viewer, `404` `baseline not found` for one no row has | owner |
+| DELETE | `/api/v1/baselines/{id}` | Delete baseline → `204`; publishes `baseline.deleted` `{name}`, the name it had, so the activity log records it (REQ-5). `403` for an editor or viewer, `404` `baseline not found` for one no row has | owner |
 | GET | `/api/v1/projects/{id}/share-links` | The project's share links (`docs/sharing.md`), tokens never included | owner |
 | POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `expires_at` is the instant the link closes, whatever offset it is sent with (see Times); the list answers it in UTC. `400` for another role, and for an `expires_at` that falls outside years 1 to 9999 in UTC, such as `9999-12-31T23:00:00-05:00` (`expires_at must fall between years 1 and 9999 in UTC`), which the list could not answer. It is truncated to the microsecond, as stored, before that check, so a link closes no later than sent; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
-| POST | `/api/v1/templates` | Save a project as a template | editor |
-| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token and a runner key are refused (`403`); `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum, as `POST /projects` | user |
+| POST | `/api/v1/templates` | Save a project as a template `{project_id, name, description?}` → `201`; `400` `project_id is required` | editor |
+| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace `{name, description?}` → `201` with the project; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token and a runner key are refused (`403`); `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum, as `POST /projects` | user |
 
 **Baselines** carry `created_by` (the capturing account) and
 `created_by_name` (its display name, resolved server-side so a client never
@@ -495,32 +495,32 @@ Every artifact carries two identifiers, and they answer different questions:
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/artifacts` | Create artifact. `copied_from` (the id of an artifact the caller can read) marks a duplicate or a paste: the new artifact carries none of the source's versions or links, and its feed opens with one system note, *Copied from REQ-12 (version 3)*; an unreadable or unknown source leaves the copy without the note | editor |
-| GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&owner=&doc_numbers=1`; `owner` matches the `owner` attribute exactly) | viewer |
+| POST | `/api/v1/artifacts` | Create artifact `{project_id, type, title, body?, parent_id?, sort_order?, attributes?, copied_from?}` → `201`; an `attributes` map is checked against the attribute definitions in effect for the project and type, with the required ones enforced (`400`). `copied_from` (the id of an artifact the caller can read) marks a duplicate or a paste: the new artifact carries none of the source's versions or links, and its feed opens with one system note, *Copied from REQ-12 (version 3)*; an unreadable or unknown source leaves the copy without the note | editor |
+| GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&owner=&doc_numbers=1&limit=&offset=`; `project_id` is required, `400` without it; `owner` matches the `owner` attribute exactly; `limit` defaults to 1000 and is capped at 1000, an out-of-range one is the default; the total comes back in the `X-Total-Count` header) | viewer |
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
-| PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version); `404` `artifact not found` for an artifact no row has or the caller cannot reach | editor |
-| DELETE | `/api/v1/artifacts/{id}` | Soft-delete (history retained) | editor |
+| PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version) with any of `type`, `title`, `body`, `parent_id`, `sort_order`, `attributes` (a key left out is kept; `attributes`, when sent, replaces the whole map; `parent_id: null` moves the artifact to the root) and the link edits `pendingLinkAdds` / `pendingLinkRemoves`; a change to an approved artifact's `type`, `title` or `body` makes the new version a `draft`; `404` `artifact not found` for an artifact no row has or the caller cannot reach | editor |
+| DELETE | `/api/v1/artifacts/{id}` | Soft-delete (history retained) → `204` | editor |
 | GET | `/api/v1/artifacts/{id}/versions` | Version history, newest first. A deleted artifact's stays readable: the guard asks the project of its versions, so the project's viewers read it after the delete (REQ-4); an id no version has, or one in a project the caller cannot reach, answers `404` `project not found` | viewer |
-| POST | `/api/v1/artifacts/{id}/restore` | Restore an older version `{version}` as a new one. The artifact keeps its ref, as every version does (a restore that brings back a type with another prefix draws a new one, as a retype does), and the restore publishes `artifact.restored` `{artifact_type, title, version, restored_version}`. `404` `artifact version not found` for a version the artifact never had; `404` `artifact not found` as for an update | editor |
+| POST | `/api/v1/artifacts/{id}/restore` | Restore an older version `{version}` as a new one → `200` with the artifact. The artifact keeps its ref, as every version does (a restore that brings back a type with another prefix draws a new one, as a retype does), and the restore publishes `artifact.restored` `{artifact_type, title, version, restored_version}`. `404` `artifact version not found` for a version the artifact never had; `404` `artifact not found` as for an update | editor |
 | GET | `/api/v1/artifacts/{id}/links` | Links per artifact version: `?version=N` reads that version's links, a deleted artifact's among them, as its versions are read; without it, the live links | viewer |
-| POST | `/api/v1/links` | Create traceability link. A link may cross projects: the caller needs editor rights on both ends' projects, except for `refines` (the flow-down link, `docs/flow-down.md`), which needs editor rights on the source's project and viewer rights on the target's | editor |
-| GET | `/api/v1/links` | List links (`?project_id=`): every link that touches the project, from either end, so a flow-down link written from a child project is seen by the parent too | viewer |
+| POST | `/api/v1/links` | Create traceability link `{from_id, to_id, type, attributes?}` → `201`; `400` `source artifact not found` / `target artifact not found` for an end no row has or the caller cannot reach, `400` for a `type` the link rules refuse between those artifact types (`docs/link-type-rules.md`), and `403` with the flow-down remedy for `refines` on a workspace whose channel has not received `flow-down`. A link may cross projects: the caller needs editor rights on both ends' projects, except for `refines` (the flow-down link, `docs/flow-down.md`), which needs editor rights on the source's project and viewer rights on the target's | editor |
+| GET | `/api/v1/links` | List links (`?project_id=`, required: `400` without it): every link that touches the project, from either end, so a flow-down link written from a child project is seen by the parent too | viewer |
 | GET | `/api/v1/links/{id}` | Get link | viewer |
-| PUT | `/api/v1/links/{id}` | Update link | editor |
+| PUT | `/api/v1/links/{id}` | Update link `{type, attributes}`: both replace what the link held, so a key left out is cleared, and the new type is not checked against the link rules again | editor |
 | PUT | `/api/v1/links/{id}/confirm` | Clear the suspect flag: an editor vouches that the trace still holds after an artifact at one end changed. Idempotent — confirming a link that is not suspect changes nothing. Refused `403` for a proposal-mode agent run rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag exists to trigger | editor |
-| DELETE | `/api/v1/links/{id}` | Delete link. Both ends get a new version, so the caller needs what creating the link needs: editor rights on the source's project and on the target's, except that a `refines` link takes viewer rights on the target's project while the flow-down feature is on. No feature gate refuses a delete: with the feature off, a `refines` link wants editor rights on the target like any other. A target whose artifact has been deleted asks none. A proposal-mode agent run's delete becomes a proposal once those checks pass | editor |
-| POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact as a figure (`artifact_id`). A figure takes its artifact to a new version, as a new figure version and a rename do (see Figures). An upload whose project is deleted while the file comes in waits for the delete and answers `404` "project not found", its file removed | editor |
+| DELETE | `/api/v1/links/{id}` | Delete link → `204`. Both ends get a new version, so the caller needs what creating the link needs: editor rights on the source's project and on the target's, except that a `refines` link takes viewer rights on the target's project while the flow-down feature is on. No feature gate refuses a delete: with the feature off, a `refines` link wants editor rights on the target like any other. A target whose artifact has been deleted asks none. A proposal-mode agent run's delete becomes a proposal once those checks pass | editor |
+| POST | `/api/v1/attachments/upload` | Upload a file to an artifact as a figure: multipart fields `artifact_id` (required), `file` and an optional `title` (up to 255 characters); `201` with the attachment. A figure takes its artifact to a new version, as a new figure version and a rename do (see Figures). An upload whose project is deleted while the file comes in waits for the delete and answers `404` "project not found", its file removed | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata (`title` is the name a member gave the figure, empty when none; readers fall back to `original_filename`) | viewer |
-| PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157) | editor |
+| PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157), `400` for a longer title. Answers the attachment | editor |
 | GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
 | POST | `/api/v1/attachments/{id}/versions` | Replace a figure's file with a new version (multipart) | editor |
-| POST | `/api/v1/attachments/{id}/versions/{version}/restore` | Bring an older version's file and title back as a NEW version; nothing is deleted. 404 for a version the figure never had, 409 for the one already current | editor |
+| POST | `/api/v1/attachments/{id}/versions/{version}/restore` | Bring an older version's file and title back as a NEW version; nothing is deleted. `201` with the attachment. 404 for a version the figure never had, 409 for the one already current | editor |
 | GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first; each entry carries the file, its `kind` and the `title` the figure had at that version, so a rename and a new file read alike | viewer |
 | DELETE | `/api/v1/attachments/{id}` | Delete a figure with every version of it. Once the delete has committed, the stored file of every version is removed from the uploads directory; one that cannot be removed is logged and does not fail the delete, and a delete that fails removes no file | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | GET | `/api/v1/projects/{projectID}/attachments` | Every attachment in the project, in artifact order then figure number. Serves cross-artifact figure citations, which need the project's figures as one list | viewer |
-| POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |
-| GET | `/api/v1/chatter` | List an artifact's activity feed. Each entry carries `mentions` (the project members its @names resolve to) and `todo` (the work item raised from it, with its current status) — both composed at read time, neither stored | viewer |
+| POST | `/api/v1/chatter` | Comment on an artifact `{artifact_id, message}` (a reviewer may: that is what the role is for); answers the entry | reviewer |
+| GET | `/api/v1/chatter` | List an artifact's activity feed (`?artifact_id=`, required: `400` without it). Each entry carries `mentions` (the project members its @names resolve to) and `todo` (the work item raised from it, with its current status) — both composed at read time, neither stored | viewer |
 
 ### Figures
 
@@ -613,7 +613,8 @@ POST /api/v1/projects/{id}/review-round
 ```
 
 `types` is optional and must name artifact types from the catalog; an unknown
-one is a 400 and nothing is written. Omitted, the scope is **every type in the
+one is a 400 and nothing is written. The route is gated on `project-review-round`: a
+workspace whose channel has not received it is answered `403` with the remedy. Omitted, the scope is **every type in the
 catalog**, headings and descriptions included: a reviewer signs off the
 document, and structure left out of every round would sit in draft for ever,
 making a "reviewed" project one that still had unreviewed artifacts in it.
@@ -636,6 +637,11 @@ the artifact are the same write and land in the same history.
 | Approve | `PUT /api/v1/artifacts/{id}/status` with `{"status":"approved"}` |
 | Send back | `POST /api/v1/chatter` with the reason, then `PUT …/status` with `{"status":"draft"}` |
 
+`PUT /api/v1/artifacts/{id}/status` answers `400` for a status the catalog does not
+have and `409` for a move the status rules refuse (`draft` → `in_review`;
+`in_review` → `draft` or `approved`; `approved` → `superseded`); an agent run in
+proposal mode is refused `403`.
+
 A rejection is two calls, **in that order**. The reason is posted first: if
 the note fails, nothing has been rejected and the reviewer can try again,
 whereas the reverse order can leave an author with an artifact back in draft
@@ -650,15 +656,15 @@ pushes new items live.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/notifications` | List the caller's notifications (`?view=inbox\|flagged\|cleared&unread=true&limit=&before=<cursor>`) | user |
-| POST | `/api/v1/notifications/read` | Mark specific notifications read | user |
-| POST | `/api/v1/notifications/read-all` | Mark all read | user |
-| POST | `/api/v1/notifications/clear` | Archive the caller's inbox into the cleared view | user |
-| DELETE | `/api/v1/notifications/cleared` | Permanently delete what the caller has cleared (irreversible) | user |
-| PUT | `/api/v1/notifications/{id}/flag` | Flag or unflag one of the caller's notifications | user |
+| GET | `/api/v1/notifications` | List the caller's notifications (`?view=inbox\|flagged\|cleared&unread=true&limit=&before=<cursor>`) as `{notifications, unread_count, next_cursor?}`: `limit` is a positive integer (`400` otherwise) and is capped, `next_cursor` (`<timestamp>\|<id>`) is present when a page came back full and is passed back as `before` (`400` for a malformed one) | user |
+| POST | `/api/v1/notifications/read` | Mark specific notifications read `{ids}` (`400` `ids is required` for none) → `{updated, unread_count}` | user |
+| POST | `/api/v1/notifications/read-all` | Mark all read → `{updated, unread_count}` | user |
+| POST | `/api/v1/notifications/clear` | Archive the caller's inbox into the cleared view → `{cleared, unread_count}` | user |
+| DELETE | `/api/v1/notifications/cleared` | Permanently delete what the caller has cleared (irreversible) → `{deleted, unread_count}` | user |
+| PUT | `/api/v1/notifications/{id}/flag` | Flag or unflag one of the caller's notifications `{flagged}` (a boolean, required: `400` otherwise) → `{flagged}`; `404` `notification not found` | user |
 | GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
 | GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
-| PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |
+| PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was; answers both | user |
 | GET | `/api/v1/me/default-workspace` | The workspace the caller's sign-in lands in: `{org_id}`, `""` for the personal workspace (REQ-156) | user |
 | PUT | `/api/v1/me/default-workspace` | Choose it: `{org_id}` names a workspace the caller belongs to (`404` otherwise, the same answer as an unknown one), `""` or the personal workspace's id means the personal workspace. A stable-channel workspace whose release predates the feature answers `403` with the remedy (`default-workspace` gate). The choice is re-checked against membership on every sign-in: a member who has left the workspace lands in their personal one | user |
 
@@ -737,7 +743,7 @@ devices. Off unless the server has a VAPID key pair (`docs/operations.md`).
 |---|---|---|---|
 | GET | `/api/v1/me/push/config` | `{enabled, public_key}`; `enabled` is false when no VAPID keys are configured | user |
 | GET | `/api/v1/me/push-subscriptions` | `{subscriptions: [...]}` — the caller's devices, never their encryption keys | user |
-| POST | `/api/v1/me/push-subscriptions` | Register this device: `{endpoint, keys:{p256dh, auth}, user_agent?}` → 201. Idempotent on `endpoint`: re-posting refreshes the keys | user |
+| POST | `/api/v1/me/push-subscriptions` | Register this device: `{endpoint, keys:{p256dh, auth}, user_agent?}` (`endpoint` and both keys are required: `400`) → 201; `503` on a server with no push store. Idempotent on `endpoint`: re-posting refreshes the keys | user |
 | DELETE | `/api/v1/me/push-subscriptions` | Withdraw a device: `{endpoint}` → 204 (204 too when nothing was there) | user |
 
 `endpoint` must be an `https` URL on port 443, with no credentials, whose
@@ -835,11 +841,11 @@ invent. Consequently the gates are tighter than the role ladder alone:
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/shared-products` | List the visible community pool | user |
-| POST | `/api/v1/shared-products` | Share a product with every workspace | org member (session only) |
-| POST | `/api/v1/shared-products/{id}/report` | Flag an entry for review | user (session only) |
+| POST | `/api/v1/shared-products` | Share a product with every workspace `{category, name, description, vision, problem, target_users}` → `201` with the entry; `400` for a field that is empty, too long, holds a link or other text the sanitiser refuses, `409` for a name already in the pool, `429` past the workspace's daily cap or when the pool is full, `403` for an agent run or a runner key | org member (session only) |
+| POST | `/api/v1/shared-products/{id}/report` | Flag an entry for review → `204` | user (session only) |
 | PUT | `/api/v1/shared-products/{id}/vote` | Vote for an entry | user (session only) |
 | DELETE | `/api/v1/shared-products/{id}/vote` | Withdraw your vote | user (session only) |
-| DELETE | `/api/v1/shared-products/{id}` | Remove an entry outright | platform admin |
+| DELETE | `/api/v1/shared-products/{id}` | Remove an entry outright → `204`; `403` for anyone else | platform admin |
 
 `GET /api/v1/shared-products` takes `?limit=` (default 200, max 500) and
 `?sort=`:
@@ -864,14 +870,14 @@ hidden entry is out of every list and cannot be voted for either.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/profile` | Product profile (vision, users, constraints) | viewer |
-| PUT | `/api/v1/projects/{id}/profile` | Update product profile | editor |
-| POST | `/api/v1/projects/{id}/test-runs` | Create test run. A `baseline_id` names one of the project's baselines: one no row has, a deleted one, a malformed id or another project's answers `404` `baseline not found`, after the project guard and the body's decode, and no run is created | editor |
+| PUT | `/api/v1/projects/{id}/profile` | Update product profile `{vision, problem_statement, target_users, constraints, success_metrics, settings}`: the whole profile, each key replaced by what is sent | editor |
+| POST | `/api/v1/projects/{id}/test-runs` | Create test run `{name, description?, baseline_id?}` → `201` (`400` for a blank `name`). A `baseline_id` names one of the project's baselines: one no row has, a deleted one, a malformed id or another project's answers `404` `baseline not found`, after the project guard and the body's decode, and no run is created | editor |
 | GET | `/api/v1/projects/{id}/test-runs` | List test runs. A run whose `baseline_id` names no baseline of its project, as when the baseline was deleted after the run named it (a baseline delete goes ahead, and the run keeps the id as history, REQ-13), carries `baseline_deleted: true`; the field is left out when the baseline exists or no baseline is named. It is read from the baselines on every read, as in every answer below that holds a run | viewer |
 | GET | `/api/v1/test-runs/{id}` | Test run details, `baseline_deleted` as in the list | viewer |
-| PUT | `/api/v1/test-runs/{id}` | Update test run: `{status}`, `completed` or `aborted`, from `in-progress`; the answer marks `baseline_deleted` as the list does. No route changes a run's `baseline_id` | editor |
+| PUT | `/api/v1/test-runs/{id}` | Update test run: `{status}`, `completed` or `aborted`, from `in-progress` (`400` for another status, `409` for a run already closed); the answer marks `baseline_deleted` as the list does. No route changes a run's `baseline_id` | editor |
 | DELETE | `/api/v1/test-runs/{id}` | Delete a test run that holds no result. `409` for one that holds results, which are kept (REQ-13): `a test run that holds results is kept: complete or abort it instead of deleting it` for a run in progress, and `a test run that holds results is kept: this one is already completed` (or `aborted`) for a closed one | editor |
-| POST | `/api/v1/test-runs/{id}/results` | Record a test result `{test_case_id, status, notes?, evidence?}`. Recording a case again adds a result with an id of its own rather than overwriting the earlier one, which stays in the run's history; the one recorded last is the case's current result wherever a result is read, its times always after those of the result it supersedes, an omitted `evidence` carries the current one's, and the current one's evidence citations move to it (REQ-13, REQ-121). `404` `artifact not found` for a `test_case_id` no artifact of the run's project has; `409` `this test run is completed; only in-progress runs accept new results` (or `aborted`) for a closed run | editor |
-| POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases. Refused `403` for a proposal-mode agent run, and `409` for a closed run, before the body is read, as a result there is: `this test run is completed; only in-progress runs accept new results` (or `aborted`) | editor |
+| POST | `/api/v1/test-runs/{id}/results` | Record a test result `{test_case_id, status, notes?, evidence?}`, `status` being `pass`, `fail`, `blocked` or `not-run` (`400` otherwise, and `400` for a `test_case_id` that is no test case). Recording a case again adds a result with an id of its own rather than overwriting the earlier one, which stays in the run's history; the one recorded last is the case's current result wherever a result is read, its times always after those of the result it supersedes, an omitted `evidence` carries the current one's, and the current one's evidence citations move to it (REQ-13, REQ-121). `404` `artifact not found` for a `test_case_id` no artifact of the run's project has; `409` `this test run is completed; only in-progress runs accept new results` (or `aborted`) for a closed run, and `403` for an agent run recording a test case whose `execution_method` is `manual` or `physical` | editor |
+| POST | `/api/v1/test-runs/{id}/agent-run` | `{agent_slug, test_case_ids?}`: launch an agent on the run's agent-executable cases → `201 {run, executing, skipped}`; `400` for a blank `agent_slug` or when no selected case is agent-executable, `404` `agent not found`. Refused `403` for a proposal-mode agent run, and `409` for a closed run, before the body is read, as a result there is: `this test run is completed; only in-progress runs accept new results` (or `aborted`) | editor |
 | GET | `/api/v1/test-runs/{id}/results` | The run's current result per test case, the latest recorded first; `?history=true` lists every result recorded in the run, those later results superseded included, newest first | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
@@ -888,7 +894,7 @@ hidden entry is out of every list and cannot be voted for either.
 Any member may read it: what the workspace allows is not privileged, and
 hiding it only produces a surprise at the moment somebody is refused. The
 response carries the plan, whether the deployment is self-hosted (which
-decides the remedy offered), and one entry per limit:
+decides the remedy offered), and one entry per limit under `limits`:
 
 ```json
 {
@@ -976,10 +982,11 @@ pricing page. Amounts are in the currency's minor unit (pence, cents):
 }
 ```
 
-The workspace state carries `plan` (billed), `entitled_plan` (what the
+The workspace state carries `org_id`, `plan` (billed), `entitled_plan` (what the
 limits resolve from — the free tier once a subscription lapses), `granted`
 (a platform admin's plan, nothing to buy) and `billing` (status, interval,
-seats, period end, cancel-at-period-end, grandfathered, synced-at). Provider
+seats, period end, cancel-at-period-end, grandfathered, synced-at), `self_hosted`
+and `plans`, the public catalogue below. Provider
 object ids never reach a client. A refresh reads from the provider and can
 grant nothing it does not hold; a provider failure is `503` with
 `code: "billing_upstream"` and `Retry-After`, the workspace left as it was.
@@ -1038,8 +1045,10 @@ says so; the workspace is left as it was). Where two admins complete two checkou
 at bind and the tab says so. `change` keeps one subscription per workspace
 (`409 no_subscription` without one): `business_lite` bills a quantity of
 one, `business` the workspace's seats. `portal` needs a customer record
-(`409 no_customer`). Writes are limited to a burst of 5 then 20 an hour per
-workspace (`OPENV_BILLING_WRITE_BURST` / `_REFILL_PER_HOUR`).
+(`409 no_customer`). Checkout, change and portal are limited to a burst of 5 then 20 an hour per
+workspace (`OPENV_BILLING_WRITE_BURST` / `_REFILL_PER_HOUR`), and refresh to its own
+burst of 10 then 120 an hour (`OPENV_BILLING_REFRESH_BURST` / `_REFILL_PER_HOUR`);
+beyond either it is `429` with `Retry-After`.
 ### Evidence bundles
 
 A bundle is one physical or manual capture session — what was done, when, by
@@ -1056,15 +1065,15 @@ demonstration, a written account is the evidence.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/evidence-bundles` | List bundles, newest capture first | viewer |
-| POST | `/api/v1/projects/{id}/evidence-bundles` | Record a capture session | editor |
+| POST | `/api/v1/projects/{id}/evidence-bundles` | Record a capture session `{title, summary?, captured_at?, captured_by?, conditions?}` → `201` (`title` is required, and each field has a length bound: `400`) | editor |
 | GET | `/api/v1/evidence-bundles/{id}` | One bundle with its files and the results citing it | viewer |
-| PUT | `/api/v1/evidence-bundles/{id}` | Edit a bundle (the `ref` and project are fixed) | editor |
-| DELETE | `/api/v1/evidence-bundles/{id}` | Delete a bundle, its files and its citations | editor |
-| POST | `/api/v1/evidence-bundles/{id}/files` | Upload one file (multipart, streamed) | editor |
+| PUT | `/api/v1/evidence-bundles/{id}` | Edit a bundle (the `ref` and project are fixed); the body is the whole record, `{title, summary, captured_at, captured_by, conditions}`, and every field is replaced by what is sent | editor |
+| DELETE | `/api/v1/evidence-bundles/{id}` | Delete a bundle, its files and its citations → `204` | editor |
+| POST | `/api/v1/evidence-bundles/{id}/files` | Upload one file (multipart, streamed) → `201` with the file; `400` for a body that is not multipart or holds no file | editor |
 | GET | `/api/v1/evidence-files/{id}/download` | Download a file | viewer |
 | DELETE | `/api/v1/evidence-files/{id}` | Delete one file | editor |
 | GET | `/api/v1/test-results/{id}/citations` | The bundles a result rests on | viewer |
-| POST | `/api/v1/test-results/{id}/citations` | Cite a bundle (`{"bundle_id", "note"}`) | editor |
+| POST | `/api/v1/test-results/{id}/citations` | Cite a bundle (`{"bundle_id", "note"}`; `400` `bundle_id is required`) → `201` | editor |
 | DELETE | `/api/v1/test-results/{id}/citations/{bundleId}` | Drop a citation; the bundle is untouched | editor |
 
 **Uploads** are a separate path from artifact figures, and the rules differ.
@@ -1080,7 +1089,8 @@ that carry script, so every file is served `application/octet-stream` with
 `X-Evidence-SHA256` so a downloader can check the bytes against the record.
 
 **Storage** is capped per workspace by the `evidence_storage_mb` org limit
-(free 2048, team 20480), because uploads share one volume with the rest of
+(single and the legacy `free` 2048, Business Lite 10240, Business and the legacy
+`team` 20480, unlimited on enterprise and self-host), because uploads share one volume with the rest of
 the deployment. An upload that would exceed it is refused with `413` and a
 message naming the current usage. Citing a bundle twice from one result is
 accepted quietly rather than refused — it is the state the caller asked for —
@@ -1122,13 +1132,13 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/work-items` | Create card. `source_chatter_id` raises it from a note (that note must be in the same project, else 400). `assignee_type` is `user` (the default), `agent` or `team` (a crew), else 400 `invalid assignee_type: must be user, agent or team`; a crew's `assignee_id` must name a crew the caller may know of (*Crew writes*), else 404 `team not found`, and one of the project's workspace, else 400 `team belongs to a different workspace` | editor |
+| POST | `/api/v1/projects/{id}/work-items` | Create card `{title, description?, column?, assignee_type?, assignee_id?, artifact_ids?, due_date?, source_chatter_id?}` → `201`; `title` is required and `column` is one of the board's columns, `backlog` by default (`400` otherwise). `source_chatter_id` raises it from a note (that note must be in the same project, else 400). `assignee_type` is `user` (the default), `agent` or `team` (a crew), else 400 `invalid assignee_type: must be user, agent or team`; a crew's `assignee_id` must name a crew the caller may know of (*Crew writes*), else 404 `team not found`, and one of the project's workspace, else 400 `team belongs to a different workspace` | editor |
 | GET | `/api/v1/projects/{id}/work-items` | List board: the columns in the order the board flows in (`backlog`, `todo`, `in-progress`, `review`, `done`), then `sort_order`, then `created_at` | viewer |
-| GET | `/api/v1/work-items/{id}` | Card + activity | viewer |
-| PUT | `/api/v1/work-items/{id}` | Edit card. `assignee_type` and a crew's `assignee_id` are checked as on create; an omitted `assignee_type` keeps the card's, and the `assignee_id` sent is checked against it. An update replaces `assignee_id` (omitted, it clears it), and one that re-sends the card's own assignee, the same type and id, is not checked again | editor |
-| DELETE | `/api/v1/work-items/{id}` | Delete card | editor |
-| POST | `/api/v1/work-items/{id}/move` | Move card (agent columns can enqueue runs) | editor |
-| POST | `/api/v1/work-items/{id}/comments` | Comment on card | viewer |
+| GET | `/api/v1/work-items/{id}` | Card + activity: `{item, activity}` | viewer |
+| PUT | `/api/v1/work-items/{id}` | Edit card `{title, description, assignee_type, assignee_id, artifact_ids, due_date}`: `title` is required (`400`), `description` and `due_date` are replaced by what is sent (left out, they are cleared) and `artifact_ids` is kept when left out. `assignee_type` and a crew's `assignee_id` are checked as on create; an omitted `assignee_type` keeps the card's, and the `assignee_id` sent is checked against it. An update replaces `assignee_id` (omitted, it clears it), and one that re-sends the card's own assignee, the same type and id, is not checked again | editor |
+| DELETE | `/api/v1/work-items/{id}` | Delete card → `204` | editor |
+| POST | `/api/v1/work-items/{id}/move` | Move card `{column, sort_order}` (agent columns can enqueue runs); `400` for a column the board does not have | editor |
+| POST | `/api/v1/work-items/{id}/comments` | Comment on card `{content}` → `201` with the activity entry | viewer |
 
 ### Guided sessions (requirements wizard + V&V Assistant chat)
 
@@ -1140,16 +1150,16 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/guided-sessions` | Start a wizard session | editor |
-| GET | `/api/v1/guided-sessions` | List sessions (`?project_id=`) | viewer |
+| POST | `/api/v1/guided-sessions` | Start a wizard session `{project_id}` → `201` | editor |
+| GET | `/api/v1/guided-sessions` | List sessions (`?project_id=`, required) | viewer |
 | GET | `/api/v1/guided-sessions/{id}` | Session state | viewer |
-| PUT | `/api/v1/guided-sessions/{id}/step` | Save a step's answers | editor |
-| POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts. Each draft's links are checked as an artifact update's `pendingLinkAdds` are: a link to an id no artifact has, to another workspace's artifact, of a type the link rules refuse for the draft's type, or into another project the caller cannot edit is skipped, and the draft is still made. Refused `403` for a proposal-mode agent run, like the commit | editor |
+| PUT | `/api/v1/guided-sessions/{id}/step` | Save a step's answers `{step, answers}` → the session; the answers are merged key by key into the session's, `step` becomes its current step, and `400` once the session is no longer in progress | editor |
+| POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts `{drafts: [{type, title, body, parent_id?, sort_order?, attributes?, links?: [{type, to_id}]}]}` → `{artifact_ids}`. Each draft's links are checked as an artifact update's `pendingLinkAdds` are: a link to an id no artifact has, to another workspace's artifact, of a type the link rules refuse for the draft's type, or into another project the caller cannot edit is skipped, and the draft is still made. Refused `403` for a proposal-mode agent run, like the commit | editor |
 | POST | `/api/v1/guided-sessions/{id}/commit` | Commit session: each of its drafts is approved through the review states (`draft` → `in_review` → `approved`, a version and a `status-change` note per step), and the session closes. Each approval publishes the `artifact.status_changed` event a status change does, with the committing user as actor and the session id as `guided_session`; the step into review publishes none, so editors are not asked to review it. Refused `403` for a proposal-mode agent run, like a status change | editor |
 | POST | `/api/v1/guided-sessions/{id}/abandon` | Abandon session | editor |
 | GET | `/api/v1/guided-sessions/{id}/messages` | Assistant chat history | viewer |
-| POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches an assistant turn; optional `artifact_id`). Refused `403` for a proposal-mode agent run, as are kickoff and nudge | editor |
-| POST | `/api/v1/guided-sessions/{id}/chat/kickoff` | First assistant greeting (optional `artifact_id`) | editor |
+| POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message `{content, step, state, artifact_id?}` (`400` for blank `content`) → `{message, runner_online}`; launches an assistant turn. Refused `403` for a proposal-mode agent run, as are kickoff and nudge | editor |
+| POST | `/api/v1/guided-sessions/{id}/chat/kickoff` | First assistant greeting `{step, state, artifact_id?}` → `{status, runner_online}`, `status` being `launched`, `pending` (a turn is in flight), `skipped` (the transcript is not empty) or `unavailable` | editor |
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
 | GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
 
@@ -1175,11 +1185,11 @@ when the next `message` arrives.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/interviews` | Create interview; an optional `persona_artifact_id` is checked as `PUT /interviews/{id}/persona` checks it. Refused `403` for a proposal-mode agent run, since each participant message launches the interviewer's run | editor |
+| POST | `/api/v1/projects/{id}/interviews` | Create interview `{name, brief, agent_slug?, guided_session_id?, persona_artifact_id?}` → `201` (`agent_slug` defaults to `requirements-interviewer`); an optional `persona_artifact_id` is checked as `PUT /interviews/{id}/persona` checks it. Refused `403` for a proposal-mode agent run, since each participant message launches the interviewer's run | editor |
 | GET | `/api/v1/projects/{id}/interviews` | List interviews | viewer |
 | POST | `/api/v1/interviews/{id}/close` | Close interview | editor |
 | PUT | `/api/v1/interviews/{id}/persona` | Link/unlink a persona artifact (`persona_artifact_id`: `400` for an artifact of another project or one that is no persona, `400` `persona artifact not found` for one no row has or in a project the caller cannot reach) | editor |
-| POST | `/api/v1/interviews/{id}/invites` | Mint an invite link. Refused `403` for a proposal-mode agent run, as is the interview | editor |
+| POST | `/api/v1/interviews/{id}/invites` | Mint an invite link `{invitee_label, expires_at?}` → `201 {invite, token, path}`, the token returned once. Refused `403` for a proposal-mode agent run, as is the interview | editor |
 | GET | `/api/v1/interviews/{id}/invites` | List invites | viewer |
 | POST | `/api/v1/interview-invites/{id}/revoke` | Revoke invite | editor |
 | GET | `/api/v1/interviews/{id}/sessions` | List participant sessions | viewer |
@@ -1194,15 +1204,15 @@ when the next `message` arrives.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/agents` | List workspace agents | user |
-| POST | `/api/v1/agents` | Create agent (writes the markdown file) | org admin |
+| POST | `/api/v1/agents` | Create agent (writes the markdown file) from a definition `{slug, name, provider, allowed_tools, description?, model?, effort?, write_mode?, repo_access?, max_turns?, timeout_seconds?, config?, locked?, system_prompt?}` → `201`. `slug` (lowercase letters, digits and hyphens), `name`, `provider` and `allowed_tools` are required (`400`); `write_mode` is `proposal` (the default) or `direct`; `409` for a slug the workspace already has; `403` with the remedy for a provider the workspace's channel has not received (`antigravity-cli`) | org admin |
 | POST | `/api/v1/agents/sync` | Re-sync agent files → registry | org admin |
 | GET | `/api/v1/agents/{slug}` | Agent details | user |
-| PUT | `/api/v1/agents/{slug}` | Update agent | org admin |
-| DELETE | `/api/v1/agents/{slug}` | Delete agent; `404` for a slug no agent of the workspace has, a deleted one's among them | org admin |
+| PUT | `/api/v1/agents/{slug}` | Update agent with a definition as above (`400` when the body's `slug` is not the URL's; `403` as for create) | org admin |
+| DELETE | `/api/v1/agents/{slug}` | Delete agent → `204`; `404` for a slug no agent of the workspace has, a deleted one's among them | org admin |
 | GET | `/api/v1/agents/{slug}/raw` | Raw markdown (frontmatter + prompt) | user |
-| PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown | org admin |
-| POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent: in the body's `project_id`, or, with none, in the agent's workspace, where a person must be a member (a worker key or run token of that workspace launches there), past the workspace's read-only gate either way. Refused `403` for a proposal-mode agent run | editor (project-scoped) / org member |
-| POST | `/api/v1/projects/{id}/draft-test-cases` | `{requirement_ids}`: launch the seeded test-case author on them, in proposal mode. Refused `403` for a proposal-mode agent run, like a status change: a launch is no write a proposal can carry | editor |
+| PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown `{content}` → the agent | org admin |
+| POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent `{project_id?, prompt, work_item_id?}` → `201` with the run (`404` `agent not found`; `402` when the workspace's budget is spent and `OPENV_BUDGET_ENFORCE` is on): in the body's `project_id`, or, with none, in the agent's workspace, where a person must be a member (a worker key or run token of that workspace launches there), past the workspace's read-only gate either way. Refused `403` for a proposal-mode agent run | editor (project-scoped) / org member |
+| POST | `/api/v1/projects/{id}/draft-test-cases` | `{requirement_ids}` (artifact ids, at least one: `400`): launch the seeded test-case author on them, in proposal mode → `201` with the run; `404` when the workspace has no such agent, `402` as for an agent launch. Refused `403` for a proposal-mode agent run, like a status change: a launch is no write a proposal can carry | editor |
 
 **`allowed_tools` is required.** `POST /api/v1/agents` and
 `PUT /api/v1/agents/{slug}` answer **400** when the definition carries no tool
@@ -1245,9 +1255,9 @@ the vendor CLI can express.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/agent-runs` | List runs, newest first (project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own). `project=none` keeps the workspace-wide listing's runs that have no project (a whole-workspace automation's, one launched outside any project, one its project's delete left behind), for the workspace Runs page: an org admin gets them all, a member the ones they launched, as `GET /agent-runs/{id}` lets each read them. `400` for any other `project` value, or `project=none` beside `project_id` | user |
-| POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run (a personal key: its owner's, and the ownerless ones its owner could see), never one whose cancel was requested. `204` when there is none, and when the run claimed was asked to stop before its token was issued (a project's delete, say): it is handed back, which ends it cancelled | worker |
-| POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
+| GET | `/api/v1/agent-runs` | List runs, newest first (`?project_id=&agent_id=&status=&parent_id=&limit=&project=none`; project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own). `project=none` keeps the workspace-wide listing's runs that have no project (a whole-workspace automation's, one launched outside any project, one its project's delete left behind), for the workspace Runs page: an org admin gets them all, a member the ones they launched, as `GET /agent-runs/{id}` lets each read them. `400` for any other `project` value, or `project=none` beside `project_id` | user |
+| POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run `{worker_id, providers, hosted, min_priority}` (a personal key: its owner's, and the ownerless ones its owner could see), never one whose cancel was requested. `204` when there is none, and when the run claimed was asked to stop before its token was issued (a project's delete, say): it is handed back, which ends it cancelled | worker |
+| POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent `{role_label, prompt}` → `201 {run_id, status}`; `400` for a blank `prompt`, for a run that is not part of a crew and for a `role_label` that names no delegate of its node, `403` for anything but a run token, `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree, less each run below the root the caller could not open by itself and the runs below it | launcher / viewer |
@@ -1265,8 +1275,8 @@ worker releases it back to the queue — and broadcast as `partial` on the run's
 own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation → the run. A queued run is cancelled at once; a claimed or running run is asked to stop (`cancel_requested`), and its worker stops it and reports it cancelled. The run's status when the cancel is written decides, not when it was read: a run its worker hands back to the queue meanwhile is cancelled. A finished run, or one awaiting approval, is answered as it is | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/retry` | Re-enqueue a failed, cancelled or timed-out run as a new one (`retried_from_run_id`); `409` otherwise. Refused `403` for a proposal-mode agent run, `401` for any other run token | launcher / editor |
-| POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
-| POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
+| POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running → `204`; `409` for a run that is not claimed | worker |
+| POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion `{status, exit_code?, final_text, error, error_class?, tokens_in, tokens_out, cost_usd?}`, `status` being `succeeded`, `failed`, `cancelled` or `timed_out`, of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
 | POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. A run whose cancel was requested is not queued again: it ends `cancelled`. `204` also when nothing was released | worker |
 
 A run that finishes with proposals pending review waits in
@@ -1320,19 +1330,19 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/crews` | List crews | user |
-| POST | `/api/v1/crews` | Create crew | editor (project-pinned) / org admin |
+| GET | `/api/v1/crews` | List crews (`?project_id=` narrows to a project's) | user |
+| POST | `/api/v1/crews` | Create crew `{name, description?, project_id?}` → `201`; `project_id` pins it to a project of the workspace | editor (project-pinned) / org admin |
 | GET | `/api/v1/crews/{id}` | Crew graph (nodes + edges) | org member |
-| PUT | `/api/v1/crews/{id}` | Update crew | editor / org admin |
-| DELETE | `/api/v1/crews/{id}` | Delete crew | editor / org admin |
-| POST | `/api/v1/crews/{id}/clone` | Clone crew (the source's write guard, then the copy's: `project_id` a project of the crew's workspace the caller edits, or none for an org admin) | editor / org admin |
-| POST | `/api/v1/crews/{id}/nodes` | Add node (agent or human) | editor / org admin |
-| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node (in the body's `project_id`, else in a pinned crew's project); `400` for a project outside the crew's workspace; `404` `team not found` for a caller who may not know of the crew (*Crew writes*). A pin that no longer names a project of the crew's workspace counts as none, for launches and for every crew write. Refused `403` for a proposal-mode agent run | editor / org admin |
-| PUT | `/api/v1/crew-nodes/{id}` | Update node | editor / org admin |
-| DELETE | `/api/v1/crew-nodes/{id}` | Remove node | editor / org admin |
-| POST | `/api/v1/crews/{id}/edges` | Add edge (delegates-to, hands-off-to, reviews) | editor / org admin |
-| PUT | `/api/v1/crew-edges/{id}` | Update edge | editor / org admin |
-| DELETE | `/api/v1/crew-edges/{id}` | Remove edge | editor / org admin |
+| PUT | `/api/v1/crews/{id}` | Update crew `{name?, description?, entry_node_id?}`; a key left out is left as it was | editor / org admin |
+| DELETE | `/api/v1/crews/{id}` | Delete crew → `204` | editor / org admin |
+| POST | `/api/v1/crews/{id}/clone` | Clone crew `{name?, project_id?}` → `201` (the source's write guard, then the copy's: `project_id` a project of the crew's workspace the caller edits, or none for an org admin) | editor / org admin |
+| POST | `/api/v1/crews/{id}/nodes` | Add node (agent or human) `{node_type, agent_id or user_id, label?, department?, position?}` → `201` | editor / org admin |
+| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node `{project_id?, prompt}` → `201` with the run (in the body's `project_id`, else in a pinned crew's project); `400` for a crew with no entry node; `400` for a project outside the crew's workspace; `404` `team not found` for a caller who may not know of the crew (*Crew writes*). A pin that no longer names a project of the crew's workspace counts as none, for launches and for every crew write. Refused `403` for a proposal-mode agent run | editor / org admin |
+| PUT | `/api/v1/crew-nodes/{id}` | Update node `{label?, agent_id?, user_id?, department?, position?}` | editor / org admin |
+| DELETE | `/api/v1/crew-nodes/{id}` | Remove node → `204` | editor / org admin |
+| POST | `/api/v1/crews/{id}/edges` | Add edge `{from_node_id, to_node_id, edge_type, config?}` (`delegates-to`, `hands-off-to`, `reviews`) → `201` | editor / org admin |
+| PUT | `/api/v1/crew-edges/{id}` | Update edge `{config}` | editor / org admin |
+| DELETE | `/api/v1/crew-edges/{id}` | Remove edge → `204` | editor / org admin |
 
 **Deprecated aliases** (same handlers, kept for compatibility — see
 `registerCrewRoutes` in `internal/api/crew_handlers.go`): `/api/v1/teams`, `/api/v1/teams/{id}`,
@@ -1343,28 +1353,28 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/automations` | List automations | user |
-| POST | `/api/v1/automations` | Create (manual / cron / event-triggered). `created_by` is the caller, whatever the body says. `project_id` pins it to a project of the workspace (`400` "project does not belong to this workspace" otherwise); absent, null or `""`, it covers the whole workspace. A triggered automation fires only on events of its own workspace, and of its own project when pinned to one; a workspace-wide one's run takes the event's project. The target must be the workspace's: an agent of it, or a crew of it pinned to no project or to the automation's own (`400` "agent not found", "crew not found", "the crew is pinned to another project", or, for a workspace-wide one, "a crew pinned to a project cannot run an automation for the whole workspace"). Cron expressions are read in UTC | editor (project-pinned) / org admin |
+| GET | `/api/v1/automations` | List automations (`?project_id=` narrows to a project's) | user |
+| POST | `/api/v1/automations` | Create `{name, kind, agent_id or team_id, project_id?, prompt_template, enabled?, cron_expr?, catch_up?, event_type?, event_filter?, cooldown_seconds?, max_runs_per_hour?}` → `201`; `kind` is `manual`, `scheduled` (a cron schedule: `cron_expr`) or `triggered` (an event: `event_type`, `event_filter`); `400` for any other. `created_by` is the caller, whatever the body says. `project_id` pins it to a project of the workspace (`400` "project does not belong to this workspace" otherwise); absent, null or `""`, it covers the whole workspace. A triggered automation fires only on events of its own workspace, and of its own project when pinned to one; a workspace-wide one's run takes the event's project. The target must be the workspace's: an agent of it, or a crew of it pinned to no project or to the automation's own (`400` "agent not found", "crew not found", "the crew is pinned to another project", or, for a workspace-wide one, "a crew pinned to a project cannot run an automation for the whole workspace"). Cron expressions are read in UTC | editor (project-pinned) / org admin |
 | GET | `/api/v1/automations/{id}` | Details | org member |
-| PUT | `/api/v1/automations/{id}` | Update; null fields are left as they are. `project_id` moves it: to a project, or with `""` to the whole workspace, which takes the write rights of where it goes too and the `workspace-automations` feature (`403` with the feature gate's message before a stable-channel workspace has it). The target is checked as on create when the scope or the target changes | editor / org admin (and of the scope it moves to) |
-| DELETE | `/api/v1/automations/{id}` | Delete | editor / org admin |
-| POST | `/api/v1/automations/{id}/run-now` | Launch immediately. Refused `403` for a proposal-mode agent run, `401` for any other run token | editor / org admin |
+| PUT | `/api/v1/automations/{id}` | Update (the same keys, all optional); null fields are left as they are. `project_id` moves it: to a project, or with `""` to the whole workspace, which takes the write rights of where it goes too and the `workspace-automations` feature (`403` with the feature gate's message before a stable-channel workspace has it). The target is checked as on create when the scope or the target changes | editor / org admin (and of the scope it moves to) |
+| DELETE | `/api/v1/automations/{id}` | Delete → `204` | editor / org admin |
+| POST | `/api/v1/automations/{id}/run-now` | Launch immediately → `201` with the run. Refused `403` for a proposal-mode agent run, `401` for any other run token | editor / org admin |
 | GET | `/api/v1/proposals` | List agent proposals, newest first, at most 500: `?project_id=` (viewer), or without it the active workspace's (org admin; anyone else `400` `project_id is required`); `status`, `run_id` narrow either | viewer (project) / org admin |
-| POST | `/api/v1/proposals/{id}/approve` | Apply a proposed write; a run token is refused (`403`) | editor |
-| POST | `/api/v1/proposals/{id}/reject` | Reject it; a run token is refused (`403`) | editor |
+| POST | `/api/v1/proposals/{id}/approve` | Apply a proposed write (the body may carry `{note}`) → the proposal; a run token is refused (`403`) | editor |
+| POST | `/api/v1/proposals/{id}/reject` | Reject it (the body may carry `{note}`) → the proposal; a run token is refused (`403`) | editor |
 
 ### Repo connections & provider settings
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/repo-connections` | List connected repositories, each with the caller's local path (a run token: its claimant's) | viewer |
-| POST | `/api/v1/projects/{id}/repo-connections` | Connect a repository | owner |
-| PUT | `/api/v1/repo-connections/{id}` | Update connection | owner |
+| POST | `/api/v1/projects/{id}/repo-connections` | Connect a repository `{name, remote_url, default_branch}` → `201` | owner |
+| PUT | `/api/v1/repo-connections/{id}` | Update connection `{name?, remote_url?, default_branch?}` | owner |
 | DELETE | `/api/v1/repo-connections/{id}` | Remove connection | owner |
-| PUT | `/api/v1/repo-connections/{id}/my-path` | Set my machine's checkout path | viewer |
+| PUT | `/api/v1/repo-connections/{id}/my-path` | Set my machine's checkout path `{local_path}` → the connection | viewer |
 | GET | `/api/v1/provider-settings` | Provider status + model catalog per provider | user |
-| PUT | `/api/v1/provider-settings` | Update provider config (auth mode, default model); answers the stored row, whose `id` an update keeps | org admin |
-| POST | `/api/v1/provider-settings/detect` | Worker reports detected CLIs/logins/models, `{provider: {...}}` for each of its adapters. Every provider the server knows is recorded, whatever else the report names; one it does not know answers `400` naming it (the first by name), the known ones recorded all the same | worker |
+| PUT | `/api/v1/provider-settings` | Update provider config `{provider, auth_mode, api_key_env, default_model, enabled}`; answers the stored row, whose `id` an update keeps; `400` for a setting it refuses, `403` with the remedy for a provider the workspace's channel has not received (`antigravity-cli`) | org admin |
+| POST | `/api/v1/provider-settings/detect` | Worker reports detected CLIs/logins/models, `{provider: {...}}` for each of its adapters. Every provider the server knows is recorded, whatever else the report names; one it does not know answers `400` naming it (the first by name), the known ones recorded all the same; `204` when every one was recorded | worker |
 | POST | `/api/v1/provider-logins` | Start a CLI sign-in relay (workspace: org admin; user-targeted: org member) | user |
 | POST | `/api/v1/provider-logins/claim` | Worker claims a pending sign-in | worker |
 | GET | `/api/v1/provider-logins/{id}` | Sign-in status (redacted) | user |
@@ -1377,7 +1387,7 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/events` | Domain event feed (`?project_id=` viewer, the project's events whatever workspace the caller acts in; workspace-wide: org admin) | user |
+| GET | `/api/v1/events` | Domain event feed (`?project_id=&event_type=&before=&limit=`; `project_id` viewer, the project's events whatever workspace the caller acts in; without it, the active workspace's: every event for an org admin, the events of the projects they hold a role in for anyone else). `limit` defaults to 100 and is capped at 500 (out of range, it is 100); `before` is an event id from the previous page (`400` when it is no id), and a full page carries the next one in the `X-Next-Cursor` header | user |
 
 Each event carries its stored audit fields (`actor` — `user:<id>`,
 `agent:<run id>`, `worker:<org>[:user:<id>]` or `system` — plus `entity_id`)

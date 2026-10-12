@@ -1,6 +1,6 @@
 # Codebase refactor: what is left, and how it is run
 
-Status: 11 October 2026, against `master` at `f022b7d`. This file is the
+Status: 12 October 2026, against `master` at `278fc94`. This file is the
 execution plan for the rest of
 [the refactor plan](codebase-refactor.md). That plan stays the source of
 truth for **what** each step does: its rows in §6.7, the invariants in §3,
@@ -35,9 +35,12 @@ What is left, measured on `master`:
 Open items from the tracking issue (#379) that are not plan steps:
 
 - **H1** Test hygiene: `TestNewHandlerNamesAMalformedPerRequestSettingAtBoot`
-  fails under `go test -count=2`.
-- **Bug 226** A huge `*_mb` workspace limit wraps when turned into bytes.
-  Its fix was recommended by the agent, not yet decided by the maintainer.
+  failed under `go test -count=2`. Done on 4 October 2026 (the merge of
+  #499): the test tags its values with a per-run counter
+  (`bootSettingRuns`), and `go test -count=2 ./internal/api/` passes.
+- **Bug 226** A huge `*_mb` workspace limit wrapped when turned into bytes.
+  Done: the maintainer decided the fix and it merged in #639, which
+  refuses and clamps size limits too large for bytes.
 
 Not scheduled: F8 and its S16d–S16h pins run only when a feature next
 touches one of those views. S17, P5, X19 and Phase 4 stay dropped.
@@ -103,7 +106,7 @@ codemod plus 8 area PRs, and X13 is 20 repository PRs.
 
 | # | Step | Class | Model | Why that model | Depends |
 |---|---|---|---|---|---|
-| 1 | **H1** `-count=2` test fix | test only | Sonnet | Finding the leaked state needs some diagnosis | – |
+| 1 | **H1** `-count=2` test fix | test only | Sonnet | Finding the leaked state needs some diagnosis. Done on 4 October 2026 (#499): per-run counter `bootSettingRuns` | – |
 | 2 | **X10b** Stages read config through `internal/config` | E (+ `BOOT_STEPS_CHANGES`) | Opus | Each read keeps its condition and statement; fatal checks keep their boot positions | X10a, X10b pin (merged) |
 | 3 | **X11c** Appliers built in `wire_agents.go` | E | Opus | Boot order and `boot_steps.txt` must not move | X11b (merged) |
 | 4 | **X14c guard** `X14C_IMPORT_EDGES` | T | Haiku | Copy of `X14B_IMPORT_EDGES` with one edge | – |
@@ -145,7 +148,7 @@ tracking issue first and merge only while no other open PR changes it.
 |---|---|---|---|---|
 | 18 | **X18c** Step components into `views/guidedWizard/`, shell of 400 lines or fewer | E | Sonnet | 17 merged |
 | 19 | **D2** `docs/architecture.md` | T (docs) | Sonnet | X13 and X17 merged |
-| 20 | **Bug 226** Size limits that do not fit in bytes | fix | Sonnet | Maintainer's decision on the fix |
+| 20 | **Bug 226** Size limits that do not fit in bytes | fix | Sonnet | Done (#639): the maintainer decided the fix |
 | 21 | **Stop point 3** Baseline, the last tracking-issue update | – | Haiku | All of the above |
 
 That is about 43 PRs: 1 in wave 0, 8 in waves 1 and 2, 3 in wave 3, 28 in
@@ -155,8 +158,6 @@ windows.
 ## 4. What only the maintainer can do
 
 - Review any PR before it merges, if wanted: merging is delegated (§2).
-- Decide bug 226's fix, which the tracking issue records as the agent's
-  recommendation.
 - Make the *Refactor guard* job required, and protect `master` with
   "require branches to be up to date" (S14b).
 - Re-approve TC-56 in OpenV and review REQ-91's new sentence.
