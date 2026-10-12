@@ -1,10 +1,12 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -192,7 +194,34 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A type sent empty is refused. A type that differs from the stored one
+	// is checked against the link-type rules for the link's two ends, as
+	// POST /links checks it; a type left out or unchanged asks nothing.
+	if req.Type != nil {
+		if *req.Type == "" {
+			writeJSONError(w, http.StatusBadRequest, links.ErrEmptyType.Error())
+			return
+		}
+		if *req.Type != existing.Type {
+			var from, to *artifacts.Artifact
+			if a, err := h.ArtifactService.GetArtifact(existing.FromID); err == nil {
+				from = a
+			}
+			if a, err := h.ArtifactService.GetArtifact(existing.ToID); err == nil {
+				to = a
+			}
+			if err := traceability.CheckRules(*req.Type, traceability.EndOf(from), traceability.EndOf(to)); err != nil {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+		}
+	}
+
 	link, err := h.LinkService.UpdateLink(id, req)
+	if errors.Is(err, links.ErrEmptyType) {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		respondInternal(w, r, "failed to update link", err)
 		return

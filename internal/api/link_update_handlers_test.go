@@ -20,7 +20,7 @@ import (
 
 // updateLinkService fakes the links.Service an update reaches: the lookup
 // the guard resolves the project from, the update itself (as the real one,
-// type and attributes replaced as sent and the version bumped), and the
+// a field sent replaced and the version bumped), and the
 // link lists the auto-version reads.
 type updateLinkService struct {
 	links.Service
@@ -40,7 +40,13 @@ func (f *updateLinkService) UpdateLink(id string, req links.UpdateLinkRequest) (
 		return nil, f.updateErr
 	}
 	l := *f.byID[id]
-	l.Type, l.Attributes, l.Version = req.Type, req.Attributes, l.Version+1
+	if req.Type != nil {
+		l.Type = *req.Type
+	}
+	if req.Attributes != nil {
+		l.Attributes = req.Attributes
+	}
+	l.Version++
 	return &l, nil
 }
 
@@ -89,7 +95,7 @@ func TestUpdateLinkPublishesLinkUpdated(t *testing.T) {
 
 	t.Run("an editor retypes a link", func(t *testing.T) {
 		h, bus, _ := newFixture()
-		w := put(h, "editor", `{"type":"derives-from","attributes":{"note":"retyped"}}`)
+		w := put(h, "editor", `{"type":"relates-to","attributes":{"note":"retyped"}}`)
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 		}
@@ -101,7 +107,7 @@ func TestUpdateLinkPublishesLinkUpdated(t *testing.T) {
 			t.Errorf("link.updated: entity %q, project %q, org %q, actor %q; want link-1, %s, %s, user:editor",
 				e.EntityID, e.ProjectID, e.OrgID, e.Actor, project, org)
 		}
-		want := map[string]interface{}{"link_type": "derives-from", "from_id": "art-tc", "to_id": "art-req"}
+		want := map[string]interface{}{"link_type": "relates-to", "from_id": "art-tc", "to_id": "art-req"}
 		if !reflect.DeepEqual(e.Payload, want) {
 			t.Errorf("link.updated payload = %v, want %v, as link.created's with the type the link has now", e.Payload, want)
 		}
@@ -109,7 +115,7 @@ func TestUpdateLinkPublishesLinkUpdated(t *testing.T) {
 
 	t.Run("a viewer is refused and nothing is published", func(t *testing.T) {
 		h, bus, _ := newFixture()
-		if w := put(h, "viewer", `{"type":"derives-from"}`); w.Code != http.StatusForbidden {
+		if w := put(h, "viewer", `{"type":"relates-to"}`); w.Code != http.StatusForbidden {
 			t.Fatalf("status = %d, want 403 (body %q)", w.Code, w.Body.String())
 		}
 		if got := bus.types(); len(got) != 0 {
@@ -120,7 +126,7 @@ func TestUpdateLinkPublishesLinkUpdated(t *testing.T) {
 	t.Run("a failed update publishes nothing", func(t *testing.T) {
 		h, bus, linkSvc := newFixture()
 		linkSvc.updateErr = errors.New("connection refused")
-		if w := put(h, "editor", `{"type":"derives-from"}`); w.Code != http.StatusInternalServerError {
+		if w := put(h, "editor", `{"type":"relates-to"}`); w.Code != http.StatusInternalServerError {
 			t.Fatalf("status = %d, want 500 (body %q)", w.Code, w.Body.String())
 		}
 		if got := bus.types(); len(got) != 0 {

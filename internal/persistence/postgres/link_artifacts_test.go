@@ -117,7 +117,7 @@ func (f *laFixture) link(svc *links.DefaultService, name, from, to string) *link
 
 func (f *laFixture) update(svc *links.DefaultService, l *links.Link) {
 	f.t.Helper()
-	if _, err := svc.UpdateLink(l.ID, links.UpdateLinkRequest{Type: "verifies"}); err != nil {
+	if _, err := svc.UpdateLink(l.ID, links.UpdateLinkRequest{Type: ptr("verifies")}); err != nil {
 		f.t.Fatalf("UpdateLink %s: %v", f.names[l.ID], err)
 	}
 }
@@ -253,7 +253,7 @@ func TestLinkArtifactsRowsOnDelete(t *testing.T) {
 	}
 
 	f.bump(from, 2)
-	if _, err := f.links.UpdateLink(l.ID, links.UpdateLinkRequest{Type: "verifies"}); err == nil || err.Error() != "link not found" {
+	if _, err := f.links.UpdateLink(l.ID, links.UpdateLinkRequest{Type: ptr("verifies")}); err == nil || err.Error() != "link not found" {
 		t.Errorf("UpdateLink of the deleted link = %v, want link not found", err)
 	}
 	f.want("UpdateLink of the deleted link", "link from 1", "link to 3")
