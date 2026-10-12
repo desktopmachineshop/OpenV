@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.17.2 — 2026-10-12
+
 ### Bug fixes
 
 - **A size limit that is far too large is now refused instead of silently
