@@ -160,6 +160,7 @@ type app struct {
 	vapid                notify.VAPIDConfig
 	pushSubService       *pushsubs.DefaultService
 	userMetricsService   *usermetrics.DefaultService
+	visitorMetrics       *usermetrics.DefaultVisitorService
 	notificationService  *notifications.DefaultService
 	minutesMonitor       *notify.MinutesMonitor
 	deploymentKind       string

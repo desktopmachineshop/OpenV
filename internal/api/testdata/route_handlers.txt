@@ -34,6 +34,8 @@ GET /api/v1/admin/workspaces -> AdminListWorkspaces
 GET /api/v1/admin/users -> AdminListUsers
 PUT /api/v1/admin/users/{id}/admin -> AdminSetUserAdmin
 GET /api/v1/admin/metrics/users -> AdminUserMetrics
+GET /api/v1/admin/metrics/visitors -> AdminVisitorMetrics
+POST /api/v1/public/visits -> RecordSiteVisit
 GET /api/v1/public/plans -> GetPublicPlans
 GET /api/v1/orgs/{id}/billing -> GetOrgBilling
 POST /api/v1/orgs/{id}/billing/refresh -> RefreshOrgBilling [alwaysWritable]

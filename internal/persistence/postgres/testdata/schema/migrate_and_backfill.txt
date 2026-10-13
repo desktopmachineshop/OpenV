@@ -853,7 +853,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 59
+table schema_migrations rows 60
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -911,6 +911,27 @@ table shared_products rows 0
   index idx_shared_products_visible CREATE INDEX idx_shared_products_visible ON public.shared_products USING btree (created_at DESC) WHERE (hidden = false)
   index shared_products_name_key_key CREATE UNIQUE INDEX shared_products_name_key_key ON public.shared_products USING btree (name_key)
   index shared_products_pkey CREATE UNIQUE INDEX shared_products_pkey ON public.shared_products USING btree (id)
+table site_visit_days rows 0
+  column visitor_id uuid NOT NULL
+  column day date NOT NULL
+  constraint site_visit_days_pkey PRIMARY KEY (visitor_id, day)
+  constraint site_visit_days_visitor_id_fkey FOREIGN KEY (visitor_id) REFERENCES site_visitors(id) ON DELETE CASCADE
+  index idx_site_visit_days_day CREATE INDEX idx_site_visit_days_day ON public.site_visit_days USING btree (day)
+  index site_visit_days_pkey CREATE UNIQUE INDEX site_visit_days_pkey ON public.site_visit_days USING btree (visitor_id, day)
+table site_visitors rows 0
+  column id uuid NOT NULL
+  column first_seen timestamp with time zone NOT NULL DEFAULT now()
+  column first_day date NOT NULL
+  column landing_path character varying(100) NOT NULL DEFAULT ''::character varying
+  column source character varying(60) NOT NULL DEFAULT ''::character varying
+  column country character varying(2) NOT NULL DEFAULT ''::character varying
+  column user_id uuid
+  column linked_at timestamp with time zone
+  constraint site_visitors_pkey PRIMARY KEY (id)
+  constraint site_visitors_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+  index idx_site_visitors_first_day CREATE INDEX idx_site_visitors_first_day ON public.site_visitors USING btree (first_day)
+  index idx_site_visitors_user CREATE INDEX idx_site_visitors_user ON public.site_visitors USING btree (user_id) WHERE (user_id IS NOT NULL)
+  index site_visitors_pkey CREATE UNIQUE INDEX site_visitors_pkey ON public.site_visitors USING btree (id)
 table templates rows 0
   column id uuid NOT NULL
   column template_key character varying(128)
@@ -1107,3 +1128,4 @@ ledger 0056 boot_tasks
 ledger 0057 drop_attachment_test_result
 ledger 0058 cancel_requeued_cancelled_runs
 ledger 0059 user_activity_days
+ledger 0060 site_visitors

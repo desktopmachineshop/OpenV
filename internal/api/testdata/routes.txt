@@ -37,6 +37,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/work-items/{id}
 GET /api/v1/admin/metrics/users
+GET /api/v1/admin/metrics/visitors
 GET /api/v1/admin/users
 GET /api/v1/admin/workspaces
 GET /api/v1/agent-runs
@@ -281,6 +282,7 @@ POST /api/v1/provider-settings/detect
 POST /api/v1/public/connector/pair
 POST /api/v1/public/interviews/{token}/finish
 POST /api/v1/public/interviews/{token}/messages
+POST /api/v1/public/visits
 POST /api/v1/runner-pool/nodes
 POST /api/v1/runner-pool/nodes/{id}/heartbeat
 POST /api/v1/runner-pool/nodes/{id}/release

@@ -11,6 +11,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **OpenV now counts visits to its public site, so the people who run it
+  can see how many visitors go on to make an account.** When you open
+  openv.app while not signed in, your browser is given a random visitor id
+  in a first-party cookie, and the page you landed on, the site that sent
+  you and the country Cloudflare reports are noted; if you then sign up,
+  that visit is linked to your new account. Platform administrators see
+  unique and new visitors, the share who sign up, and the landing pages and
+  sources that bring them, on a new Visitors section of the Platform admin
+  page. Your IP address is not kept, nothing is shared with anyone else,
+  and a browser that sends Global Privacy Control or Do Not Track is not
+  counted at all.
+
 - **Search engines and AI assistants can now read their way around
   openv.app.** The site answers `/robots.txt`, `/sitemap.xml` and
   `/llms.txt` with real files instead of the app page, the sitemap lists
