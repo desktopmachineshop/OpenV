@@ -9,8 +9,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
-## 0.17.3 — 2026-10-13
-
 ### Maintenance updates
 
 - **OpenV now counts visits to its public site, so the people who run it
@@ -24,6 +22,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   page. Your IP address is not kept, nothing is shared with anyone else,
   and a browser that sends Global Privacy Control or Do Not Track is not
   counted at all.
+
+## 0.17.3 — 2026-10-13
+
+### Maintenance updates
 
 - **Search engines and AI assistants can now read their way around
   openv.app.** The site answers `/robots.txt`, `/sitemap.xml` and
