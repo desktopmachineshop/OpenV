@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.17.3 — 2026-10-13
+
 ### Maintenance updates
 
 - **Search engines and AI assistants can now read their way around
