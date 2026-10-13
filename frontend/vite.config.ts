@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, runnerImport, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // Vite replaced Create React App (react-scripts), which had its final release
@@ -9,8 +10,36 @@ import react from '@vitejs/plugin-react';
 // depends on unchanged: the same REACT_APP_ environment prefix, the same
 // build/ output directory, and the same port 3000 for the dev server, so the
 // Dockerfiles, compose files and E2E suite did not have to move with it.
+// robots.txt, sitemap.xml and llms.txt, written into the build with the
+// site's address left as a placeholder (src/site/crawl.ts). They go under a
+// dot-directory, which nginx refuses to serve, and the container copies them
+// to the web root with the address filled in at start
+// (docker-entrypoint.d/46-openv-crawl.sh). The module is loaded through
+// Vite's own runner rather than imported here, so the app's source keeps its
+// bundler-style imports and this file stays loadable by Node unaided.
+const crawlFiles = (): Plugin => ({
+  name: 'openv-crawl-files',
+  apply: 'build',
+  async generateBundle() {
+    const root = fileURLToPath(new URL('.', import.meta.url));
+    const { module: crawl } = await runnerImport<typeof import('./src/site/crawl')>('/src/site/crawl.ts', {
+      root,
+      configFile: false,
+      logLevel: 'error',
+    });
+    const files = {
+      'robots.txt': crawl.robotsTxt(),
+      'sitemap.xml': crawl.sitemapXml(),
+      'llms.txt': crawl.llmsTxt(),
+    };
+    for (const [name, source] of Object.entries(files)) {
+      this.emitFile({ type: 'asset', fileName: `.openv-crawl/${name}`, source });
+    }
+  },
+});
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), crawlFiles()],
 
   // `REACT_APP_API_URL` is baked into the bundle by both Dockerfiles, named in
   // docker-compose, the E2E harness and the deployment docs. Keeping CRA's

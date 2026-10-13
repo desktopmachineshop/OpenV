@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Search engines and AI assistants can now read their way around
+  openv.app.** The site answers `/robots.txt`, `/sitemap.xml` and
+  `/llms.txt` with real files instead of the app page, the sitemap lists
+  every public page and manual chapter, and copies of the site at other
+  addresses are kept out of search results so it is indexed once, under its
+  own name. A self-hosted OpenV publishes the same files for its own address
+  once `OPENV_SITE_URL` names it. The site and README now describe OpenV as
+  source-available, which is what the Elastic License 2.0 makes it.
+
 ## 0.17.2 — 2026-10-12
 
 ### Bug fixes

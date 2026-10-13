@@ -12,7 +12,7 @@ export const LICENSE_URL = `${REPO_URL}/blob/master/LICENSE`;
 export const TAGLINE = 'Requirements, traceability and V&V evidence, with AI agents that work inside the audit trail.';
 
 export const SUBLINE =
-  'DOORS-grade rigour without the DOORS-grade licence: typed artifacts, stable references, baselines, verification runs, documents, and AI agents that propose changes for your team to approve. Open source. Bring your own AI.';
+  'DOORS-grade rigour without the DOORS-grade licence: typed artifacts, stable references, baselines, verification runs, documents, and AI agents that propose changes for your team to approve. Source-available. Bring your own AI.';
 
 /** What the platform does, one card each. */
 export const FEATURES: { title: string; body: string }[] = [
@@ -221,7 +221,7 @@ export const PRICING_FOOTNOTE =
 export const SELF_HOST_COMMANDS = ['git clone https://github.com/desktopmachineshop/OpenV.git', 'cd OpenV', 'docker compose up -d'];
 
 export const LICENSE_GLOSS =
-  'OpenV is licensed under the Elastic License 2.0. Self-hosting is free for anyone, at any scale: read the source, fork it, change it, and run it on your own servers for your own teams with every feature. The one thing you may not do is sell OpenV to others as a hosted or managed service.';
+  'OpenV is source-available, licensed under the Elastic License 2.0. Self-hosting is free for anyone, at any scale: read the source, fork it, change it, and run it on your own servers for your own teams with every feature. The one thing you may not do is sell OpenV to others as a hosted or managed service.';
 
 /** The licence in plain English, one line each; the README carries the same list. */
 export const LICENSE_INTENT: string[] = [

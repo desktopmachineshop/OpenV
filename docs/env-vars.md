@@ -250,7 +250,10 @@ The inventory reads this module's Go code, so it does not see these:
 - **The frontend image** (nginx, `frontend/docker-entrypoint.d/`):
   `API_UPSTREAM`, the API's `host:port` on the private network that `/api/`
   is proxied to (default `api:8080`); `OPENV_NOINDEX`, set to keep a
-  deployment out of search results; `OPENV_APP_VARIANT=staging`, the
+  deployment out of search results; `OPENV_SITE_URL`, the public site's
+  canonical address (`https://openv.app`), which publishes `robots.txt`
+  with a sitemap, `sitemap.xml` and `llms.txt` for it and marks every other
+  host name the deployment answers to noindex; `OPENV_APP_VARIANT=staging`, the
   installed app's name and icons for staging; and, at build time only,
   `REACT_APP_API_URL`, the API origin of a split deployment, where the
   browser does not go through the proxy.

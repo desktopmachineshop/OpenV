@@ -58,6 +58,12 @@ COPY openv-nginx/api-proxy.conf /etc/nginx/openv/api-proxy.conf
 # one.
 COPY docker-entrypoint.d/45-openv-noindex.sh /docker-entrypoint.d/45-openv-noindex.sh
 COPY openv-nginx/noindex.conf /etc/nginx/openv/noindex.conf
+# robots.txt, sitemap.xml and llms.txt from the build's .openv-crawl/
+# templates and OPENV_SITE_URL, plus the host-name map behind the noindex sent
+# on any address but the site's own. The copied default map is what the
+# `nginx -t` below reads.
+COPY docker-entrypoint.d/46-openv-crawl.sh /docker-entrypoint.d/46-openv-crawl.sh
+COPY openv-nginx/robots-host.conf /etc/nginx/openv/robots-host.conf
 # Installed-app identity: OPENV_APP_VARIANT rewrites the app shell's manifest,
 # icon and title links at start so a non-production copy installs as its own
 # app. It edits files under the web root rather than nginx config, so there is
@@ -71,6 +77,7 @@ RUN api_origin="${REACT_APP_API_URL%/}" && \
     fi && \
     chmod +x /docker-entrypoint.d/40-openv-api-proxy.sh \
              /docker-entrypoint.d/45-openv-noindex.sh \
+             /docker-entrypoint.d/46-openv-crawl.sh \
              /docker-entrypoint.d/50-openv-app-identity.sh && \
     nginx -t
 

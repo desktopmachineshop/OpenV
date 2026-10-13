@@ -1,8 +1,8 @@
 # OpenV - V&V Requirements Management Platform
 
-A modern, open-source Verification & Validation (V&V) requirements management system inspired by IBM DOORS, with full traceability, baselines, and a clean web UI.
+A modern, source-available Verification & Validation (V&V) requirements management system inspired by IBM DOORS, with full traceability, baselines, and a clean web UI. Free to self-host under the [Elastic License 2.0](LICENSE).
 
-Public demo: https://openv-frontend-production.up.railway.app/
+Hosted service: https://openv.app
 
 ## Features
 

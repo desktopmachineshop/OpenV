@@ -1,6 +1,8 @@
 # Search and AI visibility plan
 
-Status: proposed, 2026-10-13. Evidence base:
+Status: approved 2026-10-13 (decision 1: source-available). 4.1, the
+`og:image` and canonical-host items of 4.3, and the wording change are
+built; the rest is open. Evidence base:
 `docs/assessments/2026-10-13-ai-visibility.md` (Conviora scan, baseline
 **0 / 100**, OpenV in 0 of 60 unbranded AI answers, plus direct checks of the
 site and repository).
@@ -57,8 +59,9 @@ sources the engines already trust. Model memory follows the third.
    or AGPL-3.0 for the core) and keep "open source". (b) gets OpenV into
    the "best open-source requirements tools" lists, where StrictDoc,
    Doorstop and Tuleap currently win on that label alone. (a) is honest and
-   costs nothing. **Recommendation: decide before Phase 2**, because every
-   page and listing repeats the claim.
+   costs nothing. **Decided 2026-10-13: (a), source-available.** The site,
+   `index.html`, `llms.txt` and the README say so; every listing and page
+   from here on uses the same words.
 2. **One-line descriptor, used verbatim everywhere.** Proposed: *"OpenV is
    a requirements management and V&V platform: traceability from need to
    test evidence, baselines, ReqIF exchange and AI agents, hosted or
@@ -79,29 +82,37 @@ a test case each).
 
 ### 4.1 robots.txt, sitemap.xml, llms.txt
 
-- Generate all three **at container start** in a new
-  `frontend/docker-entrypoint.d/46-openv-crawl.sh`, alongside the existing
-  `45-openv-noindex.sh`, from `FRONTEND_URL`. They are written at start-up,
-  not shipped in `public/`, so a self-hosted or staging instance never
-  advertises openv.app's sitemap.
+Built as follows.
+
+- The build writes all three from `frontend/src/site/crawl.ts` into
+  `build/.openv-crawl/` (which nginx refuses to serve), with the address left
+  as a placeholder. `frontend/docker-entrypoint.d/46-openv-crawl.sh` fills it
+  in at container start from a new **`OPENV_SITE_URL`** (`https://openv.app`
+  on production) and copies them to the web root, so a self-hosted or
+  staging instance never advertises openv.app's sitemap.
   - `OPENV_NOINDEX` set → `robots.txt` allows everything (so the existing
     `X-Robots-Tag: noindex` is still seen, per that script's own reasoning)
-    and no sitemap is written.
-  - Otherwise → explicit `Allow: /` groups for Googlebot, Bingbot,
+    and there is no sitemap or `llms.txt`.
+  - `OPENV_SITE_URL` set → one group naming Googlebot, Bingbot,
     OAI-SearchBot, ChatGPT-User, GPTBot, Claude-SearchBot, Claude-User,
-    ClaudeBot, PerplexityBot, Perplexity-User, Google-Extended;
-    `Disallow` for `/api/`, `/projects/`, `/org/`, `/admin`, `/share/`, `/s/`,
-    `/interview/`, `/login`, `/verify-email`, `/reset-password`; and a
-    `Sitemap:` line.
+    ClaudeBot, PerplexityBot, Perplexity-User and Google-Extended alongside
+    `*`, so all of them get the same rules; `Disallow` for `/api/`,
+    `/projects`, `/org/`, `/admin`, `/whats-new`, `/interview/`,
+    `/verify-email` and `/reset-password`; and a `Sitemap:` line. Share links
+    are not disallowed: their page says noindex itself, and a crawler barred
+    from fetching it would never read that.
+  - Neither → the same `robots.txt` without the `Sitemap:` line, and no
+    sitemap or `llms.txt`.
 - `sitemap.xml` lists the public site routes from `frontend/src/pages.ts`
-  (`public: true`, scope `site`, no `:param`) plus each manual chapter and
-  each published open-source project page.
-- `llms.txt`: the descriptor, then one line and link per public page and
-  manual chapter. It is cheap, a few crawlers read it, and it doubles as a
-  map for anyone pasting the site into an assistant.
-- nginx: exact-match `location = /robots.txt` etc. with
-  `default_type text/plain` / `application/xml`, so they can never fall
-  through to `index.html` again.
+  (`public: true`, scope `site`, no `:param`, less the sign-in and token
+  pages) plus each manual chapter. `crawl.test.ts` fails when a new public
+  page has no summary or a private one is not disallowed. Published
+  open-source project pages come from the API at run time and are not yet
+  listed; they join when pages are pre-rendered (4.2).
+- `llms.txt`: the descriptor, the licence in one paragraph, then one line
+  and link per public page and manual chapter.
+- nginx: exact-match `location = /robots.txt` etc., so a file a deployment
+  does not publish is a 404 and never the app's `index.html`.
 
 ### 4.2 Pre-render the public pages
 
@@ -138,11 +149,12 @@ component changes.
   Linux (Docker)`, `offers` with the free alpha, licence URL, the
   descriptor). `FAQPage` on `/faq`, generated from the same `content.ts`
   entries the page renders, so it cannot drift.
-- `og:image` / `twitter:image` → `https://openv.app/Images/og.png`, not the
-  Railway host.
-- Railway frontend host: add `X-Robots-Tag: noindex` when `$host` is not
-  the canonical host (a `map` in nginx.conf). Keep it serving rather than
-  301-redirecting, because health checks and the API proxy may use it.
+- Done: `og:image` / `twitter:image` → `https://openv.app/Images/og.png`,
+  not the Railway host.
+- Done: with `OPENV_SITE_URL` set, every host name but the site's own gets
+  `X-Robots-Tag: noindex, nofollow` (a `map` on `$host` the entrypoint
+  writes). The Railway host keeps serving rather than redirecting, because
+  health checks and the API proxy may use it.
 
 ### 4.4 Get indexed
 
@@ -267,7 +279,7 @@ Phase 3.
 |---|---|---|---|
 | 1 | Decisions 1–3 | maintainer | a conversation |
 | 2 | GitHub description, homepage, topics, README opener | maintainer (or agent with repo admin) | 10 min |
-| 3 | robots / sitemap / llms.txt, canonical host, og:image (4.1, 4.3) | repo PR | 1 day |
+| 3 | robots / sitemap / llms.txt, canonical host, og:image (4.1, 4.3); then set `OPENV_SITE_URL=https://openv.app` on the production frontend | repo PR, then maintainer | done in this PR |
 | 4 | Pre-render public pages with per-route meta and JSON-LD (4.2, 4.3) | repo PR | 2–3 days |
 | 5 | Search Console and Bing Webmaster Tools, sitemap submit | maintainer | 1 hour |
 | 6 | `/capabilities` from the OpenV Platform project, `/self-hosted…`, `/reqif`, FAQ additions | repo PRs | 1 week |
