@@ -27,6 +27,8 @@ import { Demos } from './Demos';
 import { Faq } from './Faq';
 import { HowItWorks } from './HowItWorks';
 import { OpenSourceProjects } from './OpenSourceProjects';
+import { TopicPage } from './TopicPage';
+import { TOPICS, getTopic } from './topics';
 import { WhitePapers } from './WhitePapers';
 
 /**
@@ -46,6 +48,7 @@ export const PRERENDER_ROUTES: { path: string; element: JSX.Element }[] = [
   { path: '/white-papers', element: <WhitePapers /> },
   { path: '/manual', element: <ManualView /> },
   { path: '/manual/:chapterSlug', element: <ManualView /> },
+  ...TOPICS.map((t) => ({ path: t.path, element: <TopicPage path={t.path} /> })),
 ];
 
 export const HOME_TITLE = 'OpenV — requirements, traceability and V&V with AI agents';
@@ -124,6 +127,34 @@ function homeJsonLd(): object {
   };
 }
 
+/** A topic page as a dated article by the organisation, for search engines and assistants. */
+function topicJsonLd(path: string): object[] {
+  const topic = getTopic(path);
+  if (!topic) return [];
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': topic.kind === 'glossary' ? 'DefinedTermSet' : 'TechArticle',
+      name: topic.title,
+      headline: topic.heading,
+      description: topic.summary,
+      url: absolute(path),
+      dateModified: topic.updated,
+      about: 'OpenV',
+      publisher: { '@type': 'Organization', name: 'Desktop Machine Shop', url: absolute('/') },
+      ...(topic.kind === 'glossary'
+        ? {
+            hasDefinedTerm: topic.sections.map((s) => ({
+              '@type': 'DefinedTerm',
+              name: s.heading,
+              description: (s.paragraphs ?? []).join(' '),
+            })),
+          }
+        : {}),
+    },
+  ];
+}
+
 function faqJsonLd(): object {
   return {
     '@context': 'https://schema.org',
@@ -161,7 +192,7 @@ export function prerenderedPages(): PrerenderedPage[] {
       file,
       title: `${page.title} · OpenV`,
       description: page.summary ?? DESCRIPTOR,
-      jsonLd: path === '/faq' ? [faqJsonLd()] : [],
+      jsonLd: path === '/faq' ? [faqJsonLd()] : topicJsonLd(path),
     };
   });
 }

@@ -22,6 +22,13 @@ const PUBLIC_SEGMENTS = [
   '/faq',
   '/customers',
   '/white-papers',
+  '/requirements-traceability',
+  '/verification-evidence',
+  '/baselines-and-audit-trail',
+  '/reqif',
+  '/self-hosted-requirements-management',
+  '/safety-critical',
+  '/glossary',
   '/security',
 ];
 

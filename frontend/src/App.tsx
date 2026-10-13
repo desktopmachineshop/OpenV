@@ -81,6 +81,8 @@ const OpenSourceProjects = lazy(() =>
 );
 const Customers = lazy(() => import('./site/Customers').then((m) => ({ default: m.Customers })));
 const WhitePapers = lazy(() => import('./site/WhitePapers').then((m) => ({ default: m.WhitePapers })));
+// One lazy layout for every topic page; its copy is data in site/topics.
+const TopicPage = lazy(() => import('./site/TopicPage').then((m) => ({ default: m.TopicPage })));
 const SharedProjectView = lazy(() =>
   import('./views/SharedProjectView').then((m) => ({ default: m.SharedProjectView }))
 );
@@ -255,6 +257,13 @@ function App() {
         <Route path="/open-source" element={<OpenSourceProjects />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/white-papers" element={<WhitePapers />} />
+        <Route path="/requirements-traceability" element={<TopicPage path="/requirements-traceability" />} />
+        <Route path="/verification-evidence" element={<TopicPage path="/verification-evidence" />} />
+        <Route path="/baselines-and-audit-trail" element={<TopicPage path="/baselines-and-audit-trail" />} />
+        <Route path="/reqif" element={<TopicPage path="/reqif" />} />
+        <Route path="/self-hosted-requirements-management" element={<TopicPage path="/self-hosted-requirements-management" />} />
+        <Route path="/safety-critical" element={<TopicPage path="/safety-critical" />} />
+        <Route path="/glossary" element={<TopicPage path="/glossary" />} />
         {walled ? (
           <Route path="*" element={<Navigate to="/verify-email" replace />} />
         ) : (

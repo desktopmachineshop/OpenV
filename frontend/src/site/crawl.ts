@@ -13,6 +13,7 @@
 // crawl.test.ts fails when one has no summary below.
 import { MANUAL_CHAPTERS } from '../manual';
 import { PAGES, pagePattern } from '../pages';
+import { TOPICS } from './topics';
 
 export const SITE_URL_PLACEHOLDER = '__OPENV_SITE_URL__';
 
@@ -119,6 +120,8 @@ export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> 
     title: 'User manual',
     summary: 'The OpenV user manual, chapter by chapter.',
   },
+  // The topic pages carry their own title and summary (site/topics).
+  ...Object.fromEntries(TOPICS.map((t) => [t.path, { title: t.title, summary: t.summary }])),
 };
 
 /** Every public page with content, site pages first, then the manual. */
