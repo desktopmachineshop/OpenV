@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.17.3 — 2026-10-13
+
 ### Maintenance updates
 
 - **OpenV now counts visits to its public site, so the people who run it
