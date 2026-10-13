@@ -24,6 +24,7 @@ import { OrgSettings } from './views/OrgSettings';
 import { InterviewChatRoute } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
+import { releasePrerender } from './site/prerenderHandoff';
 import './index.css';
 
 // Route-level code splitting for the heavyweight views so their large
@@ -132,6 +133,13 @@ function App() {
       })
       .finally(() => setAuthChecked(true));
   }, [setCurrentUser, setEmailVerificationRequired]);
+
+  // A signed-in visitor to a pre-rendered page goes into the app (the front
+  // page redirects to /projects), so its snapshot is dropped as soon as the
+  // session is known rather than left for a page that will not mount.
+  useEffect(() => {
+    if (authChecked && currentUser) releasePrerender();
+  }, [authChecked, currentUser]);
 
   // The wall: a signed-in account that has not confirmed its email, on a
   // server that requires it, sees only the verification page. The API

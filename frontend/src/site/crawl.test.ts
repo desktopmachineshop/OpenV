@@ -1,6 +1,7 @@
 import { MANUAL_CHAPTERS } from '../manual';
 import { PAGES, pagePattern } from '../pages';
 import {
+  CANONICAL_PATHS,
   CRAWLERS,
   DISALLOWED_PREFIXES,
   SITE_PAGE_TEXT,
@@ -38,6 +39,18 @@ describe('crawlPages', () => {
   });
 });
 
+describe('canonical addresses', () => {
+  it('points each alias at a page that is its own canonical, and lists only canonical pages in the sitemap', () => {
+    const pages = crawlPages();
+    const own = new Set(pages.filter((p) => p.canonical === p.path).map((p) => p.path));
+    for (const [alias, target] of Object.entries(CANONICAL_PATHS)) {
+      expect(pages.map((p) => p.path)).toContain(alias);
+      expect(own.has(target)).toBe(true);
+      expect(sitemapXml()).not.toContain(`<loc>${SITE_URL_PLACEHOLDER}${alias}</loc>`);
+    }
+  });
+});
+
 describe('robotsTxt', () => {
   const robots = robotsTxt();
 
@@ -65,7 +78,7 @@ describe('sitemapXml', () => {
     const doc = new DOMParser().parseFromString(sitemapXml(), 'application/xml');
     expect(doc.getElementsByTagName('parsererror')).toHaveLength(0);
     const locs = Array.from(doc.getElementsByTagName('loc')).map((n) => n.textContent ?? '');
-    expect(locs).toHaveLength(crawlPages().length);
+    expect(locs).toHaveLength(crawlPages().filter((p) => p.canonical === p.path).length);
     expect(locs).toContain(`${SITE_URL_PLACEHOLDER}/`);
     expect(locs).toContain(`${SITE_URL_PLACEHOLDER}/faq`);
     for (const loc of locs) expect(loc.startsWith(`${SITE_URL_PLACEHOLDER}/`)).toBe(true);

@@ -1,8 +1,8 @@
 # Search and AI visibility plan
 
-Status: approved 2026-10-13 (decision 1: source-available). 4.1, the
-`og:image` and canonical-host items of 4.3, and the wording change are
-built; the rest is open. Evidence base:
+Status: approved 2026-10-13 (decision 1: source-available). Phase 1 (4.1
+to 4.3) and the wording change are built; 4.4 (Search Console, Bing
+Webmaster Tools) is the maintainer's; Phases 2 to 4 are open. Evidence base:
 `docs/assessments/2026-10-13-ai-visibility.md` (Conviora scan, baseline
 **0 / 100**, OpenV in 0 of 60 unbranded AI answers, plus direct checks of the
 site and repository).
@@ -116,39 +116,56 @@ Built as follows.
 
 ### 4.2 Pre-render the public pages
 
-- A post-build step (`frontend/scripts/prerender.mjs`) serves `dist/`,
-  opens each public route in headless Chromium (Playwright is already in
-  `e2e/`), waits for the page to settle, and writes the rendered HTML to
-  `dist/<route>.html`; the `location /` block becomes `try_files $uri
-  $uri.html $uri/ /index.html`, so the snapshot is served to crawlers and
-  people alike, and app routes still fall through to the shell.
-  React's `createRoot` in `src/index.tsx` replaces it on load, so there is
-  no hydration mismatch to manage.
-- Routes: `/`, `/pricing`, `/how-it-works`, `/demos`, `/faq`,
-  `/open-source`, `/customers`, `/white-papers`, `/manual`,
-  `/manual/:chapterSlug` for every chapter, and the new pages in Phase 2.
-- Per-route `<title>`, meta description, `og:*` and
-  `<link rel="canonical" href="https://openv.app/<route>">`. Today all of
-  them share index.html's one title, which makes them duplicates to Google.
-- Remove the `<noscript>You need to enable JavaScript…` line from
-  pre-rendered pages. It is the only body text crawlers currently see.
-- Guard: a `make check` step that fails if a pre-rendered public page has
-  fewer than N words of body text or lacks a canonical. That stops a later
-  change silently putting the shell back.
+Built as follows, by server rendering rather than the headless browser
+first proposed: the site pages turned out to render in Node unchanged
+(`useViewport` already falls back to a desktop width without `window`, and
+the pages fetch their data after mounting), and server rendering keeps
+Chromium out of the Railway image build.
 
-Alternative considered: `react-dom/server` `renderToString` at build time.
-It is lighter but needs every site component to be SSR-safe (no `window`
-at import). Worth it later; the Chromium snapshot works today with no
-component changes.
+- `frontend/src/site/prerender.tsx` renders every page `crawlPages()` lists
+  with `react-dom/server` through a `MemoryRouter` whose table
+  (`PRERENDER_ROUTES`) gives each public path the element `App.tsx` gives
+  it. A Vite plugin (`openv-prerender-pages` in `vite.config.ts`) runs it
+  after the bundle is written and saves one copy of the built `index.html`
+  per page under `build/.openv-prerender/`: the page's markup in a
+  `#prerender` element beside the empty `#root`, in place of the
+  `<noscript>` notice, and its own `<title>`, description, `og:*`,
+  `<link rel="canonical">` and `og:url`.
+- `46-openv-crawl.sh` finishes them at start into `prerendered/` (address
+  filled in, or the address lines dropped without `OPENV_SITE_URL` or with
+  `OPENV_NOINDEX`), and nginx serves `prerendered/index.html` for `/` and
+  `prerendered$uri.html` for any other path before the app shell. Direct
+  requests for `/prerendered/…` are 404.
+- The hand-off: `index.css` hides `#root` while `#prerender` is present.
+  `SiteShell` and `ManualView` remove the snapshot as they mount, `App`
+  removes it as soon as it knows the visitor is signed in (the front page
+  then redirects to `/projects`), and `index.tsx` removes it after ten
+  seconds whatever happens. Measured in Chromium on `/`, `/pricing` and a
+  manual chapter at desktop and phone widths: the snapshot is on screen at
+  first paint, the live page replaces it 100 to 200 ms later, no frame
+  shows the app's "Loading…" or a blank page, and `/pricing` still scrolls
+  to the plans.
+- `/pricing` (the front page scrolled to its plans) and `/manual` (the
+  first chapter) name `/` and `/manual/getting-started` as canonical and
+  are left out of the sitemap (`CANONICAL_PATHS` in `crawl.ts`).
+- What a page fetches after mounting is not in its snapshot: the
+  open-source page's project list and the live plan prices read from the
+  API. Both pages still carry their full static copy.
+- Guards: `site/prerender.test.tsx` fails if a listed page renders fewer
+  than 150 words, if two canonical pages render the same, or if
+  `index.html` drifts from what `pageDocument` edits; the build fails on
+  the last too. `scripts/crawl-entrypoint.test.mjs` covers the start-up
+  step.
 
 ### 4.3 Structured data and host hygiene
 
-- JSON-LD in the pre-rendered `/`: `Organization` (Desktop Machine Shop,
-  logo, `sameAs` GitHub/LinkedIn) and `SoftwareApplication`
-  (`applicationCategory: BusinessApplication`, `operatingSystem: Web,
-  Linux (Docker)`, `offers` with the free alpha, licence URL, the
-  descriptor). `FAQPage` on `/faq`, generated from the same `content.ts`
-  entries the page renders, so it cannot drift.
+- Done: JSON-LD in the pre-rendered `/`: `Organization` (Desktop Machine
+  Shop, logo, `sameAs` GitHub) and `SoftwareApplication`
+  (`applicationCategory: BusinessApplication`, web and self-hosted Docker,
+  `isAccessibleForFree`, licence URL, the descriptor). No `offers` price is
+  given, since the site states none in a currency. `FAQPage` on `/faq`,
+  generated from the same `content.ts` entries the page renders, so it
+  cannot drift. Add LinkedIn to `sameAs` once the page exists.
 - Done: `og:image` / `twitter:image` → `https://openv.app/Images/og.png`,
   not the Railway host.
 - Done: with `OPENV_SITE_URL` set, every host name but the site's own gets
@@ -280,7 +297,7 @@ Phase 3.
 | 1 | Decisions 1–3 | maintainer | a conversation |
 | 2 | GitHub description, homepage, topics, README opener | maintainer (or agent with repo admin) | 10 min |
 | 3 | robots / sitemap / llms.txt, canonical host, og:image (4.1, 4.3); then set `OPENV_SITE_URL=https://openv.app` on the production frontend | repo PR, then maintainer | done in this PR |
-| 4 | Pre-render public pages with per-route meta and JSON-LD (4.2, 4.3) | repo PR | 2–3 days |
+| 4 | Pre-render public pages with per-route meta and JSON-LD (4.2, 4.3) | repo PR | done in this PR |
 | 5 | Search Console and Bing Webmaster Tools, sitemap submit | maintainer | 1 hour |
 | 6 | `/capabilities` from the OpenV Platform project, `/self-hosted…`, `/reqif`, FAQ additions | repo PRs | 1 week |
 | 7 | Traceability, verification-evidence, baselines, safety-critical pages | repo PRs | 1–2 weeks |

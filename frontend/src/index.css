@@ -19,6 +19,13 @@ code {
     monospace;
 }
 
+/* A pre-rendered page (site/prerender.tsx) shows its snapshot until the live
+   page mounts and removes it (site/prerenderHandoff.ts); the app renders
+   into #root unseen until then. */
+#prerender + #root {
+  display: none;
+}
+
 /* The wordmark is dark charcoal art: keep it on a white chip in dark mode. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .app-logo {

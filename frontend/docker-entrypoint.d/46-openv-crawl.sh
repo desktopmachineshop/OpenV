@@ -23,6 +23,13 @@
 # nginx serves each file by exact match (nginx.conf), so one that is not
 # written here is a 404 rather than the app's index.html.
 #
+# The pre-rendered public pages (frontend/src/site/prerender.tsx) are finished
+# here too, from the build's .openv-prerender/ into prerendered/, which nginx
+# serves for each page's path. Their canonical link, og:url and structured
+# data carry the address: filled in when OPENV_SITE_URL is set, and dropped
+# (one tag per line) when it is not or OPENV_NOINDEX is set. The pages
+# themselves are served either way.
+#
 # OPENV_WEB_ROOT and OPENV_NGINX_CONF_DIR exist for the test
 # (frontend/scripts/crawl-entrypoint.test.mjs); the image uses the defaults.
 set -eu
@@ -81,6 +88,21 @@ elif [ -n "$site" ]; then
 else
     sed "/^Sitemap: /d" "$templates/robots.txt" > "$root/robots.txt"
     echo "openv: robots.txt without a sitemap (OPENV_SITE_URL unset)"
+fi
+
+pages="$root/prerendered"
+rm -rf "$pages"
+if [ -d "$root/.openv-prerender" ]; then
+    if [ -n "$site" ] && [ -z "$noindex" ]; then
+        expr="s|$placeholder|$site|g"
+    else
+        expr="/$placeholder/d"
+    fi
+    (cd "$root/.openv-prerender" && find . -type f -name '*.html') | while IFS= read -r f; do
+        mkdir -p "$(dirname "$pages/$f")"
+        sed "$expr" "$root/.openv-prerender/$f" > "$pages/$f"
+    done
+    echo "openv: $(find "$pages" -type f -name '*.html' | wc -l | tr -d ' ') pre-rendered public pages"
 fi
 
 {

@@ -1,4 +1,6 @@
 /// <reference types="vitest/config" />
+import fs from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, runnerImport, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -38,8 +40,54 @@ const crawlFiles = (): Plugin => ({
   },
 });
 
+// The public pages rendered ahead of time (src/site/prerender.tsx): one copy
+// of the built index.html per sitemap page, with the page's markup and head,
+// written under .openv-prerender/ for the container to finish at start like
+// the crawl files. Runs once the bundle is on disk, since each copy is made
+// from the emitted index.html and its asset tags.
+const prerenderPages = (): Plugin => {
+  let outDir = '';
+  return {
+    name: 'openv-prerender-pages',
+    apply: 'build',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      const root = fileURLToPath(new URL('.', import.meta.url));
+      const { module: pre } = await runnerImport<typeof import('./src/site/prerender')>('/src/site/prerender.tsx', {
+        root,
+        configFile: false,
+        mode: 'production',
+        logLevel: 'error',
+      });
+      const template = fs.readFileSync(path.join(outDir, 'index.html'), 'utf8');
+      const target = path.join(outDir, '.openv-prerender');
+      fs.rmSync(target, { recursive: true, force: true });
+      // react-router's Link uses useLayoutEffect, which React reports once per
+      // server render; it is expected here, and nothing else is silenced.
+      const error = console.error;
+      console.error = (...args: unknown[]) => {
+        if (typeof args[0] === 'string' && args[0].includes('useLayoutEffect does nothing on the server')) return;
+        error(...args);
+      };
+      try {
+        const pages = pre.prerenderedPages();
+        for (const page of pages) {
+          const file = path.join(target, page.file);
+          fs.mkdirSync(path.dirname(file), { recursive: true });
+          fs.writeFileSync(file, pre.pageDocument(template, page, pre.renderBody(page.path)));
+        }
+        this.info(`pre-rendered ${pages.length} public pages into .openv-prerender/`);
+      } finally {
+        console.error = error;
+      }
+    },
+  };
+};
+
 export default defineConfig({
-  plugins: [react(), crawlFiles()],
+  plugins: [react(), crawlFiles(), prerenderPages()],
 
   // `REACT_APP_API_URL` is baked into the bundle by both Dockerfiles, named in
   // docker-compose, the E2E harness and the deployment docs. Keeping CRA's

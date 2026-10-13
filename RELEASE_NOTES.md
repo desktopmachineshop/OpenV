@@ -20,6 +20,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   once `OPENV_SITE_URL` names it. The site and README now describe OpenV as
   source-available, which is what the Elastic License 2.0 makes it.
 
+- **The public pages and the manual now arrive ready to read.** The front
+  page, pricing, how it works, the FAQ and the other site pages, and every
+  manual chapter, are sent with their content already in place, each with
+  its own title and description, so they show at once instead of after a
+  "Loading…" pause, and search engines and AI assistants that do not run
+  the app can read them too.
+
 ## 0.17.2 — 2026-10-12
 
 ### Bug fixes

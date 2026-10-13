@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import { ISSUES_URL, REPO_URL } from '../landing/content';
+import { useReleasePrerender } from './prerenderHandoff';
 
 // SiteShell is the storefront's frame: the header, the footer and the
 // building blocks every public page is laid out with. The pages (Landing,
@@ -154,6 +155,9 @@ interface SiteShellProps {
 export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
   const { isCompact: compact, isPhone: phone } = useViewport();
   const { pathname } = useLocation();
+  // First effect of the shell, so the snapshot is gone before the page's own
+  // effects (Landing's scroll to a section) run against the live page.
+  useReleasePrerender();
 
   useEffect(() => {
     const previous = document.title;

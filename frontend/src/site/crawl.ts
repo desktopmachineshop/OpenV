@@ -61,9 +61,25 @@ export const UNLISTED_PAGES = new Set(['/login', '/verify-email', '/reset-passwo
 
 export interface CrawlPage {
   path: string;
+  /**
+   * The address search engines should index this page's content under: the
+   * page's own path, or another page that shows the same content.
+   */
+  canonical: string;
   title: string;
   summary?: string;
 }
+
+/**
+ * Public pages whose content is another page's: /pricing is the front page
+ * scrolled to its plans, /manual is the first chapter. They are pre-rendered
+ * and linked like any page, but name the other as canonical, and only the
+ * other is in the sitemap.
+ */
+export const CANONICAL_PATHS: Record<string, string> = {
+  '/pricing': '/',
+  '/manual': `/manual/${MANUAL_CHAPTERS[0].slug}`,
+};
 
 /** The site's own pages, by path: what each is called and what it holds. */
 export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> = {
@@ -105,7 +121,7 @@ export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> 
   },
 };
 
-/** Every page the sitemap lists, site pages first, then the manual. */
+/** Every public page with content, site pages first, then the manual. */
 export function crawlPages(): CrawlPage[] {
   const site = PAGES.filter((p) => p.scope === 'site' && p.public && !p.path.includes(':'))
     .map(pagePattern)
@@ -113,9 +129,12 @@ export function crawlPages(): CrawlPage[] {
     .map((path) => {
       const text = SITE_PAGE_TEXT[path];
       if (!text) throw new Error(`crawl: public page ${path} has no entry in SITE_PAGE_TEXT`);
-      return { path, ...text };
+      return { path, canonical: CANONICAL_PATHS[path] ?? path, ...text };
     });
-  const manual = MANUAL_CHAPTERS.map((c) => ({ path: `/manual/${c.slug}`, title: c.title }));
+  const manual = MANUAL_CHAPTERS.map((c) => {
+    const path = `/manual/${c.slug}`;
+    return { path, canonical: path, title: c.title };
+  });
   return [...site, ...manual];
 }
 
@@ -138,8 +157,11 @@ export function robotsTxt(): string {
   ].join('\n');
 }
 
+/** The sitemap lists canonical addresses only (CANONICAL_PATHS). */
 export function sitemapXml(): string {
-  const entries = crawlPages().map((p) => `  <url><loc>${url(p.path)}</loc></url>`);
+  const entries = crawlPages()
+    .filter((p) => p.canonical === p.path)
+    .map((p) => `  <url><loc>${url(p.path)}</loc></url>`);
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',

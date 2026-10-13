@@ -77,7 +77,12 @@ Every area has files here, matched by these `docs/areas.json` globs
    test fails if they disagree: the topic in `components/helpTopics.ts`
    (the entry's `help: { topic }`); `utils/publicPaths.ts` if it needs no
    session (the entry's `public`). A chapter in `manual/index.ts` if it has
-   one, and its screen in `e2e/tools/phone-audit.js`.
+   one, and its screen in `e2e/tools/phone-audit.js`. A public site page
+   also needs its title and summary in `SITE_PAGE_TEXT` (`site/crawl.ts`),
+   which puts it in the sitemap and llms.txt, and its element in
+   `PRERENDER_ROUTES` (`site/prerender.tsx`), which pre-renders it for
+   crawlers; `site/crawl.test.ts` and `site/prerender.test.tsx` fail until
+   both are there, or until the page is listed in `UNLISTED_PAGES`.
 4. Claim its file in `docs/areas.json` if no glob does, then regenerate the
    route tree and the bundle shape:
    `cd frontend && npx vitest run src/arch -u` and

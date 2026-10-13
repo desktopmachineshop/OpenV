@@ -1,6 +1,7 @@
 // Tests for docker-entrypoint.d/46-openv-crawl.sh, the start-up step that
-// turns the build's crawl templates into robots.txt, sitemap.xml and llms.txt
-// and writes the host-name map behind the noindex header.
+// turns the build's crawl templates into robots.txt, sitemap.xml and llms.txt,
+// finishes the pre-rendered public pages, and writes the host-name map behind
+// the noindex header.
 // Run: cd frontend && node --test 'scripts/*.test.mjs'
 //
 // The script runs here as the image runs it, under sh, against a web root and
@@ -24,6 +25,18 @@ const TEMPLATES = {
   'llms.txt': `# OpenV\n\n- [FAQ](${PLACEHOLDER}/faq)\n`,
 };
 
+// A pre-rendered page as src/site/prerender.tsx writes it: the lines that
+// carry the address hold the placeholder and one tag each.
+const PAGE = [
+  '<head>',
+  `    <link rel="canonical" href="${PLACEHOLDER}/faq" />`,
+  `    <meta property="og:url" content="${PLACEHOLDER}/faq" />`,
+  `    <script type="application/ld+json">{"url":"${PLACEHOLDER}/"}</script>`,
+  '</head>',
+  '<div id="prerender"><h1>FAQ</h1></div>',
+  '',
+].join('\n');
+
 function setup({ templates = true } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'openv-crawl-'));
   const root = path.join(dir, 'html');
@@ -32,6 +45,9 @@ function setup({ templates = true } = {}) {
   fs.mkdirSync(conf);
   if (templates) {
     for (const [name, body] of Object.entries(TEMPLATES)) fs.writeFileSync(path.join(root, '.openv-crawl', name), body);
+    fs.mkdirSync(path.join(root, '.openv-prerender', 'manual'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.openv-prerender', 'faq.html'), PAGE);
+    fs.writeFileSync(path.join(root, '.openv-prerender', 'manual', 'vv.html'), PAGE);
   }
   const run = (env = {}) =>
     execFileSync('sh', [SCRIPT], {
@@ -118,5 +134,32 @@ test('a build without the templates publishes nothing and leaves every host inde
   run({ OPENV_SITE_URL: 'https://openv.app' });
   assert.equal(read('robots.txt'), null);
   assert.equal(read('sitemap.xml'), null);
+  assert.equal(read('prerendered/faq.html'), null);
   assert.match(map(), /default "";/);
+});
+
+test('pre-rendered pages are finished with the address when OPENV_SITE_URL is set', () => {
+  const { run, read } = setup();
+  run({ OPENV_SITE_URL: 'https://openv.app' });
+  const faq = read('prerendered/faq.html');
+  assert.match(faq, /<link rel="canonical" href="https:\/\/openv\.app\/faq" \/>/);
+  assert.match(faq, /"url":"https:\/\/openv\.app\/"/);
+  assert.doesNotMatch(faq, new RegExp(PLACEHOLDER));
+  assert.notEqual(read('prerendered/manual/vv.html'), null);
+});
+
+test('without an address, or on a noindex deployment, pre-rendered pages lose only the lines that carry it', () => {
+  for (const env of [{}, { OPENV_NOINDEX: '1', OPENV_SITE_URL: 'https://staging.openv.app' }]) {
+    const { run, read } = setup();
+    run(env);
+    assert.equal(read('prerendered/faq.html'), '<head>\n</head>\n<div id="prerender"><h1>FAQ</h1></div>\n', JSON.stringify(env));
+  }
+});
+
+test('each start rebuilds the pre-rendered pages from the build, so a changed address takes', () => {
+  const { run, read } = setup();
+  run({ OPENV_SITE_URL: 'https://old.example.com' });
+  run({ OPENV_SITE_URL: 'https://openv.app' });
+  assert.match(read('prerendered/faq.html'), /href="https:\/\/openv\.app\/faq"/);
+  assert.doesNotMatch(read('prerendered/faq.html'), /old\.example\.com/);
 });
