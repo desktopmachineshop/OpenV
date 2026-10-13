@@ -229,6 +229,17 @@ PUBLIC_URL=https://openv.app
 FRONTEND_URL=https://openv.app
 ```
 
+and the frontend names its own canonical address, so search engines index
+the site once, under openv.app:
+
+```dotenv
+# Publishes robots.txt (with its Sitemap line), sitemap.xml and llms.txt for
+# this address, and sends X-Robots-Tag: noindex on any other host name the
+# service answers to, the generated *.up.railway.app one included. Scheme and
+# host only. Leave it unset on staging, where OPENV_NOINDEX already applies.
+OPENV_SITE_URL=https://openv.app
+```
+
 **On Cloudflare**, create the CNAME **DNS-only** (grey cloud). Railway
 validates domain ownership and issues the certificate itself, and the orange
 cloud intercepts that exchange. Once the certificate is issued you may turn

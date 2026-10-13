@@ -5,6 +5,7 @@ import './theme.css';
 import './index.css';
 import App from './App';
 import { applyThemePreference, getThemePreference } from './theme';
+import { PRERENDER_RELEASE_TIMEOUT_MS, releasePrerender } from './site/prerenderHandoff';
 
 // Re-apply the stored theme before render. index.html loads
 // public/theme-init.js before first paint; this covers any entry path that
@@ -21,6 +22,11 @@ root.render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// A pre-rendered page's snapshot is released by the live page as it mounts
+// (site/prerenderHandoff.ts). This is the backstop for a page that never
+// does, so the app itself can never stay hidden behind a snapshot.
+window.setTimeout(releasePrerender, PRERENDER_RELEASE_TIMEOUT_MS);
 
 // Register the minimal service worker so browsers offer "Install app"
 // (manifest + icons + service worker + HTTPS/localhost are the criteria).

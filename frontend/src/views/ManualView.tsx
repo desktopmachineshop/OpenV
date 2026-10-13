@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { MANUAL_CHAPTERS, ManualChapter, getChapter, headingId } from '../manual';
 import { useViewport } from '../hooks/useViewport';
+import { useReleasePrerender } from '../site/prerenderHandoff';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -117,6 +118,9 @@ const Highlighted: React.FC<{ text: string; query: string }> = ({ text, query })
 // search across all chapters, and next/prev chapter navigation. Deep-linkable
 // as /manual/:chapterSlug (and #heading anchors within a chapter).
 export const ManualView: React.FC = () => {
+  // First, so the pre-rendered snapshot is gone before the effects below
+  // scroll to a heading in the live page.
+  useReleasePrerender();
   const { chapterSlug } = useParams<{ chapterSlug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
