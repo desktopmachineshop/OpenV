@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.17.6 — 2026-10-14
+
 ### Bug fixes
 
 - **Import Project now accepts ReqIF files, as well as OpenV's own JSON
