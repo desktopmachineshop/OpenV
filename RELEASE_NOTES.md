@@ -9,8 +9,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
-## 0.17.4 — 2026-10-14
-
 ### Maintenance updates
 
 - **New guides on the OpenV site answer the questions teams ask before they
@@ -23,6 +21,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   corrected on the way: agents propose changes by default but can be
   allowed to write directly, and a baseline keeps the list of attachments
   rather than the files.
+
+## 0.17.4 — 2026-10-14
+
+### Maintenance updates
 
 - **OpenV now counts visits to its public site, so the people who run it
   can see how many visitors go on to make an account.** When you open
