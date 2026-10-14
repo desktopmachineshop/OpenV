@@ -211,7 +211,8 @@ site the product does not back, now corrected: agents "never" writing
 directly (they can, in `direct` mode), a baseline holding attachments (it
 holds their list), the quality linter checking EARS (it does not), and the
 figure cap in `docs/api-spec.md`. It also found the app's import button
-accepts only JSON although the API takes ReqIF; the ReqIF page says so.
+accepted only JSON although the API takes ReqIF; the next PR let it take
+`.reqif` and `.xml` files and updated the ReqIF page and the manual.
 
 Rules the pages keep, and the comparison pages will too: state limits
 as plainly as capabilities (no e-signatures, no separate approver role, no

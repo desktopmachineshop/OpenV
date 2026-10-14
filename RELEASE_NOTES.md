@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Import Project now accepts ReqIF files, as well as OpenV's own JSON
+  export.** The projects page only offered JSON files, although OpenV has
+  read ReqIF since it began writing it. Pick a .reqif or .xml file exported
+  from OpenV or from another requirements tool, and it becomes a new project
+  with its hierarchy, links, statuses and attributes; attachments are not
+  carried. A file that is not valid ReqIF is reported as a ReqIF problem
+  rather than as broken JSON.
+
 ## 0.17.5 — 2026-10-14
 
 ### Maintenance updates

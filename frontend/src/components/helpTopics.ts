@@ -47,7 +47,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Every project in the workspace you are currently in. Start one from scratch, from a template, or from an example, or bring an existing project in from a JSON export.',
     tips: [
       'New Project offers four starting points: a blank project, one of your saved templates, a bundled example, or a random joke product for trying the tool out.',
-      'Import Project takes a JSON file produced by a project export, so a project can move between workspaces or instances.',
+      'Import Project takes a JSON file produced by a project export, so a project can move between workspaces or instances, or a ReqIF file from another requirements tool; either becomes a new project.',
       '⧉ on a card saves that project as a reusable template; ✎ renames it and edits its description.',
       'Export a project as JSON to re-import it whole, or as CSV to get its artifacts as flat spreadsheet rows.',
       'Projects belong to the workspace shown in the top bar — switch workspaces there to see a different set.',

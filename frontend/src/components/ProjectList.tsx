@@ -653,7 +653,7 @@ export const ProjectList: React.FC = () => {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".json"
+                    accept=".json,.reqif,.xml"
                     style={{ display: 'none' }}
                     onChange={handleImportProject}
                   />
@@ -1093,7 +1093,7 @@ export const ProjectList: React.FC = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json"
+                accept=".json,.reqif,.xml"
                 style={{ display: 'none' }}
                 onChange={handleImportProject}
               />

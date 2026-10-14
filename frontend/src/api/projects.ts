@@ -73,15 +73,21 @@ export const projectAPI = {
     saveBlob(response.data, filename);
     return response;
   },
+  // A new project from an OpenV JSON export or a ReqIF file. The server can
+  // tell the two apart by content, but a .reqif or .xml file is named as
+  // ReqIF so that one that is not valid ReqIF is reported as such rather
+  // than as bad JSON.
   import: async (file: File) => {
     const fileContent = await file.text();
+    const reqif = /\.(reqif|xml)$/i.test(file.name);
     const response = await client.post<{ status: string; message: string; project_id: string }>(
       '/api/v1/projects/import',
       fileContent,
       {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': reqif ? 'application/xml' : 'application/json',
         },
+        ...(reqif ? { params: { format: 'reqif' } } : {}),
       }
     );
     return response;
