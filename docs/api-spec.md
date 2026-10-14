@@ -1080,7 +1080,8 @@ demonstration, a written account is the evidence.
 
 **Uploads** are a separate path from artifact figures, and the rules differ.
 Any file type is accepted; the per-file cap is `OPENV_MAX_EVIDENCE_MB`
-(default 200), distinct from the figure cap `OPENV_MAX_UPLOAD_MB` (25). The
+(default 200), distinct from the figure cap: the workspace plan's `max_upload_mb`
+(128 MB on the free plan), which `OPENV_MAX_UPLOAD_MB` overrides. The
 body is streamed to disk rather than buffered, and its SHA-256 is recorded at
 upload.
 

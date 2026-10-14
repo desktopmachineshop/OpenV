@@ -114,7 +114,7 @@ const AgentDiagram: React.FC = () => (
   <Diagram
     title="The agent loop: an agent reads the project through typed tools, proposes changes, and a person approves them into the project"
     viewBox="0 0 720 260"
-    caption="Agents never write to the project directly. Every change they make is a proposal with a diff, approved or rejected by a member, and recorded like any other version."
+    caption="By default an agent does not write to the project directly: every change it makes is a proposal with a diff, approved or rejected by a member. A workspace can let a trusted agent write directly instead, and either way each change is recorded like any other version."
   >
     <Defs />
     <Box x={20} y={100} w={150} h={60} label="Your project" sub="artifacts · links · runs" accent />

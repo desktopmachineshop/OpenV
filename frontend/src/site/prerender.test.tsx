@@ -4,6 +4,7 @@ import { LICENSE_URL } from '../landing/content';
 import { FAQ_GROUPS } from './content';
 import { CANONICAL_PATHS, SITE_URL_PLACEHOLDER, crawlPages } from './crawl';
 import { HOME_TITLE, PrerenderedPage, pageDocument, prerenderedPages, renderBody, summarise } from './prerender';
+import { TOPICS } from './topics';
 
 const words = (html: string) =>
   html
@@ -78,13 +79,18 @@ describe('prerenderedPages', () => {
     expect(byPath.get('/faq')?.canonical).toBe('/faq');
   });
 
-  it('describes OpenV on the front page and every FAQ answer on the FAQ, as structured data', () => {
+  it('describes OpenV on the front page, every FAQ answer on the FAQ and each topic page as an article, as structured data', () => {
     const home = byPath.get('/')?.jsonLd[0] as { '@graph': Array<Record<string, unknown>> };
     const app = home['@graph'].find((n) => n['@type'] === 'SoftwareApplication');
     expect(app).toMatchObject({ name: 'OpenV', license: LICENSE_URL, url: `${SITE_URL_PLACEHOLDER}/` });
     const faq = byPath.get('/faq')?.jsonLd[0] as { mainEntity: unknown[] };
     expect(faq.mainEntity).toHaveLength(FAQ_GROUPS.flatMap((g) => g.entries).length);
-    for (const p of pages.filter((p) => p.path !== '/' && p.path !== '/faq')) expect(p.jsonLd).toEqual([]);
+    const topics = new Set(TOPICS.map((t) => t.path));
+    for (const p of pages.filter((p) => p.path !== '/' && p.path !== '/faq' && !topics.has(p.path))) expect(p.jsonLd).toEqual([]);
+    for (const t of TOPICS) {
+      const data = byPath.get(t.path)?.jsonLd[0] as Record<string, unknown>;
+      expect(data).toMatchObject({ '@type': t.kind === 'glossary' ? 'DefinedTermSet' : 'TechArticle', dateModified: t.updated, url: `${SITE_URL_PLACEHOLDER}${t.path}` });
+    }
   });
 });
 

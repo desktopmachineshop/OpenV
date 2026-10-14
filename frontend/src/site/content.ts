@@ -72,6 +72,27 @@ export interface FaqGroup {
 
 export const FAQ_GROUPS: FaqGroup[] = [
   {
+    // The questions AI assistants were asked about OpenV by name in the
+    // 2026-10-13 visibility scan (docs/assessments/2026-10-13-ai-visibility.md),
+    // answered here in the same words so the answer they find is ours.
+    id: 'about',
+    title: 'OpenV in brief',
+    entries: [
+      {
+        q: 'Is OpenV a good fit for managing requirements, traceability and verification evidence in a regulated systems engineering programme?',
+        a: 'For the record itself, yes: needs, requirements, design items, hazards and test cases in one traced project, verification results and evidence against each requirement, immutable baselines and a full change history, with every export in an open format. It is in alpha, holds no certification, ships no tool qualification kit and has no electronic signatures, so a regulated programme should pilot it on a real subsystem and qualify it for its own process. The safety-critical page sets out what it covers and what it does not.',
+      },
+      {
+        q: 'How does OpenV compare with enterprise requirements tools for self-hosting, ReqIF interchange, AI assistance and audit-ready traceability?',
+        a: 'Self-hosting is free, with every feature, under the source-available Elastic License 2.0, where enterprise tools are typically licensed per user. ReqIF 1.x import and export are built in, though an exchange with DOORS or Polarion has not been tested yet. AI agents run on your own subscription or API keys and, by default, only propose changes a person approves. Traceability, gap reports, baselines and the activity log cover what an audit asks to see; electronic signatures, a separate approver role and tool qualification, which mature enterprise tools offer, are not there yet.',
+      },
+      {
+        q: 'What are OpenV’s main features, deployment options and limitations?',
+        a: 'Features: typed requirements, user needs, design items, hazards and test cases; rule-checked trace links, a traceability matrix and gap reports; test runs with evidence; baselines and baseline comparison; a review workflow; PDF, Word, Excel, CSV, JSON and ReqIF downloads; and AI agents that work through proposals. Deployment: the hosted service at openv.app, free during the alpha, or self-hosted with Docker Compose. Limitations today: no electronic signatures, multi-factor authentication or SAML of its own, no Excel import, a single API instance, and ReqIF tested only between OpenV instances.',
+      },
+    ],
+  },
+  {
     id: 'security',
     title: 'Security, on every tier',
     entries: [
@@ -89,7 +110,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'What does an AI agent see, and where does it go?',
-        a: 'An agent reads your project through typed tools scoped to the project it runs in, and writes back as proposals a person approves. It runs on your own AI subscription or your workspace’s own API keys, so your requirements go to the AI provider you chose and to no one else. OpenV does not resell or train on your data.',
+        a: 'An agent reads your project through typed tools scoped to the project it runs in and, unless you choose otherwise, writes back as proposals a person approves. It runs on your own AI subscription or your workspace’s own API keys, so your requirements go to the AI provider you chose and to no one else. OpenV does not resell or train on your data.',
       },
       {
         q: 'Can I keep it entirely on my own hardware?',
@@ -145,7 +166,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'What is a baseline?',
-        a: 'An immutable snapshot of every artifact, link and attachment at a moment: what was agreed at a review, a release or a contract. Any document can be produced from a baseline instead of the live project, and two baselines can be compared for the list of what changed.',
+        a: 'An immutable snapshot of every artifact and link, and of the list of attachments, at a moment: what was agreed at a review, a release or a contract. Any document can be produced from a baseline instead of the live project, and two baselines can be compared for the list of what changed.',
       },
     ],
   },
@@ -224,7 +245,7 @@ export const WHITE_PAPERS: WhitePaper[] = [
   {
     title: 'Requirements quality you can measure',
     summary:
-      'The wording rules OpenV lints against (ISO/IEC/IEEE 29148, EARS), how the score is computed, and what it is worth as a review gate.',
+      'The wording rules OpenV lints against (ISO/IEC/IEEE 29148 “shall”, or RFC 2119), how the score is computed, and what it is worth as a review gate.',
     status: 'In preparation',
   },
 ];

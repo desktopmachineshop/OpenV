@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import { ISSUES_URL, REPO_URL } from '../landing/content';
 import { useReleasePrerender } from './prerenderHandoff';
+import { TOPICS } from './topics';
 
 // SiteShell is the storefront's frame: the header, the footer and the
 // building blocks every public page is laid out with. The pages (Landing,
@@ -262,7 +263,7 @@ export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
             maxWidth,
             margin: '0 auto',
             display: 'grid',
-            gridTemplateColumns: compact ? '1fr' : 'repeat(4, minmax(0, 1fr))',
+            gridTemplateColumns: compact ? '1fr' : 'repeat(5, minmax(0, 1fr))',
             gap: compact ? 18 : 24,
             fontSize: 14,
             color: 'var(--text-muted)',
@@ -282,6 +283,7 @@ export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
               { to: '/faq', label: 'Security and FAQ' },
             ]}
           />
+          <FooterColumn heading="Guides" links={TOPICS.map((t) => ({ to: t.path, label: t.footerLabel }))} />
           <FooterColumn
             heading="Community"
             links={[

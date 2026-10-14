@@ -13,6 +13,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **New guides on the OpenV site answer the questions teams ask before they
+  choose a requirements tool.** Requirements traceability, test runs and
+  verification evidence, baselines and the audit trail, ReqIF import and
+  export, self-hosting, and safety-critical work each have a page of their
+  own, with what OpenV does not do yet set out as plainly as what it does,
+  alongside a glossary of requirements and V&V terms and a short "OpenV in
+  brief" section at the top of the FAQ. A few statements on the site were
+  corrected on the way: agents propose changes by default but can be
+  allowed to write directly, and a baseline keeps the list of attachments
+  rather than the files.
+
 - **OpenV now counts visits to its public site, so the people who run it
   can see how many visitors go on to make an account.** When you open
   openv.app while not signed in, your browser is given a random visitor id

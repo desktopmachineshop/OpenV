@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 48
-  rendering a lazy() component: 25
+<Route> elements: 55
+  rendering a lazy() component: 32
   rendering an eagerly imported component: 18
   redirects only: 5
 index routes: 1
@@ -47,58 +47,66 @@ index routes: 1
   OpenSourceProjects  ./site/OpenSourceProjects#OpenSourceProjects
   Customers           ./site/Customers#Customers
   WhitePapers         ./site/WhitePapers#WhitePapers
+  TopicPage           ./site/TopicPage#TopicPage
   SharedProjectView   ./views/SharedProjectView#SharedProjectView
   ReviewQueue         ./views/ReviewQueue#ReviewQueue
 
 ## Route tree
-  /login                           <Login>  [eager ./views/Login#Login]
-  /verify-email                    <VerifyEmail>  [eager ./views/VerifyEmail#VerifyEmail]
-  /reset-password                  <ResetPassword>  [eager ./views/ResetPassword#ResetPassword]
-  /interview/:token                <InterviewChatRoute>  [eager ./views/InterviewChat#InterviewChatRoute]
-  /share/:token                    <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
-  /s/:token                        <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
-  /open-source/:id                 <SharedProjectView source="open-source">  [lazy ./views/SharedProjectView#SharedProjectView]
-  /                                currentUser ? redirect to="/projects" replace : <Landing>  [lazy ./views/Landing#Landing]
-  /pricing                         <Landing section="pricing">  [lazy ./views/Landing#Landing]
-  /how-it-works                    <HowItWorks>  [lazy ./site/HowItWorks#HowItWorks]
-  /demos                           <Demos>  [lazy ./site/Demos#Demos]
-  /faq                             <Faq>  [lazy ./site/Faq#Faq]
-  /security                        redirect to="/faq#security" replace
-  /open-source                     <OpenSourceProjects>  [lazy ./site/OpenSourceProjects#OpenSourceProjects]
-  /customers                       <Customers>  [lazy ./site/Customers#Customers]
-  /white-papers                    <WhitePapers>  [lazy ./site/WhitePapers#WhitePapers]
-  *                                redirect to="/verify-email" replace  when walled
-  /projects                        <ProjectList>  [eager ./components/ProjectList#ProjectList]  when !walled
-  /org/settings                    <OrgSettings>  [eager ./views/OrgSettings#OrgSettings]  when !walled
-  /org/runs                        <WorkspaceRunsPage>  [lazy ./views/WorkspaceRunsPage#WorkspaceRunsPage]  when !walled
-  /manual                          <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
-  /manual/:chapterSlug             <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
-  /whats-new                       <WhatsNew>  [lazy ./views/WhatsNew#WhatsNew]  when !walled
-  /admin                           <PlatformAdmin>  [lazy ./views/PlatformAdmin#PlatformAdmin]  when !walled
-  /projects/:projectId             <ProjectLayout>  [eager ./components/ProjectLayout#ProjectLayout]  when !walled
-    (index)                        <ProductOverview>  [eager ./views/ProductOverview#ProductOverview]
-    requirements                   <ModuleView>  [lazy ./views/ModuleView#ModuleView]
-    baselines/:baselineId/compare  <BaselineCompare>  [lazy ./views/BaselineCompare#BaselineCompare]
-    guided                         <GuidedWizard>  [eager ./views/GuidedWizard#GuidedWizard]
-    interviews                     <InterviewsPage>  [eager ./views/InterviewsPage#InterviewsPage]
-    vv                             <VVDashboard>  [eager ./views/VVDashboard#VVDashboard]
-    evidence                       <EvidenceView>  [eager ./views/EvidenceView#EvidenceView]
-    vv/runs/:runId                 <TestRunView>  [lazy ./views/TestRunView#TestRunView]
-    matrix                         <TraceabilityMatrix>  [lazy ./views/TraceabilityMatrix#TraceabilityMatrix]
-    impact                         <ImpactView>  [lazy ./views/ImpactView#ImpactView]
-    review                         <ReviewQueue>  [lazy ./views/ReviewQueue#ReviewQueue]
-    board                          <KanbanBoard>  [eager ./views/KanbanBoard#KanbanBoard]
-    todos                          <TodoList>  [eager ./views/TodoList#TodoList]
-    crew                           <CrewBuilder>  [lazy ./views/CrewBuilder#CrewBuilder]
-    crew/network                   <CrewBuilder>  [lazy ./views/CrewBuilder#CrewBuilder]
-    team                           redirect to="../crew" replace (relative)
-    team/network                   redirect to="../crew/network" replace (relative)
-    automations                    <AutomationsPage>  [eager ./views/AutomationsPage#AutomationsPage]
-    agent-runs                     <AgentRunsPage>  [eager ./views/AgentRunsPage#AgentRunsPage]
-    agents                         <AgentsPage>  [eager ./views/AgentsPage#AgentsPage]
-    activity                       <ActivityLog>  [lazy ./views/ActivityLog#ActivityLog]
-    settings                       <ProjectSettings>  [eager ./views/ProjectSettings#ProjectSettings]
-  *                                redirect to="/projects" replace  when !walled
+  /login                                <Login>  [eager ./views/Login#Login]
+  /verify-email                         <VerifyEmail>  [eager ./views/VerifyEmail#VerifyEmail]
+  /reset-password                       <ResetPassword>  [eager ./views/ResetPassword#ResetPassword]
+  /interview/:token                     <InterviewChatRoute>  [eager ./views/InterviewChat#InterviewChatRoute]
+  /share/:token                         <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
+  /s/:token                             <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
+  /open-source/:id                      <SharedProjectView source="open-source">  [lazy ./views/SharedProjectView#SharedProjectView]
+  /                                     currentUser ? redirect to="/projects" replace : <Landing>  [lazy ./views/Landing#Landing]
+  /pricing                              <Landing section="pricing">  [lazy ./views/Landing#Landing]
+  /how-it-works                         <HowItWorks>  [lazy ./site/HowItWorks#HowItWorks]
+  /demos                                <Demos>  [lazy ./site/Demos#Demos]
+  /faq                                  <Faq>  [lazy ./site/Faq#Faq]
+  /security                             redirect to="/faq#security" replace
+  /open-source                          <OpenSourceProjects>  [lazy ./site/OpenSourceProjects#OpenSourceProjects]
+  /customers                            <Customers>  [lazy ./site/Customers#Customers]
+  /white-papers                         <WhitePapers>  [lazy ./site/WhitePapers#WhitePapers]
+  /requirements-traceability            <TopicPage path="/requirements-traceability">  [lazy ./site/TopicPage#TopicPage]
+  /verification-evidence                <TopicPage path="/verification-evidence">  [lazy ./site/TopicPage#TopicPage]
+  /baselines-and-audit-trail            <TopicPage path="/baselines-and-audit-trail">  [lazy ./site/TopicPage#TopicPage]
+  /reqif                                <TopicPage path="/reqif">  [lazy ./site/TopicPage#TopicPage]
+  /self-hosted-requirements-management  <TopicPage path="/self-hosted-requirements-management">  [lazy ./site/TopicPage#TopicPage]
+  /safety-critical                      <TopicPage path="/safety-critical">  [lazy ./site/TopicPage#TopicPage]
+  /glossary                             <TopicPage path="/glossary">  [lazy ./site/TopicPage#TopicPage]
+  *                                     redirect to="/verify-email" replace  when walled
+  /projects                             <ProjectList>  [eager ./components/ProjectList#ProjectList]  when !walled
+  /org/settings                         <OrgSettings>  [eager ./views/OrgSettings#OrgSettings]  when !walled
+  /org/runs                             <WorkspaceRunsPage>  [lazy ./views/WorkspaceRunsPage#WorkspaceRunsPage]  when !walled
+  /manual                               <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
+  /manual/:chapterSlug                  <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
+  /whats-new                            <WhatsNew>  [lazy ./views/WhatsNew#WhatsNew]  when !walled
+  /admin                                <PlatformAdmin>  [lazy ./views/PlatformAdmin#PlatformAdmin]  when !walled
+  /projects/:projectId                  <ProjectLayout>  [eager ./components/ProjectLayout#ProjectLayout]  when !walled
+    (index)                             <ProductOverview>  [eager ./views/ProductOverview#ProductOverview]
+    requirements                        <ModuleView>  [lazy ./views/ModuleView#ModuleView]
+    baselines/:baselineId/compare       <BaselineCompare>  [lazy ./views/BaselineCompare#BaselineCompare]
+    guided                              <GuidedWizard>  [eager ./views/GuidedWizard#GuidedWizard]
+    interviews                          <InterviewsPage>  [eager ./views/InterviewsPage#InterviewsPage]
+    vv                                  <VVDashboard>  [eager ./views/VVDashboard#VVDashboard]
+    evidence                            <EvidenceView>  [eager ./views/EvidenceView#EvidenceView]
+    vv/runs/:runId                      <TestRunView>  [lazy ./views/TestRunView#TestRunView]
+    matrix                              <TraceabilityMatrix>  [lazy ./views/TraceabilityMatrix#TraceabilityMatrix]
+    impact                              <ImpactView>  [lazy ./views/ImpactView#ImpactView]
+    review                              <ReviewQueue>  [lazy ./views/ReviewQueue#ReviewQueue]
+    board                               <KanbanBoard>  [eager ./views/KanbanBoard#KanbanBoard]
+    todos                               <TodoList>  [eager ./views/TodoList#TodoList]
+    crew                                <CrewBuilder>  [lazy ./views/CrewBuilder#CrewBuilder]
+    crew/network                        <CrewBuilder>  [lazy ./views/CrewBuilder#CrewBuilder]
+    team                                redirect to="../crew" replace (relative)
+    team/network                        redirect to="../crew/network" replace (relative)
+    automations                         <AutomationsPage>  [eager ./views/AutomationsPage#AutomationsPage]
+    agent-runs                          <AgentRunsPage>  [eager ./views/AgentRunsPage#AgentRunsPage]
+    agents                              <AgentsPage>  [eager ./views/AgentsPage#AgentsPage]
+    activity                            <ActivityLog>  [lazy ./views/ActivityLog#ActivityLog]
+    settings                            <ProjectSettings>  [eager ./views/ProjectSettings#ProjectSettings]
+  *                                     redirect to="/projects" replace  when !walled
 
 ## Full paths, in declaration order
   /login
@@ -117,6 +125,13 @@ index routes: 1
   /open-source
   /customers
   /white-papers
+  /requirements-traceability
+  /verification-evidence
+  /baselines-and-audit-trail
+  /reqif
+  /self-hosted-requirements-management
+  /safety-critical
+  /glossary
   /*                                                  when walled
   /projects                                           when !walled
   /org/settings                                       when !walled

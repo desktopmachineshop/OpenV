@@ -1,8 +1,10 @@
 # Search and AI visibility plan
 
 Status: approved 2026-10-13 (decision 1: source-available). Phase 1 (4.1
-to 4.3) and the wording change are built; 4.4 (Search Console, Bing
-Webmaster Tools) is the maintainer's; Phases 2 to 4 are open. Evidence base:
+to 4.3) and the wording change shipped in 0.17.3; 4.4 (Search Console, Bing
+Webmaster Tools) is the maintainer's. Phase 2's first batch (section 5.1) is
+built; `/capabilities` and the comparison pages are open, as are Phases 3
+and 4. Evidence base:
 `docs/assessments/2026-10-13-ai-visibility.md` (Conviora scan, baseline
 **0 / 100**, OpenV in 0 of 60 unbranded AI answers, plus direct checks of the
 site and repository).
@@ -187,6 +189,37 @@ indexed; re-run the Conviora technical audit and it should report
 structured data and canonical present.
 
 ## 5. Phase 2: pages that answer the buyer questions (2–4 weeks)
+
+### 5.1 Built: the first batch
+
+Seven topic pages, each data in `frontend/src/site/topics/` rendered by one
+layout (`site/TopicPage.tsx`): `/requirements-traceability`,
+`/verification-evidence`, `/baselines-and-audit-trail`, `/reqif`,
+`/self-hosted-requirements-management`, `/safety-critical` and
+`/glossary`, plus an "OpenV in brief" FAQ group carrying the scan's three
+branded questions word for word. Each page opens with a two-to-four
+sentence answer, ends with "What OpenV does not do", links into the manual,
+carries a dated "Updated" line and a `TechArticle` (or, for the glossary,
+`DefinedTermSet`) JSON-LD, and is pre-rendered, in the sitemap and in
+llms.txt through the existing guards. `site/topics/topics.test.ts` holds
+every page to those rules, and to plain text that never calls OpenV open
+source.
+
+The copy was written from a fact sheet of the code and docs, with file
+references, and checked claim by claim. Writing it found statements on the
+site the product does not back, now corrected: agents "never" writing
+directly (they can, in `direct` mode), a baseline holding attachments (it
+holds their list), the quality linter checking EARS (it does not), and the
+figure cap in `docs/api-spec.md`. It also found the app's import button
+accepts only JSON although the API takes ReqIF; the ReqIF page says so.
+
+Rules the pages keep, and the comparison pages will too: state limits
+as plainly as capabilities (no e-signatures, no separate approver role, no
+MFA or SAML of its own, ReqIF untested against DOORS or Polarion, no
+certification or qualification kit); never claim a standard; date every
+page.
+
+### 5.2 Planned
 
 One page per question cluster from the scan, each server-rendered (4.2),
 written to the buyer's own words, and **every capability claim traceable to
