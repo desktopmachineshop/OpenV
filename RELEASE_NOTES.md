@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.17.5 — 2026-10-14
+
 ### Maintenance updates
 
 - **New guides on the OpenV site answer the questions teams ask before they
