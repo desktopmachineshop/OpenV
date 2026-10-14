@@ -25,6 +25,7 @@ import { InterviewChatRoute } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import { releasePrerender } from './site/prerenderHandoff';
+import { sendVisitBeacon } from './site/visitBeacon';
 import './index.css';
 
 // Route-level code splitting for the heavyweight views so their large
@@ -135,6 +136,12 @@ function App() {
       })
       .finally(() => setAuthChecked(true));
   }, [setCurrentUser, setEmailVerificationRequired]);
+
+  // The site visit beacon (the platform admin's Visitors dashboard): once
+  // the session is known, and again when this browser signs in or up.
+  useEffect(() => {
+    if (authChecked) sendVisitBeacon(currentUser?.id ?? null);
+  }, [authChecked, currentUser?.id]);
 
   // A signed-in visitor to a pre-rendered page goes into the app (the front
   // page redirects to /projects), so its snapshot is dropped as soon as the

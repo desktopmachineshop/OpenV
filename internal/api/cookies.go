@@ -71,3 +71,24 @@ func (h *Handler) clearOIDCFlowCookie(w http.ResponseWriter, name string) {
 		MaxAge:      -1,
 	})
 }
+
+// VisitorCookieName holds the random id that names a browser to the site
+// visitor dashboard (usermetrics/visitors.go). It identifies no account and
+// opens nothing.
+const VisitorCookieName = "openv_vid"
+
+// visitorCookieMaxAge keeps a visitor's id for a year after its last visit.
+const visitorCookieMaxAge = 365 * 24 * time.Hour
+
+func (h *Handler) setVisitorCookie(w http.ResponseWriter, id string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:        VisitorCookieName,
+		Value:       id,
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      int(visitorCookieMaxAge.Seconds()),
+	})
+}

@@ -43,6 +43,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
 GET /api/v1/admin/metrics/users: platform-admin
+GET /api/v1/admin/metrics/visitors: platform-admin
 GET /api/v1/admin/users: platform-admin
 GET /api/v1/admin/workspaces: platform-admin
 GET /api/v1/agent-runs: session, project:viewer
@@ -287,6 +288,7 @@ POST /api/v1/provider-settings/detect: worker
 POST /api/v1/public/connector/pair: -
 POST /api/v1/public/interviews/{token}/finish: -
 POST /api/v1/public/interviews/{token}/messages: -
+POST /api/v1/public/visits: -
 POST /api/v1/runner-pool/nodes: pool-node, runner-sessions
 POST /api/v1/runner-pool/nodes/{id}/heartbeat: pool-node, runner-sessions
 POST /api/v1/runner-pool/nodes/{id}/release: pool-node, runner-sessions

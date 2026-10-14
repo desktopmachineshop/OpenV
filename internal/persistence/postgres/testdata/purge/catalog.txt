@@ -66,6 +66,8 @@ sessions scope - not reached
 shared_product_reports scope - not reached
 shared_product_votes scope - not reached
 shared_products scope - not reached
+site_visit_days scope - not reached
+site_visitors scope - not reached
 templates scope org_id deleted
 test_results scope - cascade from test_runs
 test_runs scope project_id deleted

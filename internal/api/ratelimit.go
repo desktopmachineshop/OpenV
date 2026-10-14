@@ -119,6 +119,15 @@ const (
 	defaultInviteRefill        = 60.0
 )
 
+// Site-visit beacons (the platform admin's visitor dashboard): a browser
+// sends one per page load, so the bucket is generous for an office of
+// people behind one address and still stops a script from filling the
+// visitor tables. A beacon over the limit is dropped, not refused.
+const (
+	defaultVisitBurst  = 60
+	defaultVisitRefill = 600.0
+)
+
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and
 // staleAfter is how long a bucket must sit untouched before the sweep drops
 // it (any bucket idle that long has refilled to burst, so dropping it is

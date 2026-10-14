@@ -80,6 +80,44 @@ export interface UserDashboardPoint {
   count: number;
 }
 
+export interface VisitorBreakdownRow {
+  name: string;
+  visitors: number;
+  conversions: number;
+}
+
+// GET /api/v1/admin/metrics/visitors: the public site's visitors and their
+// conversion to accounts (Go's usermetrics.VisitorDashboard).
+export interface VisitorDashboard {
+  generated_at: string;
+  visitors_today: number;
+  visitors_7d: number;
+  visitors_30d: number;
+  new_visitors_7d: number;
+  new_visitors_30d: number;
+  new_visitors_prev_30d: number;
+  conversions_30d: number;
+  conversion_rate_30d: number;
+  conversions_prev_30d: number;
+  conversion_rate_prev_30d: number;
+  signups_30d: number;
+  tracked_signups_30d: number;
+  visitors: UserDashboardPoint[];
+  new_visitors: UserDashboardPoint[];
+  conversions: UserDashboardPoint[];
+  landing_pages: VisitorBreakdownRow[];
+  sources: VisitorBreakdownRow[];
+  countries: VisitorBreakdownRow[];
+}
+
+// POST /api/v1/public/visits: one page load. The server keeps the path as
+// a template, the referrer's site only and the visitor id in its own cookie.
+export interface SiteVisit {
+  path: string;
+  referrer: string;
+  utm_source: string;
+}
+
 export interface UserDashboard {
   generated_at: string;
   total_users: number;

@@ -4,6 +4,7 @@ import { AdminUser, AdminWorkspace, PLANS, adminAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from '../components/Navbar';
 import { UserDashboard } from '../components/admin/UserDashboard';
+import { VisitorDashboard } from '../components/admin/VisitorDashboard';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
@@ -171,6 +172,8 @@ export const PlatformAdmin: React.FC = () => {
             {notice}
           </div>
         )}
+
+        <VisitorDashboard compact={compact} />
 
         <UserDashboard compact={compact} />
 

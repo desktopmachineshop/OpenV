@@ -112,6 +112,10 @@ type HandlerDeps struct {
 	// UserMetricsService records daily user activity and answers the
 	// platform admin's user dashboard. nil records nothing.
 	UserMetricsService usermetrics.Service
+	// VisitorMetrics records the public site's visitors, links them to the
+	// accounts they make and answers the platform admin's visitor
+	// dashboard. nil records nothing.
+	VisitorMetrics usermetrics.VisitorService
 	// VAPID is the web push key pair; the zero value disables push and is
 	// what /api/v1/me/push/config reports as enabled=false.
 	VAPID       notify.VAPIDConfig
@@ -210,6 +214,9 @@ type Handler struct {
 	// mails an address the sender chose, so the endpoint is a mail relay
 	// (see ratelimit.go).
 	inviteLimiter *rateLimiter
+	// visitLimiter bounds site-visit beacons per address, so a script
+	// cannot fill the visitor tables; a browser sends one per page load.
+	visitLimiter *rateLimiter
 }
 
 // NewHandler creates a new API handler
@@ -237,6 +244,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		billingRefreshLimiter:  newRateLimiterOr(deps.RateLimits.BillingRefresh, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
 		billingWriteLimiter:    newRateLimiterOr(deps.RateLimits.BillingWrite, defaultBillingWriteBurst, defaultBillingWriteRefill),
 		inviteLimiter:          newRateLimiterOr(deps.RateLimits.Invite, defaultInviteBurst, defaultInviteRefill),
+		visitLimiter:           newRateLimiter(defaultVisitBurst, defaultVisitRefill),
 	}
 	h.HandlerDeps = deps
 	if h.BillingService != nil {
