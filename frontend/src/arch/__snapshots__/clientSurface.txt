@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 209; members of exported objects: 292
+exports: 213; members of exported objects: 294
 
 interface AdminUser
 interface AdminWorkspace
@@ -136,6 +136,7 @@ type      ShareLinkRole
 type      SharedProductSort
 interface SharedProductVotes
 interface SharedProject
+interface SiteVisit
 interface StableRelease
 interface SuspectLink
 interface TeamGrant
@@ -146,6 +147,8 @@ type      UploadProgressHandler
 interface User
 interface UserDashboard
 interface UserDashboardPoint
+interface VisitorBreakdownRow
+interface VisitorDashboard
 interface WorkItem
 interface WorkItemActivity
 interface WorkerKey
@@ -159,6 +162,7 @@ const     adminAPI
             .setPlan
             .userMetrics
             .users
+            .visitorMetrics
             .workspaces
 const     agentRunsAPI
             .cancel
@@ -472,6 +476,8 @@ const     sharedProductsAPI
             .report
             .unvote
             .vote
+const     siteAPI
+            .visit
 const     templateAPI
             .create
             .createProject

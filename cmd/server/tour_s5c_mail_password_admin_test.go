@@ -402,6 +402,29 @@ func mailPasswordAdminTour(tr *tour) {
 		elide("/signups", "<90 days of sign-ups>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"),
 		elide("/active", "<90 days of active users>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"),
 		elide("/cohorts", "<six monthly cohorts>", len("[]"), tourNoMore, "monthly rows ending this month, so their months move with the calendar"))
+	// Site visitors: the public beacon and the visitor dashboard. The tour's
+	// own client names itself a script, so its beacon is answered and not
+	// counted; one with a browser's user agent mints a visitor cookie and
+	// counts the visit, and none of the tour's accounts was made after it,
+	// so nothing converts.
+	const tourBrowser = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
+	tr.step("a site visit from a script: 204, no visitor cookie, nothing counted", anon, "POST /api/v1/public/visits",
+		jsonBody(`{"path":"/","referrer":""}`))
+	tr.step("a site visit from a browser that sent Global Privacy Control: 204, no visitor cookie, nothing counted", anon,
+		"POST /api/v1/public/visits", withHeader("User-Agent", tourBrowser), withHeader("Sec-GPC", "1"),
+		jsonBody(`{"path":"/","referrer":""}`))
+	tr.step("a site visit from a browser: 204, and a visitor cookie for a year", anon, "POST /api/v1/public/visits",
+		withHeader("User-Agent", tourBrowser), withHeader("Origin", "https://openv.app"),
+		jsonBody(`{"path":"/pricing?plan=business","referrer":"https://news.ycombinator.com/item?id=1","utm_source":""}`))
+	tr.step("a site visit with a malformed body", anon, "POST /api/v1/public/visits",
+		withHeader("User-Agent", tourBrowser), jsonBody(`{`))
+	tr.step("the visitor dashboard, as someone who is not a platform admin", o, "GET /api/v1/admin/metrics/visitors")
+	tr.step("the visitor dashboard: visitors, conversions to accounts, landing pages, sources and countries", admin,
+		"GET /api/v1/admin/metrics/visitors",
+		elide("/generated_at", "<now>", len(`"2026-01-01T00:00:00Z"`), len(`"2026-01-01T00:00:00Z"`), "the time the dashboard was built"),
+		elide("/visitors", "<90 days of visitors>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"),
+		elide("/new_visitors", "<90 days of new visitors>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"),
+		elide("/conversions", "<90 days of conversions>", dashboardSeriesMin, dashboardSeriesMax, "a daily series ending today, so its days move with the calendar"))
 	setAdmin := func(title string, a *tourActor, id, body string) *tourResult {
 		return tr.step(title, a, "PUT /api/v1/admin/users/{id}/admin", at("id", id), jsonBody(body))
 	}

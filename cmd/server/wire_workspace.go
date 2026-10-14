@@ -23,6 +23,7 @@ func (a *app) workspace() {
 	// Suite services.
 	a.userService = users.NewDefaultService(a.userRepo)
 	a.userMetricsService = usermetrics.NewDefaultService(a.userMetricsRepo)
+	a.visitorMetrics = usermetrics.NewDefaultVisitorService(a.userMetricsRepo)
 	a.memberService = members.NewDefaultService(a.memberRepo)
 	a.orgService = orgs.NewDefaultService(a.orgRepo)
 

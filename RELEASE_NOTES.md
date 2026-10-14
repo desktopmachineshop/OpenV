@@ -9,6 +9,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **OpenV now counts visits to its public site, so the people who run it
+  can see how many visitors go on to make an account.** When you open
+  openv.app while not signed in, your browser is given a random visitor id
+  in a first-party cookie, and the page you landed on, the site that sent
+  you and the country Cloudflare reports are noted; if you then sign up,
+  that visit is linked to your new account. Platform administrators see
+  unique and new visitors, the share who sign up, and the landing pages and
+  sources that bring them, on a new Visitors section of the Platform admin
+  page. Your IP address is not kept, nothing is shared with anyone else,
+  and a browser that sends Global Privacy Control or Do Not Track is not
+  counted at all.
+
 ## 0.17.3 — 2026-10-13
 
 ### Maintenance updates

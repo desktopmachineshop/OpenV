@@ -6,11 +6,16 @@
 
 import { client } from './http';
 import type { Org } from './types/orgs';
-import type { AdminUser, AdminWorkspace, ReleaseInfo, UserDashboard } from './types/platform';
+import type { AdminUser, AdminWorkspace, ReleaseInfo, SiteVisit, UserDashboard, VisitorDashboard } from './types/platform';
 import type { WorkspacePlan } from '../generated/contract';
 
 export const releaseAPI = {
   current: () => client.get<ReleaseInfo>('/api/v1/release'),
+};
+
+// The public site's visit beacon, sent once per page load (site/visitBeacon).
+export const siteAPI = {
+  visit: (visit: SiteVisit) => client.post<void>('/api/v1/public/visits', visit),
 };
 
 // Every plan a workspace can be on (Go's orgs plans). `legacy` marks free
@@ -33,6 +38,7 @@ export const adminAPI = {
   workspaces: () => client.get<AdminWorkspace[]>('/api/v1/admin/workspaces'),
   users: () => client.get<AdminUser[]>('/api/v1/admin/users'),
   userMetrics: () => client.get<UserDashboard>('/api/v1/admin/metrics/users'),
+  visitorMetrics: () => client.get<VisitorDashboard>('/api/v1/admin/metrics/visitors'),
   setPlan: (orgId: string, plan: string) => client.put<Org>(`/api/v1/orgs/${orgId}/plan`, { plan }),
   setAdmin: (userId: string, isAdmin: boolean) =>
     client.put<AdminUser>(`/api/v1/admin/users/${userId}/admin`, { is_admin: isAdmin }),

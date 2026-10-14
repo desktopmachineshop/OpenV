@@ -21,6 +21,8 @@ func (h *Handler) registerAdminRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/admin/users", h.AdminListUsers).Methods("GET")
 	router.HandleFunc("/api/v1/admin/users/{id}/admin", h.AdminSetUserAdmin).Methods("PUT")
 	router.HandleFunc("/api/v1/admin/metrics/users", h.AdminUserMetrics).Methods("GET")
+	router.HandleFunc("/api/v1/admin/metrics/visitors", h.AdminVisitorMetrics).Methods("GET")
+	router.HandleFunc("/api/v1/public/visits", h.RecordSiteVisit).Methods("POST")
 }
 
 // adminWorkspace is one row of the workspace listing.

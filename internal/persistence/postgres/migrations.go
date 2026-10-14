@@ -114,4 +114,5 @@ var migrations = []Migration{
 	{Version: 57, Name: "drop_attachment_test_result", Run: m0057DropAttachmentTestResult},
 	{Version: 58, Name: "cancel_requeued_cancelled_runs", Run: m0058CancelRequeuedCancelledRuns},
 	{Version: 59, Name: "user_activity_days", Run: m0059UserActivityDays},
+	{Version: 60, Name: "site_visitors", Run: m0060SiteVisitors},
 }
