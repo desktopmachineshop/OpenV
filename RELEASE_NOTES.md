@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Every baseline picker now says who captured each baseline and when.**
+  The baseline choices on the V&V dashboard, in the new test run form and on
+  the traceability matrix showed only the baseline's name; they now read like
+  the ones in the requirements view, with the date and the person who
+  captured it.
+- **Comparing an artifact with an older version no longer shows a delete
+  button on its figures.** The button did nothing, but it should not have
+  been there: figures change only while you edit the artifact.
+- **Draft test cases refuses to run a test-case author that has been set to
+  write directly.** Its drafts are meant to wait for your approval, so if a
+  workspace admin has changed the agent's write mode, you are asked to set it
+  back to proposal instead of having drafts land in the project unreviewed.
+
 ## 0.17.6 — 2026-10-14
 
 ### Bug fixes

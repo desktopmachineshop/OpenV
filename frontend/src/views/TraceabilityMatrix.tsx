@@ -15,6 +15,7 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
+import { baselineLabel } from '../utils/baselines';
 
 const resultColor = (status: string): string => {
   switch ((status || '').toLowerCase()) {
@@ -337,7 +338,7 @@ export const TraceabilityMatrix: React.FC = () => {
             <option value="live">Live</option>
             {baselines.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.name}
+                {baselineLabel(b)}
               </option>
             ))}
           </select>
