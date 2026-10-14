@@ -10,7 +10,7 @@ export const REQIF: Topic = {
   heading: 'ReqIF import and export: what goes across and what does not',
   answer:
     'OpenV exports any project or baseline as ReqIF 1.x and imports a ReqIF file as a new project, keeping the hierarchy, the links, status and custom attributes, with list attributes as ReqIF enumerations. A project exported from OpenV imports back intact, and that round trip is what the tests prove; files from other tools are read on a best-effort basis, and an exchange with DOORS or Polarion has not been tested yet.',
-  updated: '2026-10-13',
+  updated: '2026-10-14',
   sections: [
     {
       heading: 'What an export carries',
@@ -25,7 +25,7 @@ export const REQIF: Topic = {
     {
       heading: 'What an import does',
       paragraphs: [
-        'Importing a ReqIF file creates a new project: fresh identifiers, every artifact at version 1, with the hierarchy, links, statuses and attributes rebuilt from the file. A value outside an enumeration’s list is refused with a message naming it, rather than imported as something else. Today a ReqIF file is imported through the API (POST /api/v1/projects/import); the app’s import button takes OpenV’s own JSON export.',
+        'Importing a ReqIF file creates a new project: fresh identifiers, every artifact at version 1, with the hierarchy, links, statuses and attributes rebuilt from the file. A value outside an enumeration’s list is refused with a message naming it, rather than imported as something else. Use Import Project on the projects page, or the import API.',
       ],
     },
     {
@@ -39,7 +39,6 @@ export const REQIF: Topic = {
     'Interoperability with DOORS, DOORS Next, Polarion or Jama has not been tested yet; the tests cover OpenV-to-OpenV round trips. Treat a first exchange with another tool as a pilot and check the result.',
     'Attachments and embedded objects are not carried in either direction.',
     'An import always makes a new project: there is no merge of a ReqIF file into an existing one.',
-    'ReqIF import is through the API only for now; the import button in the app accepts OpenV’s JSON export.',
     'Besides ReqIF, OpenV imports only its own JSON export. There is no Excel or CSV import.',
   ],
   manual: ['projects', 'artifacts'],
