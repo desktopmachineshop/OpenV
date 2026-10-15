@@ -50,23 +50,27 @@ func Headline(version string) string {
 }
 
 // Category names, in the order a reader wants them: what can I now do, what
-// quietly improved, what stopped being broken.
+// was a security fix, what quietly improved, what stopped being broken. A
+// security fix has a group of its own so a release's notes say that it is
+// one (REQ-142), which scripts/release_notes.py also reads to make that
+// release the stable one the day it ships.
 const (
 	CategoryFeatures    = "New features"
+	CategorySecurity    = "Security fixes"
 	CategoryMaintenance = "Maintenance updates"
 	CategoryFixes       = "Bug fixes"
 )
 
 // CategoryOrder is every category, in reading order. A section may use any
 // subset; empty ones are not rendered.
-var CategoryOrder = []string{CategoryFeatures, CategoryMaintenance, CategoryFixes}
+var CategoryOrder = []string{CategoryFeatures, CategorySecurity, CategoryMaintenance, CategoryFixes}
 
 // categorySet is CategoryOrder as a lookup.
 var categorySet = map[string]bool{
-	CategoryFeatures: true, CategoryMaintenance: true, CategoryFixes: true,
+	CategoryFeatures: true, CategorySecurity: true, CategoryMaintenance: true, CategoryFixes: true,
 }
 
-// IsCategory reports whether a sub-heading names one of the three groups.
+// IsCategory reports whether a sub-heading names one of the groups.
 func IsCategory(heading string) bool { return categorySet[heading] }
 
 // Category is one group of notes within a release.

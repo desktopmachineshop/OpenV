@@ -345,8 +345,8 @@ branch instead:
   `Release <version>` on `master`.
 - **Every release says what changed.** `RELEASE_NOTES.md` at the repository
   root is customer-facing: each pull request adds a bullet under
-  `## Unreleased`, grouped under `### New features`, `### Maintenance
-  updates` or `### Bug fixes` (the *Release notes* CI job refuses a PR that
+  `## Unreleased`, grouped under `### New features`, `### Security fixes`,
+  `### Maintenance updates` or `### Bug fixes` (the *Release notes* CI job refuses a PR that
   adds none, unless it carries the `no-release-notes` label). The promotion
   moves those bullets into a new section headed by a semantic version and
   the date — `## 0.2.0 — 2026-09-13` — committed to master before `release`

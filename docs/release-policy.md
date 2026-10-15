@@ -26,9 +26,15 @@ protocol stay backward compatible from one stable release to the next, and
 a removal is announced in the notes of two consecutive stable releases
 before it happens.
 
-Security fixes go to every workspace at the next nightly and, by a manual
-run of the stable workflow with `fix: true`, become the stable release the
-same day. No channel or upgrade window holds them back.
+Security fixes go to every workspace at the next nightly and become the
+stable release the same day. A fix is filed under `### Security fixes` in
+the release notes, so its notes say it is one, and the promotion that ships
+a release carrying one designates that release stable in the same push
+(`release_notes.py cut-stable --if-security`). A fix is never gated by a
+feature key, so no channel or upgrade window holds it back: the window only
+decides when a stable release's new features turn on. A manual run of the
+stable workflow with `fix: true` remains for an urgent fix filed under
+another group.
 
 ## What a workspace controls
 

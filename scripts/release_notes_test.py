@@ -114,6 +114,9 @@ class VersionTests(unittest.TestCase):
     def test_the_bullets_decide_the_bump(self):
         self.assertEqual(rn.bump_for([(rn.FEATURES, "x"), (rn.FIXES, "y")]), "minor")
         self.assertEqual(rn.bump_for([(rn.MAINTENANCE, "x"), (rn.FIXES, "y")]), "patch")
+        # A security fix is a patch: it ships as soon as it is ready.
+        self.assertEqual(rn.bump_for([(rn.SECURITY, "x")]), "patch")
+        self.assertEqual(rn.bump_for([(rn.SECURITY, "x"), (rn.FEATURES, "y")]), "minor")
         self.assertEqual(rn.bump_for([(rn.FIXES, "y")], major=True), "major")
 
     def test_the_first_numbered_release_is_0_1_0(self):
@@ -209,6 +212,33 @@ class StableTests(unittest.TestCase):
         self.assertEqual(rn.main(["check", path]), 0)
         # By hand, with nothing newer, the cut is refused.
         self.assertEqual(rn.main(["cut-stable", "--date", "2026-10-02", path]), 1)
+
+    # REQ-142: a release that carries a security fix becomes the stable
+    # release the day it ships, and one that does not is left to the monthly
+    # cut, quietly, because the promotion asks after every release.
+    def test_a_security_fix_is_made_stable_the_day_it_ships(self):
+        fd, path = tempfile.mkstemp(suffix=".md")
+        # Nothing pending, so the next cut carries only what this test adds.
+        two = "## Unreleased\n\n## 0.2.0" + self.TWO.partition("## 0.2.0")[2]
+        with os.fdopen(fd, "w") as f:
+            f.write(two)
+        self.addCleanup(os.remove, path)
+        # 0.2.0 has a new feature and no security fix: nothing happens.
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-09-21", "--if-security", path]), 0)
+        self.assertEqual(rn.current_stable(rn.read(path)), "0.1.0")
+        # A promotion cuts 0.2.1 with a security fix the next day.
+        version, cut = rn.cut(pending(rn.SECURITY, "Sessions end on sign-out.", rn.read(path)), "2026-09-22")
+        self.assertEqual(version, "0.2.1")
+        with open(path, "w") as f:
+            f.write(cut)
+        self.assertEqual(rn.carries_security_fix(cut), "0.2.1")
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-09-22", "--if-security", path]), 0)
+        self.assertEqual(rn.current_stable(rn.read(path)), "0.2.1")
+        self.assertIn("## 0.2.1 — 2026-09-22\n\nStable channel release since 2026-09-22.\n\n### Security fixes", rn.read(path))
+        # Asked again, it is already the stable release: nothing to do, no error.
+        self.assertEqual(rn.carries_security_fix(rn.read(path)), "")
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-09-22", "--if-security", path]), 0)
+        self.assertEqual(rn.main(["check", path]), 0)
 
 
 class CliTests(unittest.TestCase):
