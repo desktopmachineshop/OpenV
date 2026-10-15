@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Security fixes now have a heading of their own in What's new.** When a
+  release closes a security weakness, its notes list it under *Security
+  fixes*. The fix reaches every workspace as soon as it ships, whatever its
+  channel, and that release also becomes the stable release the same day, so
+  admins of stable-channel workspaces are told about it then, with a count of
+  the security fixes it brings, rather than at next month's stable release.
+
 ### Bug fixes
 
 - **Every baseline picker now says who captured each baseline and when.**

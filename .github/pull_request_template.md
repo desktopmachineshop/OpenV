@@ -7,7 +7,7 @@
 <!-- Every pull request does one of these (CONTRIBUTING.md, "Release notes"). -->
 
 - [ ] A bullet under `## Unreleased` in `RELEASE_NOTES.md`, in its group
-  (*New features*, *Maintenance updates* or *Bug fixes*), written for a
+  (*New features*, *Security fixes*, *Maintenance updates* or *Bug fixes*), written for a
   workspace member.
 - [ ] Nothing a user can see changes: the pull request carries the
   `no-release-notes` label.

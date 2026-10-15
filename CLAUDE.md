@@ -70,12 +70,14 @@ deploy nothing; shipping means running the **Promote to release** workflow
 
 Every pull request adds a customer-facing bullet under `## Unreleased` in
 `RELEASE_NOTES.md` (what a workspace member will notice, not how it was
-built), filed under `### New features`, `### Maintenance updates` or
-`### Bug fixes`; the *Release notes* CI job refuses one that does not, or
-one that sits under no group, unless the PR carries the `no-release-notes`
-label. Promotion cuts those bullets into a new semantic-version section the
+built), filed under `### New features`, `### Security fixes`,
+`### Maintenance updates` or `### Bug fixes`; the *Release notes* CI job
+refuses one that does not, or one that sits under no group, unless the PR
+carries the `no-release-notes` label. Promotion cuts those bullets into a new semantic-version section the
 app announces to every account, and the group they are in decides the bump:
-a new feature is a minor release, maintenance and fixes alone are a patch.
+a new feature is a minor release, security fixes, maintenance and fixes
+alone are a patch, and a release with a security fix also becomes the
+stable release the day it ships.
 See `CONTRIBUTING.md` for the shape and `docs/railway.md` for the pipeline.
 
 The release structure (nightly and stable channels, staging, what each plan

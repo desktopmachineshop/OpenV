@@ -180,3 +180,20 @@ func TestUpgradeTimeFor(t *testing.T) {
 		t.Fatalf("unknown zone, clamped: %v", got)
 	}
 }
+
+// REQ-142: the summary an admin is sent names security fixes on their own,
+// rather than counting them among the other changes.
+func TestPreviewLineNamesSecurityFixes(t *testing.T) {
+	s := &release.Stable{Categories: []release.Category{
+		{Name: release.CategoryFeatures, Notes: []string{"a"}},
+		{Name: release.CategorySecurity, Notes: []string{"b", "c"}},
+		{Name: release.CategoryFixes, Notes: []string{"d"}},
+	}}
+	if got, want := previewLine(s), "It brings 1 new feature(s), 2 security fix(es) and 1 other change(s); see What's new."; got != want {
+		t.Fatalf("previewLine = %q, want %q", got, want)
+	}
+	s.Categories = s.Categories[:2]
+	if got, want := previewLine(s), "It brings 1 new feature(s) and 2 security fix(es); see What's new."; got != want {
+		t.Fatalf("previewLine = %q, want %q", got, want)
+	}
+}

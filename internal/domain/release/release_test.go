@@ -291,3 +291,19 @@ func TestHeadlineNamesAReleaseTheWayItIsAnnounced(t *testing.T) {
 		t.Errorf("Headline of a legacy version = %q", got)
 	}
 }
+
+// REQ-142: a security fix is filed in a group of its own, so the notes a
+// member reads say that it is one, and it reads second, after what is new.
+func TestASecurityFixHasAGroupOfItsOwn(t *testing.T) {
+	n, err := Parse("# Notes\n\n## Unreleased\n\n## 0.2.1 — 2026-09-22\n\n### Bug fixes\n\n- A typo\n\n### Security fixes\n\n- Sessions end on sign-out\n")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	cur := n.Current()
+	if len(cur.Categories) != 2 || cur.Categories[1].Name != CategorySecurity || cur.Categories[1].Notes[0] != "Sessions end on sign-out" {
+		t.Fatalf("categories = %+v", cur.Categories)
+	}
+	if CategoryOrder[1] != CategorySecurity {
+		t.Fatalf("CategoryOrder = %v, want Security fixes second", CategoryOrder)
+	}
+}

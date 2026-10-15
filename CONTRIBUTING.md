@@ -23,7 +23,7 @@ internal docs) carries the `no-release-notes` label instead. Adding or
 removing that label re-runs the check, so it can go on after the pull
 request is opened.
 
-Every bullet goes under one of three group headings, because that is how a
+Every bullet goes under one of four group headings, because that is how a
 reader tells them apart:
 
 ```markdown
@@ -32,6 +32,10 @@ reader tells them apart:
 ### New features
 
 - Export a traceability matrix to Excel from the V&V tab.
+
+### Security fixes
+
+- Signing out now ends the session on every device.
 
 ### Maintenance updates
 
@@ -44,19 +48,23 @@ reader tells them apart:
 
 `### Maintenance updates` is for something a member can still notice — it is
 faster, clearer, better documented — not for work with no visible effect;
-that is what the `no-release-notes` label is for. A bullet under no group is
-refused.
+that is what the `no-release-notes` label is for. `### Security fixes` is
+for a change that closes a security weakness, so the notes say that it is
+one (REQ-142); describe what a member is now protected from, not how to
+exploit what was open. A bullet under no group is refused.
 
 The group also decides the version. Promotion cuts the Unreleased bullets
 into a new section headed by a semantic version and the date: anything under
-*New features* makes it a minor release, maintenance and fixes alone make it
-a patch, and a major release is asked for explicitly when the workflow is
+*New features* makes it a minor release, security fixes, maintenance and
+fixes alone make it a patch, and a major release is asked for explicitly when the workflow is
 run. The app announces that version to every account and shows it under
 What's new (see `docs/railway.md`, "Release pipeline").
 
 The group also decides who sees the change when (`docs/release-policy.md`).
-Maintenance updates and bug fixes reach every workspace with the release
-that carries them. So does a new feature on the nightly channel, but a
+Security fixes, maintenance updates and bug fixes reach every workspace with
+the release that carries them, and a release with a security fix is also
+made the stable release by the promotion that ships it, so stable-channel
+workspaces are told the same day. So does a new feature on the nightly channel, but a
 stable-channel workspace sees it only once the monthly stable release it
 has turned on is that release or a later one. A new feature therefore
 registers a key in `internal/domain/release/features.go` with the version
