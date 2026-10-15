@@ -53,9 +53,9 @@ export const ConnectedAppsCard: React.FC<{ apiBase: string }> = ({ apiBase }) =>
     <div className="card">
       <h3 style={{ marginBottom: 6 }}>Connected apps</h3>
       <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-        Connect an AI app such as Claude or Cursor to a workspace without a runner or a key: add OpenV to the app as a
-        remote MCP server at <code>{endpoint}</code>, and approve it when it asks. It acts as you, with the tools an
-        OpenV agent has.
+        Connect an AI app such as Claude or Cursor to a workspace without a runner or a key. In Claude, open Settings →
+        Connectors, choose Add custom connector and paste <code>{endpoint}</code>; in another app, add that address
+        as a remote MCP server. Approve it when it asks, and it acts as you, with the tools an OpenV agent has.
       </p>
       {error && <ErrorBanner message={error} />}
       {loading ? (

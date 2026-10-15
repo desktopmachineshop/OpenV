@@ -232,8 +232,7 @@ func AllowedRedirect(uri string) bool {
 	case "https":
 		return u.Host != ""
 	case "http":
-		host := u.Hostname()
-		return host == "localhost" || host == "127.0.0.1" || host == "::1"
+		return loopback(u.Hostname())
 	case "javascript", "data", "file", "vbscript", "about", "blob", "ftp", "ws", "wss":
 		return false
 	}
@@ -248,12 +247,34 @@ func (s *DefaultService) Authorizing(clientID, redirectURI string) (*Client, err
 		return nil, err
 	}
 	for _, u := range c.RedirectURIs {
-		if u == redirectURI {
+		if redirectMatches(u, redirectURI) {
 			return c, nil
 		}
 	}
 	return nil, ErrInvalidRedirect
 }
+
+// redirectMatches says whether a redirect URI an authorization request
+// gives is one the client registered: the same string, or, for a loopback
+// redirect, the same but for the port (RFC 8252 7.3). A native app such as
+// Claude Code listens on a port that changes from one session to the next,
+// and registers its redirect once.
+func redirectMatches(registered, given string) bool {
+	if registered == given {
+		return true
+	}
+	r, err := url.Parse(registered)
+	if err != nil || r.Scheme != "http" || !loopback(r.Hostname()) {
+		return false
+	}
+	g, err := url.Parse(given)
+	if err != nil || g.Scheme != "http" || g.Hostname() != r.Hostname() {
+		return false
+	}
+	return g.User == nil && r.User == nil && g.Path == r.Path && g.RawQuery == r.RawQuery && g.Fragment == ""
+}
+
+func loopback(host string) bool { return host == "localhost" || host == "127.0.0.1" || host == "::1" }
 
 func (s *DefaultService) client(clientID string) (*Client, error) {
 	if _, err := uuid.Parse(clientID); err != nil {
@@ -359,6 +380,11 @@ func (s *DefaultService) Exchange(code, clientID, redirectURI, verifier string) 
 	if code == "" || clientID == "" || len(verifier) < 43 || len(verifier) > 128 {
 		return nil, ErrInvalidRequest
 	}
+	// An unknown client is told so, so that an app whose registration is
+	// gone registers again rather than giving up.
+	if _, err := s.client(clientID); err != nil {
+		return nil, err
+	}
 	c, err := s.repo.ConsumeCode(tokens.HashToken(code))
 	if err != nil {
 		return nil, err
@@ -382,6 +408,9 @@ func (s *DefaultService) Exchange(code, clientID, redirectURI, verifier string) 
 func (s *DefaultService) Refresh(refreshToken, clientID string) (*Tokens, error) {
 	if !strings.HasPrefix(refreshToken, RefreshPrefix) || clientID == "" {
 		return nil, ErrInvalidGrant
+	}
+	if _, err := s.client(clientID); err != nil {
+		return nil, err
 	}
 	now := s.now().UTC()
 	t, err := s.repo.ConsumeRefresh(tokens.HashToken(refreshToken), now)

@@ -178,7 +178,9 @@ and holds a token that acts as that member in that workspace.
 - **Consent.** `GET /oauth/authorize` with `response_type=code`, PKCE
   (`code_challenge_method=S256`, required), `state` and an optional `scope`
   (`openv:read`, or `openv:read openv:write`, the default) checks the client
-  and its redirect URI, answering `400` for either without redirecting, and
+  and its redirect URI, answering `400` for either without redirecting (a
+  loopback `http` redirect matches a registered one on any port, as RFC 8252
+  §7.3 has it, since Claude Code listens on a new port each session), and
   sends the browser to the app's `/connect` page. There the signed-in
   member chooses the workspace and read only or read and write; the page
   posts the decision to `POST /api/v1/oauth/consent`, which answers the
@@ -187,8 +189,12 @@ and holds a token that acts as that member in that workspace.
 - **Tokens.** `POST /oauth/token` (form-encoded) spends a code, once, with
   its `code_verifier`, or a refresh token, for an access token (`ovat_…`,
   one hour) and a refresh token (`ovrt_…`, thirty days, replaced on every
-  use). `POST /oauth/revoke` (RFC 7009) ends the pair a token belongs to.
-  Codes and tokens are stored as SHA-256 hashes only.
+  use). A `client_id` no client is registered under answers `401`
+  `invalid_client`, so a client such as Claude registers again; a code or
+  refresh token that is not valid answers `400` `invalid_grant`. The rate
+  limit is spent per `client_id`. `POST /oauth/revoke` (RFC 7009) ends the
+  pair a token belongs to. Every OAuth answer is `application/json`. Codes
+  and tokens are stored as SHA-256 hashes only.
 - **What the token can do.** Only `/mcp` accepts it: it is not a credential
   for the rest of the API. Each tool call is the tool's REST request sent
   through the server's own router as the member, never a platform admin,
@@ -212,13 +218,13 @@ and holds a token that acts as that member in that workspace.
 | GET | `/.well-known/oauth-authorization-server` | Authorization server metadata (RFC 8414): the endpoints below, `code` with PKCE `S256`, `authorization_code` and `refresh_token`, public clients only | open |
 | POST | `/oauth/register` | Dynamic client registration `{client_name, redirect_uris}` → `201` `{client_id, client_id_issued_at, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method: "none"}`; `400 invalid_redirect_uri`; `429` past 30 a burst per address | open |
 | GET | `/oauth/authorize` | Checks the request and `302`s to the app's `/connect` page; a wrong client or redirect URI answers `400`, anything else wrong `302`s back to the client with `error` | open |
-| POST | `/oauth/token` | Form `grant_type=authorization_code` with `code`, `client_id`, `redirect_uri`, `code_verifier`; or `grant_type=refresh_token` with `refresh_token`, `client_id` → `{access_token, token_type: "Bearer", expires_in: 3600, refresh_token, scope}`; `400` `invalid_grant`, `invalid_request` or `unsupported_grant_type` | open |
+| POST | `/oauth/token` | Form `grant_type=authorization_code` with `code`, `client_id`, `redirect_uri`, `code_verifier`; or `grant_type=refresh_token` with `refresh_token`, `client_id` → `{access_token, token_type: "Bearer", expires_in: 3600, refresh_token, scope}`; `400` `invalid_grant`, `invalid_request` or `unsupported_grant_type`; `401` `invalid_client` for a client no longer registered; `429` per client | open |
 | POST | `/oauth/revoke` | Form `token`, `client_id`: ends that token's pair → `200`, whether or not it existed | open |
 | GET | `/api/v1/oauth/consent` | `?client_id=&redirect_uri=` → `{client_id, client_name, redirect_host}` for the consent page; `400` for an unknown client or a redirect URI it did not register | user |
 | POST | `/api/v1/oauth/consent` | `{client_id, redirect_uri, code_challenge, code_challenge_method, state, scope, org_id, approve}` → `{redirect_to}`: the client's redirect URI with `code` (approved) or `error=access_denied`, and `state` and `iss`. Approving needs membership of `org_id` and `remote-mcp` on (`403` otherwise); a workspace over its plan may be chosen | user, org member |
 | GET | `/api/v1/me/connected-apps` | The member's connected apps, newest first: `[{id, user_id, org_id, org_name, client_id, client_name, scope, created_at, last_used_at?}]` | user |
 | DELETE | `/api/v1/me/connected-apps/{id}` | Revoke one → `204`; another member's or an unknown id `404` | user |
-| POST | `/mcp` | One JSON-RPC message or a batch → `200` JSON (`202` for notifications only): `initialize` (revisions `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`. Bearer access token; `401` with the challenge above; `403` when `remote-mcp` is off for the grant's workspace; `400` for an unsupported `MCP-Protocol-Version` | access token |
+| POST | `/mcp` | One JSON-RPC message or a batch → `200` JSON (`202` for notifications only): `initialize` (revisions `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`. Bearer access token; `401` with the challenge above; `403` when `remote-mcp` is off for the grant's workspace or its member has left it; `400` for an unsupported `MCP-Protocol-Version` on anything but `initialize` | access token |
 | GET, DELETE | `/mcp` | `405`, `Allow: POST`: no server-initiated stream and no session | open |
 ## Authorization model
 

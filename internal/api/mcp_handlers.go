@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -89,13 +90,15 @@ func (h *Handler) MCP(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "connected apps are not yet available on this workspace's release channel")
 		return
 	}
-	if v := r.Header.Get("MCP-Protocol-Version"); v != "" && !supportedMCPVersion(v) {
-		writeJSONError(w, http.StatusBadRequest, "unsupported MCP-Protocol-Version "+v)
-		return
-	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "could not read the request body")
+		return
+	}
+	// The revision is agreed in initialize, so a header on initialize itself
+	// is the client's own preference and is answered there, not refused.
+	if v := r.Header.Get("MCP-Protocol-Version"); v != "" && !supportedMCPVersion(v) && !mcpInitialize(body) {
+		writeJSONError(w, http.StatusBadRequest, "unsupported MCP-Protocol-Version "+v)
 		return
 	}
 
@@ -129,6 +132,14 @@ func supportedMCPVersion(v string) bool {
 		}
 	}
 	return false
+}
+
+// mcpInitialize says whether a POST carries the initialize request.
+func mcpInitialize(body []byte) bool {
+	var msg struct {
+		Method string `json:"method"`
+	}
+	return json.Unmarshal(body, &msg) == nil && msg.Method == "initialize"
 }
 
 // memberTransport sends a tool's API request through the router as the

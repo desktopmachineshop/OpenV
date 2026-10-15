@@ -55,10 +55,11 @@ func TestMemberToolsLeaveOutRunOnlyAndWritingTools(t *testing.T) {
 func TestHTTPNegotiatesTheProtocolVersion(t *testing.T) {
 	c := NewClientWithTransport("http://openv", "", &roundTrip{})
 	for asked, want := range map[string]string{
+		"2025-11-25": "2025-11-25",
 		"2025-06-18": "2025-06-18",
 		"2025-03-26": "2025-03-26",
 		"2024-11-05": "2024-11-05",
-		"2099-01-01": "2025-06-18",
+		"2099-01-01": "2025-11-25",
 	} {
 		out := decode(t, HandleHTTP(c, Tools(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"`+asked+`"}}`), "openv", "0.18.0"))
 		result := out["result"].(map[string]interface{})

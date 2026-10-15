@@ -10,10 +10,12 @@ import { connectedAppsAPI } from '../api/client';
 // the app may do, never more than it asked for, and sends the browser to
 // whatever address the API answers with.
 
+const consentApp = vi.hoisted(() => ({ client_id: 'c1', client_name: 'Claude', redirect_host: 'claude.ai' }));
+
 vi.mock('../api/client', async (orig) =>
   mockApi(await orig(), {
     connectedAppsAPI: {
-      consent: () => Promise.resolve({ data: { client_id: 'c1', client_name: 'Claude', redirect_host: 'claude.ai' } }),
+      consent: () => Promise.resolve({ data: { ...consentApp } }),
       decide: vi.fn(() => Promise.resolve({ data: { redirect_to: 'https://claude.ai/cb?code=x&state=s' } })),
     },
     orgsAPI: {
@@ -45,6 +47,7 @@ beforeEach(() => {
   assign = vi.fn();
   Object.defineProperty(window, 'location', { value: { ...window.location, assign }, writable: true });
   sessionStorage.setItem('openv_return_to', '/connect?client_id=c1');
+  consentApp.redirect_host = 'claude.ai';
 });
 
 afterEach(() => {
@@ -111,6 +114,16 @@ describe('the consent page', () => {
     expect(container.querySelectorAll('input[type="radio"]').length).toBe(1);
     await act(async () => button('Connect').click());
     expect(decide.mock.calls[0][0].scope).toBe('openv:read');
+  });
+
+  it('warns when the app answers on this computer, and not otherwise', async () => {
+    await render(QUERY);
+    expect(container.querySelector('[role="note"]')).toBeNull();
+    act(() => root.unmount());
+    root = createRoot(container);
+    consentApp.redirect_host = 'localhost:3118';
+    await render(QUERY);
+    expect(container.querySelector('[role="note"]')?.textContent).toContain('runs on your own computer');
   });
 
   it('says so when the link is incomplete', async () => {

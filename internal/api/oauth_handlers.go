@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/connectedapps"
@@ -43,7 +44,7 @@ func oauthError(w http.ResponseWriter, status int, code, description string) {
 		body["error_description"] = description
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSONBareStatus(w, status, body)
+	writeJSON(w, status, body)
 }
 
 var oauthScopes = []string{connectedapps.ScopeRead, connectedapps.ScopeWrite}
@@ -55,7 +56,7 @@ func (h *Handler) OAuthProtectedResource(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	issuer := h.oauthIssuer()
-	writeJSONBare(w, map[string]interface{}{
+	writeJSONOK(w, map[string]interface{}{
 		"resource":                 issuer + "/mcp",
 		"authorization_servers":    []string{issuer},
 		"scopes_supported":         oauthScopes,
@@ -70,7 +71,7 @@ func (h *Handler) OAuthAuthorizationServer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	issuer := h.oauthIssuer()
-	writeJSONBare(w, map[string]interface{}{
+	writeJSONOK(w, map[string]interface{}{
 		"issuer":                                         issuer,
 		"authorization_endpoint":                         issuer + "/oauth/authorize",
 		"token_endpoint":                                 issuer + "/oauth/token",
@@ -116,7 +117,7 @@ func (h *Handler) OAuthRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSONBareStatus(w, http.StatusCreated, map[string]interface{}{
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"client_id":                  c.ID,
 		"client_id_issued_at":        c.CreatedAt.Unix(),
 		"client_name":                c.Name,
@@ -178,12 +179,18 @@ func (h *Handler) OAuthToken(w http.ResponseWriter, r *http.Request) {
 	if h.connectedAppsOff(w) {
 		return
 	}
-	if ok, _ := h.oauthLimiter.allow("token:" + clientIP(r)); !ok {
-		oauthError(w, http.StatusTooManyRequests, "invalid_request", "too many token requests from this address; try again later")
-		return
-	}
 	if err := r.ParseForm(); err != nil {
 		oauthError(w, http.StatusBadRequest, "invalid_request", "the body must be form-encoded")
+		return
+	}
+	// Spent per client, not per address: a hosted app such as Claude sends
+	// every one of its users' token requests from the same few addresses.
+	key := "token:" + clientIP(r)
+	if id, err := uuid.Parse(r.PostForm.Get("client_id")); err == nil {
+		key = "token:client:" + id.String()
+	}
+	if ok, _ := h.oauthLimiter.allow(key); !ok {
+		oauthError(w, http.StatusTooManyRequests, "invalid_request", "too many token requests for this client; try again later")
 		return
 	}
 	var (
@@ -203,6 +210,9 @@ func (h *Handler) OAuthToken(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, connectedapps.ErrInvalidRequest):
 		oauthError(w, http.StatusBadRequest, "invalid_request", "code, client_id, redirect_uri and a code_verifier of 43 to 128 characters are required")
 		return
+	case errors.Is(err, connectedapps.ErrInvalidClient):
+		oauthError(w, http.StatusUnauthorized, "invalid_client", "no client is registered under this client_id; register again")
+		return
 	case errors.Is(err, connectedapps.ErrInvalidGrant):
 		oauthError(w, http.StatusBadRequest, "invalid_grant", "the code or refresh token is not valid for this client")
 		return
@@ -212,7 +222,7 @@ func (h *Handler) OAuthToken(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
-	writeJSONBare(w, tok)
+	writeJSONOK(w, tok)
 }
 
 // OAuthRevoke ends a token pair (RFC 7009). It answers 200 whether or not

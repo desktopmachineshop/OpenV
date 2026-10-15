@@ -10,7 +10,7 @@ import (
 // ProtocolVersions are the MCP revisions the HTTP endpoint speaks, newest
 // first. initialize answers the client's own revision when it is one of
 // these and the newest otherwise, which the client may then refuse.
-var ProtocolVersions = []string{"2025-06-18", "2025-03-26", "2024-11-05"}
+var ProtocolVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
 
 // runOnly names the tools that act only inside an agent run: delegation
 // asks the server for a child run of the caller's run, and a member has no

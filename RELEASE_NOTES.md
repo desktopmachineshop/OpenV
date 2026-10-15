@@ -12,10 +12,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 ### New features
 
 - **Connect Claude, Cursor or another AI app to a workspace with nothing to
-  install.** Add OpenV to the app as a remote MCP server at your OpenV
-  address followed by /mcp (Settings → Connected apps shows it), approve it
-  in your browser, and choose the workspace it may work in and whether it
-  may change anything or only read. The app then works with your projects
+  install.** In Claude, add OpenV under Settings → Connectors → Add custom
+  connector with your OpenV address followed by /mcp (Settings → Connected
+  apps shows it); in another app, add that address as a remote MCP server.
+  Approve it in your browser, and choose the workspace it may work in and
+  whether it may change anything or only read. The app then works with your projects
   through the same tools an OpenV agent has, as you: everything it does is
   recorded as yours, and your role in the workspace still applies.
   Connected apps lists every app you have connected, and Disconnect stops

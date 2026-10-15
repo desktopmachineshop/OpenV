@@ -115,7 +115,7 @@
         "path": "/.well-known/oauth-protected-resource"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -150,7 +150,7 @@
         "path": "/.well-known/oauth-protected-resource/mcp"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -185,7 +185,7 @@
         "path": "/.well-known/oauth-authorization-server"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -238,7 +238,7 @@
         "body": "{\"client_name\":\"Tour Client\",\"redirect_uris\":[\"http://client.example/cb\"]}"
       },
       "status": 400,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store"
       ],
@@ -273,7 +273,7 @@
         "it asked for a secret and is registered public all the same, as the answer says"
       ],
       "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store"
       ],
@@ -314,7 +314,7 @@
         "query": "response_type=code&client_id=<client>&redirect_uri=https%3A%2F%2Fevil.example%2Fcb&code_challenge=<challenge>&code_challenge_method=S256&state=s1"
       },
       "status": 400,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store"
       ],
@@ -392,7 +392,7 @@
         "query": "client_id=<client>&redirect_uri=https:%2F%2Fclient.example%2Foauth%2Fcallback"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": 114,
@@ -447,7 +447,7 @@
         "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<owner.workspace>\",\"approve\":false}"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -476,7 +476,7 @@
         "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<owner.workspace>\",\"approve\":true}"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -505,7 +505,7 @@
         "body": "grant_type=authorization_code&code=<code.spent>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=tour-wrong-verifier-0123456789-abcdefghijklmnopqr"
       },
       "status": 400,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store"
       ],
@@ -537,7 +537,7 @@
         "body": "grant_type=authorization_code&code=<code.spent>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
       },
       "status": 400,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store"
       ],
@@ -569,7 +569,7 @@
         "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<owner.workspace>\",\"approve\":true}"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -598,7 +598,7 @@
         "body": "grant_type=authorization_code&code=<code.read>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store",
         "Pragma: no-cache"
@@ -1154,7 +1154,7 @@
         "body": "grant_type=refresh_token&refresh_token=<refresh.read>&client_id=<client>"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store",
         "Pragma: no-cache"
@@ -1190,7 +1190,7 @@
         "body": "grant_type=refresh_token&refresh_token=<refresh.read>&client_id=<client>"
       },
       "status": 400,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store"
       ],
@@ -1210,6 +1210,38 @@
     },
     {
       "n": 26,
+      "title": "a client no longer registered: 401 invalid_client, so the app registers again",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=refresh_token&refresh_token=ovrt_unknown&client_id=<phantom>"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 110,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_client\",\"error_description\":\"no client is registered under this client_id; register again\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_client",
+        "error_description": "no client is registered under this client_id; register again"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 27,
       "title": "approve read and write: the same grant takes the scope",
       "actor": "owner",
       "route": "POST /api/v1/oauth/consent",
@@ -1222,7 +1254,7 @@
         "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"\",\"org_id\":\"<owner.workspace>\",\"approve\":true}"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -1238,7 +1270,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 28,
       "title": "spend it",
       "actor": "anonymous",
       "route": "POST /oauth/token",
@@ -1251,7 +1283,7 @@
         "body": "grant_type=authorization_code&code=<code.write>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store",
         "Pragma: no-cache"
@@ -1274,7 +1306,7 @@
       "events": []
     },
     {
-      "n": 28,
+      "n": 29,
       "title": "create_artifact: made as the member",
       "actor": "writer",
       "route": "POST /mcp",
@@ -1293,7 +1325,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"jsonrpc\":\"2.0\",\"id\":6,\"result\":{\"content\":[{\"text\":\"{\\\"id\\\":\\\"<uuid:1>\\\",\\\"project_id\\\":\\\"<project>\\\",\\\"type\\\":\\\"requirement\\\",\\\"ref\\\":\\\"REQ-1\\\",\\\"title\\\":\\\"Written by a connected app\\\",\\\"body\\\":\\\"\\\",\\\"sort_order\\\":1,\\\"status\\\":\\\"draft\\\",\\\"attributes\\\":{\\\"status\\\":\\\"draft\\\"},\\\"version\\\":1,\\\"valid_from\\\":\\\"<time@step 28>\\\",\\\"valid_to\\\":null,\\\"created_at\\\":\\\"<time@step 28>\\\",\\\"updated_at\\\":\\\"<time@step 28>\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+        "{\"jsonrpc\":\"2.0\",\"id\":6,\"result\":{\"content\":[{\"text\":\"{\\\"id\\\":\\\"<uuid:1>\\\",\\\"project_id\\\":\\\"<project>\\\",\\\"type\\\":\\\"requirement\\\",\\\"ref\\\":\\\"REQ-1\\\",\\\"title\\\":\\\"Written by a connected app\\\",\\\"body\\\":\\\"\\\",\\\"sort_order\\\":1,\\\"status\\\":\\\"draft\\\",\\\"attributes\\\":{\\\"status\\\":\\\"draft\\\"},\\\"version\\\":1,\\\"valid_from\\\":\\\"<time@step 29>\\\",\\\"valid_to\\\":null,\\\"created_at\\\":\\\"<time@step 29>\\\",\\\"updated_at\\\":\\\"<time@step 29>\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
       ],
       "trailing_newline": false,
       "parsed": {
@@ -1302,7 +1334,7 @@
         "result": {
           "content": [
             {
-              "text": "{\"id\":\"<uuid:1>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Written by a connected app\",\"body\":\"\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 28>\",\"valid_to\":null,\"created_at\":\"<time@step 28>\",\"updated_at\":\"<time@step 28>\"}",
+              "text": "{\"id\":\"<uuid:1>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Written by a connected app\",\"body\":\"\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 29>\",\"valid_to\":null,\"created_at\":\"<time@step 29>\",\"updated_at\":\"<time@step 29>\"}",
               "type": "text"
             }
           ],
@@ -1324,7 +1356,7 @@
       ]
     },
     {
-      "n": 29,
+      "n": 30,
       "title": "the member's connected apps: one grant, read and write",
       "actor": "owner",
       "route": "GET /api/v1/me/connected-apps",
@@ -1333,7 +1365,7 @@
         "path": "/api/v1/me/connected-apps"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -1358,7 +1390,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 30,
+      "n": 31,
       "title": "the access token is no key to the rest of the API",
       "actor": "writer",
       "route": "GET /api/v1/projects",
@@ -1382,7 +1414,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 31,
+      "n": 32,
       "title": "the colleague approves read only for the shared workspace",
       "actor": "colleague",
       "acting_in": "<other>",
@@ -1396,7 +1428,7 @@
         "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<other>\",\"approve\":true}"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": "<varies>",
@@ -1412,7 +1444,7 @@
       "events": []
     },
     {
-      "n": 32,
+      "n": 33,
       "title": "the colleague's app spends its code",
       "actor": "anonymous",
       "route": "POST /oauth/token",
@@ -1425,7 +1457,7 @@
         "body": "grant_type=authorization_code&code=<code.colleague>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
       },
       "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "content_type": "application/json",
       "headers": [
         "Cache-Control: no-store",
         "Pragma: no-cache"
@@ -1448,7 +1480,7 @@
       "events": []
     },
     {
-      "n": 33,
+      "n": 34,
       "title": "the colleague's app works in the shared workspace: no project there is the colleague's, so the list is empty",
       "actor": "colleague.app",
       "route": "POST /mcp",
@@ -1487,7 +1519,7 @@
       "events": []
     },
     {
-      "n": 34,
+      "n": 35,
       "title": "the colleague's app once they have left the workspace: 403, nothing there",
       "actor": "colleague.app",
       "route": "POST /mcp",
@@ -1516,7 +1548,7 @@
       "events": []
     },
     {
-      "n": 35,
+      "n": 36,
       "title": "an MCP-Protocol-Version the endpoint does not speak",
       "actor": "writer",
       "route": "POST /mcp",
@@ -1546,7 +1578,48 @@
       "events": []
     },
     {
-      "n": 36,
+      "n": 37,
+      "title": "initialize carrying a revision the endpoint does not speak: answered with the newest it does",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json",
+          "Mcp-Protocol-Version: <date>"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"<date>\"}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"capabilities\":{\"tools\":{}},\"protocolVersion\":\"<date>\",\"serverInfo\":{\"name\":\"openv\",\"version\":\"<release-version>\"}}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "result": {
+          "capabilities": {
+            "tools": {}
+          },
+          "protocolVersion": "<date>",
+          "serverInfo": {
+            "name": "openv",
+            "version": "<release-version>"
+          }
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 38,
       "title": "revoke the app",
       "actor": "owner",
       "route": "DELETE /api/v1/me/connected-apps/{id}",
@@ -1564,7 +1637,7 @@
       "events": []
     },
     {
-      "n": 37,
+      "n": 39,
       "title": "the revoked app's token: 401 invalid_token",
       "actor": "writer",
       "route": "POST /mcp",
@@ -1595,7 +1668,7 @@
       "events": []
     },
     {
-      "n": 38,
+      "n": 40,
       "title": "revoke it again: gone",
       "actor": "owner",
       "route": "DELETE /api/v1/me/connected-apps/{id}",
@@ -1620,7 +1693,7 @@
       "events": []
     },
     {
-      "n": 39,
+      "n": 41,
       "title": "the revocation endpoint, for a token that is gone: 200 all the same",
       "actor": "anonymous",
       "route": "POST /oauth/revoke",
@@ -1642,7 +1715,7 @@
       "events": []
     },
     {
-      "n": 40,
+      "n": 42,
       "title": "GET /mcp: no stream",
       "actor": "anonymous",
       "route": "GET /mcp",
@@ -1668,7 +1741,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 41,
+      "n": 43,
       "title": "DELETE /mcp: no session",
       "actor": "anonymous",
       "route": "DELETE /mcp",

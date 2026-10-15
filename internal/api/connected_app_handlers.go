@@ -77,7 +77,7 @@ func (h *Handler) GetOAuthConsent(w http.ResponseWriter, r *http.Request) {
 			redirectHost = u.Scheme + ":"
 		}
 	}
-	writeJSONBare(w, map[string]interface{}{
+	writeJSONOK(w, map[string]interface{}{
 		"client_id":     c.ID,
 		"client_name":   c.Name,
 		"redirect_host": redirectHost,
@@ -114,7 +114,7 @@ func (h *Handler) DecideOAuthConsent(w http.ResponseWriter, r *http.Request) {
 	back := func(params map[string]string) {
 		params["state"] = req.State
 		params["iss"] = h.oauthIssuer()
-		writeJSONBare(w, map[string]string{"redirect_to": oauthRedirect(req.RedirectURI, params)})
+		writeJSONOK(w, map[string]string{"redirect_to": oauthRedirect(req.RedirectURI, params)})
 	}
 	if !req.Approve {
 		back(map[string]string{"error": "access_denied", "error_description": "the member declined"})
@@ -160,7 +160,7 @@ func (h *Handler) ListConnectedApps(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list connected apps", err)
 		return
 	}
-	writeJSONBare(w, list)
+	writeJSONOK(w, list)
 }
 
 // RevokeConnectedApp revokes one of the member's connected apps: its tokens

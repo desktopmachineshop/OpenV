@@ -37,6 +37,10 @@ const card: React.CSSProperties = {
 
 const para: React.CSSProperties = { color: 'var(--text-body)', fontSize: 14, lineHeight: 1.5 };
 
+// An app that answers on this computer, such as Claude Code: any program
+// running here could have started the request, so the member is told.
+const onThisComputer = (host: string): boolean => /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+
 export const OAuthConsent: React.FC = () => {
   const [params] = useSearchParams();
   const request = useMemo(
@@ -118,6 +122,12 @@ export const OAuthConsent: React.FC = () => {
             {app && (
               <p style={{ ...para, fontSize: 13, color: 'var(--text-muted)' }}>
                 After you answer you go back to <b>{app.redirect_host}</b>.
+              </p>
+            )}
+            {app && onThisComputer(app.redirect_host) && (
+              <p role="note" style={{ ...para, fontSize: 13, borderLeft: '3px solid var(--warning)', paddingLeft: 8 }}>
+                This app runs on your own computer. Connect it only if you started it yourself, for example by adding
+                OpenV to Claude Code.
               </p>
             )}
             <div className="form-group" style={{ marginBottom: 12 }}>

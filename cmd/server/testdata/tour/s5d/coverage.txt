@@ -108,7 +108,7 @@ POST /api/v1/test-runs/{id}/agent-run: 400; orchestration_budget (errors only)
 POST /mcp: 200, 202, 400, 401, 403; connected_apps
 POST /oauth/register: 201, 400; connected_apps
 POST /oauth/revoke: 200; connected_apps
-POST /oauth/token: 200, 400; connected_apps
+POST /oauth/token: 200, 400, 401; connected_apps
 PUT /api/v1/agents/{slug}: 200, 400, 403; agents_automations
 PUT /api/v1/agents/{slug}/raw: 200, 400, 403; agents_automations
 PUT /api/v1/artifacts/{id}: 202; proposals_events

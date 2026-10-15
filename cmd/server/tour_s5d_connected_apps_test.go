@@ -176,6 +176,8 @@ func connectedAppsTour(tr *tour) {
 		capture("access.refreshed", "/access_token")
 	token("the old refresh token again: spent",
 		"grant_type=refresh_token&refresh_token={{refresh.read}}&client_id={{client}}")
+	token("a client no longer registered: 401 invalid_client, so the app registers again",
+		"grant_type=refresh_token&refresh_token=ovrt_unknown&client_id=00000000-0000-4000-8000-000000000000")
 	consent("approve read and write: the same grant takes the scope", "{{owner.workspace}}", "", true).
 		captureMatch("code.write", "/redirect_to", `[?&]code=(ovac_[0-9a-f]{64})`)
 	writeToken := token("spend it",
@@ -207,6 +209,8 @@ func connectedAppsTour(tr *tour) {
 
 	mcp("an MCP-Protocol-Version the endpoint does not speak", writer, connectedAppsRPC(8, "ping", ""),
 		withHeader("MCP-Protocol-Version", "1999-01-01"))
+	mcp("initialize carrying a revision the endpoint does not speak: answered with the newest it does", writer,
+		connectedAppsRPC(11, "initialize", `{"protocolVersion":"2099-01-01"}`), withHeader("MCP-Protocol-Version", "2099-01-01"))
 
 	// Revocation.
 	tr.step("revoke the app", o, "DELETE /api/v1/me/connected-apps/{id}", at("id", "{{grant}}"))

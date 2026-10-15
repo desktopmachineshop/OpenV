@@ -177,6 +177,47 @@ func TestAuthorizingChecksTheClientAndItsOwnRedirect(t *testing.T) {
 	}
 }
 
+func TestALoopbackRedirectMatchesOnAnyPort(t *testing.T) {
+	s, _, _, _ := fixture(t)
+	c, err := s.Register("Claude Code", []string{"http://localhost:3118/callback", "http://127.0.0.1/callback"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ok := range []string{"http://localhost:3118/callback", "http://localhost:51234/callback", "http://127.0.0.1:40001/callback"} {
+		if _, err := s.Authorizing(c.ID, ok); err != nil {
+			t.Errorf("%s: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{
+		"http://localhost:3118/other", "http://127.0.0.1:3118/callback?x=1", "http://[::1]:3118/callback",
+		"https://localhost:3118/callback", "http://localhost.evil.example:3118/callback",
+	} {
+		if _, err := s.Authorizing(c.ID, bad); !errors.Is(err, ErrInvalidRedirect) {
+			t.Errorf("%s: %v", bad, err)
+		}
+	}
+	// Only a loopback redirect ignores the port.
+	web, _ := s.Register("Web", []string{"https://app.example:8443/cb"})
+	if _, err := s.Authorizing(web.ID, "https://app.example:9443/cb"); !errors.Is(err, ErrInvalidRedirect) {
+		t.Errorf("https on another port: %v", err)
+	}
+}
+
+func TestATokenRequestFromAnUnknownClientSaysSo(t *testing.T) {
+	s, _, c, _ := fixture(t)
+	code := approve(t, s, c, "")
+	if _, err := s.Exchange(code, uuid.NewString(), c.RedirectURIs[0], verifier); !errors.Is(err, ErrInvalidClient) {
+		t.Errorf("exchange: %v", err)
+	}
+	tok, err := s.Exchange(code, c.ID, c.RedirectURIs[0], verifier)
+	if err != nil {
+		t.Fatalf("the code survives a request from an unknown client: %v", err)
+	}
+	if _, err := s.Refresh(tok.RefreshToken, uuid.NewString()); !errors.Is(err, ErrInvalidClient) {
+		t.Errorf("refresh: %v", err)
+	}
+}
+
 func TestScopeIsReadOrReadAndWrite(t *testing.T) {
 	cases := map[string]string{
 		"":                        "openv:read openv:write",

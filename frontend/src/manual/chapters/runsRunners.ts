@@ -150,12 +150,20 @@ as a separate user on your machine.
 ## Connect an AI app to a workspace
 
 An AI app that speaks MCP, such as Claude or Cursor, can use OpenV's tools
-directly, with no runner and no key to copy:
+directly, with no runner and no key to copy. Its address is your OpenV
+address followed by \`/mcp\`, for example \`https://openv.app/mcp\`;
+**Settings → Connected apps** shows the exact one.
 
-1. In the app, add OpenV as a **remote MCP server** (a "custom connector"
-   in Claude) at your OpenV address followed by \`/mcp\`, for example
-   \`https://openv.app/mcp\`. **Settings → Connected apps** shows the exact
-   address.
+1. Add OpenV to the app:
+   - **Claude** (claude.ai, the desktop app and the mobile app): open
+     **Settings → Connectors**, choose **Add custom connector**, name it
+     OpenV and paste the address. On a Claude Team or Enterprise plan an
+     owner of your Claude organization adds it first, and each member then
+     connects.
+   - **Claude Code**: run
+     \`claude mcp add --transport http openv https://openv.app/mcp\`, then
+     \`/mcp\` to sign in.
+   - **Another app**: add OpenV as a **remote MCP server** at the address.
 2. The app opens OpenV in your browser. Sign in if asked, choose the
    **workspace** the app may work in and whether it may **read and change**
    or **read only**, and choose **Connect**.
@@ -165,7 +173,8 @@ directly, with no runner and no key to copy:
 Everything the app does is recorded as yours, it reaches only the workspace
 you chose, and your role there still applies: a viewer's app cannot edit.
 It cannot start agent runs. To stop it, choose **Disconnect** beside it
-under **Settings → Connected apps**; it stops working at once.
+under **Settings → Connected apps**; it stops working at once. To work in
+another workspace, connect the app again and choose that one.
 
 ## How runs are routed
 
