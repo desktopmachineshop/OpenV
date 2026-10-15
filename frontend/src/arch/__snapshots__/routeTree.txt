@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 55
-  rendering a lazy() component: 32
+<Route> elements: 56
+  rendering a lazy() component: 33
   rendering an eagerly imported component: 18
   redirects only: 5
 index routes: 1
@@ -32,6 +32,7 @@ index routes: 1
   ModuleView          ./views/ModuleView#ModuleView
   ManualView          ./views/ManualView#ManualView
   WhatsNew            ./views/WhatsNew#WhatsNew
+  OAuthConsent        ./views/OAuthConsent#OAuthConsent
   PlatformAdmin       ./views/PlatformAdmin#PlatformAdmin
   Landing             ./views/Landing#Landing
   CrewBuilder         ./views/CrewBuilder#CrewBuilder
@@ -59,7 +60,7 @@ index routes: 1
   /share/:token                         <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
   /s/:token                             <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
   /open-source/:id                      <SharedProjectView source="open-source">  [lazy ./views/SharedProjectView#SharedProjectView]
-  /                                     currentUser ? redirect to="/projects" replace : <Landing>  [lazy ./views/Landing#Landing]
+  /                                     currentUser ? redirect to="{{pendingReturnTo() || '/projects'}}" replace (relative) : <Landing>  [lazy ./views/Landing#Landing]
   /pricing                              <Landing section="pricing">  [lazy ./views/Landing#Landing]
   /how-it-works                         <HowItWorks>  [lazy ./site/HowItWorks#HowItWorks]
   /demos                                <Demos>  [lazy ./site/Demos#Demos]
@@ -82,6 +83,7 @@ index routes: 1
   /manual                               <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
   /manual/:chapterSlug                  <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
   /whats-new                            <WhatsNew>  [lazy ./views/WhatsNew#WhatsNew]  when !walled
+  /connect                              <OAuthConsent>  [lazy ./views/OAuthConsent#OAuthConsent]  when !walled
   /admin                                <PlatformAdmin>  [lazy ./views/PlatformAdmin#PlatformAdmin]  when !walled
   /projects/:projectId                  <ProjectLayout>  [eager ./components/ProjectLayout#ProjectLayout]  when !walled
     (index)                             <ProductOverview>  [eager ./views/ProductOverview#ProductOverview]
@@ -139,6 +141,7 @@ index routes: 1
   /manual                                             when !walled
   /manual/:chapterSlug                                when !walled
   /whats-new                                          when !walled
+  /connect                                            when !walled
   /admin                                              when !walled
   /projects/:projectId                                when !walled
   /projects/:projectId (index)                        when !walled

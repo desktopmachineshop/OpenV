@@ -151,6 +151,7 @@ func main()
   call (*internal/domain/proposals.DefaultService).SetAppliers
   call (*internal/orchestration.Hooks).SetGuidedNudgeLauncher
   call (*internal/api.Handler).RegisterRoutes
+  call (*internal/api.Handler).SetMCPRouter
   call (*github.com/gorilla/mux.Router).Handle -> (*github.com/gorilla/mux.Route).Methods
   call (*internal/api.AuthMiddleware).SetPoolKey
   call (*internal/api.AuthMiddleware).SetEmailVerificationPolicy

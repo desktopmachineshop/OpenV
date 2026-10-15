@@ -96,6 +96,7 @@ func (a *app) handlers() {
 		PushSubService:       a.pushSubService,
 		UserMetricsService:   a.userMetricsService,
 		VisitorMetrics:       a.visitorMetrics,
+		ConnectedApps:        a.connectedApps,
 		VAPID:                a.vapid,
 		Provisioner:          a.provisioner,
 		OrgSeeder: func(orgID string) error {

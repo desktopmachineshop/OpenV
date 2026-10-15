@@ -7,6 +7,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
+	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
@@ -33,6 +34,9 @@ func (a *app) agents() {
 		slog.Warn("agent sync completed with warnings", "error", err)
 	}
 	a.runService = agentruns.NewDefaultService(a.agentRunRepo, a.agentService, a.bus)
+	// Connected apps (REQ-44): the AI clients members attach to a workspace
+	// over the remote MCP endpoint, with their consents and tokens.
+	a.connectedApps = connectedapps.NewService(a.connectedAppRepo)
 	// First-refusal routing: runs launched by a user with an online personal
 	// runner wait for it before hosted/workspace runners may claim.
 	a.runService.SetRoutingPolicy(agentruns.RoutingPolicy(a.workerKeyService, a.orgService))

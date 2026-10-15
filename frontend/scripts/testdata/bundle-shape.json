@@ -31,6 +31,7 @@
     "src/views/Landing.tsx": "dynamic entry",
     "src/views/ManualView.tsx": "dynamic entry",
     "src/views/ModuleView.tsx": "dynamic entry",
+    "src/views/OAuthConsent.tsx": "dynamic entry",
     "src/views/PlatformAdmin.tsx": "dynamic entry",
     "src/views/ReviewQueue.tsx": "dynamic entry",
     "src/views/SharedProjectView.tsx": "dynamic entry",

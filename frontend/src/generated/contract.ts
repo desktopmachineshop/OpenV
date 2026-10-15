@@ -35,6 +35,7 @@ export const FEATURE_KEYS = [
   'workspace-billing',
   'workspace-automations',
   'workspace-runs',
+  'remote-mcp',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

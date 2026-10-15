@@ -24,6 +24,7 @@ DELETE /api/v1/evidence-bundles/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/evidence-files/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/links/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/me/avatar: 200, 401; phantom_matrix
+DELETE /api/v1/me/connected-apps/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/me/push-subscriptions: 400, 401; phantom_matrix (errors only)
 DELETE /api/v1/notifications/cleared: 200, 401; phantom_matrix
 DELETE /api/v1/org-teams/{id}: 401, 404; phantom_matrix (errors only)
@@ -49,6 +50,10 @@ DELETE /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /mcp: 405; phantom_matrix (errors only)
+GET /.well-known/oauth-authorization-server: 200; phantom_matrix
+GET /.well-known/oauth-protected-resource: 200; phantom_matrix
+GET /.well-known/oauth-protected-resource/mcp: 200; phantom_matrix
 GET /api/v1/admin/metrics/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/metrics/visitors: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/users: 200, 401, 403; phantom_matrix
@@ -100,6 +105,7 @@ GET /api/v1/interviews/{id}/invites: 200, 401, 404; phantom_matrix, real_id_read
 GET /api/v1/interviews/{id}/sessions: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/links: 200, 400, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/links/{id}: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/me/connected-apps: 200, 401; phantom_matrix
 GET /api/v1/me/default-workspace: 200, 401; phantom_matrix
 GET /api/v1/me/notification-prefs: 200, 401; phantom_matrix
 GET /api/v1/me/push-subscriptions: 200, 401; phantom_matrix
@@ -109,6 +115,7 @@ GET /api/v1/meta/attribute-definitions: 200, 401, 404; phantom_matrix, real_id_r
 GET /api/v1/meta/link-types: 200, 401; phantom_matrix
 GET /api/v1/notifications: 200, 401; phantom_matrix
 GET /api/v1/notifications/stream: 200, 401; phantom_matrix
+GET /api/v1/oauth/consent: 400, 401; phantom_matrix (errors only)
 GET /api/v1/orgs: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/billing: 401, 403, 404; over_plan_self_hosted, phantom_matrix, real_id_reads (errors only)
@@ -194,6 +201,8 @@ GET /api/v1/users: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/users/{id}/avatar: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/work-items/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /health: 200; phantom_matrix
+GET /mcp: 405; phantom_matrix (errors only)
+GET /oauth/authorize: 400; phantom_matrix (errors only)
 HEAD /api/v1/public/connector/download: 404; phantom_matrix (errors only)
 POST /api/v1/admin/users/{id}/password-reset: 401, 403, 404; phantom_matrix (errors only)
 POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
@@ -250,6 +259,7 @@ POST /api/v1/me/push-subscriptions: 400, 401; phantom_matrix (errors only)
 POST /api/v1/notifications/clear: 200, 401; phantom_matrix
 POST /api/v1/notifications/read: 400, 401; phantom_matrix (errors only)
 POST /api/v1/notifications/read-all: 200, 401; over_plan_tiers_on, phantom_matrix
+POST /api/v1/oauth/consent: 400, 401; phantom_matrix (errors only)
 POST /api/v1/org-teams/{id}/members/{userId}: 401, 404; phantom_matrix (errors only)
 POST /api/v1/orgs: 201, 400, 401; phantom_matrix, real_id_reads
 POST /api/v1/orgs/{id}/activate: 204, 401, 404; over_plan_tiers_on, phantom_matrix
@@ -314,6 +324,10 @@ POST /api/v1/test-runs/{id}/agent-run: 400, 401, 403, 404; phantom_matrix, real_
 POST /api/v1/test-runs/{id}/results: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/work-items/{id}/comments: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 POST /api/v1/work-items/{id}/move: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /mcp: 401; phantom_matrix (not counted)
+POST /oauth/register: 400; phantom_matrix (errors only)
+POST /oauth/revoke: 200; phantom_matrix
+POST /oauth/token: 400; phantom_matrix (errors only)
 PUT /api/v1/admin/users/{id}/admin: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/agents/{slug}: 400, 401, 403; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/agents/{slug}/raw: 400, 401, 403; phantom_matrix (errors only)
@@ -356,4 +370,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 344 of 344 routes reached (100.0%), 163 with a 2xx or 3xx answer (47.4%)
+s5e: 357 of 358 routes reached (99.7%), 168 with a 2xx or 3xx answer (46.9%)

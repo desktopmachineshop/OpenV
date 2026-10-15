@@ -15,7 +15,7 @@
   3  components/HelpSidebar.css
   4  components/ProjectList.css
 
-## Lazy modules (21), by path, and the stylesheets each adds, in cascade order
+## Lazy modules (22), by path, and the stylesheets each adds, in cascade order
   site/Customers.tsx  (none)
   site/Demos.tsx  (none)
   site/Faq.tsx  (none)
@@ -32,6 +32,7 @@
   views/ModuleView.tsx
     components/ImageGallery.css
     components/ImageLightbox.css
+  views/OAuthConsent.tsx  (none)
   views/PlatformAdmin.tsx  (none)
   views/ReviewQueue.tsx  (none)
   views/SharedProjectView.tsx  (none)

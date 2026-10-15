@@ -8,6 +8,7 @@ import {
 } from '../api/client';
 import { API_ERROR, apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
 // register mode. The first registered user becomes the admin.
@@ -50,6 +51,9 @@ export const Login: React.FC = () => {
   // taken up and the project opens. A signed-in browser goes back to the
   // link's own page, which offers the decision.
   const shareToken = searchParams.get('share') || '';
+  // A page that sent the person here to sign in and wants them back (the
+  // consent an AI app asks for, REQ-44): only a path inside the app.
+  const returnTo = safeReturnPath(searchParams.get('next'));
   // The landing page links straight to registration with ?mode=register, and
   // an invite link means registration too — that is what the link is for.
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(
@@ -130,13 +134,13 @@ export const Login: React.FC = () => {
           return;
         }
         if (!inviteToken) {
-          navigate('/projects');
+          navigate(returnTo || '/projects');
           return;
         }
         setSessionEmail(res.data.email);
       })
       .catch(() => {});
-  }, [navigate, setCurrentUser, setEmailVerificationRequired, inviteToken, shareToken]);
+  }, [navigate, setCurrentUser, setEmailVerificationRequired, inviteToken, shareToken, returnTo]);
 
   // Resolve the invite link so the form can name the workspace and prefill
   // the address it was sent to.
@@ -237,7 +241,7 @@ export const Login: React.FC = () => {
         return `/s/${encodeURIComponent(shareToken)}`;
       }
     }
-    return '/projects';
+    return returnTo || '/projects';
   };
 
   // requestReset asks for an emailed link. The server answers the same way
@@ -652,6 +656,7 @@ export const Login: React.FC = () => {
             {oidcEnabled && (
               <a
                 href={authAPI.oidcLoginUrl()}
+                onClick={() => rememberReturnTo(returnTo)}
                 className="button-secondary button"
                 style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
               >
@@ -661,6 +666,7 @@ export const Login: React.FC = () => {
             {googleEnabled ? (
               <a
                 href={authAPI.googleLoginUrl()}
+                onClick={() => rememberReturnTo(returnTo)}
                 className="button-secondary button"
                 style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
               >

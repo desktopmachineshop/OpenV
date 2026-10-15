@@ -147,6 +147,26 @@ agents you don't fully trust, use a **cloud runner** or the **hosted
 runner**, which run on Linux with nothing of yours on them, or run the worker
 as a separate user on your machine.
 
+## Connect an AI app to a workspace
+
+An AI app that speaks MCP, such as Claude or Cursor, can use OpenV's tools
+directly, with no runner and no key to copy:
+
+1. In the app, add OpenV as a **remote MCP server** (a "custom connector"
+   in Claude) at your OpenV address followed by \`/mcp\`, for example
+   \`https://openv.app/mcp\`. **Settings → Connected apps** shows the exact
+   address.
+2. The app opens OpenV in your browser. Sign in if asked, choose the
+   **workspace** the app may work in and whether it may **read and change**
+   or **read only**, and choose **Connect**.
+3. You go back to the app, which can now list your projects, read and edit
+   artifacts and links, record test results and comment, as you.
+
+Everything the app does is recorded as yours, it reaches only the workspace
+you chose, and your role there still applies: a viewer's app cannot edit.
+It cannot start agent runs. To stop it, choose **Disconnect** beside it
+under **Settings → Connected apps**; it stops working at once.
+
 ## How runs are routed
 
 - When you launch a run and a runner of yours is online — your own machine or

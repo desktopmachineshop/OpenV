@@ -345,3 +345,16 @@ POST /api/v1/test-results/{id}/citations -> CiteEvidence
 DELETE /api/v1/test-results/{id}/citations/{bundleId} -> UnciteEvidence
 GET /api/v1/test-runs/{id}/citations -> ListRunCitations
 GET /health -> Health
+GET /.well-known/oauth-protected-resource -> OAuthProtectedResource
+GET /.well-known/oauth-protected-resource/mcp -> OAuthProtectedResource
+GET /.well-known/oauth-authorization-server -> OAuthAuthorizationServer
+POST /oauth/register -> OAuthRegister
+GET /oauth/authorize -> OAuthAuthorize
+POST /oauth/token -> OAuthToken
+POST /oauth/revoke -> OAuthRevoke
+GET /api/v1/oauth/consent -> GetOAuthConsent
+POST /api/v1/oauth/consent -> DecideOAuthConsent [alwaysWritable]
+GET /api/v1/me/connected-apps -> ListConnectedApps
+DELETE /api/v1/me/connected-apps/{id} -> RevokeConnectedApp [alwaysWritable]
+POST /mcp -> MCP
+GET,DELETE /mcp -> MCPNoStream

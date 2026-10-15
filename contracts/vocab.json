@@ -197,7 +197,8 @@
     "artifact-stepping",
     "workspace-billing",
     "workspace-automations",
-    "workspace-runs"
+    "workspace-runs",
+    "remote-mcp"
   ],
   "event_types": [
     "artifact.created",
@@ -450,11 +451,14 @@
   "open_paths": {
     "exact": [
       "/health",
-      "/metrics"
+      "/metrics",
+      "/mcp"
     ],
     "prefixes": [
       "/api/v1/auth/",
-      "/api/v1/public/"
+      "/api/v1/public/",
+      "/.well-known/oauth-",
+      "/oauth/"
     ]
   },
   "wizard_step_labels": [

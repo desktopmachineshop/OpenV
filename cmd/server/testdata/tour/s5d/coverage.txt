@@ -18,10 +18,15 @@ DELETE /api/v1/crew-edges/{id}: 204, 403, 404; crews_teams
 DELETE /api/v1/crew-nodes/{id}: 204, 403, 404; crews_teams
 DELETE /api/v1/crews/{id}: 204, 403, 404; crews_teams
 DELETE /api/v1/links/{id}: 202; proposals_events
+DELETE /api/v1/me/connected-apps/{id}: 204, 404; connected_apps
 DELETE /api/v1/repo-connections/{id}: 204, 403, 404; providers_repos_pool
 DELETE /api/v1/team-edges/{id}: 204, 404; crews_teams
 DELETE /api/v1/team-nodes/{id}: 204, 404; crews_teams
 DELETE /api/v1/teams/{id}: 204, 404; crews_teams
+DELETE /mcp: 405; connected_apps (errors only)
+GET /.well-known/oauth-authorization-server: 200; connected_apps
+GET /.well-known/oauth-protected-resource: 200; connected_apps
+GET /.well-known/oauth-protected-resource/mcp: 200; connected_apps
 GET /api/v1/agent-runs: 200, 404; agents_automations, orchestration_budget, proposals_events, worker_wire
 GET /api/v1/agent-runs/delegate/{id}: 200, 403, 404; orchestration_budget
 GET /api/v1/agent-runs/{id}: 200, 401, 404; agents_automations, proposals_events, worker_wire
@@ -41,9 +46,11 @@ GET /api/v1/crews/{id}/export: 200, 404; crews_teams
 GET /api/v1/events: 200, 400, 401, 404; proposals_events
 GET /api/v1/guided-sessions/{id}/messages: 200; orchestration_budget
 GET /api/v1/interview-sessions/{id}/transcript: 200; orchestration_budget
+GET /api/v1/me/connected-apps: 200; connected_apps
+GET /api/v1/oauth/consent: 200, 401; connected_apps
 GET /api/v1/orgs/{id}/runner-session: 200; providers_repos_pool
 GET /api/v1/orgs/{id}/worker-keys: 200; worker_wire
-GET /api/v1/projects: 200; worker_wire
+GET /api/v1/projects: 200, 401; connected_apps, worker_wire
 GET /api/v1/projects/{id}/repo-connections: 200, 404; providers_repos_pool, worker_wire
 GET /api/v1/proposals: 200, 400, 401, 404; proposals_events
 GET /api/v1/provider-logins/{id}: 200, 404; providers_repos_pool
@@ -53,6 +60,8 @@ GET /api/v1/teams: 200; crews_teams
 GET /api/v1/teams/{id}: 200, 404; crews_teams
 GET /api/v1/teams/{id}/export: 200, 404; crews_teams
 GET /api/v1/work-items/{id}: 200, 404; agents_automations, orchestration_budget
+GET /mcp: 405; connected_apps (errors only)
+GET /oauth/authorize: 302, 400; connected_apps
 POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; orchestration_budget, providers_repos_pool, worker_wire
 POST /api/v1/agent-runs/delegate: 201, 400, 401, 403, 404, 500; orchestration_budget
 POST /api/v1/agent-runs/{id}/cancel: 200, 404; worker_wire
@@ -74,6 +83,7 @@ POST /api/v1/crews/{id}/edges: 201, 400, 403, 404; crews_teams
 POST /api/v1/crews/{id}/nodes: 201, 400, 403, 404; crews_teams
 POST /api/v1/crews/{id}/runs: 201, 400, 401, 403, 404; crews_teams, orchestration_budget
 POST /api/v1/links: 202, 400; proposals_events
+POST /api/v1/oauth/consent: 200; connected_apps
 POST /api/v1/projects/{id}/draft-test-cases: 201, 400, 402, 403, 404; orchestration_budget, proposals_events
 POST /api/v1/projects/{id}/repo-connections: 201, 400, 403; providers_repos_pool
 POST /api/v1/proposals/bulk: 200, 400, 401; proposals_events
@@ -95,6 +105,10 @@ POST /api/v1/teams/{id}/edges: 201, 400; crews_teams
 POST /api/v1/teams/{id}/nodes: 201, 400; crews_teams
 POST /api/v1/teams/{id}/runs: 201, 403; crews_teams
 POST /api/v1/test-runs/{id}/agent-run: 400; orchestration_budget (errors only)
+POST /mcp: 200, 202, 400, 401, 403; connected_apps
+POST /oauth/register: 201, 400; connected_apps
+POST /oauth/revoke: 200; connected_apps
+POST /oauth/token: 200, 400; connected_apps
 PUT /api/v1/agents/{slug}: 200, 400, 403; agents_automations
 PUT /api/v1/agents/{slug}/raw: 200, 400, 403; agents_automations
 PUT /api/v1/artifacts/{id}: 202; proposals_events
@@ -110,4 +124,4 @@ PUT /api/v1/team-edges/{id}: 200, 404; crews_teams
 PUT /api/v1/team-nodes/{id}: 200, 404; crews_teams
 PUT /api/v1/teams/{id}: 200; crews_teams
 
-s5d: 98 of 344 routes reached (28.5%), 96 with a 2xx or 3xx answer (27.9%)
+s5d: 112 of 358 routes reached (31.3%), 108 with a 2xx or 3xx answer (30.2%)

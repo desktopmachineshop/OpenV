@@ -52,6 +52,7 @@ var Registry = []Feature{
 	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
 	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
 	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
+	{Key: FeatureRemoteMCP, ShippedIn: "0.18.0", Summary: "Connect an AI client such as Claude or Cursor to a workspace by its address alone: you sign in and approve it, with no runner and no key to copy, and revoke it from your settings"},
 }
 
 // Feature keys the code gates on.
@@ -144,6 +145,15 @@ const (
 	// feature is on sends the member on to the projects list, where the
 	// link went before.
 	FeatureWorkspaceRuns = "workspace-runs"
+	// FeatureRemoteMCP is the remote MCP endpoint and its OAuth (REQ-44): a
+	// member attaches an AI client to a workspace from the client itself,
+	// approves it on a consent page, and sees and revokes it under Connected
+	// apps. It gates the consent (a workspace whose channel has not reached
+	// it cannot be chosen), the endpoint's answers for a grant's workspace,
+	// and the settings card. The OAuth metadata, registration and token
+	// endpoints are not gated: they act for no workspace, and a client
+	// cannot get a token without a consent the gate allowed.
+	FeatureRemoteMCP = "remote-mcp"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

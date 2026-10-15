@@ -35,6 +35,7 @@ vi.mock('../api/client', async (orig) =>
 );
 vi.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
 vi.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
+vi.mock('./ConnectedAppsCard', () => ({ ConnectedAppsCard: () => null }));
 vi.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));
 vi.mock('./ThemeSwitcher', () => ({ ThemeSwitcher: () => null }));
 vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));

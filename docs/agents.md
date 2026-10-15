@@ -22,6 +22,15 @@ sets the limits: a run token is scoped to its run's project and its agent's
 write mode, a runner key carries workspace-wide editor rights with no proposal
 gating. See `docs/requirements-maintenance.md`.
 
+A member can also attach an AI client to a workspace with nothing installed:
+the server serves the same tools at `${PUBLIC_URL}/mcp` over MCP's Streamable
+HTTP transport, and the client connects with OAuth (discovery, dynamic
+registration, PKCE, a consent page where the member picks the workspace and
+read only or read and write). Each tool call runs as that member, held to
+that workspace; `delegate_to_agent` is not offered, since it needs a run.
+The member sees and revokes these under **Settings → Connected apps**.
+`docs/api-spec.md` ("Connected apps") has the protocol (REQ-44).
+
 ## Runner tiers
 
 OpenV has three kinds of runners; a workspace can use any mix of them.

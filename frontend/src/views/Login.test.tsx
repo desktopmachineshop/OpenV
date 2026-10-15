@@ -595,4 +595,20 @@ describe('Login', () => {
     await render('/login?reset=done');
     expect(container.textContent).toContain('Your password has been changed');
   });
+
+  // REQ-44: the consent an AI app asks for sends a signed-out member here
+  // with ?next=; they go back there once signed in, and only ever to a page
+  // of the app.
+  it('goes back to the page that sent the person to sign in', async () => {
+    const { useNavigate } = await import('react-router-dom');
+    const navigate = vi.mocked(useNavigate());
+    navigate.mockClear();
+    authFixtures.me = { id: 'u1', email: 'member@example.com', email_verified: true };
+    await render('/login?next=%2Fconnect%3Fclient_id%3Dc1');
+    expect(navigate).toHaveBeenCalledWith('/connect?client_id=c1');
+
+    navigate.mockClear();
+    await render('/login?next=%2F%2Fevil.example%2F');
+    expect(navigate).toHaveBeenCalledWith('/projects');
+  });
 });

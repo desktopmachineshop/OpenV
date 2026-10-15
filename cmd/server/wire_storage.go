@@ -70,6 +70,7 @@ func (a *app) storage() {
 	a.notificationRepo = postgres.NewNotificationRepository(a.db)
 	a.pushSubRepo = postgres.NewPushSubscriptionRepository(a.db)
 	a.userMetricsRepo = postgres.NewUserMetricsRepository(a.db)
+	a.connectedAppRepo = postgres.NewConnectedAppRepository(a.db)
 	a.attributeDefRepo = postgres.NewAttributeDefinitionRepository(a.db)
 	a.sharedProductRepo = postgres.NewSharedProductRepository(a.db)
 
