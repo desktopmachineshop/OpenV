@@ -333,7 +333,7 @@
     },
     {
       "n": 8,
-      "title": "authorize without PKCE: back to the client with invalid_request and the state",
+      "title": "authorize without PKCE: 400 invalid_request, and no redirect before the member has seen the consent page",
       "actor": "anonymous",
       "route": "GET /oauth/authorize",
       "request": {
@@ -341,19 +341,22 @@
         "path": "/oauth/authorize",
         "query": "response_type=code&client_id=<client>&redirect_uri=https:%2F%2Fclient.example%2Foauth%2Fcallback&state=s2"
       },
-      "status": 302,
-      "content_type": "text/html; charset=utf-8",
+      "status": 400,
+      "content_type": "application/json",
       "headers": [
-        "Location: https://client.example/oauth/callback?error=invalid_request&error_description=PKCE+with+code_challenge_method+S256+is+required&iss=http%3A%2F%2Flocalhost%3A<port>&state=s2"
+        "Cache-Control: no-store"
       ],
       "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "text",
+      "content_length": 99,
+      "kind": "json",
       "body": [
-        "<a href=\"https://client.example/oauth/callback?error=invalid_request&amp;error_description=PKCE+with+code_challenge_method+S256+is+required&amp;iss=http%3A%2F%2Flocalhost%3A<port>&amp;state=s2\">Found</a>.",
-        ""
+        "{\"error\":\"invalid_request\",\"error_description\":\"PKCE with code_challenge_method S256 is required\"}"
       ],
       "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_request",
+        "error_description": "PKCE with code_challenge_method S256 is required"
+      },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {

@@ -132,13 +132,15 @@ func (h *Handler) OAuthRegister(w http.ResponseWriter, r *http.Request) {
 // the app's consent page with it. A request whose client or redirect URI is
 // wrong is answered here, never redirected: sending the browser to an
 // address the client did not register is what the check exists to stop.
-// Anything else wrong goes back to the client as an error redirect.
+// Anything else wrong is answered here too (RFC 9700 4.11.2): anyone may
+// register a client, so redirecting before the member has seen the consent
+// page would make this an open redirector to any address registered.
 func (h *Handler) OAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 	if h.connectedAppsOff(w) {
 		return
 	}
 	q := r.URL.Query()
-	clientID, redirectURI, state := q.Get("client_id"), q.Get("redirect_uri"), q.Get("state")
+	clientID, redirectURI := q.Get("client_id"), q.Get("redirect_uri")
 	if _, err := h.ConnectedApps.Authorizing(clientID, redirectURI); err != nil {
 		if errors.Is(err, connectedapps.ErrInvalidClient) || errors.Is(err, connectedapps.ErrInvalidRedirect) {
 			oauthError(w, http.StatusBadRequest, "invalid_request", err.Error())
@@ -147,11 +149,7 @@ func (h *Handler) OAuthAuthorize(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to check the client", err)
 		return
 	}
-	fail := func(code, description string) {
-		http.Redirect(w, r, oauthRedirect(redirectURI, map[string]string{
-			"error": code, "error_description": description, "state": state, "iss": h.oauthIssuer(),
-		}), http.StatusFound)
-	}
+	fail := func(code, description string) { oauthError(w, http.StatusBadRequest, code, description) }
 	if q.Get("response_type") != "code" {
 		fail("unsupported_response_type", "only the authorization code flow is supported")
 		return

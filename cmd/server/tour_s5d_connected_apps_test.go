@@ -120,7 +120,7 @@ func connectedAppsTour(tr *tour) {
 	}
 	authorize("authorize with a redirect URI the client did not register: 400, and no redirect",
 		"response_type=code&client_id={{client}}&redirect_uri=https%3A%2F%2Fevil.example%2Fcb&code_challenge={{challenge}}&code_challenge_method=S256&state=s1")
-	authorize("authorize without PKCE: back to the client with invalid_request and the state",
+	authorize("authorize without PKCE: 400 invalid_request, and no redirect before the member has seen the consent page",
 		"response_type=code&client_id={{client}}&redirect_uri="+strings.ReplaceAll(connectedAppsRedirect, "/", "%2F")+"&state=s2")
 	authorize("authorize: on to the app's consent page with the request",
 		"response_type=code&client_id={{client}}&redirect_uri="+strings.ReplaceAll(connectedAppsRedirect, "/", "%2F")+"&code_challenge={{challenge}}&code_challenge_method=S256&state=s3&scope=openv%3Aread")
