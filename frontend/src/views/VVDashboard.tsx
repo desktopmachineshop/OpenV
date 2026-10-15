@@ -13,7 +13,7 @@ import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { gapLabel } from './vvGapLabels';
-import { runBaselineLabel } from '../utils/baselines';
+import { runBaselineLabel, baselineLabel } from '../utils/baselines';
 
 // ---------------------------------------------------------------------------
 // Shared color helpers for V&V rollup statuses
@@ -203,7 +203,7 @@ export const VVDashboard: React.FC = () => {
             <option value="live">Live</option>
             {baselines.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.name}
+                {baselineLabel(b)}
               </option>
             ))}
           </select>
@@ -413,7 +413,7 @@ export const VVDashboard: React.FC = () => {
                 <option value="">None (live artifacts)</option>
                 {baselines.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.name}
+                    {baselineLabel(b)}
                   </option>
                 ))}
               </select>

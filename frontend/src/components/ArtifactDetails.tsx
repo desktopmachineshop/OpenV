@@ -457,10 +457,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Figures:</strong>
                     <div style={{ marginTop: '6px' }}>
-                      <ImageGallery 
-                        artifactId={artifact.id} 
+                      <ImageGallery
+                        artifactId={artifact.id}
                         attachments={currentVersionAttachments}
-                        onDelete={() => {}}
+                        readOnly
                         showUpload={false}
                         thumbnailSize={60}
                       />
@@ -530,10 +530,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Figures:</strong>
                     <div style={{ marginTop: '6px' }}>
-                      <ImageGallery 
-                        artifactId={previewVersion.id} 
+                      <ImageGallery
+                        artifactId={previewVersion.id}
                         attachments={previewVersionAttachments}
-                        onDelete={() => {}}
+                        readOnly
                         showUpload={false}
                         thumbnailSize={60}
                       />

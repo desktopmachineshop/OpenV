@@ -1215,7 +1215,7 @@ when the next `message` arrives.
 | GET | `/api/v1/agents/{slug}/raw` | Raw markdown (frontmatter + prompt) | user |
 | PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown `{content}` → the agent | org admin |
 | POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent `{project_id?, prompt, work_item_id?}` → `201` with the run (`404` `agent not found`; `402` when the workspace's budget is spent and `OPENV_BUDGET_ENFORCE` is on): in the body's `project_id`, or, with none, in the agent's workspace, where a person must be a member (a worker key or run token of that workspace launches there), past the workspace's read-only gate either way. Refused `403` for a proposal-mode agent run | editor (project-scoped) / org member |
-| POST | `/api/v1/projects/{id}/draft-test-cases` | `{requirement_ids}` (artifact ids, at least one: `400`): launch the seeded test-case author on them, in proposal mode → `201` with the run; `404` when the workspace has no such agent, `402` as for an agent launch. Refused `403` for a proposal-mode agent run, like a status change: a launch is no write a proposal can carry | editor |
+| POST | `/api/v1/projects/{id}/draft-test-cases` | `{requirement_ids}` (artifact ids, at least one: `400`): launch the seeded test-case author on them, in proposal mode → `201` with the run; `404` when the workspace has no such agent, `409` when its write mode has been set to `direct` (the drafts must wait for approval, and a run takes the agent's mode), `402` as for an agent launch. Refused `403` for a proposal-mode agent run, like a status change: a launch is no write a proposal can carry | editor |
 
 **`allowed_tools` is required.** `POST /api/v1/agents` and
 `PUT /api/v1/agents/{slug}` answer **400** when the definition carries no tool

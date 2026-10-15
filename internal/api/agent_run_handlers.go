@@ -185,6 +185,13 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load the test-case author agent", err)
 		return
 	}
+	// A run takes its write mode from the agent, so an author edited to
+	// direct mode would write its drafts straight into the project. REQ-75
+	// promises they reach it only through approval: refuse rather than launch.
+	if agent.WriteMode == agents.WriteModeDirect {
+		writeJSONError(w, http.StatusConflict, "the test-case author agent is set to write directly; set its write mode back to proposal so its drafts wait for approval")
+		return
+	}
 
 	prompt := fmt.Sprintf(
 		"Draft verification test cases for the following requirement artifacts in project %s: %s.\n\n"+

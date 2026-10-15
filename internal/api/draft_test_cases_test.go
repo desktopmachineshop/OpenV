@@ -159,6 +159,24 @@ func TestDraftTestCasesValidation(t *testing.T) {
 		}
 	})
 
+	t.Run("an author set to write directly answers 409 and launches nothing", func(t *testing.T) {
+		// REQ-75: the drafts reach the project only through approval, and a
+		// run takes its write mode from the agent.
+		h, runSvc := newDraftFixture(t)
+		h.AgentService.(*fakeAgentService).byID["tca"].WriteMode = agents.WriteModeDirect
+		w := httptest.NewRecorder()
+		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status = %d, want 409 (body %q)", w.Code, w.Body.String())
+		}
+		if !strings.Contains(w.Body.String(), "proposal") {
+			t.Fatalf("body %q should say to set the write mode back to proposal", w.Body.String())
+		}
+		if len(runSvc.launchReqs) != 0 {
+			t.Fatal("must not launch a direct-mode author")
+		}
+	})
+
 	t.Run("missing seeded agent answers 404", func(t *testing.T) {
 		h, runSvc := newDraftFixture(t)
 		h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{}} // agent not seeded
