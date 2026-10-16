@@ -160,6 +160,9 @@ export interface StoredProviderAPIKey {
 export interface ProviderAPIKeys {
   enabled: boolean;
   keys: StoredProviderAPIKey[];
+  /** An operator's own deployment: the app names the key variables there,
+   *  and only there. */
+  self_hosted?: boolean;
 }
 
 export interface Crew {

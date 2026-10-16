@@ -1188,15 +1188,16 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 27,
+      "content_length": 47,
       "kind": "json",
       "body": [
-        "{\"enabled\":true,\"keys\":[]}"
+        "{\"enabled\":true,\"keys\":[],\"self_hosted\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
         "enabled": true,
-        "keys": []
+        "keys": [],
+        "self_hosted": false
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1250,7 +1251,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"enabled\":true,\"keys\":[{\"key_env\":\"ANTHROPIC_API_KEY\",\"last4\":\"WXYZ\",\"updated_by\":\"<owner>\",\"updated_at\":\"<time@step 20>\"}]}"
+        "{\"enabled\":true,\"keys\":[{\"key_env\":\"ANTHROPIC_API_KEY\",\"last4\":\"WXYZ\",\"updated_by\":\"<owner>\",\"updated_at\":\"<time@step 20>\"}],\"self_hosted\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1262,7 +1263,8 @@
             "updated_by": "<owner>",
             "updated_at": "<time@step 20>"
           }
-        ]
+        ],
+        "self_hosted": false
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

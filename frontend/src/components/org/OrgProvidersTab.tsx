@@ -32,6 +32,9 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
   const [notice, setNotice] = useState('');
   const keysOn = useFeature(WORKSPACE_API_KEYS_FEATURE);
   const [apiKeys, setApiKeys] = useState<ProviderAPIKeys | null>(null);
+  // The key variable names are shown on a self-hosted deployment only. On
+  // the hosted service, and until the answer is in, they are left out.
+  const showKeyEnv = apiKeys?.self_hosted === true;
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -54,25 +57,29 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
     loadProviders();
   }, [loadProviders]);
 
+  // Loaded for every admin, not only where pasting keys is on: it also says
+  // whether this is a self-hosted deployment, the only kind that names the
+  // key variables.
   useEffect(() => {
-    if (!keysOn || !isAdmin) return;
+    if (!isAdmin) return;
     providerSettingsAPI
       .listKeys()
       .then((res) => setApiKeys(res.data))
       .catch((err: any) => setError(`Failed to load API keys: ${apiErrorMessage(err)}`));
-  }, [keysOn, isAdmin]);
+  }, [isAdmin]);
 
   const keySaved = (key: StoredProviderAPIKey) => {
     setApiKeys((prev) => ({
+      ...prev,
       enabled: prev?.enabled ?? true,
       keys: [...(prev?.keys || []).filter((k) => k.key_env !== key.key_env), key],
     }));
-    flash(`${key.key_env} saved.`);
+    flash(showKeyEnv ? `${key.key_env} saved.` : 'API key saved.');
   };
 
   const keyRemoved = (keyEnv: string) => {
     setApiKeys((prev) => (prev ? { ...prev, keys: prev.keys.filter((k) => k.key_env !== keyEnv) } : prev));
-    flash(`${keyEnv} removed.`);
+    flash(showKeyEnv ? `${keyEnv} removed.` : 'API key removed.');
   };
 
   const updateProviderLocal = (index: number, patch: Partial<ProviderSetting>) => {
@@ -185,7 +192,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
                   style={{ padding: '6px 8px', fontSize: 13 }}
                 />
               </div>
-              {p.auth_mode === 'api-key' && (
+              {p.auth_mode === 'api-key' && showKeyEnv && (
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <label style={{ fontSize: 12 }}>API key environment variable</label>
                   <input
@@ -210,6 +217,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
                 keyEnv={providerKeyEnv(p.provider, p.api_key_env)}
                 stored={apiKeys.keys.find((k) => k.key_env === providerKeyEnv(p.provider, p.api_key_env))}
                 enabled={apiKeys.enabled}
+                showKeyEnv={showKeyEnv}
                 onSaved={keySaved}
                 onRemoved={keyRemoved}
               />

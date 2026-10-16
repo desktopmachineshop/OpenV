@@ -107,10 +107,14 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 
 // providerAPIKeysResponse is the workspace's pasted keys, never their
 // values: enabled is false when the server has no OPENV_SECRETS_KEY and so
-// cannot store one.
+// cannot store one. self_hosted is true on an operator's own deployment,
+// whose runner hosts may set the key variables themselves, so the app names
+// them there and nowhere else: on the hosted service they are a detail of
+// how a run gets its key.
 type providerAPIKeysResponse struct {
-	Enabled bool                   `json:"enabled"`
-	Keys    []*providers.StoredKey `json:"keys"`
+	Enabled    bool                   `json:"enabled"`
+	Keys       []*providers.StoredKey `json:"keys"`
+	SelfHosted bool                   `json:"self_hosted"`
 }
 
 // ListProviderAPIKeys answers which provider key variables have a pasted
@@ -126,7 +130,9 @@ func (h *Handler) ListProviderAPIKeys(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to list provider API keys", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, providerAPIKeysResponse{Enabled: h.ProviderKeyService.KeysEnabled(), Keys: keys})
+	writeJSON(w, http.StatusOK, providerAPIKeysResponse{
+		Enabled: h.ProviderKeyService.KeysEnabled(), Keys: keys, SelfHosted: orgs.SelfHosted(),
+	})
 }
 
 // SetProviderAPIKey stores a pasted key for one provider key variable
