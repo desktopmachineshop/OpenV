@@ -17,8 +17,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   dashboard. openv.app is unchanged.
 - **Claude and other AI apps now see which OpenV tools only read.** Each
   tool tells a connected app its name in plain words and whether it only
-  reads, changes your project, or deletes something, so the app can ask
-  you before it deletes a link.
+  reads, adds to your project, or changes or deletes what is already
+  there, so the app can ask you before it edits an artifact or deletes a
+  link.
 
 ## 0.21.4 — 2026-10-16
 

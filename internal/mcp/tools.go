@@ -26,9 +26,10 @@ type Tool struct {
 	// grants nothing until someone deliberately marks it where it is defined.
 	// tools/list serves it as the readOnlyHint annotation.
 	ReadOnly bool
-	// Destructive marks a writer that removes something rather than adding or
-	// editing it; tools/list serves it as the destructiveHint annotation, so a
-	// client can ask before calling it. A read-only tool never sets it.
+	// Destructive marks a writer that changes or removes what is already there,
+	// rather than only adding something new; tools/list serves it as the
+	// destructiveHint annotation, so a client asks before calling it. A
+	// read-only tool never sets it.
 	Destructive bool
 }
 
