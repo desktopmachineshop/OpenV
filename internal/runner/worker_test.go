@@ -149,6 +149,21 @@ func TestRunEnvChecksTheKeyNameBeforeReadingIt(t *testing.T) {
 	}
 }
 
+// TestRunEnvUsesTheKeyTheClaimCarries: a key the workspace pasted in the
+// app comes with the claim and is injected under the provider's own
+// variable, ahead of the runner host's variable of that name.
+func TestRunEnvUsesTheKeyTheClaimCarries(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "key-on-the-host")
+	api := newFakeAPI(t, nil)
+	w := NewWorker(NewClient(api.URL(), "worker-key"), Options{WorkerID: "w-env", WorkspaceBase: t.TempDir()})
+	claim := &ClaimResponse{Run: &agentruns.Run{ID: "stored"}, Agent: &agents.Agent{Provider: providers.ProviderClaudeCode},
+		RunToken: "rt-stored", Auth: &RunAuth{Mode: "api-key", APIKeyEnv: "ANTHROPIC_API_KEY", APIKey: "key-pasted-in-the-app"}}
+	env, ok := w.runEnv(claim)
+	if !ok || env["ANTHROPIC_API_KEY"] != "key-pasted-in-the-app" {
+		t.Fatalf("runEnv = %v, %v; want the claim's key under ANTHROPIC_API_KEY", env, ok)
+	}
+}
+
 // envReadsOf runs test alone in a child test process (childTestEnv naming
 // it) with Go's test log written to a file, and returns the variables the
 // child read with os.Getenv or os.LookupEnv, in the order the log records

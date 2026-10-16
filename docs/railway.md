@@ -154,6 +154,20 @@ invitation is emailed, and without it the link is shown once for you to send.
 The link is what admits and joins them: an invited address that never
 receives it cannot sign up on a closed deployment.
 
+Optional — pasted provider API keys: for workspace admins to paste an
+Anthropic, OpenAI or Gemini key in *Workspace settings → AI providers*
+instead of setting it on every runner host, set one long random string on
+the **API** service:
+
+```dotenv
+# At least 32 characters, e.g. openssl rand -base64 32. A secret.
+OPENV_SECRETS_KEY=<random string>
+```
+
+Without it the tab says the server cannot store keys. Keep it stable:
+**changing it makes every stored key unreadable** until an admin pastes it
+again (runs fall back to the runner host's variable meanwhile).
+
 Optional — web push notifications (REQ-109): generate one VAPID key pair for
 the deployment (`make vapid-keys`, or `go run ./cmd/openv-vapid`) and set all
 three variables on the **API** service:

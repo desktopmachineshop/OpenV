@@ -192,6 +192,14 @@ Personal and cloud runners both use your own CLI sign-ins:
 - **API key** — overrides local sign-ins; runners inject the workspace's
   provider API key into the CLI instead.
 
+A workspace admin pastes that key once, in **Workspace settings → AI
+providers**, on the provider's card (one Anthropic key serves Claude Code and
+the Anthropic API). It is saved encrypted and never shown again — only its
+last four characters — and every runner that picks up a run of an API-key
+project gets it with the run, members' own machines included, so nobody sets
+an environment variable. **Remove key** takes it back; runners then fall back
+to the variable on their own machine, if it is set there.
+
 ## Repositories
 
 **Project Settings → Repositories** connects repositories (name, remote URL,

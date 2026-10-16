@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ProviderSetting, providerSettingsAPI } from '../../api/client';
+import { ProviderAPIKeys, ProviderSetting, StoredProviderAPIKey, providerSettingsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
+import { useFeature } from '../../hooks/useFeature';
 import { ModelSelect } from '../agents/ModelSelect';
+import { ProviderAPIKeyField, WORKSPACE_API_KEYS_FEATURE, providerKeyEnv } from '../agents/ProviderAPIKeyField';
 import { ProviderConnectCard } from '../agents/ProviderConnectCard';
 import { providerCaution } from '../agents/providerCautions';
 import { ErrorBanner } from '../ui';
@@ -28,6 +30,8 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
   const [savingProvider, setSavingProvider] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const keysOn = useFeature(WORKSPACE_API_KEYS_FEATURE);
+  const [apiKeys, setApiKeys] = useState<ProviderAPIKeys | null>(null);
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -49,6 +53,27 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
   useEffect(() => {
     loadProviders();
   }, [loadProviders]);
+
+  useEffect(() => {
+    if (!keysOn || !isAdmin) return;
+    providerSettingsAPI
+      .listKeys()
+      .then((res) => setApiKeys(res.data))
+      .catch((err: any) => setError(`Failed to load API keys: ${apiErrorMessage(err)}`));
+  }, [keysOn, isAdmin]);
+
+  const keySaved = (key: StoredProviderAPIKey) => {
+    setApiKeys((prev) => ({
+      enabled: prev?.enabled ?? true,
+      keys: [...(prev?.keys || []).filter((k) => k.key_env !== key.key_env), key],
+    }));
+    flash(`${key.key_env} saved.`);
+  };
+
+  const keyRemoved = (keyEnv: string) => {
+    setApiKeys((prev) => (prev ? { ...prev, keys: prev.keys.filter((k) => k.key_env !== keyEnv) } : prev));
+    flash(`${keyEnv} removed.`);
+  };
 
   const updateProviderLocal = (index: number, patch: Partial<ProviderSetting>) => {
     setProviders(providers.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -180,11 +205,21 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
                 {savingProvider === p.provider ? 'Saving…' : 'Save'}
               </button>
             </div>
-            {p.auth_mode === 'api-key' && (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-                The key itself is never stored here — set the environment variable on the server
-                running OpenV.
-              </div>
+            {keysOn && apiKeys ? (
+              <ProviderAPIKeyField
+                keyEnv={providerKeyEnv(p.provider, p.api_key_env)}
+                stored={apiKeys.keys.find((k) => k.key_env === providerKeyEnv(p.provider, p.api_key_env))}
+                enabled={apiKeys.enabled}
+                onSaved={keySaved}
+                onRemoved={keyRemoved}
+              />
+            ) : (
+              p.auth_mode === 'api-key' && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+                  The key itself is never stored here — set the environment variable on each runner's
+                  machine.
+                </div>
+              )
             )}
             {p.auth_mode === 'subscription-cli' && (
               <ProviderConnectCard

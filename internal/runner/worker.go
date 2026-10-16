@@ -487,8 +487,9 @@ func (w *Worker) repoConnections(claim *ClaimResponse) ([]*repoconns.RepoConnect
 
 // runEnv is the environment the run's CLI and its MCP server are given: the
 // API to call and the run's token, and for a project on api-key auth the
-// provider key from the runner host's environment. It reports false when it
-// failed the run because that key cannot be handed over.
+// provider key the workspace stored, or else the one in the runner host's
+// environment. It reports false when it failed the run because that key
+// cannot be handed over.
 func (w *Worker) runEnv(claim *ClaimResponse) (map[string]string, bool) {
 	run := claim.Run
 	env := map[string]string{
@@ -512,10 +513,16 @@ func (w *Worker) runEnv(claim *ClaimResponse) (map[string]string, bool) {
 				siteAPIKeyMissing, nil)
 			return nil, false
 		}
-		key := os.Getenv(keyEnv)
+		// The key the workspace pasted in the app comes with the claim; only
+		// without one does the runner read its host's variable.
+		key := claim.Auth.APIKey
 		if key == "" {
-			w.failRun(run.ID, "this project uses API-key auth, but "+keyEnv+
-				" is not set on the runner host — set it (or switch the project back to user-account auth)",
+			key = os.Getenv(keyEnv)
+		}
+		if key == "" {
+			w.failRun(run.ID, "this project uses API-key auth, but no "+keyEnv+
+				" is stored for the workspace or set on the runner host — paste one in Workspace settings → AI providers"+
+				" (or switch the project back to user-account auth)",
 				siteAPIKeyMissing, nil)
 			return nil, false
 		}

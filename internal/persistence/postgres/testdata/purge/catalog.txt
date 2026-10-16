@@ -53,6 +53,7 @@ project_members scope project_id cascade from projects
 project_share_links scope project_id cascade from projects
 project_team_access scope project_id cascade from org_teams,projects
 projects scope org_id deleted
+provider_api_keys scope org_id deleted
 provider_logins scope org_id deleted
 provider_settings scope org_id deleted
 push_subscriptions scope - not reached

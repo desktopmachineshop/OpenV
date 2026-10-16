@@ -33,6 +33,7 @@ with artifact_embeddings
   exec DELETE FROM notifications WHERE org_id = $1 args $org
   exec DELETE FROM provider_settings WHERE org_id = $1 args $org
   exec DELETE FROM provider_logins WHERE org_id = $1 args $org
+  exec DELETE FROM provider_api_keys WHERE org_id = $1 args $org
   exec DELETE FROM templates WHERE org_id = $1 args $org
   query DELETE FROM organizations WHERE id = $1 RETURNING logo_path args $org
   commit
@@ -62,6 +63,7 @@ without artifact_embeddings
   exec DELETE FROM notifications WHERE org_id = $1 args $org
   exec DELETE FROM provider_settings WHERE org_id = $1 args $org
   exec DELETE FROM provider_logins WHERE org_id = $1 args $org
+  exec DELETE FROM provider_api_keys WHERE org_id = $1 args $org
   exec DELETE FROM templates WHERE org_id = $1 args $org
   query DELETE FROM organizations WHERE id = $1 RETURNING logo_path args $org
   commit

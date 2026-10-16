@@ -20,7 +20,8 @@
     "artifact-stepping",
     "workspace-billing",
     "workspace-automations",
-    "workspace-runs"
+    "workspace-runs",
+    "workspace-api-keys"
   ],
   "event_types": [
     "artifact.created",
