@@ -564,6 +564,7 @@
       "globs": [
         "docs/plans/mobile-support.md",
         "docs/plans/search-and-ai-visibility.md",
+        "docs/research/**",
         "e2e/*",
         "e2e/tests/desktop.spec.ts",
         "e2e/tests/helpers.ts",

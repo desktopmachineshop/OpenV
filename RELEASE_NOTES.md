@@ -11,6 +11,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **openv.app compares OpenV with other requirements tools.** A page at
+  openv.app/compare sets hosted OpenV beside DOORS Next, Jama Connect,
+  Polarion, ReqView and Jira, with a page for each that says when the
+  other tool is the better choice and links every statement about it to
+  the vendor's own page.
 - **openv.app has a public changelog.** Every release, newest first, with
   the same notes What's new shows you, is at openv.app/changelog for
   anyone evaluating OpenV, and linked from the site's footer. What's new
