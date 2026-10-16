@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,19 +15,6 @@ func (h *Handler) registerProviderTokenRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/me/provider-tokens/{provider}", h.GetProviderToken).Methods("GET")
 	router.HandleFunc("/api/v1/me/provider-tokens/{provider}", h.PutProviderToken).Methods("PUT")
 	router.HandleFunc("/api/v1/me/provider-tokens/{provider}", h.DeleteProviderToken).Methods("DELETE")
-}
-
-// writeProviderTokenError answers a token store error: a caller mistake is
-// 400, a server with no secrets key 503, anything else 500.
-func writeProviderTokenError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, usertokens.ErrInvalid):
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, usertokens.ErrUnavailable):
-		writeJSONError(w, http.StatusServiceUnavailable, err.Error())
-	default:
-		respondInternal(w, r, "failed to read or write the provider token", err)
-	}
 }
 
 // GetProviderToken answers whether the caller has a token stored and when

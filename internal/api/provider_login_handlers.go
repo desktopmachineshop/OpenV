@@ -1,11 +1,17 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
@@ -19,6 +25,7 @@ func (h *Handler) registerProviderLoginRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/provider-logins/{id}/code", h.SubmitProviderLoginCode).Methods("POST")
 	router.HandleFunc("/api/v1/provider-logins/{id}/cancel", h.CancelProviderLogin).Methods("POST")
 	router.HandleFunc("/api/v1/provider-logins/{id}/progress", h.ProgressProviderLogin).Methods("POST")
+	router.HandleFunc("/api/v1/provider-logins/{id}/token", h.SaveProviderLoginToken).Methods("POST")
 	router.HandleFunc("/api/v1/provider-logins/{id}/full", h.GetProviderLoginFull).Methods("GET")
 }
 
@@ -33,8 +40,15 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Provider string `json:"provider"`
 		Target   string `json:"target"`
+		// Purpose "token" asks the member's cloud runner to mint them a
+		// saved subscription token instead of signing its CLI in.
+		Purpose string `json:"purpose"`
 	}
 	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.Purpose == providers.LoginPurposeToken {
+		h.startTokenLogin(w, r)
 		return
 	}
 	if req.Target == "" {
@@ -52,6 +66,34 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	login, err := h.LoginService.StartLogin(ActiveOrg(r), req.Provider, req.Target, CurrentUserID(r))
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSONBareStatus(w, http.StatusCreated, login.Sanitized())
+}
+
+// startTokenLogin starts a request for the member's cloud runner to mint
+// them a saved subscription token: their own request, in the active
+// workspace, gated on the workspace's channel.
+func (h *Handler) startTokenLogin(w http.ResponseWriter, r *http.Request) {
+	if !h.requireOrgRole(w, r, ActiveOrg(r), orgs.RoleMember) {
+		return
+	}
+	if !h.featureEnabled(r, ActiveOrg(r), release.FeatureCloudRunnerToken) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
+	if h.ProviderTokenService == nil {
+		writeProviderTokenError(w, r, usertokens.ErrUnavailable)
+		return
+	}
+	userID := CurrentUser(r).ID
+	if st, err := h.ProviderTokenService.Status(userID, providers.ProviderClaudeCode); err != nil || !st.Available {
+		writeProviderTokenError(w, r, usertokens.ErrUnavailable)
+		return
+	}
+	login, err := h.LoginService.StartTokenLogin(ActiveOrg(r), userID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -156,7 +198,14 @@ func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return
 	}
-	login, err := h.LoginService.Claim(WorkerOrg(r), WorkerUser(r))
+	// An older runner sends no body: it cannot mint a token, and is never
+	// handed a token request.
+	var req workerproto.LoginClaim
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeJSONError(w, http.StatusBadRequest, invalidRequestBody)
+		return
+	}
+	login, err := h.LoginService.Claim(WorkerOrg(r), WorkerUser(r), req.TokenLogins)
 	if err != nil {
 		respondInternal(w, r, "failed to claim login request", err)
 		return
@@ -217,4 +266,47 @@ func (h *Handler) GetProviderLoginFull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSONBare(w, login)
+}
+
+// SaveProviderLoginToken takes the token a member's cloud runner minted for
+// a token-purpose request and seals it as that member's saved subscription
+// token. Only the member's own runner may hand it in (their personal or
+// lease key), and only for their active token request; the token is never
+// echoed or logged.
+func (h *Handler) SaveProviderLoginToken(w http.ResponseWriter, r *http.Request) {
+	if !requireWorker(w, r) {
+		return
+	}
+	login := h.workerLoginChecked(w, r)
+	if login == nil {
+		return
+	}
+	if login.Purpose != providers.LoginPurposeToken || !login.Active() || login.RequestedBy == nil ||
+		WorkerUser(r) != *login.RequestedBy {
+		writeJSONError(w, http.StatusConflict, providers.ErrNotTokenLogin.Error())
+		return
+	}
+	if !h.memberFeatureEnabled(login.OrgID, login.RequestedBy, release.FeatureCloudRunnerToken) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
+	var req workerproto.LoginToken
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if h.ProviderTokenService == nil {
+		writeProviderTokenError(w, r, usertokens.ErrUnavailable)
+		return
+	}
+	lifetime := time.Duration(req.ExpiresIn) * time.Second
+	if _, err := h.ProviderTokenService.SaveFor(*login.RequestedBy, providers.ProviderClaudeCode, req.Token, lifetime); err != nil {
+		writeProviderTokenError(w, r, err)
+		return
+	}
+	done, err := h.LoginService.CompleteTokenLogin(login.ID)
+	if err != nil {
+		writeJSONError(w, http.StatusConflict, err.Error())
+		return
+	}
+	writeJSONBare(w, done.Sanitized())
 }

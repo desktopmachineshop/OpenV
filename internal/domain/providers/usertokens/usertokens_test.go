@@ -84,3 +84,23 @@ func TestValidationAndUnavailable(t *testing.T) {
 		t.Fatal("unknown provider accepted")
 	}
 }
+
+// A token lapses when the CLI said it would; a reported lifetime out of
+// range falls back to the default year.
+func TestSaveForDatesTheTokenByItsLifetime(t *testing.T) {
+	repo := &memRepo{rows: map[string]*Token{}}
+	s := NewDefaultService(repo, newSealer(t))
+	st, err := s.SaveFor("u1", providers.ProviderClaudeCode, sample, 30*24*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := st.ExpiresAt.Sub(*st.CreatedAt); got != 30*24*time.Hour {
+		t.Fatalf("lifetime = %v", got)
+	}
+	for _, bad := range []time.Duration{0, time.Minute, MaxLifetime + time.Hour} {
+		st, _ := s.SaveFor("u1", providers.ProviderClaudeCode, sample, bad)
+		if got := st.ExpiresAt.Sub(*st.CreatedAt); got != Lifetime {
+			t.Errorf("%v: lifetime = %v, want the default", bad, got)
+		}
+	}
+}

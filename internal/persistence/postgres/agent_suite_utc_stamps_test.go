@@ -248,7 +248,7 @@ func TestTheAgentSuiteRecordsStampTimesInUTC(t *testing.T) {
 				}
 
 				// The runner's claim stamps updated_at with NOW().
-				if claimed, err := logins.Claim(org, user); err != nil || claimed == nil || claimed.ID != first.ID {
+				if claimed, err := logins.Claim(org, user, false); err != nil || claimed == nil || claimed.ID != first.ID {
 					t.Fatalf("Claim: %+v, %v; want %s", claimed, err, first.ID)
 				}
 				start()

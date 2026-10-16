@@ -293,11 +293,12 @@ POST /api/v1/projects/{id}/work-items: project:editor, crew-visible
 POST /api/v1/proposals/bulk: session, project:editor, project-visible
 POST /api/v1/proposals/{id}/approve: project:editor
 POST /api/v1/proposals/{id}/reject: project:editor
-POST /api/v1/provider-logins: session, org:admin|org:member
+POST /api/v1/provider-logins: session, org:member, org:admin|org:member
 POST /api/v1/provider-logins/claim: worker
 POST /api/v1/provider-logins/{id}/cancel: session, org:admin
 POST /api/v1/provider-logins/{id}/code: session, org:admin
 POST /api/v1/provider-logins/{id}/progress: worker
+POST /api/v1/provider-logins/{id}/token: worker
 POST /api/v1/provider-settings/detect: worker
 POST /api/v1/public/connector/pair: -
 POST /api/v1/public/interviews/{token}/finish: -
