@@ -128,7 +128,11 @@ func guardLines(t *testing.T, src *apiSource, routes []boundRoute) []string {
 	var rows []row
 	for _, r := range routes {
 		guards := "-"
-		if kinds := src.guardsOf(t, r.handler); len(kinds) > 0 {
+		kinds := r.guards
+		if r.module == "" {
+			kinds = src.guardsOf(t, r.handler)
+		}
+		if len(kinds) > 0 {
 			guards = strings.Join(kinds, ", ")
 		}
 		for _, m := range r.methods {

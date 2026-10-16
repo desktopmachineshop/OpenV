@@ -22,8 +22,8 @@ globs of `docs/areas.json`:
 | runner-fleet | `connector_*.go`, `hosted_runner_*.go`, `runner_*.go`, `worker_*.go` |
 | events-notifications | `domain_event_*.go`, `event_names*.go`, `notification_*.go`, `publish*.go`, `push_*.go`, `sse*.go` |
 | community | `share_*.go`, `shared_product_*.go` |
-| billing | `billing_*.go` |
-| platform-http | `admin_*.go`, `compression*.go`, `errmap*.go`, `feature_*.go`, `handlers.go`, `health_*.go`, `httperr*.go`, `middleware_*.go`, `ratelimit*.go`, `release_*.go`, `requestlog*.go`, `respond*.go`, `routes*.go`, `security_headers*.go`, `testdata/**`, `*.md` |
+| billing | `billing_*.go` (tests only: billing's routes are its module, `internal/billing/http.go`) |
+| platform-http | `admin_*.go`, `compression*.go`, `errmap*.go`, `feature_*.go`, `handlers.go`, `health_*.go`, `httperr*.go`, `middleware_*.go`, `module_*.go`, `ratelimit*.go`, `release_*.go`, `requestlog*.go`, `respond*.go`, `routes*.go`, `security_headers*.go`, `testdata/**`, `*.md` |
 
 A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 
@@ -36,6 +36,7 @@ A new file whose name no glob matches needs one in `docs/areas.json` (K15).
 | `*_handlers.go` | one area each (K1): its handlers and its registrars, `register<Area>Routes`, the only place this package registers routes |
 | `respond.go`, `httperr.go`, `errmap.go`, `authz.go`, `publish.go`, `cookies.go`, `middleware_*.go` | the K3 homes: JSON out (`respondJSON`), the error envelope and writers, the per-area error writers, every `require*` guard, domain event publishing, the session and sign-in cookies, middleware |
 | `authmiddleware.go`, `compression.go`, `requestlog.go`, `security_headers.go` | the middleware `cmd/server/http.go` chains (I6) |
+| `module_host.go` | modules (`ext`): `registerModuleRoutes` registers what each module declares, at its place in `RegisterRoutes`, inside the guards it declared; the workspace observers; `moduleHost`, the Handler as a module's `ext.Host`. The route goldens read a module's routes from its declaration (`route_binding_test.go`) |
 | `ratelimit.go` | the rate limiters handlers spend; some buckets are shared across endpoints (quirk Q18) |
 | `limits.go` | plan limits for the API: the limits endpoint's response, the read-only gate and `alwaysWritable`, its exemption wrapper, and `failOpen` over `orgs.LimitEnforcer`, which counts and decides |
 | `sse.go` | `SSEHub` and `ServeStream`: the event streams and their keys (I9) |

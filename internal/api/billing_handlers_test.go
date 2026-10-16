@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/ext"
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -63,6 +64,43 @@ func (p *failingProvider) GetSubscription(context.Context, string) (*billing.Sub
 	return nil, p.err
 }
 
+// billingHandler is a Handler with the billing module around svc (nil for
+// no provider) plugged in, as stage handlers wires it.
+func billingHandler(svc *billing.Service, limits billing.Limits, deps HandlerDeps) *Handler {
+	deps.Modules = []ext.Module{billing.NewModule(svc, limits)}
+	return NewHandler(deps)
+}
+
+// billingRoute is the module route method path as the Handler registers
+// it: the module's handler inside the guards it declared.
+func billingRoute(t *testing.T, h *Handler, method, path string) http.HandlerFunc {
+	t.Helper()
+	for _, mr := range h.declaredModuleRoutes() {
+		if mr.method == method && mr.path == path {
+			return h.moduleHandler(mr)
+		}
+	}
+	t.Fatalf("no module route %s %s", method, path)
+	return nil
+}
+
+const (
+	billingStatePath    = "/api/v1/orgs/{id}/billing"
+	billingRefreshPath  = "/api/v1/orgs/{id}/billing/refresh"
+	billingCheckoutPath = "/api/v1/orgs/{id}/billing/checkout"
+	billingPortalPath   = "/api/v1/orgs/{id}/billing/portal"
+)
+
+// billingStateBody is what the workspace billing routes answer.
+type billingStateBody struct {
+	OrgID        string       `json:"org_id"`
+	Plan         string       `json:"plan"`
+	EntitledPlan string       `json:"entitled_plan"`
+	Granted      bool         `json:"granted"`
+	Billing      orgs.Billing `json:"billing"`
+	SelfHosted   bool         `json:"self_hosted"`
+}
+
 func billingReq(method, path, orgID string, user *users.User) *http.Request {
 	r := httptest.NewRequest(method, path, nil)
 	if user != nil {
@@ -75,9 +113,9 @@ func billingReq(method, path, orgID string, user *users.User) *http.Request {
 }
 
 func TestPublicPlansAnswerWithoutAProvider(t *testing.T) {
-	h := NewHandler(HandlerDeps{})
+	h := billingHandler(nil, billing.Limits{}, HandlerDeps{})
 	w := httptest.NewRecorder()
-	h.GetPublicPlans(w, billingReq(http.MethodGet, "/api/v1/public/plans", "", nil))
+	billingRoute(t, h, "GET", "/api/v1/public/plans")(w, billingReq(http.MethodGet, "/api/v1/public/plans", "", nil))
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d", w.Code)
 	}
@@ -98,13 +136,13 @@ func TestWorkspaceBillingRoutesAreAdminOnlyAnd404WithoutAProvider(t *testing.T) 
 		plan:  orgs.PlanBusiness,
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin, "member": orgs.RoleMember}},
 	}}
-	h := NewHandler(HandlerDeps{})
+	h := billingHandler(nil, billing.Limits{}, HandlerDeps{})
 	h.OrgService = svc
 	admin, member := &users.User{ID: "admin"}, &users.User{ID: "member"}
 
 	for name, call := range map[string]func(w http.ResponseWriter, r *http.Request){
-		"state":   h.GetOrgBilling,
-		"refresh": h.RefreshOrgBilling,
+		"state":   billingRoute(t, h, "GET", billingStatePath),
+		"refresh": billingRoute(t, h, "POST", billingRefreshPath),
 	} {
 		w := httptest.NewRecorder()
 		call(w, billingReq(http.MethodGet, "/api/v1/orgs/org-1/billing", "org-1", nil))
@@ -134,15 +172,15 @@ func TestWorkspaceBillingStateReadsThePlansWithoutTheProvider(t *testing.T) {
 		plan:  orgs.PlanBusiness,
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin}},
 	}}
-	h := NewHandler(HandlerDeps{BillingService: billing.New(&failingProvider{err: errors.New("never called")}, svc, nil, nil)})
+	h := billingHandler(billing.New(&failingProvider{err: errors.New("never called")}, svc, nil, nil), billing.Limits{}, HandlerDeps{})
 	h.OrgService = svc
 
 	w := httptest.NewRecorder()
-	h.GetOrgBilling(w, billingReq(http.MethodGet, "/api/v1/orgs/org-1/billing", "org-1", &users.User{ID: "admin"}))
+	billingRoute(t, h, "GET", billingStatePath)(w, billingReq(http.MethodGet, "/api/v1/orgs/org-1/billing", "org-1", &users.User{ID: "admin"}))
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d (%s)", w.Code, w.Body.String())
 	}
-	var out orgBillingResponse
+	var out billingStateBody
 	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
 		t.Fatal(err)
 	}
@@ -160,12 +198,13 @@ func TestRefreshIsA503ThatChangesNothingWhenTheProviderFails(t *testing.T) {
 		plan:  orgs.PlanBusiness,
 		roles: map[string]map[string]string{"org-1": {"admin": orgs.RoleAdmin}},
 	}, subscriptionRef: "sub_1"}
-	h := NewHandler(HandlerDeps{BillingService: billing.New(&failingProvider{err: errors.New("timeout")}, svc, nil, nil)})
+	provider := billing.New(&failingProvider{err: errors.New("timeout")}, svc, nil, nil)
+	h := billingHandler(provider, billing.Limits{}, HandlerDeps{})
 	h.OrgService = svc
 	admin := &users.User{ID: "admin"}
 
 	w := httptest.NewRecorder()
-	h.RefreshOrgBilling(w, billingReq(http.MethodPost, "/api/v1/orgs/org-1/billing/refresh", "org-1", admin))
+	billingRoute(t, h, "POST", billingRefreshPath)(w, billingReq(http.MethodPost, "/api/v1/orgs/org-1/billing/refresh", "org-1", admin))
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d (%s)", w.Code, w.Body.String())
 	}
@@ -182,11 +221,13 @@ func TestRefreshIsA503ThatChangesNothingWhenTheProviderFails(t *testing.T) {
 	}
 
 	// The refresh is bounded per workspace: after the burst it is 429.
-	h.billingRefreshLimiter = newRateLimiter(2, 0)
+	h = billingHandler(provider, billing.Limits{Refresh: billing.Limit{Burst: 2}}, HandlerDeps{})
+	h.OrgService = svc
+	refresh := billingRoute(t, h, "POST", billingRefreshPath)
 	codes := []int{}
 	for i := 0; i < 3; i++ {
 		w = httptest.NewRecorder()
-		h.RefreshOrgBilling(w, billingReq(http.MethodPost, "/api/v1/orgs/org-1/billing/refresh", "org-1", admin))
+		refresh(w, billingReq(http.MethodPost, "/api/v1/orgs/org-1/billing/refresh", "org-1", admin))
 		codes = append(codes, w.Code)
 	}
 	if codes[0] != http.StatusServiceUnavailable || codes[1] != http.StatusServiceUnavailable || codes[2] != http.StatusTooManyRequests {
@@ -297,6 +338,11 @@ func (f *purchaseOrgFake) ApplyBillingState(orgID string, st orgs.BillingState) 
 }
 
 func purchaseHandler(t *testing.T, orgType string) (*Handler, *purchaseOrgFake, *purchaseProviderFake) {
+	h, svc, provider, _ := purchaseHandlerWith(t, orgType, billing.Limits{})
+	return h, svc, provider
+}
+
+func purchaseHandlerWith(t *testing.T, orgType string, limits billing.Limits) (*Handler, *purchaseOrgFake, *purchaseProviderFake, *billing.Service) {
 	t.Helper()
 	svc := &purchaseOrgFake{fakeOrgService: fakeOrgService{
 		plan:  orgs.PlanSingle,
@@ -312,11 +358,11 @@ func purchaseHandler(t *testing.T, orgType string) (*Handler, *purchaseOrgFake, 
 	if err := b.RefreshPrices(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	h := NewHandler(HandlerDeps{BillingService: b, FrontendURL: "https://app.example"})
+	h := billingHandler(b, limits, HandlerDeps{FrontendURL: "https://app.example"})
 	h.OrgService = svc
 	// The feature resolves through the org's channel: a nightly workspace
 	// sees every gate, which is what a Single-plan workspace is.
-	return h, svc, provider
+	return h, svc, provider, b
 }
 
 func postJSON(path, orgID, body string, user *users.User) *http.Request {
@@ -333,12 +379,12 @@ func TestCheckoutIsAdminOnlyAndDecidesTheProviderValues(t *testing.T) {
 	admin := &users.User{ID: "admin", Email: "admin@example.com", Name: "Admin"}
 
 	w := httptest.NewRecorder()
-	h.CheckoutOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, &users.User{ID: "member"}))
+	billingRoute(t, h, "POST", billingCheckoutPath)(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, &users.User{ID: "member"}))
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("member: %d", w.Code)
 	}
 	w = httptest.NewRecorder()
-	h.CheckoutOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, admin))
+	billingRoute(t, h, "POST", billingCheckoutPath)(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, admin))
 	if w.Code != http.StatusOK {
 		t.Fatalf("admin: %d %s", w.Code, w.Body.String())
 	}
@@ -358,7 +404,7 @@ func TestCheckoutIsAdminOnlyAndDecidesTheProviderValues(t *testing.T) {
 		"bad currency": {`{"plan":"business","interval":"month","currency":"jpy"}`, http.StatusBadRequest, ErrCodeUnknownPlan},
 	} {
 		w = httptest.NewRecorder()
-		h.CheckoutOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", tc.body, admin))
+		billingRoute(t, h, "POST", billingCheckoutPath)(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", tc.body, admin))
 		var body errorBody
 		_ = json.Unmarshal(w.Body.Bytes(), &body)
 		if w.Code != tc.code || body.Code != tc.want {
@@ -372,24 +418,25 @@ func TestCheckoutIsAdminOnlyAndDecidesTheProviderValues(t *testing.T) {
 	// A live subscription: 409 already_subscribed; the portal then works.
 	svc.billing.Status, svc.billing.SubscriptionRef = orgs.PlanStatusActive, "sub_1"
 	w = httptest.NewRecorder()
-	h.CheckoutOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, admin))
+	billingRoute(t, h, "POST", billingCheckoutPath)(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, admin))
 	var body errorBody
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
 	if w.Code != http.StatusConflict || body.Code != ErrCodeAlreadySubscribed {
 		t.Fatalf("live: %d %q", w.Code, body.Code)
 	}
 	w = httptest.NewRecorder()
-	h.OpenOrgBillingPortal(w, postJSON("/api/v1/orgs/org-1/billing/portal", "org-1", ``, admin))
+	billingRoute(t, h, "POST", billingPortalPath)(w, postJSON("/api/v1/orgs/org-1/billing/portal", "org-1", ``, admin))
 	if w.Code != http.StatusOK || provider.portals != 1 {
 		t.Fatalf("portal: %d %s", w.Code, w.Body.String())
 	}
 
 	// The write bucket bounds all three.
-	h.billingWriteLimiter = newRateLimiter(1, 0)
+	h, svc, _, _ = purchaseHandlerWith(t, orgs.TypeCompany, billing.Limits{Write: billing.Limit{Burst: 1}})
+	svc.billing.Status, svc.billing.SubscriptionRef = orgs.PlanStatusActive, "sub_1"
 	w = httptest.NewRecorder()
-	h.OpenOrgBillingPortal(w, postJSON("/api/v1/orgs/org-1/billing/portal", "org-1", ``, admin))
+	billingRoute(t, h, "POST", billingPortalPath)(w, postJSON("/api/v1/orgs/org-1/billing/portal", "org-1", ``, admin))
 	w = httptest.NewRecorder()
-	h.OpenOrgBillingPortal(w, postJSON("/api/v1/orgs/org-1/billing/portal", "org-1", ``, admin))
+	billingRoute(t, h, "POST", billingPortalPath)(w, postJSON("/api/v1/orgs/org-1/billing/portal", "org-1", ``, admin))
 	if w.Code != http.StatusTooManyRequests {
 		t.Fatalf("past the burst: %d", w.Code)
 	}
@@ -398,7 +445,7 @@ func TestCheckoutIsAdminOnlyAndDecidesTheProviderValues(t *testing.T) {
 func TestBusinessIsRefusedOnAPersonalWorkspace(t *testing.T) {
 	h, _, provider := purchaseHandler(t, orgs.TypePersonal)
 	w := httptest.NewRecorder()
-	h.CheckoutOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, &users.User{ID: "admin"}))
+	billingRoute(t, h, "POST", billingCheckoutPath)(w, postJSON("/api/v1/orgs/org-1/billing/checkout", "org-1", `{"plan":"business","interval":"month"}`, &users.User{ID: "admin"}))
 	if w.Code != http.StatusBadRequest || provider.checkouts != 0 {
 		t.Fatalf("personal + business: %d (%s)", w.Code, w.Body.String())
 	}
@@ -413,18 +460,18 @@ func TestRefreshBindsThroughTheSessionAndRefusesAnotherWorkspaces(t *testing.T) 
 	provider.sessions["cs_theirs"] = &billing.CheckoutSession{ID: "cs_theirs", ClientReferenceID: "org-2", SubscriptionID: "sub_2"}
 
 	w := httptest.NewRecorder()
-	h.RefreshOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_theirs"}`, admin))
+	billingRoute(t, h, "POST", billingRefreshPath)(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_theirs"}`, admin))
 	var body errorBody
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
 	if w.Code != http.StatusForbidden || body.Code != ErrCodeCheckoutMismatch {
 		t.Fatalf("another workspace's session: %d %q", w.Code, body.Code)
 	}
 	w = httptest.NewRecorder()
-	h.RefreshOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_ok"}`, admin))
+	billingRoute(t, h, "POST", billingRefreshPath)(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_ok"}`, admin))
 	if w.Code != http.StatusOK {
 		t.Fatalf("bind: %d %s", w.Code, w.Body.String())
 	}
-	var out orgBillingResponse
+	var out billingStateBody
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
 	if out.Plan != orgs.PlanBusiness || out.Billing.Status != orgs.PlanStatusTrialing || svc.billing.SubscriptionRef != "sub_1" {
 		t.Fatalf("bound state = %+v", out)
@@ -443,7 +490,7 @@ func TestRefreshFromACheckoutTheProviderDoesNotKnowAnswers404(t *testing.T) {
 	provider.sessions["cs_lost"] = &billing.CheckoutSession{ID: "cs_lost", ClientReferenceID: "org-1", SubscriptionID: "sub_lost"}
 
 	w := httptest.NewRecorder()
-	h.RefreshOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_unknown"}`, admin))
+	billingRoute(t, h, "POST", billingRefreshPath)(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_unknown"}`, admin))
 	if w.Code != http.StatusNotFound || w.Body.String() != "{\"error\":\"checkout not found\"}\n" {
 		t.Fatalf("a checkout the provider does not know: %d %q, want 404 checkout not found", w.Code, w.Body.String())
 	}
@@ -455,7 +502,7 @@ func TestRefreshFromACheckoutTheProviderDoesNotKnowAnswers404(t *testing.T) {
 	}
 
 	w = httptest.NewRecorder()
-	h.RefreshOrgBilling(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_lost"}`, admin))
+	billingRoute(t, h, "POST", billingRefreshPath)(w, postJSON("/api/v1/orgs/org-1/billing/refresh", "org-1", `{"session_id":"cs_lost"}`, admin))
 	var body errorBody
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
 	if w.Code != http.StatusServiceUnavailable || body.Code != ErrCodeBillingUpstream || w.Header().Get("Retry-After") != "30" {
@@ -469,7 +516,7 @@ func TestRefreshFromACheckoutTheProviderDoesNotKnowAnswers404(t *testing.T) {
 // down changes nothing about the answer. The push happens on the queue's
 // drain, and its failure is the reconciler's to repair.
 func TestMembershipChangeSucceedsWhenTheProviderIsDown(t *testing.T) {
-	h, svc, provider := purchaseHandler(t, orgs.TypeCompany)
+	h, svc, provider, b := purchaseHandlerWith(t, orgs.TypeCompany, billing.Limits{})
 	svc.plan = orgs.PlanBusiness
 	svc.billing = orgs.Billing{Status: orgs.PlanStatusActive, Seats: 5, SubscriptionRef: "sub_1", ItemRef: "si_1", CustomerRef: "cus_1"}
 	admin := &users.User{ID: "admin", Email: "admin@example.com", Name: "Admin"}
@@ -485,7 +532,7 @@ func TestMembershipChangeSucceedsWhenTheProviderIsDown(t *testing.T) {
 	if len(provider.quantities) != 0 {
 		t.Fatalf("the handler waited on the provider: %v", provider.quantities)
 	}
-	if n := h.BillingService.FlushSeats(context.Background()); n != 1 {
+	if n := b.FlushSeats(context.Background()); n != 1 {
 		t.Fatalf("queued %d workspaces, want 1", n)
 	}
 	// The drain tried — with the seat count the members panel reads — and

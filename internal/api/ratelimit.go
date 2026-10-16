@@ -45,20 +45,6 @@ const (
 	defaultInterviewStreamRefill = 120.0
 )
 
-// Throttling for the billing refresh. The post-checkout return page calls
-// it once, and a person staring at a slow page calls it again; it re-reads
-// the workspace's subscription from the provider, so it is bounded per
-// workspace to keep a stuck client from spending the provider's rate limit.
-const (
-	defaultBillingRefreshBurst  = 10
-	defaultBillingRefreshRefill = 120.0
-
-	// The purchase writes — checkout, plan change, portal — each create a
-	// provider object, so a compromised admin session cannot spam them.
-	defaultBillingWriteBurst  = 5
-	defaultBillingWriteRefill = 20.0
-)
-
 // Throttling for the credential endpoints. bcrypt makes each password guess
 // expensive for the server but nothing stopped a client from making them
 // back to back; these buckets do. Sign-in charges every attempt against the
@@ -192,13 +178,13 @@ type RateLimit struct {
 	RefillPerHour float64
 }
 
-// RateLimits are NewHandler's thirteen token buckets, in the order it builds
+// RateLimits are NewHandler's eleven configurable token buckets, in the order it builds
 // them.
 type RateLimits struct {
 	InterviewMsg, InterviewIP, InterviewStream RateLimit
 	AuthIP, AuthAccount, RegisterIP, SSOIP     RateLimit
 	VerifyResend, PasswordReset, InvitePreview RateLimit
-	BillingRefresh, BillingWrite, Invite       RateLimit
+	Invite                                     RateLimit
 }
 
 // newRateLimiterOr builds a limiter from l, a field of which that is zero

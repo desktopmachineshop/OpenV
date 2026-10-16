@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 
+	"github.com/openv/requirements-platform/ext"
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/billing/stripe"
@@ -119,7 +120,7 @@ func (a *app) handlers() {
 		EmailLinkBase:     a.emailLinkBase,
 		EmailVerification: a.emailVerification,
 		InvitationService: a.invitationService,
-		BillingService:    a.billingService,
+		Modules:           []ext.Module{billing.NewModule(a.billingService, billingLimits(cfg.RateLimits()))},
 		MinutesAlerts:     a.minutesMonitor,
 		Registration:      a.registrationPolicy,
 		SessionPolicy:     a.sessionPolicy,
@@ -166,8 +167,14 @@ func handlerRateLimits(r config.RateLimits) api.RateLimits {
 		VerifyResend:    limit(r.VerifyResend),
 		PasswordReset:   limit(r.PasswordReset),
 		InvitePreview:   limit(r.InvitePreview),
-		BillingRefresh:  limit(r.BillingRefresh),
-		BillingWrite:    limit(r.BillingWrite),
 		Invite:          limit(r.Invite),
 	}
+}
+
+// billingLimits hands the billing module its two buckets.
+func billingLimits(r config.RateLimits) billing.Limits {
+	limit := func(l config.RateLimit) billing.Limit {
+		return billing.Limit{Burst: l.Burst, RefillPerHour: l.RefillPerHour}
+	}
+	return billing.Limits{Refresh: limit(r.BillingRefresh), Write: limit(r.BillingWrite)}
 }

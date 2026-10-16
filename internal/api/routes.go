@@ -16,7 +16,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerProjectChildRoutes(router)
 	h.registerShareRoutes(router)
 	h.registerAdminRoutes(router)
-	h.registerBillingRoutes(router)
+	h.registerModuleRoutes(router)
 	h.registerLinkedArtifactRoutes(router)
 	h.registerReviewRoutes(router)
 	h.registerReviewRoundRoutes(router)

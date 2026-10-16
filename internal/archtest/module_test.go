@@ -23,7 +23,7 @@ import (
 const rootName = "(root)"
 
 // module is the parsed source of this Go module: the root package and every
-// package under cmd/ and internal/. Nothing is built or type-checked; the
+// package under cmd/, ext/ and internal/. Nothing is built or type-checked; the
 // rules read syntax only, which keeps a run fast and the same on every host.
 // Files are kept whatever their build constraints (windows-only files
 // included), except those no build can select, such as //go:build ignore.
@@ -97,7 +97,7 @@ func parseModule(root string) (*module, error) {
 	if err := m.parseDir("."); err != nil {
 		return nil, err
 	}
-	for _, top := range []string{"cmd", "internal"} {
+	for _, top := range []string{"cmd", "ext", "internal"} {
 		if err := m.walk(top); err != nil {
 			return nil, err
 		}

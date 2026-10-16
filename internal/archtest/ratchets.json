@@ -10,6 +10,7 @@
     ],
     "cmd/server": [
       "(root)",
+      "ext",
       "internal/api",
       "internal/automation",
       "internal/billing",
@@ -65,8 +66,13 @@
       "internal/scheduler",
       "internal/seeds"
     ],
+    "ext": [
+      "internal/domain/orgs",
+      "internal/domain/release",
+      "internal/domain/users"
+    ],
     "internal/api": [
-      "internal/billing",
+      "ext",
       "internal/domain/agentruns",
       "internal/domain/agents",
       "internal/domain/artifacts",
@@ -130,6 +136,7 @@
       "internal/scheduler"
     ],
     "internal/billing": [
+      "ext",
       "internal/domain/orgs",
       "internal/envparse"
     ],

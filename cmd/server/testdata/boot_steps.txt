@@ -148,9 +148,9 @@ func main()
         call (*internal/billing.Service).SetReturnURL
       call (*internal/billing.Service).Start
   inline internal/api.NewHandler
-    if
-      call (*internal/billing.Service).SetSeatCounter
-      call (*internal/billing.Service).DefaultReturnURL
+    for
+      if
+        call (ext.HostAware).SetHost
     call conversion to int64
   call (*internal/domain/proposals.DefaultService).SetAppliers
   call (*internal/orchestration.Hooks).SetGuidedNudgeLauncher

@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/ext"
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/evidence"
@@ -155,7 +156,8 @@ func TestErrmapAttributeDefinitionWriter(t *testing.T) {
 	}
 }
 
-// TestErrmapBillingWriter pins writeBillingError (billing_handlers.go).
+// TestErrmapBillingWriter pins the billing module's error writer
+// (internal/billing/http.go), answering through this package as its Host.
 // Anything it does not name is the provider not answering: 503 with
 // Retry-After, a fixed message and billing_upstream. Prices not confirmed
 // yet answer the same, with their own message (#379's bug 189).
@@ -215,11 +217,12 @@ func TestErrmapBillingWriter(t *testing.T) {
 		{"ErrPricesUnconfirmed wrapped", errmapWrap(billing.ErrPricesUnconfirmed), 503, errmapRetryAfter("30"), unconfirmed},
 		{"unknown error", errmapUnknown, 503, errmapRetryAfter("30"), upstream},
 	}
-	h := newTestHandler(t)
+	m := billing.NewModule(nil, billing.Limits{})
+	NewHandler(HandlerDeps{Modules: []ext.Module{m}})
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			h.writeBillingError(w, errmapRequest(), tc.err)
+			m.WriteError(w, errmapRequest(), tc.err)
 			errmapCheck(t, tc, w)
 		})
 	}

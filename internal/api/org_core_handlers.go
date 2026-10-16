@@ -67,7 +67,7 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 	}
 	// A paid workspace stops being billed when its paid period ends, not
 	// before: a restore inside the grace period takes this back.
-	h.BillingService.OnWorkspaceDeleted(r.Context(), org)
+	h.workspaceDeleted(r.Context(), org)
 	writeJSONBare(w, map[string]interface{}{
 		"deleted_at":  org.DeletedAt,
 		"purge_after": org.DeletedAt.Add(orgs.DeletionGraceDays * 24 * time.Hour),
@@ -148,7 +148,7 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	h.BillingService.OnWorkspaceRestored(r.Context(), org)
+	h.workspaceRestored(r.Context(), org)
 	writeJSONBare(w, org)
 }
 

@@ -71,8 +71,8 @@ const (
 
 func TestRouteBinding(t *testing.T) {
 	src := parseAPISource(t)
-	router := routeTable(t)
-	routes := bindRoutes(t, src, router)
+	router, h := routeTableAndHandler(t)
+	routes := bindRoutes(t, src, router, h.declaredModuleRoutes())
 
 	t.Run("handlers", func(t *testing.T) {
 		checkRouteGolden(t, "route_handlers.txt", handlersHeader, bindingChange, handlerLines(routes))
@@ -231,6 +231,12 @@ type boundRoute struct {
 	wrappers []string // outermost first, such as alwaysWritable
 	at       token.Position
 	route    *mux.Route
+	// module names the module that declared the route, which is read from
+	// the module's declaration (module_host.go) rather than this package's
+	// source; guards are then the guards it declared, which the Handler
+	// runs.
+	module string
+	guards []string
 }
 
 // readRegistrations reads RegisterRoutes and every registrar it calls, in
@@ -239,7 +245,10 @@ type boundRoute struct {
 //
 //	router.HandleFunc("<path>", <handler>).Methods("<METHOD>", ...)
 //	h.register<Area>Routes(router)
-func readRegistrations(t *testing.T, src *apiSource) []boundRoute {
+//
+// registerModuleRoutes is the one registrar it does not read: it registers
+// what the modules declared, which are modules' given here.
+func readRegistrations(t *testing.T, src *apiSource, modules []moduleRoute) []boundRoute {
 	t.Helper()
 	var out []boundRoute
 	visited := map[string]bool{}
@@ -263,7 +272,15 @@ func readRegistrations(t *testing.T, src *apiSource) []boundRoute {
 				t.Fatalf("%s: registrar %s holds a statement readRegistrations does not know; extend route_binding_test.go",
 					src.pos(stmt), name)
 			}
-			if sub := registrarCall(call, recv, params[0]); sub != "" {
+			if sub := registrarCall(call, recv, params[0]); sub == "registerModuleRoutes" {
+				for _, mr := range modules {
+					out = append(out, boundRoute{
+						methods: []string{mr.method}, path: mr.path, handler: mr.handler,
+						wrappers: mr.wrappers, at: src.pos(call), module: mr.module, guards: mr.guards,
+					})
+				}
+				continue
+			} else if sub != "" {
 				read(sub)
 				continue
 			}
@@ -358,9 +375,9 @@ func handlerExpr(e ast.Expr, recv string) (string, []string, bool) {
 // bindRoutes pairs each registration read from the source with the route
 // the router holds at the same position, and fails on any disagreement in
 // order, count, methods, path or handler.
-func bindRoutes(t *testing.T, src *apiSource, router *mux.Router) []boundRoute {
+func bindRoutes(t *testing.T, src *apiSource, router *mux.Router, modules []moduleRoute) []boundRoute {
 	t.Helper()
-	routes := readRegistrations(t, src)
+	routes := readRegistrations(t, src, modules)
 	var held []*mux.Route
 	err := router.Walk(func(route *mux.Route, _ *mux.Router, ancestors []*mux.Route) error {
 		if len(ancestors) > 0 {
@@ -382,6 +399,16 @@ func bindRoutes(t *testing.T, src *apiSource, router *mux.Router) []boundRoute {
 			want = "closure:" + r.wrappers[0]
 		}
 		got := handlerIdentity(held[i].GetHandler())
+		if r.module != "" {
+			// A module's handler is its own method value, or runs inside
+			// the Handler's guard closures (module_host.go).
+			switch {
+			case got == "closure:alwaysWritable" && len(r.wrappers) > 0,
+				got == "closure:guardModuleRoute" && len(r.wrappers) == 0 && len(r.guards) > 0,
+				strings.HasSuffix(got, "."+r.handler) && len(r.wrappers) == 0 && len(r.guards) == 0:
+				want = got
+			}
+		}
 		if path != r.path || strings.Join(methods, ",") != strings.Join(r.methods, ",") || got != want {
 			t.Fatalf("route %d: the source registers %s %s -> %s at %s, but the router holds %s %s -> %s there",
 				i+1, strings.Join(r.methods, ","), r.path, want, r.at, strings.Join(methods, ","), path, got)
