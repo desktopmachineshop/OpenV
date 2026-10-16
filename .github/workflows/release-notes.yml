@@ -52,6 +52,9 @@ jobs:
       - name: Notes file is well-formed
         run: python3 scripts/release_notes.py check RELEASE_NOTES.md
 
+      - name: The public changelog matches the released notes
+        run: python3 scripts/release_notes.py site --check RELEASE_NOTES.md
+
       - name: Pull request adds a release note
         if: github.event_name == 'pull_request'
         env:

@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **openv.app has a public changelog.** Every release, newest first, with
+  the same notes What's new shows you, is at openv.app/changelog for
+  anyone evaluating OpenV, and linked from the site's footer. What's new
+  in the app is unchanged.
+
 ## 0.21.5 — 2026-10-16
 
 ### Bug fixes

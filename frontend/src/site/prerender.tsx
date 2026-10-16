@@ -22,6 +22,7 @@ import { Landing } from '../views/Landing';
 import { ManualView } from '../views/ManualView';
 import { FAQ_GROUPS } from './content';
 import { Customers } from './Customers';
+import { Changelog } from './Changelog';
 import { DESCRIPTOR, SITE_PAGE_TEXT, SITE_URL_PLACEHOLDER, crawlPages } from './crawl';
 import { Demos } from './Demos';
 import { Faq } from './Faq';
@@ -46,6 +47,7 @@ export const PRERENDER_ROUTES: { path: string; element: JSX.Element }[] = [
   { path: '/open-source', element: <OpenSourceProjects /> },
   { path: '/customers', element: <Customers /> },
   { path: '/white-papers', element: <WhitePapers /> },
+  { path: '/changelog', element: <Changelog /> },
   { path: '/manual', element: <ManualView /> },
   { path: '/manual/:chapterSlug', element: <ManualView /> },
   ...TOPICS.map((t) => ({ path: t.path, element: <TopicPage path={t.path} /> })),

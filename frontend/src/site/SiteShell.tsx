@@ -281,6 +281,7 @@ export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
               { to: '/demos', label: 'Demo videos' },
               { to: '/pricing', label: 'Pricing' },
               { to: '/faq', label: 'Security and FAQ' },
+              { to: '/changelog', label: 'Changelog' },
             ]}
           />
           <FooterColumn heading="Guides" links={TOPICS.map((t) => ({ to: t.path, label: t.footerLabel }))} />

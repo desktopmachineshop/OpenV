@@ -287,5 +287,37 @@ class CliTests(unittest.TestCase):
         self.assertEqual(rn.main(["check", path]), 0)
 
 
+class SiteTests(unittest.TestCase):
+    def test_the_site_gets_released_history_only_grouped_in_file_order(self):
+        releases = rn.site_releases(StableTests.TWO)
+        self.assertEqual([r["version"] for r in releases], ["0.2.0", "0.1.0", "2026-09-12"])
+        self.assertNotIn("Pending one wrapped", str(releases))
+        self.assertEqual(releases[0]["groups"], [{"name": rn.FEATURES, "notes": ["Newer"]}])
+        self.assertEqual(releases[1]["stableSince"], "2026-09-20")
+        self.assertEqual(releases[0]["stableSince"], "")
+        self.assertEqual(releases[1]["date"], "2026-09-13")
+
+    def test_a_legacy_release_reaches_the_site_ungrouped(self):
+        releases = rn.site_releases(LEGACY.replace("- Pending", "### Bug fixes\n\n- Pending"))
+        self.assertTrue(all(g["name"] == rn.UNGROUPED for r in releases for g in r["groups"]))
+
+    def test_the_site_command_writes_then_checks(self):
+        tmp = tempfile.mkdtemp()
+        notes, out = os.path.join(tmp, "notes.md"), os.path.join(tmp, "releases.json")
+        with open(notes, "w") as f:
+            f.write(StableTests.TWO)
+        self.assertEqual(rn.main(["site", "--check", "--out", out, notes]), 1)
+        self.assertEqual(rn.main(["site", "--out", out, notes]), 0)
+        self.assertEqual(rn.main(["site", "--check", "--out", out, notes]), 0)
+        # A new Unreleased bullet changes nothing the site shows.
+        with open(notes, "w") as f:
+            f.write(StableTests.TWO.replace("- Pending two", "- Pending two\n- Pending three"))
+        self.assertEqual(rn.main(["site", "--check", "--out", out, notes]), 0)
+        # A cut does.
+        with open(notes, "w") as f:
+            f.write(rn.cut(StableTests.TWO, "2026-09-30")[1])
+        self.assertEqual(rn.main(["site", "--check", "--out", out, notes]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
