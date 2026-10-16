@@ -26,6 +26,9 @@ interface ProviderAPIKeyFieldProps {
   stored?: StoredProviderAPIKey;
   // False when the server has no OPENV_SECRETS_KEY and cannot store keys.
   enabled: boolean;
+  // Name the key variable: on a self-hosted deployment only, whose runner
+  // hosts may set it themselves.
+  showKeyEnv?: boolean;
   onSaved: (key: StoredProviderAPIKey) => void;
   onRemoved: (keyEnv: string) => void;
 }
@@ -37,6 +40,7 @@ export const ProviderAPIKeyField: React.FC<ProviderAPIKeyFieldProps> = ({
   keyEnv,
   stored,
   enabled,
+  showKeyEnv = false,
   onSaved,
   onRemoved,
 }) => {
@@ -78,12 +82,13 @@ export const ProviderAPIKeyField: React.FC<ProviderAPIKeyFieldProps> = ({
   return (
     <form onSubmit={save} style={{ marginTop: 12 }} data-testid={`provider-api-key-${keyEnv}`}>
       <label style={{ fontSize: 12 }} htmlFor={`provider-api-key-${keyEnv}`}>
-        API key ({keyEnv})
+        {showKeyEnv ? `API key (${keyEnv})` : 'API key'}
       </label>
       {!enabled ? (
         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          This server cannot store API keys yet: its administrator has to set OPENV_SECRETS_KEY. Until
-          then, set {keyEnv} on each runner's machine.
+          {showKeyEnv
+            ? `This server cannot store API keys yet: its administrator has to set OPENV_SECRETS_KEY. Until then, set ${keyEnv} on each runner's machine.`
+            : 'API keys cannot be stored here yet.'}
         </div>
       ) : (
         <>

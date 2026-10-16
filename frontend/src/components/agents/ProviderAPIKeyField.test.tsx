@@ -74,10 +74,31 @@ describe('ProviderAPIKeyField', () => {
   it('says the server cannot store keys when it has no secrets key', () => {
     act(() => {
       root.render(
-        <ProviderAPIKeyField keyEnv="OPENAI_API_KEY" enabled={false} onSaved={vi.fn()} onRemoved={vi.fn()} />,
+        <ProviderAPIKeyField keyEnv="OPENAI_API_KEY" enabled={false} showKeyEnv onSaved={vi.fn()} onRemoved={vi.fn()} />,
       );
     });
     expect(container.querySelector('input')).toBeNull();
     expect(container.textContent).toContain('OPENV_SECRETS_KEY');
+  });
+
+  it('names the key variable on a self-hosted deployment only', () => {
+    act(() => {
+      root.render(<ProviderAPIKeyField keyEnv="OPENAI_API_KEY" enabled onSaved={vi.fn()} onRemoved={vi.fn()} />);
+    });
+    expect(container.querySelector('label')?.textContent).toBe('API key');
+    expect(container.textContent).not.toContain('OPENAI_API_KEY');
+    act(() => {
+      root.render(
+        <ProviderAPIKeyField keyEnv="OPENAI_API_KEY" enabled={false} onSaved={vi.fn()} onRemoved={vi.fn()} />,
+      );
+    });
+    expect(container.textContent).not.toContain('OPENAI_API_KEY');
+    expect(container.textContent).not.toContain('OPENV_SECRETS_KEY');
+    act(() => {
+      root.render(
+        <ProviderAPIKeyField keyEnv="OPENAI_API_KEY" enabled showKeyEnv onSaved={vi.fn()} onRemoved={vi.fn()} />,
+      );
+    });
+    expect(container.querySelector('label')?.textContent).toBe('API key (OPENAI_API_KEY)');
   });
 });

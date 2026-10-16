@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **AI provider settings on openv.app no longer show environment variable
+  names.** The key field on each provider in Workspace settings → AI
+  providers is now labelled just API key, and the setting for which
+  environment variable a runner reads appears only on self-hosted
+  deployments, where runner machines may set the key themselves.
+
 ## 0.19.0 — 2026-10-16
 
 ### New features
