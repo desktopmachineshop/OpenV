@@ -2,6 +2,7 @@
 // topic is). App.tsx routes each path by hand (K13); everything else that
 // needs the list (the sitemap, llms.txt, pre-rendering, the footer) reads it
 // from here.
+import { AI_CONNECTOR } from './aiConnector';
 import { BASELINES } from './baselines';
 import { GLOSSARY } from './glossary';
 import { REQIF } from './reqif';
@@ -20,6 +21,7 @@ export const TOPICS: readonly Topic[] = [
   REQIF,
   SELF_HOSTED,
   SAFETY_CRITICAL,
+  AI_CONNECTOR,
   GLOSSARY,
 ];
 

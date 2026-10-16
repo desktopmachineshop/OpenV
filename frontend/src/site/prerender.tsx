@@ -27,6 +27,7 @@ import { Demos } from './Demos';
 import { Faq } from './Faq';
 import { HowItWorks } from './HowItWorks';
 import { OpenSourceProjects } from './OpenSourceProjects';
+import { Privacy } from './Privacy';
 import { TopicPage } from './TopicPage';
 import { TOPICS, getTopic } from './topics';
 import { WhitePapers } from './WhitePapers';
@@ -43,6 +44,7 @@ export const PRERENDER_ROUTES: { path: string; element: JSX.Element }[] = [
   { path: '/how-it-works', element: <HowItWorks /> },
   { path: '/demos', element: <Demos /> },
   { path: '/faq', element: <Faq /> },
+  { path: '/privacy', element: <Privacy /> },
   { path: '/open-source', element: <OpenSourceProjects /> },
   { path: '/customers', element: <Customers /> },
   { path: '/white-papers', element: <WhitePapers /> },

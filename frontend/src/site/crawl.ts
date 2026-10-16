@@ -109,6 +109,10 @@ export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> 
     title: 'FAQ',
     summary: 'Security, data separation, AI data handling, self-hosting, plans, export and ReqIF exchange with DOORS and Polarion.',
   },
+  '/privacy': {
+    title: 'Privacy policy',
+    summary: 'What the hosted OpenV service collects, why, who it is shared with, how long it is kept, and how to reach us.',
+  },
   '/open-source': {
     title: 'Open-source projects',
     summary: 'Open-source projects hosted free on OpenV, each published as of its latest baseline.',

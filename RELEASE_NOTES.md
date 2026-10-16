@@ -20,6 +20,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   reads, adds to your project, or changes or deletes what is already
   there, so the app can ask you before it edits an artifact or deletes a
   link.
+- **openv.app now has a privacy policy and a guide to connecting Claude.**
+  The privacy policy at /privacy says what the hosted service collects, who
+  it is shared with and how long it is kept; the guide at /ai-connector
+  shows how to add OpenV to Claude or another AI app, what to ask it, and
+  how to disconnect it. Both are linked from the site footer.
 
 ## 0.21.4 — 2026-10-16
 
