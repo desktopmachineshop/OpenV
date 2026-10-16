@@ -214,6 +214,9 @@ PUT /api/v1/repo-connections/{id}/my-path -> SetMyRepoPath
 GET /api/v1/provider-settings -> ListProviderSettings
 PUT /api/v1/provider-settings -> UpsertProviderSetting
 POST /api/v1/provider-settings/detect -> RecordProviderDetection
+GET /api/v1/provider-api-keys -> ListProviderAPIKeys
+PUT /api/v1/provider-api-keys/{env} -> SetProviderAPIKey
+DELETE /api/v1/provider-api-keys/{env} -> DeleteProviderAPIKey
 POST /api/v1/provider-logins -> StartProviderLogin
 POST /api/v1/provider-logins/claim -> ClaimProviderLogin
 GET /api/v1/provider-logins/{id} -> GetProviderLogin

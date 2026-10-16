@@ -198,6 +198,7 @@
     "workspace-billing",
     "workspace-automations",
     "workspace-runs",
+    "workspace-api-keys",
     "remote-mcp"
   ],
   "event_types": [

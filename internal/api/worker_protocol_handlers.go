@@ -123,8 +123,9 @@ func (h *Handler) releaseFailedClaim(runID, workerID string) {
 
 // resolveRunAuth picks the provider credential mode for a claimed run. A
 // project set to api-key overrides the member's local CLI sign-in: the worker
-// injects the key named by api_key_env (org provider setting, or the
-// provider's native variable) from its host environment. Everything else —
+// injects the workspace's pasted key for api_key_env (org provider setting,
+// or the provider's native variable) when there is one, else that variable
+// from its host environment. Everything else —
 // including non-project runs — uses the runner's local sign-in.
 func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[string]string {
 	auth := map[string]string{"mode": projects.AgentAuthUserAccount}
@@ -148,6 +149,21 @@ func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[st
 		}
 	}
 	auth["api_key_env"] = keyEnv
+	// A key a workspace admin pasted in the app goes with the claim, so the
+	// runner needs nothing in its host's environment. A key that does not
+	// open (the server's secrets key changed) is left out, and the runner
+	// falls back to its host's variable.
+	if h.ProviderKeyService != nil {
+		key, err := h.ProviderKeyService.RevealKey(run.OrgID, keyEnv)
+		if err != nil {
+			// Nothing derived from the key is logged: only the workspace,
+			// whose admin can paste the key again.
+			slog.Warn("worker claim: the workspace's stored API key could not be opened (was OPENV_SECRETS_KEY changed?)",
+				"org_id", run.OrgID)
+		} else if key != "" {
+			auth["api_key"] = key
+		}
+	}
 	return auth
 }
 

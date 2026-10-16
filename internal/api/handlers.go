@@ -97,6 +97,7 @@ type HandlerDeps struct {
 	ProposalService     proposals.Service
 	RepoConnService     repoconns.Service
 	ProviderService     providers.Service
+	ProviderKeyService  providers.KeyService
 	LoginService        providers.LoginService
 	TeamService         teams.Service
 	OrgService          orgs.Service

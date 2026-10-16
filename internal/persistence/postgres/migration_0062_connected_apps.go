@@ -2,7 +2,7 @@ package postgres
 
 import "database/sql"
 
-// 0061: connected apps (REQ-44). A member attaches an AI client to a
+// 0062: connected apps (REQ-44). A member attaches an AI client to a
 // workspace over the remote MCP endpoint with OAuth 2.1: the client
 // registers itself (oauth_clients, no secret), the member consents for one
 // workspace (connected_apps, one live grant per member, client and
@@ -11,7 +11,7 @@ import "database/sql"
 // use (oauth_tokens). Codes and tokens are stored as SHA-256 hashes only. A
 // grant goes with its member, its workspace or its client, and its codes and
 // tokens go with it; a revoked grant stays as the record of the consent.
-func m0061ConnectedApps(tx *sql.Tx) error {
+func m0062ConnectedApps(tx *sql.Tx) error {
 	for _, stmt := range []string{
 		`CREATE TABLE IF NOT EXISTS oauth_clients (
 			id UUID PRIMARY KEY,

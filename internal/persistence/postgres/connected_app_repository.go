@@ -13,7 +13,7 @@ import (
 
 // ConnectedAppRepository implements connectedapps.Repository over
 // oauth_clients, connected_apps, oauth_codes and oauth_tokens (migration
-// 0061).
+// 0062).
 type ConnectedAppRepository struct {
 	db *sql.DB
 }

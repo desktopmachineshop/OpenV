@@ -156,6 +156,7 @@ var purgeOrgStatements = []string{
 	`DELETE FROM notifications WHERE org_id = $1`,
 	`DELETE FROM provider_settings WHERE org_id = $1`,
 	`DELETE FROM provider_logins WHERE org_id = $1`,
+	`DELETE FROM provider_api_keys WHERE org_id = $1`,
 	`DELETE FROM templates WHERE org_id = $1`,
 	`DELETE FROM organizations WHERE id = $1 RETURNING logo_path`, // members, teams, worker keys, pairings, hosted workers cascade
 }

@@ -239,6 +239,14 @@ func (c *Config) SharedProductPoolLimit() int {
 	return c.count("OPENV_SHARED_PRODUCT_POOL_LIMIT", sharedproducts.DefaultPoolLimit)
 }
 
+// SecretsKey is the key the server seals workspaces' pasted provider API
+// keys with (OPENV_SECRETS_KEY, a credential, exactly as set), "" when
+// unset, which leaves the app unable to store one. Changing it makes every
+// stored key unreadable until it is pasted again.
+func (c *Config) SecretsKey() string {
+	return c.secret("OPENV_SECRETS_KEY", "")
+}
+
 // RunMaxAttempts caps a run's retry chain (OPENV_RUN_MAX_ATTEMPTS, a count,
 // agentruns.DefaultMaxAttempts by default).
 func (c *Config) RunMaxAttempts() int {

@@ -51,6 +51,17 @@ func (a *app) agents() {
 	a.automationService = automations.NewDefaultService(a.automationRepo)
 	a.repoConnService = repoconns.NewDefaultService(a.repoConnRepo)
 	a.providerService = providers.NewDefaultService(a.providerRepo)
+	// Pasted provider API keys are sealed under OPENV_SECRETS_KEY; without
+	// it the store is off and runners read keys from their hosts only.
+	var keySealer *providers.Sealer
+	if secret := a.env().SecretsKey(); secret != "" {
+		sealer, err := providers.NewSealer(secret)
+		if err != nil {
+			fatal("invalid OPENV_SECRETS_KEY", err)
+		}
+		keySealer = sealer
+	}
+	a.providerKeyService = providers.NewKeyService(postgres.NewProviderAPIKeyRepository(a.db), keySealer)
 	a.loginService = providers.NewLoginService(postgres.NewProviderLoginRepository(a.db))
 	a.teamService = teams.NewDefaultService(a.teamRepo)
 	// Human crew members must belong to the crew's workspace.

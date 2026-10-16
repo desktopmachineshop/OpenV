@@ -52,6 +52,7 @@ var Registry = []Feature{
 	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
 	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
 	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
+	{Key: FeatureWorkspaceAPIKeys, ShippedIn: "0.18.0", Summary: "Paste a provider API key into workspace settings, and projects on API-key auth use it on every runner, with nothing to set on the runner's machine"},
 	{Key: FeatureRemoteMCP, ShippedIn: "0.18.0", Summary: "Connect an AI client such as Claude or Cursor to a workspace by its address alone: you sign in and approve it, with no runner and no key to copy, and revoke it from your settings"},
 }
 
@@ -145,6 +146,13 @@ const (
 	// feature is on sends the member on to the projects list, where the
 	// link went before.
 	FeatureWorkspaceRuns = "workspace-runs"
+	// FeatureWorkspaceAPIKeys is pasting a provider API key into workspace
+	// settings. It gates STORING one only: the key field on the AI providers
+	// tab and the PUT behind it. Removing a key, listing them, and handing a
+	// stored key to a runner are not gated, so a key pasted while the
+	// workspace was on nightly keeps working, and can still be taken back,
+	// after it moves to stable.
+	FeatureWorkspaceAPIKeys = "workspace-api-keys"
 	// FeatureRemoteMCP is the remote MCP endpoint and its OAuth (REQ-44): a
 	// member attaches an AI client to a workspace from the client itself,
 	// approves it on a consent page, and sees and revokes it under Connected

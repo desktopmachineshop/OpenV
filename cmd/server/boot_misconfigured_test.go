@@ -145,7 +145,14 @@ var misconfiguredBoots = []misconfiguredBoot{
 	{name: "fatal_db_password_line_break", about: "no DATABASE_URL, and a DB_PASSWORD with a line break after it, which the stand-in database receives exactly as set and refuses",
 		env:     map[string]string{"DATABASE_URL": "", "DB_PASSWORD": bootDatabasePassword + "\n"},
 		standIn: true, secret: bootDatabasePassword},
+	{name: "fatal_secrets_key_short", about: "an OPENV_SECRETS_KEY shorter than 32 characters, which would seal pasted API keys weakly",
+		env:    map[string]string{"OPENV_SECRETS_KEY": shortSecretsKey},
+		secret: shortSecretsKey},
 }
+
+// shortSecretsKey is an OPENV_SECRETS_KEY too short to seal keys with; the
+// refusal must not print it.
+const shortSecretsKey = "too-short-secrets-key"
 
 // misconfiguredExitWithin bounds a refused boot: the migrations and the
 // wiring before the last fatal check, as a normal boot does them.

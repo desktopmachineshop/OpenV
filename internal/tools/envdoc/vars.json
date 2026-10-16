@@ -496,6 +496,11 @@
       "default": "none",
       "text": "The token minted for one agent run, which the runner hands `openv-mcp`; the tools then reach only what that run may."
     },
+    "OPENV_SECRETS_KEY": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "The key the server seals workspaces' pasted provider API keys with (AES-256-GCM over its SHA-256), at least 32 characters, e.g. `openssl rand -base64 32`. Unset, the app cannot store a pasted key and runners read provider keys from their hosts only; shorter than 32 characters, the server refuses to start. Changing it leaves every stored key unreadable until it is pasted again. A credential, used exactly as set."
+    },
     "OPENV_SELF_HOSTED": {
       "area": "tenancy-identity",
       "read_by": "server",

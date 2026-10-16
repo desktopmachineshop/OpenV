@@ -112,6 +112,7 @@ OPENV_RELEASE_FEED_URL	internal/config:Config.text(name)	"https://api.openv.app/
 OPENV_RUN_AUTO_RETRY	internal/config:Config.boolean(name)	true
 OPENV_RUN_MAX_ATTEMPTS	internal/config:Config.count(name)	3
 OPENV_RUN_TOKEN	cmd/openv-mcp:resolveToken(env)	-
+OPENV_SECRETS_KEY	internal/config:Config.secret(name)	""
 OPENV_SELF_HOSTED	internal/config:Config.boolean(name)	false
 OPENV_SESSION_IDLE	internal/config:Config.sessionLifetime(name)	168h0m0s
 OPENV_SESSION_MAX_AGE	internal/config:Config.sessionLifetime(name)	720h0m0s

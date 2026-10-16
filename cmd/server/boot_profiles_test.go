@@ -145,6 +145,8 @@ var s4bProfiles = s4b([]bootProfile{
 		signUp: signUpOnOpenServer},
 	{name: "limits", about: "a deployment-wide limit override",
 		env: map[string]string{"OPENV_LIMITS": testLimits}},
+	{name: "secrets_key", about: "a secrets key set, so workspace admins can paste provider API keys",
+		env: map[string]string{"OPENV_SECRETS_KEY": strings.Repeat("s", 40)}},
 	{name: "build_sha", about: "the commit the binary was built from",
 		env: map[string]string{"OPENV_BUILD_SHA": testBuildSHA}},
 	{name: "billing", about: "billing on: a Stripe test key and a one-entry price map, the provider unreachable",

@@ -357,9 +357,25 @@ Each project chooses how its runs authenticate (Project settings → Agents):
 - **API key**: overrides members' local sign-ins. At claim time the API tells
   the runner which environment variable holds the workspace's key (the
   provider setting's `api_key_env`, defaulting to the provider's native
-  variable, e.g. `ANTHROPIC_API_KEY`); the runner reads it from its own host
-  environment and injects it into the CLI. For now these runs still execute
-  through each member's OpenV connector/runner.
+  variable, e.g. `ANTHROPIC_API_KEY`). When a workspace admin has pasted a
+  key for that variable (Workspace settings → AI providers), the claim
+  carries the key itself and the runner injects it into the CLI; otherwise
+  the runner reads the variable from its own host environment. These runs
+  still execute through each member's OpenV connector/runner, so every
+  runner that claims one — a member's own machine included — receives the
+  pasted key.
+
+### Pasted API keys
+
+A workspace admin pastes a provider key once per key variable
+(`ANTHROPIC_API_KEY` serves both Claude Code and the Anthropic API). The
+server seals it with AES-256-GCM under `OPENV_SECRETS_KEY`, binding the
+workspace and the variable, and keeps it in `provider_api_keys`; the app only
+ever shows its last four characters. It is opened only to answer a runner's
+claim for a run of a project on API-key auth. Without `OPENV_SECRETS_KEY`
+the server cannot store keys and the settings tab says so. Changing
+`OPENV_SECRETS_KEY` leaves every stored key unreadable: runs fall back to the
+runner host's variable until an admin pastes the key again.
 
 ## Per-user repo locations
 

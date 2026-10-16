@@ -325,6 +325,10 @@ including discovered models that are merged ahead of the built-in model
 catalog). `provider_logins` relays CLI sign-in flows to runners: `provider`,
 `target` (`workspace` | `user`), `status`, `auth_url`, `code`, `detail`,
 `requested_by`.
+`provider_api_keys` holds the keys a workspace admin pasted, one per
+workspace and key variable (`org_id`, `key_env`): `sealed` (AES-256-GCM
+under the server's `OPENV_SECRETS_KEY`, the nonce first; never the key in
+the clear), `last4`, `updated_by`, `updated_at`.
 
 ### agent_teams / agent_team_nodes / agent_team_edges (crews)
 Agent org charts (API name: **crews**; table names keep the historical
