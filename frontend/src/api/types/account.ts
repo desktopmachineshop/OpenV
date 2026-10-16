@@ -43,6 +43,9 @@ export interface AuthConfig {
   // Whether this deployment still has a public sign-up door (REQ-95). When
   // 'closed', new accounts arrive only by invitation or through SSO.
   registration?: 'open' | 'closed';
+  // What this deployment offers ('hosted', 'billing'); absent from an
+  // older server, which the app takes as offering everything.
+  capabilities?: string[];
 }
 
 // What a sign-up that carried an invite token did with it. Absent when the

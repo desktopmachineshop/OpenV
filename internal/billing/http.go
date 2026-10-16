@@ -72,6 +72,7 @@ var (
 	_ ext.RouteModule       = (*Module)(nil)
 	_ ext.HostAware         = (*Module)(nil)
 	_ ext.WorkspaceObserver = (*Module)(nil)
+	_ ext.CapabilityModule  = (*Module)(nil)
 )
 
 // Name implements ext.Module.
@@ -98,6 +99,15 @@ func orDefault(l Limit, burst int, refill float64) (int, float64) {
 		l.RefillPerHour = refill
 	}
 	return l.Burst, l.RefillPerHour
+}
+
+// Capabilities implements ext.CapabilityModule: billing, while a provider
+// is configured.
+func (m *Module) Capabilities() []string {
+	if !m.svc.Enabled() {
+		return nil
+	}
+	return []string{ext.CapabilityBilling}
 }
 
 // Routes implements ext.RouteModule.
