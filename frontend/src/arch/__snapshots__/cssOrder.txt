@@ -15,7 +15,8 @@
   3  components/HelpSidebar.css
   4  components/ProjectList.css
 
-## Lazy modules (22), by path, and the stylesheets each adds, in cascade order
+## Lazy modules (23), by path, and the stylesheets each adds, in cascade order
+  site/Changelog.tsx  (none)
   site/Customers.tsx  (none)
   site/Demos.tsx  (none)
   site/Faq.tsx  (none)

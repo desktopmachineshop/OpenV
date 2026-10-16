@@ -51,6 +51,11 @@ Subcommands:
   version [FILE]               print the current (top) version
   next [--major] [FILE]        print the version the next cut would produce
   stable-version [FILE]        print the newest stable release ("" if none)
+  site [--out PATH] [--check] [FILE]
+                               write the released history as the JSON the
+                               public /changelog page renders (default
+                               frontend/src/site/changelog/releases.json);
+                               --check fails when that file is out of date
   cut-stable [--date D] [--fix] [--if-scheduled] [--if-security] [FILE]
                                designate the newest release that is at
                                least SOAK_DAYS old and newer than the
@@ -409,6 +414,53 @@ def cmd_stable_version(args):
     print(current_stable(read(args.file)))
 
 
+SITE_JSON = "frontend/src/site/changelog/releases.json"
+
+
+def site_releases(text):
+    """The released history the public changelog page renders: every release
+    section, newest first, its bullets grouped in file order. Unreleased is
+    never included, so nothing reaches the public page before it ships."""
+    _, releases, _ = parse(text)
+    since = dict(stables(text))
+    out = []
+    for version, date, notes in releases:
+        groups = []
+        for group, bullet in notes:
+            if not groups or groups[-1]["name"] != group:
+                groups.append({"name": group, "notes": []})
+            groups[-1]["notes"].append(bullet)
+        out.append({"version": version, "date": date, "stableSince": since.get(version, ""), "groups": groups})
+    return out
+
+
+def site_json(text):
+    """The file the site build reads (SITE_JSON), byte for byte."""
+    import json
+
+    body = {
+        "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
+        "releases": site_releases(text),
+    }
+    return json.dumps(body, ensure_ascii=False, indent=1) + "\n"
+
+
+def cmd_site(args):
+    want = site_json(read(args.file))
+    if args.check:
+        try:
+            have = read(args.out)
+        except FileNotFoundError:
+            have = ""
+        if have != want:
+            raise NotesError(
+                f"{args.out} is out of date with {args.file}; run `python3 scripts/release_notes.py site`"
+            )
+        return
+    with open(args.out, "w", encoding="utf-8") as f:
+        f.write(want)
+
+
 def carries_security_fix(text, strict=True):
     """The newest release's version when it has a Security fixes group and
     is not the stable release already, else ""."""
@@ -466,6 +518,14 @@ def main(argv=None):
     add("version", cmd_version)
     add("next", cmd_next, **{"--major": major})
     add("stable-version", cmd_stable_version)
+    add(
+        "site",
+        cmd_site,
+        **{
+            "--out": {"default": SITE_JSON},
+            "--check": {"action": "store_true", "help": "fail if --out differs instead of writing it"},
+        },
+    )
     add(
         "cut-stable",
         cmd_cut_stable,

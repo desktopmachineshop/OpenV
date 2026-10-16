@@ -129,7 +129,8 @@ jobs:
           if python3 scripts/release_notes.py cut $major RELEASE_NOTES.md; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add RELEASE_NOTES.md
+            python3 scripts/release_notes.py site RELEASE_NOTES.md
+            git add RELEASE_NOTES.md frontend/src/site/changelog/releases.json
             git commit -m "Release $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           fi
           python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
@@ -147,7 +148,8 @@ jobs:
           if [ "$before" != "$after" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add RELEASE_NOTES.md
+            python3 scripts/release_notes.py site RELEASE_NOTES.md
+            git add RELEASE_NOTES.md frontend/src/site/changelog/releases.json
             git commit -m "Stable release $after (security fix)"
           fi
 

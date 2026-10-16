@@ -22,6 +22,7 @@ const PUBLIC_SEGMENTS = [
   '/faq',
   '/customers',
   '/white-papers',
+  '/changelog',
   '/requirements-traceability',
   '/verification-evidence',
   '/baselines-and-audit-trail',

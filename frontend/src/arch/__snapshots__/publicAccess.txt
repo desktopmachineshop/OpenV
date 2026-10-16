@@ -4,7 +4,7 @@
 isOpenPath exact: /health, /metrics, /mcp
 isOpenPath prefixes: /api/v1/auth/, /api/v1/public/, /.well-known/oauth-, /oauth/
 401 interceptor exempts calls under: /api/v1/auth/
-PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /glossary, /security
+PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /changelog, /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /glossary, /security
 
 ## Routes (example URL, :param as x)
   public   /login
@@ -23,6 +23,7 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   public   /open-source
   public   /customers
   public   /white-papers
+  public   /changelog
   public   /requirements-traceability
   public   /verification-evidence
   public   /baselines-and-audit-trail
@@ -63,6 +64,8 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   session  /projects/:projectId/settings
 
 ## API calls reachable from each public page module (open = isOpenPath)
+site/Changelog.tsx  <- /changelog
+  (no API calls)
 site/Customers.tsx  <- /customers
   (no API calls)
 site/Demos.tsx  <- /demos
