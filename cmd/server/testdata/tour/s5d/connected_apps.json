@@ -705,7 +705,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"tools\":[{\"description\":\"List all projects visible to this agent.\",\"inputSchema\":{\"properties\":{},\"required\":[],\"type\":\"object\"},\"name\":\"list_projects\"},{\"description\":\"List artifacts in a project, optionally filtered by type and by owner (the \\\"owner\\\" attribute: a person, team or supplier).\",\"inputSchema\":{\"properties\":{\"owner\":{\"description\":\"Optional owner filter: only artifacts whose owner attribute equals this\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"},\"type\":{\"description\":\"Optional artifact type filter\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_artifacts\"},{\"description\":\"Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \\\"REQ-12\\\") instead of a UUID when project_id is also given.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID; required only when id is a stable ref\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_artifact\"},{\"description\":\"The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.\",\"inputSchema\":{\"properties\":{\"baseline_id\":{\"description\":\"Optional baseline ID to render the map from that snapshot\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_project_map\"},{\"description\":\"One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Artifact stable ref (e.g. REQ-12) or UUID\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\",\"id\"],\"type\":\"object\"},\"name\":\"get_context\"},{\"description\":\"Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_project_tree\"},{\"description\":\"Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\\\"REQ-30\\\", case-insensitive) returns that artifact first.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"},\"query\":{\"description\":\"Substring to search for, or a ref such as REQ-30\",\"type\":\"string\"}},\"required\":[\"project_id\",\"query\"],\"type\":\"object\"},\"name\":\"search_artifacts\"},{\"description\":\"List all links touching one artifact.\",\"inputSchema\":{\"properties\":{\"artifact_id\":{\"description\":\"Artifact ID\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"artifact_id\",\"project_id\"],\"type\":\"object\"},\"name\":\"list_links_for_artifact\"},{\"description\":\"List a project's baselines.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_baselines\"},{\"description\":\"Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Baseline ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_baseline\"},{\"description\":\"The requirement quality rules this project is judged against: its normative convention (\\\"shall\\\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_quality_rules\"},{\"description\":\"Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.\",\"inputSchema\":{\"properties\":{\"artifact_id\":{\"description\":\"Artifact ID or stable ref (pass project_id to resolve a ref)\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID, required when artifact_id is a stable ref\",\"type\":\"string\"}},\"required\":[\"artifact_id\"],\"type\":\"object\"},\"name\":\"get_quality_findings\"},{\"description\":\"Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.\",\"inputSchema\":{\"properties\":{\"detail\":{\"description\":\"Return the full report instead of the per-requirement summary lines\",\"type\":\"boolean\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_vv_coverage\"},{\"description\":\"Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_vv_gaps\"},{\"description\":\"List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.\",\"inputSchema\":{\"properties\":{\"assignee_id\":{\"description\":\"Optional assignee ID filter (agent, user or team ID)\",\"type\":\"string\"},\"column\":{\"description\":\"Optional board column filter: backlog, todo, in-progress, review or done\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_work_items\"},{\"description\":\"Get a kanban work item with its activity.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Work item ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_work_item\"},{\"description\":\"Get just the activity history of a work item.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Work item ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_work_item_history\"}]}}"
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"tools\":[{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"List projects\"},\"description\":\"List all projects visible to this agent.\",\"inputSchema\":{\"properties\":{},\"required\":[],\"type\":\"object\"},\"name\":\"list_projects\",\"title\":\"List projects\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"List artifacts\"},\"description\":\"List artifacts in a project, optionally filtered by type and by owner (the \\\"owner\\\" attribute: a person, team or supplier).\",\"inputSchema\":{\"properties\":{\"owner\":{\"description\":\"Optional owner filter: only artifacts whose owner attribute equals this\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"},\"type\":{\"description\":\"Optional artifact type filter\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_artifacts\",\"title\":\"List artifacts\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get artifact\"},\"description\":\"Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \\\"REQ-12\\\") instead of a UUID when project_id is also given.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID; required only when id is a stable ref\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_artifact\",\"title\":\"Get artifact\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get project map\"},\"description\":\"The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.\",\"inputSchema\":{\"properties\":{\"baseline_id\":{\"description\":\"Optional baseline ID to render the map from that snapshot\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_project_map\",\"title\":\"Get project map\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get context\"},\"description\":\"One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Artifact stable ref (e.g. REQ-12) or UUID\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\",\"id\"],\"type\":\"object\"},\"name\":\"get_context\",\"title\":\"Get context\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get project tree\"},\"description\":\"Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_project_tree\",\"title\":\"Get project tree\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Search artifacts\"},\"description\":\"Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\\\"REQ-30\\\", case-insensitive) returns that artifact first.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"},\"query\":{\"description\":\"Substring to search for, or a ref such as REQ-30\",\"type\":\"string\"}},\"required\":[\"project_id\",\"query\"],\"type\":\"object\"},\"name\":\"search_artifacts\",\"title\":\"Search artifacts\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"List links for artifact\"},\"description\":\"List all links touching one artifact.\",\"inputSchema\":{\"properties\":{\"artifact_id\":{\"description\":\"Artifact ID\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"artifact_id\",\"project_id\"],\"type\":\"object\"},\"name\":\"list_links_for_artifact\",\"title\":\"List links for artifact\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"List baselines\"},\"description\":\"List a project's baselines.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_baselines\",\"title\":\"List baselines\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get baseline\"},\"description\":\"Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Baseline ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_baseline\",\"title\":\"Get baseline\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get quality rules\"},\"description\":\"The requirement quality rules this project is judged against: its normative convention (\\\"shall\\\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_quality_rules\",\"title\":\"Get quality rules\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get quality findings\"},\"description\":\"Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.\",\"inputSchema\":{\"properties\":{\"artifact_id\":{\"description\":\"Artifact ID or stable ref (pass project_id to resolve a ref)\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID, required when artifact_id is a stable ref\",\"type\":\"string\"}},\"required\":[\"artifact_id\"],\"type\":\"object\"},\"name\":\"get_quality_findings\",\"title\":\"Get quality findings\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get V\\u0026V coverage\"},\"description\":\"Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.\",\"inputSchema\":{\"properties\":{\"detail\":{\"description\":\"Return the full report instead of the per-requirement summary lines\",\"type\":\"boolean\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_vv_coverage\",\"title\":\"Get V\\u0026V coverage\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get V\\u0026V gaps\"},\"description\":\"Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_vv_gaps\",\"title\":\"Get V\\u0026V gaps\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"List work items\"},\"description\":\"List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.\",\"inputSchema\":{\"properties\":{\"assignee_id\":{\"description\":\"Optional assignee ID filter (agent, user or team ID)\",\"type\":\"string\"},\"column\":{\"description\":\"Optional board column filter: backlog, todo, in-progress, review or done\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_work_items\",\"title\":\"List work items\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get work item\"},\"description\":\"Get a kanban work item with its activity.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Work item ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_work_item\",\"title\":\"Get work item\"},{\"annotations\":{\"destructiveHint\":false,\"openWorldHint\":false,\"readOnlyHint\":true,\"title\":\"Get work item history\"},\"description\":\"Get just the activity history of a work item.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Work item ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_work_item_history\",\"title\":\"Get work item history\"}]}}"
       ],
       "trailing_newline": false,
       "parsed": {
@@ -714,15 +714,28 @@
         "result": {
           "tools": [
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "List projects"
+              },
               "description": "List all projects visible to this agent.",
               "inputSchema": {
                 "properties": {},
                 "required": [],
                 "type": "object"
               },
-              "name": "list_projects"
+              "name": "list_projects",
+              "title": "List projects"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "List artifacts"
+              },
               "description": "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",
               "inputSchema": {
                 "properties": {
@@ -744,9 +757,16 @@
                 ],
                 "type": "object"
               },
-              "name": "list_artifacts"
+              "name": "list_artifacts",
+              "title": "List artifacts"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get artifact"
+              },
               "description": "Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \"REQ-12\") instead of a UUID when project_id is also given.",
               "inputSchema": {
                 "properties": {
@@ -764,9 +784,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_artifact"
+              "name": "get_artifact",
+              "title": "Get artifact"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get project map"
+              },
               "description": "The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.",
               "inputSchema": {
                 "properties": {
@@ -784,9 +811,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_project_map"
+              "name": "get_project_map",
+              "title": "Get project map"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get context"
+              },
               "description": "One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.",
               "inputSchema": {
                 "properties": {
@@ -805,9 +839,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_context"
+              "name": "get_context",
+              "title": "Get context"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get project tree"
+              },
               "description": "Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).",
               "inputSchema": {
                 "properties": {
@@ -821,9 +862,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_project_tree"
+              "name": "get_project_tree",
+              "title": "Get project tree"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Search artifacts"
+              },
               "description": "Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\"REQ-30\", case-insensitive) returns that artifact first.",
               "inputSchema": {
                 "properties": {
@@ -842,9 +890,16 @@
                 ],
                 "type": "object"
               },
-              "name": "search_artifacts"
+              "name": "search_artifacts",
+              "title": "Search artifacts"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "List links for artifact"
+              },
               "description": "List all links touching one artifact.",
               "inputSchema": {
                 "properties": {
@@ -863,9 +918,16 @@
                 ],
                 "type": "object"
               },
-              "name": "list_links_for_artifact"
+              "name": "list_links_for_artifact",
+              "title": "List links for artifact"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "List baselines"
+              },
               "description": "List a project's baselines.",
               "inputSchema": {
                 "properties": {
@@ -879,9 +941,16 @@
                 ],
                 "type": "object"
               },
-              "name": "list_baselines"
+              "name": "list_baselines",
+              "title": "List baselines"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get baseline"
+              },
               "description": "Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.",
               "inputSchema": {
                 "properties": {
@@ -895,9 +964,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_baseline"
+              "name": "get_baseline",
+              "title": "Get baseline"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get quality rules"
+              },
               "description": "The requirement quality rules this project is judged against: its normative convention (\"shall\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.",
               "inputSchema": {
                 "properties": {
@@ -911,9 +987,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_quality_rules"
+              "name": "get_quality_rules",
+              "title": "Get quality rules"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get quality findings"
+              },
               "description": "Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.",
               "inputSchema": {
                 "properties": {
@@ -931,9 +1014,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_quality_findings"
+              "name": "get_quality_findings",
+              "title": "Get quality findings"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get V\u0026V coverage"
+              },
               "description": "Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.",
               "inputSchema": {
                 "properties": {
@@ -951,9 +1041,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_vv_coverage"
+              "name": "get_vv_coverage",
+              "title": "Get V\u0026V coverage"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get V\u0026V gaps"
+              },
               "description": "Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.",
               "inputSchema": {
                 "properties": {
@@ -967,9 +1064,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_vv_gaps"
+              "name": "get_vv_gaps",
+              "title": "Get V\u0026V gaps"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "List work items"
+              },
               "description": "List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.",
               "inputSchema": {
                 "properties": {
@@ -991,9 +1095,16 @@
                 ],
                 "type": "object"
               },
-              "name": "list_work_items"
+              "name": "list_work_items",
+              "title": "List work items"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get work item"
+              },
               "description": "Get a kanban work item with its activity.",
               "inputSchema": {
                 "properties": {
@@ -1007,9 +1118,16 @@
                 ],
                 "type": "object"
               },
-              "name": "get_work_item"
+              "name": "get_work_item",
+              "title": "Get work item"
             },
             {
+              "annotations": {
+                "destructiveHint": false,
+                "openWorldHint": false,
+                "readOnlyHint": true,
+                "title": "Get work item history"
+              },
               "description": "Get just the activity history of a work item.",
               "inputSchema": {
                 "properties": {
@@ -1023,7 +1141,8 @@
                 ],
                 "type": "object"
               },
-              "name": "get_work_item_history"
+              "name": "get_work_item_history",
+              "title": "Get work item history"
             }
           ]
         }
