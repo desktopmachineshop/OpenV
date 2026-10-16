@@ -9,8 +9,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
-## 0.21.2 — 2026-10-16
-
 ### Bug fixes
 
 - **Self-hosted workspaces get every feature of the release you run.** A
@@ -20,15 +18,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   release that never came. Every workspace on a self-hosted install now
   runs the release you deployed. Workspace settings shows its channel as
   Nightly, with no channel picker or upgrade window.
-- **A Claude sign-in that stalls after you paste the code now says why.**
-  If the sign-in on your runner goes quiet for half a minute after the code,
-  the card shows what the runner's terminal is displaying (with any
-  credential hidden), so you can tell a slow sign-in from one waiting on
-  you, and a sign-in that times out says the same.
-- **Signing Claude Code in on a cloud runner starts from a clean slate.**
-  Both ways of signing in (for the session, or for a year with a saved
-  token) now sign the runner's Claude Code out first, so a sign-in it
-  already held cannot get in the way of the new one.
 
 ### Maintenance updates
 
@@ -38,6 +27,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   people which setting to change rather than offering a plan upgrade. Set
   `OPENV_SELF_HOSTED=false` in `.env` only to try the hosted service's
   plans locally.
+
+## 0.21.2 — 2026-10-16
+
+### Bug fixes
+
+- **A Claude sign-in that stalls after you paste the code now says why.**
+  If the sign-in on your runner goes quiet for half a minute after the code,
+  the card shows what the runner's terminal is displaying (with any
+  credential hidden), so you can tell a slow sign-in from one waiting on
+  you, and a sign-in that times out says the same.
+- **Signing Claude Code in on a cloud runner starts from a clean slate.**
+  Both ways of signing in (for the session, or for a year with a saved
+  token) now sign the runner's Claude Code out first, so a sign-in it
+  already held cannot get in the way of the new one.
 
 ## 0.21.1 — 2026-10-16
 
