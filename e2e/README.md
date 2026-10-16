@@ -44,7 +44,8 @@ are claimed so each journey has an owner. A new spec needs no glob.
 ## Recipes
 
 **Run the suite.**
-1. Start the stack: `OPENV_REGISTER_IP_BURST=100 docker compose up -d --build`
+1. Start the stack as the hosted service, whose public site the journeys
+   visit: `OPENV_SELF_HOSTED=false OPENV_REGISTER_IP_BURST=100 docker compose up -d --build`
    from the repository root, and wait for the frontend on port 3000.
 2. `cd e2e && npm ci && npx playwright install --with-deps chromium webkit && npx playwright test`
    (set `BASE_URL` for another stack; `npm run report` opens the HTML

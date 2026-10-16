@@ -148,12 +148,20 @@ test('pre-rendered pages are finished with the address when OPENV_SITE_URL is se
   assert.notEqual(read('prerendered/manual/vv.html'), null);
 });
 
-test('without an address, or on a noindex deployment, pre-rendered pages lose only the lines that carry it', () => {
-  for (const env of [{}, { OPENV_NOINDEX: '1', OPENV_SITE_URL: 'https://staging.openv.app' }]) {
+test('on a noindex deployment, pre-rendered pages lose only the lines that carry the address', () => {
+  for (const env of [{ OPENV_NOINDEX: '1', OPENV_SITE_URL: 'https://staging.openv.app' }, { OPENV_NOINDEX: '1' }]) {
     const { run, read } = setup();
     run(env);
     assert.equal(read('prerendered/faq.html'), '<head>\n</head>\n<div id="prerender"><h1>FAQ</h1></div>\n', JSON.stringify(env));
   }
+});
+
+test('a deployment with no address that is not staging (self-hosted) publishes no pre-rendered pages', () => {
+  const { run, read } = setup();
+  run({ OPENV_SITE_URL: 'https://openv.app' });
+  run();
+  assert.equal(read('prerendered/faq.html'), null);
+  assert.equal(read('prerendered/manual/vv.html'), null);
 });
 
 test('each start rebuilds the pre-rendered pages from the build, so a changed address takes', () => {

@@ -60,7 +60,7 @@ index routes: 1
   /share/:token                         <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
   /s/:token                             <SharedProjectView source="share">  [lazy ./views/SharedProjectView#SharedProjectView]
   /open-source/:id                      <SharedProjectView source="open-source">  [lazy ./views/SharedProjectView#SharedProjectView]
-  /                                     currentUser ? redirect to="{{pendingReturnTo() || '/projects'}}" replace (relative) : <Landing>  [lazy ./views/Landing#Landing]
+  /                                     currentUser ? redirect to="{{pendingReturnTo() || '/projects'}}" replace (relative) : hosted ? <Landing>  [lazy ./views/Landing#Landing] : redirect to="/login" replace
   /pricing                              <Landing section="pricing">  [lazy ./views/Landing#Landing]
   /how-it-works                         <HowItWorks>  [lazy ./site/HowItWorks#HowItWorks]
   /demos                                <Demos>  [lazy ./site/Demos#Demos]

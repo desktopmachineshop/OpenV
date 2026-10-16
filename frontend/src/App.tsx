@@ -26,6 +26,7 @@ import { DialogProvider } from './components/ui';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import { releasePrerender } from './site/prerenderHandoff';
 import { sendVisitBeacon } from './site/visitBeacon';
+import { CAPABILITY_HOSTED, hasCapability } from './capabilities';
 import './index.css';
 import { pendingReturnTo } from './utils/returnTo';
 
@@ -118,7 +119,12 @@ function App() {
     setFeaturesFailed,
     emailVerificationRequired,
     setEmailVerificationRequired,
+    capabilities,
+    setCapabilities,
   } = useAppStore();
+  // The public site and its visit beacon are the hosted service's; a
+  // self-hosted OpenV opens on its sign-in page.
+  const hosted = hasCapability(capabilities, CAPABILITY_HOSTED);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -134,16 +140,17 @@ function App() {
         setCurrentUser(me.status === 'fulfilled' ? me.value.data : null);
         if (config.status === 'fulfilled') {
           setEmailVerificationRequired(!!config.value.data.email_verification_required);
+          if (Array.isArray(config.value.data.capabilities)) setCapabilities(config.value.data.capabilities);
         }
       })
       .finally(() => setAuthChecked(true));
-  }, [setCurrentUser, setEmailVerificationRequired]);
+  }, [setCurrentUser, setEmailVerificationRequired, setCapabilities]);
 
   // The site visit beacon (the platform admin's Visitors dashboard): once
   // the session is known, and again when this browser signs in or up.
   useEffect(() => {
-    if (authChecked) sendVisitBeacon(currentUser?.id ?? null);
-  }, [authChecked, currentUser?.id]);
+    if (authChecked && hosted) sendVisitBeacon(currentUser?.id ?? null);
+  }, [authChecked, hosted, currentUser?.id]);
 
   // A signed-in visitor to a pre-rendered page goes into the app (the front
   // page redirects to /projects), so its snapshot is dropped as soon as the
@@ -258,7 +265,15 @@ function App() {
             authChecked gates rendering above, so currentUser is settled here. */}
         <Route
           path="/"
-          element={currentUser ? <Navigate to={pendingReturnTo() || '/projects'} replace /> : <Landing />}
+          element={
+            currentUser ? (
+              <Navigate to={pendingReturnTo() || '/projects'} replace />
+            ) : hosted ? (
+              <Landing />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
         <Route path="/pricing" element={<Landing section="pricing" />} />
         {/* The storefront's other pages, public like the landing page. */}

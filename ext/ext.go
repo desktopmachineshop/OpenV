@@ -91,6 +91,24 @@ type WorkspaceObserver interface {
 	WorkspaceRestored(ctx context.Context, org *Workspace)
 }
 
+// CapabilityModule names what a module offers on this deployment, for the
+// app to show or hide what depends on it (GET /api/v1/auth/config's
+// capabilities). A module that is plugged in but off, such as billing with
+// no provider, names nothing.
+type CapabilityModule interface {
+	Module
+	Capabilities() []string
+}
+
+// The capability names the core and its modules publish.
+const (
+	// CapabilityHosted: this deployment is the hosted service, with plans,
+	// release channels and the public site; a self-hosted one is not.
+	CapabilityHosted = "hosted"
+	// CapabilityBilling: workspaces can buy a plan here.
+	CapabilityBilling = "billing"
+)
+
 // Router is where a RouteModule declares its routes. A route's guard is
 // declared, not coded: the Host runs it before the handler, exactly as the
 // core's own guard of that kind, so a module cannot forget one and the

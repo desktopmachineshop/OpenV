@@ -16,6 +16,11 @@ interface AppState {
   // the API's own gate still protects data.
   emailVerificationRequired: boolean;
   setEmailVerificationRequired: (required: boolean) => void;
+  // What this deployment offers (/auth/config's capabilities, such as
+  // 'hosted' and 'billing'); null until read, and left null when the read
+  // fails, which useCapability takes as the hosted service's full set.
+  capabilities: string[] | null;
+  setCapabilities: (capabilities: string[]) => void;
   meta: MetaState;
   setMeta: (meta: Partial<MetaState>) => void;
   orgs: Org[];
@@ -66,6 +71,8 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentUser: (user: User | null) => set({ currentUser: user }),
   emailVerificationRequired: false,
   setEmailVerificationRequired: (required: boolean) => set({ emailVerificationRequired: required }),
+  capabilities: null,
+  setCapabilities: (capabilities: string[]) => set({ capabilities }),
 
   meta: { artifactTypes: [], linkTypeRules: [], loaded: false },
   setMeta: (meta: Partial<MetaState>) =>

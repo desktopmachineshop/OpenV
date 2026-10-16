@@ -14,6 +14,7 @@ import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { ErrorBanner } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
+import { CAPABILITY_BILLING, CAPABILITY_HOSTED, useCapability } from '../capabilities';
 
 type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage' | 'limits' | 'billing';
 
@@ -37,12 +38,17 @@ export const OrgSettings: React.FC = () => {
   const org = orgs.find((o) => o.id === activeOrgId) || null;
   const isAdmin = Boolean(org && (org.role === 'admin' || currentUser?.is_admin));
   const { isPhone } = useViewport();
+  // Plans and billing are the hosted service's; a self-hosted OpenV has no
+  // Billing tab and no Plan card.
+  const hosted = useCapability(CAPABILITY_HOSTED);
+  const billing = useCapability(CAPABILITY_BILLING);
+  const tabs = hosted || billing ? TABS : TABS.filter((t) => t.key !== 'billing');
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : TABS[0].key;
+  const tab: Tab = tabs.some((t) => t.key === tabParam) ? (tabParam as Tab) : tabs[0].key;
   const setTab = (next: Tab) =>
     setSearchParams(
       (prev) => {
@@ -290,7 +296,7 @@ export const OrgSettings: React.FC = () => {
         </div>
 
         <div className="tab-strip" role="tablist">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
@@ -394,6 +400,7 @@ export const OrgSettings: React.FC = () => {
               )}
             </div>
 
+            {hosted && (
             <div className="card">
               <h3>Plan</h3>
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
@@ -409,6 +416,7 @@ export const OrgSettings: React.FC = () => {
                 ; see <a href="/pricing" target="_blank" rel="noreferrer">the tiers</a>.
               </p>
             </div>
+            )}
 
             <div className="card">
               <h3>Release channel</h3>
