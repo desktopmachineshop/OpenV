@@ -17,6 +17,11 @@ interface Props {
   // refuses them. Rendered above the Connect button, so a sign-in that cannot
   // succeed for this account says so while there is still time not to try it.
   caution?: React.ReactNode;
+  // 'token' has the member's cloud runner mint them a saved subscription
+  // token (`claude setup-token`) instead of signing its CLI in.
+  purpose?: 'token';
+  // The start button's label, instead of Connect / Re-connect.
+  startLabel?: string;
 }
 
 /**
@@ -54,6 +59,8 @@ export const ProviderConnectCard: React.FC<Props> = ({
   target = 'workspace',
   title = 'Subscription sign-in',
   caution,
+  purpose,
+  startLabel,
 }) => {
   const { isPhone } = useViewport();
   const [login, setLogin] = useState<ProviderLogin | null>(null);
@@ -113,7 +120,9 @@ export const ProviderConnectCard: React.FC<Props> = ({
     setCodeSent(false);
     sentDetailRef.current = null;
     try {
-      const res = await providerLoginsAPI.start(provider, target);
+      const res = purpose
+        ? await providerLoginsAPI.startToken()
+        : await providerLoginsAPI.start(provider, target);
       setLogin(res.data);
       poll(res.data.id);
     } catch (err: any) {
@@ -173,6 +182,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
     if (!login) return null;
     switch (login.status) {
       case 'pending':
+        if (purpose) return login.detail;
         return target === 'user'
           ? 'Waiting for your personal runner to pick this up…'
           : 'Waiting for the worker (agentd) to pick this up…';
@@ -182,7 +192,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
       case 'awaiting_code':
         return login.detail;
       case 'completed':
-        return 'Signed in successfully.';
+        return purpose ? login.detail : 'Signed in successfully.';
       case 'cancelled':
         return 'Sign-in cancelled.';
       case 'failed':
@@ -268,7 +278,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
             style={isPhone ? { minHeight: 44, width: '100%', fontSize: 14 } : { padding: '6px 14px', fontSize: 13 }}
             onClick={start}
           >
-            {loggedIn ? 'Re-connect' : 'Connect'}
+            {startLabel ?? (loggedIn ? 'Re-connect' : 'Connect')}
           </button>
         ) : (
           // On a phone Cancel goes last, under the steps it abandons; beside

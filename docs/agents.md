@@ -328,6 +328,21 @@ token it prints (it starts `sk-ant-oat01-` and lasts a year).
   save the new token. An expired token is not sent; the run uses the
   runner's own sign-in, and the card asks for a new one.
 
+**Minted on a cloud runner.** Instead of running `claude setup-token`
+themselves, a member can choose *Get token* on the card (gated by
+`cloud-runner-token`). That starts a brokered request with
+`purpose: "token"` (always Claude Code, always the member's own): a runner
+claims one only when its claim says `token_logins: true`, which only a
+headless runner with a pseudo-terminal sends, so an older runner, or one on
+the member's own machine, never runs an ordinary sign-in in its place. The
+runner drives `claude setup-token` exactly as it drives `auth login` above
+(link out, code in), reads the token the CLI prints, and hands it to
+`POST /api/v1/provider-logins/{id}/token`, which accepts it only from the
+requester's own runner key or lease, for their active token request, seals
+it as their saved token and completes the request. The token is never in a
+progress report, the request's detail or the runner's log: every line the
+runner relays or logs passes `redactSecrets` first.
+
 This is why `claude setup-token` is not used for the brokered sign-in above:
 that flow signs the CLI in on the runner's disk, and a setup-token does not;
 the token works only when it reaches the CLI as `CLAUDE_CODE_OAUTH_TOKEN`,

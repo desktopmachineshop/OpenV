@@ -48,6 +48,7 @@ func wireGoldenCases() map[string][]wireCase {
 		"ClaimLogin":          wireClaimLoginCases(),
 		"LoginProgress":       wireLoginProgressCases(),
 		"GetLoginFull":        wireGetLoginFullCases(),
+		"SaveLoginToken":      wireSaveLoginTokenCases(),
 		"ListRepoConnections": wireListRepoConnectionsCases(),
 		"RegisterPoolNode":    wireRegisterPoolNodeCases(),
 		"PoolHeartbeat":       wirePoolHeartbeatCases(),
@@ -307,7 +308,8 @@ func wireLoginJSON(status, code string) string {
 }
 
 func wireClaimLoginCases() []wireCase {
-	call := wireCall{`ClaimLogin()`, func(c *Client) (interface{}, error) { return c.ClaimLogin() }}
+	call := wireCall{`ClaimLogin(false)`, func(c *Client) (interface{}, error) { return c.ClaimLogin(false) }}
+	minting := wireCall{`ClaimLogin(true)`, func(c *Client) (interface{}, error) { return c.ClaimLogin(true) }}
 	return []wireCase{
 		{
 			name:      "nothing pending answers 204: no request and no error",
@@ -315,9 +317,14 @@ func wireClaimLoginCases() []wireCase {
 			calls:     []wireCall{call},
 		},
 		{
-			name:      "a pending sign-in is claimed with no body",
+			name:      "a pending sign-in is claimed, saying the runner mints no token",
 			responses: []wireResponse{{200, wireLoginJSON("claimed", "")}},
 			calls:     []wireCall{call},
+		},
+		{
+			name:      "a headless runner says it can mint a token",
+			responses: []wireResponse{{204, ""}},
+			calls:     []wireCall{minting},
 		},
 		{
 			name:      "a server error is returned at once, not retried",
@@ -340,6 +347,24 @@ func wireLoginProgressCases() []wireCase {
 		{
 			name:      "a refused step is returned as an error",
 			responses: []wireResponse{{400, `{"error":"login request is no longer active"}` + "\n"}},
+			calls:     []wireCall{call},
+		},
+	}
+}
+
+func wireSaveLoginTokenCases() []wireCase {
+	call := wireCall{`SaveLoginToken("<login-id>", "<token>")`, func(c *Client) (interface{}, error) {
+		return nil, c.SaveLoginToken(wireID("<login-id>"), "sk-ant-oat01-wire-golden-placeholder-token")
+	}}
+	return []wireCase{
+		{
+			name:      "hands in the minted token",
+			responses: []wireResponse{{200, wireLoginJSON("completed", "")}},
+			calls:     []wireCall{call},
+		},
+		{
+			name:      "a refused token is returned as an error",
+			responses: []wireResponse{{409, `{"error":"this sign-in request does not mint a token"}` + "\n"}},
 			calls:     []wireCall{call},
 		},
 	}

@@ -56,6 +56,7 @@ var Registry = []Feature{
 	{Key: FeatureRemoteMCP, ShippedIn: "0.19.0", Summary: "Connect an AI client such as Claude or Cursor to a workspace by its address alone: you sign in and approve it, with no runner and no key to copy, and revoke it from your settings"},
 	{Key: FeatureAutoCloudRunner, ShippedIn: "0.20.0", Summary: "Send a chat message with no runner online and OpenV starts a cloud runner for you, where your plan has cloud runner minutes"},
 	{Key: FeatureSubscriptionToken, ShippedIn: "0.20.0", Summary: "Keep Claude signed in: save a long-lived Claude subscription token once, and your own and leased runners start chats already signed in"},
+	{Key: FeatureCloudRunnerToken, ShippedIn: "0.21.0", Summary: "Get your saved Claude token from your cloud runner: sign in once in the browser, and the runner mints the token and saves it for you"},
 }
 
 // Feature keys the code gates on.
@@ -174,6 +175,12 @@ const (
 	// chat turn of theirs is queued with no runner online to take it. It
 	// gates only the automatic lease; starting one by hand is unchanged.
 	FeatureAutoCloudRunner = "auto-cloud-runner"
+	// FeatureCloudRunnerToken is having the member's cloud runner mint their
+	// saved subscription token (`claude setup-token` relayed to the
+	// browser) instead of pasting one. It gates STARTING such a request and
+	// the runner handing its token in; a token already saved works as any
+	// saved token does.
+	FeatureCloudRunnerToken = "cloud-runner-token"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

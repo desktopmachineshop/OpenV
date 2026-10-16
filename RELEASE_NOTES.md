@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Your cloud runner can get your Claude token for you.** Under Settings →
+  Claude subscription token, choose Get token: your cloud runner opens the
+  Claude sign-in, you sign in with your Claude subscription in the browser
+  and paste the code back, and the long-lived token it receives is saved for
+  you, with nothing to install or run on your own computer. Start a cloud
+  runner first if you have none running.
+
 ## 0.20.0 — 2026-10-16
 
 ### New features

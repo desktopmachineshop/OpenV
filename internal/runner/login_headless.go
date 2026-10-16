@@ -22,7 +22,8 @@ import (
 //
 // Two shapes of flow need help here:
 //
-//   - TUI logins (Claude Code's `claude setup-token`) render nothing over
+//   - TUI logins (Claude Code's `claude auth login`, and `claude setup-token`
+//     when the member asks the runner to mint a saved token) render nothing over
 //     pipes. They are driven over a pseudo-terminal instead: the URL is
 //     scraped out of the terminal output, and the code the member pastes
 //     back is typed into the terminal.
@@ -143,6 +144,10 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 	const pasteDetail = "Open the sign-in link, authorize, then paste the code you are given back here."
 
 	screen := newScreenBuffer(32 * 1024)
+	// minted holds what the terminal drew after the code was typed, which
+	// is where `claude setup-token` prints its token; only a minting flow
+	// keeps it, and it never leaves this function but as the token itself.
+	minted := newScreenBuffer(32 * 1024)
 	tail := newLineTail(40)
 	urlReported := false
 	nudged := false
@@ -161,6 +166,13 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 	for {
 		select {
 		case err := <-done:
+			if flow.mintsToken && err == nil && ctx.Err() == nil {
+				// Read out whatever is still buffered: the token is the last
+				// thing the CLI draws before it exits.
+				drainChunks(chunks, minted, outputDrainTimeout)
+				b.saveMintedToken(login, minted.String())
+				return
+			}
 			b.finishLogin(ctx, login, err, ctx.Err(), tail)
 			return
 		case chunk, ok := <-chunks:
@@ -168,6 +180,9 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 				continue
 			}
 			screen.add(chunk)
+			if flow.mintsToken && sentCode != "" {
+				minted.add(chunk)
+			}
 			for _, line := range visibleLines(chunk) {
 				tail.add(line)
 			}
@@ -181,7 +196,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 			// the member's answer: relay it instead of waiting for an exit
 			// that a retry prompt will never produce.
 			if sentCode != "" {
-				if msg := tuiError(screen.String()); msg != "" && msg != reportedErr {
+				if msg := redactSecrets(tuiError(screen.String())); msg != "" && msg != reportedErr {
 					reportedErr = msg
 					log.Printf("login %s: the sign-in terminal reported: %s", login.ID, msg)
 					b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
@@ -229,6 +244,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 			sentCode = code
 			reportedErr = ""
 			screen.reset()
+			minted.reset()
 			if _, err := io.WriteString(tty, code+"\r"); err != nil {
 				log.Printf("login %s: writing code to terminal failed: %v", login.ID, err)
 				continue
@@ -270,6 +286,42 @@ func (b *screenBuffer) String() string { return b.text.String() }
 // reset drops what the TUI drew before the current attempt, so a stale error
 // from a previous paste is never reported against a new one.
 func (b *screenBuffer) reset() { b.text.Reset() }
+
+// drainChunks adds to buf what the terminal still has buffered, until the
+// reader closes the channel or the wait runs out (something the CLI started
+// may hold the terminal open after it exits).
+func drainChunks(chunks <-chan string, buf *screenBuffer, wait time.Duration) {
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	for {
+		select {
+		case chunk, ok := <-chunks:
+			if !ok {
+				return
+			}
+			buf.add(chunk)
+		case <-timer.C:
+			return
+		}
+	}
+}
+
+// saveMintedToken hands the server the token `claude setup-token` printed,
+// which completes the request there; it reports a failure itself. Neither
+// the token nor the output it was read from is logged or relayed.
+func (b *loginBroker) saveMintedToken(login *providers.LoginRequest, output string) {
+	token := subscriptionTokenPattern.FindString(stripANSI(output))
+	if token == "" {
+		b.loginProgress(login.ID, providers.LoginFailed, "",
+			"the sign-in finished but printed no token — start again, and paste the whole code")
+		return
+	}
+	if err := b.client.SaveLoginToken(login.ID, token); err != nil {
+		b.loginProgress(login.ID, providers.LoginFailed, "", "the runner minted a token but could not save it: "+redactSecrets(err.Error()))
+		return
+	}
+	log.Printf("login %s: minted a token and handed it to the server", login.ID)
+}
 
 // finishLogin reports the terminal state of a sign-in the CLI has exited.
 func (b *loginBroker) finishLogin(ctx context.Context, login *providers.LoginRequest, waitErr, ctxErr error, tail *lineTail) {

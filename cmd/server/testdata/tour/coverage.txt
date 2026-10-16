@@ -300,10 +300,11 @@ POST /api/v1/proposals/bulk: s5d, s5e; 2xx or 3xx in s5d, s5e
 POST /api/v1/proposals/{id}/approve: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/proposals/{id}/reject: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/provider-logins: s5d, s5e; 2xx or 3xx in s5d
-POST /api/v1/provider-logins/claim: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /api/v1/provider-logins/claim: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/provider-logins/{id}/cancel: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/provider-logins/{id}/code: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/provider-logins/{id}/progress: s5d, s5e; 2xx or 3xx in s5d
+POST /api/v1/provider-logins/{id}/token: s5e (errors only)
 POST /api/v1/provider-settings/detect: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/public/connector/pair: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/public/interviews/{token}/finish: s5b, s5e; 2xx or 3xx in s5b
@@ -375,4 +376,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 364 of 364 routes reached (100.0%), 356 with a 2xx or 3xx answer (97.8%); the floor is 90%, 328 routes
+the tour: 365 of 365 routes reached (100.0%), 356 with a 2xx or 3xx answer (97.5%); the floor is 90%, 329 routes

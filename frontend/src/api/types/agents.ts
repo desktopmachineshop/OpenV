@@ -273,6 +273,8 @@ export interface ProviderLogin {
   // 'workspace' runs on any shared worker; 'user' only on the requester's
   // personal runner (the credential lands on their own machine).
   target: 'workspace' | 'user';
+  // 'token' when the runner mints a saved subscription token instead.
+  purpose?: 'token';
   status: 'pending' | 'claimed' | 'url_ready' | 'awaiting_code' | 'completed' | 'failed' | 'cancelled';
   auth_url: string;
   detail: string;

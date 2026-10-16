@@ -22,10 +22,10 @@ func (m *memLogins) FindLoginByID(id string) (*LoginRequest, error) {
 	}
 	return &l, nil
 }
-func (m *memLogins) FindActiveLogin(orgID, provider, target string, userID *string) (*LoginRequest, error) {
+func (m *memLogins) FindActiveLogin(orgID, provider, target, purpose string, userID *string) (*LoginRequest, error) {
 	return nil, nil
 }
-func (m *memLogins) ClaimPendingLogin(orgID, workerUserID string) (*LoginRequest, error) {
+func (m *memLogins) ClaimPendingLogin(orgID, workerUserID string, tokenLogins bool) (*LoginRequest, error) {
 	return nil, nil
 }
 
@@ -72,5 +72,34 @@ func TestProgressRecordsAFailureInFlight(t *testing.T) {
 	}
 	if got.Status != LoginFailed || repo.rows["l1"].Status != LoginFailed || got.Detail != "The CLI exited." {
 		t.Fatalf("answered %+v, stored %q; want failed", got, repo.rows["l1"].Status)
+	}
+}
+
+// A token request is Claude Code's, the member's own, and finishes only
+// through CompleteTokenLogin; an ordinary sign-in cannot be finished that way.
+func TestTokenLogins(t *testing.T) {
+	repo := &memLogins{rows: map[string]LoginRequest{}}
+	s := NewLoginService(repo)
+	login, err := s.StartTokenLogin("org", "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if login.Provider != ProviderClaudeCode || login.Target != LoginTargetUser || login.Purpose != LoginPurposeToken {
+		t.Fatalf("token request = %+v", login)
+	}
+	if _, err := s.StartTokenLogin("org", ""); err == nil {
+		t.Fatal("a token request with no member was accepted")
+	}
+	done, err := s.CompleteTokenLogin(login.ID)
+	if err != nil || done.Status != LoginCompleted {
+		t.Fatalf("complete = %+v, %v", done, err)
+	}
+	if _, err := s.CompleteTokenLogin(login.ID); err != ErrNotTokenLogin {
+		t.Fatalf("a finished request completed again: %v", err)
+	}
+	user := "u1"
+	plain, _ := s.StartLogin("org", ProviderClaudeCode, LoginTargetUser, &user)
+	if _, err := s.CompleteTokenLogin(plain.ID); err != ErrNotTokenLogin {
+		t.Fatalf("an ordinary sign-in completed as a token: %v", err)
 	}
 }

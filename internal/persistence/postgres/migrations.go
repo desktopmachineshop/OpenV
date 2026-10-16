@@ -118,4 +118,5 @@ var migrations = []Migration{
 	{Version: 61, Name: "provider_api_keys", Run: m0061ProviderApiKeys},
 	{Version: 62, Name: "connected_apps", Run: m0062ConnectedApps},
 	{Version: 63, Name: "user_provider_tokens", Run: m0063UserProviderTokens},
+	{Version: 64, Name: "provider_login_purpose", Run: m0064ProviderLoginPurpose},
 }

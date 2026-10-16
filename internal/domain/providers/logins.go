@@ -52,16 +52,34 @@ const (
 	LoginTargetUser = "user"
 )
 
+// Login purposes: what a brokered sign-in is for.
+const (
+	// LoginPurposeSignIn signs the CLI in on the runner, which keeps the
+	// credentials it gets; OpenV never sees them. The zero value.
+	LoginPurposeSignIn = ""
+	// LoginPurposeToken has a cloud runner mint the member a long-lived
+	// Claude subscription token (`claude setup-token`) and hand it to the
+	// server, which seals it as the member's saved token. Only Claude Code,
+	// only a user-targeted request, and only a runner that says it can
+	// capture the token (a headless one) claims it.
+	LoginPurposeToken = "token"
+)
+
 // LoginRequest brokers a CLI provider sign-in between the UI and the host
-// worker. The OAuth code passes through briefly; the CLI stores the actual
-// credentials on the host — OpenV never sees tokens.
+// worker. The OAuth code passes through briefly; for an ordinary sign-in the
+// CLI stores the actual credentials on the host — OpenV never sees them. A
+// token-purpose request is the exception: its token reaches the server once,
+// to be sealed as the member's saved token, and is never stored here.
 type LoginRequest struct {
 	ID       string `json:"id"`
 	OrgID    string `json:"org_id"`
 	Provider string `json:"provider"`
 	// Target is where the sign-in executes: "workspace" (any shared worker)
 	// or "user" (only the requester's personal runner).
-	Target  string `json:"target"`
+	Target string `json:"target"`
+	// Purpose is "" for a sign-in, or "token" when the runner mints the
+	// member a saved subscription token instead.
+	Purpose string `json:"purpose,omitempty"`
 	Status  string `json:"status"`
 	AuthURL string `json:"auth_url"`
 	Code    string `json:"code,omitempty"`
@@ -94,14 +112,16 @@ type LoginRepository interface {
 	UpdateLogin(l *LoginRequest) error
 	FindLoginByID(id string) (*LoginRequest, error)
 	// FindActiveLogin returns the most recent in-flight request for a
-	// provider, scoped by target: user-targeted requests match per requester
-	// (userID), workspace-targeted requests match org-wide.
-	FindActiveLogin(orgID, provider, target string, userID *string) (*LoginRequest, error)
+	// provider and purpose, scoped by target: user-targeted requests match
+	// per requester (userID), workspace-targeted requests match org-wide.
+	FindActiveLogin(orgID, provider, target, purpose string, userID *string) (*LoginRequest, error)
 	// ClaimPendingLogin atomically claims the org's oldest pending request a
 	// worker may execute: workspace-targeted requests for any worker, plus
 	// user-targeted requests when workerUserID matches the requester
-	// (personal runners).
-	ClaimPendingLogin(orgID, workerUserID string) (*LoginRequest, error)
+	// (personal runners). Token-purpose requests are claimed only when
+	// tokenLogins is set: a runner that cannot capture the token would run
+	// an ordinary sign-in in its place.
+	ClaimPendingLogin(orgID, workerUserID string, tokenLogins bool) (*LoginRequest, error)
 }
 
 // LoginService defines the login broker logic.
@@ -110,14 +130,21 @@ type LoginService interface {
 	// a CLI provider in an org. target picks the executing machine:
 	// "workspace" (shared workers) or "user" (the requester's own runner).
 	StartLogin(orgID, provider, target string, requestedBy *string) (*LoginRequest, error)
+	// StartTokenLogin creates (or returns the existing active) request for
+	// the member's own runner to mint them a Claude subscription token.
+	StartTokenLogin(orgID, requestedBy string) (*LoginRequest, error)
+	// CompleteTokenLogin finishes a token-purpose request once its token is
+	// saved. A request that is not an active token request is refused.
+	CompleteTokenLogin(id string) (*LoginRequest, error)
 	Get(id string) (*LoginRequest, error)
 	// SubmitCode records the user's pasted authorization code.
 	SubmitCode(id, code string) (*LoginRequest, error)
 	Cancel(id string) (*LoginRequest, error)
 	// Claim hands the org's oldest matching pending request to a worker (nil
 	// when none). workerUserID is the personal runner's owner ("" for
-	// workspace workers).
-	Claim(orgID, workerUserID string) (*LoginRequest, error)
+	// workspace workers); tokenLogins is whether the worker can mint a
+	// token (see ClaimPendingLogin).
+	Claim(orgID, workerUserID string, tokenLogins bool) (*LoginRequest, error)
 	// Progress records worker-side state updates. pasteKind is "code" or
 	// "url" when the worker is asking for a paste, and "" otherwise (which
 	// leaves any kind already recorded in place). A cancelled or completed
@@ -145,6 +172,19 @@ func cliProvider(name string) bool {
 
 // StartLogin creates a login request, reusing a fresh active one if present.
 func (s *DefaultLoginService) StartLogin(orgID, provider, target string, requestedBy *string) (*LoginRequest, error) {
+	return s.start(orgID, provider, target, LoginPurposeSignIn, requestedBy)
+}
+
+// StartTokenLogin creates a token-purpose request for the member's own
+// runner, reusing a fresh active one if present.
+func (s *DefaultLoginService) StartTokenLogin(orgID, requestedBy string) (*LoginRequest, error) {
+	if requestedBy == "" {
+		return nil, errors.New("a token request needs a requesting user")
+	}
+	return s.start(orgID, ProviderClaudeCode, LoginTargetUser, LoginPurposeToken, &requestedBy)
+}
+
+func (s *DefaultLoginService) start(orgID, provider, target, purpose string, requestedBy *string) (*LoginRequest, error) {
 	if orgID == "" {
 		return nil, errors.New("organization id is required")
 	}
@@ -161,7 +201,7 @@ func (s *DefaultLoginService) StartLogin(orgID, provider, target string, request
 		return nil, errors.New("a user-targeted login needs a requesting user")
 	}
 
-	existing, err := s.repo.FindActiveLogin(orgID, provider, target, requestedBy)
+	existing, err := s.repo.FindActiveLogin(orgID, provider, target, purpose, requestedBy)
 	if err != nil {
 		return nil, err
 	}
@@ -186,12 +226,16 @@ func (s *DefaultLoginService) StartLogin(orgID, provider, target string, request
 	if target == LoginTargetUser {
 		detail = "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running."
 	}
+	if purpose == LoginPurposeToken {
+		detail = "Waiting for your cloud runner to pick this up. Start one under Cloud runner if none is running."
+	}
 	now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 162)
 	login := &LoginRequest{
 		ID:          uuid.New().String(),
 		OrgID:       orgID,
 		Provider:    provider,
 		Target:      target,
+		Purpose:     purpose,
 		Status:      LoginPending,
 		Detail:      detail,
 		RequestedBy: requestedBy,
@@ -251,8 +295,31 @@ func (s *DefaultLoginService) Cancel(id string) (*LoginRequest, error) {
 }
 
 // Claim hands the org's oldest matching pending request to a worker.
-func (s *DefaultLoginService) Claim(orgID, workerUserID string) (*LoginRequest, error) {
-	return s.repo.ClaimPendingLogin(orgID, workerUserID)
+func (s *DefaultLoginService) Claim(orgID, workerUserID string, tokenLogins bool) (*LoginRequest, error) {
+	return s.repo.ClaimPendingLogin(orgID, workerUserID, tokenLogins)
+}
+
+// ErrNotTokenLogin refuses a token for a request that is not an active
+// token-purpose one.
+var ErrNotTokenLogin = errors.New("this sign-in request does not mint a token")
+
+// CompleteTokenLogin marks an active token-purpose request completed.
+func (s *DefaultLoginService) CompleteTokenLogin(id string) (*LoginRequest, error) {
+	login, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if login.Purpose != LoginPurposeToken || !login.Active() {
+		return nil, ErrNotTokenLogin
+	}
+	login.Status = LoginCompleted
+	login.Detail = "Token saved. Your runners now start Claude signed in."
+	login.Code = ""
+	login.UpdatedAt = time.Now().UTC()
+	if err := s.repo.UpdateLogin(login); err != nil {
+		return nil, err
+	}
+	return login, nil
 }
 
 // Progress applies a worker-side status update.

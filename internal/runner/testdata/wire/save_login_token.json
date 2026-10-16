@@ -1,0 +1,57 @@
+{
+  "method": "Client.SaveLoginToken",
+  "cases": [
+    {
+      "name": "hands in the minted token",
+      "calls": [
+        {
+          "call": "SaveLoginToken(\"<login-id>\", \"<token>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/<login-id>/token",
+                "route": "POST /api/v1/provider-logins/{id}/token",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"token\":\"sk-ant-oat01-wire-golden-placeholder-token\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<login-id>\",\"org_id\":\"<org-id>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"completed\",\"auth_url\":\"https://claude.ai/oauth/authorize?code=true&state=s1\",\"detail\":\"Open the link and paste the code.\",\"requested_by\":\"<user-id>\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a refused token is returned as an error",
+      "calls": [
+        {
+          "call": "SaveLoginToken(\"<login-id>\", \"<token>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/<login-id>/token",
+                "route": "POST /api/v1/provider-logins/{id}/token",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"token\":\"sk-ant-oat01-wire-golden-placeholder-token\"}"
+              },
+              "response": {
+                "status": 409,
+                "body": "{\"error\":\"this sign-in request does not mint a token\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 409: {\"error\":\"this sign-in request does not mint a token\"}"
+        }
+      ]
+    }
+  ]
+}

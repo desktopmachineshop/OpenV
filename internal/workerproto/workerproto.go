@@ -123,6 +123,25 @@ type ReleaseRequest struct {
 // provider: "installed", "version", "logged_in" and "detail".
 type DetectionReport map[string]map[string]interface{}
 
+// --- Sign-ins: POST /api/v1/provider-logins/claim ---
+
+// LoginClaim is what a runner says about itself when it asks for a sign-in
+// to run. Older runners send no body, which reads as the zero value.
+type LoginClaim struct {
+	// TokenLogins is true for a runner that can mint the member a saved
+	// subscription token (a headless runner driving `claude setup-token`
+	// over a pseudo-terminal). Only such a runner is handed one.
+	TokenLogins bool `json:"token_logins"`
+}
+
+// --- Sign-ins: POST /api/v1/provider-logins/{id}/token ---
+
+// LoginToken carries the token a runner minted for a token-purpose
+// sign-in. A credential: never log or persist it outside the sealed store.
+type LoginToken struct {
+	Token string `json:"token"`
+}
+
 // --- Sign-ins: POST /api/v1/provider-logins/{id}/progress ---
 
 // LoginProgress is a runner's report on a provider sign-in it is relaying.

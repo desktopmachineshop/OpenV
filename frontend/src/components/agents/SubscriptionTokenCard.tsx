@@ -2,8 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { providerTokensAPI, ProviderTokenStatus } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import type { FeatureKey } from '../../generated/contract';
+import { useFeature } from '../../hooks/useFeature';
+import { ProviderConnectCard } from './ProviderConnectCard';
 
 export const SUBSCRIPTION_TOKEN_FEATURE: FeatureKey = 'claude-subscription-token';
+// The member's cloud runner minting the token, instead of a paste.
+export const CLOUD_RUNNER_TOKEN_FEATURE: FeatureKey = 'cloud-runner-token';
 
 const PROVIDER = 'claude-code';
 const WARN_DAYS = 30;
@@ -26,6 +30,7 @@ export const SubscriptionTokenCard: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const runnerMints = useFeature(CLOUD_RUNNER_TOKEN_FEATURE);
 
   const load = useCallback(async () => {
     try {
@@ -151,6 +156,28 @@ export const SubscriptionTokenCard: React.FC = () => {
             </button>
           )}
         </form>
+      )}
+
+      {runnerMints && (showForm || status?.expired) && (
+        <div data-testid="mint-token" style={{ marginTop: 12 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>
+            No terminal to hand? Your cloud runner can get the token for you: start one under Cloud
+            runner, then sign in with your Claude subscription here. The token goes straight to
+            OpenV and is saved for you.
+          </p>
+          <ProviderConnectCard
+            provider="claude-code"
+            target="user"
+            purpose="token"
+            loggedIn={false}
+            title="Get a token from your cloud runner"
+            startLabel="Get token"
+            onComplete={() => {
+              setEditing(false);
+              load();
+            }}
+          />
+        </div>
       )}
 
       {error && (
