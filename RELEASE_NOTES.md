@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **openv.app offers Claude Code as its only agent provider for now.** Codex
+  CLI, Gemini CLI and Antigravity CLI no longer appear in AI provider
+  settings, the agent editor or your agent sign-ins, because they have not
+  been tested end to end yet. An agent you already set up on one of them
+  keeps working. Self-hosted deployments still offer every provider unless
+  their operator limits the list.
+
 ## 0.19.1 — 2026-10-16
 
 ### Bug fixes

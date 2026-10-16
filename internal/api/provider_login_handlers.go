@@ -47,6 +47,10 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, ActiveOrg(r), minRole) {
 		return
 	}
+	if !h.providerOffered(r, ActiveOrg(r), req.Provider) {
+		writeJSONError(w, http.StatusForbidden, h.providerRefusal(req.Provider))
+		return
+	}
 	login, err := h.LoginService.StartLogin(ActiveOrg(r), req.Provider, req.Target, CurrentUserID(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())

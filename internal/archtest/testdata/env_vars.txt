@@ -49,6 +49,7 @@ HOME	os.LookupEnv	-
 HOSTED_RUNNERS	internal/config:Config.text(name)	""
 HOSTED_RUNNER_PIDS_LIMIT	internal/config:Config.getenv(name)	-
 OPENAI_API_KEY	os.Getenv !=""	-
+OPENV_AGENT_PROVIDERS	internal/config:Config.text(name)	""
 OPENV_API_TOKEN	cmd/openv-mcp:resolveToken(env)	-
 OPENV_API_URL	cmd/agentd:envOr(key)	"http://localhost:8080"
 OPENV_API_URL	os.Getenv	-
