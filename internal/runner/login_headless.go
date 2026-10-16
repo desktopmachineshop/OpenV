@@ -110,7 +110,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 		return
 	}
 	cmd := exec.CommandContext(ctx, flow.command[0], flow.command[1:]...)
-	cmd.Env = childEnv(flow.env...)
+	cmd.Env = childEnv(b.cleanSlate(ctx, login, flow)...)
 	// A TUI that believes it is on a dumb terminal prints nothing useful.
 	cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 
@@ -283,6 +283,33 @@ func (b *screenBuffer) String() string { return b.text.String() }
 // reset drops what the TUI drew before the current attempt, so a stale error
 // from a previous paste is never reported against a new one.
 func (b *screenBuffer) reset() { b.text.Reset() }
+
+// signOutTimeout bounds the sign-out a headless sign-in starts with.
+const signOutTimeout = 20 * time.Second
+
+// cleanSlate signs the CLI out of whatever it already holds and returns the
+// entries a headless sign-in adds to childEnv: the flow's own, then its
+// credential variables blanked. A sign-out that fails is logged and the
+// sign-in carries on: it is a precaution, and the sign-in may still succeed.
+func (b *loginBroker) cleanSlate(ctx context.Context, login *providers.LoginRequest, flow loginFlow) []string {
+	extra := append([]string(nil), flow.env...)
+	for _, name := range flow.clearEnv {
+		extra = append(extra, name+"=") // the later entry wins: unset for the CLI
+	}
+	if len(flow.signOut) == 0 {
+		return extra
+	}
+	outCtx, cancel := context.WithTimeout(ctx, signOutTimeout)
+	defer cancel()
+	out := exec.CommandContext(outCtx, flow.signOut[0], flow.signOut[1:]...)
+	out.Env = childEnv(extra...)
+	if err := out.Run(); err != nil {
+		log.Printf("login %s: signing the CLI out first failed, carrying on: %v", login.ID, err)
+	} else {
+		log.Printf("login %s: signed the CLI out first", login.ID)
+	}
+	return extra
+}
 
 // quietAfter is how long a sign-in may sit silent after the member's code
 // before the runner shows the member what its terminal says.

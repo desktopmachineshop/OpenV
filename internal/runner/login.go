@@ -49,7 +49,18 @@ type loginFlow struct {
 	// long-lived token instead of signing itself in, and the runner hands
 	// that token to the server as the member's saved one.
 	mintsToken bool
+	// signOut, when set, is run before a headless sign-in so it starts from
+	// a clean slate: a sign-in the CLI already holds can leave the new one
+	// half-finished. It runs only where the runner owns the CLI's home (a
+	// leased runner); a member's own machine is left as they have it.
+	signOut []string
+	// clearEnv names credential variables the sign-in starts without, so an
+	// existing key or token cannot stand in for the sign-in being made.
+	clearEnv []string
 }
+
+// claudeCredentialEnv are the variables the Claude Code CLI signs in from.
+var claudeCredentialEnv = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"}
 
 // mintTokenFlow is the flow of a token-purpose request: Claude Code's
 // `claude setup-token`, a TUI like `claude auth login`, that ends by
@@ -58,6 +69,8 @@ var mintTokenFlow = loginFlow{
 	command:     []string{"claude", "setup-token"},
 	interactive: true,
 	mintsToken:  true,
+	signOut:     []string{"claude", "auth", "logout"},
+	clearEnv:    claudeCredentialEnv,
 }
 
 // subscriptionTokenPattern matches a token `claude setup-token` prints.
@@ -103,6 +116,8 @@ func flowFor(provider string) (loginFlow, bool) {
 		return loginFlow{
 			command:     []string{"claude", "auth", "login"},
 			interactive: true,
+			signOut:     []string{"claude", "auth", "logout"},
+			clearEnv:    claudeCredentialEnv,
 		}, true
 	case providers.ProviderCodexCLI:
 		return loginFlow{

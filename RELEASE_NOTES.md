@@ -16,6 +16,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   the card shows what the runner's terminal is displaying (with any
   credential hidden), so you can tell a slow sign-in from one waiting on
   you, and a sign-in that times out says the same.
+- **Signing Claude Code in on a cloud runner starts from a clean slate.**
+  Both ways of signing in (for the session, or for a year with a saved
+  token) now sign the runner's Claude Code out first, so a sign-in it
+  already held cannot get in the way of the new one.
 
 ## 0.21.0 — 2026-10-16
 
