@@ -73,6 +73,29 @@ var ErrInvalidWindow = errors.New("upgrade window must be a day of the month fro
 // needs the list to compute the effective channel in SQL.
 var ChoosablePlans = []string{PlanBusiness, PlanTeam, PlanEnterprise}
 
+// ChannelPlan is the plan a workspace's release channel follows: the
+// self-host plan on a self-hosted deployment, whatever the row says, as
+// EffectiveLimits reads it, and the billed plan otherwise. A self-hosted
+// workspace whose row still carries a company plan therefore runs nightly
+// and sees every feature its own server ships, rather than waiting on a
+// stable release nobody turns on for it.
+func (o *Org) ChannelPlan() string {
+	if defaultPolicy.SelfHosted {
+		return PlanSelfHost
+	}
+	return o.BilledPlan
+}
+
+// DeploymentChoosablePlans is ChoosablePlans as this deployment applies
+// it, for the SQL that lists workspaces by channel: none on a self-hosted
+// deployment, where every workspace runs nightly (ChannelPlan).
+func DeploymentChoosablePlans() []string {
+	if defaultPolicy.SelfHosted {
+		return []string{}
+	}
+	return ChoosablePlans
+}
+
 // ValidateUpgradeWindow checks a window: day 0 means none; otherwise day
 // 1-28 (so it exists in every month), hour 0-23, and a loadable IANA zone
 // (empty means UTC).
@@ -154,12 +177,13 @@ func ValidChannel(name string) bool {
 // override and the plan. Persistence calls it after a scan and the service
 // after a write, so a client always sees the effective channel.
 func (o *Org) ResolveReleaseChannel() {
-	if o.ReleaseChannelOverride != "" && ChannelChoosable(o.BilledPlan) {
+	plan := o.ChannelPlan()
+	if o.ReleaseChannelOverride != "" && ChannelChoosable(plan) {
 		o.ReleaseChannel = o.ReleaseChannelOverride
 	} else {
-		o.ReleaseChannel = ChannelForPlan(o.BilledPlan)
+		o.ReleaseChannel = ChannelForPlan(plan)
 	}
-	o.ReleaseChannelLocked = !ChannelChoosable(o.BilledPlan)
+	o.ReleaseChannelLocked = !ChannelChoosable(plan)
 }
 
 // ChannelSettings is the slice of Service for release channels: a
@@ -197,7 +221,7 @@ func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := CheckReleaseChannel(org.BilledPlan, channel); err != nil {
+	if err := CheckReleaseChannel(org.ChannelPlan(), channel); err != nil {
 		return nil, err
 	}
 	if err := s.repo.SetReleaseChannel(id, channel); err != nil {
@@ -215,7 +239,7 @@ func (s *DefaultService) SetUpgradeWindow(id string, day, hour int, timezone str
 	if err != nil {
 		return nil, err
 	}
-	if err := CheckUpgradeWindow(org.BilledPlan, day, hour, timezone); err != nil {
+	if err := CheckUpgradeWindow(org.ChannelPlan(), day, hour, timezone); err != nil {
 		return nil, err
 	}
 	if day == 0 {

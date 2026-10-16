@@ -9,6 +9,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Self-hosted workspaces get every feature of the release you run.** A
+  workspace on a self-hosted OpenV whose plan was set to Business, Team or
+  Enterprise was put on the hosted service's stable channel, so features
+  your own server already ships stayed switched off for it until a stable
+  release that never came. Every workspace on a self-hosted install now
+  runs the release you deployed. Workspace settings shows its channel as
+  Nightly, with no channel picker or upgrade window.
+
+### Maintenance updates
+
+- **`docker compose up` now starts a self-hosted OpenV.** The compose files
+  set `OPENV_SELF_HOSTED=true`, so a new install creates workspaces on the
+  self-host plan with nothing capped, and a limit you set yourself tells
+  people which setting to change rather than offering a plan upgrade. Set
+  `OPENV_SELF_HOSTED=false` in `.env` only to try the hosted service's
+  plans locally.
+
 ## 0.21.2 — 2026-10-16
 
 ### Bug fixes

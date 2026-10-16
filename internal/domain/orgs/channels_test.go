@@ -77,3 +77,50 @@ func TestAPlatformAdminsPlanMoveKeepsNightly(t *testing.T) {
 		}
 	}
 }
+
+// TestASelfHostedWorkspaceRunsNightlyWhateverItsRowSays: on a self-hosted
+// deployment the channel follows the self-host plan, as limits do, so a
+// workspace whose row still carries a company plan (and even a stable
+// choice) runs nightly, locked, and sees every feature its own server
+// ships; choosing a channel or an upgrade window is refused as for any
+// nightly-only plan, and no plan's workspaces are listed on stable. Before,
+// the channel read the billed plan, and such a workspace waited on a stable
+// release nobody turns on for it.
+func TestASelfHostedWorkspaceRunsNightlyWhateverItsRowSays(t *testing.T) {
+	atPolicyDefaults(t)
+	SetSelfHosted(true)
+
+	for _, plan := range []string{PlanBusiness, PlanTeam, PlanEnterprise, PlanSingle} {
+		for _, override := range []string{"", ChannelStable} {
+			o := &Org{BilledPlan: plan, ReleaseChannelOverride: override}
+			o.ResolveReleaseChannel()
+			if o.ChannelPlan() != PlanSelfHost || o.ReleaseChannel != ChannelNightly || !o.ReleaseChannelLocked {
+				t.Errorf("self-hosted %s (override %q): channel plan %q, channel %q, locked %v; want self_host, nightly, locked",
+					plan, override, o.ChannelPlan(), o.ReleaseChannel, o.ReleaseChannelLocked)
+			}
+		}
+	}
+	if got := DeploymentChoosablePlans(); len(got) != 0 {
+		t.Errorf("DeploymentChoosablePlans() = %v on a self-hosted deployment, want none", got)
+	}
+
+	repo := &planRepoFake{org: &Org{ID: "o1", BilledPlan: PlanBusiness}}
+	svc := NewDefaultService(repo)
+	if _, err := svc.SetReleaseChannel("o1", ChannelStable); err != ErrChannelLocked {
+		t.Errorf("SetReleaseChannel on a self-hosted business row = %v, want ErrChannelLocked", err)
+	}
+	if _, err := svc.SetUpgradeWindow("o1", 1, 9, "UTC"); err != ErrChannelLocked {
+		t.Errorf("SetUpgradeWindow on a self-hosted business row = %v, want ErrChannelLocked", err)
+	}
+
+	SetSelfHosted(false)
+	o := &Org{BilledPlan: PlanBusiness}
+	o.ResolveReleaseChannel()
+	if o.ChannelPlan() != PlanBusiness || o.ReleaseChannel != ChannelStable || o.ReleaseChannelLocked {
+		t.Errorf("hosted business: channel plan %q, channel %q, locked %v; want business, stable, choosable",
+			o.ChannelPlan(), o.ReleaseChannel, o.ReleaseChannelLocked)
+	}
+	if got := DeploymentChoosablePlans(); len(got) != len(ChoosablePlans) {
+		t.Errorf("DeploymentChoosablePlans() = %v on the hosted service, want %v", got, ChoosablePlans)
+	}
+}

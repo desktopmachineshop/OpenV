@@ -316,7 +316,7 @@ func (h *Handler) checkOrgUpdate(w http.ResponseWriter, orgID string, budget jso
 		}
 	}
 	if channel != nil {
-		if err := orgs.CheckReleaseChannel(org.BilledPlan, *channel); err != nil {
+		if err := orgs.CheckReleaseChannel(org.ChannelPlan(), *channel); err != nil {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return update, false
 		}
@@ -334,7 +334,7 @@ func (h *Handler) checkOrgUpdate(w http.ResponseWriter, orgID string, budget jso
 		if parsed != nil {
 			update.day, update.hour, update.timezone = parsed.Day, parsed.Hour, parsed.Timezone
 		}
-		if err := orgs.CheckUpgradeWindow(org.BilledPlan, update.day, update.hour, update.timezone); err != nil {
+		if err := orgs.CheckUpgradeWindow(org.ChannelPlan(), update.day, update.hour, update.timezone); err != nil {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return update, false
 		}
