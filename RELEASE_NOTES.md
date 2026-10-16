@@ -9,6 +9,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Shared and open-source projects scroll on a phone.** A long artifact
+  tree, or a long artifact, now scrolls within the page instead of running
+  off the bottom of the screen.
+
 ### Maintenance updates
 
 - **A self-hosted OpenV now opens on its sign-in page.** Its front page is
