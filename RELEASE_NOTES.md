@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.21.4 — 2026-10-16
+
 ### Bug fixes
 
 - **Staying signed in to Claude Code for a year no longer stalls on "Code
