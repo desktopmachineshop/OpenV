@@ -513,6 +513,7 @@
         "docs/extending.md",
         "docs/release-policy.md",
         "ext/**",
+        "frontend/src/ext/**",
         "frontend/src/api/**/platform*",
         "frontend/src/api/wireCompat*",
         "frontend/src/components/ReleaseUpdateBanner*",

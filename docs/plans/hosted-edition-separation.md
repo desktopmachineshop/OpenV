@@ -355,12 +355,10 @@ Built, in order:
   built-in one, which then starts nothing, so openv.app can move billing
   out before Phase 4 deletes it here. `internal/billing/boot` is billing's
   factory, doing what stage billing does.
-- **`openv-hosted`, prepared but not created.** This session's GitHub
-  access cannot create repositories, so the maintainer creates an empty
-  private `desktopmachineshop/openv-hosted` and gives Claude access. Its
-  contents are ready: `billing/` (OpenV's billing, built on `ext`),
-  `register/`, scripts that fetch the pinned OpenV release and link the
-  modules into its `cmd/server`, `Dockerfile.api`, CI, and a README with
+- **`openv-hosted`** (private, created by the maintainer): `billing/`
+  (OpenV's billing, built on `ext`), `register/`, scripts that fetch the
+  pinned OpenV release and link the modules into its `cmd/server`,
+  `Dockerfile.api`, CI (green against OpenV `master`), and a README with
   the cut-over checklist. A server built from it was booted against
   Postgres: it logs `billing is a registered module` and serves the
   billing routes.
@@ -373,8 +371,17 @@ Built, in order:
   after `ext.Build`. Phase 4 moves the tiers into `openv-hosted`'s policy
   and leaves core's built-in plans as the self-host defaults.
 
-Still open: the frontend extension registry, which moving the marketing site
-needs; the cut-over itself (the maintainer's, staging first); and
+- **The frontend registry** (Phase 1, step 3). `frontend/src/ext/registry.ts`
+  takes Org Settings tabs, Platform admin sections and start hooks, each
+  shown where the deployment offers its capabilities;
+  `frontend/src/ext/modules.ts` is the one file a hosted build replaces.
+  The Billing tab, the Visitors dashboard and the visit beacon register
+  there, loaded lazily. Routes are not registered: K13 keeps the route
+  table hand-written, so moving the marketing site needs a decision on
+  how a hosted build adds its routes (a route slot, or the hosted build
+  carrying its own `App.tsx`).
+
+Still open: how the marketing site's routes reach a hosted build (above); the cut-over itself (the maintainer's, staging first); and
 Phase 4. Removing billing's routes from a self-hosted server is subject to
 REQ-143 (a route removal is announced in two stable releases first), which
 the route inventory test enforces.
