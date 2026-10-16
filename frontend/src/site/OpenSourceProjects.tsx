@@ -102,7 +102,7 @@ export const OpenSourceProjects: React.FC = () => {
       </Section>
 
       <Section compact={compact} id="openv">
-        <H2 compact={compact}>OpenV itself is source-available</H2>
+        <H2 compact={compact}>OpenV itself is open source</H2>
         <Lead>{LICENSE_GLOSS}</Lead>
         <ul style={{ margin: '0 0 20px', paddingLeft: 20, fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
           {LICENSE_INTENT.map((line) => (

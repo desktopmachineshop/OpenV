@@ -402,7 +402,7 @@ keeps rather than fixes are listed in
 
 ## Licensing of contributions
 
-OpenV is licensed under the [Elastic License 2.0](LICENSE). By contributing, you
+OpenV is licensed under the [MIT License](LICENSE). By contributing, you
 agree that your contribution is licensed under the same terms.
 
 All commits must carry a **Developer Certificate of Origin (DCO)**
@@ -420,11 +420,11 @@ The DCO certifies your right to submit the work; it does not transfer
 copyright. If the project ever needs to offer the code under different
 terms (e.g. commercial licensing for OEM embedding), it will ask
 contributors for that permission at the time. Your contribution always
-remains available under the Elastic License 2.0.
+remains available under the MIT License.
 
 ## Enterprise code
 
 Any future enterprise-only code will live in a clearly separated `ee/`
 directory under its own license, so the boundary between the open core and
 commercial extensions stays visible in the tree. Everything outside `ee/`
-is and remains under the Elastic License 2.0.
+is and remains under the MIT License.

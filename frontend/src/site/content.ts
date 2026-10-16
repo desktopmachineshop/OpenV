@@ -84,7 +84,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'How does OpenV compare with enterprise requirements tools for self-hosting, ReqIF interchange, AI assistance and audit-ready traceability?',
-        a: 'Self-hosting is free, with every feature, under the source-available Elastic License 2.0, where enterprise tools are typically licensed per user. ReqIF 1.x import and export are built in, though an exchange with DOORS or Polarion has not been tested yet. AI agents run on your own subscription or API keys and, by default, only propose changes a person approves. Traceability, gap reports, baselines and the activity log cover what an audit asks to see; electronic signatures, a separate approver role and tool qualification, which mature enterprise tools offer, are not there yet.',
+        a: 'Self-hosting is free, with every feature, under the open-source MIT License, where enterprise tools are typically licensed per user. ReqIF 1.x import and export are built in, though an exchange with DOORS or Polarion has not been tested yet. AI agents run on your own subscription or API keys and, by default, only propose changes a person approves. Traceability, gap reports, baselines and the activity log cover what an audit asks to see; electronic signatures, a separate approver role and tool qualification, which mature enterprise tools offer, are not there yet.',
       },
       {
         q: 'What are OpenV’s main features, deployment options and limitations?',
@@ -114,7 +114,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'Can I keep it entirely on my own hardware?',
-        a: 'Yes. Self-hosting is free forever under the Elastic License 2.0, with every feature, and the Agent Connector runs agents on a machine you control. A JSON export from the hosted service restores into a self-hosted OpenV.',
+        a: 'Yes. Self-hosting is free forever under the MIT License, with every feature, and the Agent Connector runs agents on a machine you control. A JSON export from the hosted service restores into a self-hosted OpenV.',
       },
     ],
   },
