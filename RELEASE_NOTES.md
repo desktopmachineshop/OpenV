@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.21.0 — 2026-10-16
+
 ### New features
 
 - **One place to sign Claude Code in, for the session or for a year.** The
