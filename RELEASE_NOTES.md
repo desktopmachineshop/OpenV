@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.19.1 — 2026-10-16
+
 ### Bug fixes
 
 - **AI provider settings on openv.app no longer show environment variable
