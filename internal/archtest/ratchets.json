@@ -139,6 +139,7 @@
       "internal/domain/agentruns",
       "internal/domain/embeddings",
       "internal/domain/orgs",
+      "internal/domain/providers",
       "internal/domain/sharedproducts",
       "internal/domain/users",
       "internal/envparse",

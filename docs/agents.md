@@ -550,6 +550,18 @@ detected on the worker host, whether it is logged in, and which providers are
 enabled for runs. A provider that shows as unavailable usually means the CLI is
 not on the worker's PATH or has not been logged in.
 
+### Providers a deployment offers
+
+`OPENV_AGENT_PROVIDERS` on the API names the providers a deployment offers,
+separated by commas. Any other provider is left out of Workspace settings →
+AI providers, the agent editor's provider list and the CLI sign-ins in user
+settings, and the API refuses a provider setting, a new or moved agent, or a
+sign-in on it (`403`, "not available on this server yet"). An agent already
+on such a provider keeps it, so its runs are not stranded. Unset, every
+provider is offered. openv.app's production sets `claude-code`, the one
+provider tested end to end; staging leaves it unset so the others can be
+tried there.
+
 ## Agent definitions
 
 Agents are plain markdown files under the data volume:

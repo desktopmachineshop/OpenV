@@ -3,6 +3,7 @@ package providers
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -84,6 +85,29 @@ func KnownProviders() []string {
 		ProviderOpenAIAPI,
 		ProviderGoogleAPI,
 	}
+}
+
+// ParseOffered reads a deployment's list of offered providers
+// (OPENV_AGENT_PROVIDERS): provider names separated by commas, spaces or
+// both. It answers the known names as a set, and the names it does not know
+// apart. A list naming no known provider answers nil, which offers every
+// provider: a typo must not leave a deployment with no provider at all.
+func ParseOffered(list string) (offered map[string]bool, unknown []string) {
+	known := map[string]bool{}
+	for _, p := range KnownProviders() {
+		known[p] = true
+	}
+	for _, name := range strings.FieldsFunc(list, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' }) {
+		if !known[name] {
+			unknown = append(unknown, name)
+			continue
+		}
+		if offered == nil {
+			offered = map[string]bool{}
+		}
+		offered[name] = true
+	}
+	return offered, unknown
 }
 
 // ProviderSetting configures a single agent provider within an org.

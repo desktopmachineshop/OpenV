@@ -5,9 +5,11 @@ package config
 // server's.
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/billing"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/envparse"
 )
 
@@ -91,6 +93,20 @@ func (c *Config) SecureCookies() bool {
 // CrossSiteCookies is CROSS_SITE_COOKIES (a boolean, false by default).
 func (c *Config) CrossSiteCookies() bool {
 	return c.boolean("CROSS_SITE_COOKIES", false)
+}
+
+// AgentProviders is the set of agent providers this deployment offers
+// (OPENV_AGENT_PROVIDERS, provider names separated by commas), which stage
+// handlers hands the API: nil, every provider, when it is unset or names no
+// provider the server knows. A name it does not know is left out with a
+// warning naming the variable and the names.
+func (c *Config) AgentProviders() map[string]bool {
+	offered, unknown := providers.ParseOffered(c.text("OPENV_AGENT_PROVIDERS", ""))
+	if len(unknown) > 0 {
+		slog.Warn("ignoring agent providers the server does not know", "variable", "OPENV_AGENT_PROVIDERS",
+			"names", strings.Join(unknown, ","))
+	}
+	return offered
 }
 
 // HandlerFrontendURL is api.HandlerDeps.FrontendURL as stage handlers sets

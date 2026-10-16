@@ -98,6 +98,7 @@ type HandlerDeps struct {
 	RepoConnService     repoconns.Service
 	ProviderService     providers.Service
 	ProviderKeyService  providers.KeyService
+	OfferedProviders    map[string]bool
 	LoginService        providers.LoginService
 	TeamService         teams.Service
 	OrgService          orgs.Service

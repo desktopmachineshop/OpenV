@@ -50,7 +50,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.agentProviderAllowed(r, def.Slug, def.Provider) {
-		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		writeJSONError(w, http.StatusForbidden, h.providerRefusal(def.Provider))
 		return
 	}
 	// Friendly pre-check; the (org_id, slug) unique index is the real guard,
@@ -111,7 +111,7 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.agentProviderAllowed(r, slug, def.Provider) {
-		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		writeJSONError(w, http.StatusForbidden, h.providerRefusal(def.Provider))
 		return
 	}
 	agent, err := h.AgentService.SaveDefinition(ActiveOrg(r), &def)
@@ -162,7 +162,7 @@ func (h *Handler) SaveAgentRaw(w http.ResponseWriter, r *http.Request) {
 	// The file's provider passes the same gate as a form save; a file that
 	// does not parse is left to the service, which says why.
 	if def, err := agents.ParseFile(req.Content); err == nil && !h.agentProviderAllowed(r, mux.Vars(r)["slug"], def.Provider) {
-		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		writeJSONError(w, http.StatusForbidden, h.providerRefusal(def.Provider))
 		return
 	}
 	agent, err := h.AgentService.SaveRawFile(ActiveOrg(r), mux.Vars(r)["slug"], req.Content)

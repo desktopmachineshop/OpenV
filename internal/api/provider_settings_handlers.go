@@ -52,7 +52,7 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 	}
 	setting.OrgID = ActiveOrg(r)
 	if !h.providerOffered(r, setting.OrgID, setting.Provider) {
-		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		writeJSONError(w, http.StatusForbidden, h.providerRefusal(setting.Provider))
 		return
 	}
 	if err := h.ProviderService.Upsert(&setting); err != nil {

@@ -161,6 +161,11 @@
       "default": "none",
       "text": "When set in the runner's environment, the Codex CLI counts as signed in (API key mode). Passed on to the CLI exactly as set."
     },
+    "OPENV_AGENT_PROVIDERS": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "text": "The agent providers this deployment offers, by name, separated by commas (e.g. `claude-code`). Any other provider is left out of the AI providers settings, the agent editor and the CLI sign-ins, and choosing one is refused; an agent already on it keeps it. Unset, or naming no provider the server knows, every provider is offered; an unknown name is ignored with a warning."
+    },
     "OPENV_API_TOKEN": {
       "area": "agent-suite",
       "read_by": "openv-mcp",

@@ -168,6 +168,15 @@ Without it the tab says the server cannot store keys. Keep it stable:
 **changing it makes every stored key unreadable** until an admin pastes it
 again (runs fall back to the runner host's variable meanwhile).
 
+Optional — the agent providers offered: production sets the providers that
+have been tested, and staging leaves the variable unset so every provider can
+be tried there (see `docs/agents.md`, "Providers a deployment offers"):
+
+```dotenv
+# production only
+OPENV_AGENT_PROVIDERS=claude-code
+```
+
 Optional — web push notifications (REQ-109): generate one VAPID key pair for
 the deployment (`make vapid-keys`, or `go run ./cmd/openv-vapid`) and set all
 three variables on the **API** service:

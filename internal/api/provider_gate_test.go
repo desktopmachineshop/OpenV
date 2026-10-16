@@ -277,3 +277,52 @@ func TestTheAntigravityGateReadsItsRegisteredFeature(t *testing.T) {
 	}
 	t.Fatalf("%q is not in release.Registry", release.FeatureAntigravity)
 }
+
+// TestADeploymentOffersOnlyTheProvidersItNames (REQ-198): with OPENV_AGENT_PROVIDERS
+// set to claude-code (OfferedProviders), the provider settings list holds
+// claude-code alone, and a provider setting, an agent or a CLI sign-in on
+// another provider is refused with the deployment's own message, whatever
+// the workspace's channel. An agent already on another provider keeps it.
+func TestADeploymentOffersOnlyTheProvidersItNames(t *testing.T) {
+	notOffered := func(w *httptest.ResponseRecorder) bool {
+		return w.Code == http.StatusForbidden && strings.Contains(w.Body.String(), "not available on this server")
+	}
+	existing := map[string]*agents.Agent{"scout": {Slug: "scout", Provider: providers.ProviderCodexCLI}}
+	for _, c := range append(append([][2]string{}, gateOpen...), gateClosed...) {
+		h, repo, svc := providerGateFixture(t, c[0], c[1], existing)
+		h.OfferedProviders = map[string]bool{providers.ProviderClaudeCode: true}
+
+		if got := listedProviders(t, h); strings.Join(got, ",") != providers.ProviderClaudeCode {
+			t.Errorf("%s on %q: listed %v, want claude-code alone", c[0], c[1], got)
+		}
+
+		w := httptest.NewRecorder()
+		h.UpsertProviderSetting(w, gateReq(http.MethodPut, "/api/v1/provider-settings",
+			`{"provider":"codex-cli","auth_mode":"api-key"}`, nil))
+		if !notOffered(w) || repo.stored[providers.ProviderCodexCLI] != nil {
+			t.Errorf("%s on %q: codex-cli setting: status = %d (body %q), want the deployment's 403 and nothing stored", c[0], c[1], w.Code, w.Body.String())
+		}
+
+		w = httptest.NewRecorder()
+		h.CreateAgent(w, gateReq(http.MethodPost, "/api/v1/agents", strings.Replace(agentBody(providers.ProviderGeminiCLI), "scout", "scribe", 1), nil))
+		if !notOffered(w) || len(svc.saved) != 0 {
+			t.Errorf("%s on %q: gemini-cli agent: status = %d (body %q), want the deployment's 403", c[0], c[1], w.Code, w.Body.String())
+		}
+		w = httptest.NewRecorder()
+		h.CreateAgent(w, gateReq(http.MethodPost, "/api/v1/agents", strings.Replace(agentBody(providers.ProviderClaudeCode), "scout", "scribe", 1), nil))
+		if w.Code != http.StatusCreated {
+			t.Errorf("%s on %q: claude-code agent: status = %d (body %q)", c[0], c[1], w.Code, w.Body.String())
+		}
+		w = httptest.NewRecorder()
+		h.UpdateAgent(w, gateReq(http.MethodPut, "/api/v1/agents/scout", agentBody(providers.ProviderCodexCLI), map[string]string{"slug": "scout"}))
+		if w.Code != http.StatusOK {
+			t.Errorf("%s on %q: an agent already on codex-cli, edited: status = %d (body %q), want it kept", c[0], c[1], w.Code, w.Body.String())
+		}
+
+		w = httptest.NewRecorder()
+		h.StartProviderLogin(w, gateReq(http.MethodPost, "/api/v1/provider-logins", `{"provider":"codex-cli","target":"workspace"}`, nil))
+		if !notOffered(w) {
+			t.Errorf("%s on %q: codex-cli sign-in: status = %d (body %q), want the deployment's 403", c[0], c[1], w.Code, w.Body.String())
+		}
+	}
+}

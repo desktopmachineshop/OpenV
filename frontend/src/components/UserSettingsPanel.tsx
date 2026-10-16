@@ -672,7 +672,11 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 your own machine persist. Projects set to “API key” auth override these sign-ins
                 for their runs.
               </p>
-              {CLI_PROVIDERS.map((p) => (
+              {CLI_PROVIDERS.filter(
+                // The server lists only the providers this deployment offers;
+                // until that list loads (or if it fails), show every CLI.
+                (p) => providers.length === 0 || providers.some((s) => s.provider === p.key),
+              ).map((p) => (
                 <ProviderConnectCard
                   key={p.key}
                   provider={p.key}
