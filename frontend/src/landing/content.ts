@@ -12,7 +12,7 @@ export const LICENSE_URL = `${REPO_URL}/blob/master/LICENSE`;
 export const TAGLINE = 'Requirements, traceability and V&V evidence, with AI agents that work inside the audit trail.';
 
 export const SUBLINE =
-  'DOORS-grade rigour without the DOORS-grade licence: typed artifacts, stable references, baselines, verification runs, documents, and AI agents that propose changes for your team to approve. Source-available. Bring your own AI.';
+  'DOORS-grade rigour without the DOORS-grade licence: typed artifacts, stable references, baselines, verification runs, documents, and AI agents that propose changes for your team to approve. Open source. Bring your own AI.';
 
 /** What the platform does, one card each. */
 export const FEATURES: { title: string; body: string }[] = [
@@ -164,7 +164,7 @@ export const OTHER_TIERS: PricingTier[] = [
     name: 'Self-hosted',
     price: 'Free forever',
     available: true,
-    summary: 'Elastic License 2.0. All features, your hardware, no limits from us.',
+    summary: 'MIT License. All features, your hardware, no limits from us.',
     points: [
       'One command: git clone, docker compose up.',
       'Your data never leaves your machines.',
@@ -221,12 +221,12 @@ export const PRICING_FOOTNOTE =
 export const SELF_HOST_COMMANDS = ['git clone https://github.com/desktopmachineshop/OpenV.git', 'cd OpenV', 'docker compose up -d'];
 
 export const LICENSE_GLOSS =
-  'OpenV is source-available, licensed under the Elastic License 2.0. Self-hosting is free for anyone, at any scale: read the source, fork it, change it, and run it on your own servers for your own teams with every feature. The one thing you may not do is sell OpenV to others as a hosted or managed service.';
+  'OpenV is open source, licensed under the MIT License. Use it, fork it, change it, redistribute it and build on it, commercially or not, with every feature. The one thing the licence asks is attribution: keep the copyright and licence notice with any copy you pass on.';
 
 /** The licence in plain English, one line each; the README carries the same list. */
 export const LICENSE_INTENT: string[] = [
   'Self-host free, at any scale, with every feature. No licence key, no phone-home, no seat count.',
   'Read, fork and modify the source; keep your changes private or publish them.',
-  'Paid help is fine: a consultant or integrator can charge to install, customise or support a customer’s own OpenV.',
-  'Not allowed: offering OpenV, or a substantial part of it, to third parties as a hosted or managed service.',
+  'Redistribute it, sell it, or run it as a hosted service for others: all allowed.',
+  'Asked in return: keep OpenV’s copyright notice and the licence text with any copy you pass on.',
 ];

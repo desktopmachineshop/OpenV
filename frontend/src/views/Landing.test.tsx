@@ -79,7 +79,7 @@ describe('Landing', () => {
     }
     expect(text).toContain(DATA_PROMISE);
     expect(text).toContain('ReqIF');
-    expect(text).toContain('Elastic License 2.0');
+    expect(text).toContain('MIT License');
     expect(text).not.toContain('AGPL');
     for (const line of LICENSE_INTENT) expect(text).toContain(line);
   });

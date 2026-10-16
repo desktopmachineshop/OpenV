@@ -4,12 +4,12 @@ export const SELF_HOSTED: Topic = {
   path: '/self-hosted-requirements-management',
   title: 'Self-hosted requirements management',
   summary:
-    'Run OpenV on your own servers with Docker: what it needs, how upgrades and backups work, sign-in options, and what the source-available Elastic License 2.0 allows.',
+    'Run OpenV on your own servers with Docker: what it needs, how upgrades and backups work, sign-in options, and what the open-source MIT License allows.',
   footerLabel: 'Self-hosting',
   eyebrow: 'Self-hosting',
-  heading: 'Self-hosted requirements management, free under a source-available licence',
+  heading: 'Self-hosted requirements management, free under an open-source licence',
   answer:
-    'OpenV runs on your own servers from its public source with Docker Compose: PostgreSQL, the API, the web app and an optional runner pool, every feature included, with no licence key, phone-home or seat count. It is source-available under the Elastic License 2.0, which lets you run, read, fork and modify it for your own organisation and forbids only selling it to others as a hosted service.',
+    'OpenV runs on your own servers from its public source with Docker Compose: PostgreSQL, the API, the web app and an optional runner pool, every feature included, with no licence key, phone-home or seat count. It is open source under the MIT License, which lets you run, read, fork, modify, redistribute and sell it, as long as you keep its copyright and licence notice.',
   updated: '2026-10-13',
   sections: [
     {
@@ -51,9 +51,9 @@ export const SELF_HOSTED: Topic = {
       bullets: [
         'Self-host free, at any scale, with every feature.',
         'Read, fork and modify the source; keep your changes private or publish them.',
-        'A consultant or integrator may charge to install, customise or support a customer’s own OpenV.',
-        'Not allowed: offering OpenV, or a substantial part of it, to third parties as a hosted or managed service.',
-        'The Elastic License 2.0 is source-available, not an OSI open-source licence.',
+        'Redistribute it, sell it, or offer it to others as a hosted service: all allowed.',
+        'Keep OpenV’s copyright notice and the licence text with any copy you pass on.',
+        'The MIT License is an OSI-approved open-source licence.',
       ],
     },
   ],

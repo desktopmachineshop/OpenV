@@ -1,6 +1,7 @@
 # Search and AI visibility plan
 
-Status: approved 2026-10-13 (decision 1: source-available). Phase 1 (4.1
+Status: approved 2026-10-13 (decision 1: source-available, reversed
+2026-10-16: relicensed under MIT). Phase 1 (4.1
 to 4.3) and the wording change shipped in 0.17.3; 4.4 (Search Console, Bing
 Webmaster Tools) is the maintainer's. Phase 2's first batch (section 5.1) is
 built; `/capabilities` and the comparison pages are open, as are Phases 3
@@ -64,6 +65,9 @@ sources the engines already trust. Model memory follows the third.
    costs nothing. **Decided 2026-10-13: (a), source-available.** The site,
    `index.html`, `llms.txt` and the README say so; every listing and page
    from here on uses the same words.
+   **Reversed 2026-10-16.** OpenV is relicensed under the MIT License, an
+   OSI licence, so the site, `index.html`, `llms.txt` and the README now
+   say "open source" and name it.
 2. **One-line descriptor, used verbatim everywhere.** Proposed: *"OpenV is
    a requirements management and V&V platform: traceability from need to
    test evidence, baselines, ReqIF exchange and AI agents, hosted or

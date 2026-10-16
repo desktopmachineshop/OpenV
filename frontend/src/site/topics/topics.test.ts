@@ -73,7 +73,8 @@ describe('topic pages', () => {
     for (const t of TOPICS) expect({ path: t.path, markdown: /`|\*\*|\]\(|^#/m.test(allText(t)) }).toEqual({ path: t.path, markdown: false });
   });
 
-  it('never call OpenV open source: it is source-available under the Elastic License 2.0', () => {
-    for (const t of TOPICS) expect(allText(t)).not.toMatch(/OpenV is (an? )?open[- ]source|open-source requirements management/i);
+  it('name the licence as the MIT License, never source-available or the Elastic License', () => {
+    for (const t of TOPICS) expect(allText(t)).not.toMatch(/source[- ]available|Elastic License/i);
+    expect(TOPICS.map(allText).join('\n')).toContain('MIT License');
   });
 });
