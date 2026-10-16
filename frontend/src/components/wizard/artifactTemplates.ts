@@ -23,10 +23,16 @@ export interface ArtifactText {
 // The guided wizard
 // ---------------------------------------------------------------------------
 
-export const wizardPersonaText = (p: PersonaEntry): ArtifactText => ({
-  title: p.name.trim(),
-  body: `**Role:** ${p.role.trim()}\n\n**Goals:**\n${p.goals.trim()}\n\n**Pain points:**\n${p.pains.trim()}`,
-});
+export const wizardPersonaText = (p: PersonaEntry): ArtifactText => {
+  // Cut at 120 like a hazard's title; a cut name opens the body in full.
+  const name = p.name.trim();
+  const title = asTitle(name);
+  const full = title === name ? '' : `${name}\n\n`;
+  return {
+    title,
+    body: `${full}**Role:** ${p.role.trim()}\n\n**Goals:**\n${p.goals.trim()}\n\n**Pain points:**\n${p.pains.trim()}`,
+  };
+};
 
 export const wizardNeedText = (n: NeedEntry, persona: PersonaEntry | undefined): ArtifactText => {
   // The persona as its own artifact is titled: trimmed.
@@ -48,14 +54,26 @@ export const wizardNfrText = (n: NfrEntry): ArtifactText => ({
   body: `${n.text.trim()}${n.fit_criterion.trim() ? `\n\n**Fit criterion:** ${n.fit_criterion.trim()}` : ''}`,
 });
 
-export const wizardHazardText = (h: HazardEntry): ArtifactText => ({
-  title: h.hazard.trim(),
-  body: `**Category:** ${h.category}\n\n**Potential harm:** ${h.harm.trim()}\n\n**Severity:** ${h.severity}`,
-});
+export const wizardHazardText = (h: HazardEntry): ArtifactText => {
+  // The title is cut at 120 like a requirement's, so a long hazard fits the
+  // 512-character title column; a cut hazard opens its body in full, since
+  // the body has no other copy of it.
+  const hazard = h.hazard.trim();
+  const title = asTitle(hazard);
+  const full = title === hazard ? '' : `${hazard}\n\n`;
+  return {
+    title,
+    body: `${full}**Category:** ${h.category}\n\n**Potential harm:** ${h.harm.trim()}\n\n**Severity:** ${h.severity}`,
+  };
+};
 
-/** A verification stub for a requirement the wizard materialized. */
+/**
+ * A verification stub for a requirement the wizard materialized. Its title
+ * is cut at 120 like a requirement's: the candidate is the requirement's full
+ * text, which can outrun the 512-character title column; the body keeps it.
+ */
 export const wizardTestStubText = (c: { title: string }): ArtifactText => ({
-  title: `Verify: ${c.title}`,
+  title: asTitle(`Verify: ${c.title}`),
   body: `Test case stub for requirement: ${c.title}\n\nDefine steps, preconditions and expected results.`,
 });
 

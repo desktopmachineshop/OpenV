@@ -32,6 +32,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   [`docs/extending.md`](docs/extending.md) shows how. openv.app's billing
   is built this way.
 
+### Bug fixes
+
+- **Verification stubs for long requirements save again.** In guided
+  requirements definition, checking a requirement whose text runs past a
+  few hundred characters made the Verification stubs step fail with "value
+  too long". The draft test case's title is now shortened like a
+  requirement's, and its description still quotes the requirement in full.
+- **Long hazards save in guided requirements definition.** A hazard
+  described in more than a few hundred characters made the Hazards step
+  fail the same way. Its title is now shortened like a requirement's, and
+  the full hazard opens its description.
+- **Long persona names save in guided requirements definition.** A persona
+  name of more than a few hundred characters no longer fails the Personas
+  step: its title is shortened, and the full name opens its description.
+
 ## 0.21.4 — 2026-10-16
 
 ### Bug fixes

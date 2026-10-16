@@ -380,8 +380,8 @@ describe('GuidedWizard saved answers (X18 characterization)', () => {
     expect(persona).toEqual([
       {
         type: 'persona',
-        title: PERSONA_126,
-        body: '**Role:** Maintenance planner\n\n**Goals:**\nPlan downtime\n\n**Pain points:**\nSurprise breakdowns',
+        title: `${PERSONA_126.slice(0, 117)}…`,
+        body: `${PERSONA_126}\n\n**Role:** Maintenance planner\n\n**Goals:**\nPlan downtime\n\n**Pain points:**\nSurprise breakdowns`,
         parent_id: 'art-h',
       },
     ]);
