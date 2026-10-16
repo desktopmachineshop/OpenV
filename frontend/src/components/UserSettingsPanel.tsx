@@ -31,7 +31,7 @@ import { getAPIBaseURL } from '../api/baseURL';
 import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
-import { SubscriptionTokenCard, SUBSCRIPTION_TOKEN_FEATURE } from './agents/SubscriptionTokenCard';
+import { ClaudeSignInCard, SUBSCRIPTION_TOKEN_FEATURE } from './agents/ClaudeSignInCard';
 import { providerCaution } from './agents/providerCautions';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import type { AgentProvider } from '../generated/contract';
@@ -678,7 +678,12 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 // The server lists only the providers this deployment offers;
                 // until that list loads (or if it fails), show every CLI.
                 (p) => providers.length === 0 || providers.some((s) => s.provider === p.key),
-              ).map((p) => (
+              ).map((p) =>
+                // With saved tokens, Claude Code has one card for both ways to
+                // sign in, and a line saying which is in force.
+                subscriptionTokenOn && p.key === 'claude-code' ? (
+                  <ClaudeSignInCard key={p.key} loggedIn={loggedInFor(p.key)} onChanged={loadProviders} />
+                ) : (
                 <ProviderConnectCard
                   key={p.key}
                   provider={p.key}
@@ -688,10 +693,9 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                   caution={providerCaution(p.key)}
                   onComplete={loadProviders}
                 />
-              ))}
+                )
+              )}
             </div>
-
-            {subscriptionTokenOn && <SubscriptionTokenCard />}
 
             <div className="card" style={{ background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}>
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>

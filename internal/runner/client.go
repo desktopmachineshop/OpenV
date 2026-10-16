@@ -290,8 +290,10 @@ func (c *Client) LoginProgress(id, status, authURL, detail, pasteKind string) er
 
 // SaveLoginToken hands the server the token a token-purpose sign-in minted,
 // which it seals as the member's saved subscription token.
-func (c *Client) SaveLoginToken(id, token string) error {
-	resp, err := c.do(c.http, "POST", "/api/v1/provider-logins/"+id+"/token", workerproto.LoginToken{Token: token})
+// expiresIn is the lifetime the CLI printed (0 when it printed none).
+func (c *Client) SaveLoginToken(id, token string, expiresIn time.Duration) error {
+	resp, err := c.do(c.http, "POST", "/api/v1/provider-logins/"+id+"/token",
+		workerproto.LoginToken{Token: token, ExpiresIn: int64(expiresIn / time.Second)})
 	if err != nil {
 		return err
 	}

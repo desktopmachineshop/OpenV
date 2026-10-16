@@ -5,7 +5,7 @@
       "name": "hands in the minted token",
       "calls": [
         {
-          "call": "SaveLoginToken(\"<login-id>\", \"<token>\")",
+          "call": "SaveLoginToken(\"<login-id>\", \"<token>\", 8760h)",
           "http": [
             {
               "request": {
@@ -14,7 +14,7 @@
                 "route": "POST /api/v1/provider-logins/{id}/token",
                 "authorization": "Bearer <worker-key>",
                 "content_type": "application/json",
-                "body": "{\"token\":\"sk-ant-oat01-wire-golden-placeholder-token\"}"
+                "body": "{\"token\":\"sk-ant-oat01-wire-golden-placeholder-token\",\"expires_in\":31536000}"
               },
               "response": {
                 "status": 200,
@@ -31,7 +31,7 @@
       "name": "a refused token is returned as an error",
       "calls": [
         {
-          "call": "SaveLoginToken(\"<login-id>\", \"<token>\")",
+          "call": "SaveLoginToken(\"<login-id>\", \"<token>\", 8760h)",
           "http": [
             {
               "request": {
@@ -40,7 +40,7 @@
                 "route": "POST /api/v1/provider-logins/{id}/token",
                 "authorization": "Bearer <worker-key>",
                 "content_type": "application/json",
-                "body": "{\"token\":\"sk-ant-oat01-wire-golden-placeholder-token\"}"
+                "body": "{\"token\":\"sk-ant-oat01-wire-golden-placeholder-token\",\"expires_in\":31536000}"
               },
               "response": {
                 "status": 409,

@@ -140,6 +140,10 @@ type LoginClaim struct {
 // sign-in. A credential: never log or persist it outside the sealed store.
 type LoginToken struct {
 	Token string `json:"token"`
+	// ExpiresIn is how long the CLI said the token is valid for, in
+	// seconds; 0 when it said nothing the runner could read, which the
+	// server takes as the CLI's default of a year.
+	ExpiresIn int64 `json:"expires_in,omitempty"`
 }
 
 // --- Sign-ins: POST /api/v1/provider-logins/{id}/progress ---

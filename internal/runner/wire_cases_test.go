@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"time"
+
 	"errors"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -353,8 +355,8 @@ func wireLoginProgressCases() []wireCase {
 }
 
 func wireSaveLoginTokenCases() []wireCase {
-	call := wireCall{`SaveLoginToken("<login-id>", "<token>")`, func(c *Client) (interface{}, error) {
-		return nil, c.SaveLoginToken(wireID("<login-id>"), "sk-ant-oat01-wire-golden-placeholder-token")
+	call := wireCall{`SaveLoginToken("<login-id>", "<token>", 8760h)`, func(c *Client) (interface{}, error) {
+		return nil, c.SaveLoginToken(wireID("<login-id>"), "sk-ant-oat01-wire-golden-placeholder-token", 8760*time.Hour)
 	}}
 	return []wireCase{
 		{

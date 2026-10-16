@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -166,14 +167,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 	for {
 		select {
 		case err := <-done:
-			if flow.mintsToken && err == nil && ctx.Err() == nil {
-				// Read out whatever is still buffered: the token is the last
-				// thing the CLI draws before it exits.
-				drainChunks(chunks, minted, outputDrainTimeout)
-				b.saveMintedToken(login, minted.String())
-				return
-			}
-			b.finishLogin(ctx, login, err, ctx.Err(), tail)
+			b.finishPTYLogin(ctx, login, flow, err, chunks, minted, tail)
 			return
 		case chunk, ok := <-chunks:
 			if !ok {
@@ -287,6 +281,20 @@ func (b *screenBuffer) String() string { return b.text.String() }
 // from a previous paste is never reported against a new one.
 func (b *screenBuffer) reset() { b.text.Reset() }
 
+// finishPTYLogin reports how a terminal sign-in ended: a minting flow that
+// succeeded hands its token in, and anything else is finishLogin's.
+func (b *loginBroker) finishPTYLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow,
+	waitErr error, chunks <-chan string, minted *screenBuffer, tail *lineTail) {
+	if flow.mintsToken && waitErr == nil && ctx.Err() == nil {
+		// Read out whatever is still buffered: the token is the last thing
+		// the CLI draws before it exits.
+		drainChunks(chunks, minted, outputDrainTimeout)
+		b.saveMintedToken(login, minted.String())
+		return
+	}
+	b.finishLogin(ctx, login, waitErr, ctx.Err(), tail)
+}
+
 // drainChunks adds to buf what the terminal still has buffered, until the
 // reader closes the channel or the wait runs out (something the CLI started
 // may hold the terminal open after it exits).
@@ -310,17 +318,58 @@ func drainChunks(chunks <-chan string, buf *screenBuffer, wait time.Duration) {
 // which completes the request there; it reports a failure itself. Neither
 // the token nor the output it was read from is logged or relayed.
 func (b *loginBroker) saveMintedToken(login *providers.LoginRequest, output string) {
-	token := subscriptionTokenPattern.FindString(stripANSI(output))
+	text := stripANSI(output)
+	token := subscriptionTokenPattern.FindString(text)
 	if token == "" {
 		b.loginProgress(login.ID, providers.LoginFailed, "",
 			"the sign-in finished but printed no token — start again, and paste the whole code")
 		return
 	}
-	if err := b.client.SaveLoginToken(login.ID, token); err != nil {
+	if err := b.client.SaveLoginToken(login.ID, token, mintedLifetime(text)); err != nil {
 		b.loginProgress(login.ID, providers.LoginFailed, "", "the runner minted a token but could not save it: "+redactSecrets(err.Error()))
 		return
 	}
 	log.Printf("login %s: minted a token and handed it to the server", login.ID)
+}
+
+// validForPattern finds the lifetime `claude setup-token` prints with its
+// token: "Your OAuth token (valid for 1 year):".
+var validForPattern = regexp.MustCompile(`(?i)valid for\s+([^)]{1,60})\)`)
+
+// durationPartPattern is one number and unit of that lifetime.
+var durationPartPattern = regexp.MustCompile(`(?i)(\d+)\s*(years?|y|months?|mo|weeks?|w|days?|d|hours?|hrs?|h|minutes?|mins?|m)\b`)
+
+// mintedLifetime reads the lifetime the CLI printed with the token, summing
+// its parts ("1 year", "30 days", "12h 30m"); 0 when it printed none the
+// runner can read, which the server takes as the CLI's default.
+func mintedLifetime(text string) time.Duration {
+	m := validForPattern.FindStringSubmatch(text)
+	if m == nil {
+		return 0
+	}
+	var total time.Duration
+	for _, part := range durationPartPattern.FindAllStringSubmatch(m[1], -1) {
+		n, err := strconv.Atoi(part[1])
+		if err != nil {
+			return 0
+		}
+		unit := strings.ToLower(part[2])
+		switch {
+		case strings.HasPrefix(unit, "y"):
+			total += time.Duration(n) * 365 * 24 * time.Hour
+		case strings.HasPrefix(unit, "mo"):
+			total += time.Duration(n) * 30 * 24 * time.Hour
+		case strings.HasPrefix(unit, "w"):
+			total += time.Duration(n) * 7 * 24 * time.Hour
+		case strings.HasPrefix(unit, "d"):
+			total += time.Duration(n) * 24 * time.Hour
+		case strings.HasPrefix(unit, "h"):
+			total += time.Duration(n) * time.Hour
+		default:
+			total += time.Duration(n) * time.Minute
+		}
+	}
+	return total
 }
 
 // finishLogin reports the terminal state of a sign-in the CLI has exited.

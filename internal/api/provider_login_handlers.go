@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -297,7 +298,8 @@ func (h *Handler) SaveProviderLoginToken(w http.ResponseWriter, r *http.Request)
 		writeProviderTokenError(w, r, usertokens.ErrUnavailable)
 		return
 	}
-	if _, err := h.ProviderTokenService.Save(*login.RequestedBy, providers.ProviderClaudeCode, req.Token); err != nil {
+	lifetime := time.Duration(req.ExpiresIn) * time.Second
+	if _, err := h.ProviderTokenService.SaveFor(*login.RequestedBy, providers.ProviderClaudeCode, req.Token, lifetime); err != nil {
 		writeProviderTokenError(w, r, err)
 		return
 	}

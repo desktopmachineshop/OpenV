@@ -14,6 +14,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
@@ -262,5 +263,18 @@ func respondInviteError(w http.ResponseWriter, r *http.Request, err error) {
 		writeJSONError(w, http.StatusNotFound, err.Error())
 	default:
 		respondInternal(w, r, "failed to resolve invite", err)
+	}
+}
+
+// writeProviderTokenError answers a token store error: a caller mistake is
+// 400, a server with no secrets key 503, anything else 500.
+func writeProviderTokenError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, usertokens.ErrInvalid):
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, usertokens.ErrUnavailable):
+		writeJSONError(w, http.StatusServiceUnavailable, err.Error())
+	default:
+		respondInternal(w, r, "failed to read or write the provider token", err)
 	}
 }

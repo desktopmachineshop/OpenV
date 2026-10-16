@@ -328,9 +328,17 @@ token it prints (it starts `sk-ant-oat01-` and lasts a year).
   save the new token. An expired token is not sent; the run uses the
   runner's own sign-in, and the card asks for a new one.
 
+**One card, two ways in.** In user settings Claude Code has a single card
+(`ClaudeSignInCard`) in place of a Connect row and a separate token card. Its
+top line says which sign-in is in force: a saved token, with the date it
+expires; a sign-in for this session only (the runner's own, reported by its
+detection, which a cloud runner loses when its lease ends); or none. Below it
+are *This session only* (the brokered `auth login` above), *Stay signed in
+for a year* (minting, below) and, folded away, the paste.
+
 **Minted on a cloud runner.** Instead of running `claude setup-token`
-themselves, a member can choose *Get token* on the card (gated by
-`cloud-runner-token`). That starts a brokered request with
+themselves, a member can choose *Stay signed in for a year* on the card
+(gated by `cloud-runner-token`). That starts a brokered request with
 `purpose: "token"` (always Claude Code, always the member's own): a runner
 claims one only when its claim says `token_logins: true`, which only a
 headless runner with a pseudo-terminal sends, so an older runner, or one on
@@ -341,7 +349,12 @@ runner drives `claude setup-token` exactly as it drives `auth login` above
 requester's own runner key or lease, for their active token request, seals
 it as their saved token and completes the request. The token is never in a
 progress report, the request's detail or the runner's log: every line the
-runner relays or logs passes `redactSecrets` first.
+runner relays or logs passes `redactSecrets` first. The CLI's own lifetime
+is kept: it prints "Your OAuth token (valid for …)", and the runner sends
+that as `expires_in`, so the card's date is Claude's, not a guess (a lifetime
+it cannot read, or one under an hour or over five years, is taken as a year).
+The CLI (2.1.x) offers no choice of lifetime: its `expiresInDays` setting is
+read but always resolves to one year, so the card offers none either.
 
 This is why `claude setup-token` is not used for the brokered sign-in above:
 that flow signs the CLI in on the runner's disk, and a setup-token does not;

@@ -26,7 +26,7 @@ func TestPTYMintHandsTheTokenToTheServerOnly(t *testing.T) {
 	}
 	var mu sync.Mutex
 	var progress []string
-	saved := make(chan string, 1)
+	saved := make(chan map[string]any, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/progress"):
@@ -39,9 +39,9 @@ func TestPTYMintHandsTheTokenToTheServerOnly(t *testing.T) {
 		case strings.HasSuffix(r.URL.Path, "/full"):
 			_ = json.NewEncoder(w).Encode(providers.LoginRequest{ID: "l1", Status: providers.LoginAwaitingCode, Code: "the-code"})
 		case strings.HasSuffix(r.URL.Path, "/token"):
-			var body map[string]string
+			var body map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&body)
-			saved <- body["token"]
+			saved <- body
 			_, _ = w.Write([]byte(`{}`))
 		default:
 			_, _ = w.Write([]byte(`{}`))
@@ -55,7 +55,7 @@ func TestPTYMintHandsTheTokenToTheServerOnly(t *testing.T) {
 	// in colour, as the real one draws it.
 	flow.command = []string{"sh", "-c",
 		`echo https://claude.ai/oauth/authorize?client_id=openv; read code; ` +
-			`printf '\033[32mYour OAuth token:\033[0m\r\n` + fakeMintedToken + `\r\n'; sleep 0.2`}
+			`printf '\033[32mYour OAuth token (valid for 1 year):\033[0m\r\n` + fakeMintedToken + `\r\n'; sleep 0.2`}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	done := make(chan struct{})
@@ -67,8 +67,11 @@ func TestPTYMintHandsTheTokenToTheServerOnly(t *testing.T) {
 
 	select {
 	case got := <-saved:
-		if got != fakeMintedToken {
-			t.Fatalf("saved token = %q", got)
+		if got["token"] != fakeMintedToken {
+			t.Fatalf("saved token = %v", got["token"])
+		}
+		if got["expires_in"] != float64(365*24*3600) {
+			t.Fatalf("expires_in = %v, want the year the CLI printed", got["expires_in"])
 		}
 	case <-time.After(30 * time.Second):
 		mu.Lock()
@@ -124,5 +127,23 @@ func TestOnlyAHeadlessRunnerMints(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("a personal runner did not refuse the token request")
+	}
+}
+
+// The lifetime is read from what the CLI printed, in the forms a duration
+// takes; anything unreadable is 0, the server's cue for the default.
+func TestMintedLifetime(t *testing.T) {
+	day := 24 * time.Hour
+	for text, want := range map[string]time.Duration{
+		"Your OAuth token (valid for 1 year):":   365 * day,
+		"Your OAuth token (valid for 30 days):":  30 * day,
+		"Your OAuth token (valid for 12h 30m):":  12*time.Hour + 30*time.Minute,
+		"Your OAuth token (valid for 2 weeks):":  14 * day,
+		"Your OAuth token (valid for a while):":  0,
+		"Long-lived token created successfully!": 0,
+	} {
+		if got := mintedLifetime(text); got != want {
+			t.Errorf("%q: %v, want %v", text, got, want)
+		}
 	}
 }
