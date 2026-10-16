@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.19.2 — 2026-10-16
+
 ### Maintenance updates
 
 - **openv.app offers Claude Code as its only agent provider for now.** Codex
