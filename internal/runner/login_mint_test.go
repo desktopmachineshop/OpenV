@@ -240,3 +240,38 @@ func TestAHeadlessSignInStartsFromACleanSlate(t *testing.T) {
 		t.Fatal("a Claude sign-in flow does not sign out first")
 	}
 }
+
+// timedWriter records each write and when it came.
+type timedWriter struct {
+	writes []string
+	at     []time.Time
+}
+
+func (w *timedWriter) Write(p []byte) (int, error) {
+	w.writes = append(w.writes, string(p))
+	w.at = append(w.at, time.Now())
+	return len(p), nil
+}
+
+// The code and its Enter are two writes, apart: a TUI reads one burst as a
+// paste and keeps an Enter inside it as text, which left a minted sign-in
+// sitting on its masked code in production.
+func TestTypeCodePressesEnterSeparately(t *testing.T) {
+	w := &timedWriter{}
+	if err := typeCode(w, "the-code#state"); err != nil {
+		t.Fatal(err)
+	}
+	if len(w.writes) != 2 || w.writes[0] != "the-code#state" || w.writes[1] != "\r" {
+		t.Fatalf("writes = %q", w.writes)
+	}
+	if gap := w.at[1].Sub(w.at[0]); gap < submitAfter/2 {
+		t.Fatalf("Enter came %v after the code", gap)
+	}
+}
+
+// The relayed screen carries no charset or shift codes.
+func TestStripANSIDropsCharsetAndShiftCodes(t *testing.T) {
+	if got := stripANSI("\x1b(B\x0fPaste code here\x1b)0\x0e"); got != "Paste code here" {
+		t.Fatalf("stripped = %q", got)
+	}
+}
