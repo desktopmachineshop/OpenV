@@ -11,6 +11,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Modules can add screens to your OpenV.** A module linked into your
+  build can add its own workspace settings tab, platform admin section or
+  start-up step, shown only where its server side says it is on
+  ([`docs/extending.md`](docs/extending.md#the-app-the-frontend-registry)).
 - **openv.app has a public changelog.** Every release, newest first, with
   the same notes What's new shows you, is at openv.app/changelog for
   anyone evaluating OpenV, and linked from the site's footer. What's new

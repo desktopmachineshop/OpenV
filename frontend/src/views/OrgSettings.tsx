@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Org, OrgFeatures, orgsAPI, releaseAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { Navbar } from '../components/Navbar';
 import { OrgLimitsTab } from '../components/org/OrgLimitsTab';
-import { OrgBillingTab } from '../components/org/OrgBillingTab';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
@@ -14,15 +13,16 @@ import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { ErrorBanner } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
-import { CAPABILITY_BILLING, CAPABILITY_HOSTED, useCapability } from '../capabilities';
+import { CAPABILITY_HOSTED, useCapability } from '../capabilities';
+import { orgSettingsTab, withOrgSettingsTabs } from '../ext/registry';
 
-type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage' | 'limits' | 'billing';
+// A core tab's key, or a registered one's (ext/registry.ts).
+type Tab = string;
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'members', label: 'Members' },
   { key: 'limits', label: 'Limits' },
-  { key: 'billing', label: 'Billing' },
   { key: 'teams', label: 'Teams' },
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
@@ -38,17 +38,18 @@ export const OrgSettings: React.FC = () => {
   const org = orgs.find((o) => o.id === activeOrgId) || null;
   const isAdmin = Boolean(org && (org.role === 'admin' || currentUser?.is_admin));
   const { isPhone } = useViewport();
-  // Plans and billing are the hosted service's; a self-hosted OpenV has no
-  // Billing tab and no Plan card.
+  // Plans are the hosted service's; a self-hosted OpenV has no Plan card,
+  // and no Billing tab, which billing registers (ext/modules.ts).
   const hosted = useCapability(CAPABILITY_HOSTED);
-  const billing = useCapability(CAPABILITY_BILLING);
-  const tabs = hosted || billing ? TABS : TABS.filter((t) => t.key !== 'billing');
+  const capabilities = useAppStore((s) => s.capabilities);
+  const tabs = withOrgSettingsTabs(TABS, capabilities);
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const tab: Tab = tabs.some((t) => t.key === tabParam) ? (tabParam as Tab) : tabs[0].key;
+  const registeredTab = orgSettingsTab(tab, TABS);
   const setTab = (next: Tab) =>
     setSearchParams(
       (prev) => {
@@ -583,7 +584,11 @@ export const OrgSettings: React.FC = () => {
 
         {tab === 'members' && <OrgMembersTab org={org} isAdmin={isAdmin} currentUser={currentUser} />}
         {tab === 'limits' && <OrgLimitsTab org={org} />}
-        {tab === 'billing' && <OrgBillingTab org={org} isAdmin={isAdmin} />}
+        {registeredTab && (
+          <Suspense fallback={null}>
+            <registeredTab.Component org={org} isAdmin={isAdmin} />
+          </Suspense>
+        )}
         {tab === 'teams' && <OrgTeamsTab org={org} isAdmin={isAdmin} />}
         {tab === 'providers' && <OrgProvidersTab isAdmin={isAdmin} />}
         {tab === 'worker-keys' && <WorkerKeysTab org={org} isAdmin={isAdmin} />}

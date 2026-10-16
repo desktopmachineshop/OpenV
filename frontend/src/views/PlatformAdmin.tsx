@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AdminUser, AdminWorkspace, PLANS, adminAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from '../components/Navbar';
 import { UserDashboard } from '../components/admin/UserDashboard';
-import { VisitorDashboard } from '../components/admin/VisitorDashboard';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
-import { CAPABILITY_HOSTED, useCapability } from '../capabilities';
+import { registeredAdminSections } from '../ext/registry';
 
 // PlatformAdmin is the page for the deployment's operators (REQ-155): every
 // workspace with its plan, which is where the open-source tier is granted
@@ -37,9 +36,9 @@ const planLabel = (plan: string): string => PLANS.find((p) => p.value === plan)?
 export const PlatformAdmin: React.FC = () => {
   const { currentUser } = useAppStore();
   const { isCompact: compact } = useViewport();
-  // The site's visitors are the hosted service's public site; a self-hosted
-  // OpenV has none.
-  const hosted = useCapability(CAPABILITY_HOSTED);
+  // What modules add here (ext/modules.ts): the hosted service's site
+  // Visitors dashboard, which a self-hosted OpenV has none of.
+  const sections = registeredAdminSections(useAppStore((s) => s.capabilities));
   const confirm = useConfirm();
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[] | null>(null);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -177,7 +176,11 @@ export const PlatformAdmin: React.FC = () => {
           </div>
         )}
 
-        {hosted && <VisitorDashboard compact={compact} />}
+        {sections.map(({ key, Component }) => (
+          <Suspense key={key} fallback={null}>
+            <Component compact={compact} />
+          </Suspense>
+        ))}
 
         <UserDashboard compact={compact} />
 

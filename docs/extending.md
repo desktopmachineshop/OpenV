@@ -115,3 +115,25 @@ this repository are held to that by `TestExtModulesImportOnlyExt`
 
 `ext` changes with OpenV's releases; a change that breaks a module is named
 in the release notes.
+
+## The app: the frontend registry
+
+A module can add screens to the app as well, through
+[`frontend/src/ext/registry.ts`](../frontend/src/ext/registry.ts):
+
+| Register | Where it shows |
+|---|---|
+| `registerOrgSettingsTab({key, label, after?, capabilities?, Component})` | a tab of workspace settings, after the tab `after` names; `Component` gets the workspace and whether the caller administers it |
+| `registerAdminSection({key, capabilities?, Component})` | a section of the platform admin page, above the user dashboard |
+| `registerStartHook({key, capabilities?, run})` | runs once the session is known and again whenever the signed-in account changes |
+
+An entry that names `capabilities` shows only where `GET
+/api/v1/auth/config` lists one of them, so a module's server side decides
+whether its screens appear. Registrations live in
+[`frontend/src/ext/modules.ts`](../frontend/src/ext/modules.ts), the one
+file a build that links modules in replaces, as it adds one file to
+`cmd/server`. Load a module's components with `lazy()` there, so a
+deployment that never shows them never downloads them.
+
+Routes are not registered: the app's route table stays hand-written
+(`frontend/src/README.md`, K13).

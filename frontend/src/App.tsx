@@ -25,7 +25,8 @@ import { InterviewChatRoute } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import { releasePrerender } from './site/prerenderHandoff';
-import { sendVisitBeacon } from './site/visitBeacon';
+import './ext/modules';
+import { registeredStartHooks } from './ext/registry';
 import { CAPABILITY_HOSTED, hasCapability } from './capabilities';
 import './index.css';
 import { pendingReturnTo } from './utils/returnTo';
@@ -123,8 +124,8 @@ function App() {
     capabilities,
     setCapabilities,
   } = useAppStore();
-  // The public site and its visit beacon are the hosted service's; a
-  // self-hosted OpenV opens on its sign-in page.
+  // The public site is the hosted service's; a self-hosted OpenV opens on
+  // its sign-in page.
   const hosted = hasCapability(capabilities, CAPABILITY_HOSTED);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -147,11 +148,13 @@ function App() {
       .finally(() => setAuthChecked(true));
   }, [setCurrentUser, setEmailVerificationRequired, setCapabilities]);
 
-  // The site visit beacon (the platform admin's Visitors dashboard): once
-  // the session is known, and again when this browser signs in or up.
+  // What modules run at start (ext/registry.ts), such as the site visit
+  // beacon: once the session is known, and again when this browser signs
+  // in or up.
   useEffect(() => {
-    if (authChecked && hosted) sendVisitBeacon(currentUser?.id ?? null);
-  }, [authChecked, hosted, currentUser?.id]);
+    if (!authChecked) return;
+    for (const h of registeredStartHooks(capabilities)) h.run(currentUser?.id ?? null);
+  }, [authChecked, capabilities, currentUser?.id]);
 
   // A signed-in visitor to a pre-rendered page goes into the app (the front
   // page redirects to /projects), so its snapshot is dropped as soon as the
