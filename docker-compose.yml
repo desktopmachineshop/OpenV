@@ -33,6 +33,12 @@ services:
       OPENV_DATA_DIR: /data
       WORKER_API_KEY: ${WORKER_API_KEY:-dev-worker-key}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      # This stack is somebody's own installation: new workspaces get the
+      # self_host plan (nothing capped), limit refusals name the setting to
+      # change rather than a plan upgrade, and every workspace runs the
+      # release this server ships. Set OPENV_SELF_HOSTED=false in .env only
+      # to try the hosted service's plans and billing locally.
+      OPENV_SELF_HOSTED: ${OPENV_SELF_HOSTED:-true}
       # Google sign-in: set these (e.g. in a .env file) to show the button.
       # Authorized redirect URI: ${PUBLIC_URL}/api/v1/auth/google/callback
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

@@ -481,6 +481,7 @@
       "globs": [
         "docs/billing-odoo.md",
         "docs/plans/billing-stripe.md",
+        "docs/plans/hosted-edition-separation.md",
         "frontend/src/api/**/billing*",
         "frontend/src/components/org/OrgBilling*",
         "internal/api/billing_*.go",

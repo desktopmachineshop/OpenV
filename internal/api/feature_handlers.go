@@ -148,7 +148,7 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "workspace not found")
 		return
 	}
-	if !orgs.ChannelChoosable(org.BilledPlan) {
+	if !orgs.ChannelChoosable(org.ChannelPlan()) {
 		writeJSONError(w, http.StatusBadRequest, orgs.ErrChannelLocked.Error())
 		return
 	}

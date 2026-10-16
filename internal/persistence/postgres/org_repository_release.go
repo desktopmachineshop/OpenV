@@ -33,7 +33,8 @@ func (r *OrgRepository) SetUpgradeWindow(orgID string, day, hour int, timezone s
 
 // effectiveChannelSQL is the channel a row is on, as SQL: an override
 // counts on a company plan, otherwise the plan decides (orgs.ChannelForPlan).
-// $N is the parameter holding orgs.ChoosablePlans.
+// $N is the parameter holding orgs.DeploymentChoosablePlans, which is empty
+// on a self-hosted deployment, so every workspace there is nightly.
 const effectiveChannelSQL = `CASE WHEN o.plan = ANY($2) THEN COALESCE(NULLIF(o.release_channel, ''), 'stable') ELSE 'nightly' END`
 
 // ListOrgsByChannel lists live workspaces whose effective channel is channel.
@@ -42,7 +43,7 @@ func (r *OrgRepository) ListOrgsByChannel(channel string) ([]*orgs.Org, error) {
 		SELECT `+orgColumnsQualified+` FROM organizations o
 		WHERE o.deleted_at IS NULL AND `+effectiveChannelSQL+` = $1
 		ORDER BY o.created_at
-	`, channel, pq.Array(orgs.ChoosablePlans))
+	`, channel, pq.Array(orgs.DeploymentChoosablePlans()))
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (r *OrgRepository) ListMemberUserIDsByChannel(channel string) ([]string, er
 		SELECT DISTINCT m.user_id FROM org_members m
 		JOIN organizations o ON o.id = m.org_id
 		WHERE o.deleted_at IS NULL AND `+effectiveChannelSQL+` = $1
-	`, channel, pq.Array(orgs.ChoosablePlans))
+	`, channel, pq.Array(orgs.DeploymentChoosablePlans()))
 	if err != nil {
 		return nil, err
 	}
