@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Staying signed in to Claude Code for a year no longer stalls on "Code
+  sent".** The code you paste into a cloud runner's sign-in is now
+  submitted, so the runner finishes minting and saves your token, and the
+  card no longer reports a sign-in for the session that the runner had
+  just signed out of.
+
 ## 0.21.3 — 2026-10-16
 
 ### Bug fixes

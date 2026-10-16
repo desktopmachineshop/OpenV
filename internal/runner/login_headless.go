@@ -34,7 +34,7 @@ import (
 //     runner replays it against its own loopback listener.
 
 // ansiPattern matches the escape sequences a TUI paints its output with.
-var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)|\r`)
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)|\x1b[()*+][0-9A-Za-z]|[\x0e\x0f]|\r`)
 
 // stripANSI reduces terminal output to the text a human would see.
 func stripANSI(s string) string { return ansiPattern.ReplaceAllString(s, "") }
@@ -242,7 +242,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 			reportedErr = ""
 			screen.reset()
 			minted.reset()
-			if _, err := io.WriteString(tty, code+"\r"); err != nil {
+			if err := typeCode(tty, code); err != nil {
 				log.Printf("login %s: writing code to terminal failed: %v", login.ID, err)
 				continue
 			}
@@ -284,6 +284,23 @@ func (b *screenBuffer) String() string { return b.text.String() }
 // from a previous paste is never reported against a new one.
 func (b *screenBuffer) reset() { b.text.Reset() }
 
+// submitAfter is the pause between typing a code and pressing Enter. A TUI
+// reads a burst of input as a paste, and an Enter inside a paste becomes
+// part of the pasted text rather than a submit: the code then sits in the
+// field, masked, and the sign-in never finishes.
+const submitAfter = 500 * time.Millisecond
+
+// typeCode types the member's code into the sign-in terminal, then presses
+// Enter on its own.
+func typeCode(tty io.Writer, code string) error {
+	if _, err := io.WriteString(tty, code); err != nil {
+		return err
+	}
+	time.Sleep(submitAfter)
+	_, err := io.WriteString(tty, "\r")
+	return err
+}
+
 // signOutTimeout bounds the sign-out a headless sign-in starts with.
 const signOutTimeout = 20 * time.Second
 
@@ -307,6 +324,8 @@ func (b *loginBroker) cleanSlate(ctx context.Context, login *providers.LoginRequ
 		log.Printf("login %s: signing the CLI out first failed, carrying on: %v", login.ID, err)
 	} else {
 		log.Printf("login %s: signed the CLI out first", login.ID)
+		// The card reads the last detection: it said signed in until now.
+		b.redetect(ctx, login.Provider)
 	}
 	return extra
 }
