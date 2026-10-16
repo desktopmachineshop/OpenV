@@ -1,6 +1,7 @@
 # Separating the hosted service from the open-source product
 
-Status: decisions taken 2026-10-16 (section 3). Not started.
+Status: decisions taken 2026-10-16 (section 3): one private repository,
+one domain. Not started.
 
 ## 1. Why
 
@@ -28,11 +29,11 @@ charges for. Today the code does not reflect that:
 The goal: this repository is the open-source product, complete for anyone
 who runs it, with no hosted-service concepts in sight. The hosted service
 — billing, plans, the marketing site, openv.app operations — moves to
-private repositories that build on top of it.
+one private repository, `openv-hosted`, that builds on top of it.
 
 ### Non-goals
 
-- A fork. The private repositories consume a released version of this
+- A fork. The private repository consumes a released version of this
   one; they never carry patches to core. Anything core needs is
   contributed here, in the open.
 - Removing data. Migrations are frozen (`migration_freeze_*_test.go`);
@@ -43,7 +44,7 @@ private repositories that build on top of it.
 
 Sorted from the code as it stands (file paths are where each lives today).
 
-### Hosted-only: moves to the private repositories
+### Hosted-only: moves to the private repository
 
 | Concern | Backend | Frontend | Ops / docs |
 |---|---|---|---|
@@ -95,19 +96,16 @@ Sorted from the code as it stands (file paths are where each lives today).
    extension API** (section 4). That is the main new work.
 4. **The community product pool is hosted-only.** The cloud runner pool
    stays in core.
-5. **The marketing site moves to its own repository** and deploy,
-   separate from the hosted app modules.
-
-Still open (decide before Phase 4): where the marketing site is served.
-Either (a) openv.app stays one origin, with openv.app's nginx sending the
-marketing paths to the site's deploy and everything else to the app, so
-URLs, share links and search rankings are unchanged; or (b) the site
-keeps `openv.app` and the app moves to `app.openv.app`, which is simpler
-to run but changes every app and share URL. **Recommended: (a).**
+5. **One private repository for everything hosted.** The marketing site
+   moves out of this repository into `openv-hosted`, alongside the hosted
+   modules and the openv.app operations.
+6. **One domain.** openv.app keeps serving the marketing site and the app
+   from the same origin, as today. URLs, share links and search rankings
+   do not change, and there is no `app.` subdomain.
 
 ## 4. Target shape
 
-Three repositories:
+Two repositories:
 
 ```
 desktopmachineshop/OpenV  (public, MIT)          the product
@@ -115,16 +113,19 @@ desktopmachineshop/OpenV  (public, MIT)          the product
   ├─ ext/            public Go extension API (new)
   └─ frontend/src/ext/  frontend extension registry (new)
 
-openv-hosted  (private)                          openv.app's app layer
+openv-hosted  (private)                          everything openv.app adds
   ├─ go.mod: requires OpenV at a release tag
   ├─ billing/, plans/, channels/, showcase/, community/, visitors/
   ├─ cmd/server/: main = OpenV server + hosted modules
   ├─ frontend/: OpenV frontend + hosted extensions
+  ├─ site/: landing, pricing, FAQ, topics, crawl files, prerender
   └─ Railway config, promotion and staging workflows, ops docs
-
-openv-site  (private)                            the marketing site
-  └─ landing, pricing, FAQ, topics, crawl files, prerender
 ```
+
+openv.app keeps its current two Railway services (API and frontend) and
+the runner pool. Each is built from `openv-hosted` instead of this
+repository. The frontend image serves the marketing pages and the app
+from one nginx, exactly as today.
 
 ### 4.1 The Go extension API (`ext/`)
 
@@ -187,11 +188,19 @@ beacon. `/` opens sign-in.
 
 ### 4.3 The marketing site
 
-`openv-site` takes `views/Landing.tsx`, `landing/**`, `site/**`, the
-crawl and prerender build steps and their entrypoint scripts. It reads
-the manual for its sitemap from the published app (or a build artefact
-of the pinned OpenV tag), not from source. The open frontend keeps
-`/manual` and a plain `/` → sign-in.
+`openv-hosted/site/` takes `views/Landing.tsx`, `landing/**`, `site/**`,
+the crawl and prerender build steps (the `crawlFiles()` and
+`prerenderPages()` Vite plugins) and their entrypoint scripts
+(`45-openv-noindex.sh`, `46-openv-crawl.sh`, `50-openv-app-identity.sh`).
+The site registers its routes and public segments through the frontend
+registry (4.2), and its pages are built into the same frontend image as
+the app, so `/` on openv.app is the landing page and the app is unchanged
+behind it. The sitemap still lists the manual's chapters, which the
+hosted build reads from the pinned OpenV source.
+
+The open frontend keeps `/manual` and a plain `/` → sign-in. Its nginx
+config loses the `location = /` prerender rule and the crawl-file
+locations; the hosted image adds them back.
 
 ## 5. Phases
 
@@ -237,23 +246,23 @@ the code is still here, so every later move is a pure move:
 - Document `ext` in `docs/extending.md`, which is also useful to a
   self-hoster who wants their own integration.
 
-### Phase 3: stand up the private repositories (no product change)
+### Phase 3: stand up `openv-hosted` (no product change)
 
-- Create `openv-hosted` and `openv-site`. Copy the hosted modules and the
-  marketing site into them, building against the current OpenV release.
+- Create `openv-hosted`. Copy the hosted modules and the marketing site
+  into it, building against the current OpenV release.
 - `openv-hosted` gets the Railway config, the promotion, staging and
   stable-cut workflows, and the ops docs (`railway.md`,
   `release-policy.md`, the billing plans).
-- Deploy openv.app's staging from `openv-hosted` and `openv-site`.
+- Deploy openv.app's staging from `openv-hosted`.
   Compare it against today's staging (smoke tests, billing in Stripe test
   mode, prerendered pages, crawl files) before production moves.
-- Switch production's Railway services to the new repositories. Railway
+- Switch production's Railway services to `openv-hosted`. Railway
   then deploys from `openv-hosted`'s `release` branch. This repository
   keeps CI, CodeQL, release notes and version tags.
 
 ### Phase 4: remove the hosted code from this repository
 
-Only after production runs from the private repositories:
+Only after production runs from `openv-hosted`:
 
 - Delete the hosted modules, the marketing site, `frontend/railway.json`,
   the staging icons and manifest, and the openv.app workflows and docs.
@@ -290,7 +299,7 @@ Only after production runs from the private repositories:
   every write). Phase 1 must route all of it through `PlanPolicy` and
   `WorkspaceObserver` before anything can move. That is the largest
   single piece of work.
-- **The cut-over.** openv.app must run from the private repositories
+- **The cut-over.** openv.app must run from `openv-hosted`
   (Phase 3) before the code is deleted here (Phase 4). Staging runs the
   new stack first, and Stripe live mode is switched only after staging
   passes.
