@@ -20,6 +20,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   described in more than a few hundred characters made the Hazards step
   fail the same way. Its title is now shortened like a requirement's, and
   the full hazard opens its description.
+- **Long persona names save in guided requirements definition.** A persona
+  name of more than a few hundred characters no longer fails the Personas
+  step: its title is shortened, and the full name opens its description.
 
 ## 0.21.4 — 2026-10-16
 

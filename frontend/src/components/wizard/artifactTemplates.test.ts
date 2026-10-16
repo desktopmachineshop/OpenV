@@ -63,6 +63,14 @@ describe('golden strings: the guided wizard', () => {
     });
   });
 
+  it('writes a persona, its title cut at 120 and a cut name in full in its body', () => {
+    const name = 'p'.repeat(130);
+    expect(wizardPersonaText({ ...persona, name })).toEqual({
+      title: `${'p'.repeat(117)}…`,
+      body: `${name}\n\n**Role:** CNC operator\n\n**Goals:**\nRun jobs without surprises\n\n**Pain points:**\nSpindles start without warning`,
+    });
+  });
+
   it('writes a need as its sentence, and names "a user" without a persona', () => {
     const need = { id: 'n-1', persona_id: 'p-1', capability: 'to see the spindle state', outcome: 'I never reach into a live machine' };
     const sentence = 'As Maya the Machinist, I need to see the spindle state so that I never reach into a live machine';

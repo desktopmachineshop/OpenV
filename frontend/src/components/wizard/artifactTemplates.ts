@@ -23,10 +23,16 @@ export interface ArtifactText {
 // The guided wizard
 // ---------------------------------------------------------------------------
 
-export const wizardPersonaText = (p: PersonaEntry): ArtifactText => ({
-  title: p.name.trim(),
-  body: `**Role:** ${p.role.trim()}\n\n**Goals:**\n${p.goals.trim()}\n\n**Pain points:**\n${p.pains.trim()}`,
-});
+export const wizardPersonaText = (p: PersonaEntry): ArtifactText => {
+  // Cut at 120 like a hazard's title; a cut name opens the body in full.
+  const name = p.name.trim();
+  const title = asTitle(name);
+  const full = title === name ? '' : `${name}\n\n`;
+  return {
+    title,
+    body: `${full}**Role:** ${p.role.trim()}\n\n**Goals:**\n${p.goals.trim()}\n\n**Pain points:**\n${p.pains.trim()}`,
+  };
+};
 
 export const wizardNeedText = (n: NeedEntry, persona: PersonaEntry | undefined): ArtifactText => {
   // The persona as its own artifact is titled: trimmed.

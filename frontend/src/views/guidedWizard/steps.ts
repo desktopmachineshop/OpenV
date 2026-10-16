@@ -22,8 +22,8 @@ import {
  * Each row says what its step does today, quirks included. These rows name
  * the quirks; they do not fix them (R7):
  *
- * - Titles are cut at 120 characters for needs, requirements, hazards and
- *   verification stubs, at 100 for NFRs, and never for personas. The cut is
+ * - Titles are cut at 120 characters for personas, needs, requirements,
+ *   hazards and verification stubs, and at 100 for NFRs. The cut is
  *   made by the F5 templates in `components/wizard/artifactTemplates.ts`.
  *   `titleLimit` records it beside each row's template, and
  *   `steps.test.ts` holds the two to agree.
@@ -136,7 +136,7 @@ export const PERSONA_STEP: EntryStep<PersonaEntry> = {
   listKey: 'personas',
   idsKey: 'step_2_ids',
   artifactType: 'persona',
-  titleLimit: null,
+  titleLimit: 120,
   template: (p) => wizardPersonaText(p),
   required: (p) => p.name,
   sectionKey: () => 'personas',

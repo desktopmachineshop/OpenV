@@ -94,7 +94,7 @@ describe('the step table', () => {
       [6, 'step_6', 'hazards', null],
     ]);
     expect([PERSONA_STEP, NEED_STEP, REQUIREMENT_STEP, NFR_STEP, HAZARD_STEP, STUB_STEP].map((d) => d.titleLimit)).toEqual([
-      null,
+      120,
       120,
       120,
       100,
