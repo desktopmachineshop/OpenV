@@ -35,6 +35,8 @@ export const FEATURE_KEYS = [
   'workspace-billing',
   'workspace-automations',
   'workspace-runs',
+  'workspace-api-keys',
+  'remote-mcp',
   'auto-cloud-runner',
   'claude-subscription-token',
 ] as const;

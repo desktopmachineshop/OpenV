@@ -31,7 +31,8 @@ type ClaimRequest struct {
 
 // ClaimResponse is what the API answers a claim that got a run: the run's
 // agentruns.Run and agents.Agent, the run's token, and the credential mode
-// resolved for it, a map holding "mode" and, for an API key, "api_key_env".
+// resolved for it, a map holding "mode" and, for an API key, "api_key_env"
+// and, when the workspace pasted one in the app, "api_key".
 // The auth key is always written, with no omitempty (I12); the runner reads
 // it as a RunAuth.
 type ClaimResponse struct {
@@ -49,10 +50,13 @@ const AuthSubscriptionToken = "subscription-token"
 // RunAuth is the credential mode the API resolved for a claimed run.
 type RunAuth struct {
 	// Mode is "user-account" (use the host's CLI sign-in, the default),
-	// "api-key" (inject the key named by APIKeyEnv from the host env) or
-	// "subscription-token" (sign the CLI in with OAuthToken).
+	// "api-key" (inject APIKey, or else the key named by APIKeyEnv from the
+	// host env) or "subscription-token" (sign the CLI in with OAuthToken).
 	Mode      string `json:"mode"`
 	APIKeyEnv string `json:"api_key_env,omitempty"`
+	// APIKey is the key the workspace pasted in the app for APIKeyEnv, ""
+	// when it pasted none. It is a credential: never log or persist it.
+	APIKey string `json:"api_key,omitempty"`
 	// OAuthToken is the member's Claude subscription token, set only in
 	// the subscription-token mode. A secret: never logged or persisted.
 	OAuthToken string `json:"oauth_token,omitempty"`

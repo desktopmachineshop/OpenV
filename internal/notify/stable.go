@@ -198,14 +198,19 @@ func (s *StableScheduler) notifyAdmins(org *orgs.Org, ntype, title, body, versio
 }
 
 // previewLine is the one-line summary of what a stable release brings:
-// how many new features, and how many other changes.
+// how many new features, how many security fixes (named, so an admin can
+// see that one is among them, REQ-142), and how many other changes.
 func previewLine(stable *release.Stable) string {
 	features := 0
+	security := 0
 	others := 0
 	for _, c := range stable.Categories {
-		if c.Name == release.CategoryFeatures {
+		switch c.Name {
+		case release.CategoryFeatures:
 			features += len(c.Notes)
-		} else {
+		case release.CategorySecurity:
+			security += len(c.Notes)
+		default:
 			others += len(c.Notes)
 		}
 	}
@@ -213,13 +218,21 @@ func previewLine(stable *release.Stable) string {
 	if features > 0 {
 		parts = append(parts, fmt.Sprintf("%d new feature(s)", features))
 	}
+	if security > 0 {
+		parts = append(parts, fmt.Sprintf("%d security fix(es)", security))
+	}
 	if others > 0 {
 		parts = append(parts, fmt.Sprintf("%d other change(s)", others))
 	}
 	if len(parts) == 0 {
 		return "See What's new for details."
 	}
-	return "It brings " + strings.Join(parts, " and ") + "; see What's new."
+	// "a and b", or "a, b and c" once a security fix makes three.
+	list := parts[len(parts)-1]
+	if len(parts) > 1 {
+		list = strings.Join(parts[:len(parts)-1], ", ") + " and " + list
+	}
+	return "It brings " + list + "; see What's new."
 }
 
 // formatWhen renders a time in the workspace's zone (UTC when none).

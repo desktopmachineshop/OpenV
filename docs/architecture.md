@@ -222,6 +222,7 @@ the area that owns them; the area guide of
 | agent-suite | `internal/domain/agentruns` | runs, the queue, the budget guard and routing |
 | | `internal/domain/agents` | agent definitions |
 | | `internal/domain/automations` | automation rules |
+| | `internal/domain/connectedapps` | AI clients a member connects to a workspace over the remote MCP endpoint: OAuth clients, consents, codes and tokens |
 | | `internal/domain/crewtemplates` | a crew as a portable document |
 | | `internal/domain/guided` | guided sessions |
 | | `internal/domain/interviews` | interviews and their invites |

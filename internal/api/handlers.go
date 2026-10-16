@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/exports"
@@ -90,14 +91,16 @@ type HandlerDeps struct {
 	ShareLinkService sharelinks.Service
 	// FrontendURL is the origin the app is served from, for absolute links
 	// in social previews and share pages.
-	FrontendURL       string
-	AgentService      agents.Service
-	RunService        agentruns.Service
-	AutomationService automations.Service
-	ProposalService   proposals.Service
-	RepoConnService   repoconns.Service
-	ProviderService   providers.Service
-	LoginService      providers.LoginService
+	FrontendURL        string
+	AgentService       agents.Service
+	RunService         agentruns.Service
+	AutomationService  automations.Service
+	ProposalService    proposals.Service
+	RepoConnService    repoconns.Service
+	ProviderService    providers.Service
+	ProviderKeyService providers.KeyService
+	OfferedProviders   map[string]bool
+	LoginService       providers.LoginService
 	// ProviderTokenService holds members' own provider sign-in tokens.
 	ProviderTokenService usertokens.Service
 	TeamService          teams.Service
@@ -119,6 +122,10 @@ type HandlerDeps struct {
 	// accounts they make and answers the platform admin's visitor
 	// dashboard. nil records nothing.
 	VisitorMetrics usermetrics.VisitorService
+	// ConnectedApps holds the AI clients members attach to a workspace over
+	// the remote MCP endpoint, their consents and their tokens (REQ-44). nil
+	// turns the endpoint and its OAuth off: they answer 404.
+	ConnectedApps connectedapps.Service
 	// VAPID is the web push key pair; the zero value disables push and is
 	// what /api/v1/me/push/config reports as enabled=false.
 	VAPID       notify.VAPIDConfig
@@ -220,6 +227,13 @@ type Handler struct {
 	// visitLimiter bounds site-visit beacons per address, so a script
 	// cannot fill the visitor tables; a browser sends one per page load.
 	visitLimiter *rateLimiter
+	// oauthLimiter bounds client registrations and token requests per
+	// address: a client registers once and refreshes once an hour, so the
+	// bucket only stops a script from filling the clients table or guessing.
+	oauthLimiter *rateLimiter
+	// mcpRouter is the router the remote MCP endpoint sends each tool's API
+	// request through, as the member (mcp_handlers.go); see SetMCPRouter.
+	mcpRouter http.Handler
 }
 
 // NewHandler creates a new API handler
@@ -248,6 +262,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		billingWriteLimiter:    newRateLimiterOr(deps.RateLimits.BillingWrite, defaultBillingWriteBurst, defaultBillingWriteRefill),
 		inviteLimiter:          newRateLimiterOr(deps.RateLimits.Invite, defaultInviteBurst, defaultInviteRefill),
 		visitLimiter:           newRateLimiter(defaultVisitBurst, defaultVisitRefill),
+		oauthLimiter:           newRateLimiter(defaultOAuthBurst, defaultOAuthRefill),
 	}
 	h.HandlerDeps = deps
 	if h.BillingService != nil {

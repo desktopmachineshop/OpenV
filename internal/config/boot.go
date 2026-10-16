@@ -239,6 +239,14 @@ func (c *Config) SharedProductPoolLimit() int {
 	return c.count("OPENV_SHARED_PRODUCT_POOL_LIMIT", sharedproducts.DefaultPoolLimit)
 }
 
+// SecretsKey is the key the server seals workspaces' pasted provider API
+// keys and members' saved subscription tokens with (OPENV_SECRETS_KEY, a credential, exactly as set), "" when
+// unset, which leaves the app unable to store one. Changing it makes every
+// stored key unreadable until it is pasted again.
+func (c *Config) SecretsKey() string {
+	return c.secret("OPENV_SECRETS_KEY", "")
+}
+
 // RunMaxAttempts caps a run's retry chain (OPENV_RUN_MAX_ATTEMPTS, a count,
 // agentruns.DefaultMaxAttempts by default).
 func (c *Config) RunMaxAttempts() int {
@@ -249,13 +257,6 @@ func (c *Config) RunMaxAttempts() int {
 // (OPENV_RUN_AUTO_RETRY, a boolean, true by default).
 func (c *Config) RunAutoRetry() bool {
 	return c.boolean("OPENV_RUN_AUTO_RETRY", true)
-}
-
-// SecretsKey is OPENV_SECRETS_KEY exactly as set, or "": the base64 of 32
-// random bytes that seals the provider tokens members store (stage agents).
-// Unset, the server stores none.
-func (c *Config) SecretsKey() string {
-	return c.secret("OPENV_SECRETS_KEY", "")
 }
 
 // Deployment is the deployment's kind (OPENV_DEPLOYMENT, default shared);

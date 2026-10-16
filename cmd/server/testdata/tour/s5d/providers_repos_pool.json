@@ -27,6 +27,7 @@
     "(beyond the harness's fixed environment, cmd/server/harness_test.go)",
     "HTTPS_PROXY=http://127.0.0.1:<recording proxy port>",
     "HTTP_PROXY=http://127.0.0.1:<recording proxy port>",
+    "OPENV_SECRETS_KEY=tttttttttttttttttttttttttttttttttttttttt",
     "RUNNER_POOL_KEY=tour-pool-key",
     "TZ=UTC"
   ],
@@ -73,7 +74,7 @@
     },
     {
       "name": "lease",
-      "about": "the lease's key, which the node got on its beat at step 108: a personal runner key of the member's, bound to the lease (worker id tour-lease)"
+      "about": "the lease's key, which the node got on its beat at step 119: a personal runner key of the member's, bound to the lease (worker id tour-lease)"
     },
     {
       "name": "mrun",
@@ -1175,6 +1176,315 @@
     },
     {
       "n": 19,
+      "title": "W's pasted API keys before any is stored: none, and the server can store one",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/provider-api-keys",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/provider-api-keys"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 47,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":true,\"keys\":[],\"self_hosted\":false}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": true,
+        "keys": [],
+        "self_hosted": false
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 20,
+      "title": "paste an Anthropic key: 200, answered by its last four characters, never the key",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"key\":\"fake-tour-key-WXYZ\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"key_env\":\"ANTHROPIC_API_KEY\",\"last4\":\"WXYZ\",\"updated_by\":\"<owner>\",\"updated_at\":\"<time@step 20>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "key_env": "ANTHROPIC_API_KEY",
+        "last4": "WXYZ",
+        "updated_by": "<owner>",
+        "updated_at": "<time@step 20>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 21,
+      "title": "W's pasted API keys: the one, without its value",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/provider-api-keys",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/provider-api-keys"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"enabled\":true,\"keys\":[{\"key_env\":\"ANTHROPIC_API_KEY\",\"last4\":\"WXYZ\",\"updated_by\":\"<owner>\",\"updated_at\":\"<time@step 20>\"}],\"self_hosted\":false}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": true,
+        "keys": [
+          {
+            "key_env": "ANTHROPIC_API_KEY",
+            "last4": "WXYZ",
+            "updated_by": "<owner>",
+            "updated_at": "<time@step 20>"
+          }
+        ],
+        "self_hosted": false
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 22,
+      "title": "paste a key for a variable outside the catalogue",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/provider-api-keys/DATABASE_URL",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"key\":\"fake-key\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 135,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid API key: not a provider key variable; use one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GOOGLE_API_KEY\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid API key: not a provider key variable; use one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GOOGLE_API_KEY"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 23,
+      "title": "paste a key with a space in it",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"key\":\"fake key\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 89,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid API key: the key contains a space or line break; paste the key alone\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid API key: the key contains a space or line break; paste the key alone"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 24,
+      "title": "paste with a body that does not decode",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 25,
+      "title": "a member lists them: the workspace admin guard",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/provider-api-keys",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/provider-api-keys"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 44,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"workspace admin access required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "workspace admin access required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 26,
+      "title": "a member pastes one: the workspace admin guard",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"key\":\"fake-key\"}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 44,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"workspace admin access required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "workspace admin access required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 27,
+      "title": "the box key removes one: a key is no user",
+      "actor": "box",
+      "route": "DELETE /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 28,
+      "title": "remove the Anthropic key: 204",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "DELETE /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 29,
+      "title": "remove it again: 404, none is stored",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "DELETE /api/v1/provider-api-keys/{env}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/provider-api-keys/ANTHROPIC_API_KEY"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"no API key is stored for that variable\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "no API key is stored for that variable"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 30,
       "title": "an admin starts a sign-in of claude-code on W's shared workers (the default target): 201, pending, with the copy that waits for agentd",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1194,7 +1504,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 19>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 30>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1206,14 +1516,14 @@
         "auth_url": "",
         "detail": "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 19>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 30>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 20,
+      "n": 31,
       "title": "start it again, naming the target: the same request, resumed (201, the same id)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1233,7 +1543,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 19>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 30>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1245,14 +1555,14 @@
         "auth_url": "",
         "detail": "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 19>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 30>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 21,
+      "n": 32,
       "title": "the member starts a sign-in on its own runner: 201, with the personal runner's copy",
       "actor": "member",
       "acting_in": "<w>",
@@ -1272,7 +1582,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 21>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 32>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1284,14 +1594,14 @@
         "auth_url": "",
         "detail": "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 21>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 32>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 22,
+      "n": 33,
       "title": "start a provider that signs in with an API key, not a CLI",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1321,7 +1631,7 @@
       "events": []
     },
     {
-      "n": 23,
+      "n": 34,
       "title": "start with a target no machine has",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1351,7 +1661,7 @@
       "events": []
     },
     {
-      "n": 24,
+      "n": 35,
       "title": "the member starts a sign-in on W's shared workers: the workspace admin guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -1381,7 +1691,7 @@
       "events": []
     },
     {
-      "n": 25,
+      "n": 36,
       "title": "start with a body that does not decode: before the role is checked",
       "actor": "member",
       "acting_in": "<w>",
@@ -1411,7 +1721,7 @@
       "events": []
     },
     {
-      "n": 26,
+      "n": 37,
       "title": "the box key starts one: the handler's 401, a key is no user",
       "actor": "box",
       "route": "POST /api/v1/provider-logins",
@@ -1440,7 +1750,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 38,
       "title": "a signed-in user claims: worker credentials are required",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1466,7 +1776,7 @@
       "events": []
     },
     {
-      "n": 28,
+      "n": 39,
       "title": "the pool key claims: no workspace, so no worker",
       "actor": "pool",
       "route": "POST /api/v1/provider-logins/claim",
@@ -1491,7 +1801,7 @@
       "events": []
     },
     {
-      "n": 29,
+      "n": 40,
       "title": "the box key claims: the admin's request, whole, claimed, updated_at the database's NOW()",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/claim",
@@ -1506,7 +1816,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 29>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 40>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1518,14 +1828,14 @@
         "auth_url": "",
         "detail": "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 29>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 40>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 30,
+      "n": 41,
       "title": "the box key claims again: 204, the member's personal sign-in is not a workspace key's",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/claim",
@@ -1543,7 +1853,7 @@
       "events": []
     },
     {
-      "n": 31,
+      "n": 42,
       "title": "the member's runner key claims: the member's personal sign-in",
       "actor": "runner",
       "route": "POST /api/v1/provider-logins/claim",
@@ -1558,7 +1868,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 31>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 42>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1570,14 +1880,14 @@
         "auth_url": "",
         "detail": "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 31>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 42>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 32,
+      "n": 43,
       "title": "the box key reports the link, and that it waits for a code: 200, the whole request",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -1599,7 +1909,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 32>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 43>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1612,14 +1922,14 @@
         "detail": "Open the link and paste the code.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 32>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 43>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 33,
+      "n": 44,
       "title": "report the status pending, which a worker may not set",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -1648,7 +1958,7 @@
       "events": []
     },
     {
-      "n": 34,
+      "n": 45,
       "title": "report with a body that does not decode",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -1677,7 +1987,7 @@
       "events": []
     },
     {
-      "n": 35,
+      "n": 46,
       "title": "the admin reads the request: the link and what to paste",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1693,7 +2003,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 32>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 43>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1706,13 +2016,13 @@
         "detail": "Open the link and paste the code.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 32>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 43>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 36,
+      "n": 47,
       "title": "the admin pastes the code: 200, sanitised, no code in the answer",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1732,7 +2042,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 36>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 47>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1745,14 +2055,14 @@
         "detail": "Open the link and paste the code.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 36>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 47>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 37,
+      "n": 48,
       "title": "the admin reads it again: still no code",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1768,7 +2078,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 36>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 47>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1781,13 +2091,13 @@
         "detail": "Open the link and paste the code.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 36>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 47>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 38,
+      "n": 49,
       "title": "the box key reads it whole: the code, for the CLI's stdin",
       "actor": "box",
       "route": "GET /api/v1/provider-logins/{id}/full",
@@ -1802,7 +2112,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 36>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"url_ready\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 47>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1816,13 +2126,13 @@
         "detail": "Open the link and paste the code.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 36>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 47>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 39,
+      "n": 50,
       "title": "the admin reads it whole: worker credentials are required",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1847,7 +2157,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 40,
+      "n": 51,
       "title": "paste with a body that does not decode",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1877,7 +2187,7 @@
       "events": []
     },
     {
-      "n": 41,
+      "n": 52,
       "title": "the box key reports completion: the whole request, the code still in it",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -1896,7 +2206,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 41>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1910,14 +2220,14 @@
         "detail": "Signed in.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 41>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 52>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 42,
+      "n": 53,
       "title": "paste a code after completion",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1947,7 +2257,7 @@
       "events": []
     },
     {
-      "n": 43,
+      "n": 54,
       "title": "cancel the completed request: 200, as it is",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1963,7 +2273,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 41>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1976,14 +2286,14 @@
         "detail": "Signed in.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 41>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 52>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 44,
+      "n": 55,
       "title": "the box key reports a failure after completion: 200, the request as it is, still completed",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -2002,7 +2312,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 41>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2016,14 +2326,14 @@
         "detail": "Signed in.",
         "paste_kind": "code",
         "requested_by": "<owner>",
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 41>"
+        "created_at": "<time@step 30>",
+        "updated_at": "<time@step 52>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 45,
+      "n": 56,
       "title": "the other member reads the member's personal sign-in: 404, as if it did not exist",
       "actor": "member2",
       "acting_in": "<w>",
@@ -2048,7 +2358,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 46,
+      "n": 57,
       "title": "the other member cancels it: 404 too",
       "actor": "member2",
       "acting_in": "<w>",
@@ -2074,7 +2384,7 @@
       "events": []
     },
     {
-      "n": 47,
+      "n": 58,
       "title": "W's admin reads it: admins see every sign-in of the workspace",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2090,7 +2400,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 31>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 42>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2102,13 +2412,13 @@
         "auth_url": "",
         "detail": "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 31>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 42>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 48,
+      "n": 59,
       "title": "the member reads its own: claimed by its runner",
       "actor": "member",
       "acting_in": "<w>",
@@ -2124,7 +2434,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 31>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"\",\"detail\":\"Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 42>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2136,13 +2446,13 @@
         "auth_url": "",
         "detail": "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 31>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 42>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 49,
+      "n": 60,
       "title": "the member cancels it: 200, cancelled, Cancelled by user.",
       "actor": "member",
       "acting_in": "<w>",
@@ -2158,7 +2468,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 60>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2170,14 +2480,14 @@
         "auth_url": "",
         "detail": "Cancelled by user.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 49>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 60>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 50,
+      "n": 61,
       "title": "the runner key reports completion after the cancel: 200, the request as it is, the late update swallowed",
       "actor": "runner",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -2196,7 +2506,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 60>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2208,14 +2518,14 @@
         "auth_url": "",
         "detail": "Cancelled by user.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 49>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 60>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 51,
+      "n": 62,
       "title": "the member pastes a code into the cancelled request",
       "actor": "member",
       "acting_in": "<w>",
@@ -2245,7 +2555,7 @@
       "events": []
     },
     {
-      "n": 52,
+      "n": 63,
       "title": "the member's runner key reads it whole",
       "actor": "runner",
       "route": "GET /api/v1/provider-logins/{id}/full",
@@ -2260,7 +2570,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<login2>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<member>\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 60>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2272,13 +2582,13 @@
         "auth_url": "",
         "detail": "Cancelled by user.",
         "requested_by": "<member>",
-        "created_at": "<time@step 21>",
-        "updated_at": "<time@step 49>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 60>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 53,
+      "n": 64,
       "title": "the member's runner key starts one: the handler's 401",
       "actor": "runner",
       "route": "POST /api/v1/provider-logins",
@@ -2307,7 +2617,7 @@
       "events": []
     },
     {
-      "n": 54,
+      "n": 65,
       "title": "the admin starts a sign-in of gemini-cli on W's shared workers",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2327,7 +2637,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login3>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 54>\",\"updated_at\":\"<time@step 54>\"}"
+        "{\"id\":\"<login3>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2339,14 +2649,14 @@
         "auth_url": "",
         "detail": "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
         "requested_by": "<owner>",
-        "created_at": "<time@step 54>",
-        "updated_at": "<time@step 54>"
+        "created_at": "<time@step 65>",
+        "updated_at": "<time@step 65>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 55,
+      "n": 66,
       "title": "the member reads it: a workspace sign-in is any member's to read",
       "actor": "member",
       "acting_in": "<w>",
@@ -2362,7 +2672,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login3>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 54>\",\"updated_at\":\"<time@step 54>\"}"
+        "{\"id\":\"<login3>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2374,13 +2684,13 @@
         "auth_url": "",
         "detail": "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
         "requested_by": "<owner>",
-        "created_at": "<time@step 54>",
-        "updated_at": "<time@step 54>"
+        "created_at": "<time@step 65>",
+        "updated_at": "<time@step 65>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 56,
+      "n": 67,
       "title": "the member cancels it: 403, the workspace admin guard, as its start's",
       "actor": "member",
       "acting_in": "<w>",
@@ -2406,7 +2716,7 @@
       "events": []
     },
     {
-      "n": 57,
+      "n": 68,
       "title": "the box key claims: 204, nothing pending is left",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/claim",
@@ -2424,7 +2734,7 @@
       "events": []
     },
     {
-      "n": 58,
+      "n": 69,
       "title": "the admin starts a sign-in in its personal workspace",
       "actor": "owner",
       "route": "POST /api/v1/provider-logins",
@@ -2443,7 +2753,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login.home>\",\"org_id\":\"<owner.workspace>\",\"provider\":\"codex-cli\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 58>\",\"updated_at\":\"<time@step 58>\"}"
+        "{\"id\":\"<login.home>\",\"org_id\":\"<owner.workspace>\",\"provider\":\"codex-cli\",\"target\":\"workspace\",\"status\":\"pending\",\"auth_url\":\"\",\"detail\":\"Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2455,14 +2765,14 @@
         "auth_url": "",
         "detail": "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
         "requested_by": "<owner>",
-        "created_at": "<time@step 58>",
-        "updated_at": "<time@step 58>"
+        "created_at": "<time@step 69>",
+        "updated_at": "<time@step 69>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 59,
+      "n": 70,
       "title": "the admin reads it from W: 404, it is not W's",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2487,7 +2797,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 60,
+      "n": 71,
       "title": "the admin cancels it from W: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2513,7 +2823,7 @@
       "events": []
     },
     {
-      "n": 61,
+      "n": 72,
       "title": "W's box key reads it whole: 404, it is not the key's workspace's",
       "actor": "box",
       "route": "GET /api/v1/provider-logins/{id}/full",
@@ -2537,7 +2847,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 62,
+      "n": 73,
       "title": "W's box key reports on it: 404",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -2566,7 +2876,7 @@
       "events": []
     },
     {
-      "n": 63,
+      "n": 74,
       "title": "a sign-in no one has",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2591,7 +2901,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 64,
+      "n": 75,
       "title": "a sign-in no one has, read whole",
       "actor": "box",
       "route": "GET /api/v1/provider-logins/{id}/full",
@@ -2615,7 +2925,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 65,
+      "n": 76,
       "title": "a report on a sign-in no one has",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
@@ -2644,7 +2954,7 @@
       "events": []
     },
     {
-      "n": 66,
+      "n": 77,
       "title": "a code for a sign-in no one has",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2674,7 +2984,7 @@
       "events": []
     },
     {
-      "n": 67,
+      "n": 78,
       "title": "an id that is not a UUID: 404 all the same (the lookup's error is not told apart)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2699,7 +3009,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 68,
+      "n": 79,
       "title": "P's repository connections: none, written null (Q14)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2722,7 +3032,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 69,
+      "n": 80,
       "title": "P's owner connects a repository: 201, the default branch main, credential_strategy host",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2742,7 +3052,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\"}"
+        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2752,14 +3062,14 @@
         "remote_url": "https://git.example.com/tour.git",
         "default_branch": "main",
         "credential_strategy": "host",
-        "created_at": "<time@step 69>",
-        "updated_at": "<time@step 69>"
+        "created_at": "<time@step 80>",
+        "updated_at": "<time@step 80>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 70,
+      "n": 81,
       "title": "and a second, on a branch of its own",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2779,7 +3089,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}"
+        "{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 81>\",\"updated_at\":\"<time@step 81>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2789,14 +3099,14 @@
         "remote_url": "git@git.example.com:tour/docs.git",
         "default_branch": "trunk",
         "credential_strategy": "host",
-        "created_at": "<time@step 70>",
-        "updated_at": "<time@step 70>"
+        "created_at": "<time@step 81>",
+        "updated_at": "<time@step 81>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 71,
+      "n": 82,
       "title": "connect one with no name",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2826,7 +3136,7 @@
       "events": []
     },
     {
-      "n": 72,
+      "n": 83,
       "title": "connect one with no remote_url",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2856,7 +3166,7 @@
       "events": []
     },
     {
-      "n": 73,
+      "n": 84,
       "title": "connect one with a body that does not decode",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2886,7 +3196,7 @@
       "events": []
     },
     {
-      "n": 74,
+      "n": 85,
       "title": "the member, a viewer of P, connects one: P's owner guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -2916,7 +3226,7 @@
       "events": []
     },
     {
-      "n": 75,
+      "n": 86,
       "title": "the box key connects one: a workspace key is an editor of P, refused P's owner guard as an editor is",
       "actor": "box",
       "route": "POST /api/v1/projects/{id}/repo-connections",
@@ -2945,7 +3255,7 @@
       "events": []
     },
     {
-      "n": 76,
+      "n": 87,
       "title": "the box key removes the first: P's owner guard",
       "actor": "box",
       "route": "DELETE /api/v1/repo-connections/{id}",
@@ -2970,7 +3280,7 @@
       "events": []
     },
     {
-      "n": 77,
+      "n": 88,
       "title": "the member sets its local path to the first: 200, the connection with my_local_path, trimmed",
       "actor": "member",
       "acting_in": "<w>",
@@ -2990,7 +3300,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\",\"my_local_path\":\"/home/member/src/tour\"}"
+        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\",\"my_local_path\":\"/home/member/src/tour\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3000,15 +3310,15 @@
         "remote_url": "https://git.example.com/tour.git",
         "default_branch": "main",
         "credential_strategy": "host",
-        "created_at": "<time@step 69>",
-        "updated_at": "<time@step 69>",
+        "created_at": "<time@step 80>",
+        "updated_at": "<time@step 80>",
         "my_local_path": "/home/member/src/tour"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 78,
+      "n": 89,
       "title": "set it with a body that does not decode",
       "actor": "member",
       "acting_in": "<w>",
@@ -3038,7 +3348,7 @@
       "events": []
     },
     {
-      "n": 79,
+      "n": 90,
       "title": "the other member, with no role in P, sets one: P's guard",
       "actor": "member2",
       "acting_in": "<w>",
@@ -3068,7 +3378,7 @@
       "events": []
     },
     {
-      "n": 80,
+      "n": 91,
       "title": "set a path for a connection no one has",
       "actor": "member",
       "acting_in": "<w>",
@@ -3098,7 +3408,7 @@
       "events": []
     },
     {
-      "n": 81,
+      "n": 92,
       "title": "the box key sets one: the handler's 401, a key has no user",
       "actor": "box",
       "route": "PUT /api/v1/repo-connections/{id}/my-path",
@@ -3127,7 +3437,7 @@
       "events": []
     },
     {
-      "n": 82,
+      "n": 93,
       "title": "P's connections as the owner, in the order made: no local path of the member's",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3143,7 +3453,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}]"
+        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 81>\",\"updated_at\":\"<time@step 81>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3154,8 +3464,8 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@step 69>",
-          "updated_at": "<time@step 69>"
+          "created_at": "<time@step 80>",
+          "updated_at": "<time@step 80>"
         },
         {
           "id": "<repo2>",
@@ -3164,14 +3474,14 @@
           "remote_url": "git@git.example.com:tour/docs.git",
           "default_branch": "trunk",
           "credential_strategy": "host",
-          "created_at": "<time@step 70>",
-          "updated_at": "<time@step 70>"
+          "created_at": "<time@step 81>",
+          "updated_at": "<time@step 81>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 83,
+      "n": 94,
       "title": "as the member: its own path on the first",
       "actor": "member",
       "acting_in": "<w>",
@@ -3187,7 +3497,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\",\"my_local_path\":\"/home/member/src/tour\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}]"
+        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\",\"my_local_path\":\"/home/member/src/tour\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 81>\",\"updated_at\":\"<time@step 81>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3198,8 +3508,8 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@step 69>",
-          "updated_at": "<time@step 69>",
+          "created_at": "<time@step 80>",
+          "updated_at": "<time@step 80>",
           "my_local_path": "/home/member/src/tour"
         },
         {
@@ -3209,14 +3519,14 @@
           "remote_url": "git@git.example.com:tour/docs.git",
           "default_branch": "trunk",
           "credential_strategy": "host",
-          "created_at": "<time@step 70>",
-          "updated_at": "<time@step 70>"
+          "created_at": "<time@step 81>",
+          "updated_at": "<time@step 81>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 84,
+      "n": 95,
       "title": "as the member's runner key: the member's paths, through the key's user",
       "actor": "runner",
       "route": "GET /api/v1/projects/{id}/repo-connections",
@@ -3231,7 +3541,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\",\"my_local_path\":\"/home/member/src/tour\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}]"
+        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\",\"my_local_path\":\"/home/member/src/tour\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 81>\",\"updated_at\":\"<time@step 81>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3242,8 +3552,8 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@step 69>",
-          "updated_at": "<time@step 69>",
+          "created_at": "<time@step 80>",
+          "updated_at": "<time@step 80>",
           "my_local_path": "/home/member/src/tour"
         },
         {
@@ -3253,14 +3563,14 @@
           "remote_url": "git@git.example.com:tour/docs.git",
           "default_branch": "trunk",
           "credential_strategy": "host",
-          "created_at": "<time@step 70>",
-          "updated_at": "<time@step 70>"
+          "created_at": "<time@step 81>",
+          "updated_at": "<time@step 81>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 85,
+      "n": 96,
       "title": "as the box key: no user, so no path",
       "actor": "box",
       "route": "GET /api/v1/projects/{id}/repo-connections",
@@ -3275,7 +3585,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}]"
+        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 81>\",\"updated_at\":\"<time@step 81>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3286,8 +3596,8 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@step 69>",
-          "updated_at": "<time@step 69>"
+          "created_at": "<time@step 80>",
+          "updated_at": "<time@step 80>"
         },
         {
           "id": "<repo2>",
@@ -3296,14 +3606,14 @@
           "remote_url": "git@git.example.com:tour/docs.git",
           "default_branch": "trunk",
           "credential_strategy": "host",
-          "created_at": "<time@step 70>",
-          "updated_at": "<time@step 70>"
+          "created_at": "<time@step 81>",
+          "updated_at": "<time@step 81>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 86,
+      "n": 97,
       "title": "as the other member: P's guard",
       "actor": "member2",
       "acting_in": "<w>",
@@ -3328,7 +3638,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 87,
+      "n": 98,
       "title": "the member clears its path on the first with a blank one, which trims to empty: 200, no my_local_path",
       "actor": "member",
       "acting_in": "<w>",
@@ -3348,7 +3658,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\"}"
+        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3358,14 +3668,14 @@
         "remote_url": "https://git.example.com/tour.git",
         "default_branch": "main",
         "credential_strategy": "host",
-        "created_at": "<time@step 69>",
-        "updated_at": "<time@step 69>"
+        "created_at": "<time@step 80>",
+        "updated_at": "<time@step 80>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 88,
+      "n": 99,
       "title": "as the member again: no path of its own now",
       "actor": "member",
       "acting_in": "<w>",
@@ -3381,7 +3691,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 69>\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 70>\",\"updated_at\":\"<time@step 70>\"}]"
+        "[{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"},{\"id\":\"<repo2>\",\"project_id\":\"<p>\",\"name\":\"Tour docs\",\"remote_url\":\"git@git.example.com:tour/docs.git\",\"default_branch\":\"trunk\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 81>\",\"updated_at\":\"<time@step 81>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3392,8 +3702,8 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@step 69>",
-          "updated_at": "<time@step 69>"
+          "created_at": "<time@step 80>",
+          "updated_at": "<time@step 80>"
         },
         {
           "id": "<repo2>",
@@ -3402,14 +3712,14 @@
           "remote_url": "git@git.example.com:tour/docs.git",
           "default_branch": "trunk",
           "credential_strategy": "host",
-          "created_at": "<time@step 70>",
-          "updated_at": "<time@step 70>"
+          "created_at": "<time@step 81>",
+          "updated_at": "<time@step 81>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 89,
+      "n": 100,
       "title": "the owner renames the first and empties its branch: 200, the branch back to main",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3429,7 +3739,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo (renamed)\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 69>\",\"updated_at\":\"<time@step 89>\"}"
+        "{\"id\":\"<repo1>\",\"project_id\":\"<p>\",\"name\":\"Tour repo (renamed)\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 100>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3439,14 +3749,14 @@
         "remote_url": "https://git.example.com/tour.git",
         "default_branch": "main",
         "credential_strategy": "host",
-        "created_at": "<time@step 69>",
-        "updated_at": "<time@step 89>"
+        "created_at": "<time@step 80>",
+        "updated_at": "<time@step 100>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 90,
+      "n": 101,
       "title": "update the second with an empty name",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3476,7 +3786,7 @@
       "events": []
     },
     {
-      "n": 91,
+      "n": 102,
       "title": "update the second with an empty remote_url",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3506,7 +3816,7 @@
       "events": []
     },
     {
-      "n": 92,
+      "n": 103,
       "title": "update with a body that does not decode",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3536,7 +3846,7 @@
       "events": []
     },
     {
-      "n": 93,
+      "n": 104,
       "title": "the member updates one: P's owner guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -3566,7 +3876,7 @@
       "events": []
     },
     {
-      "n": 94,
+      "n": 105,
       "title": "update a connection no one has",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3596,7 +3906,7 @@
       "events": []
     },
     {
-      "n": 95,
+      "n": 106,
       "title": "update an id that is not a UUID: 404 all the same",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3626,7 +3936,7 @@
       "events": []
     },
     {
-      "n": 96,
+      "n": 107,
       "title": "the member removes one: P's owner guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -3652,7 +3962,7 @@
       "events": []
     },
     {
-      "n": 97,
+      "n": 108,
       "title": "the owner removes the first: 204",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3671,7 +3981,7 @@
       "events": []
     },
     {
-      "n": 98,
+      "n": 109,
       "title": "remove it again: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3697,7 +4007,7 @@
       "events": []
     },
     {
-      "n": 99,
+      "n": 110,
       "title": "the owner removes the second: 204",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3716,7 +4026,7 @@
       "events": []
     },
     {
-      "n": 100,
+      "n": 111,
       "title": "P's connections: none again, null (Q14)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3739,7 +4049,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 101,
+      "n": 112,
       "title": "a pool node registers: 201, idle, in the default pool",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes",
@@ -3758,7 +4068,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":[\"claude\",\"codex\"],\"status\":\"idle\",\"last_seen_at\":\"<time@step 101>\",\"created_at\":\"<time@step 101>\"}"
+        "{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":[\"claude\",\"codex\"],\"status\":\"idle\",\"last_seen_at\":\"<time@step 112>\",\"created_at\":\"<time@step 112>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3770,14 +4080,14 @@
           "codex"
         ],
         "status": "idle",
-        "last_seen_at": "<time@step 101>",
-        "created_at": "<time@step 101>"
+        "last_seen_at": "<time@step 112>",
+        "created_at": "<time@step 112>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 102,
+      "n": 113,
       "title": "it registers again under the same name, as a restarted node does: the same row, reclaimed idle, its providers replaced",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes",
@@ -3799,7 +4109,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":[],\"status\":\"idle\",\"last_seen_at\":\"<time@step 102>\",\"created_at\":\"<time@step 101>\"}"
+        "{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":[],\"status\":\"idle\",\"last_seen_at\":\"<time@step 113>\",\"created_at\":\"<time@step 112>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3808,14 +4118,14 @@
         "pool": "default",
         "providers": [],
         "status": "idle",
-        "last_seen_at": "<time@step 102>",
-        "created_at": "<time@step 101>"
+        "last_seen_at": "<time@step 113>",
+        "created_at": "<time@step 112>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 103,
+      "n": 114,
       "title": "register with a blank name: the handler's fixed message",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes",
@@ -3844,7 +4154,7 @@
       "events": []
     },
     {
-      "n": 104,
+      "n": 115,
       "title": "register with a body that does not decode",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes",
@@ -3873,7 +4183,7 @@
       "events": []
     },
     {
-      "n": 105,
+      "n": 116,
       "title": "the box key registers one: pool credentials are required",
       "actor": "box",
       "route": "POST /api/v1/runner-pool/nodes",
@@ -3902,7 +4212,7 @@
       "events": []
     },
     {
-      "n": 106,
+      "n": 117,
       "title": "a signed-in user registers one: the same",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3932,7 +4242,7 @@
       "events": []
     },
     {
-      "n": 107,
+      "n": 118,
       "title": "the node beats with no lease: no assignment, the node as stored (providers null)",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -3947,7 +4257,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"idle\",\"last_seen_at\":\"<time@step 107>\",\"created_at\":\"<time@step 101>\"}}"
+        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"idle\",\"last_seen_at\":\"<time@step 118>\",\"created_at\":\"<time@step 112>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3958,15 +4268,15 @@
           "pool": "default",
           "providers": null,
           "status": "idle",
-          "last_seen_at": "<time@step 107>",
-          "created_at": "<time@step 101>"
+          "last_seen_at": "<time@step 118>",
+          "created_at": "<time@step 112>"
         }
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 108,
+      "n": 119,
       "title": "the node beats: its assignment, with the lease's key, handed out once from memory",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -3985,7 +4295,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"assignment\":{\"session_id\":\"<lease>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"user_name\":\"Tour Member\",\"worker_key\":\"<lease.token>\",\"expires_at\":\"<time>\"},\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"leased\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 108>\",\"created_at\":\"<time@step 101>\"}}"
+        "{\"assignment\":{\"session_id\":\"<lease>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"user_name\":\"Tour Member\",\"worker_key\":\"<lease.token>\",\"expires_at\":\"<time>\"},\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"leased\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 119>\",\"created_at\":\"<time@step 112>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4004,15 +4314,15 @@
           "providers": null,
           "status": "leased",
           "session_id": "<lease>",
-          "last_seen_at": "<time@step 108>",
-          "created_at": "<time@step 101>"
+          "last_seen_at": "<time@step 119>",
+          "created_at": "<time@step 112>"
         }
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 109,
+      "n": 120,
       "title": "the node beats again: the assignment, no key",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4027,7 +4337,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"assignment\":{\"session_id\":\"<lease>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"user_name\":\"Tour Member\",\"expires_at\":\"<time>\"},\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"leased\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 109>\",\"created_at\":\"<time@step 101>\"}}"
+        "{\"assignment\":{\"session_id\":\"<lease>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"user_name\":\"Tour Member\",\"expires_at\":\"<time>\"},\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"leased\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 120>\",\"created_at\":\"<time@step 112>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4045,15 +4355,15 @@
           "providers": null,
           "status": "leased",
           "session_id": "<lease>",
-          "last_seen_at": "<time@step 109>",
-          "created_at": "<time@step 101>"
+          "last_seen_at": "<time@step 120>",
+          "created_at": "<time@step 112>"
         }
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 110,
+      "n": 121,
       "title": "the lease's key claims with nothing queued: 204, and the lease's idle clock restarts",
       "actor": "lease",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4075,7 +4385,7 @@
       "events": []
     },
     {
-      "n": 111,
+      "n": 122,
       "title": "the lease's key claims the member's run, as the member's personal runner",
       "actor": "lease",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4098,7 +4408,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-pool\",\"name\":\"Tour Pool\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-pool.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 111>\",\"created_at\":\"<time@before step 111>\",\"updated_at\":\"<time@before step 111>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<mrun>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy my week.\",\"worker_id\":\"tour-lease\",\"heartbeat_at\":\"<time@step 111>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@before step 111>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Pool\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<mrun.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-pool\",\"name\":\"Tour Pool\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-pool.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 122>\",\"created_at\":\"<time@before step 122>\",\"updated_at\":\"<time@before step 122>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<mrun>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy my week.\",\"worker_id\":\"tour-lease\",\"heartbeat_at\":\"<time@step 122>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@before step 122>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Pool\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<mrun.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4123,9 +4433,9 @@
           "locked": false,
           "file_path": "<tmp>/data/agents/<w>/tour-pool.md",
           "content_hash": "<hex64:1>",
-          "synced_at": "<time@before step 111>",
-          "created_at": "<time@before step 111>",
-          "updated_at": "<time@before step 111>"
+          "synced_at": "<time@before step 122>",
+          "created_at": "<time@before step 122>",
+          "updated_at": "<time@before step 122>"
         },
         "auth": {
           "mode": "user-account"
@@ -4139,7 +4449,7 @@
           "priority": 0,
           "prompt": "Tidy my week.",
           "worker_id": "tour-lease",
-          "heartbeat_at": "<time@step 111>",
+          "heartbeat_at": "<time@step 122>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4150,7 +4460,7 @@
           "launched_by": "<member>",
           "preferred_user_id": "<member>",
           "hosted_after": "<time>",
-          "created_at": "<time@before step 111>",
+          "created_at": "<time@before step 122>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Pool",
           "agent_provider": "claude-code"
@@ -4161,7 +4471,7 @@
       "events": []
     },
     {
-      "n": 112,
+      "n": 123,
       "title": "the member's cloud runner: active, its last_activity_at the claim's, on the default lease (no tiers): one hour, idle after 15 minutes; the pool's one node leased, so red",
       "actor": "member",
       "acting_in": "<w>",
@@ -4181,13 +4491,13 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"deadline\":\"<time>\",\"enabled\":true,\"pool_load\":{\"status\":\"red\"},\"seconds_remaining\":<about 900 s>,\"session\":{\"id\":\"<lease>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"node_id\":\"<node>\",\"worker_key_id\":\"<lease.key>\",\"status\":\"active\",\"started_at\":\"<time@before step 108>\",\"expires_at\":\"<time>\",\"last_activity_at\":\"<time@step 111>\",\"idle_minutes\":15,\"node_name\":\"tour-node\"}}"
+        "{\"deadline\":\"<time>\",\"enabled\":true,\"pool_load\":{\"status\":\"red\"},\"seconds_remaining\":<about 900 s>,\"session\":{\"id\":\"<lease>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"node_id\":\"<node>\",\"worker_key_id\":\"<lease.key>\",\"status\":\"active\",\"started_at\":\"<time@before step 119>\",\"expires_at\":\"<time>\",\"last_activity_at\":\"<time@step 122>\",\"idle_minutes\":15,\"node_name\":\"tour-node\"}}"
       ],
       "trailing_newline": true,
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 113,
+      "n": 124,
       "title": "the node beats: no assignment, the node draining the ended lease",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4205,7 +4515,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"draining\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 113>\",\"created_at\":\"<time@step 101>\"}}"
+        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"draining\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 124>\",\"created_at\":\"<time@step 112>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4217,15 +4527,15 @@
           "providers": null,
           "status": "draining",
           "session_id": "<lease>",
-          "last_seen_at": "<time@step 113>",
-          "created_at": "<time@step 101>"
+          "last_seen_at": "<time@step 124>",
+          "created_at": "<time@step 112>"
         }
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 114,
+      "n": 125,
       "title": "the lease's key claims: revoked with the lease, the middleware's 401",
       "actor": "lease",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4254,7 +4564,7 @@
       "events": []
     },
     {
-      "n": 115,
+      "n": 126,
       "title": "the node releases naming another lease: 204, and nothing released",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4276,7 +4586,7 @@
       "events": []
     },
     {
-      "n": 116,
+      "n": 127,
       "title": "the node beats: still draining",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4291,7 +4601,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"draining\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 116>\",\"created_at\":\"<time@step 101>\"}}"
+        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"draining\",\"session_id\":\"<lease>\",\"last_seen_at\":\"<time@step 127>\",\"created_at\":\"<time@step 112>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4303,15 +4613,15 @@
           "providers": null,
           "status": "draining",
           "session_id": "<lease>",
-          "last_seen_at": "<time@step 116>",
-          "created_at": "<time@step 101>"
+          "last_seen_at": "<time@step 127>",
+          "created_at": "<time@step 112>"
         }
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 117,
+      "n": 128,
       "title": "release with a body that does not decode",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4340,7 +4650,7 @@
       "events": []
     },
     {
-      "n": 118,
+      "n": 129,
       "title": "release with no body",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4365,7 +4675,7 @@
       "events": []
     },
     {
-      "n": 119,
+      "n": 130,
       "title": "the node releases the lease it wiped: 204",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4387,7 +4697,7 @@
       "events": []
     },
     {
-      "n": 120,
+      "n": 131,
       "title": "the node beats: idle, no lease",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4402,7 +4712,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"idle\",\"last_seen_at\":\"<time@step 120>\",\"created_at\":\"<time@step 101>\"}}"
+        "{\"assignment\":null,\"node\":{\"id\":\"<node>\",\"name\":\"tour-node\",\"pool\":\"default\",\"providers\":null,\"status\":\"idle\",\"last_seen_at\":\"<time@step 131>\",\"created_at\":\"<time@step 112>\"}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4413,15 +4723,15 @@
           "pool": "default",
           "providers": null,
           "status": "idle",
-          "last_seen_at": "<time@step 120>",
-          "created_at": "<time@step 101>"
+          "last_seen_at": "<time@step 131>",
+          "created_at": "<time@step 112>"
         }
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 121,
+      "n": 132,
       "title": "the node releases with {}: 204, idle either way",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4443,7 +4753,7 @@
       "events": []
     },
     {
-      "n": 122,
+      "n": 133,
       "title": "release a node no one has: 404, not registered, as its beat answers",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4472,7 +4782,7 @@
       "events": []
     },
     {
-      "n": 123,
+      "n": 134,
       "title": "a node no one has beats: 404, register again",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4497,7 +4807,7 @@
       "events": []
     },
     {
-      "n": 124,
+      "n": 135,
       "title": "a node id that is not a UUID beats",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4522,7 +4832,7 @@
       "events": []
     },
     {
-      "n": 125,
+      "n": 136,
       "title": "release a node id that is not a UUID",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
@@ -4551,7 +4861,7 @@
       "events": []
     },
     {
-      "n": 126,
+      "n": 137,
       "title": "the box key beats for the node: pool credentials are required",
       "actor": "box",
       "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
@@ -4576,7 +4886,7 @@
       "events": []
     },
     {
-      "n": 127,
+      "n": 138,
       "title": "the member releases the node: the same",
       "actor": "member",
       "acting_in": "<w>",
@@ -4606,7 +4916,7 @@
       "events": []
     },
     {
-      "n": 128,
+      "n": 139,
       "title": "the run's token reads P's connections, as the runner reads a claimed run's: the local path of the member, whose runner key claimed the run",
       "actor": "prun",
       "route": "GET /api/v1/projects/{id}/repo-connections",
@@ -4624,7 +4934,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@before step 128>\",\"updated_at\":\"<time@before step 128>\",\"my_local_path\":\"/home/member/src/tour\"}]"
+        "[{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@before step 139>\",\"updated_at\":\"<time@before step 139>\",\"my_local_path\":\"/home/member/src/tour\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4635,15 +4945,15 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@before step 128>",
-          "updated_at": "<time@before step 128>",
+          "created_at": "<time@before step 139>",
+          "updated_at": "<time@before step 139>",
           "my_local_path": "/home/member/src/tour"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 129,
+      "n": 140,
       "title": "the token of a run the box key claimed reads P's connections: no member's machine, so no path",
       "actor": "brun",
       "route": "GET /api/v1/projects/{id}/repo-connections",
@@ -4661,7 +4971,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@before step 128>\",\"updated_at\":\"<time@before step 128>\"}]"
+        "[{\"id\":\"<repo3>\",\"project_id\":\"<p>\",\"name\":\"Tour repo\",\"remote_url\":\"https://git.example.com/tour.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time@before step 139>\",\"updated_at\":\"<time@before step 139>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4672,8 +4982,8 @@
           "remote_url": "https://git.example.com/tour.git",
           "default_branch": "main",
           "credential_strategy": "host",
-          "created_at": "<time@before step 128>",
-          "updated_at": "<time@before step 128>"
+          "created_at": "<time@before step 139>",
+          "updated_at": "<time@before step 139>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"

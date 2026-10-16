@@ -1,8 +1,8 @@
 # Which pages are public (utils/publicPaths.ts isPublicPath) and which API paths their module graph
 # calls, checked against internal/api/authmiddleware.go isOpenPath (OpenV REQ-114). Regenerate: npx vitest run src/arch -u
 
-isOpenPath exact: /health, /metrics
-isOpenPath prefixes: /api/v1/auth/, /api/v1/public/
+isOpenPath exact: /health, /metrics, /mcp
+isOpenPath prefixes: /api/v1/auth/, /api/v1/public/, /.well-known/oauth-, /oauth/
 401 interceptor exempts calls under: /api/v1/auth/
 PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /glossary, /security
 
@@ -36,6 +36,7 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   public   /manual
   public   /manual/:chapterSlug
   session  /whats-new
+  session  /connect
   session  /admin
   session  /projects/:projectId
   session  /projects/:projectId (index)

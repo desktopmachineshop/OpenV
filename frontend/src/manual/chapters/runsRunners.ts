@@ -147,6 +147,35 @@ agents you don't fully trust, use a **cloud runner** or the **hosted
 runner**, which run on Linux with nothing of yours on them, or run the worker
 as a separate user on your machine.
 
+## Connect an AI app to a workspace
+
+An AI app that speaks MCP, such as Claude or Cursor, can use OpenV's tools
+directly, with no runner and no key to copy. Its address is your OpenV
+address followed by \`/mcp\`, for example \`https://openv.app/mcp\`;
+**Settings → Connected apps** shows the exact one.
+
+1. Add OpenV to the app:
+   - **Claude** (claude.ai, the desktop app and the mobile app): open
+     **Settings → Connectors**, choose **Add custom connector**, name it
+     OpenV and paste the address. On a Claude Team or Enterprise plan an
+     owner of your Claude organization adds it first, and each member then
+     connects.
+   - **Claude Code**: run
+     \`claude mcp add --transport http openv https://openv.app/mcp\`, then
+     \`/mcp\` to sign in.
+   - **Another app**: add OpenV as a **remote MCP server** at the address.
+2. The app opens OpenV in your browser. Sign in if asked, choose the
+   **workspace** the app may work in and whether it may **read and change**
+   or **read only**, and choose **Connect**.
+3. You go back to the app, which can now list your projects, read and edit
+   artifacts and links, record test results and comment, as you.
+
+Everything the app does is recorded as yours, it reaches only the workspace
+you chose, and your role there still applies: a viewer's app cannot edit.
+It cannot start agent runs. To stop it, choose **Disconnect** beside it
+under **Settings → Connected apps**; it stops working at once. To work in
+another workspace, connect the app again and choose that one.
+
 ## How runs are routed
 
 - When you launch a run and a runner of yours is online — your own machine or
@@ -191,6 +220,14 @@ Personal and cloud runners both use your own CLI sign-ins:
 - **User account** (default) — runs use the launcher's own local CLI sign-in.
 - **API key** — overrides local sign-ins; runners inject the workspace's
   provider API key into the CLI instead.
+
+A workspace admin pastes that key once, in **Workspace settings → AI
+providers**, on the provider's card (one Anthropic key serves Claude Code and
+the Anthropic API). It is saved encrypted and never shown again — only its
+last four characters — and every runner that picks up a run of an API-key
+project gets it with the run, members' own machines included, so nobody sets
+an environment variable. **Remove key** takes it back; runners then fall back
+to the variable on their own machine, if it is set there.
 
 ## Repositories
 

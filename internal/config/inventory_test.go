@@ -271,6 +271,9 @@ func accessorCases() []accessorCase {
 			get: func(c *Config) any { return c.PublicAPIURL() }},
 		{name: "CONNECTOR_DIST_DIR", read: "cmd/server:envOr(key)", accessor: "ConnectorDistDir()", def: "./dist",
 			get: func(c *Config) any { return c.ConnectorDistDir() }},
+		{name: "OPENV_AGENT_PROVIDERS", read: "internal/config:Config.text(name)", accessor: "AgentProviders()", def: map[string]bool(nil),
+			get:    func(c *Config) any { return c.AgentProviders() },
+			pinned: func(c *Config) any { return c.text("OPENV_AGENT_PROVIDERS", "") }},
 		// stage server
 		{name: "OPENV_METRICS_TOKEN", read: "cmd/server:envSecret(key)", accessor: "MetricsToken()", def: "",
 			get: func(c *Config) any { return c.MetricsToken() }},

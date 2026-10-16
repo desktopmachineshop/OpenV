@@ -3,8 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/workerproto"
@@ -31,15 +30,11 @@ const testSubscriptionToken = "sk-ant-oat01-0123456789abcdefghijklmnopqrstuvwxyz
 
 func newTokenService(t *testing.T) *usertokens.DefaultService {
 	t.Helper()
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		t.Fatal(err)
-	}
-	s, err := usertokens.NewDefaultService(&memTokenRepo{rows: map[string]*usertokens.Token{}}, base64.StdEncoding.EncodeToString(key))
+	sealer, err := providers.NewSealer("a test secrets key of thirty-two or more characters")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return s
+	return usertokens.NewDefaultService(&memTokenRepo{rows: map[string]*usertokens.Token{}}, sealer)
 }
 
 func TestProviderTokenIsSavedButNeverAnsweredBack(t *testing.T) {

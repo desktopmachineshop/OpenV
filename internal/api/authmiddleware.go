@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -28,6 +29,11 @@ const (
 	// the deployment's pool key and has no workspace of its own until it is
 	// leased.
 	ctxPoolNode contextKey = "openv-pool-node"
+	// ctxConnectedApp marks a request a member's connected app makes through
+	// the remote MCP endpoint (REQ-44, mcp_handlers.go): the member is
+	// ctxUser, and the grant names the one workspace the member consented
+	// to, which the project and workspace guards hold the request to.
+	ctxConnectedApp contextKey = "openv-connected-app"
 )
 
 // SessionCookieName is the browser session cookie.
@@ -108,6 +114,20 @@ func isOpenPath(path string) bool {
 		return true
 	}
 	if strings.HasPrefix(path, "/api/v1/public/") {
+		return true
+	}
+	// The remote MCP endpoint and its OAuth (REQ-44) authenticate their own
+	// callers: the metadata, registration and token endpoints need no
+	// credential, and /mcp answers a missing or bad access token with the
+	// WWW-Authenticate header that sends a client to the metadata, which a
+	// 401 from here would not carry.
+	if strings.HasPrefix(path, "/.well-known/oauth-") {
+		return true
+	}
+	if strings.HasPrefix(path, "/oauth/") {
+		return true
+	}
+	if path == "/mcp" {
 		return true
 	}
 	return false
@@ -244,6 +264,15 @@ func (m *AuthMiddleware) resolveActiveOrg(r *http.Request, sessionToken string, 
 func CurrentUser(r *http.Request) *users.User {
 	if u, ok := r.Context().Value(ctxUser).(*users.User); ok {
 		return u
+	}
+	return nil
+}
+
+// ConnectedApp returns the grant a connected app acts under, or nil for any
+// other caller.
+func ConnectedApp(r *http.Request) *connectedapps.Grant {
+	if g, ok := r.Context().Value(ctxConnectedApp).(*connectedapps.Grant); ok {
+		return g
 	}
 	return nil
 }

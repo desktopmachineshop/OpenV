@@ -17,6 +17,7 @@ DELETE /api/v1/evidence-bundles/{id}: project:editor
 DELETE /api/v1/evidence-files/{id}: project:editor
 DELETE /api/v1/links/{id}: project:editor, project:editor|project:viewer
 DELETE /api/v1/me/avatar: session
+DELETE /api/v1/me/connected-apps/{id}: session
 DELETE /api/v1/me/provider-tokens/{provider}: session
 DELETE /api/v1/me/push-subscriptions: session
 DELETE /api/v1/notifications/cleared: session
@@ -33,6 +34,7 @@ DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
 DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
+DELETE /api/v1/provider-api-keys/{env}: org:admin
 DELETE /api/v1/repo-connections/{id}: project:owner
 DELETE /api/v1/share-links/{id}: project:owner
 DELETE /api/v1/shared-products/{id}: platform-admin
@@ -43,6 +45,10 @@ DELETE /api/v1/teams/{id}: session, scoped-write
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
+DELETE /mcp: -
+GET /.well-known/oauth-authorization-server: -
+GET /.well-known/oauth-protected-resource: -
+GET /.well-known/oauth-protected-resource/mcp: -
 GET /api/v1/admin/metrics/users: platform-admin
 GET /api/v1/admin/metrics/visitors: platform-admin
 GET /api/v1/admin/users: platform-admin
@@ -94,6 +100,7 @@ GET /api/v1/interviews/{id}/invites: project:viewer
 GET /api/v1/interviews/{id}/sessions: project:viewer
 GET /api/v1/links: project:viewer
 GET /api/v1/links/{id}: project:viewer
+GET /api/v1/me/connected-apps: session
 GET /api/v1/me/default-workspace: session
 GET /api/v1/me/notification-prefs: session
 GET /api/v1/me/provider-tokens/{provider}: session
@@ -104,6 +111,7 @@ GET /api/v1/meta/attribute-definitions: project:viewer, org:member
 GET /api/v1/meta/link-types: -
 GET /api/v1/notifications: session
 GET /api/v1/notifications/stream: session
+GET /api/v1/oauth/consent: session
 GET /api/v1/orgs: session
 GET /api/v1/orgs/{id}: org:member
 GET /api/v1/orgs/{id}/billing: org:admin
@@ -158,6 +166,7 @@ GET /api/v1/projects/{id}/vv/report: project:viewer
 GET /api/v1/projects/{id}/work-items: project:viewer
 GET /api/v1/projects/{projectID}/attachments: project:viewer
 GET /api/v1/proposals: session, project:viewer
+GET /api/v1/provider-api-keys: org:admin
 GET /api/v1/provider-logins/{id}: session
 GET /api/v1/provider-logins/{id}/full: worker
 GET /api/v1/provider-settings: session
@@ -189,6 +198,8 @@ GET /api/v1/users: session
 GET /api/v1/users/{id}/avatar: user-visible
 GET /api/v1/work-items/{id}: project:viewer
 GET /health: -
+GET /mcp: -
+GET /oauth/authorize: -
 HEAD /api/v1/public/connector/download: -
 POST /api/v1/admin/users/{id}/password-reset: platform-admin
 POST /api/v1/agent-runs/claim: worker
@@ -245,6 +256,7 @@ POST /api/v1/me/push-subscriptions: session
 POST /api/v1/notifications/clear: session
 POST /api/v1/notifications/read: session
 POST /api/v1/notifications/read-all: session
+POST /api/v1/oauth/consent: session, org:member
 POST /api/v1/org-teams/{id}/members/{userId}: org:admin
 POST /api/v1/orgs: session
 POST /api/v1/orgs/{id}/activate: org:member
@@ -309,6 +321,10 @@ POST /api/v1/test-runs/{id}/agent-run: no-proposal-run, project:editor
 POST /api/v1/test-runs/{id}/results: project:editor
 POST /api/v1/work-items/{id}/comments: project:viewer
 POST /api/v1/work-items/{id}/move: project:editor
+POST /mcp: -
+POST /oauth/register: -
+POST /oauth/revoke: -
+POST /oauth/token: -
 PUT /api/v1/admin/users/{id}/admin: platform-admin
 PUT /api/v1/agents/{slug}: org:admin
 PUT /api/v1/agents/{slug}/raw: org:admin
@@ -342,6 +358,7 @@ PUT /api/v1/projects/{id}/parties: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
 PUT /api/v1/projects/{id}/team-access: project:owner, org-visible
+PUT /api/v1/provider-api-keys/{env}: org:admin
 PUT /api/v1/provider-settings: org:admin
 PUT /api/v1/repo-connections/{id}: project:owner
 PUT /api/v1/repo-connections/{id}/my-path: session, project:viewer

@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 215; members of exported objects: 297
+exports: 221; members of exported objects: 304
 
 interface AdminUser
 interface AdminWorkspace
@@ -28,6 +28,7 @@ interface BillingSnapshot
 interface BillingState
 interface BulkProposalOutcome
 interface ChatterEntry
+interface ConnectedApp
 interface ConnectorPairing
 interface CoverageEntry
 interface CoverageReport
@@ -78,6 +79,8 @@ interface NoteTodo
 interface NotificationList
 interface NotificationPrefs
 type      NotificationView
+interface OAuthConsentDecision
+interface OAuthConsentRequest
 interface OpenSourceProject
 interface Org
 interface OrgAgentUsage
@@ -99,6 +102,7 @@ interface Project
 interface ProjectExport
 interface ProjectMember
 interface Proposal
+interface ProviderAPIKeys
 interface ProviderLogin
 interface ProviderModel
 interface ProviderSetting
@@ -139,6 +143,7 @@ interface SharedProductVotes
 interface SharedProject
 interface SiteVisit
 interface StableRelease
+interface StoredProviderAPIKey
 interface SuspectLink
 interface TeamGrant
 interface Template
@@ -261,6 +266,11 @@ const     cloudRunnerAPI
             .extend
             .get
             .start
+const     connectedAppsAPI
+            .consent
+            .decide
+            .list
+            .revoke
 const     connectorAPI
             .createPairing
             .downloadAvailable
@@ -432,6 +442,9 @@ const     providerLoginsAPI
             .submitCode
 const     providerSettingsAPI
             .list
+            .listKeys
+            .removeKey
+            .setKey
             .upsert
 const     providerTokensAPI
             .get

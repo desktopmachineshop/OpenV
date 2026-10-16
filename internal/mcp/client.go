@@ -27,6 +27,19 @@ func NewClient(baseURL, runToken string) *Client {
 	}
 }
 
+// NewClientWithTransport creates a client whose calls go through rt rather
+// than the network: the remote MCP endpoint (REQ-44) answers a tool call by
+// sending the tool's API request through the server's own router, as the
+// member, so every authorization rule applies to it unchanged. token may be
+// empty when rt authenticates the call itself.
+func NewClientWithTransport(baseURL, token string, rt http.RoundTripper) *Client {
+	return &Client{
+		baseURL: strings.TrimRight(baseURL, "/"),
+		token:   token,
+		http:    &http.Client{Timeout: 30 * time.Second, Transport: rt},
+	}
+}
+
 // request performs an API call and returns the response body and status.
 func (c *Client) request(method, path string, query url.Values, body interface{}) (string, int, error) {
 	var reader io.Reader

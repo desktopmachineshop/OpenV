@@ -9,16 +9,14 @@
 // and the CLI runs signed in with no browser step.
 //
 // The token is a secret of the member's subscription, so it is sealed with
-// AES-256-GCM under a server key (OPENV_SECRETS_KEY) before it reaches the
-// database, never returned by the API, and opened only for a claim. A server
-// without the key has no stored tokens: Save refuses with ErrUnavailable.
+// the deployment's providers.Sealer (AES-256-GCM under OPENV_SECRETS_KEY, the
+// key that seals workspaces' pasted API keys) before it reaches the
+// database, bound to the member, never returned by the API, and opened only
+// for a claim. A server without the key has no stored tokens: Save refuses
+// with ErrUnavailable.
 package usertokens
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -91,39 +89,24 @@ type Service interface {
 
 // DefaultService implements Service.
 type DefaultService struct {
-	repo Repository
-	aead cipher.AEAD // nil when the server has no secrets key
-	now  func() time.Time
+	repo   Repository
+	sealer *providers.Sealer // nil when the server has no secrets key
+	now    func() time.Time
 }
 
-// NewDefaultService builds the service. key is the base64 encoding of 32
-// random bytes; an empty key leaves the store unavailable, and a key that is
-// not 32 bytes is an error the boot reports.
-func NewDefaultService(repo Repository, key string) (*DefaultService, error) {
-	s := &DefaultService{repo: repo, now: func() time.Time { return time.Now().UTC() }}
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return s, nil
-	}
-	raw, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return nil, fmt.Errorf("OPENV_SECRETS_KEY is not base64: %w", err)
-	}
-	if len(raw) != 32 {
-		return nil, fmt.Errorf("OPENV_SECRETS_KEY must decode to 32 bytes, got %d", len(raw))
-	}
-	block, err := aes.NewCipher(raw)
-	if err != nil {
-		return nil, err
-	}
-	if s.aead, err = cipher.NewGCM(block); err != nil {
-		return nil, err
-	}
-	return s, nil
+// NewDefaultService builds the service over the deployment's sealer; a nil
+// sealer leaves the store unavailable.
+func NewDefaultService(repo Repository, sealer *providers.Sealer) *DefaultService {
+	return &DefaultService{repo: repo, sealer: sealer, now: func() time.Time { return time.Now().UTC() }}
 }
 
 // Available reports whether the server can store tokens.
-func (s *DefaultService) Available() bool { return s != nil && s.aead != nil }
+func (s *DefaultService) Available() bool { return s != nil && s.sealer != nil }
+
+// sealScope is the first half of a token's seal binding, the member: the
+// sealer binds a workspace id there for pasted API keys, and the prefix keeps
+// the two kinds of row from ever opening as each other.
+func sealScope(userID string) string { return "user:" + userID }
 
 func checkProvider(provider string) error {
 	if provider != providers.ProviderClaudeCode {
@@ -183,15 +166,15 @@ func (s *DefaultService) Save(userID, provider, token string) (*Status, error) {
 	if !s.Available() {
 		return nil, ErrUnavailable
 	}
-	nonce := make([]byte, s.aead.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
+	sealed, err := s.sealer.Seal(sealScope(userID), provider, token)
+	if err != nil {
 		return nil, err
 	}
 	now := s.now()
 	t := &Token{
 		UserID:    userID,
 		Provider:  provider,
-		Sealed:    s.aead.Seal(nonce, nonce, []byte(token), aad(userID, provider)),
+		Sealed:    sealed,
 		Last4:     token[len(token)-4:],
 		CreatedAt: now,
 		ExpiresAt: now.Add(Lifetime),
@@ -223,18 +206,11 @@ func (s *DefaultService) ForRun(userID, provider string) (string, error) {
 	if !s.now().Before(t.ExpiresAt) {
 		return "", nil
 	}
-	n := s.aead.NonceSize()
-	if len(t.Sealed) < n {
-		return "", errors.New("stored provider token is corrupt")
-	}
-	plain, err := s.aead.Open(nil, t.Sealed[:n], t.Sealed[n:], aad(userID, provider))
+	plain, err := s.sealer.Open(sealScope(userID), provider, t.Sealed)
 	if err != nil {
-		// A rotated key or a row moved between members: unusable, not fatal.
-		return "", fmt.Errorf("stored provider token cannot be opened: %w", err)
+		// A changed secrets key or a row moved between members: unusable,
+		// not fatal.
+		return "", err
 	}
-	return string(plain), nil
+	return plain, nil
 }
-
-// aad binds a sealed token to its member and provider, so a row copied to
-// another member's id does not open.
-func aad(userID, provider string) []byte { return []byte(userID + "\x00" + provider) }

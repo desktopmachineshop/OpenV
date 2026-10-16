@@ -128,6 +128,15 @@ const (
 	defaultVisitRefill = 600.0
 )
 
+// OAuth registrations and token requests of connected apps (REQ-44): a
+// client registers once and refreshes its token about once an hour, so a
+// small office behind one address stays well inside this, and a script
+// filling the clients table or guessing codes does not.
+const (
+	defaultOAuthBurst  = 30
+	defaultOAuthRefill = 300.0
+)
+
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and
 // staleAfter is how long a bucket must sit untouched before the sweep drops
 // it (any bucket idle that long has refilled to burst, so dropping it is

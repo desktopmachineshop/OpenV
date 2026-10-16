@@ -7,6 +7,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
+	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
@@ -34,6 +35,9 @@ func (a *app) agents() {
 		slog.Warn("agent sync completed with warnings", "error", err)
 	}
 	a.runService = agentruns.NewDefaultService(a.agentRunRepo, a.agentService, a.bus)
+	// Connected apps (REQ-44): the AI clients members attach to a workspace
+	// over the remote MCP endpoint, with their consents and tokens.
+	a.connectedApps = connectedapps.NewService(a.connectedAppRepo)
 	// First-refusal routing: runs launched by a user with an online personal
 	// runner wait for it before hosted/workspace runners may claim.
 	a.runService.SetRoutingPolicy(agentruns.RoutingPolicy(a.workerKeyService, a.orgService))
@@ -48,14 +52,20 @@ func (a *app) agents() {
 	a.automationService = automations.NewDefaultService(a.automationRepo)
 	a.repoConnService = repoconns.NewDefaultService(a.repoConnRepo)
 	a.providerService = providers.NewDefaultService(a.providerRepo)
-	a.loginService = providers.NewLoginService(postgres.NewProviderLoginRepository(a.db))
-	// Members' own provider tokens, sealed under OPENV_SECRETS_KEY; with no
-	// key the store is unavailable rather than the boot failing.
-	providerTokens, err := usertokens.NewDefaultService(postgres.NewProviderTokenRepository(a.db), a.env().SecretsKey())
-	if err != nil {
-		fatal("invalid OPENV_SECRETS_KEY", err)
+	// Pasted provider API keys are sealed under OPENV_SECRETS_KEY; without
+	// it the store is off and runners read keys from their hosts only.
+	var keySealer *providers.Sealer
+	if secret := a.env().SecretsKey(); secret != "" {
+		sealer, err := providers.NewSealer(secret)
+		if err != nil {
+			fatal("invalid OPENV_SECRETS_KEY", err)
+		}
+		keySealer = sealer
 	}
-	a.providerTokenService = providerTokens
+	a.providerKeyService = providers.NewKeyService(postgres.NewProviderAPIKeyRepository(a.db), keySealer)
+	a.loginService = providers.NewLoginService(postgres.NewProviderLoginRepository(a.db))
+	// Members' own subscription tokens share the sealer: off with it.
+	a.providerTokenService = usertokens.NewDefaultService(postgres.NewProviderTokenRepository(a.db), keySealer)
 	a.teamService = teams.NewDefaultService(a.teamRepo)
 	// Human crew members must belong to the crew's workspace.
 	a.teamService.SetMemberValidator(func(orgID, userID string) bool {

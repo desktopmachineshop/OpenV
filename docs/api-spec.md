@@ -26,7 +26,9 @@ sets, is stored the same way.
 Every request is authenticated by the middleware in
 `internal/api/authmiddleware.go` as one of four principals. Only these paths are
 open (no credentials): `/health`, `/metrics` (carries its own optional
-`OPENV_METRICS_TOKEN` bearer gate), `/api/v1/auth/*`, and `/api/v1/public/*`.
+`OPENV_METRICS_TOKEN` bearer gate), `/api/v1/auth/*`, and `/api/v1/public/*`;
+and the remote MCP endpoint's `/.well-known/oauth-*`, `/oauth/*` and `/mcp`,
+which authenticate their own callers (section 5).
 
 ### 1. Human users — session cookie
 
@@ -150,6 +152,80 @@ new key. The value is used exactly as set, like every credential the server
 reads: spaces or a line break around it are not trimmed, and the server
 names such a key in its boot log, never printing it.
 
+
+### 5. Connected apps — the remote MCP endpoint and its OAuth
+
+A member attaches an AI client (Claude, Cursor, any client that speaks MCP's
+Streamable HTTP transport and its authorization profile) to one workspace
+by giving the client the endpoint `${PUBLIC_URL}/mcp` (REQ-44). No runner,
+no binary and no key to copy: the client discovers the authorization server
+from the endpoint's `401`, registers itself, sends the member to approve it,
+and holds a token that acts as that member in that workspace.
+
+- **Where it is.** `PUBLIC_URL` is the issuer and the endpoint's base. On
+  a deployment where it names the frontend's origin, as the Railway guide
+  sets it, the frontend's nginx proxies `/mcp`, `/oauth/` and
+  `/.well-known/oauth-*` to the API, as it does `/api/`; the consent page
+  is the app's `/connect`.
+- **Discovery.** `POST /mcp` without a valid access token answers `401` with
+  `WWW-Authenticate: Bearer realm="OpenV", resource_metadata="${PUBLIC_URL}/.well-known/oauth-protected-resource"`.
+  That document names `${PUBLIC_URL}` as the authorization server, whose
+  metadata is `/.well-known/oauth-authorization-server` (RFC 8414).
+- **Registration.** `POST /oauth/register` (RFC 7591) registers a public
+  client: no secret, whatever authentication method it asks for. One to
+  five redirect URIs, each `https`, `http` on `localhost`, `127.0.0.1` or
+  `::1`, or a private-use scheme (`cursor://…`), with no fragment.
+- **Consent.** `GET /oauth/authorize` with `response_type=code`, PKCE
+  (`code_challenge_method=S256`, required), `state` and an optional `scope`
+  (`openv:read`, or `openv:read openv:write`, the default) checks the client
+  and its redirect URI, answering `400` for either without redirecting (a
+  loopback `http` redirect matches a registered one on any port, as RFC 8252
+  §7.3 has it, since Claude Code listens on a new port each session), and
+  sends the browser to the app's `/connect` page. There the signed-in
+  member chooses the workspace and read only or read and write; the page
+  posts the decision to `POST /api/v1/oauth/consent`, which answers the
+  address to send the browser back to, with a code (or `access_denied`),
+  `state` and `iss`.
+- **Tokens.** `POST /oauth/token` (form-encoded) spends a code, once, with
+  its `code_verifier`, or a refresh token, for an access token (`ovat_…`,
+  one hour) and a refresh token (`ovrt_…`, thirty days, replaced on every
+  use). A `client_id` no client is registered under answers `401`
+  `invalid_client`, so a client such as Claude registers again; a code or
+  refresh token that is not valid answers `400` `invalid_grant`. The rate
+  limit is spent per `client_id`. `POST /oauth/revoke` (RFC 7009) ends the
+  pair a token belongs to. Every OAuth answer is `application/json`. Codes
+  and tokens are stored as SHA-256 hashes only.
+- **What the token can do.** Only `/mcp` accepts it: it is not a credential
+  for the rest of the API. Each tool call is the tool's REST request sent
+  through the server's own router as the member, never a platform admin,
+  with the grant's workspace active and every guard and plan gate applying
+  as they do to the member's own requests; a project or workspace other
+  than the grant's answers as one no row has. A read-only grant is offered
+  only the read-only tools, and its requests are refused anything but a
+  `GET`. `delegate_to_agent`, which needs an agent run, is not offered.
+- **The member's list.** `GET /api/v1/me/connected-apps` lists the member's
+  live grants (app, workspace, scope, when made and last used);
+  `DELETE /api/v1/me/connected-apps/{id}` revokes one, ending its tokens at
+  once. A connected app cannot call these, nor the consent.
+- **Release channel.** The feature key `remote-mcp` gates the consent and
+  `/mcp` for a grant's workspace; the metadata, registration and token
+  endpoints act for no workspace and are not gated.
+
+| Method | Path | Description | Auth |
+|---|---|---|---|
+| GET | `/.well-known/oauth-protected-resource` | Protected resource metadata (RFC 9728): `resource` (`${PUBLIC_URL}/mcp`), `authorization_servers`, `scopes_supported`, `bearer_methods_supported` | open |
+| GET | `/.well-known/oauth-protected-resource/mcp` | The same document at the path-suffixed address RFC 9728 also allows | open |
+| GET | `/.well-known/oauth-authorization-server` | Authorization server metadata (RFC 8414): the endpoints below, `code` with PKCE `S256`, `authorization_code` and `refresh_token`, public clients only | open |
+| POST | `/oauth/register` | Dynamic client registration `{client_name, redirect_uris}` → `201` `{client_id, client_id_issued_at, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method: "none"}`; `400 invalid_redirect_uri`; `429` past 30 a burst per address | open |
+| GET | `/oauth/authorize` | Checks the request and `302`s to the app's `/connect` page; a wrong client or redirect URI, and anything else wrong, answers `400` with `error`, never a redirect, so an address anyone may register is not reachable through it unseen (RFC 9700 §4.11.2) | open |
+| POST | `/oauth/token` | Form `grant_type=authorization_code` with `code`, `client_id`, `redirect_uri`, `code_verifier`; or `grant_type=refresh_token` with `refresh_token`, `client_id` → `{access_token, token_type: "Bearer", expires_in: 3600, refresh_token, scope}`; `400` `invalid_grant`, `invalid_request` or `unsupported_grant_type`; `401` `invalid_client` for a client no longer registered; `429` per client | open |
+| POST | `/oauth/revoke` | Form `token`, `client_id`: ends that token's pair → `200`, whether or not it existed | open |
+| GET | `/api/v1/oauth/consent` | `?client_id=&redirect_uri=` → `{client_id, client_name, redirect_host}` for the consent page; `400` for an unknown client or a redirect URI it did not register | user |
+| POST | `/api/v1/oauth/consent` | `{client_id, redirect_uri, code_challenge, code_challenge_method, state, scope, org_id, approve}` → `{redirect_to}`: the client's redirect URI with `code` (approved) or `error=access_denied`, and `state` and `iss`. Approving needs membership of `org_id` and `remote-mcp` on (`403` otherwise); a workspace over its plan may be chosen | user, org member |
+| GET | `/api/v1/me/connected-apps` | The member's connected apps, newest first: `[{id, user_id, org_id, org_name, client_id, client_name, scope, created_at, last_used_at?}]` | user |
+| DELETE | `/api/v1/me/connected-apps/{id}` | Revoke one → `204`; another member's or an unknown id `404` | user |
+| POST | `/mcp` | One JSON-RPC message or a batch → `200` JSON (`202` for notifications only): `initialize` (revisions `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`. Bearer access token; `401` with the challenge above; `403` when `remote-mcp` is off for the grant's workspace or its member has left it; `400` for an unsupported `MCP-Protocol-Version` on anything but `initialize` | access token |
+| GET, DELETE | `/mcp` | `405`, `Allow: POST`: no server-initiated stream and no session | open |
 ## Authorization model
 
 Enforced per-handler via `internal/api/authz.go`:
@@ -1385,6 +1461,9 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 | GET | `/api/v1/provider-settings` | Provider status + model catalog per provider | user |
 | PUT | `/api/v1/provider-settings` | Update provider config `{provider, auth_mode, api_key_env, default_model, enabled}`; answers the stored row, whose `id` an update keeps; `400` for a setting it refuses, `403` with the remedy for a provider the workspace's channel has not received (`antigravity-cli`) | org admin |
 | POST | `/api/v1/provider-settings/detect` | Worker reports detected CLIs/logins/models, `{provider: {...}}` for each of its adapters. Every provider the server knows is recorded, whatever else the report names; one it does not know answers `400` naming it (the first by name), the known ones recorded all the same; `204` when every one was recorded | worker |
+| GET | `/api/v1/provider-api-keys` | The workspace's pasted provider API keys, `{enabled, keys: [{key_env, last4, updated_by, updated_at}], self_hosted}`; never a key's value. `enabled` is `false` when the server has no `OPENV_SECRETS_KEY` and so cannot store one. `self_hosted` is `OPENV_SELF_HOSTED`: the app names the key variables on a self-hosted deployment only | org admin |
+| PUT | `/api/v1/provider-api-keys/{env}` | Store a pasted key `{key}` for one provider key variable (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`), sealed with AES-256-GCM, replacing any earlier one; answers it as `GET` lists it. `400` for another variable or a blank key, or one with spaces or line breaks; `503` when the server has no `OPENV_SECRETS_KEY`; `403` with the remedy before the workspace's channel has received `workspace-api-keys`. A run of a project on API-key auth is claimed with the key (`auth.api_key`), so the runner needs nothing on its host | org admin |
+| DELETE | `/api/v1/provider-api-keys/{env}` | Remove the pasted key for one variable; `204`, `404` when none is stored. Runs fall back to the runner host's variable | org admin |
 | POST | `/api/v1/provider-logins` | Start a CLI sign-in relay (workspace: org admin; user-targeted: org member) | user |
 | POST | `/api/v1/provider-logins/claim` | Worker claims a pending sign-in | worker |
 | GET | `/api/v1/provider-logins/{id}` | Sign-in status (redacted) | user |

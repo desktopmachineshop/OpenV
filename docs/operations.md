@@ -121,8 +121,8 @@ another key.
 The credentials are `WORKER_API_KEY` and `RUNNER_POOL_KEY`, on the API and
 the runner alike, `DATABASE_URL`, `DB_PASSWORD`, `OPENV_METRICS_TOKEN`,
 `GOOGLE_CLIENT_SECRET`, `OPENV_OIDC_CLIENT_SECRET`, `OPENV_SMTP_USER`,
-`OPENV_SMTP_PASSWORD`, `STRIPE_SECRET_KEY`, `OPENV_EMBEDDING_API_KEY` and
-`OPENV_VAPID_PRIVATE_KEY`. One with spaces or a line break around it, as a
+`OPENV_SMTP_PASSWORD`, `STRIPE_SECRET_KEY`, `OPENV_EMBEDDING_API_KEY`,
+`OPENV_VAPID_PRIVATE_KEY` and `OPENV_SECRETS_KEY`. One with spaces or a line break around it, as a
 secret pasted from a file often has, is named once in the log as the API or
 the runner starts (`a credential setting has spaces or a line break around
 it; it is used exactly as set`), never printed; remove them, or whatever the

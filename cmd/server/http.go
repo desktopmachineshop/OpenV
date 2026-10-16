@@ -40,6 +40,10 @@ func buildHTTPHandler(
 	// The one router, with every route.
 	router := mux.NewRouter()
 	handler.RegisterRoutes(router)
+	// The remote MCP endpoint answers a tool call by sending its API request
+	// through this same router as the member (REQ-44), inside the
+	// middleware: the request is the endpoint's, already authenticated.
+	handler.SetMCPRouter(router)
 
 	// Prometheus scrape endpoint. Unauthenticated by default (firewall it to an
 	// internal network in production); set OPENV_METRICS_TOKEN to require an

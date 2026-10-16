@@ -75,13 +75,13 @@ class: auth (not retried)
 ## api-key-missing
 given: api-key auth with the provider's default variable, ANTHROPIC_API_KEY, unset on the runner host
 POST /api/v1/agent-runs/api-key-missing/start
-POST /api/v1/agent-runs/api-key-missing/finish {"status":"failed","final_text":"","error":"this project uses API-key auth, but ANTHROPIC_API_KEY is not set on the runner host — set it (or switch the project back to user-account auth)","error_class":"auth","tokens_in":0,"tokens_out":0}
+POST /api/v1/agent-runs/api-key-missing/finish {"status":"failed","final_text":"","error":"this project uses API-key auth, but no ANTHROPIC_API_KEY is stored for the workspace or set on the runner host — paste one in Workspace settings → AI providers (or switch the project back to user-account auth)","error_class":"auth","tokens_in":0,"tokens_out":0}
 class: auth (not retried)
 
 ## api-key-missing-named
 given: api-key auth naming GOOGLE_API_KEY, unset on the runner host
 POST /api/v1/agent-runs/api-key-missing-named/start
-POST /api/v1/agent-runs/api-key-missing-named/finish {"status":"failed","final_text":"","error":"this project uses API-key auth, but GOOGLE_API_KEY is not set on the runner host — set it (or switch the project back to user-account auth)","error_class":"auth","tokens_in":0,"tokens_out":0}
+POST /api/v1/agent-runs/api-key-missing-named/finish {"status":"failed","final_text":"","error":"this project uses API-key auth, but no GOOGLE_API_KEY is stored for the workspace or set on the runner host — paste one in Workspace settings → AI providers (or switch the project back to user-account auth)","error_class":"auth","tokens_in":0,"tokens_out":0}
 class: auth (not retried)
 
 ## api-key-present

@@ -154,6 +154,32 @@ invitation is emailed, and without it the link is shown once for you to send.
 The link is what admits and joins them: an invited address that never
 receives it cannot sign up on a closed deployment.
 
+Optional — pasted provider API keys: for workspace admins to paste an
+Anthropic, OpenAI or Gemini key in *Workspace settings → AI providers*
+instead of setting it on every runner host, set one long random string on
+the **API** service:
+
+```dotenv
+# At least 32 characters, e.g. openssl rand -base64 32. A secret.
+OPENV_SECRETS_KEY=<random string>
+```
+
+Without it the tab says the server cannot store keys. The same key seals
+the Claude subscription tokens members save under Settings
+(`docs/agents.md`), so without it the token card says so too. Keep it
+stable: **changing it makes every stored key and token unreadable** until
+it is pasted again (runs fall back to the runner host's variable or its own
+sign-in meanwhile). Give staging a key of its own, never production's.
+
+Optional — the agent providers offered: production sets the providers that
+have been tested, and staging leaves the variable unset so every provider can
+be tried there (see `docs/agents.md`, "Providers a deployment offers"):
+
+```dotenv
+# production only
+OPENV_AGENT_PROVIDERS=claude-code
+```
+
 Optional — web push notifications (REQ-109): generate one VAPID key pair for
 the deployment (`make vapid-keys`, or `go run ./cmd/openv-vapid`) and set all
 three variables on the **API** service:
@@ -170,18 +196,6 @@ public key reaches browsers through `/api/v1/me/push/config`, so it needs no
 frontend variable and no rebuild — but it is baked into every subscription a
 member takes, so **rotating the pair invalidates every existing
 subscription** and each device has to be turned on again.
-
-Optional — saved Claude subscription tokens: set one random key on the
-**API** service, and members can save the token `claude setup-token` prints
-so their own and leased runners start signed in (`docs/agents.md`):
-
-```dotenv
-# openssl rand -base64 32 — a secret; changing it voids every saved token
-OPENV_SECRETS_KEY=<32 random bytes, base64>
-```
-
-Unset, the settings card says the server keeps no tokens. Give staging a key
-of its own, never production's.
 
 Push also needs the app served over HTTPS on one origin with a registered
 service worker, which is what section 3's frontend already does. See
@@ -202,8 +216,10 @@ Service settings:
 Variables:
 
 ```dotenv
-# Where nginx proxies /api/ to: the API service over Railway's private
-# network (http, port 8080). Read when the container starts; the name is
+# Where nginx proxies /api/ to, and the remote MCP endpoint's /mcp,
+# /oauth/ and /.well-known/oauth-* (REQ-44: PUBLIC_URL is this origin, so an
+# AI app connects to https://<this origin>/mcp): the API service over
+# Railway's private network (http, port 8080). Read when the container starts; the name is
 # re-resolved through Railway's internal DNS on every request, so API
 # redeploys (which change its private address) need no frontend restart.
 # Substitute your API service's actual name for `openv-api`.
@@ -357,8 +373,8 @@ branch instead:
   `Release <version>` on `master`.
 - **Every release says what changed.** `RELEASE_NOTES.md` at the repository
   root is customer-facing: each pull request adds a bullet under
-  `## Unreleased`, grouped under `### New features`, `### Maintenance
-  updates` or `### Bug fixes` (the *Release notes* CI job refuses a PR that
+  `## Unreleased`, grouped under `### New features`, `### Security fixes`,
+  `### Maintenance updates` or `### Bug fixes` (the *Release notes* CI job refuses a PR that
   adds none, unless it carries the `no-release-notes` label). The promotion
   moves those bullets into a new section headed by a semantic version and
   the date — `## 0.2.0 — 2026-09-13` — committed to master before `release`

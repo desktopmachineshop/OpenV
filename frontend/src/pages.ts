@@ -241,6 +241,7 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 'manual', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'manual/:chapterSlug', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'connect', load: 'lazy', public: false, help: NO_PANEL },
   { scope: 'site', path: 'admin', load: 'lazy', public: false, help: NO_PANEL },
 ];
 

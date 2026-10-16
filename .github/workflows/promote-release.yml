@@ -14,6 +14,8 @@
 #   RELEASE_NOTES.md are cut into a new version section (committed to master
 #   by this workflow), and a master whose notes name nothing newer than what
 #   `release` already carries is refused (scripts/release_notes.py)
+# - a release that carries a security fix is also designated the stable
+#   release in the same push (REQ-142)
 # - the push is a plain fast-forward; if `release` somehow has commits that
 #   master lacks, the push is rejected instead of overwriting them
 # - the shipped commit is tagged `v<version>`, so a release is a point in
@@ -131,6 +133,23 @@ jobs:
             git commit -m "Release $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           fi
           python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
+
+      # A release that carries a security fix becomes the stable release in
+      # this same promotion, so stable-channel workspaces are told about it
+      # today rather than at next month's cut, and it costs no second build
+      # (REQ-142, docs/release-policy.md). Any other release is left to the
+      # monthly cut; the script says so and changes nothing.
+      - name: Make a security fix the stable release
+        run: |
+          before=$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)
+          python3 scripts/release_notes.py cut-stable --if-security RELEASE_NOTES.md
+          after=$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)
+          if [ "$before" != "$after" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add RELEASE_NOTES.md
+            git commit -m "Stable release $after (security fix)"
+          fi
 
       - name: Push release
         run: |

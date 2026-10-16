@@ -124,31 +124,19 @@ func (h *Handler) releaseFailedClaim(runID, workerID string) {
 
 // resolveRunAuth picks the provider credential mode for a claimed run. A
 // project set to api-key overrides the member's local CLI sign-in: the worker
-// injects the key named by api_key_env (org provider setting, or the
-// provider's native variable) from its host environment. Otherwise a run
-// launched by a member who stored a subscription token carries that token,
-// but only to a runner that serves that member alone (their personal runner
-// key, or a lease bound to them): a workspace runner is someone else's host,
-// and it keeps using its own sign-in. Everything else uses the runner's local
-// sign-in.
+// injects the workspace's pasted key for api_key_env (org provider setting,
+// or the provider's native variable) when there is one, else that variable
+// from its host environment. Otherwise a run launched by a member who stored
+// a subscription token carries that token, but only to a runner that serves
+// that member alone (their personal runner key, or a lease bound to them): a
+// workspace runner is someone else's host, and it keeps using its own
+// sign-in. Everything else uses the runner's local sign-in.
 func (h *Handler) resolveRunAuth(r *http.Request, run *agentruns.Run, agent *agents.Agent) map[string]string {
 	auth := map[string]string{"mode": projects.AgentAuthUserAccount}
 	if run.ProjectID != nil && *run.ProjectID != "" {
 		project, err := h.ProjectService.GetProject(*run.ProjectID)
 		if err == nil && project != nil && project.AgentAuth == projects.AgentAuthAPIKey {
-			auth["mode"] = projects.AgentAuthAPIKey
-			keyEnv := providers.DefaultAPIKeyEnv(agent.Provider)
-			if h.ProviderService != nil {
-				if settings, err := h.ProviderService.List(run.OrgID); err == nil {
-					for _, s := range settings {
-						if s.Provider == agent.Provider && s.APIKeyEnv != "" {
-							keyEnv = s.APIKeyEnv
-							break
-						}
-					}
-				}
-			}
-			auth["api_key_env"] = keyEnv
+			h.resolveAPIKeyAuth(auth, run, agent)
 			return auth
 		}
 	}
@@ -157,6 +145,38 @@ func (h *Handler) resolveRunAuth(r *http.Request, run *agentruns.Run, agent *age
 		auth["oauth_token"] = token
 	}
 	return auth
+}
+
+// resolveAPIKeyAuth fills auth for a run of a project on api-key auth.
+func (h *Handler) resolveAPIKeyAuth(auth map[string]string, run *agentruns.Run, agent *agents.Agent) {
+	auth["mode"] = projects.AgentAuthAPIKey
+	keyEnv := providers.DefaultAPIKeyEnv(agent.Provider)
+	if h.ProviderService != nil {
+		if settings, err := h.ProviderService.List(run.OrgID); err == nil {
+			for _, s := range settings {
+				if s.Provider == agent.Provider && s.APIKeyEnv != "" {
+					keyEnv = s.APIKeyEnv
+					break
+				}
+			}
+		}
+	}
+	auth["api_key_env"] = keyEnv
+	// A key a workspace admin pasted in the app goes with the claim, so the
+	// runner needs nothing in its host's environment. A key that does not
+	// open (the server's secrets key changed) is left out, and the runner
+	// falls back to its host's variable.
+	if h.ProviderKeyService != nil {
+		key, err := h.ProviderKeyService.RevealKey(run.OrgID, keyEnv)
+		if err != nil {
+			// Nothing derived from the key is logged: only the workspace,
+			// whose admin can paste the key again.
+			slog.Warn("worker claim: the workspace's stored API key could not be opened (was OPENV_SECRETS_KEY changed?)",
+				"org_id", run.OrgID)
+		} else if key != "" {
+			auth["api_key"] = key
+		}
+	}
 }
 
 // subscriptionTokenFor is the launching member's stored subscription token

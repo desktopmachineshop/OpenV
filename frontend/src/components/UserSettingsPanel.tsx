@@ -25,6 +25,9 @@ import {
   unsubscribeThisDevice,
 } from '../push/webPush';
 import { MyRunnerCard } from './org/MyRunnerCard';
+import { ConnectedAppsCard } from './ConnectedAppsCard';
+import { REMOTE_MCP_FEATURE } from '../features';
+import { getAPIBaseURL } from '../api/baseURL';
 import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
@@ -95,6 +98,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   // the empty choice; a company workspace is offered only while the member
   // belongs to it (the list is their memberships).
   const defaultWorkspaceOn = useFeature(DEFAULT_WORKSPACE_FEATURE);
+  const remoteMcp = useFeature(REMOTE_MCP_FEATURE);
   const subscriptionTokenOn = useFeature(SUBSCRIPTION_TOKEN_FEATURE);
   const [defaultOrgSaving, setDefaultOrgSaving] = useState(false);
   const [defaultOrgError, setDefaultOrgError] = useState('');
@@ -646,6 +650,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
           </div>
         )}
 
+        {remoteMcp && <ConnectedAppsCard apiBase={getAPIBaseURL() || window.location.origin} />}
+
         {!activeOrgId ? (
           <div className="card">
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
@@ -668,7 +674,11 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 your own machine persist. Projects set to “API key” auth override these sign-ins
                 for their runs.
               </p>
-              {CLI_PROVIDERS.map((p) => (
+              {CLI_PROVIDERS.filter(
+                // The server lists only the providers this deployment offers;
+                // until that list loads (or if it fails), show every CLI.
+                (p) => providers.length === 0 || providers.some((s) => s.provider === p.key),
+              ).map((p) => (
                 <ProviderConnectCard
                   key={p.key}
                   provider={p.key}

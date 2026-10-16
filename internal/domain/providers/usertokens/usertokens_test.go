@@ -1,8 +1,6 @@
 package usertokens
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"strings"
 	"testing"
@@ -17,23 +15,20 @@ func (m *memRepo) Get(u, p string) (*Token, error) { return m.rows[u+"/"+p], nil
 func (m *memRepo) Upsert(t *Token) error           { m.rows[t.UserID+"/"+t.Provider] = t; return nil }
 func (m *memRepo) Delete(u, p string) error        { delete(m.rows, u+"/"+p); return nil }
 
-func newKey(t *testing.T) string {
+func newSealer(t *testing.T) *providers.Sealer {
 	t.Helper()
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	sealer, err := providers.NewSealer("a test secrets key of thirty-two or more characters")
+	if err != nil {
 		t.Fatal(err)
 	}
-	return base64.StdEncoding.EncodeToString(b)
+	return sealer
 }
 
 const sample = "sk-ant-oat01-abcdefghijklmnopqrstuvwxyz0123456789_-AbCd"
 
 func TestSaveSealsAndForRunOpens(t *testing.T) {
 	repo := &memRepo{rows: map[string]*Token{}}
-	s, err := NewDefaultService(repo, newKey(t))
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := NewDefaultService(repo, newSealer(t))
 	st, err := s.Save("u1", providers.ProviderClaudeCode, "  "+sample+"\n")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +56,7 @@ func TestSaveSealsAndForRunOpens(t *testing.T) {
 
 func TestExpiredTokenIsNotHandedOut(t *testing.T) {
 	repo := &memRepo{rows: map[string]*Token{}}
-	s, _ := NewDefaultService(repo, newKey(t))
+	s := NewDefaultService(repo, newSealer(t))
 	if _, err := s.Save("u1", providers.ProviderClaudeCode, sample); err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +71,7 @@ func TestExpiredTokenIsNotHandedOut(t *testing.T) {
 
 func TestValidationAndUnavailable(t *testing.T) {
 	repo := &memRepo{rows: map[string]*Token{}}
-	s, _ := NewDefaultService(repo, "")
+	s := NewDefaultService(repo, nil)
 	if _, err := s.Save("u1", providers.ProviderClaudeCode, sample); !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("no key: %v", err)
 	}
@@ -87,8 +82,5 @@ func TestValidationAndUnavailable(t *testing.T) {
 	}
 	if _, err := s.Status("u1", "codex-cli"); !errors.Is(err, ErrInvalid) {
 		t.Fatal("unknown provider accepted")
-	}
-	if _, err := NewDefaultService(repo, base64.StdEncoding.EncodeToString([]byte("short"))); err == nil {
-		t.Fatal("short key accepted")
 	}
 }

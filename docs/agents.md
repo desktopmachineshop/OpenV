@@ -22,6 +22,28 @@ sets the limits: a run token is scoped to its run's project and its agent's
 write mode, a runner key carries workspace-wide editor rights with no proposal
 gating. See `docs/requirements-maintenance.md`.
 
+A member can also attach an AI client to a workspace with nothing installed:
+the server serves the same tools at `${PUBLIC_URL}/mcp` over MCP's Streamable
+HTTP transport, and the client connects with OAuth (discovery, dynamic
+registration, PKCE, a consent page where the member picks the workspace and
+read only or read and write). Each tool call runs as that member, held to
+that workspace; `delegate_to_agent` is not offered, since it needs a run.
+The member sees and revokes these under **Settings → Connected apps**.
+`docs/api-spec.md` ("Connected apps") has the protocol (REQ-44).
+
+The main client is a **Claude custom connector** (claude.ai, Claude Desktop,
+mobile and Claude Code share one OAuth client), so the server meets what
+Anthropic's connector documentation asks of an authorization server:
+the `401` challenge names the resource metadata, whose `resource` is the
+exact address a member pastes; Claude registers itself by DCR, with the
+callback `https://claude.ai/api/mcp/auth_callback`; a loopback redirect
+(Claude Code's) matches on any port; the token endpoint answers a client it
+no longer knows with `401 invalid_client`, so Claude registers again, and
+an invalid refresh token with `invalid_grant`; refresh tokens rotate; every
+OAuth answer is `application/json`; and the token endpoint's rate limit is
+spent per client, since all of Claude's requests come from Anthropic's
+addresses (`160.79.104.0/21`).
+
 ## Runner tiers
 
 OpenV has three kinds of runners; a workspace can use any mix of them.
@@ -391,9 +413,25 @@ Each project chooses how its runs authenticate (Project settings → Agents):
 - **API key**: overrides members' local sign-ins. At claim time the API tells
   the runner which environment variable holds the workspace's key (the
   provider setting's `api_key_env`, defaulting to the provider's native
-  variable, e.g. `ANTHROPIC_API_KEY`); the runner reads it from its own host
-  environment and injects it into the CLI. For now these runs still execute
-  through each member's OpenV connector/runner.
+  variable, e.g. `ANTHROPIC_API_KEY`). When a workspace admin has pasted a
+  key for that variable (Workspace settings → AI providers), the claim
+  carries the key itself and the runner injects it into the CLI; otherwise
+  the runner reads the variable from its own host environment. These runs
+  still execute through each member's OpenV connector/runner, so every
+  runner that claims one — a member's own machine included — receives the
+  pasted key.
+
+### Pasted API keys
+
+A workspace admin pastes a provider key once per key variable
+(`ANTHROPIC_API_KEY` serves both Claude Code and the Anthropic API). The
+server seals it with AES-256-GCM under `OPENV_SECRETS_KEY`, binding the
+workspace and the variable, and keeps it in `provider_api_keys`; the app only
+ever shows its last four characters. It is opened only to answer a runner's
+claim for a run of a project on API-key auth. Without `OPENV_SECRETS_KEY`
+the server cannot store keys and the settings tab says so. Changing
+`OPENV_SECRETS_KEY` leaves every stored key unreadable: runs fall back to the
+runner host's variable until an admin pastes the key again.
 
 ## Per-user repo locations
 
@@ -567,6 +605,18 @@ Open **Settings** in the UI to see per-provider status: whether the CLI was
 detected on the worker host, whether it is logged in, and which providers are
 enabled for runs. A provider that shows as unavailable usually means the CLI is
 not on the worker's PATH or has not been logged in.
+
+### Providers a deployment offers
+
+`OPENV_AGENT_PROVIDERS` on the API names the providers a deployment offers,
+separated by commas. Any other provider is left out of Workspace settings →
+AI providers, the agent editor's provider list and the CLI sign-ins in user
+settings, and the API refuses a provider setting, a new or moved agent, or a
+sign-in on it (`403`, "not available on this server yet"). An agent already
+on such a provider keeps it, so its runs are not stranded. Unset, every
+provider is offered. openv.app's production sets `claude-code`, the one
+provider tested end to end; staging leaves it unset so the others can be
+tried there.
 
 ## Agent definitions
 

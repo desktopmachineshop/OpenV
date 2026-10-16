@@ -4,16 +4,23 @@
 RELEASE_NOTES.md at the repository root has one ``## Unreleased`` section and
 any number of release sections, newest first. A release section is headed by
 a semantic version and the day it shipped -- ``## 0.2.0 - 2026-09-13`` -- and
-groups its bullets under ``### New features``, ``### Maintenance updates``
-and ``### Bug fixes``, which is the shape the app serves and announces.
+groups its bullets under ``### New features``, ``### Security fixes``,
+``### Maintenance updates`` and ``### Bug fixes``, which is the shape the app
+serves and announces.
 
 Releases from before OpenV had version numbers are headed by their date
 instead and have no groups. They are read, never written: they were
 announced under those names, and renaming them would announce them again.
 
 The next version is derived from the notes themselves. Anything under New
-features is a minor bump; a release of only maintenance and fixes is a patch;
-a major bump is deliberate (``cut --major``). The first release is 0.1.0.
+features is a minor bump; a release of only security fixes, maintenance and
+fixes is a patch; a major bump is deliberate (``cut --major``). The first
+release is 0.1.0.
+
+A security fix is filed under ``### Security fixes`` so its notes say that it
+is one (REQ-142), and a release that carries one becomes the stable release
+the day it ships: the promotion runs ``cut-stable --if-security`` after its
+cut, so no channel waits a month for it.
 
 A stable release (docs/release-policy.md) is not a separate section: it is
 one of the releases designated by a marker line under its heading --
@@ -44,13 +51,16 @@ Subcommands:
   version [FILE]               print the current (top) version
   next [--major] [FILE]        print the version the next cut would produce
   stable-version [FILE]        print the newest stable release ("" if none)
-  cut-stable [--date D] [--fix] [--if-scheduled] [FILE]
+  cut-stable [--date D] [--fix] [--if-scheduled] [--if-security] [FILE]
                                designate the newest release that is at
                                least SOAK_DAYS old and newer than the
                                current stable as the stable release; --fix
                                takes the newest release with no soak;
                                --if-scheduled exits 0 without cutting on a
-                               weekend or when this month already has one
+                               weekend or when this month already has one;
+                               --if-security takes the newest release at
+                               once when it carries a security fix, and
+                               otherwise exits 0 without cutting
 """
 
 import argparse
@@ -69,9 +79,10 @@ LEGACY_VERSION = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:\.(\d+))?$")
 BULLET = re.compile(r"^\s*[-*]\s+(.+?)\s*$")
 
 FEATURES = "New features"
+SECURITY = "Security fixes"
 MAINTENANCE = "Maintenance updates"
 FIXES = "Bug fixes"
-GROUPS = (FEATURES, MAINTENANCE, FIXES)
+GROUPS = (FEATURES, SECURITY, MAINTENANCE, FIXES)
 
 # Where a bullet written before any group heading is filed. Legacy sections
 # are entirely ungrouped; a new bullet may not be, and check() says so.
@@ -398,10 +409,30 @@ def cmd_stable_version(args):
     print(current_stable(read(args.file)))
 
 
+def carries_security_fix(text, strict=True):
+    """The newest release's version when it has a Security fixes group and
+    is not the stable release already, else ""."""
+    _, releases, _ = parse(text, strict=strict)
+    numbered = [(v, notes) for v, _, notes in releases if VERSION.match(v)]
+    if not numbered:
+        return ""
+    version, notes = numbered[0]
+    if not any(group == SECURITY for group, _ in notes):
+        return ""
+    if current_stable(text, strict=strict) == version:
+        return ""
+    return version
+
+
 def cmd_cut_stable(args):
     date = args.date or datetime.date.today().isoformat()
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
         raise NotesError(f"--date must be YYYY-MM-DD, got {date!r}")
+    if args.if_security:
+        if not carries_security_fix(read(args.file)):
+            print("the newest release carries no security fix; not cutting a stable release")
+            return
+        args.fix = True
     if args.if_scheduled and not args.fix:
         day = datetime.date.fromisoformat(date)
         if day.weekday() >= 5:
@@ -442,6 +473,11 @@ def main(argv=None):
             "--date": {"default": ""},
             "--fix": {"action": "store_true", "help": "designate the newest release with no soak"},
             "--if-scheduled": {"action": "store_true", "dest": "if_scheduled"},
+            "--if-security": {
+                "action": "store_true",
+                "dest": "if_security",
+                "help": "designate the newest release at once if it carries a security fix",
+            },
         },
     )
     args = p.parse_args(argv)

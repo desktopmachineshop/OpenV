@@ -86,6 +86,8 @@ func (a *app) handlers() {
 		ProposalService:      a.proposalService,
 		RepoConnService:      a.repoConnService,
 		ProviderService:      a.providerService,
+		ProviderKeyService:   a.providerKeyService,
+		OfferedProviders:     cfg.AgentProviders(),
 		LoginService:         a.loginService,
 		ProviderTokenService: a.providerTokenService,
 		OrgService:           a.orgService,
@@ -97,6 +99,7 @@ func (a *app) handlers() {
 		PushSubService:       a.pushSubService,
 		UserMetricsService:   a.userMetricsService,
 		VisitorMetrics:       a.visitorMetrics,
+		ConnectedApps:        a.connectedApps,
 		VAPID:                a.vapid,
 		Provisioner:          a.provisioner,
 		OrgSeeder: func(orgID string) error {

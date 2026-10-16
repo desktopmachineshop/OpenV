@@ -17,11 +17,13 @@ import type {
   CrewTemplate,
   PortableCrew,
   Proposal,
+  ProviderAPIKeys,
   ProviderLogin,
   ProviderSetting,
   ProviderTokenStatus,
   RepoConnection,
   RunLogEntry,
+  StoredProviderAPIKey,
 } from './types/agents';
 
 export const agentsAPI = {
@@ -111,6 +113,12 @@ export const providerSettingsAPI = {
   list: () => client.get<ProviderSetting[]>('/api/v1/provider-settings'),
   upsert: (setting: Partial<ProviderSetting>) =>
     client.put<ProviderSetting>('/api/v1/provider-settings', setting),
+  // The workspace's pasted API keys: never a value, only the last four
+  // characters of each. Workspace admins only.
+  listKeys: () => client.get<ProviderAPIKeys>('/api/v1/provider-api-keys'),
+  setKey: (keyEnv: string, key: string) =>
+    client.put<StoredProviderAPIKey>(`/api/v1/provider-api-keys/${keyEnv}`, { key }),
+  removeKey: (keyEnv: string) => client.delete(`/api/v1/provider-api-keys/${keyEnv}`),
 };
 
 export const providerLoginsAPI = {

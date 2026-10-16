@@ -147,6 +147,24 @@ export interface ProviderSetting {
   available_models: ProviderModel[];
 }
 
+// A provider API key a workspace admin pasted in the app, as the API lists
+// it: which variable it is for and its last four characters, never the key.
+export interface StoredProviderAPIKey {
+  key_env: string;
+  last4: string;
+  updated_by: string;
+  updated_at: string;
+}
+
+// enabled is false when the server has no OPENV_SECRETS_KEY to seal keys with.
+export interface ProviderAPIKeys {
+  enabled: boolean;
+  keys: StoredProviderAPIKey[];
+  /** An operator's own deployment: the app names the key variables there,
+   *  and only there. */
+  self_hosted?: boolean;
+}
+
 export interface Crew {
   id: string;
   name: string;

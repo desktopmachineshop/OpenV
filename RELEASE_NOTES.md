@@ -27,6 +27,62 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   own machine or a workspace runner is already online, and the runner stops
   on its own once it sits idle.
 
+## 0.19.2 — 2026-10-16
+
+### Maintenance updates
+
+- **openv.app offers Claude Code as its only agent provider for now.** Codex
+  CLI, Gemini CLI and Antigravity CLI no longer appear in AI provider
+  settings, the agent editor or your agent sign-ins, because they have not
+  been tested end to end yet. An agent you already set up on one of them
+  keeps working. Self-hosted deployments still offer every provider unless
+  their operator limits the list.
+
+## 0.19.1 — 2026-10-16
+
+### Bug fixes
+
+- **AI provider settings on openv.app no longer show environment variable
+  names.** The key field on each provider in Workspace settings → AI
+  providers is now labelled just API key, and the setting for which
+  environment variable a runner reads appears only on self-hosted
+  deployments, where runner machines may set the key themselves.
+
+## 0.19.0 — 2026-10-16
+
+### New features
+
+- **Connect Claude, Cursor or another AI app to a workspace with nothing to
+  install.** In Claude, add OpenV under Settings → Connectors → Add custom
+  connector with your OpenV address followed by /mcp (Settings → Connected
+  apps shows it); in another app, add that address as a remote MCP server.
+  Approve it in your browser, and choose the workspace it may work in and
+  whether it may change anything or only read. The app then works with your projects
+  through the same tools an OpenV agent has, as you: everything it does is
+  recorded as yours, and your role in the workspace still applies.
+  Connected apps lists every app you have connected, and Disconnect stops
+  one at once.
+
+## 0.18.0 — 2026-10-16
+
+### New features
+
+- **Paste a provider API key into OpenV instead of setting it on every
+  machine.** A workspace admin can now save the workspace's Anthropic, OpenAI
+  or Gemini API key in Workspace settings → AI providers. Projects set to
+  API-key auth then use it on every runner, including members' own machines,
+  with no environment variable to set. The key is stored encrypted and never
+  shown again, only its last four characters, and Remove key takes it back.
+
+### Maintenance updates
+
+- **Security fixes now have a heading of their own in What's new.** When a
+  release closes a security weakness, its notes list it under *Security
+  fixes*. The fix reaches every workspace as soon as it ships, whatever its
+  channel, and that release also becomes the stable release the same day, so
+  admins of stable-channel workspaces are told about it then, with a count of
+  the security fixes it brings, rather than at next month's stable release.
+
 ### Bug fixes
 
 - **Every baseline picker now says who captured each baseline and when.**
