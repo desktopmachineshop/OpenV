@@ -11,6 +11,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **OpenV's own projects have their own section on the open-source page.**
+  The requirements, design and tests OpenV is built from now sit apart
+  from the community's projects, and everyone else's projects are grouped
+  under the workspace that publishes them.
+
 - **A self-hosted OpenV now opens on its sign-in page.** Its front page is
   your app, not the openv.app marketing site, and it no longer shows a
   Billing tab, a Plan card or the platform admin's site Visitors
