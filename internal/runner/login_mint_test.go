@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -51,6 +52,7 @@ func TestPTYMintHandsTheTokenToTheServerOnly(t *testing.T) {
 
 	worker := NewWorker(NewClient(srv.URL, "worker-key"), Options{Headless: true})
 	flow := mintTokenFlow
+	flow.signOut = nil // never the real `claude auth logout` in a test
 	// The fake CLI prints a link, waits for the code, then prints the token
 	// in colour, as the real one draws it.
 	flow.command = []string{"sh", "-c",
@@ -145,5 +147,96 @@ func TestMintedLifetime(t *testing.T) {
 		if got := mintedLifetime(text); got != want {
 			t.Errorf("%q: %v, want %v", text, got, want)
 		}
+	}
+}
+
+// A sign-in that goes quiet after the code relays what its terminal shows,
+// credentials hidden, so the member is not left on "code received".
+func TestAQuietSignInRelaysItsScreen(t *testing.T) {
+	if !ptySupported {
+		t.Skip("needs a pseudo-terminal")
+	}
+	defer func(was time.Duration) { quietAfter = was }(quietAfter)
+	quietAfter = time.Second
+	details := make(chan string, 16)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/progress"):
+			var body map[string]string
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			select {
+			case details <- body["detail"]:
+			default:
+			}
+			_, _ = w.Write([]byte(`{}`))
+		case strings.HasSuffix(r.URL.Path, "/full"):
+			_ = json.NewEncoder(w).Encode(providers.LoginRequest{ID: "l1", Status: providers.LoginAwaitingCode, Code: "the-code"})
+		default:
+			_, _ = w.Write([]byte(`{}`))
+		}
+	}))
+	defer srv.Close()
+	worker := NewWorker(NewClient(srv.URL, "worker-key"), Options{Headless: true})
+	flow := mintTokenFlow
+	flow.signOut = nil // never the real `claude auth logout` in a test
+	flow.command = []string{"sh", "-c", `echo https://claude.ai/oauth/authorize?client_id=openv; read code; ` +
+		`printf 'Creating API key for Claude Code… ` + fakeMintedToken + `\r\n'; sleep 20`}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		worker.logins.handlePTYLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderClaudeCode,
+			Purpose: providers.LoginPurposeToken}, flow)
+	}()
+	// The flow reads quietAfter: it must be over before the deferred reset.
+	defer func() { cancel(); <-finished }()
+	deadline := time.After(20 * time.Second)
+	for {
+		select {
+		case d := <-details:
+			if !strings.Contains(d, "terminal shows") {
+				continue
+			}
+			if !strings.Contains(d, "Creating API key for Claude Code") || strings.Contains(d, "placeholder-not-a-real-token") {
+				t.Fatalf("relayed screen = %q", d)
+			}
+			return
+		case <-deadline:
+			t.Fatal("the quiet sign-in never relayed its screen")
+		}
+	}
+}
+
+// A headless Claude sign-in signs the CLI out first and runs with the
+// Claude credential variables blanked, so neither an old sign-in nor a key
+// on the host stands in for the one being made.
+func TestAHeadlessSignInStartsFromACleanSlate(t *testing.T) {
+	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "left-over-token")
+	seen := t.TempDir() + "/seen"
+	flow := mintTokenFlow
+	flow.signOut = []string{"sh", "-c", `printf 'ran:%s' "$CLAUDE_CODE_OAUTH_TOKEN" > ` + seen}
+	worker := NewWorker(NewClient("http://127.0.0.1:1", "worker-key"), Options{Headless: true})
+	env := childEnv(worker.logins.cleanSlate(context.Background(), &providers.LoginRequest{ID: "l1"}, flow)...)
+	got, err := os.ReadFile(seen)
+	if err != nil {
+		t.Fatalf("the sign-out did not run: %v", err)
+	}
+	if string(got) != "ran:" {
+		t.Fatalf("the sign-out saw the host's token: %q", got)
+	}
+	last := map[string]string{}
+	for _, kv := range env {
+		k, v, _ := strings.Cut(kv, "=")
+		last[k] = v
+	}
+	for _, name := range claudeCredentialEnv {
+		if last[name] != "" {
+			t.Errorf("%s reaches the sign-in as %q", name, last[name])
+		}
+	}
+	// Both Claude flows start this way.
+	if signIn, _ := flowFor(providers.ProviderClaudeCode); len(signIn.signOut) == 0 || len(mintTokenFlow.signOut) == 0 {
+		t.Fatal("a Claude sign-in flow does not sign out first")
 	}
 }

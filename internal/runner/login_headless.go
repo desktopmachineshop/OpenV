@@ -110,7 +110,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 		return
 	}
 	cmd := exec.CommandContext(ctx, flow.command[0], flow.command[1:]...)
-	cmd.Env = childEnv(flow.env...)
+	cmd.Env = childEnv(b.cleanSlate(ctx, login, flow)...)
 	// A TUI that believes it is on a dumb terminal prints nothing useful.
 	cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 
@@ -158,6 +158,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 	// flow stuck at "code sent".
 	sentCode := ""
 	reportedErr := ""
+	var quiet quietWatch // what to relay when the CLI goes quiet after a code
 
 	pollTicker := time.NewTicker(2 * time.Second)
 	defer pollTicker.Stop()
@@ -213,6 +214,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 				urlReported = true
 			}
 		case <-pollTicker.C:
+			quiet.check(b, login, sentCode, screen)
 			current, err := b.client.GetLoginFull(login.ID)
 			if err != nil {
 				continue
@@ -236,6 +238,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 				time.Sleep(250 * time.Millisecond)
 			}
 			sentCode = code
+			quiet = quietWatch{codeAt: time.Now()}
 			reportedErr = ""
 			screen.reset()
 			minted.reset()
@@ -249,7 +252,7 @@ func (b *loginBroker) handlePTYLogin(ctx context.Context, login *providers.Login
 		case <-ctx.Done():
 			killTree(cmd)
 			<-done
-			b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes")
+			b.loginProgress(login.ID, providers.LoginFailed, "", "sign-in timed out after 10 minutes"+screenSays(screen))
 			return
 		}
 	}
@@ -280,6 +283,78 @@ func (b *screenBuffer) String() string { return b.text.String() }
 // reset drops what the TUI drew before the current attempt, so a stale error
 // from a previous paste is never reported against a new one.
 func (b *screenBuffer) reset() { b.text.Reset() }
+
+// signOutTimeout bounds the sign-out a headless sign-in starts with.
+const signOutTimeout = 20 * time.Second
+
+// cleanSlate signs the CLI out of whatever it already holds and returns the
+// entries a headless sign-in adds to childEnv: the flow's own, then its
+// credential variables blanked. A sign-out that fails is logged and the
+// sign-in carries on: it is a precaution, and the sign-in may still succeed.
+func (b *loginBroker) cleanSlate(ctx context.Context, login *providers.LoginRequest, flow loginFlow) []string {
+	extra := append([]string(nil), flow.env...)
+	for _, name := range flow.clearEnv {
+		extra = append(extra, name+"=") // the later entry wins: unset for the CLI
+	}
+	if len(flow.signOut) == 0 {
+		return extra
+	}
+	outCtx, cancel := context.WithTimeout(ctx, signOutTimeout)
+	defer cancel()
+	out := exec.CommandContext(outCtx, flow.signOut[0], flow.signOut[1:]...)
+	out.Env = childEnv(extra...)
+	if err := out.Run(); err != nil {
+		log.Printf("login %s: signing the CLI out first failed, carrying on: %v", login.ID, err)
+	} else {
+		log.Printf("login %s: signed the CLI out first", login.ID)
+	}
+	return extra
+}
+
+// quietAfter is how long a sign-in may sit silent after the member's code
+// before the runner shows the member what its terminal says.
+var quietAfter = 30 * time.Second
+
+// quietWatch relays the terminal's screen once a sign-in has gone quiet
+// after a code was typed, and again each time that screen changes, so a
+// member is never left on "code received" with no idea what the CLI is
+// waiting for.
+type quietWatch struct {
+	codeAt   time.Time
+	reported string
+}
+
+func (q *quietWatch) check(b *loginBroker, login *providers.LoginRequest, sentCode string, screen *screenBuffer) {
+	if sentCode == "" || q.codeAt.IsZero() || time.Since(q.codeAt) < quietAfter {
+		return
+	}
+	says := screenSays(screen)
+	if says == q.reported {
+		return
+	}
+	q.reported = says
+	log.Printf("login %s: still waiting after the code%s", login.ID, says)
+	b.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+		"Still waiting for the sign-in to finish on the runner"+says+
+			" — if it asks for something, paste the code again, or cancel and start over.", providers.PasteKindCode)
+}
+
+// screenSays is the last lines the sign-in terminal shows, credentials
+// hidden, as a clause to append to a message ("" when it shows nothing).
+func screenSays(screen *screenBuffer) string {
+	lines := visibleLines(screen.String())
+	if len(lines) == 0 {
+		return ""
+	}
+	if len(lines) > 6 {
+		lines = lines[len(lines)-6:]
+	}
+	text := redactSecrets(strings.Join(lines, " · "))
+	if len(text) > 600 {
+		text = text[len(text)-600:]
+	}
+	return ". The runner's terminal shows: " + text
+}
 
 // finishPTYLogin reports how a terminal sign-in ended: a minting flow that
 // succeeded hands its token in, and anything else is finishLogin's.
