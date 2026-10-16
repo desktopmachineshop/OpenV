@@ -259,7 +259,7 @@ export const SharedProjectView: React.FC<SharedProjectViewProps> = ({ source }) 
   const title = shared?.project.name || (source === 'share' ? 'Shared project' : 'Open-source project');
 
   return (
-    <div style={{ height: '100vh', background: 'var(--bg-app)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', background: 'var(--bg-app)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header
         style={{
           display: 'flex',
@@ -370,7 +370,15 @@ export const SharedProjectView: React.FC<SharedProjectViewProps> = ({ source }) 
           {(!isPhone || pane === 'tree') && (
             <div
               className={isPhone ? '' : 'card'}
-              style={{ width: isPhone ? '100%' : 360, flexShrink: 0, overflowY: 'auto', padding: isPhone ? 12 : 16 }}
+              style={{
+                width: isPhone ? '100%' : 360,
+                // Stacked on a phone, the tree takes the height left under the
+                // tabs and scrolls inside it instead of running off the page.
+                flex: isPhone ? 1 : '0 0 auto',
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: isPhone ? 12 : 16,
+              }}
             >
               <ArtifactList
                 artifacts={artifacts}
@@ -384,7 +392,7 @@ export const SharedProjectView: React.FC<SharedProjectViewProps> = ({ source }) 
             </div>
           )}
           {(!isPhone || pane === 'detail') && (
-            <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: isPhone ? 12 : 0 }}>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflowY: 'auto', padding: isPhone ? 12 : 0 }}>
               {selected ? (
                 <ReadOnlyDetails artifact={selected} artifacts={artifacts} links={links} onSelect={select} />
               ) : (

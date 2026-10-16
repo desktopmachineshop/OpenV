@@ -180,6 +180,7 @@ the area that owns them; the area guide of
 | `internal/orchestration` | the run hooks: board moves, crew follow-ups and hand-offs, interview sessions |
 | `internal/billing` | the subscription mirror: the entitlement each workspace gets from the provider's view, and its HTTP routes as an `ext` module |
 | `internal/billing/stripe` | the Stripe client behind `billing.Provider` |
+| `internal/billing/boot` | billing's `ext.Factory`, building it as stage billing does, for a program that registers it as a module (`docs/extending.md`) |
 | `internal/hosting` | provisions hosted-runner containers on the local Docker daemon |
 | `internal/metrics` | the Prometheus registry and the HTTP middleware that feeds it |
 | `internal/seeds` | the default agents of a workspace and the community pool's built-in demo products |

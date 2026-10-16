@@ -63,6 +63,14 @@ describe('golden strings: the guided wizard', () => {
     });
   });
 
+  it('writes a persona, its title cut at 120 and a cut name in full in its body', () => {
+    const name = 'p'.repeat(130);
+    expect(wizardPersonaText({ ...persona, name })).toEqual({
+      title: `${'p'.repeat(117)}…`,
+      body: `${name}\n\n**Role:** CNC operator\n\n**Goals:**\nRun jobs without surprises\n\n**Pain points:**\nSpindles start without warning`,
+    });
+  });
+
   it('writes a need as its sentence, and names "a user" without a persona', () => {
     const need = { id: 'n-1', persona_id: 'p-1', capability: 'to see the spindle state', outcome: 'I never reach into a live machine' };
     const sentence = 'As Maya the Machinist, I need to see the spindle state so that I never reach into a live machine';
@@ -104,18 +112,23 @@ describe('golden strings: the guided wizard', () => {
     });
   });
 
-  it('writes a hazard, its title never cut', () => {
+  it('writes a hazard, its title cut at 120 and a cut one in full in its body', () => {
+    const fits = `A ${'h'.repeat(118)}`;
+    expect(wizardHazardText({ id: 'h-1', category: 'Safety', hazard: fits, harm: 'Crushed fingers', severity: 'moderate' })).toEqual({
+      title: fits,
+      body: '**Category:** Safety\n\n**Potential harm:** Crushed fingers\n\n**Severity:** moderate',
+    });
     const long = `A ${'h'.repeat(130)}`;
     expect(wizardHazardText({ id: 'h-1', category: 'Safety', hazard: long, harm: 'Crushed fingers', severity: 'moderate' })).toEqual({
-      title: long,
-      body: '**Category:** Safety\n\n**Potential harm:** Crushed fingers\n\n**Severity:** moderate',
+      title: `A ${'h'.repeat(115)}…`,
+      body: `${long}\n\n**Category:** Safety\n\n**Potential harm:** Crushed fingers\n\n**Severity:** moderate`,
     });
   });
 
-  it("writes a requirement's verification stub, its title never cut", () => {
+  it("writes a requirement's verification stub, its title cut at 120", () => {
     const title = 'v'.repeat(130);
     expect(wizardTestStubText({ title })).toEqual({
-      title: `Verify: ${title}`,
+      title: `Verify: ${'v'.repeat(109)}…`,
       body: `Test case stub for requirement: ${title}\n\nDefine steps, preconditions and expected results.`,
     });
   });

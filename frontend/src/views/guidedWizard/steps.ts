@@ -22,8 +22,8 @@ import {
  * Each row says what its step does today, quirks included. These rows name
  * the quirks; they do not fix them (R7):
  *
- * - Titles are cut at 120 characters for needs and requirements, at 100 for
- *   NFRs, and never for personas, hazards or verification stubs. The cut is
+ * - Titles are cut at 120 characters for personas, needs, requirements,
+ *   hazards and verification stubs, and at 100 for NFRs. The cut is
  *   made by the F5 templates in `components/wizard/artifactTemplates.ts`.
  *   `titleLimit` records it beside each row's template, and
  *   `steps.test.ts` holds the two to agree.
@@ -136,7 +136,7 @@ export const PERSONA_STEP: EntryStep<PersonaEntry> = {
   listKey: 'personas',
   idsKey: 'step_2_ids',
   artifactType: 'persona',
-  titleLimit: null,
+  titleLimit: 120,
   template: (p) => wizardPersonaText(p),
   required: (p) => p.name,
   sectionKey: () => 'personas',
@@ -199,7 +199,7 @@ export const HAZARD_STEP: EntryStep<HazardEntry> & { defaultSeverity: string } =
   listKey: 'hazards',
   idsKey: null,
   artifactType: 'hazard',
-  titleLimit: null,
+  titleLimit: 120,
   template: (h) => wizardHazardText(h),
   required: (h) => h.hazard,
   sectionKey: (h) => subSectionKey('hazards', h.category),
@@ -207,12 +207,12 @@ export const HAZARD_STEP: EntryStep<HazardEntry> & { defaultSeverity: string } =
   defaultSeverity: 'moderate',
 };
 
-/** Step 7: a stub per requirement with method test, never cut. */
+/** Step 7: a stub per requirement with method test, its title cut at 120. */
 export const STUB_STEP = {
   step: 7,
   answersKey: 'step_7',
   artifactType: 'test-case',
-  titleLimit: null as number | null,
+  titleLimit: 120 as number | null,
   template: (c: { title: string }): ArtifactText => wizardTestStubText(c),
 };
 

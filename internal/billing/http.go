@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/openv/requirements-platform/ext"
-	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
 // Module is billing's HTTP surface and its workspace observer, plugged into
@@ -143,7 +142,7 @@ func (m *Module) WorkspaceRestored(ctx context.Context, org *ext.Workspace) {
 // billingAdmin runs the checks every purchase-path handler shares after the
 // admin guard: billing configured, the write bucket not spent, a live
 // workspace. It returns the workspace, or nil after answering.
-func (m *Module) billingAdmin(w http.ResponseWriter, r *http.Request) (*orgs.Org, string) {
+func (m *Module) billingAdmin(w http.ResponseWriter, r *http.Request) (*ext.Workspace, string) {
 	orgID := m.host.PathVar(r, "id")
 	if !m.available(w) {
 		return nil, orgID
@@ -236,24 +235,24 @@ type orgBillingResponse struct {
 	EntitledPlan string `json:"entitled_plan"`
 	// Granted marks a plan a platform admin gave rather than one a
 	// subscription bought; nothing here is for the workspace to buy.
-	Granted    bool         `json:"granted"`
-	Billing    orgs.Billing `json:"billing"`
-	SelfHosted bool         `json:"self_hosted"`
-	Plans      PublicPlans  `json:"plans"`
+	Granted    bool                 `json:"granted"`
+	Billing    ext.WorkspaceBilling `json:"billing"`
+	SelfHosted bool                 `json:"self_hosted"`
+	Plans      PublicPlans          `json:"plans"`
 }
 
-func (m *Module) orgBilling(org *orgs.Org) orgBillingResponse {
+func (m *Module) orgBilling(org *ext.Workspace) orgBillingResponse {
 	b := org.Billing
 	if b.Status == "" {
-		b.Status = orgs.PlanStatusNone
+		b.Status = ext.PlanStatusNone
 	}
 	return orgBillingResponse{
 		OrgID:        org.ID,
 		Plan:         org.BilledPlan,
 		EntitledPlan: org.EntitledPlan(),
-		Granted:      orgs.GrantedPlan(org.BilledPlan),
+		Granted:      ext.GrantedPlan(org.BilledPlan),
 		Billing:      b,
-		SelfHosted:   orgs.SelfHosted(),
+		SelfHosted:   ext.SelfHosted(),
 		Plans:        m.svc.PublicPlans(),
 	}
 }
@@ -286,7 +285,7 @@ func (m *Module) GetOrgBilling(w http.ResponseWriter, r *http.Request) {
 	}
 	org, err := m.host.Workspaces().Get(orgID)
 	if err != nil {
-		if errors.Is(err, orgs.ErrNotFound) {
+		if errors.Is(err, ext.ErrWorkspaceNotFound) {
 			m.host.WriteError(w, http.StatusNotFound, "workspace not found")
 			return
 		}
@@ -322,7 +321,7 @@ func (m *Module) RefreshOrgBilling(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var (
-		org *orgs.Org
+		org *ext.Workspace
 		err error
 	)
 	if req.SessionID != "" {
@@ -346,7 +345,7 @@ func (m *Module) RefreshOrgBilling(w http.ResponseWriter, r *http.Request) {
 func (m *Module) WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	h := m.host
 	switch {
-	case errors.Is(err, orgs.ErrNotFound):
+	case errors.Is(err, ext.ErrWorkspaceNotFound):
 		h.WriteError(w, http.StatusNotFound, "workspace not found")
 	case errors.Is(err, ErrCheckoutNotFound):
 		h.WriteError(w, http.StatusNotFound, err.Error())

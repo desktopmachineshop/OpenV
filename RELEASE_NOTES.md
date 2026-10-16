@@ -11,6 +11,26 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **openv.app has a public changelog.** Every release, newest first, with
+  the same notes What's new shows you, is at openv.app/changelog for
+  anyone evaluating OpenV, and linked from the site's footer. What's new
+  in the app is unchanged.
+
+## 0.21.5 — 2026-10-16
+
+### Bug fixes
+
+- **Shared and open-source projects scroll on a phone.** A long artifact
+  tree, or a long artifact, now scrolls within the page instead of running
+  off the bottom of the screen.
+
+### Maintenance updates
+
+- **OpenV's own projects have their own section on the open-source page.**
+  The requirements, design and tests OpenV is built from now sit apart
+  from the community's projects, and everyone else's projects are grouped
+  under the workspace that publishes them.
+
 - **A self-hosted OpenV now opens on its sign-in page.** Its front page is
   your app, not the openv.app marketing site, and it no longer shows a
   Billing tab, a Plan card or the platform admin's site Visitors
@@ -25,6 +45,31 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   it is shared with and how long it is kept; the guide at /ai-connector
   shows how to add OpenV to Claude or another AI app, what to ask it, and
   how to disconnect it. Both are linked from the site footer.
+- **You can extend your own OpenV with modules.** A Go package can add
+  routes, react to workspace changes and tell the app what it offers,
+  then be linked into the OpenV server at build time;
+  [`docs/extending.md`](docs/extending.md) shows how. openv.app's billing
+  is built this way.
+- **A module can set what each plan means on your OpenV.** Its plan
+  policy sets every plan's default limits and its channel policy each
+  plan's release channel, in place of the built-in ones
+  ([`docs/extending.md`](docs/extending.md#plans-and-channels)). Nothing
+  changes until a module sets one.
+
+### Bug fixes
+
+- **Verification stubs for long requirements save again.** In guided
+  requirements definition, checking a requirement whose text runs past a
+  few hundred characters made the Verification stubs step fail with "value
+  too long". The draft test case's title is now shortened like a
+  requirement's, and its description still quotes the requirement in full.
+- **Long hazards save in guided requirements definition.** A hazard
+  described in more than a few hundred characters made the Hazards step
+  fail the same way. Its title is now shortened like a requirement's, and
+  the full hazard opens its description.
+- **Long persona names save in guided requirements definition.** A persona
+  name of more than a few hundred characters no longer fails the Personas
+  step: its title is shortened, and the full name opens its description.
 
 ## 0.21.4 — 2026-10-16
 

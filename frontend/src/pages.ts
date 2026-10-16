@@ -229,6 +229,7 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 'open-source', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'customers', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'white-papers', load: 'lazy', public: true, help: NO_PANEL },
+  { scope: 'site', path: 'changelog', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'requirements-traceability', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'verification-evidence', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'baselines-and-audit-trail', load: 'lazy', public: true, help: NO_PANEL },

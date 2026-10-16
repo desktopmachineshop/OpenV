@@ -199,6 +199,10 @@ export const OPEN_SOURCE_INTRO =
 
 export const OPEN_SOURCE_CLAIM_URL = FREE_HOSTING_ISSUE_URL;
 
+/** The workspace OpenV's own projects live in: they get their own section
+ * on the open-source page, apart from the community's. */
+export const OPENV_WORKSPACE = 'Desktop Machine Shop';
+
 export const OPENV_OWN_PROJECT_NOTE =
   'OpenV is itself built this way: the platform’s requirements, design and tests live in an OpenV project, and every change to the product starts there.';
 

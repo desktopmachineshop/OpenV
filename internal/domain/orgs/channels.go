@@ -26,10 +26,23 @@ var ErrInvalidChannel = errors.New("release channel must be nightly or stable")
 var ErrChannelLocked = errors.New("this plan always runs the nightly channel")
 
 // ChannelForPlan is the channel a plan is on unless the workspace chose
-// otherwise: the one-person tiers and self-hosted deployments run nightly
-// (a self-hoster decides when to deploy, so nothing is held back from what
-// they deployed); company tiers run stable.
-func ChannelForPlan(plan string) string {
+// otherwise, under the deployment's channel policy (policies.go).
+func ChannelForPlan(plan string) string { return defaultPolicy.channels().ChannelForPlan(plan) }
+
+// ChannelChoosable reports whether a plan's admins may pick the channel,
+// under the deployment's channel policy.
+func ChannelChoosable(plan string) bool { return defaultPolicy.channels().ChannelChoosable(plan) }
+
+// ChoosablePlans lists the plans whose admins pick the channel under the
+// deployment's channel policy; persistence needs the list to compute the
+// effective channel in SQL.
+func ChoosablePlans() []string { return defaultPolicy.channels().ChoosablePlans() }
+
+// ChannelForPlan, for the built-in channels: the one-person tiers and
+// self-hosted deployments run nightly (a self-hoster decides when to deploy,
+// so nothing is held back from what they deployed); company tiers run
+// stable.
+func (BuiltinChannels) ChannelForPlan(plan string) string {
 	switch plan {
 	case PlanBusiness, PlanTeam, PlanEnterprise:
 		return ChannelStable
@@ -38,8 +51,8 @@ func ChannelForPlan(plan string) string {
 	}
 }
 
-// ChannelChoosable reports whether a plan's admins may pick the channel.
-func ChannelChoosable(plan string) bool {
+// ChannelChoosable, for the built-in channels: the company tiers.
+func (BuiltinChannels) ChannelChoosable(plan string) bool {
 	switch plan {
 	case PlanBusiness, PlanTeam, PlanEnterprise:
 		return true
@@ -69,9 +82,11 @@ func ChannelOverrideAfterMove(from, to, override string) string {
 // hour 0-23, or with a time zone the platform does not know.
 var ErrInvalidWindow = errors.New("upgrade window must be a day of the month from 1 to 28, an hour from 0 to 23, and a known time zone")
 
-// ChoosablePlans lists the plans whose admins pick the channel; persistence
-// needs the list to compute the effective channel in SQL.
-var ChoosablePlans = []string{PlanBusiness, PlanTeam, PlanEnterprise}
+// ChoosablePlans, for the built-in channels: the plans ChannelChoosable
+// accepts.
+func (BuiltinChannels) ChoosablePlans() []string {
+	return []string{PlanBusiness, PlanTeam, PlanEnterprise}
+}
 
 // ChannelPlan is the plan a workspace's release channel follows: the
 // self-host plan on a self-hosted deployment, whatever the row says, as
@@ -93,7 +108,7 @@ func DeploymentChoosablePlans() []string {
 	if defaultPolicy.SelfHosted {
 		return []string{}
 	}
-	return ChoosablePlans
+	return ChoosablePlans()
 }
 
 // ValidateUpgradeWindow checks a window: day 0 means none; otherwise day

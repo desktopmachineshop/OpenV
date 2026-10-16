@@ -17,6 +17,7 @@
     "zustand": "entry"
   },
   "lazyPages": {
+    "src/site/Changelog.tsx": "dynamic entry",
     "src/site/Customers.tsx": "dynamic entry",
     "src/site/Demos.tsx": "dynamic entry",
     "src/site/Faq.tsx": "dynamic entry",

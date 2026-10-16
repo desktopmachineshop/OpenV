@@ -282,6 +282,7 @@ check:
 	fi
 	python3 -m unittest scripts/release_notes_test.py
 	python3 scripts/release_notes.py check RELEASE_NOTES.md
+	python3 scripts/release_notes.py site --check RELEASE_NOTES.md
 	@if [ -n "$(NO_RELEASE_NOTES)" ]; then \
 		echo "NO_RELEASE_NOTES is set: not requiring a release note (the no-release-notes label)"; \
 	else \

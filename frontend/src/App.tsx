@@ -86,6 +86,7 @@ const OpenSourceProjects = lazy(() =>
 );
 const Customers = lazy(() => import('./site/Customers').then((m) => ({ default: m.Customers })));
 const WhitePapers = lazy(() => import('./site/WhitePapers').then((m) => ({ default: m.WhitePapers })));
+const Changelog = lazy(() => import('./site/Changelog').then((m) => ({ default: m.Changelog })));
 // One lazy layout for every topic page; its copy is data in site/topics.
 const TopicPage = lazy(() => import('./site/TopicPage').then((m) => ({ default: m.TopicPage })));
 const SharedProjectView = lazy(() =>
@@ -286,6 +287,7 @@ function App() {
         <Route path="/open-source" element={<OpenSourceProjects />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/white-papers" element={<WhitePapers />} />
+        <Route path="/changelog" element={<Changelog />} />
         <Route path="/requirements-traceability" element={<TopicPage path="/requirements-traceability" />} />
         <Route path="/verification-evidence" element={<TopicPage path="/verification-evidence" />} />
         <Route path="/baselines-and-audit-trail" element={<TopicPage path="/baselines-and-audit-trail" />} />

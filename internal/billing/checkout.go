@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // The purchase path: checkout, plan change, portal, and binding a completed
@@ -54,7 +54,7 @@ func (s *Service) SetTrialDays(days int) { s.trialDays = days }
 // quantityFor is the billed quantity for a plan: Business bills per member
 // and pending invitation; Lite is one person and is never seat-synced.
 func (s *Service) quantityFor(plan, orgID string) int {
-	if plan != orgs.PlanBusiness || s.seats == nil {
+	if plan != ext.PlanBusiness || s.seats == nil {
 		return 1
 	}
 	n, err := s.seats(orgID)
@@ -65,11 +65,11 @@ func (s *Service) quantityFor(plan, orgID string) int {
 }
 
 // sellable checks that a plan may be bought for this workspace at all.
-func sellable(org *orgs.Org, plan string) error {
-	if orgs.GrantedPlan(org.BilledPlan) {
+func sellable(org *ext.Workspace, plan string) error {
+	if ext.GrantedPlan(org.BilledPlan) {
 		return ErrGrantedPlan
 	}
-	if plan == orgs.PlanBusiness && org.OrgType == orgs.TypePersonal {
+	if plan == ext.PlanBusiness && org.OrgType == ext.WorkspacePersonal {
 		return ErrPersonalWorkspace
 	}
 	return nil
@@ -80,7 +80,7 @@ func sellable(org *orgs.Org, plan string) error {
 // the workspace already has a live subscription, is on a granted plan, is
 // personal and asks for Business, or asks for a currency other than the one
 // its customer is locked to.
-func (s *Service) Checkout(ctx context.Context, org *orgs.Org, buyer Buyer, plan, interval, currency string) (string, error) {
+func (s *Service) Checkout(ctx context.Context, org *ext.Workspace, buyer Buyer, plan, interval, currency string) (string, error) {
 	if !s.Enabled() {
 		return "", ErrNotConfigured
 	}
@@ -175,7 +175,7 @@ func pickCurrency(amounts map[string]int64) string {
 // subscription arriving for a workspace that already holds one — two admins
 // checking out at once — loses: it is cancelled at once and reported, so an
 // operator can refund it.
-func (s *Service) BindCheckoutSession(ctx context.Context, orgID, sessionID string) (*orgs.Org, error) {
+func (s *Service) BindCheckoutSession(ctx context.Context, orgID, sessionID string) (*ext.Workspace, error) {
 	org, err := s.orgs.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -223,7 +223,7 @@ func (s *Service) BindCheckoutSession(ctx context.Context, orgID, sessionID stri
 // ChangePlan moves a live subscription to another plan or interval in place
 // — one subscription per workspace, prorated by the provider — and applies
 // the result.
-func (s *Service) ChangePlan(ctx context.Context, org *orgs.Org, plan, interval string) (*orgs.Org, error) {
+func (s *Service) ChangePlan(ctx context.Context, org *ext.Workspace, plan, interval string) (*ext.Workspace, error) {
 	if !s.Enabled() {
 		return org, ErrNotConfigured
 	}
@@ -251,7 +251,7 @@ func (s *Service) ChangePlan(ctx context.Context, org *orgs.Org, plan, interval 
 
 // PortalURL opens the provider's self-service portal for a workspace's
 // customer: payment method, address, tax id, invoices, cancel at period end.
-func (s *Service) PortalURL(ctx context.Context, org *orgs.Org) (string, error) {
+func (s *Service) PortalURL(ctx context.Context, org *ext.Workspace) (string, error) {
 	if !s.Enabled() {
 		return "", ErrNotConfigured
 	}

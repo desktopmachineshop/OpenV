@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // The registry is the only thing that turns a price into a plan. It refuses
@@ -29,14 +29,14 @@ func TestParseRegistryAcceptsTheFourPrices(t *testing.T) {
 		t.Fatalf("Len = %d", r.Len())
 	}
 	e, ok := r.Lookup("price_by")
-	if !ok || e.Plan != orgs.PlanBusiness || e.Interval != IntervalYear {
+	if !ok || e.Plan != ext.PlanBusiness || e.Interval != IntervalYear {
 		t.Fatalf("Lookup(price_by) = %+v, %v", e, ok)
 	}
 	if _, ok := r.Lookup("price_unknown"); ok {
 		t.Fatal("an unknown price resolved")
 	}
 	entries := r.Entries()
-	if entries[0].Plan != orgs.PlanBusiness || entries[0].Interval != IntervalMonth {
+	if entries[0].Plan != ext.PlanBusiness || entries[0].Interval != IntervalMonth {
 		t.Fatalf("entries are not ordered plan then interval: %+v", entries)
 	}
 }
@@ -73,9 +73,9 @@ func TestParseRegistryRefusesWhatItCannotSell(t *testing.T) {
 
 func TestMapStatus(t *testing.T) {
 	want := map[string]string{
-		"trialing": orgs.PlanStatusTrialing, "active": orgs.PlanStatusActive, "past_due": orgs.PlanStatusPastDue,
-		"unpaid": orgs.PlanStatusUnpaid, "paused": orgs.PlanStatusPaused, "canceled": orgs.PlanStatusCanceled,
-		"incomplete": orgs.PlanStatusIncomplete, "incomplete_expired": orgs.PlanStatusIncomplete,
+		"trialing": ext.PlanStatusTrialing, "active": ext.PlanStatusActive, "past_due": ext.PlanStatusPastDue,
+		"unpaid": ext.PlanStatusUnpaid, "paused": ext.PlanStatusPaused, "canceled": ext.PlanStatusCanceled,
+		"incomplete": ext.PlanStatusIncomplete, "incomplete_expired": ext.PlanStatusIncomplete,
 		"something_new": "something_new",
 	}
 	for in, out := range want {
@@ -85,8 +85,8 @@ func TestMapStatus(t *testing.T) {
 	}
 	// Whatever a provider invents, the workspace is not entitled to a paid
 	// plan on the strength of it.
-	o := &orgs.Org{BilledPlan: orgs.PlanBusiness, Billing: orgs.Billing{Status: MapStatus("something_new")}}
-	if o.EntitledPlan() != orgs.PlanSingle {
+	o := &ext.Workspace{BilledPlan: ext.PlanBusiness, Billing: ext.WorkspaceBilling{Status: MapStatus("something_new")}}
+	if o.EntitledPlan() != ext.PlanSingle {
 		t.Error("an unknown provider status kept the paid plan")
 	}
 }

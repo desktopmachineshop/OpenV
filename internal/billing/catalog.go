@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // The catalogue: the registry's prices as the provider last confirmed them.
@@ -91,7 +91,7 @@ func (c *catalog) render(enabled bool) PublicPlans {
 		}
 		plan := byPlan[e.Plan]
 		if plan == nil {
-			plan = &PublicPlan{Plan: e.Plan, PerSeat: e.Plan == orgs.PlanBusiness, Intervals: map[string]PublicPrice{}}
+			plan = &PublicPlan{Plan: e.Plan, PerSeat: e.Plan == ext.PlanBusiness, Intervals: map[string]PublicPrice{}}
 			byPlan[e.Plan] = plan
 			out.Plans = append(out.Plans, *plan)
 		}

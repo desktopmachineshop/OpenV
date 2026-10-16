@@ -69,7 +69,8 @@
     "ext": [
       "internal/domain/orgs",
       "internal/domain/release",
-      "internal/domain/users"
+      "internal/domain/users",
+      "internal/envparse"
     ],
     "internal/api": [
       "ext",
@@ -136,9 +137,12 @@
       "internal/scheduler"
     ],
     "internal/billing": [
+      "ext"
+    ],
+    "internal/billing/boot": [
       "ext",
-      "internal/domain/orgs",
-      "internal/envparse"
+      "internal/billing",
+      "internal/billing/stripe"
     ],
     "internal/billing/stripe": [
       "internal/billing"

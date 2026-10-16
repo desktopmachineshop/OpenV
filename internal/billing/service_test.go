@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // The sync path: a failed read never changes a plan; an unknown price never
@@ -110,23 +110,23 @@ func (f *fakeProvider) ListOpenDisputes(context.Context) ([]Dispute, error) { re
 
 // fakeOrgs is an in-memory Orgs.
 type fakeOrgs struct {
-	orgs    map[string]*orgs.Org
-	applied []orgs.BillingState
+	orgs    map[string]*ext.Workspace
+	applied []ext.WorkspaceBillingState
 }
 
-func (f *fakeOrgs) Get(id string) (*orgs.Org, error) {
+func (f *fakeOrgs) Get(id string) (*ext.Workspace, error) {
 	o, ok := f.orgs[id]
 	if !ok {
-		return nil, orgs.ErrNotFound
+		return nil, ext.ErrWorkspaceNotFound
 	}
 	c := *o
 	return &c, nil
 }
 
-func (f *fakeOrgs) FindOrgByBillingRef(kind, ref string) (*orgs.Org, error) {
+func (f *fakeOrgs) FindOrgByBillingRef(kind, ref string) (*ext.Workspace, error) {
 	for _, o := range f.orgs {
-		if (kind == orgs.BillingRefSubscription && o.Billing.SubscriptionRef == ref) ||
-			(kind == orgs.BillingRefCustomer && o.Billing.CustomerRef == ref) {
+		if (kind == ext.BillingRefSubscription && o.Billing.SubscriptionRef == ref) ||
+			(kind == ext.BillingRefCustomer && o.Billing.CustomerRef == ref) {
 			c := *o
 			return &c, nil
 		}
@@ -134,8 +134,8 @@ func (f *fakeOrgs) FindOrgByBillingRef(kind, ref string) (*orgs.Org, error) {
 	return nil, nil
 }
 
-func (f *fakeOrgs) ListBillingOrgs(limit int) ([]*orgs.Org, error) {
-	var out []*orgs.Org
+func (f *fakeOrgs) ListBillingOrgs(limit int) ([]*ext.Workspace, error) {
+	var out []*ext.Workspace
 	for _, o := range f.orgs {
 		if o.Billing.SubscriptionRef != "" {
 			c := *o
@@ -145,10 +145,10 @@ func (f *fakeOrgs) ListBillingOrgs(limit int) ([]*orgs.Org, error) {
 	return out, nil
 }
 
-func (f *fakeOrgs) ApplyBillingState(orgID string, st orgs.BillingState) (bool, error) {
+func (f *fakeOrgs) ApplyBillingState(orgID string, st ext.WorkspaceBillingState) (bool, error) {
 	o, ok := f.orgs[orgID]
 	if !ok {
-		return false, orgs.ErrNotFound
+		return false, ext.ErrWorkspaceNotFound
 	}
 	// The unique index, in miniature.
 	for id, other := range f.orgs {
@@ -157,7 +157,7 @@ func (f *fakeOrgs) ApplyBillingState(orgID string, st orgs.BillingState) (bool, 
 		}
 	}
 	f.applied = append(f.applied, st)
-	if !orgs.GrantedPlan(o.BilledPlan) {
+	if !ext.GrantedPlan(o.BilledPlan) {
 		o.BilledPlan = st.Plan
 	}
 	o.Billing.Status, o.Billing.Interval, o.Billing.Seats = st.Status, st.Interval, st.Seats
@@ -198,7 +198,7 @@ func newTestService(p *fakeProvider, o *fakeOrgs) (*Service, *countingMetrics) {
 }
 
 func TestDisabledServiceIsInert(t *testing.T) {
-	s := New(nil, &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1"}}}, nil, nil)
+	s := New(nil, &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1"}}}, nil, nil)
 	if s.Enabled() {
 		t.Fatal("no provider should mean disabled")
 	}
@@ -220,16 +220,16 @@ func TestDisabledServiceIsInert(t *testing.T) {
 
 func TestReconcileAppliesAndBindsByMetadata(t *testing.T) {
 	p := &fakeProvider{subs: []*Subscription{business("sub_1", "o1", "active")}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", BilledPlan: orgs.PlanSingle}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", BilledPlan: ext.PlanSingle}}}
 	s, m := newTestService(p, o)
 	s.Reconcile(context.Background())
 
 	got := o.orgs["o1"]
-	if got.BilledPlan != orgs.PlanBusiness || got.Billing.Status != orgs.PlanStatusActive || got.Billing.SubscriptionRef != "sub_1" ||
+	if got.BilledPlan != ext.PlanBusiness || got.Billing.Status != ext.PlanStatusActive || got.Billing.SubscriptionRef != "sub_1" ||
 		got.Billing.ItemRef != "si_sub_1" || got.Billing.Seats != 3 || got.Billing.Interval != IntervalMonth || got.Billing.PeriodEnd == nil {
 		t.Fatalf("not applied: plan=%q billing=%+v", got.BilledPlan, got.Billing)
 	}
-	if got.EntitledPlan() != orgs.PlanBusiness {
+	if got.EntitledPlan() != ext.PlanBusiness {
 		t.Fatal("entitled plan did not follow")
 	}
 	if m.unknown != 0 || len(p.cancelled) != 0 {
@@ -242,11 +242,11 @@ func TestReconcileAppliesAndBindsByMetadata(t *testing.T) {
 
 func TestAFailedListingChangesNothing(t *testing.T) {
 	p := &fakeProvider{listErr: errors.New("stripe is down")}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", BilledPlan: orgs.PlanBusiness,
-		Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", BilledPlan: ext.PlanBusiness,
+		Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1"}}}}
 	s, m := newTestService(p, o)
 	s.Reconcile(context.Background())
-	if len(o.applied) != 0 || o.orgs["o1"].Billing.Status != orgs.PlanStatusActive {
+	if len(o.applied) != 0 || o.orgs["o1"].Billing.Status != ext.PlanStatusActive {
 		t.Fatalf("a failed listing wrote: %+v", o.applied)
 	}
 	if len(p.getCalls) != 0 {
@@ -264,13 +264,13 @@ func TestAnUnknownPriceOrExtraItemLeavesThePlanAlone(t *testing.T) {
 	multi := business("sub_m", "o2", "active")
 	multi.ItemCount = 2
 	p := &fakeProvider{subs: []*Subscription{unknown, multi}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{
-		"o1": {ID: "o1", BilledPlan: orgs.PlanBusinessLite},
-		"o2": {ID: "o2", BilledPlan: orgs.PlanBusinessLite},
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{
+		"o1": {ID: "o1", BilledPlan: ext.PlanBusinessLite},
+		"o2": {ID: "o2", BilledPlan: ext.PlanBusinessLite},
 	}}
 	s, m := newTestService(p, o)
 	s.Reconcile(context.Background())
-	if len(o.applied) != 0 || o.orgs["o1"].BilledPlan != orgs.PlanBusinessLite || o.orgs["o2"].BilledPlan != orgs.PlanBusinessLite {
+	if len(o.applied) != 0 || o.orgs["o1"].BilledPlan != ext.PlanBusinessLite || o.orgs["o2"].BilledPlan != ext.PlanBusinessLite {
 		t.Fatalf("an unmappable subscription was applied: %+v", o.applied)
 	}
 	if m.unknown != 2 {
@@ -285,7 +285,7 @@ func TestAnOrphanedLiveSubscriptionIsCancelled(t *testing.T) {
 	live := business("sub_live", "purged-org", "active")
 	dead := business("sub_dead", "purged-org", "canceled")
 	p := &fakeProvider{subs: []*Subscription{live, dead}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{}}
 	s, _ := newTestService(p, o)
 	s.Reconcile(context.Background())
 	if len(p.cancelled) != 1 || p.cancelled[0] != "sub_live" {
@@ -296,15 +296,15 @@ func TestAnOrphanedLiveSubscriptionIsCancelled(t *testing.T) {
 func TestAConflictingBindIsRefused(t *testing.T) {
 	second := business("sub_2", "o1", "active")
 	p := &fakeProvider{subs: []*Subscription{second}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", BilledPlan: orgs.PlanBusiness,
-		Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", BilledPlan: ext.PlanBusiness,
+		Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1"}}}}
 	s, _ := newTestService(p, o)
 	s.Reconcile(context.Background())
 	if o.orgs["o1"].Billing.SubscriptionRef != "sub_1" || len(o.applied) != 0 {
 		t.Fatalf("the second subscription took over: %+v", o.orgs["o1"].Billing)
 	}
 	// Once the held subscription is over, the new one may bind.
-	o.orgs["o1"].Billing.Status = orgs.PlanStatusCanceled
+	o.orgs["o1"].Billing.Status = ext.PlanStatusCanceled
 	s.Reconcile(context.Background())
 	if o.orgs["o1"].Billing.SubscriptionRef != "sub_2" {
 		t.Fatalf("a re-subscription did not bind: %+v", o.orgs["o1"].Billing)
@@ -313,17 +313,17 @@ func TestAConflictingBindIsRefused(t *testing.T) {
 
 func TestADisputeMarksTheWorkspaceLapsed(t *testing.T) {
 	p := &fakeProvider{subs: []*Subscription{business("sub_1", "o1", "active")}, disputes: []Dispute{{ID: "dp_1", Status: "needs_response", SubscriptionID: "sub_1"}}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", BilledPlan: orgs.PlanSingle}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", BilledPlan: ext.PlanSingle}}}
 	s, _ := newTestService(p, o)
 	s.Reconcile(context.Background())
 	got := o.orgs["o1"]
-	if got.Billing.Status != orgs.PlanStatusDisputed || got.EntitledPlan() != orgs.PlanSingle {
+	if got.Billing.Status != ext.PlanStatusDisputed || got.EntitledPlan() != ext.PlanSingle {
 		t.Fatalf("disputed: %+v entitled %q", got.Billing, got.EntitledPlan())
 	}
 	// The dispute closes; the next tick restores the provider's status.
 	p.disputes = nil
 	s.Reconcile(context.Background())
-	if o.orgs["o1"].Billing.Status != orgs.PlanStatusActive {
+	if o.orgs["o1"].Billing.Status != ext.PlanStatusActive {
 		t.Fatalf("after the dispute: %+v", o.orgs["o1"].Billing)
 	}
 }
@@ -333,11 +333,11 @@ func TestAStoredSubscriptionTheListingMissedIsReRead(t *testing.T) {
 	// subscription exists when asked for by id.
 	sub := business("sub_1", "o1", "trialing")
 	p := &fakeProvider{subs: []*Subscription{sub}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", BilledPlan: orgs.PlanSingle, Billing: orgs.Billing{SubscriptionRef: "sub_1"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", BilledPlan: ext.PlanSingle, Billing: ext.WorkspaceBilling{SubscriptionRef: "sub_1"}}}}
 	s, _ := newTestService(p, o)
 	s.provider = &listlessProvider{fakeProvider: p}
 	s.Reconcile(context.Background())
-	if o.orgs["o1"].Billing.Status != orgs.PlanStatusTrialing {
+	if o.orgs["o1"].Billing.Status != ext.PlanStatusTrialing {
 		t.Fatalf("the missed subscription was not re-read: %+v", o.orgs["o1"].Billing)
 	}
 }
@@ -351,14 +351,14 @@ func (l *listlessProvider) ListSubscriptions(context.Context, string) ([]*Subscr
 
 func TestRefreshOrgNeverDowngradesOnAFailedRead(t *testing.T) {
 	p := &fakeProvider{getErr: errors.New("timeout")}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", BilledPlan: orgs.PlanBusiness,
-		Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", BilledPlan: ext.PlanBusiness,
+		Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1"}}}}
 	s, _ := newTestService(p, o)
 	got, err := s.RefreshOrg(context.Background(), "o1")
 	if err == nil {
 		t.Fatal("a failed read should be reported")
 	}
-	if got == nil || got.Billing.Status != orgs.PlanStatusActive || len(o.applied) != 0 {
+	if got == nil || got.Billing.Status != ext.PlanStatusActive || len(o.applied) != 0 {
 		t.Fatalf("a failed read changed the workspace: %+v", got)
 	}
 
@@ -366,11 +366,11 @@ func TestRefreshOrgNeverDowngradesOnAFailedRead(t *testing.T) {
 	p.getErr = nil
 	p.subs = []*Subscription{business("sub_1", "o1", "past_due")}
 	got, err = s.RefreshOrg(context.Background(), "o1")
-	if err != nil || got.Billing.Status != orgs.PlanStatusPastDue || got.EntitledPlan() != orgs.PlanBusiness {
+	if err != nil || got.Billing.Status != ext.PlanStatusPastDue || got.EntitledPlan() != ext.PlanBusiness {
 		t.Fatalf("refresh: %v %+v", err, got.Billing)
 	}
 	// A workspace with no subscription is returned as is, no provider call.
-	o.orgs["o2"] = &orgs.Org{ID: "o2"}
+	o.orgs["o2"] = &ext.Workspace{ID: "o2"}
 	calls := len(p.getCalls)
 	if _, err := s.RefreshOrg(context.Background(), "o2"); err != nil || len(p.getCalls) != calls {
 		t.Fatalf("an unsubscribed workspace reached the provider: %v", err)
@@ -382,7 +382,7 @@ func TestRefreshPricesConfirmsAndKeepsLastGood(t *testing.T) {
 		"price_bm": {ID: "price_bm", Interval: IntervalMonth, UsageType: "licensed", Amounts: map[string]int64{"gbp": 1200, "usd": 1500, "eur": 1400}, TaxBehavior: "exclusive"},
 		"price_lm": {ID: "price_lm", Interval: IntervalMonth, UsageType: "licensed", Amounts: map[string]int64{"gbp": 900}},
 	}}
-	s, _ := newTestService(p, &fakeOrgs{orgs: map[string]*orgs.Org{}})
+	s, _ := newTestService(p, &fakeOrgs{orgs: map[string]*ext.Workspace{}})
 
 	// Enabled but unconfirmed: nothing is for sale yet.
 	if pp := s.PublicPlans(); pp.BillingEnabled {
@@ -400,7 +400,7 @@ func TestRefreshPricesConfirmsAndKeepsLastGood(t *testing.T) {
 	}
 	var biz PublicPlan
 	for _, pl := range pp.Plans {
-		if pl.Plan == orgs.PlanBusiness {
+		if pl.Plan == ext.PlanBusiness {
 			biz = pl
 		}
 	}
@@ -408,7 +408,7 @@ func TestRefreshPricesConfirmsAndKeepsLastGood(t *testing.T) {
 		t.Fatalf("business = %+v", biz)
 	}
 	for _, pl := range pp.Plans {
-		if pl.Plan == orgs.PlanBusinessLite && pl.PerSeat {
+		if pl.Plan == ext.PlanBusinessLite && pl.PerSeat {
 			t.Fatal("Lite is flat, not per seat")
 		}
 	}
@@ -441,12 +441,12 @@ func TestRefreshPricesConfirmsAndKeepsLastGood(t *testing.T) {
 // live subscription, and neither runs without a provider.
 func TestDeleteAndRestoreScheduleAndResumeCancellation(t *testing.T) {
 	p := &fakeProvider{}
-	s, _ := newTestService(p, &fakeOrgs{orgs: map[string]*orgs.Org{}})
-	live := &orgs.Org{ID: "o1", Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1"}}
-	lapsed := &orgs.Org{ID: "o2", Billing: orgs.Billing{Status: orgs.PlanStatusCanceled, SubscriptionRef: "sub_2"}}
-	none := &orgs.Org{ID: "o3"}
+	s, _ := newTestService(p, &fakeOrgs{orgs: map[string]*ext.Workspace{}})
+	live := &ext.Workspace{ID: "o1", Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1"}}
+	lapsed := &ext.Workspace{ID: "o2", Billing: ext.WorkspaceBilling{Status: ext.PlanStatusCanceled, SubscriptionRef: "sub_2"}}
+	none := &ext.Workspace{ID: "o3"}
 
-	for _, o := range []*orgs.Org{live, lapsed, none, nil} {
+	for _, o := range []*ext.Workspace{live, lapsed, none, nil} {
 		s.OnWorkspaceDeleted(context.Background(), o)
 	}
 	if len(p.scheduled) != 1 || p.scheduled[0] != "sub_1=on" {
@@ -464,9 +464,9 @@ func TestDeleteAndRestoreScheduleAndResumeCancellation(t *testing.T) {
 func TestStalenessReportsTheOldestSnapshot(t *testing.T) {
 	old := time.Date(2026, 9, 21, 11, 0, 0, 0, time.UTC) // an hour before now
 	p := &fakeProvider{subs: []*Subscription{business("sub_1", "o1", "active")}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{
-		"o1": {ID: "o1", BilledPlan: orgs.PlanBusiness, Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1", SyncedAt: &old}},
-		"o2": {ID: "o2", BilledPlan: orgs.PlanBusiness, Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_gone", SyncedAt: &old}},
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{
+		"o1": {ID: "o1", BilledPlan: ext.PlanBusiness, Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1", SyncedAt: &old}},
+		"o2": {ID: "o2", BilledPlan: ext.PlanBusiness, Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_gone", SyncedAt: &old}},
 	}}
 	s, m := newTestService(p, o)
 	s.Reconcile(context.Background())
@@ -475,7 +475,7 @@ func TestStalenessReportsTheOldestSnapshot(t *testing.T) {
 	if m.stale != 3600 {
 		t.Fatalf("stale = %v, want 3600", m.stale)
 	}
-	if o.orgs["o2"].Billing.Status != orgs.PlanStatusActive {
+	if o.orgs["o2"].Billing.Status != ext.PlanStatusActive {
 		t.Fatal("a subscription unknown to the provider was changed")
 	}
 }

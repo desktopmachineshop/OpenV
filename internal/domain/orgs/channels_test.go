@@ -120,7 +120,7 @@ func TestASelfHostedWorkspaceRunsNightlyWhateverItsRowSays(t *testing.T) {
 		t.Errorf("hosted business: channel plan %q, channel %q, locked %v; want business, stable, choosable",
 			o.ChannelPlan(), o.ReleaseChannel, o.ReleaseChannelLocked)
 	}
-	if got := DeploymentChoosablePlans(); len(got) != len(ChoosablePlans) {
-		t.Errorf("DeploymentChoosablePlans() = %v on the hosted service, want %v", got, ChoosablePlans)
+	if got := DeploymentChoosablePlans(); len(got) != len(ChoosablePlans()) {
+		t.Errorf("DeploymentChoosablePlans() = %v on the hosted service, want %v", got, ChoosablePlans())
 	}
 }

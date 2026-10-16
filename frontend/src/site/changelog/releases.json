@@ -1,0 +1,1121 @@
+{
+ "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
+ "releases": [
+  {
+   "version": "0.21.5",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Shared and open-source projects scroll on a phone.** A long artifact tree, or a long artifact, now scrolls within the page instead of running off the bottom of the screen."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**OpenV's own projects have their own section on the open-source page.** The requirements, design and tests OpenV is built from now sit apart from the community's projects, and everyone else's projects are grouped under the workspace that publishes them.",
+      "**A self-hosted OpenV now opens on its sign-in page.** Its front page is your app, not the openv.app marketing site, and it no longer shows a Billing tab, a Plan card or the platform admin's site Visitors dashboard. openv.app is unchanged.",
+      "**Claude and other AI apps now see which OpenV tools only read.** Each tool tells a connected app its name in plain words and whether it only reads, adds to your project, or changes or deletes what is already there, so the app can ask you before it edits an artifact or deletes a link.",
+      "**openv.app now has a privacy policy and a guide to connecting Claude.** The privacy policy at /privacy says what the hosted service collects, who it is shared with and how long it is kept; the guide at /ai-connector shows how to add OpenV to Claude or another AI app, what to ask it, and how to disconnect it. Both are linked from the site footer.",
+      "**You can extend your own OpenV with modules.** A Go package can add routes, react to workspace changes and tell the app what it offers, then be linked into the OpenV server at build time; [`docs/extending.md`](docs/extending.md) shows how. openv.app's billing is built this way.",
+      "**A module can set what each plan means on your OpenV.** Its plan policy sets every plan's default limits and its channel policy each plan's release channel, in place of the built-in ones ([`docs/extending.md`](docs/extending.md#plans-and-channels)). Nothing changes until a module sets one."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Verification stubs for long requirements save again.** In guided requirements definition, checking a requirement whose text runs past a few hundred characters made the Verification stubs step fail with \"value too long\". The draft test case's title is now shortened like a requirement's, and its description still quotes the requirement in full.",
+      "**Long hazards save in guided requirements definition.** A hazard described in more than a few hundred characters made the Hazards step fail the same way. Its title is now shortened like a requirement's, and the full hazard opens its description.",
+      "**Long persona names save in guided requirements definition.** A persona name of more than a few hundred characters no longer fails the Personas step: its title is shortened, and the full name opens its description."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.21.4",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Staying signed in to Claude Code for a year no longer stalls on \"Code sent\".** The code you paste into a cloud runner's sign-in is now submitted, so the runner finishes minting and saves your token, and the card no longer reports a sign-in for the session that the runner had just signed out of."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Billing now plugs into OpenV as a module.** Nothing changes for your workspace: the Billing tab, checkout and plan changes answer exactly as before. This is the first step of keeping the hosted service's billing and plans apart from the open-source product, so that a self-hosted OpenV no longer carries them; anyone can now add routes of their own the same way."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.21.3",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Self-hosted workspaces get every feature of the release you run.** A workspace on a self-hosted OpenV whose plan was set to Business, Team or Enterprise was put on the hosted service's stable channel, so features your own server already ships stayed switched off for it until a stable release that never came. Every workspace on a self-hosted install now runs the release you deployed. Workspace settings shows its channel as Nightly, with no channel picker or upgrade window."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**`docker compose up` now starts a self-hosted OpenV.** The compose files set `OPENV_SELF_HOSTED=true`, so a new install creates workspaces on the self-host plan with nothing capped, and a limit you set yourself tells people which setting to change rather than offering a plan upgrade. Set `OPENV_SELF_HOSTED=false` in `.env` only to try the hosted service's plans locally."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.21.2",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A Claude sign-in that stalls after you paste the code now says why.** If the sign-in on your runner goes quiet for half a minute after the code, the card shows what the runner's terminal is displaying (with any credential hidden), so you can tell a slow sign-in from one waiting on you, and a sign-in that times out says the same.",
+      "**Signing Claude Code in on a cloud runner starts from a clean slate.** Both ways of signing in (for the session, or for a year with a saved token) now sign the runner's Claude Code out first, so a sign-in it already held cannot get in the way of the new one."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.21.1",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**OpenV is open source again, under the MIT License.** You may use, change, redistribute and sell OpenV, or build your own product or hosted service on it, as long as you keep its copyright and licence notice. The Elastic License 2.0's ban on offering OpenV as a hosted or managed service is gone. The README, the site's licence section and the manual say so in plain English."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.21.0",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**One place to sign Claude Code in, for the session or for a year.** The Claude Code card under Agent sign-ins now offers both: *This session only* signs your runner in until its lease ends, and *Stay signed in for a year* has your cloud runner get a long-lived token for you (you sign in with your Claude subscription in the browser and paste the code back), so every runner of yours starts signed in with nothing to run on your own computer. A line at the top of the card says which one is in force, and for a saved token the date it expires, as Claude reported it. Pasting a token you made yourself with `claude setup-token` is still there, inside the same card."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.20.0",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Keep Claude signed in with a subscription token.** Run `claude setup-token` on your own computer and paste the token it prints under Settings → Claude subscription token. Your chats and agent runs on your own runner, and on cloud runners leased to you, then start already signed in to Claude: no more signing in again on every cloud runner. The token lasts a year; OpenV keeps it encrypted, never shows it again, gives it only to runners that work for you alone, and tells you when it needs replacing.",
+      "**The V&V Assistant starts a cloud runner for you.** Send a message with no runner online and OpenV now leases a cloud runner for you on its own, instead of asking you to go and reserve one first. The chat says a runner is starting and the reply follows when it is up. It happens only where your workspace has cloud runner minutes left this month, never when your own machine or a workspace runner is already online, and the runner stops on its own once it sits idle."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.19.2",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**openv.app offers Claude Code as its only agent provider for now.** Codex CLI, Gemini CLI and Antigravity CLI no longer appear in AI provider settings, the agent editor or your agent sign-ins, because they have not been tested end to end yet. An agent you already set up on one of them keeps working. Self-hosted deployments still offer every provider unless their operator limits the list."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.19.1",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**AI provider settings on openv.app no longer show environment variable names.** The key field on each provider in Workspace settings → AI providers is now labelled just API key, and the setting for which environment variable a runner reads appears only on self-hosted deployments, where runner machines may set the key themselves."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.19.0",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Connect Claude, Cursor or another AI app to a workspace with nothing to install.** In Claude, add OpenV under Settings → Connectors → Add custom connector with your OpenV address followed by /mcp (Settings → Connected apps shows it); in another app, add that address as a remote MCP server. Approve it in your browser, and choose the workspace it may work in and whether it may change anything or only read. The app then works with your projects through the same tools an OpenV agent has, as you: everything it does is recorded as yours, and your role in the workspace still applies. Connected apps lists every app you have connected, and Disconnect stops one at once."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.18.0",
+   "date": "2026-10-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Paste a provider API key into OpenV instead of setting it on every machine.** A workspace admin can now save the workspace's Anthropic, OpenAI or Gemini API key in Workspace settings → AI providers. Projects set to API-key auth then use it on every runner, including members' own machines, with no environment variable to set. The key is stored encrypted and never shown again, only its last four characters, and Remove key takes it back."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Security fixes now have a heading of their own in What's new.** When a release closes a security weakness, its notes list it under *Security fixes*. The fix reaches every workspace as soon as it ships, whatever its channel, and that release also becomes the stable release the same day, so admins of stable-channel workspaces are told about it then, with a count of the security fixes it brings, rather than at next month's stable release."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Every baseline picker now says who captured each baseline and when.** The baseline choices on the V&V dashboard, in the new test run form and on the traceability matrix showed only the baseline's name; they now read like the ones in the requirements view, with the date and the person who captured it.",
+      "**Comparing an artifact with an older version no longer shows a delete button on its figures.** The button did nothing, but it should not have been there: figures change only while you edit the artifact.",
+      "**Draft test cases refuses to run a test-case author that has been set to write directly.** Its drafts are meant to wait for your approval, so if a workspace admin has changed the agent's write mode, you are asked to set it back to proposal instead of having drafts land in the project unreviewed."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.6",
+   "date": "2026-10-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Import Project now accepts ReqIF files, as well as OpenV's own JSON export.** The projects page only offered JSON files, although OpenV has read ReqIF since it began writing it. Pick a .reqif or .xml file exported from OpenV or from another requirements tool, and it becomes a new project with its hierarchy, links, statuses and attributes; attachments are not carried. A file that is not valid ReqIF is reported as a ReqIF problem rather than as broken JSON."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.5",
+   "date": "2026-10-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**New guides on the OpenV site answer the questions teams ask before they choose a requirements tool.** Requirements traceability, test runs and verification evidence, baselines and the audit trail, ReqIF import and export, self-hosting, and safety-critical work each have a page of their own, with what OpenV does not do yet set out as plainly as what it does, alongside a glossary of requirements and V&V terms and a short \"OpenV in brief\" section at the top of the FAQ. A few statements on the site were corrected on the way: agents propose changes by default but can be allowed to write directly, and a baseline keeps the list of attachments rather than the files."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.4",
+   "date": "2026-10-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**OpenV now counts visits to its public site, so the people who run it can see how many visitors go on to make an account.** When you open openv.app while not signed in, your browser is given a random visitor id in a first-party cookie, and the page you landed on, the site that sent you and the country Cloudflare reports are noted; if you then sign up, that visit is linked to your new account. Platform administrators see unique and new visitors, the share who sign up, and the landing pages and sources that bring them, on a new Visitors section of the Platform admin page. Your IP address is not kept, nothing is shared with anyone else, and a browser that sends Global Privacy Control or Do Not Track is not counted at all."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.3",
+   "date": "2026-10-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Search engines and AI assistants can now read their way around openv.app.** The site answers `/robots.txt`, `/sitemap.xml` and `/llms.txt` with real files instead of the app page, the sitemap lists every public page and manual chapter, and copies of the site at other addresses are kept out of search results so it is indexed once, under its own name. A self-hosted OpenV publishes the same files for its own address once `OPENV_SITE_URL` names it. The site and README now describe OpenV as source-available, which is what the Elastic License 2.0 makes it.",
+      "**The public pages and the manual now arrive ready to read.** The front page, pricing, how it works, the FAQ and the other site pages, and every manual chapter, are sent with their content already in place, each with its own title and description, so they show at once instead of after a \"Loading…\" pause, and search engines and AI assistants that do not run the app can read them too."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.2",
+   "date": "2026-10-12",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A size limit that is far too large is now refused instead of silently becoming a tiny cap.** A deployment that set a storage, upload or hosted-runner memory limit to a number too big to count in bytes could end up with a cap that was negative or a few bytes, so uploads were refused or the runner container failed to start. OpenV now stops with a message naming the limit and the largest size it accepts, and a size of that kind already stored for a workspace is treated as the largest size that fits.",
+      "**Saving a link no longer wipes what you did not send, and it keeps to the link rules.** Changing only a link's attributes used to blank its type, and changing only its type used to clear its attributes, which dropped the link from traceability and coverage without a word. A link update now changes only the fields you send. A new type is checked against the same link rules as creating a link, and is refused with the same message when it breaks one, and an empty type is refused.",
+      "**A project with an unknown agent sign-in mode is now refused with a clear message.** Creating or updating a project with an `agent_auth` other than `user-account` or `api-key` used to answer as if the server had failed. It now answers 400 and names the field and the two values it takes.",
+      "**Revoking a runner key that does not exist now says so.** Revoking a workspace runner key the workspace does not have, or one that belongs to another workspace, used to answer 400 as if the request were malformed. It now answers 404, the same as for any other item that is not there.",
+      "**The guided wizard no longer accepts a step it does not have.** Saving a step numbered below 1 or past the last step used to be stored, which could leave a session reopening on a step the wizard cannot show. The step save now answers 400 and names the valid range, 1 to 8."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.1",
+   "date": "2026-10-10",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**OpenV now keeps a daily record of who uses it, for the people who run it.** Each day you use OpenV while signed in is noted, with the country your connection comes from as Cloudflare reports it, so the platform's administrators can see sign-ups, active and returning users, and where people use OpenV from, on a new Users section of the Platform admin page. Your IP address is not kept, and the record goes with your account.",
+      "**OpenV now runs on a newer Go release with the latest security fixes.** The server and the hosted runners are rebuilt on Go 1.26.9 and an updated network library, which closes a set of publicly reported weaknesses in how the web server handles requests and secure connections. Nothing changes in how you use OpenV."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**An agent that looks up a baseline now gets its name and when it was taken.** An agent using OpenV's tools could look up a baseline by its id with `get_baseline`, but was told only which project it belongs to: its name, its capture time and even its own id came back empty, so the agent could not say which baseline it was working from. It now gets all four, as the project's list of baselines shows them. A baseline that does not exist, or that the agent cannot see, is still refused as *baseline not found*.",
+      "**An interview link opened again after the interview ended shows its thank-you page.** A participant who ended an interview and later opened their invite link again was asked for their name as if they had never started, and the visit alone added an empty, anonymous session to the interview's sessions for reviewers to find. The link now opens on the thank-you page, and no session is added.",
+      "**A run you open straight after a finished one keeps its log live.** In a list of runs, such as a project's Runs page, choosing a run that is still going right after one that had finished could leave its log frozen: if its live connection dropped before the run had loaded, the panel took the new run for finished too, and neither reconnected nor looked for new lines until you chose the run again. It now reconnects, as it does for any run still going.",
+      "**Clearing or deleting notifications keeps the panel open, and asks the right question.** Confirming or cancelling *Clear all* or *Delete forever* in the notification panel also closed the panel, so you had to open it again to see what was left; it now stays open. The questions counted only the notifications loaded on screen, at most 30, so a long inbox read \"Clear all 30 notifications? 101 of them unread.\" while the whole inbox was cleared, and an inbox of one \"Clear all 1 notifications?\". *Clear all* now asks \"Clear all notifications?\" and says how many of them are unread, and *Delete forever* asks to delete all cleared notifications, with no count.",
+      "**The notification panel shows each notification once, under the right tab.** Switching tabs quickly, say from *Flagged* to *Cleared*, could show the flagged notifications under *Cleared* when the slower answer arrived last, and a page of *Load older* rows could land on the tab you had switched to. A new notification could also appear twice in the list and count twice on the bell. Each tab now shows only its own notifications, and each notification appears and counts once.",
+      "**The V&V Assistant still answers when its conversation fails to load.** When the assistant's earlier messages could not be loaded, the panel said so and then stopped listening: nothing the assistant wrote afterwards appeared until you left the page and came back. The panel still says the conversation failed to load, but it now connects all the same, so new replies arrive as usual.",
+      "**The V&V Assistant's panel says one thing at a time, and offers only what it can add.** With no runner connected and nothing said yet, the panel showed \"The assistant will join in a moment\" right beside the notice that the V&V Assistant is not connected; it now shows only the notice. A suggestion of a kind OpenV does not know showed its raw data as its title and offered to add it, and Apply all counted it, though it could not be added. It now shows its kind and a few words of what it says, with no button, and Apply all leaves it out. And a link in an assistant reply, or in the interviewer's on an interview page, no longer carries a stray `node=\"[object Object]\"` attribute in the page.",
+      "**The notes panel's assistant follows you to another project.** With no artifact selected, going from one project's requirements to another's (from a notification, say) kept the first project's V&V Assistant conversation in the notes panel, so what you asked there went into the other project's conversation. The panel now opens the conversation of the project you are in.",
+      "**Links in an artifact's text no longer carry a stray attribute.** Every ordinary web link in the text of a requirement or other artifact, in the project and on a shared project's page, was written into the page with a meaningless `node=\"[object Object]\"` attribute beside its address. The links looked and opened as before, but the attribute was there for anything that reads the page's markup, such as the browser's inspector, some accessibility tools and HTML checkers. Links now carry only their address and the instruction to open in a new tab.",
+      "**A busy or unreachable interview page no longer calls its link broken.** When a participant's network had opened interview pages too many times in a short while, or the page could not reach OpenV at all, the participant was told the link wasn't working, may have expired or been revoked, and to ask you for a new one. The page now says to wait a moment and reload, or to check the connection and reload; only a link that really is expired, revoked or closed shows the broken-link page.",
+      "**An ended interview's link can no longer start another conversation.** After a participant ended an interview, their link could still start a second, anonymous conversation on the same invite, from a page left open that wrote again or simply reconnected, and it appeared among the interview's sessions. An ended interview's link now takes no more answers and starts nothing; a page left open shows the thank-you page. To interview the same person again, send them a new invite.",
+      "**Moving to another interview link shows only that interview.** When a participant went from one interview link to another in the same browser tab, for example with Back and Forward, the page kept showing the previous interview's conversation while the new one loaded, and kept a half-typed answer after it. The page now starts afresh on each link.",
+      "**On a dedicated instance, each support window warning reaches you once.** On an OpenV instance you run yourselves, the warnings that its support window is about to close, or has closed, came once for every workspace you administer, your personal workspace included, so an admin of two workspaces got each warning twice: in the bell, by email and by push. Each warning now comes once, however many workspaces you administer.",
+      "**A setting the server cannot use is named in its log, never quoted.** If you run your own OpenV server: an unknown `OPENV_LOG_LEVEL` or `OPENV_REGISTRATION`, or an unusable `OPENV_SESSION_MAX_AGE` or `OPENV_SESSION_IDLE`, was written to the log with its value, so a password or key pasted into the wrong setting ended up there. The warning now names the setting and what applies instead, never the value. `HOSTED_RUNNERS` or `OPENV_EMAIL_VERIFICATION` set to anything but `off`, such as `false`, was ignored without a word; only `off` still turns either off, but the log now names the setting and says it takes `off`. A size too large to count in bytes (8,796,093,022,208 MB or more) in `OPENV_MAX_BODY_MB`, `OPENV_MAX_UPLOAD_MB` or `OPENV_MAX_EVIDENCE_MB` made the server refuse every request body, figure or evidence file it applied to; it now keeps the default, with a warning. And when `OPENV_LIMITS` has several keys the server cannot use, the message it stops with names the first in alphabetical order, the same one on every start, where it named any one of them."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.17.0",
+   "date": "2026-10-05",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**See the agent runs that belong to no project.** Some runs belong to no project: the scheduled and event runs of a whole-workspace automation, the products an agent invents from the projects list, and the runs of a project that has since been deleted. No page listed them, so a run like that could not be found again. The workspace menu, beside *Workspace settings*, now opens *Workspace runs*: the workspace's runs that belong to no project, newest first. Choose one to follow it beside the list, with its log, its answer, Cancel and Retry, as on a project's Runs page; the address keeps it open when the page is reloaded. Workspace admins see every such run, and other members the ones they launched. A notification that such a run failed, in the bell, by email or as a web push, now opens it there instead of the projects list, and an invention that is taking long on the projects list links to its run."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A guided draft's links follow the same rules as any other link.** When the requirements wizard created its draft artifacts, it made every link a draft asked for: one to an artifact of another workspace, one into a project you can only view, or one of a kind the link rules do not allow, such as a requirement that *verifies* a user need. A draft now gets only the links you could have added to it yourself in the artifact editor; the others are left out, and the draft is still created.",
+      "**An agent whose writes wait for review can no longer create guided drafts.** An agent working in proposal mode, whose changes wait for a person to approve them, was already refused the commit of a guided session, but could create the session's draft artifacts directly, with no review. It is now refused the drafts too.",
+      "**Deleting a link needs edit rights on the projects at both of its ends.** Deleting a link adds a version to the artifacts at both ends, yet only the project the link starts in was checked, so you could delete a link into a project you can only view and change an artifact there. A link that crosses projects now needs edit rights in both, as it already did when removed in the artifact editor. A flow-down (*refines*) link, which a supplier can make with view rights on the parent, can still be deleted with them.",
+      "**Saving an artifact changes only its own links.** An update of an artifact, from an agent or the API, could also add or remove a link between two other artifacts; after such a removal, the artifact the link started from went on listing it in its latest version. An update no longer adds or removes a link between two other artifacts: it changes only links to or from the artifact it saves.",
+      "**An artifact's history lists only the link changes that were made.** When a save added or removed links, its note in the artifact's history listed every link asked for, including ones that were refused, such as a link of a kind the rules do not allow or one into a project you cannot edit, and so could name an artifact you have no access to. The note now lists only the links that were actually added or removed.",
+      "**A link added while editing an artifact's text is no longer suspect at once.** When you changed an artifact's title, text or type and added a link in the same save, the new link was immediately flagged suspect, as if the artifact had changed after the link was made, and waited in the review queue for someone to confirm it. A link made in the same save now starts trusted; the artifact's other links are flagged as before.",
+      "**Importing a file that is not an OpenV export says what is wrong in plain terms.** When a JSON file you imported as a project held a value of the wrong kind, such as text where an OpenV export has a list, or was not a project at all, the refusal named the program's internal types, such as *exports.ProjectExport*. It now names the field in the file and what it found there, as in *cannot unmarshal string into field \"linked_artifacts\"*, or says the file cannot be read as a project export. A file that is not valid JSON is described as before.",
+      "**A project's Runs page no longer warns about another workspace's runners.** When a link took you to a project in your other workspace, from a notification for example, its Runs page kept the warning of the workspace you came from, that runs were queued but no runner was online, until it had checked the runners of the new one. It now shows only the warning of the workspace you are in.",
+      "**A project's Runs page no longer shows the error of the project you left.** When a project's Runs page could not load its runs and you went on to another project's, the first project's error stayed above the second project's list until the second project's runs arrived. The error now goes as you switch, and each project's page shows only its own.",
+      "**A project's Runs page no longer shows another project's runs while it loads.** When you went from one project's Runs page to another's, from a notification for example, the first project's runs stayed on the list until the second project's arrived, and a Runs page still loading said there were no runs yet. The list now says it is loading until the project's own runs arrive.",
+      "**A feature that failed to load comes back by itself.** OpenV asks which features your workspace has when you open it or switch to it. When that question failed, on a dropped connection for example, every feature that depends on the answer, such as to-dos, share links and artifact owners, stayed hidden until you switched workspace or reloaded the page. OpenV now asks again a few times over the next twenty seconds, and once more whenever you come back to the window or your connection returns, so they reappear by themselves.",
+      "**The Runs pages no longer flash runs you have switched away from.** A project's Runs page, and Workspace runs, refresh their list every few seconds. Right after you switched workspace or project, or chose another status, a refresh for what you had left could arrive late and put its runs back on the list for a few seconds, along with its warning that no runner is online. An older refresh could also briefly replace a newer one. A refresh that arrives late is now ignored.",
+      "**Each failed run keeps its own web push notification.** When two of your agent runs failed, the second one's web push replaced the first one's on your phone or computer, so you saw only one: for two runs of one project, and for any two runs that belong to no project, in any of your workspaces. Each run's failure now stays on screen beside the others'.",
+      "**A run you cannot open is not found, whoever you are.** A run that belongs to no project opens only for the member who launched it and for the workspace's admins. Any other member of the workspace who followed a link to it was told that workspace admin access was required, which told them the run existed. They are now told the run is not found, as someone outside the workspace is.",
+      "**Cancel always stops a run.** Cancelling a run at the moment its runner handed it back to the queue, as a runner shutting down does, could be lost: the run went back to waiting, and the next runner started it again. The run is now cancelled.",
+      "**A run you cancel as it fails is not started again.** A cancel that came while the run's runner was reporting it finished was forgotten, so a run that then failed in a way that is normally retried was started again automatically. The cancel is now kept, and the run is not retried.",
+      "**Deleting a project stops every one of its runs.** A run its runner handed back to the queue at the moment its project was deleted, as a runner shutting down does, escaped the delete: it waited in the queue with no project, and the next runner started it. It is now cancelled with the project's other runs.",
+      "**A run you cancelled shows as cancelled when its runner goes quiet.** When a run's runner stopped responding after you asked the run to stop, the run was failed as \"worker lost\", and you were told \"Agent run failed\" about a run you had cancelled. It now ends cancelled, with no error and no failure notification.",
+      "**Artifacts, links, baselines, notes and test runs keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, artifacts and each of their versions, links, baselines, notes and test runs and results recorded their times shifted by the zone's offset, and showed them hours off. A removed link's history began hours before the link was made west of UTC, and ended before it began east of UTC. West of UTC, a test result recorded a moment ago counted as older than one recorded an hour earlier while the server ran in UTC, so the V&V coverage kept showing the earlier result. They now record every time in UTC, as on OpenV's hosted service. Times recorded before this update keep their offset.",
+      "**Guided sessions, interviews, agent proposals, AI provider sign-ins and repository connections keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, they recorded their times shifted by the zone's offset, and showed them hours off. West of UTC, a CLI sign-in to an AI provider read as hours old the moment it started, so starting it again abandoned the sign-in in progress and began another; east of UTC, a sign-in that had stalled was handed out again for hours instead of starting afresh. They now record every time in UTC, as on OpenV's hosted service.",
+      "**Workspaces, teams, product profiles, templates, figures, the activity feed and push devices keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, a workspace's and a people team's creation and update times, a product profile's, a template's, each version of a figure, each entry of the activity feed, when a device was registered for push notifications and when it last received or failed one, and when each release was announced and each stable release turned on for a workspace, were recorded shifted by the zone's offset, and showed hours off: two hours east of UTC, a workspace created at 09:00 UTC showed as created at 11:00. They now record every time in UTC, as on OpenV's hosted service.",
+      "**Project share links, and the daily limit on adding invented products to the shared collection, keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, a project share link recorded when it was made and when it was revoked shifted by the zone's offset. The limit on how many invented products a workspace adds to the shared collection each day counted the last 29 hours west of UTC and the last 22 hours east of it. They now keep time in UTC, as on OpenV's hosted service.",
+      "**Used and expired email verification and password reset links are cleaned up.** OpenV kept every email verification link and password reset link it had sent, once used or expired, for good. The server now deletes each within a minute of its being used or expiring. A link still waiting to be used is kept.",
+      "**An agent's OpenV tool list is enforced as written on every runner.** An agent's allowed tools can name OpenV tools one at a time, as in `mcp__openv__get_artifact`. An entry written in an unusual way, with the `mcp__openv__` prefix twice, a space after it, or two names joined by a comma, could give the agent more OpenV tools than it named, up to all of them, most visibly for agents run by Codex CLI. Such an entry now gives the agent no OpenV tool, so an agent gets only the OpenV tools its list names, whichever AI provider runs it. `mcp__openv__*` and `mcp__openv` still grant them all.",
+      "**An agent's allowed tools name one tool per entry.** In an agent's markdown file, one `allowed_tools` entry could list several tools separated by commas, such as `mcp__openv__get_artifact, Bash`. Claude Code takes each of them, but OpenV read the entry as a single tool, so an agent given a shell, web access or another MCP server that way was not treated as reaching outside the workspace, and its runs were not given the stricter settings such agents get. OpenV now reads every part of such an entry, and saving one is refused with a message asking for one tool per entry. An agent already saved that way keeps working, judged by each part.",
+      "**A custom attribute that fails to save no longer shows the server's internal error.** When saving a custom attribute failed on the server's side, the message you saw carried the server's own error text, which could name parts of its database. It now says the attribute definition could not be saved, and the details go only to the server's log.",
+      "**Buying a plan before its prices are confirmed says so.** When a workspace admin chose *Continue to Stripe* before OpenV had confirmed the plans' prices with the billing provider, they were told the billing provider did not answer. They are now told the prices have not been confirmed with the billing provider yet, and to try again shortly. The workspace is left as it was, as before.",
+      "**Quality rules that fail to save say so.** When saving a project's or the workspace's requirement quality rules failed on the server's side, the message said the quality rules could not be loaded. It now says they could not be saved; a failure to load them still says so.",
+      "**Raising `max_upload_mb` in `OPENV_LIMITS` lets bigger figures through.** For operators: on a deployment not set as self-hosted, setting `max_upload_mb` in `OPENV_LIMITS` above 1024 MB, the most any plan allows, raised every workspace's limit on one figure, but a file over 1024 MB was still refused as larger than the upload limit before that limit was checked. Figures up to the deployment's `max_upload_mb` now upload, within the 8192 MB no single upload may exceed. Self-hosted deployments were not affected.",
+      "**A feature turned off on a self-hosted deployment says so.** On a deployment the operator runs themselves, a feature turned off there, such as teams, was refused as not included in the workspace's plan, though such a deployment has no plans. The refusal now says the feature is turned off on this deployment, and still names the setting to change in `OPENV_LIMITS`. Hosted workspaces are pointed to the Billing tab as before. The workspace's Limits tab says the same. A read-only workspace on such a deployment is told to raise its limits in `OPENV_LIMITS`, not to change plan."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.16.1",
+   "date": "2026-10-04",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Agent runs and runners keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, agent runs, cloud runner leases and runner keys recorded their times shifted by the zone's offset, and acted on the shifted times. East of UTC, a run could be failed as \"worker lost\" while its runner was still preparing it, an automatic retry, and a run reserved for its launcher's own runner, were held back for hours, and a runner that had stopped still showed as online for hours. West of UTC, a run reserved for its launcher's own runner went to a workspace runner at once, an automatic retry ran without waiting, a runner that stopped right after claiming a run was noticed hours late, a runner polling right then showed as offline, the cloud runner pool showed no runner available, and a cloud runner lease counted its whole length against the workspace's minutes as soon as it started. Either way, a run's start, finish and log times, and a cloud runner's time left, showed hours off. They now record every time in UTC, as on OpenV's hosted service.",
+      "**Every project can add figures to its artifacts.** A figure takes its reference from its artifact, as REQ-1-FIG-1 does from REQ-1, and each project numbers its own artifacts from REQ-1, but a figure reference could be used only once on the whole server. Once any project, in any workspace, had a REQ-1-FIG-1, adding the first figure to another project's REQ-1 failed with \"Failed to save attachment metadata\", and so on for every reference already taken elsewhere. A figure reference now needs to be unique only within its project, as the artifact reference it is built on is. Figures already added keep their references.",
+      "**Deleting a figure removes every version of its file.** Deleting a figure removed only the file of its current version, and the files of its earlier versions stayed stored on the server. The file also went before the figure did, so a delete that failed left a figure whose image could no longer be opened. The figure is now deleted first, and then the file of every version of it is removed. A delete that fails removes nothing, and a file the server cannot remove is noted in its log while the figure is deleted all the same.",
+      "**Purging a deleted workspace removes its files.** When a deleted workspace's 30 days ran out and it was purged, every file uploaded to it stayed stored on the server: its figures with every earlier version, its evidence files and its logo. They are now removed with the workspace. A file the server cannot remove is noted in its log, and the workspace is purged all the same.",
+      "**A figure added as its project is deleted no longer stays behind.** A figure whose upload finished while its project was being deleted, or just after, was stored all the same, with no project to show it in, and its file stayed on the server. The upload now waits for the delete and then answers \"project not found\", as for any deleted project, and its file is removed. A figure that was stored first is deleted with the project.",
+      "**Files left behind by earlier deletes are cleared once.** The figure and evidence files of projects deleted, workspaces purged and figure versions deleted before this update stayed stored on the server, though nothing in OpenV could reach them any more, and so did the logo of every workspace purged before it. The first time the server starts after this update, it removes them, once, and with them any profile picture whose account is gone. It removes only files it can be sure are its own uploads that nothing refers to, last changed more than an hour before it started; when it cannot be sure, for example because the files it knows of are not in the uploads folder, it removes nothing there. A deleted workspace still in its 30 days keeps its logo. If you run OpenV yourself, each file removed is noted in the server's log, under \"upload sweep\", with a summary at the end; and if your uploads folder is shared with another OpenV server, set `OPENV_UPLOAD_SWEEP=off` before you update, so that this server leaves the other's files alone. With it off, nothing is swept, and the first start without it sweeps. Some records earlier purges left, which numbered the figures of artifacts that no longer exist, are removed too.",
+      "**A figure no longer has an unused place for a test result.** The stored record of every figure had room to name a test result, for test evidence, that OpenV never filled in: test evidence has its own bundles, which a result cites. It is removed when this update is installed. If you run OpenV yourself and filled it in outside OpenV, the server does not start after the update, and its log says how many figures name a test result and how to clear them.",
+      "**Sign-ins last as long as they should on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, accounts, sign-in sessions, password reset links and email verification links recorded their times shifted by the zone's offset. West of UTC, every sign-in ended hours before its idle limit or its lifetime, and at once where `OPENV_SESSION_IDLE` or `OPENV_SESSION_MAX_AGE` was set shorter than the offset: the person was signed out by their next click. They now record every time in UTC, as on OpenV's hosted service.",
+      "**Workspace invitations, deleted workspaces and hosted runners keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, they recorded their times shifted by the zone's offset. Inviting an address again, unchanged, within an hour of its last invitation email sent another email every time west of UTC, and east of UTC sent none for hours longer. A deleted workspace's deletion time, and so the date it can be restored until, and a hosted runner's times showed hours off. They now record every time in UTC, as on OpenV's hosted service. A workspace deleted before this update on such a server is purged up to that offset early (west of UTC) or late (east of UTC).",
+      "**Agent runs keep time when the database is not set to UTC.** On a self-hosted OpenV server whose PostgreSQL server, database or database user is set to another time zone, or whose host sets `PGTZ`, the times the database recorded itself, such as when an agent run was claimed, cancelled or failed, or when a record was created, were that zone's local time instead of UTC, and the checks comparing them were off by the zone's offset. East of UTC, a run reserved for its launcher's own runner went to a workspace runner at once, an automatic retry ran without waiting, a runner that stopped right after claiming a run was noticed hours late, and a cloud runner lease counted its whole length against the workspace's minutes as soon as it started. West of UTC, a run could be failed as \"worker lost\" moments after a runner claimed it, while the runner was still preparing it. OpenV now runs every database connection in UTC, whatever the database's own setting.",
+      "**A purged workspace's agents are removed from the server.** When a deleted workspace's grace period ended and OpenV purged it, the files defining its agents stayed in the server's agents directory (`AGENTS_DIR`), those deleted to its trash included, and every restart registered those agents again, under a workspace that no longer exists. Purging a workspace now removes its agents' files too.",
+      "**Run now on a whole-workspace automation shows the run it started.** On a project's Automations page, Run now on an automation for the whole workspace opened the project's Runs page, whose list leaves the run out: it belongs to no project. The run now opens beside the automations, with its status, log, answer, Cancel and Retry, and stays open on a reload.",
+      "**Deleting a project ends its runs that await approval.** A run of the deleted project that was waiting for its proposals to be reviewed waited for ever, its proposals gone with the project. It is now cancelled with the project's other unfinished runs. The project's runs also stop pointing at its cards, sessions, automations and crews, and the server no longer logs a \"failed to move card\" error for them.",
+      "**A member's own runner stops a run whose project is deleted.** When a project was deleted while the personal runner of a member who is not a workspace admin was working on one of its runs, the runner lost sight of the run: it never learned the run was cancelled, kept working until the run was failed as \"worker lost\", and an automatic retry could then start it again outside any project. The runner now stops the run and reports it cancelled, and a run someone asked to stop is never retried automatically.",
+      "**A cancelled run stays cancelled.** A run whose cancel was requested went back to the queue, and was started again by the next runner, when its runner shut down before stopping it or could not start it; it now ends cancelled, and runs left in the queue this way are cancelled by this update. A run claimed by a runner a moment before its project was deleted could still be given a working run token; it now gets none, and is cancelled."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.16.0",
+   "date": "2026-10-04",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Make an automation for the whole workspace.** On a project's Automations page, a workspace admin now chooses what a new automation covers: this project, as before, or the whole workspace. A whole-workspace automation runs on events in every project of the workspace, in the project of the event that set it off, and on workspace membership and invitation events, which no project's automation sees. Every project's Automations page lists the whole workspace's automations, marked *Whole workspace*, beside its own; workspace admins edit, run and delete them there, and move an automation between its project and the whole workspace, while other members see them without changing them. A whole-workspace automation runs an agent, or one of the workspace's own crews such as its default crew, not a crew made in one project."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A failed agent run is retried only when retrying can help.** When an agent's CLI fails, OpenV reads its error text to tell a sign-in problem (not retried) and a provider outage or rate limit (retried) from the agent's own error (not retried), and numbers and words that only looked like those could fool it. A run whose CLI said it \"wrote 403 lines\" was failed as a sign-in problem, and one that \"processed 1500 files\" or mentioned \"the network tool\" was retried as a provider outage, failing the same way again. A status code now counts only where it is one, as in \"HTTP 403\" or \"Error: 429\", and a word only as a whole word, so these read as the agent's own error. A rate limit or overload that mentions an API key, such as \"rate limit exceeded; check your API key\", is now retried as the rate limit it is, rather than failed as a sign-in problem.",
+      "**A run that cannot read its project's repositories fails instead of running without them.** When an agent with repository access ran and its runner could not read the project's repository connections, because the request was refused or the server failed, the run went ahead in an empty workspace and could finish as succeeded without ever seeing the code. It now fails before the agent starts, saying \"could not read the project's repository connections\" and why, and it is not retried.",
+      "**A run whose agent CLI exits with an error code fails.** A run whose agent CLI exited with a non-zero code, without the runner reporting an error with it, showed as succeeded with the exit code beside it. It now fails, saying \"the agent CLI exited with code\" and the code, and is not retried. The answer and token counts the run produced are kept, as for any failed run.",
+      "**A runner no longer crashes on an answer to its claim that names no run.** When a runner asked for work and the answer named no run, which OpenV itself never sends but a proxy or a mismatched server can, the runner crashed. Every run it was working on stopped reporting with it, and was failed once its heartbeat lapsed. The runner now treats such an answer as no work, logs it, and asks again on its next poll. As before, a run that crashes inside the runner is reported as a worker error and the runner carries on.",
+      "**A failed Codex sign-in shows the CLI's last lines.** When `codex login` failed on your own runner or on a cloud runner, the sign-in card quoted the end of the CLI's output, but the runner could lose the last lines, where the CLI says why it failed, if it exited right after printing them. The card now always ends with the CLI's own last lines.",
+      "**A runner pool node puts `HOME` back after every lease.** A pool node points `HOME` at a directory of the lease's own while it serves a member, so the vendor CLIs keep that member's sign-ins there, and deletes the directory when the lease ends. When a lease could not start because its workspace directory could not be made, the node left `HOME` on the lease's directory, and the directory on disk, until the next lease started. A node started with `HOME` unset or empty kept `HOME` on the deleted directory after every lease. The node now puts `HOME` back exactly as it found it, set, empty or unset, whenever a lease ends or fails to start, and removes the directory a failed lease made. This matters only if you run your own runner pool.",
+      "**A notification's email and phone alert open the page the bell does.** The link in a notification email, and a tap on its phone alert, took you to your projects list, or to the project's overview, for a change to your workspace or project access, someone joining or leaving the workspace, a release, and a dedicated instance's support window. They now open the same page as the notification in the bell: the workspace's or the project's members, What's new, or the workspace settings. A cloud runner minutes alert, which tells an admin to raise the allowance from the Billing tab, opened your projects list everywhere, the bell included; it now opens the workspace's Billing tab.",
+      "**Notifications read as written.** A review request for an artifact whose title has quotes or a backslash in it showed extra backslashes, as in `\"Brake \\\"pedal\\\" force\"`; the title now reads exactly as written. A release announcement showed the release notes' formatting marks, such as the `**` around each headline; it now shows plain text. A phone alert too long for the screen could end in the middle of a word, and a release announcement's on a bare bullet; it now ends after a whole word, with an ellipsis. On a dedicated instance, the support window warning read \"Upgrade OpenV within 1 days\", and \"within 0 days\" on the last day; it now counts the days left, rounding up, as \"within 2 days\" or \"within 1 day\", says \"Upgrade OpenV today\" on the last day, and the notice that the window has closed arrives when it closes rather than a day later.",
+      "**Notification emails show a workspace's name correctly in the subject.** A subject naming a workspace whose name has accented or other non-English letters, such as Zürich Labs, could show garbled in some mail programs; it is now encoded so that every mail program shows it as written. A line break in a workspace's name no longer reaches the email's headers: the subject shows it as a space.",
+      "**An artifact in a baseline is read-only.** Reading an artifact in a baseline still offered Edit, Delete, Submit for review and History, and they acted on the live artifact, not on the baseline: Delete removed it from the live project, a status change moved the live artifact along, and Edit left the document pane blank. A baseline now shows its artifacts without those buttons. To change an artifact, switch back to Live Project.",
+      "**Project settings keep your quality-rule changes, and screen readers can tell which tab is open.** An unsaved change on the Quality rules tab was lost when you switched to another tab, and the rules loaded again on every visit; the change is now still there when you come back, as on the other tabs, and the rules load once. A screen reader now announces the settings tabs as tabs and says which one is selected. The Add party and Remove buttons under Reference parties looked like plain browser buttons; they now match the other buttons in settings. And in a workspace that does not have share links yet, project settings no longer load them.",
+      "**An assistant card added to the project from the guided wizard says it was added.** When you added a card that creates an artifact in the project from the V&V Assistant beside the guided wizard, the artifact was created but the card said \"The change could not be applied.\" and kept its \"+ Add to project\" button, so a second click created a duplicate. The card now shows \"✓ Added to project\", stays marked as added when you come back to the wizard, and offers no second add.",
+      "**A name can no longer add lines of its own to a notification or an email.** A display name, a workspace's name, an artifact's title or an invited address with a line break in it went into notifications and into the emails OpenV sends as it was typed, so the text after the break stood on a line, or in a paragraph, of its own and read as if OpenV had written it. A line break, a tab or another invisible control character in such a name now reads as one space: in the bell, in phone alerts, and in notification, invitation, sign-up and password reset emails. A line break anywhere in an email's text also reaches the mail server as an ordinary line end, which no server can take for the end of the message. Names without such characters read exactly as before.",
+      "**A budget alert says which mark was passed and how much was spent.** When a workspace's agent spend for the month passed 80% or 100% of its budget, the alert its admins got ended \"(80%)\" or \"(100%)\", which read as the share spent even when 85% or 105% had been. The title now names the mark passed, as in \"Workspace reached 80% of its budget\", and the text gives the month's spend against the budget, as in \"This month's agent runs have spent $212.50 of the $250.00 budget.\", in the bell, in phone alerts and in email. The alert that a workspace's cloud runner minutes are nearly used up no longer ends \"(80%)\" either; it gives the minutes used against the plan's allowance.",
+      "**The refines link type's description is whole.** Hovering the refines link type when adding a link showed \"A requirement in a subsystem or supplier project refines a requirement of its parent project\" and stopped there, leaving out what the link does for verification. It now reads in full, as the server says it: \"…; the parent's verification rolls the refinements up\".",
+      "**A shared project names every artifact type.** On a project opened from a share link or the open-source page, a description or an \"other\" artifact was badged with its raw type name, \"description\" or \"other\", where every other artifact read as a word, such as \"Requirement\". They now read \"Description\" and \"Other\". The page also stops carrying a label for a \"non-functional\" type that no artifact can have.",
+      "**Antigravity CLI waits for a stable-channel workspace's stable release, as every new feature does.** The Antigravity CLI agent provider was offered to every workspace from the release that shipped it, stable channel included, even where the workspace's stable release did not carry it yet. Such a workspace is now offered it, in the agent editor's provider list and under AI providers in workspace settings, once its stable release carries it (0.7.0 or later), and an agent or provider setting that names it is refused until then with the usual \"reaches stable-channel workspaces at their next stable release\" message. An agent already on Antigravity CLI keeps it: it can still be edited and still runs. Nightly workspaces, and stable-channel workspaces already on 0.15.0, see no change.",
+      "**The activity log can show you any kind of event a project records.** The Type filter on a project's Activity page left out six kinds of event the log holds: status changes, review rounds, proposals an agent made for review, and members added to the project, removed from it or given another role. Those events were listed under \"all\" but could not be picked out on their own. The filter now offers every kind of event a project's activity can hold.",
+      "**The platform admin page names a workspace's legacy plan.** A workspace still on one of the first plan names, free or team, showed its plan in the admin page's plan picker as a bare \"free\" or \"team\" entry with no value behind it. It now reads \"Free (legacy Single User)\" or \"Team (legacy Business)\", selected, and those two are offered only to the workspace already on one: every other workspace's picker lists the current plans as before.",
+      "**Picking an artifact in the requirements tree loads it once.** A click on a row in the requirements workspace selected the artifact, briefly went back to the one selected before, and then selected the new one again, so the artifact's document, links, quality score and figures were requested twice for one click, with the previous artifact's once more in between. A click now loads the artifact once, live or in a baseline.",
+      "**Following a citation or pasting a copy in the requirements workspace selects it.** Clicking a reference such as #REQ-12 in an artifact's description or notes, or one to a figure that is no longer there, went straight back to the artifact selected before instead of opening the one it named. Paste before, Paste after and Duplicate in the tree's right-click menu made the copy but left the selection where it was. Each now selects the artifact it names, or the new copy, as a click in the tree does, and the page's address follows it.",
+      "**An expired share link no longer offers Revoke.** In project settings, a share link past its expiry date already opens nothing, yet its row still had a Revoke button, while a revoked link's row had none. An expired link's row now has no Revoke button either; it still shows \"expired\" and the date.",
+      "**The guided wizard leaves stray spaces out of what it writes.** A persona name typed with a space at its end gave every need written for that persona a sentence like \"As Pat the Planner , I need …\", with a space before the comma, even though the persona's own title left the space out. A space typed at either end of a persona's role, goals or pain points, or of a hazard's potential harm, likewise went into the artifact as typed. The wizard now trims each of these, in the artifacts it writes and in the need sentences it shows while you work, as the V&V Assistant's cards already did.",
+      "**A double-click on an assistant card adds it once.** A card from the V&V Assistant, beside the guided wizard or in the notes panel, counted as added only once the first click had finished, so a quick second click, or Apply all pressed while a card was still being added, added it again: a card that creates an artifact created two. A card's button is now set aside from the first click until it finishes, and a second click does nothing.",
+      "**Workspace settings keep your quality-rule changes too.** An unsaved change on the Quality rules tab of workspace settings was lost when you switched to another tab, and the rules loaded again on every visit. The change is now still there when you come back, and the rules load once, as in project settings.",
+      "**The Billing tab's buttons look like the rest of settings.** In workspace settings, Billing's Continue to Stripe, Manage billing, Update the card, Change plan and Keep the current plan buttons drew as plain browser buttons. They now match the other buttons in settings, with the step that moves you on (checkout, confirming a plan change, updating the card after a failed payment) drawn as the main button.",
+      "**An artifact in a baseline shows the version the baseline holds, and nothing else.** Reading an artifact in a baseline showed its version beside a count of the live artifact's versions, as in \"Version 2 • 5 total\", which said nothing about the baseline and read as if the baseline held five. The header now shows only the version the baseline holds, \"Version 2\", and no longer loads the live artifact's history to count it. Live, the header reads as before.",
+      "**A PDF's table of contents names the right pages, with no blank page after it.** A PDF download or report with a table of contents had an empty page after the contents, and every entry named the page before the one its section starts on. The blank page is gone, and each entry names the page its section is on.",
+      "**A requirement refined from another project is named in the PDF and Word traceability tables.** When a requirement of another project refined one of yours, a PDF or Word download listed it in the traceability table by a long internal id. It is now named by its project, reference and title, as in \"Landing gear / REQ-12 Brake within 2 m\".",
+      "**A project's description keeps its angle brackets on the PDF and Word covers.** Text in angle brackets in a project's description, such as `<pump>`, disappeared from the cover of a PDF or Word download, because the description was read as Markdown. The cover now shows the description as you typed it, as the app does, with its paragraphs and line breaks.",
+      "**Links say when they were made.** A link's `valid_from` read 0001-01-01T00:00:00Z in a project's JSON export, in the links an artifact shows and in the record of links each artifact version keeps for its history. It now reads the time the link was made. Baselines and artifact versions captured from now on keep the right time; earlier ones keep what they were captured with.",
+      "**A ReqIF document says when each requirement last changed.** Every `LAST-CHANGE` in a ReqIF export or download was the time of the export, so a tool such as DOORS or Polarion that merges ReqIF by it took every requirement and link as changed each time. Each requirement, its place in the outline and each link now carry the time it last changed; the type definitions, which OpenV keeps no such time for, still carry the export's.",
+      "**Importing a project keeps review status, suspect links and a baseline's attributes.** Importing an OpenV JSON export could lose an artifact's review status, brought every suspect link back as confirmed, dropped what was stored on each link, and dropped the attribute definitions a baseline's JSON download carries. The import now keeps each artifact's status and each link's suspect flag and attributes, and gives the new project the baseline's attribute definitions as its own, unless your workspace already defines the same attribute; it never changes your workspace's definitions. Imported artifacts still start at version 1.",
+      "**A crew no longer points at a node that is gone or belongs to another crew.** Deleting a crew's entry node, or the agent it placed, left the crew pointing at a node that no longer existed, and launching the crew failed with \"entry node not found in team\". The crew is now left with no entry node, as a new crew has, and a launch says \"team has no entry node\" until you pick one with *Set as entry node*; nothing else about the crew changes. A connection can only join two nodes of its own crew. When this update is installed, a crew whose entry node was gone or in another crew has its entry node cleared, and any connection that joined another crew's nodes, which could stop you adding connections to its crew, is removed.",
+      "**One damaged card no longer stops the board from loading.** A to-do whose stored list of linked artifacts was not in the form OpenV writes made the project's whole board and to-do list fail to load, and the card itself fail to open. Such a card now loads as one with no linked artifacts, and the server log names it so an operator can repair it.",
+      "**A note with more than one to-do shows the newest.** In the notes beside an artifact, a note from which several to-dos had been raised showed one of them, and which one could change from one visit to the next. It now always shows the most recently raised.",
+      "**Agents, project members and team access list in the same alphabetical order on every server.** Depending on how the server's database was set up, the agents page, a project's members and the teams with access to a project could list every name that starts with a capital before any that starts with a small letter, so \"Bravo\" came before \"alpha\", and two agents or teams with one name could swap places between visits. These lists are now alphabetical without regard to case everywhere, a name in capitals before the same name in small letters, and entries with the same name always come in the same order.",
+      "**Adding a member to a project deleted a moment before says the project was not found.** Adding someone to a project, or changing a member's role, just as the project was deleted answered \"failed to add member\" or \"failed to update member role\", as if the server had failed. It now answers \"project not found\", as opening a deleted project does.",
+      "**A scheduled automation whose schedule can no longer be read is switched off instead of silently stopping.** An automation holding a cron expression OpenV can no longer read ran at most once more and then never again, while the Automations table still showed it switched on. Such an automation is now switched off without running, so the table shows it off: correct its schedule and switch it back on. OpenV already refuses such a schedule when an automation is saved, so only older automations can hold one.",
+      "**An automation's last run shows only runs that were launched.** A scheduled automation's last run moved to its scheduled time even when no run started: when its agent or crew could not be found, when the launch was refused (over the workspace's budget, for instance), or when a run missed while OpenV was down was skipped. Last run now changes only when a run is actually launched. A missed or failed occurrence is still not retried; the next one runs as usual.",
+      "**An event filter on a number of a million or more matches.** A triggered automation whose event filter compared a number in the event, such as an artifact's version, with a number of 1,000,000 or more never fired, because the two were compared as text and the filter's number read as \"1e+06\". Numbers are now compared as numbers. This affected filters written through the API with a number as the value; a filter set in the app holds text and already matched.",
+      "**A blank prompt falls back to the standard one on every kind of run.** When an automation's prompt template came out blank, a triggered run started with OpenV's standard prompt, but a scheduled run or **Run now** started with the blank prompt itself if the template came out as nothing but spaces or line breaks, as a template of placeholders that do not apply can. All three now start with the standard prompt (\"Scheduled run of automation: …\", \"Manual run of automation: …\") whenever the template comes out blank.",
+      "**A triggered automation holds back when its loop guard or hourly cap cannot be checked.** Before it fires, a triggered automation checks that the event was not caused by one of its own runs and that it has not reached its runs-per-hour limit. When OpenV could not make either check, during a brief database outage for instance, the automation fired anyway, so it could set itself off again or run past its limit. It now skips that event, and the skip is logged.",
+      "**More events can trigger an automation.** A triggered automation's event list offered 10 of OpenV's event types; it now offers all of them, adding an artifact's status change and restore, a deleted baseline, a review round started, a new comment, a work item's update, crew hand-offs skipped, an agent's proposal, and changes to project and workspace membership and invitations. An automation saved on one of these events through the API now also opens with its own event shown, not another. Workspace membership and invitation events concern the whole workspace, so they fire only an automation that covers the whole workspace, not one that covers a single project: see *Make an automation for the whole workspace* above.",
+      "**Automations keep time on a server whose clock is not set to UTC.** On an OpenV server running in another time zone, as a self-hosted one can, automations recorded their times shifted by the zone's offset: the Automations table showed the next and last runs hours off, a scheduled automation ran hours before or after the next run it showed, and a triggered automation's cooldown and runs-per-hour limit counted from the wrong moment, so it could be held back for hours after a run or run past its limit. Automations now record every time in UTC, and a schedule is read in UTC on every server, as it always was on OpenV's hosted service.",
+      "**An automation triggered on a link's update fires.** A triggered automation could be set to run on `link.updated`, but changing a link's type or attributes never set it off, because OpenV recorded no event for it. Changing a link through the API now records a `link.updated` event, as creating and deleting one already did, naming the link's two artifacts and the type it has now: it starts the automations waiting for it, and the change shows in the project's activity log.",
+      "**An automation runs only agents and crews of its own workspace.** Through the API, an automation could be saved naming another workspace's agent or crew, a crew made in another project, or another workspace's project, and its runs then used them. Saving one now answers \"agent not found\", \"crew not found\", \"the crew is pinned to another project\" or \"project does not belong to this workspace\"; an automation for the whole workspace also refuses a crew made in one project, since it runs in every project. An automation already saved is checked again only when its agent, crew or scope is changed.",
+      "**Switching an automation between an agent and a crew saves.** Editing an automation to run a crew instead of an agent, or an agent instead of a crew, failed with \"exactly one of agent_id or team_id must be set\". It now saves with the new target.",
+      "**A mistyped `OPENV_PLAN_DEFAULT` is warned about at boot.** For operators: when `OPENV_PLAN_DEFAULT` named no plan, new workspaces were quietly created on the `single` plan, even on a self-hosted deployment, and the boot log still showed the mistyped name as the default plan. Such a name now keeps the deployment's default, `self_host` with `OPENV_SELF_HOSTED=true` and `single` otherwise; the boot log carries a warning naming the variable, and its `workspace limits configured` line shows the plan actually used. `open_source`, which was ignored the same way, is now accepted.",
+      "**A failed Antigravity run points you to a Gemini API key only when it failed to sign in.** The note about the keyring and setting a Gemini API key was added whenever the CLI's error merely contained letters such as \"auth\" or \"login\", so an error about an \"author\" field or a file named `auth.go` was explained, and failed, as a sign-in problem, while \"invalid API key\" or \"HTTP 403\" came with no explanation. The note now appears exactly when the run fails as a sign-in problem, read by the same whole-word rule as every other agent's failure.",
+      "**Deleting a project now deletes everything in it.** Deleting a project removed the project itself, its members, baselines and share links, but left its artifacts with all their versions, comments, attachments and links, its to-dos, crews, test runs, interviews, guided sessions, project attributes, automations and agent proposals stored, out of sight but still on the server, and links between its artifacts and other projects' stayed in place. All of it now goes with the project, at once or not at all, links to and from other projects' artifacts included. The project's agent runs stay in the workspace's usage, no longer tied to a project, its entries stay in the activity log, and a project filed under it moves to the top level, as before. When this update is installed, what was left behind by projects deleted earlier is removed the same way.",
+      "**Changing or deleting a project deleted a moment before says the project was not found.** Saving a project's settings, or deleting it, just as someone else deleted it answered \"failed to update project\" or \"failed to delete project\", as if the server had failed. It now answers \"project not found\", as opening a deleted project does.",
+      "**Purging a deleted workspace leaves nothing of it behind.** When a deleted workspace's 30 days ran out and it was purged, OpenV kept the counter it numbers each artifact's figures by, for every artifact that had a figure, and, for a link between one of the workspace's artifacts and an artifact in another workspace, the record of which version of the other artifact the link was made against. Neither was shown anywhere, but both stayed on the server. They now go with the workspace when it is purged.",
+      "**Deleting a project removes the files uploaded to it.** Deleting a project took everything in it out of the workspace, but the files uploaded to it, its figures with every earlier version and its evidence files, stayed stored on the server. They are now removed as the project is deleted. A file the server cannot remove is noted in its log, and the project is deleted all the same. Files of projects deleted before this update stay where they are.",
+      "**Deleting a project stops its agent runs.** An agent run waiting in a deleted project's queue still started, with no project to work in, and one already running carried on to the end. Deleting a project now cancels its waiting runs and asks its running ones to stop, as **Cancel** does, and a run's access to OpenV ends at once. The runs stay in the workspace's usage, as before."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.15.1",
+   "date": "2026-09-30",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Runners open a run's repositories with the run's own access.** A runner now looks up the repositories of the project an agent works in with the access OpenV gives that run, not with the runner's own key, which reads only the projects its owner can open. Your personal runner keeps working from your own copy of each repository, the local path you set under Project settings → Repositories, and a run taken by a workspace runner clones the repository, as before.",
+      "**The manual says what an agent can read on the machine it runs on.** An agent runs as the same user of the machine as the runner that runs it, so it can read whatever that user can: on your own machine, your files and the Agent Connector's key file, and on Windows and macOS the runner's environment, which holds its key. The *Runs & runners* page of the manual, and the runner setup guide, now say so, and recommend a cloud runner or the hosted runner, which run on Linux with nothing of yours on them, or a separate user on your machine, for agents you do not fully trust.",
+      "**The web app's connection library carries today's security fixes.** The app now uses axios 1.20.0. Security advisories published on 30 September 2026 cover every earlier 1.x version: requests that could be redirected or altered by polluted objects, and inputs that could stall the app. Nothing you do in the app changes."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A runner no longer prints its keys in its help or on a flag error.** `agentd` showed the worker key and the runner pool key, from `WORKER_API_KEY` and `RUNNER_POOL_KEY`, as the defaults of `--worker-key` and `--pool-key`. It printed them in `agentd -h`, and in the usage it prints on any flag error, such as a mistyped flag, so both keys could land in a container log or in help output someone shared. The runner now names those variables and never prints their values, and `--pool` and `--node-name` no longer show two defaults when `RUNNER_POOL` or `RUNNER_NODE_NAME` is set. A runner still reads all four from the environment when the flag is not given. If a runner's help or flag-error output may have reached anyone, or a log others can read, replace the keys it showed. *Rotate* a personal runner key under *My personal runner* in your settings, which stops the old key at once. For a workspace key, use *Create key* on the workspace's *Runners* tab, move the runner to the new key, then *Revoke* the old one, which keeps working until you do. If you run your own OpenV, also set a new `RUNNER_POOL_KEY` on the server and its pool nodes, and a new `WORKER_API_KEY` on the server if the runner used the deployment's own key, then restart them.",
+      "**A runner no longer hands its own keys to the agents it runs.** Every program a runner started for a run (the agent's CLI, its sign-in and version checks, and git in the run's workspace) inherited `WORKER_API_KEY` and `RUNNER_POOL_KEY` from the runner, and on Linux any of them could also read both from the runner process itself. So an agent, or a command or git hook it ran, could read the key its runner signs in with, and on a pool node the deployment's shared pool key, whichever member's run it was. The runner now keeps both keys from everything it starts, and on Linux, hosted runners and the runner image included, it stops programs running as its own user from reading its environment or memory. On Windows and macOS a program running as the same user can still read a runner's environment through the operating system, so run agents you do not trust on Linux or as another user. Agents still reach OpenV with their run's own token, and every other setting, a provider's API key included, reaches them as before. If agents you do not fully trust have run on a runner, replace the key it used. *Rotate* a personal runner key under *My personal runner* in your settings. For a workspace key, use *Create key* on the workspace's *Runners* tab, move the runner to the new key, then *Revoke* the old one. If you run your own OpenV, also set a new `RUNNER_POOL_KEY` on the server and its pool nodes, and a new `WORKER_API_KEY` on the server if a runner used the server's own key.",
+      "**Committing a guided definition approves its drafts.** The wizard's last step said every draft was now live, but the personas, needs, requirements, hazards and test stubs it had created stayed drafts: Requirements showed them as drafts, and the next *Modify guided definition* listed them for review all over again. *Commit* now approves each one as an approval by hand does: its history shows it going through review to approved, with a note for each step, and the project's *Activity* page records who approved it. A reopened definition that adds nothing new can still be committed, with *Commit definition*. Drafts left by a definition committed before this release stay drafts, and committing a later *Modify guided definition* does not approve them: submit each for review and approve it from its status in Requirements, or send the project for review and approve them from the Review Queue.",
+      "**Open-source projects now show on the open-source page.** A workspace on the open-source tier found none of its projects listed there, and each project's public address answered *not found*, even after a baseline was taken. Every project with a baseline is now listed, and its address opens the latest baseline for anyone, no account needed, with a preview card when the link is shared. Work since the last baseline stays private, a new name or description included, and so do the other projects its requirements are linked to.",
+      "**The V&V report now counts verification done in child projects, as the V&V dashboard does.** A requirement with no test case of its own, verified through the requirements of a child project that refine it, was counted as uncovered in the PDF from *Download V&V report* and listed there under *Requirements without a test case*, although the dashboard showed the result its refinements earned. The report, and the V&V status in a downloaded PDF or Word document, now give a requirement refined in a child project the same result as the dashboard: the worst of its refinements' results, or, for a requirement with evidence of its own (its own test cases, or marked verified), the worse of its own result and theirs. A requirement without a verification method is still listed as missing one.",
+      "**A demonstration, analysis or inspection requirement refined in a child project is no longer listed as *Unverified*.** The V&V gaps, and the V&V report, listed it there while its refinements were still uncovered, even once it was marked verified itself, although a test requirement in the same place was never listed under *Requirements without a test case*. Neither is listed now: the gap is in its refinements, and the dashboard shows each of them with its own result.",
+      "**Verification that reaches a project by two routes now counts on both.** When one project's requirements refined requirements of two projects of a programme, say both the aircraft's and the landing gear's, and were refined in turn by a project below, the V&V dashboard, gaps and report could count requirements verified through it as uncovered, and which ones could change from one reload to the next. Each now gets the result its refinements earned.",
+      "**Citing the same evidence twice from one test result through the API no longer answers with a citation that does not exist.** The repeat was accepted, but its answer carried a new citation id, time and note that were never saved, so that id could not be found afterwards. It now answers with the citation already on record, its original note and time intact; to give a citation a different note, remove it and cite the evidence again with the new note.",
+      "**A workspace update refused through the API no longer saves part of the request.** A `PUT /api/v1/orgs/{id}` refused for one of its settings, such as a monthly budget the workspace's plan does not include or a release channel it cannot choose, could still save other settings sent with it, a new name among them. A refused update now changes nothing. Workspace settings in the app save one setting at a time and were not affected.",
+      "**Uploading a logo for a workspace that does not exist answers *workspace not found*.** A platform admin's logo upload through the API for an unknown workspace id answered with a server error and left the file on the server. It now answers 404 and stores nothing.",
+      "**Switching to a workspace that does not exist is refused.** A platform admin's `POST /api/v1/orgs/{id}/activate` for an unknown workspace id answered as though the session had switched to it. It now answers 404 *workspace not found*, and the session stays in the workspace it was in.",
+      "**Previewing the next stable release is refused in a workspace you are not a member of.** A platform admin who turned the preview on in a workspace they do not belong to was answered as though it had worked, with the preview still off. The preview belongs to a member's own place in the workspace, so the request is now refused with *you are not a member of this organization*.",
+      "**Restoring a deleted workspace answers with the workspace as restored.** The answer gave the workspace's last-updated time as the time it was deleted; it is now the time of the restore, as reading the workspace afterwards shows.",
+      "**Profile pictures and workspace logos must be the image type they claim to be.** A picture of one image type named as another, such as a GIF saved as `.png`, or a BMP or icon file renamed to `.png`, was accepted and then served as the type its name claimed. It is now refused with *File content does not match an image of the declared type*: save the picture as a real PNG, JPEG, GIF or WebP file and upload it again. Pictures and logos uploaded before this release are left as they are.",
+      "**Demoting a workspace's last admin now says why it cannot be done.** Changing the only admin's role to member failed with *failed to update workspace member*, an error that looked like a fault on our side. It is now refused with the reason, that the last admin of a workspace cannot be demoted, as removing that admin already was: make another member an admin first.",
+      "**Removing someone who is no longer a member of the workspace is refused.** Removing a person who had already left, or whom another admin had removed a moment before, answered as if it had worked, and the workspace's admins were told of a removal that did not happen. The same went for an account named through the API that was never a member. Such a removal is now refused, as a role change for that person already was, and only removals that happen are announced. In the Members tab, either refusal now refreshes the list and says the person is no longer a member, instead of saying that you are not one.",
+      "**A platform admin granting a plan to a workspace that pays by subscription is told why it is refused.** Moving a workspace with a live subscription onto the enterprise or open-source plan from the platform admin page failed with *failed to set the workspace plan*. It is now refused with the reason, that the workspace has a live subscription to cancel before a plan can be granted, and an API client gets `409` with the code `already_subscribed`, as a checkout for that workspace does.",
+      "**Membership notifications name your role in plain English.** The notification and email for joining a workspace said you had \"the a member role\", and those for project access said \"a editor access\" or that your role was now \"a editor\" or \"a owner\". They now read \"with a member role\", \"with an admin role\", \"editor access\", \"an editor\" and \"an owner\".",
+      "**A workspace's admins are told whenever someone joins by invitation.** Signing up from an invitation link added the account to the workspace without telling its admins, although joining through single sign-on did; and taking a link up while signed in told the person who joined, in the app and by email, what they had just done. Every way of taking up an invitation now tells the workspace's admins who joined and with which role, and does not notify the person who joined. For API clients, the workspace's events now carry `org.invitation_accepted` for a sign-up with an invitation link too, and name the person who joined as its actor where a signed-in acceptance named `system`.",
+      "**The password reset email gives the link's full hour.** It said the link was valid for 59 minutes; the link has always lasted an hour, and the email now says 60 minutes.",
+      "**A workspace's automations fire only on events in that workspace.** An automation set to run when something happens anywhere in its workspace, such as a new artifact, also ran when that happened in another workspace on the same server: the run was placed in the other workspace's project, with that workspace's artifact title in the agent's instructions and the run's card on that project's board. An automation now runs only for events in its own workspace, and, when it is pinned to a project, only for that project's.",
+      "**An automation records the person who created it.** An automation created through the API was recorded as created by whichever account the request named, and one created in the app recorded no creator at all. It is now always recorded as created by the person who created it; an account named in the request is ignored.",
+      "**An agent can no longer approve or reject its own proposals.** An agent that proposes its changes for review could approve those proposals itself through the API, with the credentials its run is given, so its changes reached the project without anyone reviewing them. A run's credentials are now refused whenever they are used to approve or reject a proposal, and every change an agent proposes waits for a person to review it.",
+      "**A personal runner key can no longer approve proposals or change artifacts beyond its owner's role.** A member's personal runner key could approve or reject an agent's proposals, and create or change artifacts, in every project of the workspace, even one where that member could only view. Used through the API, it now needs the same access its owner needs in the app: an editor's role in the project, or admin of the workspace. Workspace runner keys are unchanged.",
+      "**A workspace admin's list of proposals through the API holds all of the workspace's proposals.** Asking for the proposals of a whole workspace, with no project named, could leave out some or all of that workspace's proposals once other workspaces on the same server had hundreds of newer ones. The list now holds the workspace's own proposals, the newest 500 of them; when there are none it is `null`, as a project's empty list already was.",
+      "**A run that fails once its changes are reviewed keeps the reason.** When an approved change an agent proposed could not be applied, the run was marked failed, but the reason, *one or more approved proposals failed to apply*, showed only to someone watching the run at that moment: opened later, or read through the API, the failed run gave no reason at all. The run now keeps it.",
+      "**A run handed back to the queue no longer lets its agent go on working.** When a runner shutting down handed an unfinished run back, the agent it had started could still read and write the project with the run's access until another runner picked the run up. That access now ends the moment the run is handed back (its token answers `401`), and the runner that picks the run up gets access of its own.",
+      "**A run still waiting in the queue can no longer be reported finished.** A runner's key could mark such a run, one no runner had picked up, as finished, with a result no agent had produced. Such a report is now refused with `409`, as a second report for a finished run already was, and the run stays in the queue for a runner to take.",
+      "**An agent whose changes need review can no longer use the *Draft test cases* request.** An agent in proposal mode could call it through the API, which started another agent run and put its card on the board with no person asking for it and no record of who had. That request is now refused for such an agent, as a status change by such an agent already was. People, and agents that write directly, draft test cases as before.",
+      "**Deleting an agent that is already gone, and two runner requests about something that no longer exists, answer *not found*.** Through the API, deleting an agent a moment after someone else did (or one that never existed), a runner pool node releasing itself after the pool lost its record, and a crew agent delegating after its place in the crew was removed all failed with a server error. They now answer `404`: *agent not found*; *pool node is not registered*, as the node's heartbeat already did, so the node no longer retries the report (its heartbeat, answered the same way, is what has it register again); and *team node not found*.",
+      "**A runner's report of its AI tools is recorded in full.** A runner reports every AI tool it has in one go, and when that report named one this server does not know, as a newer runner's can, the tools the server does know were recorded or not at random, so the workspace's *AI providers* settings could show a tool the runner has as never detected. Every tool the server knows is now recorded, and the report is still refused for the one it does not.",
+      "**Copying a crew checks the project it is copied into.** A crew copied through the API with a `project_id` that named no project, or a project of another workspace, was accepted, and the copy then could not be renamed, changed or deleted, even by the workspace's admins. A copy now goes where a new crew may: into a project of the crew's own workspace that you can edit, or, for a workspace admin, the whole workspace; anything else is refused with the reason. *Start from default crew* in the crew builder always named the project you were in and was not affected. A crew whose project has since been deleted, or that was pinned to another workspace's project, is now looked after by its own workspace's admins, and a crew's run always stays in the crew's workspace.",
+      "**A project's crew runs in that project when launched without naming one.** Launching a crew made for a project through the API, with no project in the request, started a run that belonged to no project: it got no card on the board, and only the person who launched it and the workspace's admins could follow it. It now runs in the crew's project, with its card on that project's board. Launching from the crew builder always named the project and was not affected.",
+      "**Saving an AI provider's settings again answers with their saved id.** `PUT /api/v1/provider-settings` for a provider whose settings were already saved answered with a new id that was never stored, so it did not match the id the provider settings list shows. It now answers with the saved id. The settings themselves were always saved correctly.",
+      "**A completed CLI sign-in stays completed.** When a runner reported a vendor CLI sign-in as failed after it had already reported it complete, the sign-in showed as failed although the CLI was signed in. A completed sign-in now keeps its status, as a cancelled one already did.",
+      "**Only a workspace admin can cancel a sign-in on the workspace's shared runners, or paste its code.** Any member of a workspace could cancel a vendor CLI sign-in an admin had started on the workspace's shared runners, or paste an authorization code into it, which could sign those runners in to the member's own account, although only an admin can start one. Both now take a workspace admin, as starting one does. A sign-in on your own runner is unchanged: you, and the workspace's admins, can still cancel it or paste its code.",
+      "**A workspace runner key can no longer do what only a project's owner can.** A workspace runner key carries an editor's rights in every project of its workspace, but used through the API it could also do what only a project's owner or a workspace admin can: see, create and revoke the project's share links, add, change and remove its members and team access, connect, change and remove its repositories, delete baselines, rebuild the project's search index, and delete the project itself. It is now refused these, as a project editor is. Everything an editor can do it still does, and its changes still land without review. Personal runner keys are unchanged.",
+      "**An agent can no longer create projects.** With the credentials its run is given, an agent could create a new project in its workspace through the API, a project with no owner, and an agent whose changes need review did so without anyone reviewing it. An agent works only in its run's project, so its credentials are now refused (`403`) when they are used to create a project, and creating one from a template or by import, which was already refused, now gives the same reason.",
+      "**An agent refused an owner's action in its own project is told why.** When an agent asked for something only the project's owner may do, such as creating a share link or adding a member, the refusal said the agent's run was not scoped to the project, although the run belonged to it. It now says that an agent run acts at most as a project editor. A request for another project is still refused as not scoped to it.",
+      "**A platform admin asking for a project or workspace that does not exist is told it is not found.** Through the API, a platform admin who named a project that does not exist in a download, the export, a V&V view or report, the product profile, the quality report or a delete got a server error, and so did a connector pairing for a workspace that does not exist; many other such requests answered with an empty list or as if they had worked. Wherever a platform admin's access to a project or workspace is checked, OpenV now first checks that it exists, and one that does not answers `404` *project not found* or *workspace not found*.",
+      "**Removing someone from a project that does not exist is refused, and nobody is told of it.** A platform admin's removal of a member or of a team's access from a project that does not exist, the revocation of their own runner key in a workspace that does not exist, and a search reindex of such a project answered through the API as if they had worked, and the member's removal told the admin's own workspace that someone had left a project that was never there. They now answer `404`, and nothing is announced.",
+      "**Nothing can be added to a project that does not exist.** A platform admin creating an artifact, an attribute definition or a guided session through the API for a project that does not exist had it saved where no project could show it, and the new artifact was announced in the admin's own workspace; saving such a project as a template failed with a server error. Each is now refused with `404` *project not found*, and nothing is saved or announced.",
+      "**Creating a project from a template that is not there answers *template not found*.** Through the API, a well-formed template id that no template has failed with a server error; it now answers `404` *template not found*. So does a template saved in another workspace, which yours cannot see, where a project used to be created from it, copying that template's content into your workspace. Built-in templates and your own workspace's templates work as before.",
+      "**Importing a JSON file that cannot be read says why.** Importing a JSON file that is not valid JSON, such as one cut short, failed with *failed to import project*, an error that looked like a fault on our side. It is now refused with the reason the file could not be read, as a malformed ReqIF file already was (`400` for an API client).",
+      "**A read-only workspace on a self-hosted deployment is told which setting to change.** On a deployment the operator runs themselves, a workspace over the deployment's limits is read-only, and every change refused there told a workspace admin to subscribe from the Billing tab, which such a deployment does not have, and called those limits the workspace's plan. The refusal now speaks of the deployment's limits and names the setting to raise in `OPENV_LIMITS`, as a refusal at one of those limits already did. Hosted workspaces are pointed to the Billing tab as before.",
+      "**An agent whose changes need review can no longer start other runs.** With its run's credentials, an agent in proposal mode could launch another agent, a crew, or an agent on a test run through the API, send the V&V Assistant a message, or set up an interview with any agent as its interviewer, invite a participant and answer as one, and so start work whose changes could land with no one reviewing them. Each is now refused (`403`), as *Draft test cases* already was, and so are retrying a run and running an automation now. An agent that writes directly can still launch runs, and a run it launches now shows under it in the run tree of its run's details, where it had stood alone with no record of what started it; the tree shows only the runs you could open yourself. Like a run a crew agent delegates, such a run is followed in that tree rather than on a card of its own on the board, and it is not retried automatically if it fails.",
+      "**Every way of creating a project counts toward the workspace's project limit and respects a read-only workspace.** Creating a project from a template or by importing one did not count toward the most projects the workspace's plan allows (on a self-hosted deployment, `OPENV_LIMITS`), so either could take a workspace past its limit and make it read-only; and on a workspace already read-only because it is over its plan, a new project and one from a template were still created. Each now counts: at the limit it is refused with the limit and how to raise it, and on a read-only workspace a new project and one from a template are refused like any other change. Importing stays available on a read-only workspace while the workspace is under its project limit. Launching an agent with no project through the API now also needs you to be a member of the agent's workspace, and is refused while that workspace is read-only.",
+      "**A runner key can no longer create projects.** Through the API, a workspace runner key, or a member's own runner key, could create a project that no one owned, and creating one from a template or by import with it answered as if nobody had signed in. Each is now refused (`403`, *runner keys cannot create projects*). Any member of a workspace still creates projects there and becomes their owner.",
+      "**An agent listing projects sees only its own.** Through the API, an agent's run credentials listed every project of its workspace, including projects the agent cannot open. The list now holds only the project the run works in, and is empty for a run that has none.",
+      "**A personal runner key reads only the projects its owner can open.** A member's personal runner key could read every project of its workspace through the API, and list them all, even projects that member could not open in the app. It now reads and lists only the projects its owner can open, as a workspace admin or with a role in the project, and anything else is refused as it is for the member. Workspace runner keys are unchanged.",
+      "**A personal runner takes only the work its owner could see.** A member's personal runner picked up automation and board runs from every project of the workspace, so its agent worked in projects that member cannot open. It now takes such a run only in a project its owner has a role in, or, for a workspace admin, anywhere in the workspace. A run that belongs to no project, which only a workspace's admins can open, is left to an admin's runner or to the workspace's shared runners. Runs you launch still go to your own runner, and workspace and hosted runners take any run as before.",
+      "**Runner keys and share links can be revoked in a read-only workspace.** In a workspace that holds more than its plan allows, and so is read-only, revoking a workspace runner key, your own personal runner key or a project's share link was refused like any change to the workspace (`403 plan_read_only` for an API client), so the key or link went on working until the workspace was back under its plan. Revoking them is now always allowed there, as removing someone from the workspace or revoking a workspace invitation already was.",
+      "**You can switch to a read-only workspace, set your own stable-release preview and end your cloud runner there.** In a workspace that holds more than its plan allows, turning the next stable release's preview on or off for yourself and ending your leased cloud runner were refused, although neither changes the workspace, and so was making it your session's active workspace (`POST /api/v1/orgs/{id}/activate`, which the app sends when you switch to it). These three now work there as in any other workspace; starting or extending a cloud runner lease, like changes to the workspace's own content, stays refused until it is back under its plan.",
+      "**A run can be cancelled in a read-only workspace.** In a workspace that holds more than its plan allows, a project's editor could not cancel a run someone else had launched in the project, nor a workspace admin a run launched outside any project: the cancel was refused as a change to the workspace, although the person who launched the run could cancel it. Everyone who may cancel a run can now cancel it there.",
+      "**Something you cannot reach answers exactly as something that does not exist.** Through the API, a project, a workspace, or anything in them that your account cannot open answered `403` saying you had no access, and some of them told another workspace's runner key or agent that it needed to sign in, while one that did not exist answered `404`, so the answer told anyone who guessed an id that it existed. Both now get the same `404` and the same message: *project not found*, *workspace not found*, or the item's own, such as *baseline not found*, *team not found* or *agent run not found*. This holds for people outside the workspace, for another workspace's runner keys and agents, for an agent working in another project, and for a workspace member with no role in the project. A crew is launched only by someone who may see it: a member of its workspace, that workspace's runner keys and agents, or someone who can open the project it is pinned to; an agent sees a crew pinned to a project only if it works in that project. An editor of a project who is not a member of its workspace, launching one of that workspace's crews there, is now told *team not found*. Something a request names in a project or workspace you cannot open is refused as if it did not exist too: a link from or to an artifact there answers `400` *source artifact not found* or *target artifact not found*, a crew pinned to such a project `400` *project not found*, a parent project `400` *parent project not found*, an interview's persona `400` *persona artifact not found*, and giving a people-team of such a workspace access to your project `404` *team not found*. A project you can open but may not change still answers `403`. A deleted workspace now answers *workspace not found* to its own members too. Its admins can still restore it, a member who is not its admin is still told that only admins can, and restoring a workspace you are not a member of answers *workspace not found*. In the app, a link to a project you cannot open still takes you back to your projects.",
+      "**A platform admin's event and run lists for a project show that project's.** Through the API, `GET /api/v1/events?project_id=` and `GET /api/v1/agent-runs?project_id=` answered a platform admin an empty list unless the admin's own active workspace was the project's. They now list that project's events and runs, as every other read of it does, and so they do for a member of the project working in another workspace.",
+      "**Listing proposals without naming a project says what is missing.** Through the API, `GET /api/v1/proposals` with no `project_id` refused a workspace member who is not its admin with `403`, as if forbidden. It now answers `400` *project_id is required*. Workspace admins still get the proposals of their whole workspace.",
+      "**An id that is not an id is answered as one that does not exist.** Through the API, a request that named something by a malformed id, one that is not a UUID, failed with a server error (`500`) in many places: reading or managing a workspace or a project, choosing your default workspace, marking notifications read or flagging one, a platform admin's password reset link or admin standing, a template, evidence, a shared product, the agent and run filters of the run and proposal lists, and the runner pool's nodes; an id holding a byte that is not text, such as `%FF` or `%00`, failed so on every project and workspace. Each now answers as for an id nobody has: `404` with the usual *not found*, an empty list, or nothing changed. Updating or restoring an artifact, recording a test result for a test case, and downloading a project from a baseline failed with a server error for an id nobody has, and so for a malformed one; they now answer `404` *artifact not found* or *baseline not found*. Giving a project role to an account that does not exist now answers `404` *user not found*, where it failed with a server error.",
+      "**A profile picture is shown only to people who share a workspace with its owner.** Anyone signed in could fetch any account's uploaded profile picture by the account's id, including someone who shares no workspace with it. A picture is now served to the account itself, to members of the workspaces it belongs to, and to platform admins. Anyone else is answered `404` *user has no uploaded picture*, exactly as for an account with no picture or no account at all, so the answer no longer tells them the account exists. Where OpenV lists someone whose picture you may not see, such as a project member from outside your workspace, it shows their initial in its place.",
+      "**Returning from a checkout the billing provider has no record of says so.** Through the API, `POST /api/v1/orgs/{id}/billing/refresh` with a `session_id` the billing provider does not know answered `503` *the billing provider did not answer*, with a `Retry-After`, as if the provider were down and trying again could help. It now answers `404` *checkout not found*, with no `Retry-After`, and still leaves the workspace as it was. When the provider really does not answer, the refresh still answers `503` with a `Retry-After`, as before.",
+      "**Signing up with a password that is too short gives the same error code as changing or resetting one.** Through the API, `POST /api/v1/auth/register` refused a password under 8 characters with *password must be at least 8 characters* but no error code, where changing or resetting a password gives that refusal the code `weak_password`. Signing up now gives it the same code and the same message. Signing in is unchanged: a wrong password, however short, is refused with one message that does not say whether the account exists.",
+      "**A closed test run no longer takes new results, and a run takes results only for its own project's test cases.** A result recorded in a test run that had been completed or aborted was accepted, so a closed run's record could still change. It is now refused with `409` and the message *this test run is completed; only in-progress runs accept new results*. A result for a test case of another project was accepted into a run too; it is now answered as for a test case that does not exist, `404` *artifact not found*, whether or not you can open that project. An approved agent proposal that records a result follows the same rules.",
+      "**Recording a test result again keeps the earlier one.** Recording a result for a test case a run already had one for overwrote it, so only the automatic note on the test case said what it had been. Each result is now kept: the newest is the case's result wherever OpenV shows one (the run's grid, V&V coverage and gaps, reports and documents), evidence cited for the case moves with it, and API clients list every result a run holds with `GET /api/v1/test-runs/{id}/results?history=true`, newest first. A result recorded again has an id of its own. Deleting a test run that holds results, which deleted them with it, is now refused with `409`, and the run is kept: complete or abort a run still in progress instead. A run with no results can still be deleted.",
+      "**A time sent with a time zone offset keeps its moment.** An evidence capture's date, a to-do's due date and an interview invite's expiry were stored without their offset, so a time sent as `2026-01-15T09:30:00+01:00` read back as `2026-01-15T09:30:00Z`, an hour late, and an invite with such an expiry expired at the wrong time. They are now stored as the moment sent and read back in UTC, `2026-01-15T08:30:00Z` for that example, as a workspace invitation's expiry is too. Times stored before this release read as the UTC times OpenV wrote. The app already sends these dates in UTC, so what it shows is unchanged; API and MCP clients that send an offset now get the moment they meant.",
+      "**Restoring an earlier version of an artifact keeps its reference, and the activity log records it.** Restoring a version from an artifact's History gave the artifact a new reference, so REQ-3 might become REQ-9 and every citation of REQ-3, in documents, notes and other artifacts, stopped pointing at it; figures added afterwards were numbered under the new reference. A restore now keeps the artifact's reference, as every other edit does. Only a restore that brings back a different type of artifact, such as a heading over what is now a requirement, takes a new reference of the matching kind, as changing the type does. Each restore now also appears in the project's activity log as *artifact.restored*, with the version it brought back, and the log's filter offers it. An artifact a restore already renumbered keeps the reference it has now.",
+      "**Restoring a version an artifact never had says so.** Through the API, restoring an artifact to a version it never had failed with a server error (`500`). It now answers `404` *artifact version not found*, and nothing is written.",
+      "**A deleted artifact's history can still be read.** Through the API, the version history of a deleted artifact answered `404` even to the project's members, although OpenV keeps every version. Anyone who can view the project can now read a deleted artifact's versions, and the links of any one of them. Someone with no access to the project still gets `404`, as for an artifact that does not exist.",
+      "**Adding a figure to an artifact creates a new version of it.** Uploading a new file for a figure, or renaming one, already took the artifact to a new version, but adding a figure did not, so the History did not show when a drawing first appeared. Adding a figure now creates a version too. As with the other figure changes, that version does not send an approved artifact back to draft or mark its links suspect.",
+      "**Deleting a baseline is recorded in the activity log.** A project owner could delete a baseline and nothing recorded that it had existed. The deletion now appears in the project's activity log as *baseline.deleted*, with the baseline's name and who deleted it, and the log's filter offers it. Deleting a baseline is still for the project's owners alone.",
+      "**A baseline keeps the project's attribute definitions.** A baseline kept a project's artifacts, links and the details of its attachments, but not the custom attributes defined for it, so what a baseline's values meant could change after it was taken. A new baseline also keeps the attribute definitions in effect when it is captured, the workspace's and the project's, and its ReqIF download types list attributes by them. Its PDF and Word downloads, and the fields the download wizard offers for it, name each custom attribute as it was defined then, where the live project's downloads name it after its key. Attachment files are still not copied into a baseline, and each attachment's name, type and size are still kept. Baselines captured before this release are unchanged and read as before.",
+      "**PDF and Word downloads include V&V status unless you turn it off.** A downloaded specification carried each requirement's verification status, the coverage summary and the gaps only when *V&V status* was ticked or the Verification & Validation template chosen. Every PDF and Word download, and the Specification template, now carries them by default; untick *V&V status* under *Document* in the download wizard to leave them out. The Requirements review and Test planning templates still leave them out, and test results are still included only when chosen. A box you tick or untick under *Document*, or the fields you choose, after choosing a template now always reaches the document: before, one ticked to match what a download has without a template, such as *Figures* on the Test planning template or every field on Requirements review, was lost, and the document followed the template instead.",
+      "**A ReqIF download types list attributes as the ReqIF export does.** A project downloaded as ReqIF wrote an attribute with a fixed list of values, such as a *risk* of low or high, as free text, while the ReqIF export wrote it as a list of values, so DOORS, Polarion and an OpenV import saw two different documents. The download now writes it as the export does, from the same attribute definitions, and the two files match. As in the export, a value that is not in its attribute's list, such as one left behind when the list was edited, is left out of the file. A download of a baseline uses the definitions the baseline kept; one captured before this release still writes such attributes as text.",
+      "**A test run can only name a baseline of its own project.** Through the API, creating a test run with a `baseline_id` no baseline has, or one of another project, stored that reference anyway, and an id that is not a UUID failed with a database error (`400`). Each now answers `404` *baseline not found*, as every other request that names a baseline does, and no run is created. A run on one of the project's own baselines, or on none, is created as before.",
+      "**A card on the board is assigned only to a person, an agent or an existing crew, and the board's cards list in the order its columns flow.** Through the API, creating or editing a work item with an `assignee_type` other than `user`, `agent` or `team` saved it as sent, and assigning a card to a crew (`assignee_type` `team`) that does not exist saved that too, so the card named an assignee nobody could find. The first now answers `400` *invalid assignee_type: must be user, agent or team*, the second `404` *team not found*, and neither saves anything. A crew you may not see is refused as one that does not exist, and one you can see in another workspace than the card's project answers `400` *team belongs to a different workspace*. An edit that sends no `assignee_type` keeps the card's, and the assignee it sends is checked against that; an edit that sends the card's own assignee back unchanged is not checked again, so it saves as before. A person's or an agent's id is not looked up. Cards already assigned so are left as they are. The list of a project's cards, which agents read through the `list_work_items` tool, gave the columns in alphabetical order, with Done before In Progress and To Do; it now gives them as the board shows them, Backlog, To Do, In Progress, Review and Done, each column's cards in their order on the board. The board itself looks as it did.",
+      "**The quality report accepts a citation of a linked artifact in another project.** A requirement that cites an artifact of another project it is linked to, such as the requirement it refines, was flagged in the project's quality report as citing something it has no traceability link to, and its score in the requirements list was lowered for it, while the requirement's own quality check found nothing wrong. The report now judges every citation as that check does, so a citation of any artifact the requirement is linked to, in whichever project, counts as linked in both. A citation of an artifact it is not linked to is still flagged in both.",
+      "**A run whose approved changes could not be applied is marked an agent error.** When you approved an agent's proposed changes and one of them could not be applied, the run was marked failed with no failure class, so the Runs page and the run's panel showed no *agent error* beside it, and an API client read no `error_class`. Such a run now fails as an `agent_error`, as other failures of the agent's own work do, and is not retried automatically, since the same changes would fail the same way. You can still retry it yourself.",
+      "**A crew no longer hands work to someone who cannot open the project.** When a crew run finished and its crew handed work to a person, or asked a person for a review, the card it put on the project's board was assigned to that person even when they had no role in the project, so they could not open the work they were given. Such a hand-off is now refused: no card is made, nobody is given access, and the run's log and its card on the board say who the hand-off was for and why it was refused. Give the person a role in the project, or make them an admin of the workspace, to hand work to them. Someone who has left the workspace is refused even if they kept a role in the project, and the reason says they are no longer a member of the workspace: add them back to it, with a role in the project, to hand work to them. Hand-offs to members of the workspace who can open the project, and to agents, work as before.",
+      "**A crew run stopped by the budget now says which agents it did not start.** Where a workspace's monthly AI budget is enforced, a crew run that finished after the budget was reached launched none of the agents it hands work to or is reviewed by, and only the server's own log said so. The run's log now ends with a note naming those agents and the budget that stopped them, and the project's *Activity* page records an `agentrun.successors_skipped` event with the same, which API clients can follow. Hand-offs to people still go ahead, since they start no run.",
+      "**Revoking a server's own runner key on the Runners tab now stops it.** On a deployment you run yourself, the runner key the server is given in `WORKER_API_KEY` is listed on the workspace's *Runners* tab as *env-bootstrap*. Revoking it there changed nothing: the server went on accepting the same key from its own settings. It is now refused like any revoked key, even while the server still has that value, and a restart with the same value keeps it revoked, adds no key, and logs a warning saying so. To use the server's own key again, set a new `WORKER_API_KEY` and restart the server, which registers the new value as a new key.",
+      "**A runner keeps more OpenV credentials from the agents it runs.** A runner already kept its own worker and pool keys from every program it starts for a run. It now also keeps `OPENV_API_TOKEN`, `OPENV_EMAIL` and `OPENV_PASSWORD` from them, which a machine that also runs the OpenV tools or scripts may have set, so an agent's CLI, the commands and git hooks it runs, and its MCP servers no longer see a runner key or an account's password that way. Agents still reach OpenV with their run's own token, and every other setting, a provider's API key included, reaches them as before.",
+      "**Runner keys stay off the command line.** The setup command shown when you create a runner key, and the runner setup guide, passed the key to `agentd` as `--worker-key`, where `ps` shows it to every user of the machine. Both now set the key in the runner's environment as `WORKER_API_KEY`, and the guide starts a pool node with `RUNNER_POOL_KEY` there too. `agentd` still accepts `--worker-key` and `--pool-key`, so existing scripts keep working, but it now logs a warning when either is given, naming the flag and the variable to use instead, never the key. If a runner was started with its key on the command line of a machine other people use, replace the key: *Rotate* a personal runner key under *My personal runner* in your settings, or create a new workspace key on the *Runners* tab, move the runner to it and revoke the old one.",
+      "**Asking again for a cloud runner you hold answers 200.** Through the API, `POST /api/v1/orgs/{id}/runner-session` returned the cloud runner you already hold with `201 Created`, as if it had leased you another. It now returns that same lease with `200`, and answers `201` only when it leases you a new runner. The body is the same either way, and the app works as before.",
+      "**A workspace a platform admin moves onto Business or Enterprise keeps the nightly channel.** Moving a workspace from Single User, Business Lite, Self-hosted or Open source onto Business or Enterprise from the platform admin page, or with `PUT /api/v1/orgs/{id}/plan`, put it on the stable channel before any stable release had turned on for it, so every newer feature its members were using disappeared at once. It now stays on nightly, as a workspace that moves onto Business by checkout already does, and its admins can choose stable in workspace settings whenever they want to. A workspace whose admins had already chosen a channel keeps their choice, and a move between Business and Enterprise changes nothing. Workspaces moved before this release stay on the channel they are on: an admin can choose nightly in workspace settings.",
+      "**A share link closes at the moment its expiry names.** A share link created through the API with an expiry carrying a time zone offset, such as `2026-10-01T12:00:00+02:00`, was stored without its offset, so it closed at 12:00 UTC: a link given a `+02:00` expiry stayed open to anyone holding it for two hours after it should have closed, and one given a `-05:00` expiry closed five hours early. Links now close at the moment sent, and the list of a project's links shows each expiry in UTC, `2026-10-01T10:00:00Z` for that example; an expiry that falls outside the years 1 to 9999 in UTC is refused. The app already sends a link's expiry in UTC, so links made in Project settings close when they did; links already created close when they did before this release, so revoke and re-create any link an API client gave an expiry with a positive offset if it should close sooner.",
+      "**Settings are read one way, and a mistyped one is named in the log.** A self-hosted server or runner treated the same slip differently from one setting to the next: spaces round a value, as in `AGENT_CONCURRENCY=\" 3\"`, made it count as nonsense; `SECURE_COOKIES=TRUE` counted as off, since only a lower-case `true` was on; a runner took `0` or a negative number for its concurrency, and `-1h` for how long it keeps finished workspaces; and a rate limit, such as sign-in's, given a refill of `Inf` stopped throttling altogether. The API and the runner now ignore spaces round a setting's value, read a count as a whole number above 0, a duration as positive and a rate as a positive, finite number, and take `true` or `false` in any case, or `1` or `0`, for an on/off setting. A value that breaks this keeps the setting's default, and the log says so once, as the server or runner starts, naming the variable but never its value. `HOSTED_RUNNER_PIDS_LIMIT=0`, or a negative number, still means no cap on a hosted runner's processes. Credentials are the exception to the spaces: a key, token, password or private key, such as `WORKER_API_KEY`, `RUNNER_POOL_KEY`, `DATABASE_URL`, `DB_PASSWORD` or `STRIPE_SECRET_KEY`, is used exactly as set, and one with spaces or a line break around it is named in the log once, as the server or runner starts, and never printed. A `DATABASE_URL` that does not parse, or that has spaces or a line break in front of it, no longer puts the whole URL, password included, in the log: the server stops, before it dials anything, with a message saying what is wrong. Billing still refuses to start on a malformed setting, and now also when anything follows the number, so `OPENV_BILLING_TRIAL_DAYS=30d`, which gave a 30-day trial by luck, stops the server with a message that it must be a whole number of days; a malformed `OPENV_STRIPE_PRICES` is now explained in its own terms rather than by an internal type name. If you run your own OpenV, check your settings before you upgrade: `SECURE_COOKIES=TRUE`, `OPENV_TRUST_PROXY=true` and `OPENV_RUN_AUTO_RETRY=0` now take effect, so set `OPENV_TRUST_PROXY` only when a proxy sits in front of the API; a billing count such as `30d` keeps the server from starting until it is written as a number; a runner's `AGENT_CHILD_CONCURRENCY=0`, or a negative number, which reserved no extra slots for child and interview runs, now keeps the default of 2, so pass `-child-concurrency=0` to reserve none; and `STRIPE_SECRET_KEY`, `OPENV_EMBEDDING_API_KEY`, `OPENV_VAPID_PRIVATE_KEY` and `DB_PASSWORD` no longer lose the spaces or line break around them, and `DB_PASSWORD` keeps the spaces, quotes and backslashes in it that used to cut it short or change it, so remove whatever the log names, or billing, embeddings, web push or the database will refuse the credential; a Stripe, embeddings or VAPID key that is only spaces still leaves its feature off.",
+      "**A test run whose baseline was deleted says so.** A test run can be pinned to a baseline, and a project owner can still delete that baseline later. The run keeps the baseline as part of its record, but the runs table on the V&V dashboard then showed a long id where the baseline's name had been. It now says *Baseline deleted*. Through the API, a run read with `GET /api/v1/test-runs/{id}`, or in a project's list of test runs, carries `baseline_deleted: true` when the baseline it names has been deleted, and leaves the field out otherwise. A new run still cannot be pinned to a deleted baseline.",
+      "**Starting an agent on a closed test run answers 409, as recording a result there does.** Through the API, starting an agent on a completed or aborted run with `POST /api/v1/test-runs/{id}/agent-run` answered `400`, while recording a result in the same run answers `409` with the same message. The launch now answers `409` with the same body, *this test run is completed; only in-progress runs accept new results* (or *aborted*), so a client can treat both refusals alike. No agent starts, as before, and the app offers the launch only on a run in progress.",
+      "**Ticking every artifact type after choosing a download template now gets every type.** In the download wizard, a template such as *Requirements review* ticks only its own types, user needs and requirements. Ticking the other types as well still gave a document with the template's types alone, while the wizard said it would hold the whole project. The download now holds every type you tick. Through the API, `types=all` beside a `template` keeps every type whatever the template keeps; a request that leaves `types` out still gets the template's types, and a download with no template is unchanged."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.15.0",
+   "date": "2026-09-22",
+   "stableSince": "2026-10-01",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**A workspace admin can subscribe to Business Lite or Business from the new Billing tab in workspace settings.** Pick the plan, monthly or yearly, in GBP, USD or EUR, and pay on Stripe's checkout page; the workspace is on its plan by the time the tab reloads. A first subscription starts with a 14-day trial, promotion codes work at checkout, VAT is worked out there and a business VAT number is accepted. The same tab changes plan in place (prorated), and *Manage billing* opens Stripe's portal for invoices, the card, the billing address and cancellation. Nothing about a card ever reaches OpenV. Workspaces created before the date announced with the first live price keep every tier's features free, for good; the tiers' limits apply only to workspaces created after it, and only from the release that turns them on. Feature key `workspace-billing` (0.15.0): the plan picker waits for a stable release on stable-channel workspaces; a workspace that already holds a subscription always sees its Billing tab.",
+      "**The tiers are now real, and every workspace from the alpha keeps everything.** On the date announced with the first live price, a workspace created before it is marked as keeping the alpha terms — every feature, no member or workspace caps, unmetered cloud runners — for good, whatever plan it is on; the Limits tab says so. A workspace created after it is on its tier: the free tier seats two people in one shared workspace and 300 minutes of leased cloud runner a month; Business Lite adds an always-on hosted runner and unmetered cloud runners; Business adds teams, per-project team access, the workspace budget and usage rollup, and as many members and shared workspaces as it bills for. A refusal names the Billing tab. A workspace that holds more than its plan allows — after a lapsed subscription, say — becomes read-only rather than losing anything: everything stays readable and exportable, and removing members or deleting projects, or subscribing, makes it writable again. Admins are told when leased cloud-runner minutes reach 80% and 100% of the month's allowance. No feature key: the values are plan defaults with no channel in scope, and the plans they cap are always on the nightly channel, so a key would gate nothing."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**A Business subscription's seat count follows the Members tab on its own.** Adding, inviting, removing or revoking updates the billed quantity within a few seconds, prorated on the next invoice, and the Billing tab shows the seats billed beside the members counted. A membership change never waits on, or fails because of, the billing provider; a missed update is caught within minutes.",
+      "**Workspace plans now carry a billing status, and the pricing page can read live prices.** A workspace's limits resolve from the plan it is entitled to, which is its plan while a subscription (there is none yet) is in good standing and the free tier once one lapses; the limits panel names the entitled plan and the status. The pricing page reads confirmed prices from the platform when a billing provider is configured and shows its usual copy otherwise. Nothing is for sale yet, no workspace's limits change, and a self-hosted deployment is unaffected."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.14.3",
+   "date": "2026-09-21",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Per-address rate limits read the real client more carefully behind a proxy.** A self-hosted deployment can now name the header its CDN sets to the real client (`OPENV_CLIENT_IP_HEADER`, e.g. Cloudflare's `CF-Connecting-IP`) or declare how many proxies it sits behind (`OPENV_TRUSTED_PROXY_HOPS`); the forwarded-for chain is read from the right so a caller cannot pick its own rate-limit bucket by prepending a header. The existing `OPENV_TRUST_PROXY=1` keeps working as a single-hop setting. Hosted workspaces are unaffected."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.14.2",
+   "date": "2026-09-20",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**The browser tab shows the OpenV mark again.** `favicon.ico` was never an image — it was a placeholder text file saying a real one should go there — so every tab, bookmark and history entry fell back to the browser's blank page icon. It is now the round check mark, at the four sizes browsers ask for. A staging deployment gets the amber version, matching its app icon."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**A test copy of OpenV installs as its own app.** Installing the app from a staging or preview deployment put a second white *OpenV* tile on the home screen, identical to the live one, so which you opened was a guess. A non-production deployment can now carry its own installed name, icon and theme colour — staging installs as amber *OpenV (Staging)*. The live service is unchanged."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.14.1",
+   "date": "2026-09-18",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Every deployment can now say which build it is running.** The service health check reports the commit it was built from, and the web app serves the same at `/build.json`. Nothing changes in the app itself; it means a deployment can be matched to an exact revision when something needs chasing down, and it is what lets a test run prove which build it tested.",
+      "**Agents can clear a suspect link.** Editing an artifact marks the links touching it suspect, and until now an agent could see the flag but not act on it — someone had to open the app and confirm each one by hand, even where the agent had just re-read both ends. The connector's tools now include confirming a link, the same action the link panel offers. Agents held to proposal review are still refused it: vouching that a trace holds is a sign-off, and it stays with the people who do the signing off."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.14.0",
+   "date": "2026-09-18",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Read a project straight through.** Getting from one requirement to the next meant going back to the tree, finding your place in it, and clicking the row below — on a project of any size the tree became somewhere you lived rather than somewhere you looked. An artifact now carries **‹** and **›** and says where you are: *12 of 148*. They walk the project in the order the tree shows it — a heading, then what is under it, then the next heading — across whatever your search and filters have left in view, so a narrowed tree reads as its own short document.",
+      "**J and K on a keyboard, a swipe on a phone.** **J** moves to the next artifact and **K** to the previous one, from anywhere except a field, an open editor or a dialog. On a phone, swipe the document sideways instead: left for the next artifact, right for the one before. A table or code block wide enough to scroll keeps its own sideways swipe, scrolling up and down is never interrupted, and the Tree / Document / Notes buttons still switch panes.",
+      "**The tree opens itself to wherever you are.** Arriving at an artifact from a link, a citation, the review queue or the new ‹ / › controls could leave its row hidden inside a section you had collapsed: the artifact was on screen and the tree gave no sign of where it sat. The path from the artifact up to the top is now opened for you — and only that path, so a section you closed on purpose stays closed."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.13.0",
+   "date": "2026-09-18",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Approve or send back from the review queue itself.** The In review list was a list of links: every decision meant opening the artifact, changing its status and coming back. Each row is now something you can act on. It shows the type, the reference, the title, the start of the description and small previews of the artifact's figures — pictures as thumbnails, PDFs and CAD files as chips — so you can judge most things without opening anything, and carries **Approve** and **Send back** buttons of its own.",
+      "**A rejection now has to say why.** *Send back* asks what needs to change before it moves anything, and the comment goes onto the artifact's feed as an ordinary note — `@name` reaches a person, `@@name` raises them a to-do, `#REQ-12` cites, exactly as in the notes panel. The reason is posted before the artifact moves, so nobody ever finds work back in their drafts with no word on what was wrong with it.",
+      "**Decide a batch at once.** Tick rows, or the box in the header to take the whole table, and approve everything selected or send it all back with one shared reason. Anything that could not be decided is reported and stays in the queue."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Sending a project for review no longer skips its headings.** A review round covered requirements, needs, test cases and the rest but deliberately left headings and descriptions out, which meant they sat in draft for ever and a project that had been through review still had unreviewed artifacts in it. A round now covers the whole document."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.12.0",
+   "date": "2026-09-18",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Send a whole project for review in one action.** Putting a project through review meant opening each requirement and submitting it by hand, which is a chore on a project of ten and not a process at all on a project of two hundred. The Review Queue now has **Send project for review**: every artifact still in draft goes into review at once, and headings and descriptions — which have nothing to sign off — are left alone. It is built to be run again each cycle rather than once: an approved requirement nobody has touched stays approved, so nobody is asked to sign the same words twice, and one that was edited since it was approved comes back for a fresh sign-off. What comes back says how many were sent and how many stayed approved, so a quiet cycle looks quiet instead of looking like a button that did nothing."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Large figures and evidence files upload again.** An upload was given the same 60-second deadline as an ordinary click, and because that deadline covers sending the file as well as waiting for the answer, it quietly became a limit on how fast your connection was rather than on how big the file was: anything that took over a minute to send failed with a timeout before OpenV had seen it, however far inside your plan's limit it was. A separate 32 MB ceiling in front of the API turned away bigger files on top of that, so the 128 MB / 512 MB / 1 GB figure limits your plan advertises were unreachable. Uploads now run to completion, and what refuses a file is your workspace's own limit, which says what it is. Adding a figure or an evidence file also shows a percentage as it goes, so a long upload no longer looks like a frozen screen."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.11.1",
+   "date": "2026-09-17",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Attach the CAD file you actually work from.** A figure was capped at 25 MB, which turned away most real geometry and made the CAD formats the uploader offers a promise it could not keep. The ceiling is now a workspace limit that follows your plan — 128 MB free, 512 MB on Business Lite, 1 GB on Business, and nothing imposed on a self-hosted OpenV. Workspace settings → **Limits** shows your number under *Largest figure*, and a refusal now names it instead of saying only that the file is too big.",
+      "**Business workspaces get the bigger cloud runner they were sold.** Every runner figure on the Business tier was identical to Business Lite's, so the tier bought company features and not one minute of extra runner. Business now leases 8 GB and 4 CPUs for four hours, reclaimed after 30 idle minutes, and the pricing page states each tier's numbers rather than leaving Business's to be guessed from the tier below it.",
+      "**Choosing how a side panel behaves no longer closes it mid-choice.** Clicking *Pinned → Auto-hide → Hidden* on the project menu or the notes panel shut the panel the moment the mode changed, taking the button that changes it off the screen; getting to the third option meant finding the edge strip first. The panel now stays put while you cycle, and closes when you click away or press Escape.",
+      "**The strip that brings a hidden panel back is now something you can see and hit.** It was ten pixels wide with a chevron most people never found. It is wider, carries a chevron that looks like the button it is, and reaches the keyboard.",
+      "**A Gemini CLI sign-in says what it will run into before you start it.** Google no longer serves Gemini CLI to free, Google One, AI Pro or AI Ultra accounts, so a sign-in from one of those lands on a deprecation page. The sign-in card now says so up front, and points at the workspace Gemini API key that still works."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.11.0",
+   "date": "2026-09-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Tag people and artifacts inside a note.** Typing `@` in the notes panel offers the people on the project and writes the name the mention will actually resolve to, so a comment reaches the person you meant instead of quietly naming nobody. Typing `@@` does the same and **raises a to-do for them as the note is posted** — the note becomes the card, assigned to whoever it named. Raising one afterwards from the note still works exactly as before; `@@` is the shortcut for when you already know it is work.",
+      "**Cite a figure or an artifact from a note**, the way you already can from a description. `#` offers this artifact's own figures and the artifacts it is linked to; `##` reaches the whole project. Citations in a note are links: a reader follows `#REQ-12` to the requirement, or `##REQ-17-FIG-1` to the drawing, without going to look for it.",
+      "**`##` now offers any artifact in the project**, not only figures. Citing something this artifact is not linked to used to mean typing the reference by hand, where nothing marked it as a citation at all. The doubled marker is what says the citation reaches outside what this artifact is connected to, in the text as well as in the menu, so a single `#` still means a link the traceability matrix can see.",
+      "**The quality linter flags a citation with no link behind it**, as an **error** — the same weight as unfinished placeholder text. A description that cites REQ-99 without a traceability link to it claims a connection the matrix does not hold, so a coverage or impact analysis reading the links will quietly disagree with the requirement as written. The finding names the artifact and asks you to link the two. Figure citations are not flagged: pointing at a drawing asserts nothing about how two artifacts relate. Set **Citation with no link** to a lower severity, or off, in the quality rules if your project wants it quieter."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "The notes panel opens on **Comments** rather than the whole history, and the filters read **Comments, Changes, All** — the panel is where people talk to each other, and the recorded changes are the backdrop to that rather than the reason to open it."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.10.1",
+   "date": "2026-09-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "The notes panel's **Comments** tab is now called **History**, which is what it has always held: every version, status move, link, figure and test result OpenV recorded against the artifact, alongside the notes people wrote. Three buttons above the list narrow it — **All**, **Changes** for the audit trail alone, **Comments** for the discussion alone — so you can follow what happened to a requirement without reading past the conversation about it, or the other way round. An empty list now says what would appear in it instead of showing nothing at all."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.10.0",
+   "date": "2026-09-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Search finds an artifact by its ref.** Typing `REQ-30` into the search box now brings back REQ-30 itself, at the top, instead of whatever happens to mention it — and `req-30` works just as well, so a ref pasted out of a report or a chat message finds its artifact without being tidied up first. Every result now shows its ref beside the title, so a list of similar titles is finally possible to tell apart. A longer ref that merely contains what you typed still appears, below the exact match: searching `REQ-3` puts REQ-3 first and leaves REQ-30 further down."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.9.2",
+   "date": "2026-09-16",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "OpenV is now at **openv.app**. The old `*.up.railway.app` addresses keep working, so nothing you have bookmarked or configured breaks, but the new one is the address to use and to share. Agent connectors, the MCP server and `sync.py` reach the API at `https://api.openv.app`.",
+      "The web app is built with a current, maintained toolchain. The previous one had its last release in 2022 and has since been retired by its authors, which meant a slowly growing list of security advisories that nobody could act on, because no fixed version was ever going to be published. Nothing about the app looks or behaves differently — the same pages load the same way — but the ground it is built on is supported again."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "Retyping an artifact now gives it a matching reference. A heading created by accident and switched to a requirement (or any other type) picks up a fresh reference in that type's own numbering instead of keeping the heading's old one."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.9.1",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "Releases are no longer held up by the dependency robot failing to write its own update. It reports a failure when a flagged package has no upgrade path available, which is a fact about that package rather than anything wrong with the release — so fixes and features reach you on time instead of waiting behind it. Every test OpenV runs against itself still has to pass before a release goes out, as does the separate scan of the packages OpenV depends on and the scan of OpenV's own code."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.9.0",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "Attach more than pictures to an artifact. A figure can now be a **PDF** — a supplier datasheet, a standard, a test report — or a **CAD file**: STEP, IGES, STL, 3MF, OBJ, PLY, glTF, DXF, DWG and the common native part formats. Clicking one opens it: a PDF in a reader, an STL as a 3D preview you can drag to turn, and every other format in a panel naming it with a Download button. Figures keep one numbering sequence whatever the format, so `REQ-17-FIG-2` may be a drawing today and the STEP model tomorrow.",
+      "Cite a figure on **any** artifact in the project by typing `##` in a description. A single `#` still offers this artifact's own figures and the artifacts it is linked to; `##` offers every figure in the project, naming the artifact each belongs to, and writes the citation as `##REQ-99-FIG-2` so a reader can see it reaches outside what they are reading."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "OpenV's own source code is now scanned by CodeQL on every change, on every release, and weekly against an updated set of rules. It looks for bugs we wrote — injection, path traversal and similar — which is the half that the existing dependency scanning cannot see."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "Clicking a figure or artifact citation in a description works again. Every citation had been rendering as a link with no destination, so following one opened a new tab showing the page you were already on instead of the figure or artifact it named."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.8.2",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "Every release from now on is tagged in the source repository as `v<version>`, so the exact code behind a version number can be found, compared against another release, or checked out. That matters when you are self-hosting, and when pinning down which release a problem started in. Releases up to 0.8.1 predate this and are untagged."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.8.1",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "0.8.0 could not start against an existing database, taking the service down until this release. Nothing was lost and no data was touched — the server refused to start rather than run a schema change it could not complete — but OpenV was unreachable in the meantime."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.8.0",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**To-dos**, under *Plan*, lists the project's work under the person it belongs to rather than the column it sits in — everyone with access gets a section, including those who owe nothing, so the page answers who owes what. It is the board's work rearranged, not a second list: move a card and this page says so. *Just mine* narrows it to you, and finished work is hidden until you ask for it.",
+      "**Raise a to-do from a note.** A note that mentions someone with @name now offers *Add to-do*, which fills in the person it named and the note's first line, links the artifact and carries the whole note across as the description. Afterwards the note shows a small link to the to-do with its current status, so an old thread tells you whether the thing being discussed ever got done. Mentioning someone still just tells them: nothing is added to the board unless you ask for it.",
+      "**Restore an older version of a figure.** Its history now offers *Restore* on any earlier version: the figure goes back to the image and the name it had then. Like restoring an artifact, it is recorded as a new version and nothing is deleted — the superseded drawing stays in the history and stays openable, which is what you need when a requirement was reviewed against what the figure used to show. The history entry says which version it brought back."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "Antigravity agents no longer stop five minutes in. The CLI applies its own five-minute cap to a single-prompt run and ends it there regardless of the timeout set on the agent — which defaults to thirty minutes — so a longer piece of work was cut off and whatever had been produced so far was reported as the answer. The agent's own timeout is now the only one that applies."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "Cloud runners now build with a fixed, checksum-verified copy of the Antigravity CLI rather than fetching whichever version is current at build time. Two rebuilds of the same commit now give runners the same CLI, and a version change is a visible edit to this repository instead of something that happens quietly between builds."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.7.1",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "The **?** help button now sits beside the notification bell instead of floating over the bottom-right corner of the page. It used to cover whatever the page put in that corner — on the V&V dashboard, the *Complete* and *Abort* buttons of the last test run — and the first attempt at fixing that reserved the corner instead, which left an empty strip along the bottom of every page. Neither now: it is in the bar with the other controls that are about you rather than the page, which is where phones have had it all along."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.7.0",
+   "date": "2026-09-15",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Antigravity CLI** is available as an agent provider. Google moved the free, Google One, AI Pro and AI Ultra tiers off the Gemini CLI and onto Antigravity on 18 June 2026, so agents can now run on it. It runs from a Gemini API key set on the workspace rather than a personal sign-in, because the CLI keeps its sign-in in the computer's keyring and a cloud runner has none. Agents that edit a connected repository still need Claude Code."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "The floating **?** help button no longer sits on top of the buttons in the bottom-right corner of a page. On the V&V dashboard it covered the *Complete* and *Abort* buttons of the last test run, which could not be clicked at all once the table reached the bottom of the window.",
+      "A failed **Gemini CLI** sign-in now explains the likeliest reason: since 18 June 2026 the Gemini CLI signs in only Google accounts on a Gemini Code Assist Standard or Enterprise licence, and other tiers need an API key instead. The message used to be the CLI's raw output with no hint that no amount of retrying would help."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.6.3",
+   "date": "2026-09-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "Signing the Gemini CLI in from a cloud runner works again. The CLI will only complete a sign-in from a session it considers interactive, and it counted the runner's as automated on three separate grounds — so it stopped with \"Manual authorization is required but the current session is non-interactive\" before showing the link. It now gets a real terminal and the sign-in link appears as it should. It also no longer refuses the runner's workspace as untrusted."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.6.2",
+   "date": "2026-09-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "The **Cloud runner** card now shows how busy the shared pool is as a traffic light — *Runners available*, *Runners busy*, *All runners in use* — instead of printing how many runners are free. You can hold one runner at a time, so the count was never something you could act on, and the deployment's capacity is no longer published to every account."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.6.1",
+   "date": "2026-09-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "Signing the Gemini CLI in from a runner works again, on a phone or a desktop. The CLI now refuses to start unless it is told which kind of Google account to use, so the sign-in failed before it could show you a link — and headless Gemini runs failed the same way. OpenV names the mode for it. Workspaces that run Gemini on an API key or on Vertex AI keep the account they configured."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.6.0",
+   "date": "2026-09-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "Choose the workspace OpenV opens in when you sign in. Personal settings → *Default workspace* lists your personal workspace and every company workspace you belong to; pick the one you work in and each sign-in starts there instead of in your personal space. Switching workspaces during a session is unchanged. Stable-channel workspaces get this with their next stable release.",
+      "Figures can be renamed. A screenshot arrives called something like `Screenshot 2026-09-14 at 09.12.33.png`; use ✎ on the figure while editing to give it a name that says what it shows. The name appears under the figure and in PDF and Word documents, and every rename is a figure version, with who changed it and when, alongside the image history.",
+      "Forgot your password? The sign-in screen can now email you a link to set a new one: it works once and lasts an hour, and setting the password signs the account out everywhere. On a server that sends no mail, or when the email does not arrive, a platform admin can make a reset link for your account from the Platform admin page and pass it to you."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "A duplicated or pasted artifact now says where it came from. Its history starts with one note, *Copied from REQ-12 (version 3)*, instead of looking like an artifact that was typed in from scratch.",
+      "Uploading a new version of a figure works again. Pressing ⬆ (or the history, rename or delete buttons) on a figure used to save the artifact and leave the editor before the file was chosen, so the image never changed; the buttons no longer submit the editing form.",
+      "PDF and Word downloads no longer print each requirement's description twice. It sits once, in the Description row of the fields table, and keeps its formatting there: lists, tables, code, links and emphasis all survive, and a description longer than a page carries its row across the break."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.5.1",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "OpenV's licence is now the Elastic License 2.0. Self-hosting stays free for anyone at any scale, the source stays public, and paid installation or support stays allowed; what is no longer allowed is offering OpenV to others as a hosted or managed service. The README, the site's licence section and the manual carry a plain-English summary."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.5.0",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "The V&V Assistant can now change the project, not just add to it — from the notes panel and from the guided definition wizard alike. Ask it to add a test case, a design item, a heading or any other kind of artifact and it offers a card that files it where you said; ask it to rewrite or restructure and it offers *Apply change* and *Move* cards that edit an artifact's text or move it under another heading. It sees the whole project's outline while you talk and can read any artifact in full, so when you resume a definition it can work on what is already there, name things by their reference, and tell a locked wizard entry from a new one. Stable-channel workspaces get this with their next stable release."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.4.2",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "Platform admins have a page of their own, under the account menu: every workspace with its plan, changeable in place (which is how a workspace is granted the open-source tier), and every account, where platform-admin standing is granted or removed. Until now only the first account ever registered could be a platform admin."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.4.1",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "A platform admin can move a workspace to another plan through the API, which is how a workspace is granted the open-source tier; before, that took a hand edit of the database."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.4.0",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "Share a project from one link. Under Project settings → Access, an owner mints a *public* link that opens the live project read only for anyone, no account needed, or a *reviewer* link that asks the holder to sign in and makes them a reviewer. Links can carry a label and an expiry, and can be revoked. Pasted into Slack, Discord, LinkedIn and the like, a link shows a preview card naming the project.",
+      "A new project role, *reviewer*: reads everything, adds notes, comments and mentions, and changes nothing. It can be granted by name or team like the other roles.",
+      "Workspaces on the open-source tier have every project's latest baseline published on the site's open-source page, where anyone can read it; live work stays private until the next baseline."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "PDF and Word downloads put each requirement's description in its table, under the reference and type, so it no longer gets lost between figures.",
+      "The site has grown from one page into a small storefront: how OpenV works with diagrams, five narrated demo videos (two of them on a phone), a security and subscription FAQ, an open-source projects page, and places for customer stories and white papers."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.3.0",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "A project can name the project it refines, so a subsystem or a supplier works in its own project under the system it belongs to. Set it under Project settings → General.",
+      "A requirement can *refine* a requirement of the parent project. The link is offered when editing a requirement, is seen from both projects, and the parent's V&V shows each refined requirement's own result and rolls the worst one up, so verification flows back up the tree.",
+      "Every artifact can have an owner: a member, or one of the reference parties a project lists in its settings (your workspace is always one). The owner shows on the artifact, and the module view, the API and the agent tools can filter by it.",
+      "A download can be narrowed to one or more owners, in every format, so a supplier's share of a project can be handed over on its own."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.2.0",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "Workspace settings show the workspace's release channel: Business and Enterprise workspaces are on the monthly stable channel and their admins can switch to nightly; Personal and Lite workspaces run nightly.",
+      "Stable-channel workspaces receive new features at a monthly stable release instead of with every nightly; maintenance updates and bug fixes still arrive with each nightly. Workspace admins choose the day and hour the monthly release turns on, up to 14 days after it is designated, and are told when it is designated and the day before it turns on.",
+      "Any member of a Business or Enterprise workspace can try the next stable release early for their own account from workspace settings.",
+      "What's new opens with your workspace's own channel: the stable release it runs and the one scheduled next, or the nightly it runs; stable releases are marked in the history.",
+      "Release notifications follow the channel: nightly-channel members hear about each release, stable-channel members when their monthly release turns on.",
+      "Dedicated OpenV instances are warned 30 and 7 days before their support window closes after a newer stable release, and again once it has."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "0.1.0",
+   "date": "2026-09-13",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "OpenV releases are numbered now. What's new names the version you were upgraded to and keeps new features, maintenance updates and bug fixes apart instead of running them together in one list, and the notification that announces a release is grouped the same way."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "What's new shows the releases and nothing else. It was also showing the notes file's instructions to contributors, and changes that had not shipped yet."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "2026-09-12.3",
+   "date": "2026-09-12",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Changes",
+     "notes": [
+      "The V&V Assistant's answers now read as they were written — lists as lists, emphasis as emphasis — instead of showing the raw markup around them. The same goes for the assistant in an interview.",
+      "Add what the assistant suggests from wherever you are talking to it. A persona, need, requirement, NFR or hazard it proposes can be added to the project straight from the notes panel, filed under the usual heading and left as a draft for you to review; before, only the guided definition wizard could take them."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "2026-09-12.2",
+   "date": "2026-09-12",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Changes",
+     "notes": [
+      "Get a notification whenever OpenV is updated, with a summary of what changed, and read the full history under What's new in the account menu.",
+      "Open tabs learn about an update while they are open and offer a reload."
+     ]
+    }
+   ]
+  },
+  {
+   "version": "2026-09-12",
+   "date": "2026-09-12",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Changes",
+     "notes": [
+      "Upload your own profile picture from Personal settings. It replaces the picture your sign-in provider supplied and stays put across sign-ins.",
+      "Member avatars keep their round shape beside long names on a phone.",
+      "PDF and Word downloads are rebuilt on a document model: templates, field selection, evidence appendices and the workspace logo on the cover page.",
+      "Baselines record who captured them, and large baselines are stored compressed.",
+      "Workspace admins are notified when somebody joins, leaves or changes role, and members are told when their own access changes.",
+      "Workspace limits are shown in workspace settings."
+     ]
+    }
+   ]
+  }
+ ]
+}

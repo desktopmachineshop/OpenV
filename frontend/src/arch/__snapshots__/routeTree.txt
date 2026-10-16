@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 58
-  rendering a lazy() component: 35
+<Route> elements: 59
+  rendering a lazy() component: 36
   rendering an eagerly imported component: 18
   redirects only: 5
 index routes: 1
@@ -49,6 +49,7 @@ index routes: 1
   OpenSourceProjects  ./site/OpenSourceProjects#OpenSourceProjects
   Customers           ./site/Customers#Customers
   WhitePapers         ./site/WhitePapers#WhitePapers
+  Changelog           ./site/Changelog#Changelog
   TopicPage           ./site/TopicPage#TopicPage
   SharedProjectView   ./views/SharedProjectView#SharedProjectView
   ReviewQueue         ./views/ReviewQueue#ReviewQueue
@@ -71,6 +72,7 @@ index routes: 1
   /open-source                          <OpenSourceProjects>  [lazy ./site/OpenSourceProjects#OpenSourceProjects]
   /customers                            <Customers>  [lazy ./site/Customers#Customers]
   /white-papers                         <WhitePapers>  [lazy ./site/WhitePapers#WhitePapers]
+  /changelog                            <Changelog>  [lazy ./site/Changelog#Changelog]
   /requirements-traceability            <TopicPage path="/requirements-traceability">  [lazy ./site/TopicPage#TopicPage]
   /verification-evidence                <TopicPage path="/verification-evidence">  [lazy ./site/TopicPage#TopicPage]
   /baselines-and-audit-trail            <TopicPage path="/baselines-and-audit-trail">  [lazy ./site/TopicPage#TopicPage]
@@ -131,6 +133,7 @@ index routes: 1
   /open-source
   /customers
   /white-papers
+  /changelog
   /requirements-traceability
   /verification-evidence
   /baselines-and-audit-trail

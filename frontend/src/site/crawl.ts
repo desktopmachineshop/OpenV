@@ -125,6 +125,10 @@ export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> 
     title: 'White papers',
     summary: 'Longer reads on requirements, traceability, verification and AI agents in a regulated process.',
   },
+  '/changelog': {
+    title: 'Changelog',
+    summary: 'Every OpenV release, newest first: new features, security fixes, maintenance updates and bug fixes.',
+  },
   '/manual': {
     title: 'User manual',
     summary: 'The OpenV user manual, chapter by chapter.',
