@@ -441,6 +441,11 @@ jobs:
         run: docker compose up -d --build
         env:
           OPENV_REGISTER_IP_BURST: "100"
+          # The journeys include the hosted service's public site (the
+          # landing page, pricing), which a self-hosted OpenV does not show:
+          # docker-compose.yml starts self-hosted, so the stack runs as the
+          # hosted service here.
+          OPENV_SELF_HOSTED: "false"
 
       - uses: actions/setup-node@v4
         with:
