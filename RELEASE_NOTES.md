@@ -33,6 +33,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   then be linked into the OpenV server at build time;
   [`docs/extending.md`](docs/extending.md) shows how. openv.app's billing
   is built this way.
+- **A module can set what each plan means on your OpenV.** Its plan
+  policy sets every plan's default limits and its channel policy each
+  plan's release channel, in place of the built-in ones
+  ([`docs/extending.md`](docs/extending.md#plans-and-channels)). Nothing
+  changes until a module sets one.
 
 ### Bug fixes
 

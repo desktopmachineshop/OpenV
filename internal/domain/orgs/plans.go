@@ -56,12 +56,19 @@ func PlanDefaults(plan string) map[string]interface{} {
 	return defaultPolicy.PlanDefaults(plan)
 }
 
-// PlanDefaults returns the default limits for a billing plan, with the tier
-// values laid over them when p enforces the tiers.
+// PlanDefaults returns the default limits for a billing plan, as p's plan
+// policy (policies.go) sets them, with the tier values laid over them when p
+// enforces the tiers.
+func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
+	return p.plans().PlanDefaults(plan, p.TiersEnforced)
+}
+
+// PlanDefaults is the built-in plans' defaults for plan, with the tier
+// values laid over them when tiers is true.
 //
 // An unknown or empty plan gets the most restrictive hosted defaults, so a bad
 // plan value can never accidentally mean "unlimited".
-func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
+func (BuiltinPlans) PlanDefaults(plan string, tiers bool) map[string]interface{} {
 	switch plan {
 	case PlanSelfHost, PlanEnterprise:
 		// Somebody else's hardware, or a negotiated agreement. Nothing here
@@ -89,7 +96,7 @@ func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
 		// matters to somebody running an agent over a real repository, so it
 		// is the one that moves — four hours rather than two, on twice the
 		// memory, with a longer idle window to match.
-		return p.tiered(plan, map[string]interface{}{
+		return tiered(plan, tiers, map[string]interface{}{
 			LimitRunnerMemoryMB:           8192,
 			LimitRunnerCPUs:               4.0,
 			LimitRunnerSessionMinutes:     240,
@@ -105,7 +112,7 @@ func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
 			LimitWorkspaceBudget:          true,
 		})
 	case PlanBusinessLite:
-		return p.tiered(plan, map[string]interface{}{
+		return tiered(plan, tiers, map[string]interface{}{
 			LimitRunnerMemoryMB:           4096,
 			LimitRunnerCPUs:               2.0,
 			LimitRunnerSessionMinutes:     120,
@@ -121,7 +128,7 @@ func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
 			LimitWorkspaceBudget:          true,
 		})
 	default: // PlanSingle, PlanFree and anything unrecognized
-		return p.tiered(plan, map[string]interface{}{
+		return tiered(plan, tiers, map[string]interface{}{
 			LimitRunnerMemoryMB:           2048,
 			LimitRunnerCPUs:               1.0,
 			LimitRunnerSessionMinutes:     60,
@@ -147,7 +154,7 @@ func (p *DeploymentPolicy) PlanDefaults(plan string) map[string]interface{} {
 const FreeHostedRunnerMinutes = 300
 
 // tiered lays the tier's counts and flags over a plan's alpha defaults when
-// p enforces the tiers. The paid tiers pay for the company layer, not the
+// the tiers are enforced. The paid tiers pay for the company layer, not the
 // product: what moves is seats, shared workspaces, the flags and hosted
 // minutes; every product limit stays as it was.
 //
@@ -159,8 +166,8 @@ const FreeHostedRunnerMinutes = 300
 // Business keeps members unlimited: nobody caps seats on a plan billed per
 // seat. Lite gets the free tier's counts, not fewer. The project caps are
 // abuse ceilings, high enough that nobody chooses which product to track.
-func (p *DeploymentPolicy) tiered(plan string, m map[string]interface{}) map[string]interface{} {
-	if !p.TiersEnforced {
+func tiered(plan string, tiers bool, m map[string]interface{}) map[string]interface{} {
+	if !tiers {
 		return m
 	}
 	switch plan {

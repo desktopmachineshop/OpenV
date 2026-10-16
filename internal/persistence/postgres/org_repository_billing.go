@@ -24,7 +24,7 @@ func (r *OrgRepository) SetBudget(orgID string, budget *float64) error {
 
 // SetPlan writes plan (REQ-154), and the channel override keepNightlySQL writes.
 func (r *OrgRepository) SetPlan(orgID, plan string) error {
-	_, err := r.db.Exec(`UPDATE organizations SET plan = $2, `+fmt.Sprintf(keepNightlySQL, "$2", "$3")+`, updated_at = NOW() WHERE id = $1`, orgID, plan, pq.Array(orgs.ChoosablePlans))
+	_, err := r.db.Exec(`UPDATE organizations SET plan = $2, `+fmt.Sprintf(keepNightlySQL, "$2", "$3")+`, updated_at = NOW() WHERE id = $1`, orgID, plan, pq.Array(orgs.ChoosablePlans()))
 	return err
 }
 
@@ -119,7 +119,7 @@ func (r *OrgRepository) ApplyBillingState(orgID string, st orgs.BillingState) (b
 		WHERE id = $1 AND (plan_synced_at IS NULL OR plan_synced_at <= $10)
 	`, orgID, st.Plan, st.Status, st.Interval, st.Seats, periodEnd, st.CancelAtPeriodEnd,
 		st.SubscriptionRef, st.ItemRef, st.ReadAt.UTC(),
-		pq.Array([]string{orgs.PlanEnterprise, orgs.PlanOpenSource}), pq.Array(orgs.ChoosablePlans))
+		pq.Array([]string{orgs.PlanEnterprise, orgs.PlanOpenSource}), pq.Array(orgs.ChoosablePlans()))
 	if err != nil {
 		return false, err
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/openv/requirements-platform/ext"
@@ -9,6 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/billing/stripe"
 	"github.com/openv/requirements-platform/internal/config"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
@@ -37,6 +39,9 @@ func (a *app) billing() {
 	a.extModules, err = ext.Build(extBoot{a})
 	if err != nil {
 		fatal("a module could not be built", err)
+	}
+	if err := installPolicies(a.extModules); err != nil {
+		fatal("the modules' plan policies conflict", err)
 	}
 	switch {
 	case ext.Registered("billing"):
@@ -198,6 +203,36 @@ func (a *app) modules(cfg *config.Config) []ext.Module {
 		mods = append(mods, billing.NewModule(a.billingService, billingLimits(cfg.RateLimits())))
 	}
 	return mods
+}
+
+// installPolicies installs the plan and channel policies a module sets
+// (ext.PolicyModule) in place of the built-in ones. Two modules setting the
+// same one is an error: neither could know which of them is in force.
+func installPolicies(mods []ext.Module) error {
+	var plans, channels string
+	for _, m := range mods {
+		pm, ok := m.(ext.PolicyModule)
+		if !ok {
+			continue
+		}
+		if p := pm.PlanPolicy(); p != nil {
+			if plans != "" {
+				return fmt.Errorf("modules %s and %s both set the plan policy", plans, m.Name())
+			}
+			plans = m.Name()
+			orgs.SetPlanPolicy(p)
+			slog.Info("plan policy set by a module", "module", plans)
+		}
+		if c := pm.ChannelPolicy(); c != nil {
+			if channels != "" {
+				return fmt.Errorf("modules %s and %s both set the channel policy", channels, m.Name())
+			}
+			channels = m.Name()
+			orgs.SetChannelPolicy(c)
+			slog.Info("channel policy set by a module", "module", channels)
+		}
+	}
+	return nil
 }
 
 // extBoot is the app as a module's ext.Boot.

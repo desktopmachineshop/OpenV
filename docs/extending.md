@@ -18,6 +18,29 @@ interfaces it also implements:
 | `ext.HostAware` | calls `SetHost(h)` first, handing it the `ext.Host`: the caller, path variables, feature gates, workspaces, seat counts, rate limiters, and the API's own way of answering (`RespondJSON`, `WriteErrorCode`, ...) |
 | `ext.WorkspaceObserver` | tells it, after the change is committed, that a workspace's seat count may have moved, or that a workspace was deleted or restored |
 | `ext.CapabilityModule` | adds the names it returns to `capabilities` in `GET /api/v1/auth/config`, which the app reads to show or hide screens |
+| `ext.PolicyModule` | installs the `ext.PlanPolicy` (each plan's default limits) and `ext.ChannelPolicy` (each plan's release channel) it returns in place of the built-in ones, before the server serves; a nil one leaves the built-in policy. Two modules setting the same policy stop the boot |
+
+### Plans and channels
+
+A plan's default limits are the bottom layer of a workspace's limits, under
+the deployment's `OPENV_LIMITS` and the workspace's own. The built-in
+policies (`ext.BuiltinPlans`, `ext.BuiltinChannels`) are openv.app's tiers
+today; a policy of your own can embed them and change only what it means
+to:
+
+```go
+type plans struct{ ext.BuiltinPlans }
+
+// Every plan gets two-hour runner sessions.
+func (p plans) PlanDefaults(plan string, tiers bool) map[string]any {
+	m := p.BuiltinPlans.PlanDefaults(plan, tiers)
+	m[ext.LimitRunnerSessionMinutes] = 120
+	return m
+}
+```
+
+On a self-hosted deployment every workspace is on the `self_host` plan, so
+that is the plan your policy answers for there.
 
 ### Guards are declared, not coded
 

@@ -365,8 +365,15 @@ Built, in order:
   Postgres: it logs `billing is a registered module` and serves the
   billing routes.
 
-Still open: plan tiers and channel policy behind interfaces (Phase 1,
-step 1); the frontend extension registry, which moving the marketing site
+- **Plan and channel policies** (Phase 1, step 1). `orgs.PlanPolicy`
+  (each plan's default limits) and `orgs.ChannelPolicy` (each plan's
+  channel, and whether its admins choose) sit on the deployment policy;
+  the tier tables and channel rules are their built-in implementations,
+  unchanged. A module sets its own through `ext.PolicyModule`, installed
+  after `ext.Build`. Phase 4 moves the tiers into `openv-hosted`'s policy
+  and leaves core's built-in plans as the self-host defaults.
+
+Still open: the frontend extension registry, which moving the marketing site
 needs; the cut-over itself (the maintainer's, staging first); and
 Phase 4. Removing billing's routes from a self-hosted server is subject to
 REQ-143 (a route removal is announced in two stable releases first), which
