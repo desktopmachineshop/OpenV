@@ -117,7 +117,7 @@ func TestTourS5dProvidersReposPool(t *testing.T) {
 			"member and a runner, a project's repository connections with each member's local path, and the runner " +
 			"pool's nodes: registration, the heartbeat that hands a lease's key over, and the release.",
 		run: providersReposPoolTour,
-		env: map[string]string{"RUNNER_POOL_KEY": providersReposPoolKey},
+		env: map[string]string{"RUNNER_POOL_KEY": providersReposPoolKey, "OPENV_SECRETS_KEY": providersReposPoolSecretsKey},
 		accounts: []tourAccount{
 			{name: "member", display: "Tour Member", about: "a plain member of W that views P: its own sign-in, " +
 				"its local path, its runner key, and the cloud runner it leases"},
@@ -130,6 +130,10 @@ func TestTourS5dProvidersReposPool(t *testing.T) {
 // providersReposPoolKey is the deployment's runner pool key, the bearer the
 // pool's nodes present.
 const providersReposPoolKey = "tour-pool-key"
+
+// providersReposPoolSecretsKey is the server's OPENV_SECRETS_KEY, which
+// lets the area store a pasted provider API key.
+var providersReposPoolSecretsKey = strings.Repeat("t", 40)
 
 // providersReposPoolAgent is the area's agent, with a short prompt, whose
 // run the lease's key claims.
@@ -156,6 +160,7 @@ func providersReposPoolTour(tr *tour) {
 	pool := tr.bearerActor("pool", providersReposPoolKey, "a runner pool node, presenting the deployment's pool key "+
 		"(RUNNER_POOL_KEY) as its bearer")
 	providersReposPoolSettings(tr, o, m, box, pool)
+	providersReposPoolAPIKeys(tr, o, m, box)
 	providersReposPoolLogins(tr, o, m, m2, box, runner, pool)
 	providersReposPoolRepos(tr, o, m, m2, box, runner)
 	providersReposPoolNodes(tr, o, m, box, pool)
@@ -216,6 +221,31 @@ func providersReposPoolSettings(tr *tour, o, m, box, pool *tourActor) {
 	providersReposPoolMinted(tr.step("W's provider settings, as a member (any member reads them): claude-code's "+
 		"stored row under its first id (<setting1>) with the detection, gemini-cli's row stored by the report with "+
 		"its detected models ahead of the catalog's, and the rest defaults", m, list, opts...), defaults...)
+}
+
+// providersReposPoolAPIKeys walks the workspace's pasted provider API keys
+// (REQ-197): none, one stored and answered by its last four characters only,
+// the refusals, and its removal.
+func providersReposPoolAPIKeys(tr *tour, o, m, box *tourActor) {
+	const (
+		list = "GET /api/v1/provider-api-keys"
+		put  = "PUT /api/v1/provider-api-keys/{env}"
+		del  = "DELETE /api/v1/provider-api-keys/{env}"
+	)
+	anthropic := at("env", "ANTHROPIC_API_KEY")
+	tr.step("W's pasted API keys before any is stored: none, and the server can store one", o, list)
+	tr.step("paste an Anthropic key: 200, answered by its last four characters, never the key", o, put, anthropic,
+		jsonBody(`{"key":"fake-tour-key-WXYZ"}`))
+	tr.step("W's pasted API keys: the one, without its value", o, list)
+	tr.step("paste a key for a variable outside the catalogue", o, put, at("env", "DATABASE_URL"),
+		jsonBody(`{"key":"fake-key"}`))
+	tr.step("paste a key with a space in it", o, put, anthropic, jsonBody(`{"key":"fake key"}`))
+	tr.step("paste with a body that does not decode", o, put, anthropic, jsonBody(`{`))
+	tr.step("a member lists them: the workspace admin guard", m, list)
+	tr.step("a member pastes one: the workspace admin guard", m, put, anthropic, jsonBody(`{"key":"fake-key"}`))
+	tr.step("the box key removes one: a key is no user", box, del, anthropic)
+	tr.step("remove the Anthropic key: 204", o, del, anthropic)
+	tr.step("remove it again: 404, none is stored", o, del, anthropic)
 }
 
 // providersReposPoolLease notes on a step answering the member's lease what

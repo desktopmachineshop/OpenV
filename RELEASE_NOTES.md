@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Paste a provider API key into OpenV instead of setting it on every
+  machine.** A workspace admin can now save the workspace's Anthropic, OpenAI
+  or Gemini API key in Workspace settings → AI providers. Projects set to
+  API-key auth then use it on every runner, including members' own machines,
+  with no environment variable to set. The key is stored encrypted and never
+  shown again, only its last four characters, and Remove key takes it back.
+
 ### Maintenance updates
 
 - **Security fixes now have a heading of their own in What's new.** When a

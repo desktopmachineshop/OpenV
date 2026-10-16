@@ -26,6 +26,7 @@ DELETE /api/v1/orgs/{id}/worker-keys/{keyId}
 DELETE /api/v1/projects/{id}
 DELETE /api/v1/projects/{id}/members/{userId}
 DELETE /api/v1/projects/{id}/team-access/{teamId}
+DELETE /api/v1/provider-api-keys/{env}
 DELETE /api/v1/repo-connections/{id}
 DELETE /api/v1/share-links/{id}
 DELETE /api/v1/shared-products/{id}
@@ -150,6 +151,7 @@ GET /api/v1/projects/{id}/vv/report
 GET /api/v1/projects/{id}/work-items
 GET /api/v1/projects/{projectID}/attachments
 GET /api/v1/proposals
+GET /api/v1/provider-api-keys
 GET /api/v1/provider-logins/{id}
 GET /api/v1/provider-logins/{id}/full
 GET /api/v1/provider-settings
@@ -333,6 +335,7 @@ PUT /api/v1/projects/{id}/parties
 PUT /api/v1/projects/{id}/profile
 PUT /api/v1/projects/{id}/quality-rules
 PUT /api/v1/projects/{id}/team-access
+PUT /api/v1/provider-api-keys/{env}
 PUT /api/v1/provider-settings
 PUT /api/v1/repo-connections/{id}
 PUT /api/v1/repo-connections/{id}/my-path

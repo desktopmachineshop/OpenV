@@ -32,6 +32,7 @@ DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
 DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
+DELETE /api/v1/provider-api-keys/{env}: org:admin
 DELETE /api/v1/repo-connections/{id}: project:owner
 DELETE /api/v1/share-links/{id}: project:owner
 DELETE /api/v1/shared-products/{id}: platform-admin
@@ -156,6 +157,7 @@ GET /api/v1/projects/{id}/vv/report: project:viewer
 GET /api/v1/projects/{id}/work-items: project:viewer
 GET /api/v1/projects/{projectID}/attachments: project:viewer
 GET /api/v1/proposals: session, project:viewer
+GET /api/v1/provider-api-keys: org:admin
 GET /api/v1/provider-logins/{id}: session
 GET /api/v1/provider-logins/{id}/full: worker
 GET /api/v1/provider-settings: session
@@ -339,6 +341,7 @@ PUT /api/v1/projects/{id}/parties: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
 PUT /api/v1/projects/{id}/team-access: project:owner, org-visible
+PUT /api/v1/provider-api-keys/{env}: org:admin
 PUT /api/v1/provider-settings: org:admin
 PUT /api/v1/repo-connections/{id}: project:owner
 PUT /api/v1/repo-connections/{id}/my-path: session, project:viewer

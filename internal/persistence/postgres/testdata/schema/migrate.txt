@@ -746,6 +746,17 @@ table projects rows 0
   index idx_projects_org CREATE INDEX idx_projects_org ON public.projects USING btree (org_id)
   index idx_projects_parent CREATE INDEX idx_projects_parent ON public.projects USING btree (parent_project_id) WHERE (parent_project_id IS NOT NULL)
   index projects_pkey CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
+table provider_api_keys rows 0
+  column org_id uuid NOT NULL
+  column key_env character varying(64) NOT NULL
+  column sealed bytea NOT NULL
+  column last4 character varying(8) NOT NULL DEFAULT ''::character varying
+  column updated_by uuid
+  column updated_at timestamp without time zone NOT NULL
+  constraint provider_api_keys_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint provider_api_keys_pkey PRIMARY KEY (org_id, key_env)
+  constraint provider_api_keys_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+  index provider_api_keys_pkey CREATE UNIQUE INDEX provider_api_keys_pkey ON public.provider_api_keys USING btree (org_id, key_env)
 table provider_logins rows 0
   column id uuid NOT NULL
   column provider character varying(64) NOT NULL
@@ -853,7 +864,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 60
+table schema_migrations rows 61
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1129,3 +1140,4 @@ ledger 0057 drop_attachment_test_result
 ledger 0058 cancel_requeued_cancelled_runs
 ledger 0059 user_activity_days
 ledger 0060 site_visitors
+ledger 0061 provider_api_keys

@@ -144,6 +144,7 @@ type app struct {
 	automationService    *automations.DefaultService
 	repoConnService      *repoconns.DefaultService
 	providerService      *providers.DefaultService
+	providerKeyService   *providers.DefaultKeyService
 	loginService         *providers.DefaultLoginService
 	teamService          *teams.DefaultService
 	proposalService      *proposals.DefaultService

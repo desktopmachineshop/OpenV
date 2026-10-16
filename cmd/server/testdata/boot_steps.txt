@@ -78,6 +78,10 @@ func main()
   call (*internal/domain/agents.FileService).SyncAllFromDisk
   call (*internal/domain/agentruns.DefaultService).SetRoutingPolicy
   call (*internal/domain/agentruns.DefaultService).SetRetryPolicy
+  if
+    call internal/domain/providers.NewSealer
+    if
+      call os.Exit
   call (*internal/domain/teams.DefaultService).SetMemberValidator
   call (*internal/domain/proposals.DefaultService).OnResolved
   call (*internal/domain/orgs.DefaultService).ListAll

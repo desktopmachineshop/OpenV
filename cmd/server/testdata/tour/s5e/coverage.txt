@@ -39,6 +39,7 @@ DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: 204, 401, 404; over_plan_self_host
 DELETE /api/v1/projects/{id}: 204, 401, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/projects/{id}/members/{userId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/projects/{id}/team-access/{teamId}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/provider-api-keys/{env}: 400, 401, 403; phantom_matrix (errors only)
 DELETE /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/share-links/{id}: 204, 401, 404; over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/shared-products/{id}: 401, 403, 404; phantom_matrix (errors only)
@@ -163,6 +164,7 @@ GET /api/v1/projects/{id}/vv/report: 200, 401, 404; over_plan_tiers_on, phantom_
 GET /api/v1/projects/{id}/work-items: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{projectID}/attachments: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/proposals: 200, 400, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/provider-api-keys: 200, 401, 403; phantom_matrix
 GET /api/v1/provider-logins/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/provider-logins/{id}/full: 200, 401, 403, 404; phantom_matrix, real_id_reads
 GET /api/v1/provider-settings: 200, 401; phantom_matrix
@@ -346,6 +348,7 @@ PUT /api/v1/projects/{id}/parties: 400, 401, 403, 404; phantom_matrix, real_id_r
 PUT /api/v1/projects/{id}/profile: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/quality-rules: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/team-access: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/provider-api-keys/{env}: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/provider-settings: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}/my-path: 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
@@ -356,4 +359,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 344 of 344 routes reached (100.0%), 163 with a 2xx or 3xx answer (47.4%)
+s5e: 347 of 347 routes reached (100.0%), 164 with a 2xx or 3xx answer (47.3%)

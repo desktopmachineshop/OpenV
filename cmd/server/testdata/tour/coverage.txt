@@ -38,6 +38,7 @@ DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 DELETE /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/projects/{id}/team-access/{teamId}: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/provider-api-keys/{env}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/repo-connections/{id}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/share-links/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 DELETE /api/v1/shared-products/{id}: s5b, s5e; 2xx or 3xx in s5b
@@ -162,6 +163,7 @@ GET /api/v1/projects/{id}/vv/report: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/work-items: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{projectID}/attachments: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/proposals: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/provider-api-keys: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/provider-logins/{id}: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/provider-logins/{id}/full: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/provider-settings: s5d, s5e; 2xx or 3xx in s5d, s5e
@@ -345,6 +347,7 @@ PUT /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/team-access: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/provider-api-keys/{env}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/provider-settings: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/repo-connections/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/repo-connections/{id}/my-path: s5d, s5e; 2xx or 3xx in s5d
@@ -355,4 +358,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 344 of 344 routes reached (100.0%), 340 with a 2xx or 3xx answer (98.8%); the floor is 90%, 310 routes
+the tour: 347 of 347 routes reached (100.0%), 343 with a 2xx or 3xx answer (98.8%); the floor is 90%, 313 routes

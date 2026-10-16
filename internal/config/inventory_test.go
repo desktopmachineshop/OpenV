@@ -154,6 +154,8 @@ func accessorCases() []accessorCase {
 			get: func(c *Config) any { return c.RunMaxAttempts() }},
 		{name: "OPENV_RUN_AUTO_RETRY", read: "cmd/server:envBool(key)", accessor: "RunAutoRetry()", def: true,
 			get: func(c *Config) any { return c.RunAutoRetry() }},
+		{name: "OPENV_SECRETS_KEY", read: "internal/config:Config.secret(name)", accessor: "SecretsKey()", def: "",
+			get: func(c *Config) any { return c.SecretsKey() }},
 		// stage notify
 		{name: "OPENV_SMTP_HOST", read: "os.Getenv", accessor: "SMTP().Host", def: "",
 			get: func(c *Config) any { return c.SMTP().Host }, pinned: raw("OPENV_SMTP_HOST")},
