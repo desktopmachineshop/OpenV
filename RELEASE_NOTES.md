@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Verification stubs for long requirements save again.** In guided
+  requirements definition, checking a requirement whose text runs past a
+  few hundred characters made the Verification stubs step fail with "value
+  too long". The draft test case's title is now shortened like a
+  requirement's, and its description still quotes the requirement in full.
+
 ## 0.21.4 — 2026-10-16
 
 ### Bug fixes

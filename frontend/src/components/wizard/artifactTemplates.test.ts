@@ -112,10 +112,10 @@ describe('golden strings: the guided wizard', () => {
     });
   });
 
-  it("writes a requirement's verification stub, its title never cut", () => {
+  it("writes a requirement's verification stub, its title cut at 120", () => {
     const title = 'v'.repeat(130);
     expect(wizardTestStubText({ title })).toEqual({
-      title: `Verify: ${title}`,
+      title: `Verify: ${'v'.repeat(109)}…`,
       body: `Test case stub for requirement: ${title}\n\nDefine steps, preconditions and expected results.`,
     });
   });

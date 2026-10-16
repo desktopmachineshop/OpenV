@@ -3900,7 +3900,7 @@
       [
         {
           "type": "test-case",
-          "title": "Verify: The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.",
+          "title": "Verify: The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency …",
           "body": "Test case stub for requirement: The system shall stop the spindle and lock the guard within one second of an operator pressing any emergency stop button.\n\nDefine steps, preconditions and expected results.",
           "parent_id": "art-31",
           "links": [

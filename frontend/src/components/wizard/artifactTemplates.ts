@@ -53,9 +53,13 @@ export const wizardHazardText = (h: HazardEntry): ArtifactText => ({
   body: `**Category:** ${h.category}\n\n**Potential harm:** ${h.harm.trim()}\n\n**Severity:** ${h.severity}`,
 });
 
-/** A verification stub for a requirement the wizard materialized. */
+/**
+ * A verification stub for a requirement the wizard materialized. Its title
+ * is cut at 120 like a requirement's: the candidate is the requirement's full
+ * text, which can outrun the 512-character title column; the body keeps it.
+ */
 export const wizardTestStubText = (c: { title: string }): ArtifactText => ({
-  title: `Verify: ${c.title}`,
+  title: asTitle(`Verify: ${c.title}`),
   body: `Test case stub for requirement: ${c.title}\n\nDefine steps, preconditions and expected results.`,
 });
 
