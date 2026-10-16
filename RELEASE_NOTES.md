@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.18.0 — 2026-10-16
+
 ### New features
 
 - **Paste a provider API key into OpenV instead of setting it on every
