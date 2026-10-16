@@ -9,12 +9,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
-### Bug fixes
-
-- **Shared and open-source projects scroll on a phone.** A long artifact
-  tree, or a long artifact, now scrolls within the page instead of running
-  off the bottom of the screen.
-
 ### Maintenance updates
 
 - **OpenV's own projects have their own section on the open-source page.**
@@ -34,6 +28,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Shared and open-source projects scroll on a phone.** A long artifact
+  tree, or a long artifact, now scrolls within the page instead of running
+  off the bottom of the screen.
 - **Verification stubs for long requirements save again.** In guided
   requirements definition, checking a requirement whose text runs past a
   few hundred characters made the Verification stubs step fail with "value
