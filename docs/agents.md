@@ -336,6 +336,15 @@ detection, which a cloud runner loses when its lease ends); or none. Below it
 are *This session only* (the brokered `auth login` above), *Stay signed in
 for a year* (minting, below) and, folded away, the paste.
 
+**A clean slate.** On a headless runner both Claude sign-ins first run
+`claude auth logout` (bounded to 20 seconds; a failure is logged and the
+sign-in carries on) and start with `ANTHROPIC_API_KEY`,
+`ANTHROPIC_AUTH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN` blanked, so neither a
+sign-in the CLI already holds nor a key on the host stands in for the one
+being made. A member's own machine is left as they have it. If a sign-in
+then sits silent for 30 seconds after the code, the runner relays the last
+lines its terminal shows (credentials hidden) to the card and its log.
+
 **Minted on a cloud runner.** Instead of running `claude setup-token`
 themselves, a member can choose *Stay signed in for a year* on the card
 (gated by `cloud-runner-token`). That starts a brokered request with
