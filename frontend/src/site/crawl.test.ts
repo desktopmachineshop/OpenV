@@ -94,9 +94,9 @@ describe('llmsTxt', () => {
     expect(quote.startsWith('> OpenV is a requirements management and V&V platform')).toBe(true);
   });
 
-  it('says what the licence is, and never that OpenV is open source', () => {
-    expect(llms).toContain('source-available under the Elastic License 2.0');
-    expect(llms).not.toMatch(/OpenV is open[- ]source/i);
+  it('says what the licence is', () => {
+    expect(llms).toContain('open source under the MIT License');
+    expect(llms).not.toMatch(/source[- ]available|Elastic License/i);
   });
 
   it('links every page it lists', () => {

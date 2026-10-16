@@ -95,7 +95,7 @@ export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> 
   },
   '/pricing': {
     title: 'Pricing',
-    summary: 'The hosted plans, free self-hosting under the Elastic License 2.0, and the free alpha.',
+    summary: 'The hosted plans, free self-hosting under the MIT License, and the free alpha.',
   },
   '/how-it-works': {
     title: 'How it works',
@@ -188,7 +188,7 @@ export function llmsTxt(): string {
     '',
     `> ${DESCRIPTOR}`,
     '',
-    'OpenV is source-available under the Elastic License 2.0: self-hosting is free at any scale with every feature, and the source is on GitHub at https://github.com/desktopmachineshop/OpenV. The hosted service is in a free alpha. Projects export as PDF, Word, JSON, CSV, Excel and ReqIF on every plan.',
+    'OpenV is open source under the MIT License: self-hosting is free at any scale with every feature, and the source is on GitHub at https://github.com/desktopmachineshop/OpenV. The hosted service is in a free alpha. Projects export as PDF, Word, JSON, CSV, Excel and ReqIF on every plan.',
     '',
     '## Site',
     '',

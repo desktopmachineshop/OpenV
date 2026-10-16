@@ -192,7 +192,7 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
             }}
           >
             <div>
-              <Eyebrow>Source-available · Free alpha · Bring your own AI</Eyebrow>
+              <Eyebrow>Open source · Free alpha · Bring your own AI</Eyebrow>
               <h1 style={{ margin: '0 0 16px', fontSize: compact ? 30 : 40, lineHeight: 1.15, color: 'var(--text)' }}>
                 {TAGLINE}
               </h1>
@@ -491,7 +491,7 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
         </Section>
 
         <Section compact={compact} id="licence">
-          <H2 compact={compact}>Source-available, and built in the open</H2>
+          <H2 compact={compact}>Open source, and built in the open</H2>
           <Lead>{LICENSE_GLOSS}</Lead>
           <ul style={{ margin: '0 0 20px', paddingLeft: 20, fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
             {LICENSE_INTENT.map((line) => (

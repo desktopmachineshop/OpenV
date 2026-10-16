@@ -1,6 +1,6 @@
 # OpenV - V&V Requirements Management Platform
 
-A modern, source-available Verification & Validation (V&V) requirements management system inspired by IBM DOORS, with full traceability, baselines, and a clean web UI. Free to self-host under the [Elastic License 2.0](LICENSE).
+A modern, open-source Verification & Validation (V&V) requirements management system inspired by IBM DOORS, with full traceability, baselines, and a clean web UI. Free to use, self-host and build on under the [MIT License](LICENSE).
 
 Hosted service: https://openv.app
 
@@ -47,7 +47,7 @@ Setup guide: [docs/agents.md](docs/agents.md)
   subscribes from workspace settings; payment goes through Stripe.
   Workspaces created during the alpha keep every tier's features free. The
   free-tier limits in force are listed on the same page.
-- **Self-hosted**: free forever under the Elastic License 2.0, all features, your hardware.
+- **Self-hosted**: free forever under the MIT License, all features, your hardware.
 - **Charities and open-source projects**: free forever on the hosted service.
   Claim it with a [free-hosting issue](https://github.com/desktopmachineshop/OpenV/issues/new?template=free-hosting.md).
 
@@ -304,22 +304,19 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Licensing
 
-OpenV is licensed under the [Elastic License 2.0](LICENSE).
+OpenV is open source, licensed under the [MIT License](LICENSE).
 
 ### What that means in plain English
 
-- **Self-hosting is free, for anyone, at any scale.** A company can run OpenV
-  on its own servers for its own teams, for good, with every feature. There
-  is no licence key, no phone-home and no seat count.
-- **The source is open to read, fork and change.** Modify it, keep your
-  changes private or publish them, and contribute them back if you like.
-- **Paid help is fine.** A consultant or integrator can charge to install,
-  customise or support a customer's own OpenV.
-- **The one thing you may not do is sell OpenV as a service.** You may not
-  offer OpenV, or a substantial part of it, to third parties as a hosted or
-  managed service. Hosted OpenV is how the project is funded.
+- **Do what you like with it.** Use, copy, modify, fork, redistribute and
+  sell OpenV or anything built from it, commercially or not, including as a
+  hosted service. There is no licence key, no phone-home and no seat count.
+- **Keep the attribution.** Any copy, or substantial part of one, that you
+  pass on must include OpenV's copyright notice and the licence text in
+  [LICENSE](LICENSE).
+- **No warranty.** OpenV comes as is.
 
-The licence text is short and readable. Where this summary and the text
+The licence text is the authority. Where this summary and the text
 disagree, the text wins.
 
 Contributions are accepted under the Developer Certificate of Origin — see

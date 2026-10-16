@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **OpenV is open source again, under the MIT License.** You may
+  use, change, redistribute and sell OpenV, or build your own product or
+  hosted service on it, as long as you keep its copyright and licence
+  notice. The Elastic License 2.0's ban on offering OpenV as a hosted or
+  managed service is gone. The README, the site's licence section and the
+  manual say so in plain English.
+
 ## 0.21.0 — 2026-10-16
 
 ### New features
