@@ -472,7 +472,7 @@ func copyModule(t *testing.T, root string) string {
 			copyFile(t, filepath.Join(root, e.Name()), filepath.Join(dst, e.Name()))
 		}
 	}
-	for _, d := range []string{"cmd", "internal", "examples", "contracts"} {
+	for _, d := range []string{"cmd", "ext", "internal", "examples", "contracts"} {
 		err := filepath.WalkDir(filepath.Join(root, d), func(p string, e os.DirEntry, err error) error {
 			if err != nil {
 				return err

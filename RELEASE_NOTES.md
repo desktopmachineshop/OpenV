@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Billing now plugs into OpenV as a module.** Nothing changes for your
+  workspace: the Billing tab, checkout and plan changes answer exactly as
+  before. This is the first step of keeping the hosted service's billing
+  and plans apart from the open-source product, so that a self-hosted
+  OpenV no longer carries them; anyone can now add routes of their own the
+  same way.
+
 ## 0.21.3 — 2026-10-16
 
 ### Bug fixes

@@ -169,6 +169,7 @@ the area that owns them; the area guide of
 | Package | Holds |
 |---|---|
 | `internal/api` | the handlers, the single route table, middleware, authorization guards and the SSE hub |
+| `ext` | the public extension API a module outside the core plugs in through: routes with declared guards, workspace observers, the Host the server lends it (`docs/plans/hosted-edition-separation.md`) |
 | `internal/config` | the server's configuration (X10): `Load` records every variable the boot stages read through the lookup it is given, and an accessor per setting parses it as the stage always did |
 | `internal/envparse` | the one rule for reading a setting from the environment, with its warnings |
 | `internal/persistence/postgres` | the repositories, the frozen baseline schema and the numbered migrations |
@@ -177,7 +178,7 @@ the area that owns them; the area guide of
 | `internal/scheduler` | the cron automations that are due, with catch-up at start |
 | `internal/automation` | the trigger matcher: launches the automations whose event filter matches |
 | `internal/orchestration` | the run hooks: board moves, crew follow-ups and hand-offs, interview sessions |
-| `internal/billing` | the subscription mirror: the entitlement each workspace gets from the provider's view |
+| `internal/billing` | the subscription mirror: the entitlement each workspace gets from the provider's view, and its HTTP routes as an `ext` module |
 | `internal/billing/stripe` | the Stripe client behind `billing.Provider` |
 | `internal/hosting` | provisions hosted-runner containers on the local Docker daemon |
 | `internal/metrics` | the Prometheus registry and the HTTP middleware that feeds it |

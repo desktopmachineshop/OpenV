@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"github.com/openv/requirements-platform/ext"
 	"sort"
 	"testing"
 	"time"
@@ -50,6 +51,10 @@ func newTestHandler(t testing.TB, opts ...func(*Handler)) *Handler {
 // that they never name a Handler field: M14's scripted rename of the fields
 // NewHandler copies from HandlerDeps is a class R commit, and edits these
 // instead. Any test may use them like any other option.
+
+func withModules(m ...ext.Module) func(*Handler) {
+	return func(h *Handler) { h.Modules = m }
+}
 
 func withProjectService(s projects.Service) func(*Handler) {
 	return func(h *Handler) { h.ProjectService = s }

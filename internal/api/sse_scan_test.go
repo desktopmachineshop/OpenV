@@ -161,7 +161,7 @@ func loadModuleSources(t *testing.T) *moduleSources {
 		}
 	}
 	var paths []string
-	for _, top := range []string{".", "cmd", "internal"} {
+	for _, top := range []string{".", "cmd", "ext", "internal"} {
 		start := filepath.Join(root, top)
 		err := filepath.WalkDir(start, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/openv/requirements-platform/ext"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
@@ -22,7 +23,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 
-	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
@@ -152,9 +152,10 @@ type HandlerDeps struct {
 	// InvitationService backs workspace invitations; nil leaves the
 	// endpoints answering 404 and registration unable to see an invitation.
 	InvitationService invitations.Service
-	// BillingService is the subscription sync path; nil or disabled where
-	// no provider is configured.
-	BillingService *billing.Service
+	// Modules plug in parts of the product that live outside this package
+	// (ext): their routes, their guards and what they watch. Billing is one
+	// on the hosted service.
+	Modules []ext.Module
 	// MinutesAlerts tells workspace admins when leased cloud-runner minutes
 	// near or reach the month's allowance; nil means no alerts.
 	MinutesAlerts *notify.MinutesMonitor
@@ -188,9 +189,11 @@ type Handler struct {
 	// those, not the HandlerDeps fields they come from.
 	HandlerDeps
 
-	frontendURL    string
-	secureCookies  bool
-	cookieSameSite http.SameSite
+	frontendURL string
+	// moduleRouteList is what the modules declared, asked once.
+	moduleRouteList []moduleRoute
+	secureCookies   bool
+	cookieSameSite  http.SameSite
 
 	// Rate limiters for the public (invite-token) interview endpoints; see
 	// ratelimit.go for defaults and environment overrides.
@@ -215,11 +218,6 @@ type Handler struct {
 	// from authIPLimiter on purpose: opening an invite link must never spend
 	// somebody's sign-in budget (see ratelimit.go).
 	invitePreviewLimiter *rateLimiter
-	// billingRefreshLimiter bounds synchronous subscription re-reads per
-	// workspace; billingWriteLimiter bounds the purchase writes (see
-	// ratelimit.go).
-	billingRefreshLimiter *rateLimiter
-	billingWriteLimiter   *rateLimiter
 	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
 	// mails an address the sender chose, so the endpoint is a mail relay
 	// (see ratelimit.go).
@@ -258,18 +256,15 @@ func NewHandler(deps HandlerDeps) *Handler {
 		verifyResendLimiter:    newRateLimiterOr(deps.RateLimits.VerifyResend, defaultVerifyResendBurst, defaultVerifyResendRefill),
 		passwordResetLimiter:   newRateLimiterOr(deps.RateLimits.PasswordReset, defaultPasswordResetBurst, defaultPasswordResetRefill),
 		invitePreviewLimiter:   newRateLimiterOr(deps.RateLimits.InvitePreview, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
-		billingRefreshLimiter:  newRateLimiterOr(deps.RateLimits.BillingRefresh, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
-		billingWriteLimiter:    newRateLimiterOr(deps.RateLimits.BillingWrite, defaultBillingWriteBurst, defaultBillingWriteRefill),
 		inviteLimiter:          newRateLimiterOr(deps.RateLimits.Invite, defaultInviteBurst, defaultInviteRefill),
 		visitLimiter:           newRateLimiter(defaultVisitBurst, defaultVisitRefill),
 		oauthLimiter:           newRateLimiter(defaultOAuthBurst, defaultOAuthRefill),
 	}
 	h.HandlerDeps = deps
-	if h.BillingService != nil {
-		// Billed seats are the seat limit's own reading, and the return
-		// origin is the app's unless the operator named another.
-		h.BillingService.SetSeatCounter(h.countOrgSeats)
-		h.BillingService.DefaultReturnURL(h.frontendURL)
+	for _, m := range h.Modules {
+		if aware, ok := m.(ext.HostAware); ok {
+			aware.SetHost(moduleHost{h})
+		}
 	}
 	readRequestSettingsAtBoot()
 	return h

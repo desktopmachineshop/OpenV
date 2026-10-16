@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"github.com/openv/requirements-platform/internal/billing"
 	"os"
 	"path/filepath"
 	"sort"
@@ -86,10 +87,18 @@ func TestRouteInventoryIsBackwardCompatible(t *testing.T) {
 // fresh mux router and RegisterRoutes. The inventory above and the binding
 // goldens (route_binding_test.go) walk the same table.
 func routeTable(t *testing.T) *mux.Router {
-	h := newTestHandler(t)
+	router, _ := routeTableAndHandler(t)
+	return router
+}
+
+// routeTableAndHandler is the router as a deployment builds it, the
+// modules it ships included (stage handlers), and the Handler that
+// registered it.
+func routeTableAndHandler(t *testing.T) (*mux.Router, *Handler) {
+	h := newTestHandler(t, withModules(billing.NewModule(nil, billing.Limits{})))
 	router := mux.NewRouter()
 	h.RegisterRoutes(router)
-	return router
+	return router, h
 }
 
 func dedupe(sorted []string) []string {

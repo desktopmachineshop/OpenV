@@ -79,8 +79,8 @@ func contextViolations(m *module, df *dockerfile, allEmbeds bool) []string {
 			p := m.pkgs[name]
 			if p == nil {
 				// Not parsed, so its files cannot be checked: fail, never skip.
-				out = append(out, fmt.Sprintf("%s builds %s, which links %s (%s), a package outside the root package, cmd/ and internal/, "+
-					"which archtest does not read: keep Go code under cmd/ or internal/", df.name, target, name, chain(parent, name)))
+				out = append(out, fmt.Sprintf("%s builds %s, which links %s (%s), a package outside the root package, cmd/, ext/ and internal/, "+
+					"which archtest does not read: keep Go code under cmd/, ext/ or internal/", df.name, target, name, chain(parent, name)))
 				continue
 			}
 			var missing []string
@@ -433,7 +433,7 @@ func TestDockerfileParsing(t *testing.T) {
 	got := contextViolations(m, df, false)
 	if len(got) != 3 || !strings.Contains(got[0], "links (root) (cmd/app -> (root)), but root.go lies outside") ||
 		!strings.Contains(got[1], "root.go: //go:embed NOTES.md resolves to NOTES.md, outside") ||
-		!strings.Contains(got[2], "links misc (cmd/app -> misc), a package outside the root package, cmd/ and internal/") {
+		!strings.Contains(got[2], "links misc (cmd/app -> misc), a package outside the root package, cmd/, ext/ and internal/") {
 		t.Errorf("violations = %q, want the uncopied root package, its embed, and misc, which archtest does not read", got)
 	}
 	if pats := embedPatterns(m.pkgs["internal/x"].files[0]); strings.Join(pats, " ") != "data static/*.json" {
