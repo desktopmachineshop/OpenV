@@ -53,7 +53,7 @@ var Registry = []Feature{
 	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
 	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
 	{Key: FeatureWorkspaceAPIKeys, ShippedIn: "0.18.0", Summary: "Paste a provider API key into workspace settings, and projects on API-key auth use it on every runner, with nothing to set on the runner's machine"},
-	{Key: FeatureRemoteMCP, ShippedIn: "0.18.0", Summary: "Connect an AI client such as Claude or Cursor to a workspace by its address alone: you sign in and approve it, with no runner and no key to copy, and revoke it from your settings"},
+	{Key: FeatureRemoteMCP, ShippedIn: "0.19.0", Summary: "Connect an AI client such as Claude or Cursor to a workspace by its address alone: you sign in and approve it, with no runner and no key to copy, and revoke it from your settings"},
 }
 
 // Feature keys the code gates on.

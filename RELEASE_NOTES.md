@@ -9,8 +9,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
-## 0.18.0 — 2026-10-16
-
 ### New features
 
 - **Connect Claude, Cursor or another AI app to a workspace with nothing to
@@ -23,6 +21,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   recorded as yours, and your role in the workspace still applies.
   Connected apps lists every app you have connected, and Disconnect stops
   one at once.
+
+## 0.18.0 — 2026-10-16
+
+### New features
+
 - **Paste a provider API key into OpenV instead of setting it on every
   machine.** A workspace admin can now save the workspace's Anthropic, OpenAI
   or Gemini API key in Workspace settings → AI providers. Projects set to
