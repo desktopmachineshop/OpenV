@@ -1,7 +1,8 @@
 # Separating the hosted service from the open-source product
 
 Status: decisions taken 2026-10-16 (section 3): one private repository,
-one domain. Not started.
+one domain. Phase 0 built with this plan (PR #662); Phases 1–4 not
+started.
 
 ## 1. Why
 
@@ -210,7 +211,7 @@ in the OpenV Platform project (`CLAUDE.md`). Moves that change nothing
 observable go as `refactor` PRs under the pure-move rules
 (`docs/plans/codebase-refactor.md`).
 
-### Phase 0: fix what self-hosters hit today (small, ship first)
+### Phase 0: fix what self-hosters hit today (done)
 
 - `ResolveReleaseChannel` uses the effective plan (`self_host` on a
   self-hosted install), so self-hosted workspaces are never on stable.

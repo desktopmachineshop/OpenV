@@ -26,6 +26,12 @@ docker compose up -d        # or: make up
 
 The API creates and migrates its schema automatically on first boot.
 
+The compose files set `OPENV_SELF_HOSTED=true`, so this is a self-hosted
+install: workspaces are on the `self_host` plan with nothing capped, there
+are no paid plans, and every workspace gets every feature of the release
+you run. Caps, if you want any, are yours to set (`OPENV_LIMITS`, see
+`docs/operations.md`).
+
 ## 2. Register your first user
 
 Open http://localhost:3000 and register with email + password.

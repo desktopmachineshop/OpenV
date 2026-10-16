@@ -549,11 +549,16 @@ Notes:
   layers, most specific first: the workspace's own `limits` JSONB, then the
   deployment's `OPENV_LIMITS`, then its plan's defaults. **Zero means
   unlimited** for every limit, uniformly.
-  - `OPENV_SELF_HOSTED=true` is the one setting a self-hoster needs. It
+  - `OPENV_SELF_HOSTED=true` is the one setting a self-hoster needs, and
+    `docker-compose.yml` sets it (override it in `.env` only to try the
+    hosted service's plans locally). It
     creates new workspaces on the `self_host` plan, where nothing is capped,
     and it changes what a limit refusal tells people to do — a hosted member
     is offered a plan upgrade, which is nonsense on a deployment with no plan
     and nobody to pay, so yours are told which setting to change instead.
+    Every workspace also runs the release this server ships: the hosted
+    service's stable channel never applies, whatever plan a workspace's
+    row carries.
   - `OPENV_PLAN_DEFAULT` overrides just the plan new workspaces get
     (`single`, `business_lite`, `business`, `enterprise`, `self_host`,
     `open_source` — granted to an open-source project's workspace; it
