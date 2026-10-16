@@ -37,6 +37,7 @@ func linkTools() []Tool {
 		{
 			Name:        "delete_link",
 			Description: "Delete a link by ID.",
+			Destructive: true,
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id": str("Link ID"),
 			}),

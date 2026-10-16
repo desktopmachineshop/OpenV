@@ -105,3 +105,29 @@ func TestListWorkItems(t *testing.T) {
 		}
 	})
 }
+
+// TestToolsListAnnotatesEveryTool keeps tools/list carrying what a connector
+// directory asks of every tool: a title, and readOnlyHint and destructiveHint
+// stated outright, since a client that finds destructiveHint missing assumes
+// the tool deletes. A read-only tool is never also destructive.
+func TestToolsListAnnotatesEveryTool(t *testing.T) {
+	_, list := toolIndex(Tools())
+	for _, entry := range list {
+		name := entry["name"]
+		ann, _ := entry["annotations"].(map[string]interface{})
+		if title, _ := entry["title"].(string); title == "" || ann["title"] != title {
+			t.Errorf("tool %v: title %q, annotations.title %v; want both set and equal", name, title, ann["title"])
+		}
+		ro, roOK := ann["readOnlyHint"].(bool)
+		destructive, dOK := ann["destructiveHint"].(bool)
+		if !roOK || !dOK {
+			t.Errorf("tool %v: readOnlyHint %v, destructiveHint %v; want both stated", name, ann["readOnlyHint"], ann["destructiveHint"])
+		}
+		if ro && destructive {
+			t.Errorf("tool %v is annotated both read-only and destructive", name)
+		}
+	}
+	if got := toolTitle("get_vv_gaps"); got != "Get V&V gaps" {
+		t.Errorf(`toolTitle("get_vv_gaps") = %q, want "Get V&V gaps"`, got)
+	}
+}

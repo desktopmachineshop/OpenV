@@ -209,6 +209,7 @@
     {
       "name": "delete_link",
       "read_only": false,
+      "destructive": true,
       "description": "Delete a link by ID.",
       "input_schema": {
         "properties": {

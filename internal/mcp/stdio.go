@@ -124,11 +124,7 @@ func toolIndex(tools []Tool) (map[string]Tool, []map[string]interface{}) {
 	toolList := make([]map[string]interface{}, 0, len(tools))
 	for _, t := range tools {
 		byName[t.Name] = t
-		toolList = append(toolList, map[string]interface{}{
-			"name":        t.Name,
-			"description": t.Description,
-			"inputSchema": t.InputSchema,
-		})
+		toolList = append(toolList, toolListEntry(t))
 	}
 	return byName, toolList
 }

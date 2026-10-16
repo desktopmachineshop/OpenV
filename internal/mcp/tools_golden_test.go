@@ -36,6 +36,7 @@ type toolsGolden struct {
 type toolGolden struct {
 	Name        string          `json:"name"`
 	ReadOnly    bool            `json:"read_only"`
+	Destructive bool            `json:"destructive,omitempty"`
 	Description string          `json:"description"`
 	InputSchema json.RawMessage `json:"input_schema"`
 	// Calls are the REST requests the handler makes, in order, each as its
@@ -256,6 +257,7 @@ func buildToolsGolden(t *testing.T) toolsGolden {
 		doc.Tools = append(doc.Tools, toolGolden{
 			Name:        tool.Name,
 			ReadOnly:    ReadOnly(tool.Name),
+			Destructive: tool.Destructive,
 			Description: tool.Description,
 			InputSchema: schemaJSON(t, tool.InputSchema),
 			Calls:       calls,
@@ -284,8 +286,8 @@ func schemaJSON(t *testing.T, schema map[string]interface{}) json.RawMessage {
 }
 
 // checkToolsListAgainstGolden compares a tools/list result served from the
-// whole table with testdata/tools.json: every tool's name, description and
-// input schema, in order. Under UPDATE_GOLDEN=1 the file may be rewritten by
+// whole table with testdata/tools.json: every tool's name, title,
+// description, input schema and annotations, in order. Under UPDATE_GOLDEN=1 the file may be rewritten by
 // TestMCPToolsGolden in the same run, so the table is compared with itself
 // instead.
 func checkToolsListAgainstGolden(t *testing.T, served []interface{}) {
@@ -293,7 +295,7 @@ func checkToolsListAgainstGolden(t *testing.T, served []interface{}) {
 	var want []map[string]interface{}
 	if updatingGoldens() {
 		for _, tool := range Tools() {
-			want = append(want, map[string]interface{}{"name": tool.Name, "description": tool.Description, "inputSchema": tool.InputSchema})
+			want = append(want, toolListEntry(tool))
 		}
 	} else {
 		shown := goldenPkgDir + "/" + filepath.ToSlash(toolsGoldenPath)
@@ -306,7 +308,9 @@ func checkToolsListAgainstGolden(t *testing.T, served []interface{}) {
 			t.Fatalf("parse golden %s: %v", shown, err)
 		}
 		for _, tool := range doc.Tools {
-			want = append(want, map[string]interface{}{"name": tool.Name, "description": tool.Description, "inputSchema": tool.InputSchema})
+			entry := toolListEntry(Tool{Name: tool.Name, Description: tool.Description, ReadOnly: tool.ReadOnly, Destructive: tool.Destructive})
+			entry["inputSchema"] = tool.InputSchema
+			want = append(want, entry)
 		}
 	}
 	wantJSON, gotJSON := string(encodeGolden(t, want)), string(encodeGolden(t, served))

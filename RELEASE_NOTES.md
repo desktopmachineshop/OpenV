@@ -15,6 +15,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   your app, not the openv.app marketing site, and it no longer shows a
   Billing tab, a Plan card or the platform admin's site Visitors
   dashboard. openv.app is unchanged.
+- **Claude and other AI apps now see which OpenV tools only read.** Each
+  tool tells a connected app its name in plain words and whether it only
+  reads, changes your project, or deletes something, so the app can ask
+  you before it deletes a link.
 
 ## 0.21.4 — 2026-10-16
 

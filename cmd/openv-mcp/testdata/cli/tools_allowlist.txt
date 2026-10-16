@@ -15,5 +15,5 @@ env OPENV_MCP_TOOLS="list_projects"
 exit 0
 --- stdout
 {"jsonrpc":"2.0","id":1,"result":{"capabilities":{"tools":{}},"protocolVersion":"2024-11-05","serverInfo":{"name":"openv-mcp","version":"0.1.0"}}}
-{"jsonrpc":"2.0","id":2,"result":{"tools":[{"description":"List all projects visible to this agent.","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"list_projects"}]}}
+{"jsonrpc":"2.0","id":2,"result":{"tools":[{"annotations":{"destructiveHint":false,"openWorldHint":false,"readOnlyHint":true,"title":"List projects"},"description":"List all projects visible to this agent.","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"list_projects","title":"List projects"}]}}
 --- stderr
