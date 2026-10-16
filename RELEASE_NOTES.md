@@ -15,6 +15,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   the same notes What's new shows you, is at openv.app/changelog for
   anyone evaluating OpenV, and linked from the site's footer. What's new
   in the app is unchanged.
+- **Claude and other AI apps now see which OpenV tools only read.** Each
+  tool tells a connected app its name in plain words and whether it only
+  reads, adds to your project, or changes or deletes what is already
+  there, so the app can ask you before it edits an artifact or deletes a
+  link.
+- **openv.app now has a privacy policy and a guide to connecting Claude.**
+  The privacy policy at /privacy says what the hosted service collects, who
+  it is shared with and how long it is kept; the guide at /ai-connector
+  shows how to add OpenV to Claude or another AI app, what to ask it, and
+  how to disconnect it. Both are linked from the site footer.
 
 ## 0.21.5 — 2026-10-16
 
@@ -35,16 +45,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   your app, not the openv.app marketing site, and it no longer shows a
   Billing tab, a Plan card or the platform admin's site Visitors
   dashboard. openv.app is unchanged.
-- **Claude and other AI apps now see which OpenV tools only read.** Each
-  tool tells a connected app its name in plain words and whether it only
-  reads, adds to your project, or changes or deletes what is already
-  there, so the app can ask you before it edits an artifact or deletes a
-  link.
-- **openv.app now has a privacy policy and a guide to connecting Claude.**
-  The privacy policy at /privacy says what the hosted service collects, who
-  it is shared with and how long it is kept; the guide at /ai-connector
-  shows how to add OpenV to Claude or another AI app, what to ask it, and
-  how to disconnect it. Both are linked from the site footer.
 - **You can extend your own OpenV with modules.** A Go package can add
   routes, react to workspace changes and tell the app what it offers,
   then be linked into the OpenV server at build time;
