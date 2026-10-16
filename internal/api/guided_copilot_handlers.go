@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -9,13 +10,13 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/release"
+	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 )
 
 // registerGuidedCopilotRoutes wires a guided session's copilot chat: its
@@ -123,10 +124,25 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 			h.SSEHub.BroadcastSession("guided:"+session.ID, "message", note)
 		}
 	}
-	writeJSONBare(w, map[string]interface{}{
-		"message":       message,
-		"runner_online": h.guidedRunnerOnline(session),
-	})
+	writeJSONBare(w, h.guidedRunnerState(session, CurrentUserID(r), map[string]interface{}{
+		"message": message,
+	}))
+}
+
+// guidedRunnerState adds to a chat answer whether a runner is online and,
+// when none is, whether a cloud runner the member holds is still starting:
+// runner_starting is present only then, so the panel can say a runner is on
+// its way rather than that nothing is connected.
+func (h *Handler) guidedRunnerState(session *guided.Session, userID *string, answer map[string]interface{}) map[string]interface{} {
+	online := h.guidedRunnerOnline(session)
+	answer["runner_online"] = online
+	if !online {
+		if project, err := h.ProjectService.GetProject(session.ProjectID); err == nil && project != nil &&
+			h.cloudRunnerStarting(project.OrgID, userID) {
+			answer["runner_starting"] = true
+		}
+	}
+	return answer
 }
 
 // KickoffGuidedChat launches an opening copilot turn for a session whose chat
@@ -148,12 +164,10 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	runnerOnline := h.guidedRunnerOnline(session)
 	reply := func(status string) {
-		writeJSONBare(w, map[string]interface{}{
-			"status":        status,
-			"runner_online": runnerOnline,
-		})
+		writeJSONBare(w, h.guidedRunnerState(session, CurrentUserID(r), map[string]interface{}{
+			"status": status,
+		}))
 	}
 	transcript, err := h.GuidedService.GetChatTranscript(session.ID)
 	if err != nil {
@@ -214,12 +228,10 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 	// show (or clear) its thinking indicator: "launched" and "pending" both
 	// mean a copilot message will arrive; "unavailable" means none will; and
 	// runner_online=false means turns are queuing with nobody to answer.
-	runnerOnline := h.guidedRunnerOnline(session)
 	reply := func(status string) {
-		writeJSONBare(w, map[string]interface{}{
-			"status":        status,
-			"runner_online": runnerOnline,
-		})
+		writeJSONBare(w, h.guidedRunnerState(session, CurrentUserID(r), map[string]interface{}{
+			"status": status,
+		}))
 	}
 	event := strings.TrimSpace(req.Event)
 	if event == "" {
@@ -391,6 +403,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 	if err != nil {
 		return err
 	}
+	h.autoStartCloudRunner(orgID, launchedBy)
 	if err := h.GuidedService.AttachAgentRun(session.ID, run.ID); err != nil {
 		slog.Warn("api: failed to attach copilot run to guided session",
 			"run_id", run.ID, "session_id", session.ID, "error", err)
@@ -570,4 +583,81 @@ Beside the project, the wizard shapes above are added straight to the project as
 - {"kind":"move","ref":"REQ-12","parent":"<reference of the new parent heading; "" for the top level>","before":"<reference>"} or "after":"<reference>" or "position":"first|last" — move an artifact under another heading, or reorder it among its siblings. Omit parent to keep it where it is and only change its position.
 - Name an artifact by its reference from the outline, or by the artifact_id a locked wizard entry carries.
 The wizard shapes above still work here: a persona, need, requirement, nfr or hazard is added as a draft under the standard heading for its kind (in the wizard, into the form). "replaces" reaches only unlocked wizard entries — for anything already in the project use edit or move. When the user asks you to restructure, rewrite or file something, answer with these blocks (several at once is fine, applied in order) rather than describing what they should do.`
+}
+
+// autoStartCloudRunner leases a cloud runner for a member whose chat turn
+// was just queued with nothing to answer it, so that sending a message is
+// all it takes: no trip to settings to reserve one first. It does nothing
+// when something can already take the turn — the member's own runner, a
+// lease they hold, or a workspace or hosted runner that is online — when the
+// deployment has no runner pool, when the workspace has no lease minutes
+// left this month, or when the workspace's channel has not received the
+// feature. It never fails the turn: a pool with nothing free is logged, and
+// the chat says no runner is connected as before.
+//
+// It reports whether the member now holds a lease that is coming up.
+func (h *Handler) autoStartCloudRunner(orgID string, userID *string) bool {
+	if h.RunnerSessionService == nil || h.WorkerKeyService == nil || userID == nil || *userID == "" {
+		return false
+	}
+	if !h.memberFeatureEnabled(orgID, userID, release.FeatureAutoCloudRunner) {
+		return false
+	}
+	if h.runnerAvailableFor(orgID, *userID) {
+		return false
+	}
+	if live, err := h.RunnerSessionService.Get(orgID, *userID); err != nil || live != nil {
+		return live != nil
+	}
+	sessionMinutes, idleMinutes := h.sessionLimits(orgID)
+	minutes, err := h.leaseMinutesAllowed(orgID, sessionMinutes)
+	if err != nil || minutes <= 0 {
+		return false
+	}
+	session, created, err := h.RunnerSessionService.Start(orgID, *userID, minutes, idleMinutes)
+	if err != nil {
+		if !errors.Is(err, runnersessions.ErrNoNodes) {
+			slog.Warn("api: could not start a cloud runner for a chat turn", "org_id", orgID, "error", err)
+		}
+		return false
+	}
+	if created {
+		slog.Info("api: started a cloud runner for a chat turn", "org_id", orgID, "session_id", session.ID)
+		if h.MinutesAlerts != nil {
+			h.MinutesAlerts.Check(orgID)
+		}
+	}
+	return true
+}
+
+// runnerAvailableFor reports whether a runner that can take the member's
+// run is online: one of the member's own keys (their connector or a lease),
+// or a workspace key, which hosted and shared runners use. Another member's
+// personal runner does not count: it takes only its own member's runs.
+func (h *Handler) runnerAvailableFor(orgID, userID string) bool {
+	keys, err := h.WorkerKeyService.List(orgID)
+	if err != nil {
+		// Unknown: assume a runner, rather than lease minutes on a guess.
+		return true
+	}
+	for _, key := range keys {
+		if key.Revoked || key.LastUsedAt == nil || time.Since(*key.LastUsedAt) >= workerOnlineWindow {
+			continue
+		}
+		if key.UserID == nil || *key.UserID == userID {
+			return true
+		}
+	}
+	return false
+}
+
+// cloudRunnerStarting reports whether the member holds a cloud runner lease
+// that has not yet come online, which the chat panel shows instead of "no
+// runner connected".
+func (h *Handler) cloudRunnerStarting(orgID string, userID *string) bool {
+	if h.RunnerSessionService == nil || userID == nil || *userID == "" {
+		return false
+	}
+	live, err := h.RunnerSessionService.Get(orgID, *userID)
+	return err == nil && live != nil
 }

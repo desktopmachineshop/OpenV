@@ -255,6 +255,18 @@ export interface BulkProposalOutcome {
   error?: string;
 }
 
+// A member's stored subscription token, as the API reports it: never the
+// token itself. `available` is false on a server with no secrets key.
+export interface ProviderTokenStatus {
+  provider: string;
+  available: boolean;
+  connected: boolean;
+  last4?: string;
+  created_at?: string;
+  expires_at?: string;
+  expired: boolean;
+}
+
 export interface ProviderLogin {
   id: string;
   provider: string;

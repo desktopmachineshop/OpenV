@@ -54,6 +54,8 @@ var Registry = []Feature{
 	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
 	{Key: FeatureWorkspaceAPIKeys, ShippedIn: "0.18.0", Summary: "Paste a provider API key into workspace settings, and projects on API-key auth use it on every runner, with nothing to set on the runner's machine"},
 	{Key: FeatureRemoteMCP, ShippedIn: "0.19.0", Summary: "Connect an AI client such as Claude or Cursor to a workspace by its address alone: you sign in and approve it, with no runner and no key to copy, and revoke it from your settings"},
+	{Key: FeatureAutoCloudRunner, ShippedIn: "0.20.0", Summary: "Send a chat message with no runner online and OpenV starts a cloud runner for you, where your plan has cloud runner minutes"},
+	{Key: FeatureSubscriptionToken, ShippedIn: "0.20.0", Summary: "Keep Claude signed in: save a long-lived Claude subscription token once, and your own and leased runners start chats already signed in"},
 }
 
 // Feature keys the code gates on.
@@ -162,6 +164,16 @@ const (
 	// endpoints are not gated: they act for no workspace, and a client
 	// cannot get a token without a consent the gate allowed.
 	FeatureRemoteMCP = "remote-mcp"
+	// FeatureSubscriptionToken is a member's stored Claude subscription
+	// token (`claude setup-token`). It gates SAVING one (the settings card
+	// and PUT /me/provider-tokens) and handing it to a runner in a claim,
+	// on the run's workspace's channel. Reading the status and forgetting a
+	// token are never gated, so a member can always remove what they saved.
+	FeatureSubscriptionToken = "claude-subscription-token"
+	// FeatureAutoCloudRunner is leasing a cloud runner for a member when a
+	// chat turn of theirs is queued with no runner online to take it. It
+	// gates only the automatic lease; starting one by hand is unchanged.
+	FeatureAutoCloudRunner = "auto-cloud-runner"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

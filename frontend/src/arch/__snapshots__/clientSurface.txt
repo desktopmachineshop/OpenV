@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 219; members of exported objects: 301
+exports: 221; members of exported objects: 304
 
 interface AdminUser
 interface AdminWorkspace
@@ -106,6 +106,7 @@ interface ProviderAPIKeys
 interface ProviderLogin
 interface ProviderModel
 interface ProviderSetting
+interface ProviderTokenStatus
 interface PublicPlan
 interface PublicPlans
 interface PublicPrice
@@ -445,6 +446,10 @@ const     providerSettingsAPI
             .removeKey
             .setKey
             .upsert
+const     providerTokensAPI
+            .get
+            .remove
+            .save
 const     publicInterviewAPI
             .finish
             .intro

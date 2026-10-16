@@ -277,6 +277,62 @@ All three surface in the same **Agent sign-ins** cards. Sign-ins on a leased
 runner last exactly as long as the lease.
 
 
+### Starting a transient runner from the chat
+
+A member need not lease a transient runner by hand before they chat. When a
+V&V Assistant turn of theirs is queued (a message, the kickoff or a wizard
+nudge) and nothing can take it, the server leases one for them
+(`autoStartCloudRunner`, `internal/api/runner_session_autostart.go`), as the
+Cloud runner card's Start does, with the workspace's lease length and idle
+window, shortened to the month's remaining allowance. "Nothing can take it"
+means none of these is online (a key used in the last 30 seconds): one of the
+member's own keys (their connector, or a lease), or a workspace key, which
+shared and hosted runners use. Another member's personal runner does not
+count, since it takes only its own member's runs. Nothing is leased on a
+deployment with no runner pool, once the month's allowance is spent, while
+the member already holds a lease, or before the workspace's channel has the
+`auto-cloud-runner` feature. A pool with nothing free changes nothing: the
+chat says no runner is connected, as before.
+
+While the lease comes up the chat answers carry `runner_starting: true`
+beside `runner_online: false`, and the panel says a cloud runner is starting
+instead of "not connected". The lease ends by itself after the idle window,
+like one started by hand. Pair it with a saved subscription token (below), or
+the new runner has no Claude sign-in and the turn fails asking for one.
+
+### Keeping Claude signed in with a subscription token
+
+A sign-in on a transient runner lasts one lease, and a personal runner's CLI
+sign-in can lapse. A member can instead save a **Claude subscription token**
+under Settings → *Claude subscription token*: on their own computer they run
+`claude setup-token`, sign in with their Claude subscription, and paste the
+token it prints (it starts `sk-ant-oat01-` and lasts a year).
+
+- **Stored sealed.** The server seals it with AES-256-GCM under
+  `OPENV_SECRETS_KEY`, bound to the member, and keeps only its last four
+  characters in the clear. The API never answers it back. A server without
+  the key stores none, and the card says so.
+- **Handed out narrowly.** A claim carries it (auth mode
+  `subscription-token`, field `oauth_token`) only for a Claude Code run the
+  member launched, only to a runner that serves that member alone (their
+  personal runner key, or a transient runner leased to them), and only while
+  it is unexpired. A workspace or hosted runner is someone else's host: it
+  never receives it and keeps its own sign-in. A project on API-key auth
+  wins over it.
+- **Into the CLI only.** The runner sets `CLAUDE_CODE_OAUTH_TOKEN` in the
+  CLI's environment, never in the MCP server's (which is written to
+  `.openv/mcp.json`). As with an API key, the agent's own tools run in that
+  environment, so an agent allowed a shell could read it.
+- **When it stops working.** A run whose token Claude refuses fails as a
+  sign-in failure, and its error says to run `claude setup-token` again and
+  save the new token. An expired token is not sent; the run uses the
+  runner's own sign-in, and the card asks for a new one.
+
+This is why `claude setup-token` is not used for the brokered sign-in above:
+that flow signs the CLI in on the runner's disk, and a setup-token does not;
+the token works only when it reaches the CLI as `CLAUDE_CODE_OAUTH_TOKEN`,
+which is what the saved token does.
+
 ### Antigravity CLI
 
 `agy` is Google's successor to the Gemini CLI and is where the consumer tiers

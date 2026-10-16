@@ -18,6 +18,7 @@ DELETE /api/v1/evidence-files/{id}: project:editor
 DELETE /api/v1/links/{id}: project:editor, project:editor|project:viewer
 DELETE /api/v1/me/avatar: session
 DELETE /api/v1/me/connected-apps/{id}: session
+DELETE /api/v1/me/provider-tokens/{provider}: session
 DELETE /api/v1/me/push-subscriptions: session
 DELETE /api/v1/notifications/cleared: session
 DELETE /api/v1/org-teams/{id}: org:admin
@@ -102,6 +103,7 @@ GET /api/v1/links/{id}: project:viewer
 GET /api/v1/me/connected-apps: session
 GET /api/v1/me/default-workspace: session
 GET /api/v1/me/notification-prefs: session
+GET /api/v1/me/provider-tokens/{provider}: session
 GET /api/v1/me/push-subscriptions: session
 GET /api/v1/me/push/config: session
 GET /api/v1/meta/artifact-types: -
@@ -342,6 +344,7 @@ PUT /api/v1/links/{id}/confirm: project:editor
 PUT /api/v1/me/default-workspace: session
 PUT /api/v1/me/notification-prefs: session
 PUT /api/v1/me/password: session
+PUT /api/v1/me/provider-tokens/{provider}: session
 PUT /api/v1/notifications/{id}/flag: session
 PUT /api/v1/org-teams/{id}: org:admin
 PUT /api/v1/orgs/{id}: org:admin

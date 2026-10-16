@@ -12,6 +12,7 @@ DELETE /api/v1/evidence-files/{id}
 DELETE /api/v1/links/{id}
 DELETE /api/v1/me/avatar
 DELETE /api/v1/me/connected-apps/{id}
+DELETE /api/v1/me/provider-tokens/{provider}
 DELETE /api/v1/me/push-subscriptions
 DELETE /api/v1/notifications/cleared
 DELETE /api/v1/org-teams/{id}
@@ -96,6 +97,7 @@ GET /api/v1/links/{id}
 GET /api/v1/me/connected-apps
 GET /api/v1/me/default-workspace
 GET /api/v1/me/notification-prefs
+GET /api/v1/me/provider-tokens/{provider}
 GET /api/v1/me/push-subscriptions
 GET /api/v1/me/push/config
 GET /api/v1/meta/artifact-types
@@ -336,6 +338,7 @@ PUT /api/v1/links/{id}/confirm
 PUT /api/v1/me/default-workspace
 PUT /api/v1/me/notification-prefs
 PUT /api/v1/me/password
+PUT /api/v1/me/provider-tokens/{provider}
 PUT /api/v1/notifications/{id}/flag
 PUT /api/v1/org-teams/{id}
 PUT /api/v1/orgs/{id}

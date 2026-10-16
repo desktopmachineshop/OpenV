@@ -1242,6 +1242,13 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
 | GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
 
+Each of the three launching answers carries `runner_starting: true` beside
+`runner_online: false` when no runner was online and the caller now holds a
+cloud runner lease that is coming up: queuing a turn with nothing to take it
+leases one for the member where the deployment has a pool and the workspace
+minutes left (`docs/agents.md`, "Starting a transient runner from the chat").
+The key is absent otherwise.
+
 `chat/nudge` takes `{step, state, event}` and answers `{status, runner_online}`.
 `status` is `launched` (a turn was enqueued), `pending` (a turn is already in
 flight, so this nudge was **parked** on the session — the newest parked nudge
@@ -1464,6 +1471,9 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 | POST | `/api/v1/provider-logins/{id}/cancel` | Cancel sign-in (workspace: org admin; user-targeted: its requester or an org admin) | user |
 | POST | `/api/v1/provider-logins/{id}/progress` | Worker reports flow progress; a completed or cancelled sign-in is answered as it is, unchanged | worker |
 | GET | `/api/v1/provider-logins/{id}/full` | Full login record (incl. code) for the executing worker | worker |
+| GET | `/api/v1/me/provider-tokens/{provider}` | The caller's stored subscription token (`claude-code` only): `{provider, available, connected, last4, created_at, expires_at, expired}`; never the token. `available` is false on a server with no `OPENV_SECRETS_KEY` | user |
+| PUT | `/api/v1/me/provider-tokens/{provider}` | Save the token `claude setup-token` printed `{token}`, replacing any earlier one; answers the status. `400` for a value that is not such a token, `403` with the remedy when the active workspace's channel has not received it, `503` when the server stores no tokens | user |
+| DELETE | `/api/v1/me/provider-tokens/{provider}` | Forget the caller's token → `204` | user |
 
 ### Events
 

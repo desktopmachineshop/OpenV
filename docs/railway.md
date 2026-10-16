@@ -164,9 +164,12 @@ the **API** service:
 OPENV_SECRETS_KEY=<random string>
 ```
 
-Without it the tab says the server cannot store keys. Keep it stable:
-**changing it makes every stored key unreadable** until an admin pastes it
-again (runs fall back to the runner host's variable meanwhile).
+Without it the tab says the server cannot store keys. The same key seals
+the Claude subscription tokens members save under Settings
+(`docs/agents.md`), so without it the token card says so too. Keep it
+stable: **changing it makes every stored key and token unreadable** until
+it is pasted again (runs fall back to the runner host's variable or its own
+sign-in meanwhile). Give staging a key of its own, never production's.
 
 Optional — the agent providers offered: production sets the providers that
 have been tested, and staging leaves the variable unset so every provider can

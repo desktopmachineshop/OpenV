@@ -228,6 +228,7 @@ the area that owns them; the area guide of
 | | `internal/domain/interviews` | interviews and their invites |
 | | `internal/domain/proposals` | agent proposals and their review |
 | | `internal/domain/providers` | provider settings and sign-ins, the known providers |
+| | `internal/domain/providers/usertokens` | a member's own stored provider sign-in token (a Claude subscription token), sealed under the server's secrets key |
 | | `internal/domain/repoconns` | repository connections |
 | | `internal/domain/teams` | crews (the code says team) |
 | runner-fleet | `internal/domain/hostedworkers` | a workspace's hosted runner |

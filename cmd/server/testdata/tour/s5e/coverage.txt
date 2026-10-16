@@ -25,6 +25,7 @@ DELETE /api/v1/evidence-files/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/links/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/me/avatar: 200, 401; phantom_matrix
 DELETE /api/v1/me/connected-apps/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/me/provider-tokens/{provider}: 400, 401; phantom_matrix (errors only)
 DELETE /api/v1/me/push-subscriptions: 400, 401; phantom_matrix (errors only)
 DELETE /api/v1/notifications/cleared: 200, 401; phantom_matrix
 DELETE /api/v1/org-teams/{id}: 401, 404; phantom_matrix (errors only)
@@ -109,6 +110,7 @@ GET /api/v1/links/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/me/connected-apps: 200, 401; phantom_matrix
 GET /api/v1/me/default-workspace: 200, 401; phantom_matrix
 GET /api/v1/me/notification-prefs: 200, 401; phantom_matrix
+GET /api/v1/me/provider-tokens/{provider}: 200, 400, 401; phantom_matrix, real_id_reads
 GET /api/v1/me/push-subscriptions: 200, 401; phantom_matrix
 GET /api/v1/me/push/config: 200, 401; phantom_matrix
 GET /api/v1/meta/artifact-types: 200, 401; phantom_matrix
@@ -349,6 +351,7 @@ PUT /api/v1/links/{id}/confirm: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/me/default-workspace: 400, 401, 404; phantom_matrix (errors only)
 PUT /api/v1/me/notification-prefs: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/me/password: 400, 401; phantom_matrix (errors only)
+PUT /api/v1/me/provider-tokens/{provider}: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/notifications/{id}/flag: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/org-teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/orgs/{id}: 200, 400, 401, 403, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
@@ -373,4 +376,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 360 of 361 routes reached (99.7%), 169 with a 2xx or 3xx answer (46.8%)
+s5e: 363 of 364 routes reached (99.7%), 170 with a 2xx or 3xx answer (46.7%)

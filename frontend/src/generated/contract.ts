@@ -37,6 +37,8 @@ export const FEATURE_KEYS = [
   'workspace-runs',
   'workspace-api-keys',
   'remote-mcp',
+  'auto-cloud-runner',
+  'claude-subscription-token',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

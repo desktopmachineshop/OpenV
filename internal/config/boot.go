@@ -240,7 +240,7 @@ func (c *Config) SharedProductPoolLimit() int {
 }
 
 // SecretsKey is the key the server seals workspaces' pasted provider API
-// keys with (OPENV_SECRETS_KEY, a credential, exactly as set), "" when
+// keys and members' saved subscription tokens with (OPENV_SECRETS_KEY, a credential, exactly as set), "" when
 // unset, which leaves the app unable to store one. Changing it makes every
 // stored key unreadable until it is pasted again.
 func (c *Config) SecretsKey() string {

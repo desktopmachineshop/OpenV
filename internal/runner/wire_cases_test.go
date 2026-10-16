@@ -94,6 +94,13 @@ func wireClaimCases() []wireCase {
 			}}},
 		},
 		{
+			name:      "a run with the launcher's stored subscription token carries it",
+			responses: []wireResponse{{200, wireClaimBody(wireRunJSON, `{"mode":"subscription-token","oauth_token":"<oauth-token>"}`)}},
+			calls: []wireCall{{`Claim("<worker-id>", ["claude-code"], 0, false)`, func(c *Client) (interface{}, error) {
+				return c.Claim(wireID("<worker-id>"), []string{"claude-code"}, 0, false)
+			}}},
+		},
+		{
 			name:      "a project on api-key auth names the variable that holds the key",
 			responses: []wireResponse{{200, wireClaimBody(wireRunJSON, `{"api_key_env":"ANTHROPIC_API_KEY","mode":"api-key"}`)}},
 			calls: []wireCall{{`Claim("<worker-id>", ["claude-code"], 0, false)`, func(c *Client) (interface{}, error) {

@@ -31,6 +31,7 @@ import { getAPIBaseURL } from '../api/baseURL';
 import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
+import { SubscriptionTokenCard, SUBSCRIPTION_TOKEN_FEATURE } from './agents/SubscriptionTokenCard';
 import { providerCaution } from './agents/providerCautions';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import type { AgentProvider } from '../generated/contract';
@@ -98,6 +99,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   // belongs to it (the list is their memberships).
   const defaultWorkspaceOn = useFeature(DEFAULT_WORKSPACE_FEATURE);
   const remoteMcp = useFeature(REMOTE_MCP_FEATURE);
+  const subscriptionTokenOn = useFeature(SUBSCRIPTION_TOKEN_FEATURE);
   const [defaultOrgSaving, setDefaultOrgSaving] = useState(false);
   const [defaultOrgError, setDefaultOrgError] = useState('');
   const defaultOrgId = currentUser?.default_org_id || '';
@@ -688,6 +690,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 />
               ))}
             </div>
+
+            {subscriptionTokenOn && <SubscriptionTokenCard />}
 
             <div className="card" style={{ background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}>
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>

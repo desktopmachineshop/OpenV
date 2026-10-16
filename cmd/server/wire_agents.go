@@ -10,6 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -63,6 +64,8 @@ func (a *app) agents() {
 	}
 	a.providerKeyService = providers.NewKeyService(postgres.NewProviderAPIKeyRepository(a.db), keySealer)
 	a.loginService = providers.NewLoginService(postgres.NewProviderLoginRepository(a.db))
+	// Members' own subscription tokens share the sealer: off with it.
+	a.providerTokenService = usertokens.NewDefaultService(postgres.NewProviderTokenRepository(a.db), keySealer)
 	a.teamService = teams.NewDefaultService(a.teamRepo)
 	// Human crew members must belong to the crew's workspace.
 	a.teamService.SetMemberValidator(func(orgID, userID string) bool {

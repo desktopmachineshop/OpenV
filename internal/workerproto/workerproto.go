@@ -42,16 +42,24 @@ type ClaimResponse struct {
 	RunToken string `json:"run_token"`
 }
 
+// AuthSubscriptionToken is the RunAuth mode of a run that carries the
+// launching member's own subscription token in OAuthToken. A runner that
+// does not know the mode treats it as "user-account" and ignores the token.
+const AuthSubscriptionToken = "subscription-token"
+
 // RunAuth is the credential mode the API resolved for a claimed run.
 type RunAuth struct {
-	// Mode is "user-account" (use the host's CLI sign-in, the default) or
+	// Mode is "user-account" (use the host's CLI sign-in, the default),
 	// "api-key" (inject APIKey, or else the key named by APIKeyEnv from the
-	// host env).
+	// host env) or "subscription-token" (sign the CLI in with OAuthToken).
 	Mode      string `json:"mode"`
 	APIKeyEnv string `json:"api_key_env,omitempty"`
 	// APIKey is the key the workspace pasted in the app for APIKeyEnv, ""
 	// when it pasted none. It is a credential: never log or persist it.
 	APIKey string `json:"api_key,omitempty"`
+	// OAuthToken is the member's Claude subscription token, set only in
+	// the subscription-token mode. A secret: never logged or persisted.
+	OAuthToken string `json:"oauth_token,omitempty"`
 }
 
 // --- Logs: POST /api/v1/agent-runs/{id}/logs ---

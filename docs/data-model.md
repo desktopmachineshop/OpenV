@@ -329,6 +329,11 @@ catalog). `provider_logins` relays CLI sign-in flows to runners: `provider`,
 workspace and key variable (`org_id`, `key_env`): `sealed` (AES-256-GCM
 under the server's `OPENV_SECRETS_KEY`, the nonce first; never the key in
 the clear), `last4`, `updated_by`, `updated_at`.
+`user_provider_tokens` holds a member's saved subscription token, one per
+member and provider (`user_id`, `provider`; today `claude-code` only):
+`sealed` (the same sealer, bound to `user:<id>` and the provider), `last4`,
+`created_at`, `expires_at` (a year after saving). The rows go with the
+member.
 
 ### agent_teams / agent_team_nodes / agent_team_edges (crews)
 Agent org charts (API name: **crews**; table names keep the historical

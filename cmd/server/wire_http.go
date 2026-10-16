@@ -89,6 +89,7 @@ func (a *app) handlers() {
 		ProviderKeyService:   a.providerKeyService,
 		OfferedProviders:     cfg.AgentProviders(),
 		LoginService:         a.loginService,
+		ProviderTokenService: a.providerTokenService,
 		OrgService:           a.orgService,
 		OrgTeamService:       a.orgTeamService,
 		WorkerKeyService:     a.workerKeyService,

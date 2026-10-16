@@ -316,6 +316,9 @@ GET /api/v1/orgs/{id}/features -> GetOrgFeatures
 PUT /api/v1/orgs/{id}/members/me/preview -> SetMyStablePreview [alwaysWritable]
 GET /api/v1/me/default-workspace -> GetDefaultWorkspace
 PUT /api/v1/me/default-workspace -> SetDefaultWorkspace
+GET /api/v1/me/provider-tokens/{provider} -> GetProviderToken
+PUT /api/v1/me/provider-tokens/{provider} -> PutProviderToken
+DELETE /api/v1/me/provider-tokens/{provider} -> DeleteProviderToken
 POST /api/v1/runner-pool/nodes -> RegisterPoolNode
 POST /api/v1/runner-pool/nodes/{id}/heartbeat -> PoolNodeHeartbeat
 POST /api/v1/runner-pool/nodes/{id}/release -> ReleasePoolNode

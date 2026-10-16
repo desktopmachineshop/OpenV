@@ -142,7 +142,7 @@ buckets live in the API process, so they assume a single API instance.
 | `OPENV_RUN_AUTO_RETRY` | server | `true` | `false` turns off the automatic retry of a run that failed for a retryable reason (provider unavailable, timeout, worker error). |
 | `OPENV_RUN_MAX_ATTEMPTS` | server | `3` | Attempts a run's retry chain may make, the first included; `1` turns retries off. |
 | `OPENV_RUN_TOKEN` | openv-mcp | none | The token minted for one agent run, which the runner hands `openv-mcp`; the tools then reach only what that run may. |
-| `OPENV_SECRETS_KEY` | server | none | The key the server seals workspaces' pasted provider API keys with (AES-256-GCM over its SHA-256), at least 32 characters, e.g. `openssl rand -base64 32`. Unset, the app cannot store a pasted key and runners read provider keys from their hosts only; shorter than 32 characters, the server refuses to start. Changing it leaves every stored key unreadable until it is pasted again. A credential, used exactly as set. |
+| `OPENV_SECRETS_KEY` | server | none | The key the server seals workspaces' pasted provider API keys and members' saved Claude subscription tokens with (AES-256-GCM over its SHA-256), at least 32 characters, e.g. `openssl rand -base64 32`. Unset, the app cannot store a pasted key or a saved token, and runners read provider keys from their hosts only; shorter than 32 characters, the server refuses to start. Changing it leaves every stored key and token unreadable until it is pasted again. A credential, used exactly as set. |
 
 ### runner-fleet
 

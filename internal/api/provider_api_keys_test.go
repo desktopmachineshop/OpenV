@@ -201,19 +201,19 @@ func TestAClaimCarriesTheWorkspacesPastedKeyOnlyForAnAPIKeyProject(t *testing.T)
 	}}
 	agent := &agents.Agent{Provider: providers.ProviderClaudeCode}
 
-	auth := h.resolveRunAuth(&agentruns.Run{OrgID: "org-1", ProjectID: &apiKeyProject}, agent)
+	auth := h.resolveRunAuth(httptest.NewRequest("POST", "/api/v1/agent-runs/claim", nil), &agentruns.Run{OrgID: "org-1", ProjectID: &apiKeyProject}, agent)
 	if auth["mode"] != projects.AgentAuthAPIKey || auth["api_key_env"] != "ANTHROPIC_API_KEY" || auth["api_key"] != pastedKey {
 		t.Errorf("api-key project: auth = %v, want the pasted key for ANTHROPIC_API_KEY", auth)
 	}
-	if auth := h.resolveRunAuth(&agentruns.Run{OrgID: "org-1", ProjectID: &accountProject}, agent); auth["api_key"] != "" {
+	if auth := h.resolveRunAuth(httptest.NewRequest("POST", "/api/v1/agent-runs/claim", nil), &agentruns.Run{OrgID: "org-1", ProjectID: &accountProject}, agent); auth["api_key"] != "" {
 		t.Errorf("user-account project: auth = %v, want no key", auth)
 	}
-	if auth := h.resolveRunAuth(&agentruns.Run{OrgID: "org-1"}, agent); auth["api_key"] != "" {
+	if auth := h.resolveRunAuth(httptest.NewRequest("POST", "/api/v1/agent-runs/claim", nil), &agentruns.Run{OrgID: "org-1"}, agent); auth["api_key"] != "" {
 		t.Errorf("run with no project: auth = %v, want no key", auth)
 	}
 	// Another workspace's run of an api-key project gets nothing of org-1's.
 	h.ProjectService.(*fakeProjectService).byID[apiKeyProject].OrgID = "org-2"
-	if auth := h.resolveRunAuth(&agentruns.Run{OrgID: "org-2", ProjectID: &apiKeyProject}, agent); auth["api_key"] != "" {
+	if auth := h.resolveRunAuth(httptest.NewRequest("POST", "/api/v1/agent-runs/claim", nil), &agentruns.Run{OrgID: "org-2", ProjectID: &apiKeyProject}, agent); auth["api_key"] != "" {
 		t.Errorf("org-2's run: auth = %v, want no key", auth)
 	}
 }
