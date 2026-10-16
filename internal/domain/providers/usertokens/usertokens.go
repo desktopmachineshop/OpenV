@@ -81,6 +81,9 @@ type Repository interface {
 type Service interface {
 	Status(userID, provider string) (*Status, error)
 	Save(userID, provider, token string) (*Status, error)
+	// SaveFor is Save for a token whose lifetime the CLI reported; a
+	// lifetime of 0 or one out of range is taken as Lifetime.
+	SaveFor(userID, provider, token string, lifetime time.Duration) (*Status, error)
 	Delete(userID, provider string) error
 	// ForRun opens the member's live token for a run, or "" when they have
 	// none, it has expired, or the server cannot open it.
@@ -157,8 +160,21 @@ func (s *DefaultService) Status(userID, provider string) (*Status, error) {
 	return s.status(provider, t), nil
 }
 
-// Save seals and stores the member's token, replacing any earlier one.
+// Save seals and stores the member's token, replacing any earlier one,
+// dated to lapse Lifetime from now: a pasted token says nothing of its own.
 func (s *DefaultService) Save(userID, provider, token string) (*Status, error) {
+	return s.SaveFor(userID, provider, token, Lifetime)
+}
+
+// MaxLifetime bounds the lifetime a runner may report for a token.
+const MaxLifetime = 5 * 365 * 24 * time.Hour
+
+// SaveFor seals and stores the member's token, dated to lapse after the
+// lifetime the CLI reported.
+func (s *DefaultService) SaveFor(userID, provider, token string, lifetime time.Duration) (*Status, error) {
+	if lifetime < time.Hour || lifetime > MaxLifetime {
+		lifetime = Lifetime
+	}
 	token = strings.TrimSpace(token)
 	if err := Validate(provider, token); err != nil {
 		return nil, err
@@ -177,7 +193,7 @@ func (s *DefaultService) Save(userID, provider, token string) (*Status, error) {
 		Sealed:    sealed,
 		Last4:     token[len(token)-4:],
 		CreatedAt: now,
-		ExpiresAt: now.Add(Lifetime),
+		ExpiresAt: now.Add(lifetime),
 	}
 	if err := s.repo.Upsert(t); err != nil {
 		return nil, err

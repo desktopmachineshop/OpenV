@@ -223,6 +223,7 @@ GET /api/v1/provider-logins/{id} -> GetProviderLogin
 POST /api/v1/provider-logins/{id}/code -> SubmitProviderLoginCode
 POST /api/v1/provider-logins/{id}/cancel -> CancelProviderLogin
 POST /api/v1/provider-logins/{id}/progress -> ProgressProviderLogin
+POST /api/v1/provider-logins/{id}/token -> SaveProviderLoginToken
 GET /api/v1/provider-logins/{id}/full -> GetProviderLoginFull
 GET /api/v1/crews -> ListTeams
 POST /api/v1/crews -> CreateTeam

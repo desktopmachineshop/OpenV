@@ -16,12 +16,12 @@ func NewProviderLoginRepository(db *sql.DB) *ProviderLoginRepository {
 	return &ProviderLoginRepository{db: db}
 }
 
-const loginColumns = `id, COALESCE(org_id::text, ''), provider, target, status, auth_url, code, detail, paste_kind, requested_by, created_at, updated_at`
+const loginColumns = `id, COALESCE(org_id::text, ''), provider, target, purpose, status, auth_url, code, detail, paste_kind, requested_by, created_at, updated_at`
 
 func scanLogin(row interface{ Scan(...interface{}) error }) (*providers.LoginRequest, error) {
 	l := new(providers.LoginRequest)
 	var requestedBy sql.NullString
-	err := row.Scan(&l.ID, &l.OrgID, &l.Provider, &l.Target, &l.Status, &l.AuthURL, &l.Code, &l.Detail, &l.PasteKind, &requestedBy, &l.CreatedAt, &l.UpdatedAt)
+	err := row.Scan(&l.ID, &l.OrgID, &l.Provider, &l.Target, &l.Purpose, &l.Status, &l.AuthURL, &l.Code, &l.Detail, &l.PasteKind, &requestedBy, &l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -35,9 +35,9 @@ func scanLogin(row interface{ Scan(...interface{}) error }) (*providers.LoginReq
 // SaveLogin inserts a login request.
 func (r *ProviderLoginRepository) SaveLogin(l *providers.LoginRequest) error {
 	_, err := r.db.Exec(`
-		INSERT INTO provider_logins (id, org_id, provider, target, status, auth_url, code, detail, paste_kind, requested_by, created_at, updated_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, l.ID, l.OrgID, l.Provider, l.Target, l.Status, l.AuthURL, l.Code, l.Detail, l.PasteKind, l.RequestedBy, l.CreatedAt, l.UpdatedAt)
+		INSERT INTO provider_logins (id, org_id, provider, target, status, auth_url, code, detail, paste_kind, requested_by, created_at, updated_at, purpose)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, l.ID, l.OrgID, l.Provider, l.Target, l.Status, l.AuthURL, l.Code, l.Detail, l.PasteKind, l.RequestedBy, l.CreatedAt, l.UpdatedAt, l.Purpose)
 	return err
 }
 
@@ -59,21 +59,21 @@ func (r *ProviderLoginRepository) FindLoginByID(id string) (*providers.LoginRequ
 	return l, err
 }
 
-// FindActiveLogin returns the most recent in-flight request for a provider,
-// or nil. User-targeted requests are scoped to the requesting user;
+// FindActiveLogin returns the most recent in-flight request for a provider
+// and purpose, or nil. User-targeted requests are scoped to the requesting user;
 // workspace-targeted requests are org-wide.
-func (r *ProviderLoginRepository) FindActiveLogin(orgID, provider, target string, userID *string) (*providers.LoginRequest, error) {
+func (r *ProviderLoginRepository) FindActiveLogin(orgID, provider, target, purpose string, userID *string) (*providers.LoginRequest, error) {
 	query := `
 		SELECT ` + loginColumns + ` FROM provider_logins
-		WHERE org_id = NULLIF($1, '')::uuid AND provider = $2 AND target = $3
+		WHERE org_id = NULLIF($1, '')::uuid AND provider = $2 AND target = $3 AND purpose = $4
 		  AND status IN ('pending', 'claimed', 'url_ready', 'awaiting_code')`
-	args := []interface{}{orgID, provider, target}
+	args := []interface{}{orgID, provider, target, purpose}
 	if target == providers.LoginTargetUser {
 		uid := ""
 		if userID != nil {
 			uid = *userID
 		}
-		query += ` AND requested_by = NULLIF($4, '')::uuid`
+		query += ` AND requested_by = NULLIF($5, '')::uuid`
 		args = append(args, uid)
 	}
 	query += ` ORDER BY created_at DESC LIMIT 1`
@@ -86,8 +86,9 @@ func (r *ProviderLoginRepository) FindActiveLogin(orgID, provider, target string
 
 // ClaimPendingLogin atomically claims the org's oldest pending request the
 // worker may execute: workspace-targeted requests for any worker, plus
-// user-targeted requests belonging to the personal runner's owner.
-func (r *ProviderLoginRepository) ClaimPendingLogin(orgID, workerUserID string) (*providers.LoginRequest, error) {
+// user-targeted requests belonging to the personal runner's owner;
+// token-purpose ones only for a worker that can mint a token.
+func (r *ProviderLoginRepository) ClaimPendingLogin(orgID, workerUserID string, tokenLogins bool) (*providers.LoginRequest, error) {
 	row := r.db.QueryRow(`
 		UPDATE provider_logins SET status = 'claimed', updated_at = NOW()
 		WHERE id = (
@@ -97,10 +98,11 @@ func (r *ProviderLoginRepository) ClaimPendingLogin(orgID, workerUserID string) 
 				target = 'workspace'
 				OR (target = 'user' AND requested_by = NULLIF($2, '')::uuid)
 			  )
+			  AND (purpose = '' OR $3)
 			ORDER BY created_at LIMIT 1
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING `+loginColumns, orgID, workerUserID)
+		RETURNING `+loginColumns, orgID, workerUserID, tokenLogins)
 	l, err := scanLogin(row)
 	if noRow(err) {
 		return nil, nil

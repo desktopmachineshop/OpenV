@@ -18,6 +18,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   managed service is gone. The README, the site's licence section and the
   manual say so in plain English.
 
+## 0.21.0 — 2026-10-16
+
+### New features
+
+- **One place to sign Claude Code in, for the session or for a year.** The
+  Claude Code card under Agent sign-ins now offers both: *This session
+  only* signs your runner in until its lease ends, and *Stay signed in for a
+  year* has your cloud runner get a long-lived token for you (you sign in
+  with your Claude subscription in the browser and paste the code back), so
+  every runner of yours starts signed in with nothing to run on your own
+  computer. A line at the top of the card says which one is in force, and
+  for a saved token the date it expires, as Claude reported it. Pasting a
+  token you made yourself with `claude setup-token` is still there, inside
+  the same card.
+
 ## 0.20.0 — 2026-10-16
 
 ### New features

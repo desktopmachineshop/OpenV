@@ -45,6 +45,34 @@ type loginFlow struct {
 	loopback bool
 	// browserDetail is shown when the CLI opens the browser itself.
 	browserDetail string
+	// mintsToken is true for `claude setup-token`: the CLI prints a
+	// long-lived token instead of signing itself in, and the runner hands
+	// that token to the server as the member's saved one.
+	mintsToken bool
+}
+
+// mintTokenFlow is the flow of a token-purpose request: Claude Code's
+// `claude setup-token`, a TUI like `claude auth login`, that ends by
+// printing the token rather than storing a sign-in.
+var mintTokenFlow = loginFlow{
+	command:     []string{"claude", "setup-token"},
+	interactive: true,
+	mintsToken:  true,
+}
+
+// subscriptionTokenPattern matches a token `claude setup-token` prints.
+var subscriptionTokenPattern = regexp.MustCompile(`sk-ant-oat01-[A-Za-z0-9_-]{20,}`)
+
+// anthropicSecretPattern matches any Anthropic credential a CLI might print.
+var anthropicSecretPattern = regexp.MustCompile(`sk-ant-[A-Za-z0-9]+-[A-Za-z0-9_-]{8,}`)
+
+// redactSecrets hides any Anthropic credential in text the runner relays to
+// the member or writes to its log: a sign-in's output tail, a terminal
+// message. Only its prefix is left, so the member can tell what it was.
+func redactSecrets(text string) string {
+	return anthropicSecretPattern.ReplaceAllStringFunc(text, func(secret string) string {
+		return secret[:strings.LastIndex(secret[:len("sk-ant-oat01-")], "-")+1] + "…(hidden)"
+	})
 }
 
 // signInFailure annotates a failed sign-in with anything provider-specific
@@ -65,7 +93,9 @@ func flowFor(provider string) (loginFlow, bool) {
 		// it leaves the CLI itself signed out, so every run afterwards dies
 		// on "Not logged in". `auth login` requests the scopes a session
 		// needs (`user:sessions:claude_code`, `user:mcp_servers`, ...) and
-		// signs the CLI in.
+		// signs the CLI in. setup-token runs only for a token-purpose
+		// request (mintTokenFlow), whose token the server saves for the
+		// member and hands back to their runs as CLAUDE_CODE_OAUTH_TOKEN.
 		//
 		// It is an Ink TUI either way: it renders nothing over pipes, so it
 		// needs a real terminal — a console window on a personal runner, a
@@ -129,7 +159,9 @@ func (b *loginBroker) loginLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			login, err := b.client.ClaimLogin()
+			// Only a headless runner drives `claude setup-token` over a
+			// terminal it can read the token from.
+			login, err := b.client.ClaimLogin(b.headless && ptySupported)
 			if err != nil {
 				log.Printf("login claim failed: %v", err)
 				continue
@@ -145,6 +177,15 @@ func (b *loginBroker) loginLoop(ctx context.Context) {
 func (b *loginBroker) handleLogin(ctx context.Context, login *providers.LoginRequest) {
 	log.Printf("login %s: starting %s sign-in", login.ID, login.Provider)
 	flow, ok := flowFor(login.Provider)
+	if login.Purpose == providers.LoginPurposeToken {
+		// Minting is Claude Code's, and needs the terminal only a headless
+		// runner reads; the claim hands token requests to no other runner.
+		if login.Provider != providers.ProviderClaudeCode || !b.headless || !ptySupported {
+			b.loginProgress(login.ID, providers.LoginFailed, "", "only a cloud runner can mint a saved token")
+			return
+		}
+		flow = mintTokenFlow
+	}
 	if !ok {
 		b.loginProgress(login.ID, providers.LoginFailed, "", "provider does not support CLI sign-in")
 		return
@@ -387,7 +428,8 @@ func newLineTail(max int) *lineTail {
 func (t *lineTail) add(line string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.lines = append(t.lines, line)
+	// The tail is relayed as a failure's detail: no credential goes with it.
+	t.lines = append(t.lines, redactSecrets(line))
 	if len(t.lines) > t.max {
 		t.lines = t.lines[len(t.lines)-t.max:]
 	}

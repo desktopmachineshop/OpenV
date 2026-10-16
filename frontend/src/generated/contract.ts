@@ -39,6 +39,7 @@ export const FEATURE_KEYS = [
   'remote-mcp',
   'auto-cloud-runner',
   'claude-subscription-token',
+  'cloud-runner-token',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

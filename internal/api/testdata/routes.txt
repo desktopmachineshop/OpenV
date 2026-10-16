@@ -292,6 +292,7 @@ POST /api/v1/provider-logins/claim
 POST /api/v1/provider-logins/{id}/cancel
 POST /api/v1/provider-logins/{id}/code
 POST /api/v1/provider-logins/{id}/progress
+POST /api/v1/provider-logins/{id}/token
 POST /api/v1/provider-settings/detect
 POST /api/v1/public/connector/pair
 POST /api/v1/public/interviews/{token}/finish

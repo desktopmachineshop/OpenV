@@ -201,7 +201,8 @@
     "workspace-api-keys",
     "remote-mcp",
     "auto-cloud-runner",
-    "claude-subscription-token"
+    "claude-subscription-token",
+    "cloud-runner-token"
   ],
   "event_types": [
     "artifact.created",

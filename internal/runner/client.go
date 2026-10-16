@@ -246,8 +246,11 @@ func (c *Client) ReportDetection(report map[string]map[string]interface{}) error
 }
 
 // ClaimLogin asks for a pending provider sign-in request (nil when none).
-func (c *Client) ClaimLogin() (*providers.LoginRequest, error) {
-	resp, err := c.do(c.http, "POST", "/api/v1/provider-logins/claim", nil)
+//
+// tokenLogins says this runner can mint a saved subscription token, so a
+// token-purpose request may be handed to it.
+func (c *Client) ClaimLogin(tokenLogins bool) (*providers.LoginRequest, error) {
+	resp, err := c.do(c.http, "POST", "/api/v1/provider-logins/claim", workerproto.LoginClaim{TokenLogins: tokenLogins})
 	if err != nil {
 		return nil, err
 	}
@@ -275,6 +278,22 @@ func (c *Client) LoginProgress(id, status, authURL, detail, pasteKind string) er
 		PasteKind: pasteKind,
 		Status:    status,
 	})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return httpError(resp)
+	}
+	return nil
+}
+
+// SaveLoginToken hands the server the token a token-purpose sign-in minted,
+// which it seals as the member's saved subscription token.
+// expiresIn is the lifetime the CLI printed (0 when it printed none).
+func (c *Client) SaveLoginToken(id, token string, expiresIn time.Duration) error {
+	resp, err := c.do(c.http, "POST", "/api/v1/provider-logins/"+id+"/token",
+		workerproto.LoginToken{Token: token, ExpiresIn: int64(expiresIn / time.Second)})
 	if err != nil {
 		return err
 	}

@@ -1,8 +1,8 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 307
-  axios instance calls: 296 (DELETE 37, GET 118, HEAD 1, POST 100, PUT 40)
+call sites: 308
+  axios instance calls: 297 (DELETE 37, GET 118, HEAD 1, POST 101, PUT 40)
   helper calls (a function that passes its argument to the instance): 2
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (4 of them axios calls)
@@ -269,7 +269,7 @@ POST    /api/v1/proposals/{id}/reject                                     propos
 GET     /api/v1/provider-api-keys                                         providerSettingsAPI.listKeys
 DELETE  /api/v1/provider-api-keys/{env}                                   providerSettingsAPI.removeKey
 PUT     /api/v1/provider-api-keys/{env}                                   providerSettingsAPI.setKey
-POST    /api/v1/provider-logins                                           providerLoginsAPI.start
+POST    /api/v1/provider-logins                                           providerLoginsAPI.start, providerLoginsAPI.startToken
 GET     /api/v1/provider-logins/{id}                                      providerLoginsAPI.get
 POST    /api/v1/provider-logins/{id}/cancel                               providerLoginsAPI.cancel
 POST    /api/v1/provider-logins/{id}/code                                 providerLoginsAPI.submitCode

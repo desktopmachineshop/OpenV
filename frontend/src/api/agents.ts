@@ -124,6 +124,13 @@ export const providerSettingsAPI = {
 export const providerLoginsAPI = {
   start: (provider: string, target: 'workspace' | 'user' = 'workspace') =>
     client.post<ProviderLogin>('/api/v1/provider-logins', { provider, target }),
+  // Asks the member's cloud runner to mint them a saved Claude token.
+  startToken: () =>
+    client.post<ProviderLogin>('/api/v1/provider-logins', {
+      provider: 'claude-code',
+      target: 'user',
+      purpose: 'token',
+    }),
   get: (id: string) => client.get<ProviderLogin>(`/api/v1/provider-logins/${id}`),
   submitCode: (id: string, code: string) =>
     client.post<ProviderLogin>(`/api/v1/provider-logins/${id}/code`, { code }),
