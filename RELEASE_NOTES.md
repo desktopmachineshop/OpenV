@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.20.0 — 2026-10-16
+
 ### New features
 
 - **Keep Claude signed in with a subscription token.** Run
