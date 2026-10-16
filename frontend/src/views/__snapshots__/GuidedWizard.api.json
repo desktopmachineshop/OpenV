@@ -2882,8 +2882,8 @@
       [
         {
           "type": "hazard",
-          "title": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched",
-          "body": "**Category:** Safety\n\n**Potential harm:** Crushed or severed fingers\n\n**Severity:** moderate",
+          "title": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command i…",
+          "body": "The spindle restarts on its own after a power dip while an operator is changing the tool, because the start command is still latched\n\n**Category:** Safety\n\n**Potential harm:** Crushed or severed fingers\n\n**Severity:** moderate",
           "attributes": {
             "severity": "moderate",
             "category": "Safety"

@@ -48,10 +48,18 @@ export const wizardNfrText = (n: NfrEntry): ArtifactText => ({
   body: `${n.text.trim()}${n.fit_criterion.trim() ? `\n\n**Fit criterion:** ${n.fit_criterion.trim()}` : ''}`,
 });
 
-export const wizardHazardText = (h: HazardEntry): ArtifactText => ({
-  title: h.hazard.trim(),
-  body: `**Category:** ${h.category}\n\n**Potential harm:** ${h.harm.trim()}\n\n**Severity:** ${h.severity}`,
-});
+export const wizardHazardText = (h: HazardEntry): ArtifactText => {
+  // The title is cut at 120 like a requirement's, so a long hazard fits the
+  // 512-character title column; a cut hazard opens its body in full, since
+  // the body has no other copy of it.
+  const hazard = h.hazard.trim();
+  const title = asTitle(hazard);
+  const full = title === hazard ? '' : `${hazard}\n\n`;
+  return {
+    title,
+    body: `${full}**Category:** ${h.category}\n\n**Potential harm:** ${h.harm.trim()}\n\n**Severity:** ${h.severity}`,
+  };
+};
 
 /**
  * A verification stub for a requirement the wizard materialized. Its title

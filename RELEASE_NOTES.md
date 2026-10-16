@@ -16,6 +16,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   few hundred characters made the Verification stubs step fail with "value
   too long". The draft test case's title is now shortened like a
   requirement's, and its description still quotes the requirement in full.
+- **Long hazards save in guided requirements definition.** A hazard
+  described in more than a few hundred characters made the Hazards step
+  fail the same way. Its title is now shortened like a requirement's, and
+  the full hazard opens its description.
 
 ## 0.21.4 — 2026-10-16
 

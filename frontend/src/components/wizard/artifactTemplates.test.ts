@@ -104,11 +104,16 @@ describe('golden strings: the guided wizard', () => {
     });
   });
 
-  it('writes a hazard, its title never cut', () => {
+  it('writes a hazard, its title cut at 120 and a cut one in full in its body', () => {
+    const fits = `A ${'h'.repeat(118)}`;
+    expect(wizardHazardText({ id: 'h-1', category: 'Safety', hazard: fits, harm: 'Crushed fingers', severity: 'moderate' })).toEqual({
+      title: fits,
+      body: '**Category:** Safety\n\n**Potential harm:** Crushed fingers\n\n**Severity:** moderate',
+    });
     const long = `A ${'h'.repeat(130)}`;
     expect(wizardHazardText({ id: 'h-1', category: 'Safety', hazard: long, harm: 'Crushed fingers', severity: 'moderate' })).toEqual({
-      title: long,
-      body: '**Category:** Safety\n\n**Potential harm:** Crushed fingers\n\n**Severity:** moderate',
+      title: `A ${'h'.repeat(115)}…`,
+      body: `${long}\n\n**Category:** Safety\n\n**Potential harm:** Crushed fingers\n\n**Severity:** moderate`,
     });
   });
 

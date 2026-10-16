@@ -98,7 +98,7 @@ describe('the step table', () => {
       120,
       120,
       100,
-      null,
+      120,
       120,
     ]);
     expect(STUB_STEP.template).toBeDefined();
