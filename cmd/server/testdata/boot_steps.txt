@@ -138,6 +138,9 @@ func main()
   call (*internal/config.Config).Billing
   if
     call os.Exit
+  call ext.Build
+  if
+    call os.Exit
   switch
     case
       call (*internal/billing.Service).SetUsers

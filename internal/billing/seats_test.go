@@ -5,14 +5,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // businessOrg is a workspace holding a live Business subscription billing
 // `billed` seats.
-func businessOrg(id string, billed int) *orgs.Org {
-	return &orgs.Org{ID: id, BilledPlan: orgs.PlanBusiness, Billing: orgs.Billing{
-		Status: orgs.PlanStatusActive, Seats: billed, SubscriptionRef: "sub_" + id, ItemRef: "si_sub_" + id, CustomerRef: "cus_" + id,
+func businessOrg(id string, billed int) *ext.Workspace {
+	return &ext.Workspace{ID: id, BilledPlan: ext.PlanBusiness, Billing: ext.WorkspaceBilling{
+		Status: ext.PlanStatusActive, Seats: billed, SubscriptionRef: "sub_" + id, ItemRef: "si_sub_" + id, CustomerRef: "cus_" + id,
 	}}
 }
 
@@ -36,7 +36,7 @@ func seatService(t *testing.T, counts map[string]int, o *fakeOrgs) (*Service, *f
 }
 
 func TestSeatChangesCoalesceIntoOnePushPerWorkspace(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": businessOrg("o1", 3), "o2": businessOrg("o2", 3)}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": businessOrg("o1", 3), "o2": businessOrg("o2", 3)}}
 	s, p, _ := seatService(t, map[string]int{"o1": 5, "o2": 4}, o)
 
 	for i := 0; i < 6; i++ {
@@ -64,12 +64,12 @@ func TestSeatChangesCoalesceIntoOnePushPerWorkspace(t *testing.T) {
 
 func TestSeatSyncNeverTouchesLiteOrLapsedOrUnbilled(t *testing.T) {
 	lite := businessOrg("lite", 1)
-	lite.BilledPlan = orgs.PlanBusinessLite
+	lite.BilledPlan = ext.PlanBusinessLite
 	lapsed := businessOrg("lapsed", 3)
-	lapsed.Billing.Status = orgs.PlanStatusCanceled
+	lapsed.Billing.Status = ext.PlanStatusCanceled
 	noItem := businessOrg("noitem", 3)
 	noItem.Billing.ItemRef = ""
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"lite": lite, "lapsed": lapsed, "noitem": noItem}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"lite": lite, "lapsed": lapsed, "noitem": noItem}}
 	s, p, _ := seatService(t, map[string]int{"lite": 9, "lapsed": 9, "noitem": 9}, o)
 
 	for id := range o.orgs {
@@ -86,7 +86,7 @@ func TestSeatSyncNeverTouchesLiteOrLapsedOrUnbilled(t *testing.T) {
 }
 
 func TestSeatPushFloorsAtOneAndRefusesAboveTheCeiling(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"empty": businessOrg("empty", 3), "huge": businessOrg("huge", 3)}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"empty": businessOrg("empty", 3), "huge": businessOrg("huge", 3)}}
 	s, p, m := seatService(t, map[string]int{"empty": 0, "huge": 501}, o)
 
 	s.SeatsChanged("empty")
@@ -108,7 +108,7 @@ func TestSeatPushFloorsAtOneAndRefusesAboveTheCeiling(t *testing.T) {
 }
 
 func TestReconcileRepairsSeatDriftBothWays(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"up": businessOrg("up", 3), "down": businessOrg("down", 3), "same": businessOrg("same", 3)}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"up": businessOrg("up", 3), "down": businessOrg("down", 3), "same": businessOrg("same", 3)}}
 	s, p, m := seatService(t, map[string]int{"up": 8, "down": 2, "same": 3}, o)
 
 	s.Reconcile(context.Background())
@@ -133,7 +133,7 @@ func TestReconcileRepairsSeatDriftBothWays(t *testing.T) {
 }
 
 func TestSeatPushFailureLeavesTheSnapshotForTheNextTick(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": businessOrg("o1", 3)}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": businessOrg("o1", 3)}}
 	s, p, _ := seatService(t, map[string]int{"o1": 4}, o)
 	p.qtyErr = errors.New("stripe is down")
 

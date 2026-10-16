@@ -1,8 +1,9 @@
 # Separating the hosted service from the open-source product
 
 Status: decisions taken 2026-10-16 (section 3): one private repository,
-one domain. Phase 0 built with this plan (PR #662); Phases 1–4 not
-started.
+one domain. Phase 0 built with this plan (PR #662). Progress on the rest
+is in section 8, which records where the build departed from sections
+4–5.
 
 ## 1. Why
 
@@ -324,3 +325,49 @@ Only after production runs from `openv-hosted`:
 
 Phase 0 helps self-hosters this week. Phases 1–2 are the real work.
 Phases 3–4 are mostly moving code and switching deployments.
+
+## 8. Progress and departures (2026-10-16, overnight)
+
+Built, in order:
+
+- **Billing is an `ext` module** (PR #664). `ext/` holds `Module`,
+  `RouteModule` (routes with *declared* guards, which the server runs with
+  its own `requireOrgRole` and `alwaysWritable`), `HostAware` and
+  `WorkspaceObserver`. The route, guard, tour and matrix goldens are
+  unchanged: the binding test reads a module's routes from its
+  declaration.
+- **Capabilities** (Phase 1, step 3). `GET /api/v1/auth/config` lists what
+  the deployment offers: `hosted` unless `OPENV_SELF_HOSTED`, `billing`
+  while a provider is configured. A self-hosted app opens on sign-in, with
+  no Billing tab, Plan card, Visitors dashboard or visit beacon, and its
+  frontend container publishes no pre-rendered marketing pages.
+- **Billing builds on `ext` alone** (Phase 2). `ext` re-exports what billing
+  reads of a workspace (`ext/workspaces.go`), and
+  `TestExtModulesImportOnlyExt` holds `internal/billing/**` to importing
+  nothing else of this module.
+- **A module registry instead of `server.Run`.** Turning `cmd/server` into
+  an importable package would move every stage and the guards built around
+  `main()` (boot steps, the flatten check, the env inventory). Instead,
+  `ext.Register(name, factory)` registers a module, stage billing builds the
+  registered ones (`ext.Build`, lent an `ext.Boot`), and a program links
+  its modules into `cmd/server` by adding one file there at build time
+  (`docs/extending.md`). A registered module named `billing` replaces the
+  built-in one, which then starts nothing, so openv.app can move billing
+  out before Phase 4 deletes it here. `internal/billing/boot` is billing's
+  factory, doing what stage billing does.
+- **`openv-hosted`, prepared but not created.** This session's GitHub
+  access cannot create repositories, so the maintainer creates an empty
+  private `desktopmachineshop/openv-hosted` and gives Claude access. Its
+  contents are ready: `billing/` (OpenV's billing, built on `ext`),
+  `register/`, scripts that fetch the pinned OpenV release and link the
+  modules into its `cmd/server`, `Dockerfile.api`, CI, and a README with
+  the cut-over checklist. A server built from it was booted against
+  Postgres: it logs `billing is a registered module` and serves the
+  billing routes.
+
+Still open: plan tiers and channel policy behind interfaces (Phase 1,
+step 1); the frontend extension registry, which moving the marketing site
+needs; the cut-over itself (the maintainer's, staging first); and
+Phase 4. Removing billing's routes from a self-hosted server is subject to
+REQ-143 (a route removal is announced in two stable releases first), which
+the route inventory test enforces.

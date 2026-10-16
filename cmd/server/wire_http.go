@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/openv/requirements-platform/ext"
@@ -29,7 +30,17 @@ func (a *app) billing() {
 	if err != nil {
 		fatal("billing configuration is not usable", err)
 	}
+	// The modules a program built on this server registered (ext.Register,
+	// docs/extending.md), built here, beside billing. A registered billing
+	// module replaces the one built into this repository, which then starts
+	// nothing (docs/plans/hosted-edition-separation.md, Phase 3).
+	a.extModules, err = ext.Build(extBoot{a})
+	if err != nil {
+		fatal("a module could not be built", err)
+	}
 	switch {
+	case ext.Registered("billing"):
+		slog.Info("billing is a registered module; the built-in billing stays off")
 	case billingCfg.Enabled() && a.selfHosted:
 		slog.Warn("STRIPE_SECRET_KEY is set on a self-hosted deployment (OPENV_SELF_HOSTED=true); billing stays off")
 	case billingCfg.Enabled():
@@ -120,7 +131,7 @@ func (a *app) handlers() {
 		EmailLinkBase:     a.emailLinkBase,
 		EmailVerification: a.emailVerification,
 		InvitationService: a.invitationService,
-		Modules:           []ext.Module{billing.NewModule(a.billingService, billingLimits(cfg.RateLimits()))},
+		Modules:           a.modules(cfg),
 		MinutesAlerts:     a.minutesMonitor,
 		Registration:      a.registrationPolicy,
 		SessionPolicy:     a.sessionPolicy,
@@ -178,3 +189,21 @@ func billingLimits(r config.RateLimits) billing.Limits {
 	}
 	return billing.Limits{Refresh: limit(r.BillingRefresh), Write: limit(r.BillingWrite)}
 }
+
+// modules are the API's modules: those registered, and the built-in
+// billing unless a registered one replaces it.
+func (a *app) modules(cfg *config.Config) []ext.Module {
+	mods := append([]ext.Module(nil), a.extModules...)
+	if !ext.Registered("billing") {
+		mods = append(mods, billing.NewModule(a.billingService, billingLimits(cfg.RateLimits())))
+	}
+	return mods
+}
+
+// extBoot is the app as a module's ext.Boot.
+type extBoot struct{ a *app }
+
+func (b extBoot) Context() context.Context         { return b.a.ctx }
+func (b extBoot) Workspaces() ext.WorkspaceService { return b.a.orgService }
+func (b extBoot) Users() ext.UserService           { return b.a.userService }
+func (b extBoot) Metrics() any                     { return b.a.metricsCollector }

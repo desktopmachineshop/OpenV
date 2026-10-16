@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // The purchase path decides every provider value itself, refuses what
@@ -67,7 +67,7 @@ func (u *trialUsers) MarkBillingTrialUsed(id string) error {
 func (f *fakeOrgs) SetBillingCustomer(orgID, ref, currency string) error {
 	o, ok := f.orgs[orgID]
 	if !ok {
-		return orgs.ErrNotFound
+		return ext.ErrWorkspaceNotFound
 	}
 	o.Billing.CustomerRef, o.Billing.Currency = ref, currency
 	return nil
@@ -99,10 +99,10 @@ func newPurchaseService(t *testing.T, o *fakeOrgs) (*Service, *purchaseProvider,
 var buyer = Buyer{ID: "u1", Email: "dana@example.com", Name: "Dana"}
 
 func TestCheckoutDecidesEverythingServerSide(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", Name: "Acme", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", Name: "Acme", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanSingle}}}
 	s, p, _ := newPurchaseService(t, o)
 
-	url, err := s.Checkout(context.Background(), o.orgs["o1"], buyer, orgs.PlanBusiness, IntervalMonth, "")
+	url, err := s.Checkout(context.Background(), o.orgs["o1"], buyer, ext.PlanBusiness, IntervalMonth, "")
 	if err != nil || url != "https://checkout.example/cs_1" {
 		t.Fatalf("checkout: %q %v", url, err)
 	}
@@ -118,7 +118,7 @@ func TestCheckoutDecidesEverythingServerSide(t *testing.T) {
 	req := p.checkouts[0]
 	if req.CustomerID != "cus_new" || req.PriceID != "price_bm" || req.Quantity != 7 || req.Currency != "gbp" ||
 		req.TrialDays != DefaultTrialDays || req.ClientReferenceID != "o1" ||
-		req.Metadata[OrgMetadataKey] != "o1" || req.Metadata[PlanMetadataKey] != orgs.PlanBusiness || req.Metadata[TrialBuyerMetadataKey] != "u1" {
+		req.Metadata[OrgMetadataKey] != "o1" || req.Metadata[PlanMetadataKey] != ext.PlanBusiness || req.Metadata[TrialBuyerMetadataKey] != "u1" {
 		t.Fatalf("request = %+v", req)
 	}
 	if !strings.HasPrefix(req.SuccessURL, "https://app.example/org/settings?tab=billing&checkout=done&session_id=") ||
@@ -130,9 +130,9 @@ func TestCheckoutDecidesEverythingServerSide(t *testing.T) {
 	}
 
 	// Lite is one seat whatever the member count, and a spent trial buys none.
-	lite := &orgs.Org{ID: "o2", Name: "Solo", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanSingle}
+	lite := &ext.Workspace{ID: "o2", Name: "Solo", OrgType: ext.WorkspacePersonal, BilledPlan: ext.PlanSingle}
 	o.orgs["o2"] = lite
-	if _, err := s.Checkout(context.Background(), lite, Buyer{ID: "u2", TrialUsed: true}, orgs.PlanBusinessLite, IntervalMonth, "gbp"); err != nil {
+	if _, err := s.Checkout(context.Background(), lite, Buyer{ID: "u2", TrialUsed: true}, ext.PlanBusinessLite, IntervalMonth, "gbp"); err != nil {
 		t.Fatal(err)
 	}
 	req = p.checkouts[1]
@@ -142,27 +142,27 @@ func TestCheckoutDecidesEverythingServerSide(t *testing.T) {
 }
 
 func TestCheckoutRefusesWhatCannotBeSold(t *testing.T) {
-	personal := &orgs.Org{ID: "p", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanSingle}
-	live := &orgs.Org{ID: "l", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanBusiness, Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1"}}
-	granted := &orgs.Org{ID: "g", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanEnterprise}
-	locked := &orgs.Org{ID: "k", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle, Billing: orgs.Billing{CustomerRef: "cus_k", Currency: "usd"}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"p": personal, "l": live, "g": granted, "k": locked}}
+	personal := &ext.Workspace{ID: "p", OrgType: ext.WorkspacePersonal, BilledPlan: ext.PlanSingle}
+	live := &ext.Workspace{ID: "l", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanBusiness, Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1"}}
+	granted := &ext.Workspace{ID: "g", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanEnterprise}
+	locked := &ext.Workspace{ID: "k", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanSingle, Billing: ext.WorkspaceBilling{CustomerRef: "cus_k", Currency: "usd"}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"p": personal, "l": live, "g": granted, "k": locked}}
 	s, p, _ := newPurchaseService(t, o)
 	ctx := context.Background()
 
 	cases := []struct {
 		name                     string
-		org                      *orgs.Org
+		org                      *ext.Workspace
 		plan, interval, currency string
 		want                     error
 	}{
-		{"unknown plan", personal, orgs.PlanEnterprise, IntervalMonth, "", ErrUnknownPlan},
-		{"unknown interval", personal, orgs.PlanBusiness, "week", "", ErrUnknownPlan},
-		{"business on a personal workspace", personal, orgs.PlanBusiness, IntervalMonth, "", ErrPersonalWorkspace},
-		{"already subscribed", live, orgs.PlanBusiness, IntervalMonth, "", ErrAlreadySubscribed},
-		{"granted plan", granted, orgs.PlanBusiness, IntervalMonth, "", ErrGrantedPlan},
-		{"currency not offered", personal, orgs.PlanBusinessLite, IntervalMonth, "eur", ErrUnknownCurrency},
-		{"currency locked", locked, orgs.PlanBusiness, IntervalMonth, "gbp", ErrCurrencyLocked},
+		{"unknown plan", personal, ext.PlanEnterprise, IntervalMonth, "", ErrUnknownPlan},
+		{"unknown interval", personal, ext.PlanBusiness, "week", "", ErrUnknownPlan},
+		{"business on a personal workspace", personal, ext.PlanBusiness, IntervalMonth, "", ErrPersonalWorkspace},
+		{"already subscribed", live, ext.PlanBusiness, IntervalMonth, "", ErrAlreadySubscribed},
+		{"granted plan", granted, ext.PlanBusiness, IntervalMonth, "", ErrGrantedPlan},
+		{"currency not offered", personal, ext.PlanBusinessLite, IntervalMonth, "eur", ErrUnknownCurrency},
+		{"currency locked", locked, ext.PlanBusiness, IntervalMonth, "gbp", ErrCurrencyLocked},
 	}
 	for _, tc := range cases {
 		if _, err := s.Checkout(ctx, tc.org, buyer, tc.plan, tc.interval, tc.currency); !errors.Is(err, tc.want) {
@@ -173,7 +173,7 @@ func TestCheckoutRefusesWhatCannotBeSold(t *testing.T) {
 		t.Fatalf("a refusal reached the provider: %v %v", p.checkouts, p.customers)
 	}
 	// The locked customer's currency is used when none is asked for.
-	if _, err := s.Checkout(ctx, locked, buyer, orgs.PlanBusiness, IntervalMonth, ""); err != nil {
+	if _, err := s.Checkout(ctx, locked, buyer, ext.PlanBusiness, IntervalMonth, ""); err != nil {
 		t.Fatal(err)
 	}
 	if p.checkouts[0].Currency != "usd" || p.checkouts[0].CustomerID != "cus_k" {
@@ -181,17 +181,17 @@ func TestCheckoutRefusesWhatCannotBeSold(t *testing.T) {
 	}
 	// Unconfirmed prices refuse rather than sell blind, and no provider off.
 	unconfirmed, _ := newTestService(&fakeProvider{}, o)
-	if _, err := unconfirmed.Checkout(ctx, personal, buyer, orgs.PlanBusinessLite, IntervalMonth, ""); !errors.Is(err, ErrPricesUnconfirmed) {
+	if _, err := unconfirmed.Checkout(ctx, personal, buyer, ext.PlanBusinessLite, IntervalMonth, ""); !errors.Is(err, ErrPricesUnconfirmed) {
 		t.Errorf("unconfirmed: %v", err)
 	}
 	off := New(nil, o, nil, nil)
-	if _, err := off.Checkout(ctx, personal, buyer, orgs.PlanBusinessLite, IntervalMonth, ""); !errors.Is(err, ErrNotConfigured) {
+	if _, err := off.Checkout(ctx, personal, buyer, ext.PlanBusinessLite, IntervalMonth, ""); !errors.Is(err, ErrNotConfigured) {
 		t.Errorf("off: %v", err)
 	}
 }
 
 func TestBindCheckoutSessionAppliesAndRecordsTheTrial(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle, Billing: orgs.Billing{CustomerRef: "cus_1", Currency: "gbp"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanSingle, Billing: ext.WorkspaceBilling{CustomerRef: "cus_1", Currency: "gbp"}}}}
 	s, p, u := newPurchaseService(t, o)
 	p.subs = []*Subscription{business("sub_1", "o1", "trialing")}
 	p.sessions["cs_done"] = &CheckoutSession{ID: "cs_done", ClientReferenceID: "o1", SubscriptionID: "sub_1", Status: "complete",
@@ -210,10 +210,10 @@ func TestBindCheckoutSessionAppliesAndRecordsTheTrial(t *testing.T) {
 	}
 	// Complete: applied, entitled at once, trial recorded on the buyer.
 	got, err = s.BindCheckoutSession(context.Background(), "o1", "cs_done")
-	if err != nil || got.BilledPlan != orgs.PlanBusiness || got.Billing.Status != orgs.PlanStatusTrialing || got.Billing.SubscriptionRef != "sub_1" {
+	if err != nil || got.BilledPlan != ext.PlanBusiness || got.Billing.Status != ext.PlanStatusTrialing || got.Billing.SubscriptionRef != "sub_1" {
 		t.Fatalf("bound: %v plan=%q %+v", err, got.BilledPlan, got.Billing)
 	}
-	if got.EntitledPlan() != orgs.PlanBusiness {
+	if got.EntitledPlan() != ext.PlanBusiness {
 		t.Fatal("not entitled after bind")
 	}
 	if len(u.marked) != 1 || u.marked[0] != "u1" {
@@ -236,7 +236,7 @@ func TestBindCheckoutSessionAppliesAndRecordsTheTrial(t *testing.T) {
 // completed checkout names, stay the provider's error, which the API answers
 // 503. None of them changes the workspace.
 func TestBindCheckoutSessionTellsAnUnknownCheckoutFromAnOutage(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle, Billing: orgs.Billing{CustomerRef: "cus_1", Currency: "gbp"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanSingle, Billing: ext.WorkspaceBilling{CustomerRef: "cus_1", Currency: "gbp"}}}}
 	s, p, _ := newPurchaseService(t, o)
 	p.sessions["cs_lost"] = &CheckoutSession{ID: "cs_lost", ClientReferenceID: "o1", SubscriptionID: "sub_lost", Status: "complete"}
 	before := o.orgs["o1"].Billing
@@ -258,8 +258,8 @@ func TestBindCheckoutSessionTellsAnUnknownCheckoutFromAnOutage(t *testing.T) {
 }
 
 func TestASecondCompletedCheckoutLosesToTheHeldSubscription(t *testing.T) {
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": {ID: "o1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanBusiness,
-		Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1", CustomerRef: "cus_1"}}}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": {ID: "o1", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanBusiness,
+		Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1", CustomerRef: "cus_1"}}}}
 	s, p, _ := newPurchaseService(t, o)
 	p.subs = []*Subscription{business("sub_1", "o1", "active"), business("sub_2", "o1", "active")}
 	p.sessions["cs_2"] = &CheckoutSession{ID: "cs_2", ClientReferenceID: "o1", SubscriptionID: "sub_2"}
@@ -277,27 +277,27 @@ func TestASecondCompletedCheckoutLosesToTheHeldSubscription(t *testing.T) {
 }
 
 func TestChangePlanMovesTheOneSubscriptionInPlace(t *testing.T) {
-	org := &orgs.Org{ID: "o1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanBusinessLite,
-		Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1", ItemRef: "si_1", CustomerRef: "cus_1"}}
-	o := &fakeOrgs{orgs: map[string]*orgs.Org{"o1": org}}
+	org := &ext.Workspace{ID: "o1", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanBusinessLite,
+		Billing: ext.WorkspaceBilling{Status: ext.PlanStatusActive, SubscriptionRef: "sub_1", ItemRef: "si_1", CustomerRef: "cus_1"}}
+	o := &fakeOrgs{orgs: map[string]*ext.Workspace{"o1": org}}
 	s, p, _ := newPurchaseService(t, o)
 	after := business("sub_1", "o1", "active")
 	after.ItemID = "si_1"
 	p.subs = []*Subscription{after}
 
-	got, err := s.ChangePlan(context.Background(), org, orgs.PlanBusiness, IntervalMonth)
+	got, err := s.ChangePlan(context.Background(), org, ext.PlanBusiness, IntervalMonth)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(p.changes) != 1 || p.changes[0] != "sub_1|si_1|price_bm|7" {
 		t.Fatalf("changes = %v", p.changes)
 	}
-	if got.BilledPlan != orgs.PlanBusiness {
+	if got.BilledPlan != ext.PlanBusiness {
 		t.Fatalf("plan after change = %q", got.BilledPlan)
 	}
 	// No live subscription: nothing to change. A granted plan: nothing to buy.
-	none := &orgs.Org{ID: "o2", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle}
-	if _, err := s.ChangePlan(context.Background(), none, orgs.PlanBusiness, IntervalMonth); !errors.Is(err, ErrNoSubscription) {
+	none := &ext.Workspace{ID: "o2", OrgType: ext.WorkspaceCompany, BilledPlan: ext.PlanSingle}
+	if _, err := s.ChangePlan(context.Background(), none, ext.PlanBusiness, IntervalMonth); !errors.Is(err, ErrNoSubscription) {
 		t.Errorf("no subscription: %v", err)
 	}
 	if _, err := s.ChangePlan(context.Background(), org, "single", IntervalMonth); !errors.Is(err, ErrUnknownPlan) {
@@ -306,9 +306,9 @@ func TestChangePlanMovesTheOneSubscriptionInPlace(t *testing.T) {
 }
 
 func TestPortalNeedsACustomer(t *testing.T) {
-	with := &orgs.Org{ID: "o1", Billing: orgs.Billing{CustomerRef: "cus_1"}}
-	without := &orgs.Org{ID: "o2"}
-	s, p, _ := newPurchaseService(t, &fakeOrgs{orgs: map[string]*orgs.Org{}})
+	with := &ext.Workspace{ID: "o1", Billing: ext.WorkspaceBilling{CustomerRef: "cus_1"}}
+	without := &ext.Workspace{ID: "o2"}
+	s, p, _ := newPurchaseService(t, &fakeOrgs{orgs: map[string]*ext.Workspace{}})
 	url, err := s.PortalURL(context.Background(), with)
 	if err != nil || url != "https://portal.example/cus_1" {
 		t.Fatalf("portal: %q %v", url, err)
@@ -322,11 +322,11 @@ func TestPortalNeedsACustomer(t *testing.T) {
 }
 
 func TestRegistryPriceLookup(t *testing.T) {
-	e, ok := testRegistry.Price(orgs.PlanBusiness, IntervalMonth)
+	e, ok := testRegistry.Price(ext.PlanBusiness, IntervalMonth)
 	if !ok || e.Price != "price_bm" {
 		t.Fatalf("Price = %+v %v", e, ok)
 	}
-	if _, ok := testRegistry.Price(orgs.PlanBusiness, IntervalYear); ok {
+	if _, ok := testRegistry.Price(ext.PlanBusiness, IntervalYear); ok {
 		t.Fatal("an unregistered interval resolved")
 	}
 }

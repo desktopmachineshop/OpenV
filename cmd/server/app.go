@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/openv/requirements-platform/ext"
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/config"
@@ -175,8 +176,11 @@ type app struct {
 	googleOAuth          *api.GoogleOAuthConfig
 	oidcConfig           *api.OIDCConfig
 	billingService       *billing.Service
-	handler              *api.Handler
-	srv                  *http.Server
+	// extModules are the registered modules (ext.Register), built in stage
+	// billing for stage handlers.
+	extModules []ext.Module
+	handler    *api.Handler
+	srv        *http.Server
 }
 
 // env is the configuration the stages read every setting through: what

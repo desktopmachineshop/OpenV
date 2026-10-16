@@ -15,6 +15,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   your app, not the openv.app marketing site, and it no longer shows a
   Billing tab, a Plan card or the platform admin's site Visitors
   dashboard. openv.app is unchanged.
+- **You can extend your own OpenV with modules.** A Go package can add
+  routes, react to workspace changes and tell the app what it offers,
+  then be linked into the OpenV server at build time;
+  [`docs/extending.md`](docs/extending.md) shows how. openv.app's billing
+  is built this way.
 
 ## 0.21.4 — 2026-10-16
 
