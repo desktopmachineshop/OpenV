@@ -29,3 +29,9 @@ export const WORKSPACE_BILLING_FEATURE: FeatureKey = 'workspace-billing';
 
 /** Automations an admin makes for the whole workspace. */
 export const WORKSPACE_AUTOMATIONS_FEATURE: FeatureKey = 'workspace-automations';
+
+/**
+ * Connected apps (REQ-44): attaching an AI client to a workspace over the
+ * remote MCP endpoint, the consent page, and the list in your settings.
+ */
+export const REMOTE_MCP_FEATURE: FeatureKey = 'remote-mcp';

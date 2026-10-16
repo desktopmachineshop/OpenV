@@ -17,6 +17,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/evidence"
@@ -104,6 +105,7 @@ type app struct {
 	notificationRepo     *postgres.NotificationRepository
 	pushSubRepo          *postgres.PushSubscriptionRepository
 	userMetricsRepo      *postgres.UserMetricsRepository
+	connectedAppRepo     *postgres.ConnectedAppRepository
 	attributeDefRepo     *postgres.AttributeDefinitionRepository
 	sharedProductRepo    *postgres.SharedProductRepository
 	bus                  *eventbus.DefaultBus
@@ -162,6 +164,7 @@ type app struct {
 	pushSubService       *pushsubs.DefaultService
 	userMetricsService   *usermetrics.DefaultService
 	visitorMetrics       *usermetrics.DefaultVisitorService
+	connectedApps        *connectedapps.DefaultService
 	notificationService  *notifications.DefaultService
 	minutesMonitor       *notify.MinutesMonitor
 	deploymentKind       string

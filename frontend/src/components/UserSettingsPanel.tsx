@@ -25,6 +25,9 @@ import {
   unsubscribeThisDevice,
 } from '../push/webPush';
 import { MyRunnerCard } from './org/MyRunnerCard';
+import { ConnectedAppsCard } from './ConnectedAppsCard';
+import { REMOTE_MCP_FEATURE } from '../features';
+import { getAPIBaseURL } from '../api/baseURL';
 import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
@@ -94,6 +97,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   // the empty choice; a company workspace is offered only while the member
   // belongs to it (the list is their memberships).
   const defaultWorkspaceOn = useFeature(DEFAULT_WORKSPACE_FEATURE);
+  const remoteMcp = useFeature(REMOTE_MCP_FEATURE);
   const [defaultOrgSaving, setDefaultOrgSaving] = useState(false);
   const [defaultOrgError, setDefaultOrgError] = useState('');
   const defaultOrgId = currentUser?.default_org_id || '';
@@ -643,6 +647,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
             </form>
           </div>
         )}
+
+        {remoteMcp && <ConnectedAppsCard apiBase={getAPIBaseURL() || window.location.origin} />}
 
         {!activeOrgId ? (
           <div className="card">

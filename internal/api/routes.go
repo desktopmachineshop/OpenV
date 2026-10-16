@@ -48,4 +48,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerSharedProductRoutes(router)
 	h.registerEvidenceRoutes(router)
 	h.registerHealthRoutes(router)
+	h.registerOAuthRoutes(router)
+	h.registerConnectedAppRoutes(router)
+	h.registerMCPRoutes(router)
 }

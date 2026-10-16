@@ -116,4 +116,5 @@ var migrations = []Migration{
 	{Version: 59, Name: "user_activity_days", Run: m0059UserActivityDays},
 	{Version: 60, Name: "site_visitors", Run: m0060SiteVisitors},
 	{Version: 61, Name: "provider_api_keys", Run: m0061ProviderApiKeys},
+	{Version: 62, Name: "connected_apps", Run: m0062ConnectedApps},
 }

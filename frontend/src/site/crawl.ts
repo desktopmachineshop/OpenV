@@ -55,6 +55,11 @@ export const DISALLOWED_PREFIXES = [
   '/interview/',
   '/verify-email',
   '/reset-password',
+  // The consent an AI app asks for (REQ-44), and the OAuth and MCP paths
+  // of the API this origin also serves.
+  '/connect',
+  '/oauth/',
+  '/mcp',
 ];
 
 /** Public pages that are not content: a form, a redirect, a token link. */

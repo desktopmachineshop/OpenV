@@ -11,6 +11,7 @@ DELETE /api/v1/evidence-bundles/{id}
 DELETE /api/v1/evidence-files/{id}
 DELETE /api/v1/links/{id}
 DELETE /api/v1/me/avatar
+DELETE /api/v1/me/connected-apps/{id}
 DELETE /api/v1/me/push-subscriptions
 DELETE /api/v1/notifications/cleared
 DELETE /api/v1/org-teams/{id}
@@ -37,6 +38,10 @@ DELETE /api/v1/teams/{id}
 DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/work-items/{id}
+DELETE /mcp
+GET /.well-known/oauth-authorization-server
+GET /.well-known/oauth-protected-resource
+GET /.well-known/oauth-protected-resource/mcp
 GET /api/v1/admin/metrics/users
 GET /api/v1/admin/metrics/visitors
 GET /api/v1/admin/users
@@ -88,6 +93,7 @@ GET /api/v1/interviews/{id}/invites
 GET /api/v1/interviews/{id}/sessions
 GET /api/v1/links
 GET /api/v1/links/{id}
+GET /api/v1/me/connected-apps
 GET /api/v1/me/default-workspace
 GET /api/v1/me/notification-prefs
 GET /api/v1/me/push-subscriptions
@@ -97,6 +103,7 @@ GET /api/v1/meta/attribute-definitions
 GET /api/v1/meta/link-types
 GET /api/v1/notifications
 GET /api/v1/notifications/stream
+GET /api/v1/oauth/consent
 GET /api/v1/orgs
 GET /api/v1/orgs/{id}
 GET /api/v1/orgs/{id}/billing
@@ -183,6 +190,8 @@ GET /api/v1/users
 GET /api/v1/users/{id}/avatar
 GET /api/v1/work-items/{id}
 GET /health
+GET /mcp
+GET /oauth/authorize
 HEAD /api/v1/public/connector/download
 POST /api/v1/admin/users/{id}/password-reset
 POST /api/v1/agent-runs/claim
@@ -239,6 +248,7 @@ POST /api/v1/me/push-subscriptions
 POST /api/v1/notifications/clear
 POST /api/v1/notifications/read
 POST /api/v1/notifications/read-all
+POST /api/v1/oauth/consent
 POST /api/v1/org-teams/{id}/members/{userId}
 POST /api/v1/orgs
 POST /api/v1/orgs/{id}/activate
@@ -303,6 +313,10 @@ POST /api/v1/test-runs/{id}/agent-run
 POST /api/v1/test-runs/{id}/results
 POST /api/v1/work-items/{id}/comments
 POST /api/v1/work-items/{id}/move
+POST /mcp
+POST /oauth/register
+POST /oauth/revoke
+POST /oauth/token
 PUT /api/v1/admin/users/{id}/admin
 PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw

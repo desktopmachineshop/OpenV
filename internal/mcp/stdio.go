@@ -40,16 +40,7 @@ func ServeStdio(client *Client, tools []Tool) error {
 // serve is the transport-agnostic JSON-RPC loop behind ServeStdio; split out
 // so tests can drive it over an in-memory pipe.
 func serve(in io.Reader, w io.Writer, client *Client, tools []Tool) error {
-	byName := make(map[string]Tool, len(tools))
-	toolList := make([]map[string]interface{}, 0, len(tools))
-	for _, t := range tools {
-		byName[t.Name] = t
-		toolList = append(toolList, map[string]interface{}{
-			"name":        t.Name,
-			"description": t.Description,
-			"inputSchema": t.InputSchema,
-		})
-	}
+	byName, toolList := toolIndex(tools)
 
 	var writeMu sync.Mutex
 	out := json.NewEncoder(w)
@@ -110,23 +101,7 @@ func serve(in io.Reader, w io.Writer, client *Client, tools []Tool) error {
 			}
 			// Long-running tools (delegation) must not block the read loop.
 			go func(req rpcRequest, tool Tool, args map[string]interface{}) {
-				if args == nil {
-					args = map[string]interface{}{}
-				}
-				text, err := tool.Handler(client, args)
-				isError := false
-				if err != nil {
-					isError = true
-					if text != "" {
-						text = err.Error() + "\n" + text
-					} else {
-						text = err.Error()
-					}
-				}
-				respond(rpcResponse{ID: req.ID, Result: map[string]interface{}{
-					"content": []map[string]interface{}{{"type": "text", "text": text}},
-					"isError": isError,
-				}})
+				respond(rpcResponse{ID: req.ID, Result: callTool(client, tool, args)})
 			}(req, tool, params.Arguments)
 		default:
 			if len(req.ID) > 0 && string(req.ID) != "null" {
@@ -140,5 +115,42 @@ func serve(in io.Reader, w io.Writer, client *Client, tools []Tool) error {
 			}
 			return err
 		}
+	}
+}
+
+// toolIndex is a tool table by name and as tools/list advertises it.
+func toolIndex(tools []Tool) (map[string]Tool, []map[string]interface{}) {
+	byName := make(map[string]Tool, len(tools))
+	toolList := make([]map[string]interface{}, 0, len(tools))
+	for _, t := range tools {
+		byName[t.Name] = t
+		toolList = append(toolList, map[string]interface{}{
+			"name":        t.Name,
+			"description": t.Description,
+			"inputSchema": t.InputSchema,
+		})
+	}
+	return byName, toolList
+}
+
+// callTool runs one tool and shapes its answer as a tools/call result: the
+// text, with the error first when there is one, and isError.
+func callTool(client *Client, tool Tool, args map[string]interface{}) map[string]interface{} {
+	if args == nil {
+		args = map[string]interface{}{}
+	}
+	text, err := tool.Handler(client, args)
+	isError := false
+	if err != nil {
+		isError = true
+		if text != "" {
+			text = err.Error() + "\n" + text
+		} else {
+			text = err.Error()
+		}
+	}
+	return map[string]interface{}{
+		"content": []map[string]interface{}{{"type": "text", "text": text}},
+		"isError": isError,
 	}
 }

@@ -23,6 +23,7 @@ DELETE /api/v1/evidence-bundles/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/evidence-files/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/links/{id}: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
 DELETE /api/v1/me/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/me/connected-apps/{id}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/notifications/cleared: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/org-teams/{id}: s5c, s5e; 2xx or 3xx in s5c
@@ -49,6 +50,10 @@ DELETE /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /mcp: s5d, s5e (errors only)
+GET /.well-known/oauth-authorization-server: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /.well-known/oauth-protected-resource: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /.well-known/oauth-protected-resource/mcp: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/admin/metrics/users: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/admin/metrics/visitors: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/admin/users: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -100,6 +105,7 @@ GET /api/v1/interviews/{id}/invites: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/interviews/{id}/sessions: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/links: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/me/connected-apps: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -109,6 +115,7 @@ GET /api/v1/meta/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/meta/link-types: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/notifications: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/notifications/stream: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/oauth/consent: s5d, s5e; 2xx or 3xx in s5d
 GET /api/v1/orgs: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/billing: s5c, s5e; 2xx or 3xx in s5c
@@ -195,6 +202,8 @@ GET /api/v1/users: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/users/{id}/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/work-items/{id}: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
 GET /health: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /mcp: s5d, s5e (errors only)
+GET /oauth/authorize: s5d, s5e; 2xx or 3xx in s5d
 HEAD /api/v1/public/connector/download: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/admin/users/{id}/password-reset: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/agent-runs/claim: s5c, s5d, s5e; 2xx or 3xx in s5c, s5d, s5e
@@ -251,6 +260,7 @@ POST /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/notifications/clear: s5c, s5e; 2xx or 3xx in s5c, s5e
 POST /api/v1/notifications/read: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/notifications/read-all: s5c, s5e; 2xx or 3xx in s5c, s5e
+POST /api/v1/oauth/consent: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/org-teams/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/orgs: s5c, s5e; 2xx or 3xx in s5c, s5e
 POST /api/v1/orgs/{id}/activate: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -315,6 +325,10 @@ POST /api/v1/test-runs/{id}/agent-run: s5b, s5d, s5e; 2xx or 3xx in s5b
 POST /api/v1/test-runs/{id}/results: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/work-items/{id}/comments: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/work-items/{id}/move: s5b, s5e; 2xx or 3xx in s5b
+POST /mcp: s5d; 2xx or 3xx in s5d
+POST /oauth/register: s5d, s5e; 2xx or 3xx in s5d
+POST /oauth/revoke: s5d, s5e; 2xx or 3xx in s5d, s5e
+POST /oauth/token: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/admin/users/{id}/admin: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/agents/{slug}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/agents/{slug}/raw: s5d, s5e; 2xx or 3xx in s5d
@@ -358,4 +372,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 347 of 347 routes reached (100.0%), 343 with a 2xx or 3xx answer (98.8%); the floor is 90%, 313 routes
+the tour: 361 of 361 routes reached (100.0%), 355 with a 2xx or 3xx answer (98.3%); the floor is 90%, 325 routes

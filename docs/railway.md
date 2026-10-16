@@ -204,8 +204,10 @@ Service settings:
 Variables:
 
 ```dotenv
-# Where nginx proxies /api/ to: the API service over Railway's private
-# network (http, port 8080). Read when the container starts; the name is
+# Where nginx proxies /api/ to, and the remote MCP endpoint's /mcp,
+# /oauth/ and /.well-known/oauth-* (REQ-44: PUBLIC_URL is this origin, so an
+# AI app connects to https://<this origin>/mcp): the API service over
+# Railway's private network (http, port 8080). Read when the container starts; the name is
 # re-resolved through Railway's internal DNS on every request, so API
 # redeploys (which change its private address) need no frontend restart.
 # Substitute your API service's actual name for `openv-api`.

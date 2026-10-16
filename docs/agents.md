@@ -22,6 +22,28 @@ sets the limits: a run token is scoped to its run's project and its agent's
 write mode, a runner key carries workspace-wide editor rights with no proposal
 gating. See `docs/requirements-maintenance.md`.
 
+A member can also attach an AI client to a workspace with nothing installed:
+the server serves the same tools at `${PUBLIC_URL}/mcp` over MCP's Streamable
+HTTP transport, and the client connects with OAuth (discovery, dynamic
+registration, PKCE, a consent page where the member picks the workspace and
+read only or read and write). Each tool call runs as that member, held to
+that workspace; `delegate_to_agent` is not offered, since it needs a run.
+The member sees and revokes these under **Settings → Connected apps**.
+`docs/api-spec.md` ("Connected apps") has the protocol (REQ-44).
+
+The main client is a **Claude custom connector** (claude.ai, Claude Desktop,
+mobile and Claude Code share one OAuth client), so the server meets what
+Anthropic's connector documentation asks of an authorization server:
+the `401` challenge names the resource metadata, whose `resource` is the
+exact address a member pastes; Claude registers itself by DCR, with the
+callback `https://claude.ai/api/mcp/auth_callback`; a loopback redirect
+(Claude Code's) matches on any port; the token endpoint answers a client it
+no longer knows with `401 invalid_client`, so Claude registers again, and
+an invalid refresh token with `invalid_grant`; refresh tokens rotate; every
+OAuth answer is `application/json`; and the token endpoint's rate limit is
+spent per client, since all of Claude's requests come from Anthropic's
+addresses (`160.79.104.0/21`).
+
 ## Runner tiers
 
 OpenV has three kinds of runners; a workspace can use any mix of them.

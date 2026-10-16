@@ -23,6 +23,7 @@
       "internal/domain/automations",
       "internal/domain/baselines",
       "internal/domain/chatter",
+      "internal/domain/connectedapps",
       "internal/domain/downloads",
       "internal/domain/embeddings",
       "internal/domain/evidence",
@@ -73,6 +74,7 @@
       "internal/domain/automations",
       "internal/domain/baselines",
       "internal/domain/chatter",
+      "internal/domain/connectedapps",
       "internal/domain/crewtemplates",
       "internal/domain/downloads",
       "internal/domain/embeddings",
@@ -112,6 +114,7 @@
       "internal/domain/workitems",
       "internal/envparse",
       "internal/hosting",
+      "internal/mcp",
       "internal/notify",
       "internal/scheduler",
       "internal/seeds",
@@ -153,6 +156,9 @@
     "internal/domain/baselines": [
       "internal/domain/artifacts",
       "internal/domain/snapshot"
+    ],
+    "internal/domain/connectedapps": [
+      "internal/domain/tokens"
     ],
     "internal/domain/crewtemplates": [
       "internal/domain/agents",
@@ -294,6 +300,7 @@
       "internal/domain/automations",
       "internal/domain/baselines",
       "internal/domain/chatter",
+      "internal/domain/connectedapps",
       "internal/domain/embeddings",
       "internal/domain/events",
       "internal/domain/evidence",

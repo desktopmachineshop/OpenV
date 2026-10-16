@@ -21,7 +21,8 @@
     "workspace-billing",
     "workspace-automations",
     "workspace-runs",
-    "workspace-api-keys"
+    "workspace-api-keys",
+    "remote-mcp"
   ],
   "event_types": [
     "artifact.created",

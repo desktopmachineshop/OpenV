@@ -1,0 +1,1778 @@
+{
+  "golden": "cmd/server/testdata/tour/s5d/connected_apps.json",
+  "test": "TestTourS5dConnectedApps",
+  "about": "Connected apps (REQ-44): the remote MCP endpoint's OAuth discovery, client registration, the consent, codes with PKCE, token refresh and revocation, and tools/call as the member, held to the granted workspace and scope.",
+  "regenerate": [
+    "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5dConnectedApps$' (which also rewrites the slice's coverage.txt)",
+    "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
+  ],
+  "normalised": [
+    "<name>: a value the tour registered under that name (an account's id, its .session token and .workspace; an id a step captured)",
+    "<uuid:N>, <hex64:N>: another random UUID (version 4) or 64-hex token, numbered by first appearance in this golden",
+    "<time@step N>: an RFC 3339 timestamp the server minted during step N (<time@before step N>: during a request the tour sent after step N-1 and records no step for; <time@boot>: before the tour's first request)",
+    "<time>: any other RFC 3339 timestamp (one the tour sent, one to come such as an expiry, or a whole second on a route the area declared to write whole seconds); <datetime>: a wall-clock YYYY-MM-DD hh:mm[:ss]; <date>: YYYY-MM-DD",
+    "<http-date>, <pdf-date>, _<stamp> (a filename's _YYYYMMDD_hhmmss), <boundary> (a multipart boundary)",
+    "<tmp>: the test's temporary directory; 127.0.0.1:<port>, localhost:<port>: the server's own port",
+    "<release-version>, <stable-version>: the release the server reports (GET /api/v1/public/release)",
+    "version-5 and nil UUIDs are not random and stay as they are",
+    "bodies are the server's bytes otherwise: key order, escapes, null against [] and the trailing newline are kept",
+    "a GET or HEAD is sent twice: plain, then with Accept-Encoding: gzip (the gzip field); a write is sent once",
+    "a signed-in actor's requests carry its session cookie and X-Org-ID: its workspace, or acting_in when the step names another; neither header is listed per request",
+    "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
+    "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from",
+    "\"client_id_issued_at\":\"<issued-at>\": the Unix time the client was registered (the area's own pattern \"client_id_issued_at\":[0-9]+)"
+  ],
+  "env": [
+    "(beyond the harness's fixed environment, cmd/server/harness_test.go)",
+    "HTTPS_PROXY=http://127.0.0.1:<recording proxy port>",
+    "HTTP_PROXY=http://127.0.0.1:<recording proxy port>",
+    "TZ=UTC"
+  ],
+  "actors": [
+    {
+      "name": "admin",
+      "email": "tour-admin@example.com",
+      "account_name": "Tour Admin",
+      "workspace": "<admin.workspace>",
+      "about": "the first account registered, so the platform admin; used only for admin setup"
+    },
+    {
+      "name": "owner",
+      "email": "tour-owner@example.com",
+      "account_name": "Tour Owner",
+      "workspace": "<owner.workspace>",
+      "about": "an ordinary account that owns its personal workspace (nightly channel); reads the events after each step"
+    },
+    {
+      "name": "colleague",
+      "email": "tour-colleague@example.com",
+      "account_name": "Tour Colleague",
+      "workspace": "<colleague.workspace>",
+      "about": "a member of the owner's shared workspace, who connects the app there and is then removed from the workspace"
+    },
+    {
+      "name": "reader",
+      "about": "the connected app holding a read-only token for the member's own workspace"
+    },
+    {
+      "name": "writer",
+      "about": "the connected app holding a read-and-write token for the member's own workspace"
+    },
+    {
+      "name": "colleague.app",
+      "about": "the connected app the colleague approved for the shared workspace"
+    },
+    {
+      "name": "anonymous",
+      "about": "no session cookie"
+    }
+  ],
+  "standard_security_headers": [
+    "Content-Security-Policy: default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy: strict-origin-when-cross-origin",
+    "X-Content-Type-Options: nosniff",
+    "X-Frame-Options: DENY"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "the endpoint with no token: 401 and the challenge that names the resource metadata",
+      "actor": "anonymous",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"<date>\"}}"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [
+        "Www-Authenticate: Bearer realm=\"OpenV\", resource_metadata=\"http://localhost:<port>/.well-known/oauth-protected-resource\""
+      ],
+      "security_headers": "standard",
+      "content_length": 63,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required: connect this app to OpenV\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required: connect this app to OpenV"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 2,
+      "title": "the protected resource metadata",
+      "actor": "anonymous",
+      "route": "GET /.well-known/oauth-protected-resource",
+      "request": {
+        "method": "GET",
+        "path": "/.well-known/oauth-protected-resource"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"authorization_servers\":[\"http://localhost:<port>\"],\"bearer_methods_supported\":[\"header\"],\"resource\":\"http://localhost:<port>/mcp\",\"resource_name\":\"OpenV\",\"scopes_supported\":[\"openv:read\",\"openv:write\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "authorization_servers": [
+          "http://localhost:<port>"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ],
+        "resource": "http://localhost:<port>/mcp",
+        "resource_name": "OpenV",
+        "scopes_supported": [
+          "openv:read",
+          "openv:write"
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 3,
+      "title": "the same at the path-suffixed address",
+      "actor": "anonymous",
+      "route": "GET /.well-known/oauth-protected-resource/mcp",
+      "request": {
+        "method": "GET",
+        "path": "/.well-known/oauth-protected-resource/mcp"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"authorization_servers\":[\"http://localhost:<port>\"],\"bearer_methods_supported\":[\"header\"],\"resource\":\"http://localhost:<port>/mcp\",\"resource_name\":\"OpenV\",\"scopes_supported\":[\"openv:read\",\"openv:write\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "authorization_servers": [
+          "http://localhost:<port>"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ],
+        "resource": "http://localhost:<port>/mcp",
+        "resource_name": "OpenV",
+        "scopes_supported": [
+          "openv:read",
+          "openv:write"
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 4,
+      "title": "the authorization server metadata",
+      "actor": "anonymous",
+      "route": "GET /.well-known/oauth-authorization-server",
+      "request": {
+        "method": "GET",
+        "path": "/.well-known/oauth-authorization-server"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"authorization_endpoint\":\"http://localhost:<port>/oauth/authorize\",\"authorization_response_iss_parameter_supported\":true,\"code_challenge_methods_supported\":[\"S256\"],\"grant_types_supported\":[\"authorization_code\",\"refresh_token\"],\"issuer\":\"http://localhost:<port>\",\"registration_endpoint\":\"http://localhost:<port>/oauth/register\",\"response_types_supported\":[\"code\"],\"revocation_endpoint\":\"http://localhost:<port>/oauth/revoke\",\"revocation_endpoint_auth_methods_supported\":[\"none\"],\"scopes_supported\":[\"openv:read\",\"openv:write\"],\"token_endpoint\":\"http://localhost:<port>/oauth/token\",\"token_endpoint_auth_methods_supported\":[\"none\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "authorization_endpoint": "http://localhost:<port>/oauth/authorize",
+        "authorization_response_iss_parameter_supported": true,
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "grant_types_supported": [
+          "authorization_code",
+          "refresh_token"
+        ],
+        "issuer": "http://localhost:<port>",
+        "registration_endpoint": "http://localhost:<port>/oauth/register",
+        "response_types_supported": [
+          "code"
+        ],
+        "revocation_endpoint": "http://localhost:<port>/oauth/revoke",
+        "revocation_endpoint_auth_methods_supported": [
+          "none"
+        ],
+        "scopes_supported": [
+          "openv:read",
+          "openv:write"
+        ],
+        "token_endpoint": "http://localhost:<port>/oauth/token",
+        "token_endpoint_auth_methods_supported": [
+          "none"
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 5,
+      "title": "register with a redirect URI on another host over plain http: refused",
+      "actor": "anonymous",
+      "route": "POST /oauth/register",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/register",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_name\":\"Tour Client\",\"redirect_uris\":[\"http://client.example/cb\"]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 160,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_redirect_uri\",\"error_description\":\"give one to five redirect URIs, each https, http on localhost, or a private-use scheme, with no fragment\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_redirect_uri",
+        "error_description": "give one to five redirect URIs, each https, http on localhost, or a private-use scheme, with no fragment"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 6,
+      "title": "register a client: public, no secret",
+      "actor": "anonymous",
+      "route": "POST /oauth/register",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/register",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_name\":\"Tour Client\",\"redirect_uris\":[\"https://client.example/oauth/callback\"],\"token_endpoint_auth_method\":\"client_secret_basic\"}"
+      },
+      "notes": [
+        "it asked for a secret and is registered public all the same, as the answer says"
+      ],
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 287,
+      "kind": "json",
+      "body": [
+        "{\"client_id\":\"<client>\",\"client_id_issued_at\":\"<issued-at>\",\"client_name\":\"Tour Client\",\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"redirect_uris\":[\"https://client.example/oauth/callback\"],\"response_types\":[\"code\"],\"token_endpoint_auth_method\":\"none\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "client_id": "<client>",
+        "client_id_issued_at": "<issued-at>",
+        "client_name": "Tour Client",
+        "grant_types": [
+          "authorization_code",
+          "refresh_token"
+        ],
+        "redirect_uris": [
+          "https://client.example/oauth/callback"
+        ],
+        "response_types": [
+          "code"
+        ],
+        "token_endpoint_auth_method": "none"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 7,
+      "title": "authorize with a redirect URI the client did not register: 400, and no redirect",
+      "actor": "anonymous",
+      "route": "GET /oauth/authorize",
+      "request": {
+        "method": "GET",
+        "path": "/oauth/authorize",
+        "query": "response_type=code&client_id=<client>&redirect_uri=https%3A%2F%2Fevil.example%2Fcb&code_challenge=<challenge>&code_challenge_method=S256&state=s1"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 97,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_request\",\"error_description\":\"redirect_uri is not registered for this client\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_request",
+        "error_description": "redirect_uri is not registered for this client"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 8,
+      "title": "authorize without PKCE: 400 invalid_request, and no redirect before the member has seen the consent page",
+      "actor": "anonymous",
+      "route": "GET /oauth/authorize",
+      "request": {
+        "method": "GET",
+        "path": "/oauth/authorize",
+        "query": "response_type=code&client_id=<client>&redirect_uri=https:%2F%2Fclient.example%2Foauth%2Fcallback&state=s2"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 99,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_request\",\"error_description\":\"PKCE with code_challenge_method S256 is required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_request",
+        "error_description": "PKCE with code_challenge_method S256 is required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 9,
+      "title": "authorize: on to the app's consent page with the request",
+      "actor": "anonymous",
+      "route": "GET /oauth/authorize",
+      "request": {
+        "method": "GET",
+        "path": "/oauth/authorize",
+        "query": "response_type=code&client_id=<client>&redirect_uri=https:%2F%2Fclient.example%2Foauth%2Fcallback&code_challenge=<challenge>&code_challenge_method=S256&state=s3&scope=openv%3Aread"
+      },
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Location: http://localhost:3000/connect?client_id=<client>&code_challenge=<challenge>&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fclient.example%2Foauth%2Fcallback&scope=openv%3Aread&state=s3"
+      ],
+      "security_headers": "standard",
+      "content_length": 294,
+      "kind": "text",
+      "body": [
+        "<a href=\"http://localhost:3000/connect?client_id=<client>&amp;code_challenge=<challenge>&amp;code_challenge_method=S256&amp;redirect_uri=https%3A%2F%2Fclient.example%2Foauth%2Fcallback&amp;scope=openv%3Aread&amp;state=s3\">Found</a>.",
+        ""
+      ],
+      "trailing_newline": true,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 10,
+      "title": "the consent page reads the app",
+      "actor": "owner",
+      "route": "GET /api/v1/oauth/consent",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/oauth/consent",
+        "query": "client_id=<client>&redirect_uri=https:%2F%2Fclient.example%2Foauth%2Fcallback"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 114,
+      "kind": "json",
+      "body": [
+        "{\"client_id\":\"<client>\",\"client_name\":\"Tour Client\",\"redirect_host\":\"client.example\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "client_id": "<client>",
+        "client_name": "Tour Client",
+        "redirect_host": "client.example"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 11,
+      "title": "the consent with no session",
+      "actor": "anonymous",
+      "route": "GET /api/v1/oauth/consent",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/oauth/consent",
+        "query": "client_id=<client>&redirect_uri=https:%2F%2Fclient.example%2Foauth%2Fcallback"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 12,
+      "title": "decline: back to the client with access_denied and the state",
+      "actor": "owner",
+      "route": "POST /api/v1/oauth/consent",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/oauth/consent",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<owner.workspace>\",\"approve\":false}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"redirect_to\":\"https://client.example/oauth/callback?error=access_denied\\u0026error_description=the+member+declined\\u0026iss=http%3A%2F%2Flocalhost%3A<port>\\u0026state=s3\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "redirect_to": "https://client.example/oauth/callback?error=access_denied\u0026error_description=the+member+declined\u0026iss=http%3A%2F%2Flocalhost%3A<port>\u0026state=s3"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 13,
+      "title": "approve read only for the member's workspace: back to the client with a code",
+      "actor": "owner",
+      "route": "POST /api/v1/oauth/consent",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/oauth/consent",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<owner.workspace>\",\"approve\":true}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"redirect_to\":\"https://client.example/oauth/callback?code=<code.spent>\\u0026iss=http%3A%2F%2Flocalhost%3A<port>\\u0026state=s3\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "redirect_to": "https://client.example/oauth/callback?code=<code.spent>\u0026iss=http%3A%2F%2Flocalhost%3A<port>\u0026state=s3"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 14,
+      "title": "spend the code with the wrong verifier: invalid_grant",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=authorization_code&code=<code.spent>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=tour-wrong-verifier-0123456789-abcdefghijklmnopqr"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 103,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_grant\",\"error_description\":\"the code or refresh token is not valid for this client\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_grant",
+        "error_description": "the code or refresh token is not valid for this client"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 15,
+      "title": "the same code again, with the right verifier: spent by the first attempt",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=authorization_code&code=<code.spent>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 103,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_grant\",\"error_description\":\"the code or refresh token is not valid for this client\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_grant",
+        "error_description": "the code or refresh token is not valid for this client"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 16,
+      "title": "approve read only again",
+      "actor": "owner",
+      "route": "POST /api/v1/oauth/consent",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/oauth/consent",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<owner.workspace>\",\"approve\":true}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"redirect_to\":\"https://client.example/oauth/callback?code=<code.read>\\u0026iss=http%3A%2F%2Flocalhost%3A<port>\\u0026state=s3\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "redirect_to": "https://client.example/oauth/callback?code=<code.read>\u0026iss=http%3A%2F%2Flocalhost%3A<port>\u0026state=s3"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 17,
+      "title": "spend the code: an hour's access token, a refresh token and the scope",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=authorization_code&code=<code.read>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store",
+        "Pragma: no-cache"
+      ],
+      "security_headers": "standard",
+      "content_length": 238,
+      "kind": "json",
+      "body": [
+        "{\"access_token\":\"<reader.token>\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"<refresh.read>\",\"scope\":\"openv:read\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "access_token": "<reader.token>",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "refresh_token": "<refresh.read>",
+        "scope": "openv:read"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 18,
+      "title": "initialize: the revision the client asked for",
+      "actor": "reader",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"<date>\"}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"tools\":{}},\"protocolVersion\":\"<date>\",\"serverInfo\":{\"name\":\"openv\",\"version\":\"<release-version>\"}}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "capabilities": {
+            "tools": {}
+          },
+          "protocolVersion": "<date>",
+          "serverInfo": {
+            "name": "openv",
+            "version": "<release-version>"
+          }
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 19,
+      "title": "the client's initialized notification: 202, no body",
+      "actor": "reader",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}"
+      },
+      "status": 202,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 0,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 20,
+      "title": "tools/list: the read-only tools",
+      "actor": "reader",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"tools\":[{\"description\":\"List all projects visible to this agent.\",\"inputSchema\":{\"properties\":{},\"required\":[],\"type\":\"object\"},\"name\":\"list_projects\"},{\"description\":\"List artifacts in a project, optionally filtered by type and by owner (the \\\"owner\\\" attribute: a person, team or supplier).\",\"inputSchema\":{\"properties\":{\"owner\":{\"description\":\"Optional owner filter: only artifacts whose owner attribute equals this\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"},\"type\":{\"description\":\"Optional artifact type filter\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_artifacts\"},{\"description\":\"Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \\\"REQ-12\\\") instead of a UUID when project_id is also given.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID; required only when id is a stable ref\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_artifact\"},{\"description\":\"The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.\",\"inputSchema\":{\"properties\":{\"baseline_id\":{\"description\":\"Optional baseline ID to render the map from that snapshot\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_project_map\"},{\"description\":\"One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Artifact stable ref (e.g. REQ-12) or UUID\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\",\"id\"],\"type\":\"object\"},\"name\":\"get_context\"},{\"description\":\"Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_project_tree\"},{\"description\":\"Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\\\"REQ-30\\\", case-insensitive) returns that artifact first.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"},\"query\":{\"description\":\"Substring to search for, or a ref such as REQ-30\",\"type\":\"string\"}},\"required\":[\"project_id\",\"query\"],\"type\":\"object\"},\"name\":\"search_artifacts\"},{\"description\":\"List all links touching one artifact.\",\"inputSchema\":{\"properties\":{\"artifact_id\":{\"description\":\"Artifact ID\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"artifact_id\",\"project_id\"],\"type\":\"object\"},\"name\":\"list_links_for_artifact\"},{\"description\":\"List a project's baselines.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_baselines\"},{\"description\":\"Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Baseline ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_baseline\"},{\"description\":\"The requirement quality rules this project is judged against: its normative convention (\\\"shall\\\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_quality_rules\"},{\"description\":\"Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.\",\"inputSchema\":{\"properties\":{\"artifact_id\":{\"description\":\"Artifact ID or stable ref (pass project_id to resolve a ref)\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID, required when artifact_id is a stable ref\",\"type\":\"string\"}},\"required\":[\"artifact_id\"],\"type\":\"object\"},\"name\":\"get_quality_findings\"},{\"description\":\"Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.\",\"inputSchema\":{\"properties\":{\"detail\":{\"description\":\"Return the full report instead of the per-requirement summary lines\",\"type\":\"boolean\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_vv_coverage\"},{\"description\":\"Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.\",\"inputSchema\":{\"properties\":{\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"get_vv_gaps\"},{\"description\":\"List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.\",\"inputSchema\":{\"properties\":{\"assignee_id\":{\"description\":\"Optional assignee ID filter (agent, user or team ID)\",\"type\":\"string\"},\"column\":{\"description\":\"Optional board column filter: backlog, todo, in-progress, review or done\",\"type\":\"string\"},\"project_id\":{\"description\":\"Project ID\",\"type\":\"string\"}},\"required\":[\"project_id\"],\"type\":\"object\"},\"name\":\"list_work_items\"},{\"description\":\"Get a kanban work item with its activity.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Work item ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_work_item\"},{\"description\":\"Get just the activity history of a work item.\",\"inputSchema\":{\"properties\":{\"id\":{\"description\":\"Work item ID\",\"type\":\"string\"}},\"required\":[\"id\"],\"type\":\"object\"},\"name\":\"get_work_item_history\"}]}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "result": {
+          "tools": [
+            {
+              "description": "List all projects visible to this agent.",
+              "inputSchema": {
+                "properties": {},
+                "required": [],
+                "type": "object"
+              },
+              "name": "list_projects"
+            },
+            {
+              "description": "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",
+              "inputSchema": {
+                "properties": {
+                  "owner": {
+                    "description": "Optional owner filter: only artifacts whose owner attribute equals this",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  },
+                  "type": {
+                    "description": "Optional artifact type filter",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "list_artifacts"
+            },
+            {
+              "description": "Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \"REQ-12\") instead of a UUID when project_id is also given.",
+              "inputSchema": {
+                "properties": {
+                  "id": {
+                    "description": "Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID; required only when id is a stable ref",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "type": "object"
+              },
+              "name": "get_artifact"
+            },
+            {
+              "description": "The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.",
+              "inputSchema": {
+                "properties": {
+                  "baseline_id": {
+                    "description": "Optional baseline ID to render the map from that snapshot",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_project_map"
+            },
+            {
+              "description": "One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.",
+              "inputSchema": {
+                "properties": {
+                  "id": {
+                    "description": "Artifact stable ref (e.g. REQ-12) or UUID",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id",
+                  "id"
+                ],
+                "type": "object"
+              },
+              "name": "get_context"
+            },
+            {
+              "description": "Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).",
+              "inputSchema": {
+                "properties": {
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_project_tree"
+            },
+            {
+              "description": "Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\"REQ-30\", case-insensitive) returns that artifact first.",
+              "inputSchema": {
+                "properties": {
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  },
+                  "query": {
+                    "description": "Substring to search for, or a ref such as REQ-30",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id",
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_artifacts"
+            },
+            {
+              "description": "List all links touching one artifact.",
+              "inputSchema": {
+                "properties": {
+                  "artifact_id": {
+                    "description": "Artifact ID",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "artifact_id",
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "list_links_for_artifact"
+            },
+            {
+              "description": "List a project's baselines.",
+              "inputSchema": {
+                "properties": {
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "list_baselines"
+            },
+            {
+              "description": "Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.",
+              "inputSchema": {
+                "properties": {
+                  "id": {
+                    "description": "Baseline ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "type": "object"
+              },
+              "name": "get_baseline"
+            },
+            {
+              "description": "The requirement quality rules this project is judged against: its normative convention (\"shall\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.",
+              "inputSchema": {
+                "properties": {
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_quality_rules"
+            },
+            {
+              "description": "Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.",
+              "inputSchema": {
+                "properties": {
+                  "artifact_id": {
+                    "description": "Artifact ID or stable ref (pass project_id to resolve a ref)",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID, required when artifact_id is a stable ref",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "artifact_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_quality_findings"
+            },
+            {
+              "description": "Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.",
+              "inputSchema": {
+                "properties": {
+                  "detail": {
+                    "description": "Return the full report instead of the per-requirement summary lines",
+                    "type": "boolean"
+                  },
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_vv_coverage"
+            },
+            {
+              "description": "Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.",
+              "inputSchema": {
+                "properties": {
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_vv_gaps"
+            },
+            {
+              "description": "List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.",
+              "inputSchema": {
+                "properties": {
+                  "assignee_id": {
+                    "description": "Optional assignee ID filter (agent, user or team ID)",
+                    "type": "string"
+                  },
+                  "column": {
+                    "description": "Optional board column filter: backlog, todo, in-progress, review or done",
+                    "type": "string"
+                  },
+                  "project_id": {
+                    "description": "Project ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id"
+                ],
+                "type": "object"
+              },
+              "name": "list_work_items"
+            },
+            {
+              "description": "Get a kanban work item with its activity.",
+              "inputSchema": {
+                "properties": {
+                  "id": {
+                    "description": "Work item ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "type": "object"
+              },
+              "name": "get_work_item"
+            },
+            {
+              "description": "Get just the activity history of a work item.",
+              "inputSchema": {
+                "properties": {
+                  "id": {
+                    "description": "Work item ID",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "type": "object"
+              },
+              "name": "get_work_item_history"
+            }
+          ]
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 21,
+      "title": "list_projects: the member's projects in the granted workspace",
+      "actor": "reader",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"list_projects\",\"arguments\":{}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"content\":[{\"text\":\"[{\\\"id\\\":\\\"<project>\\\",\\\"org_id\\\":\\\"<owner.workspace>\\\",\\\"name\\\":\\\"Tour connected\\\",\\\"description\\\":\\\"\\\",\\\"agent_auth\\\":\\\"user-account\\\",\\\"parent_project_id\\\":\\\"\\\",\\\"created_at\\\":\\\"<time@before step 1>\\\",\\\"updated_at\\\":\\\"<time@before step 1>\\\"}]\",\"type\":\"text\"}],\"isError\":false}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "result": {
+          "content": [
+            {
+              "text": "[{\"id\":\"<project>\",\"org_id\":\"<owner.workspace>\",\"name\":\"Tour connected\",\"description\":\"\",\"agent_auth\":\"user-account\",\"parent_project_id\":\"\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}]",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "get_project_map of a project in another of the member's workspaces: as if it did not exist",
+      "actor": "reader",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"get_project_map\",\"arguments\":{\"project_id\":\"<project.other>\"}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 165,
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[{\"text\":\"API 404: {\\\"error\\\":\\\"project not found\\\"}\\n{\\\"error\\\":\\\"project not found\\\"}\",\"type\":\"text\"}],\"isError\":true}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "result": {
+          "content": [
+            {
+              "text": "API 404: {\"error\":\"project not found\"}\n{\"error\":\"project not found\"}",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 23,
+      "title": "create_artifact on a read-only grant: no such tool",
+      "actor": "reader",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"create_artifact\",\"arguments\":{\"project_id\":\"<project>\",\"type\":\"requirement\",\"title\":\"x\"}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 89,
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":5,\"error\":{\"code\":-32602,\"message\":\"unknown tool create_artifact\"}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "error": {
+          "code": -32602,
+          "message": "unknown tool create_artifact"
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 24,
+      "title": "refresh: a new pair",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=refresh_token&refresh_token=<refresh.read>&client_id=<client>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store",
+        "Pragma: no-cache"
+      ],
+      "security_headers": "standard",
+      "content_length": 238,
+      "kind": "json",
+      "body": [
+        "{\"access_token\":\"<access.refreshed>\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"ovrt_<hex64:1>\",\"scope\":\"openv:read\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "access_token": "<access.refreshed>",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "refresh_token": "ovrt_<hex64:1>",
+        "scope": "openv:read"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 25,
+      "title": "the old refresh token again: spent",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=refresh_token&refresh_token=<refresh.read>&client_id=<client>"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 103,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_grant\",\"error_description\":\"the code or refresh token is not valid for this client\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_grant",
+        "error_description": "the code or refresh token is not valid for this client"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 26,
+      "title": "a client no longer registered: 401 invalid_client, so the app registers again",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=refresh_token&refresh_token=ovrt_unknown&client_id=<phantom>"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 110,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid_client\",\"error_description\":\"no client is registered under this client_id; register again\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid_client",
+        "error_description": "no client is registered under this client_id; register again"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 27,
+      "title": "approve read and write: the same grant takes the scope",
+      "actor": "owner",
+      "route": "POST /api/v1/oauth/consent",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/oauth/consent",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"\",\"org_id\":\"<owner.workspace>\",\"approve\":true}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"redirect_to\":\"https://client.example/oauth/callback?code=<code.write>\\u0026iss=http%3A%2F%2Flocalhost%3A<port>\\u0026state=s3\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "redirect_to": "https://client.example/oauth/callback?code=<code.write>\u0026iss=http%3A%2F%2Flocalhost%3A<port>\u0026state=s3"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 28,
+      "title": "spend it",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=authorization_code&code=<code.write>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store",
+        "Pragma: no-cache"
+      ],
+      "security_headers": "standard",
+      "content_length": 250,
+      "kind": "json",
+      "body": [
+        "{\"access_token\":\"<writer.token>\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"ovrt_<hex64:2>\",\"scope\":\"openv:read openv:write\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "access_token": "<writer.token>",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "refresh_token": "ovrt_<hex64:2>",
+        "scope": "openv:read openv:write"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 29,
+      "title": "create_artifact: made as the member",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":{\"name\":\"create_artifact\",\"arguments\":{\"project_id\":\"<project>\",\"type\":\"requirement\",\"title\":\"Written by a connected app\"}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":6,\"result\":{\"content\":[{\"text\":\"{\\\"id\\\":\\\"<uuid:1>\\\",\\\"project_id\\\":\\\"<project>\\\",\\\"type\\\":\\\"requirement\\\",\\\"ref\\\":\\\"REQ-1\\\",\\\"title\\\":\\\"Written by a connected app\\\",\\\"body\\\":\\\"\\\",\\\"sort_order\\\":1,\\\"status\\\":\\\"draft\\\",\\\"attributes\\\":{\\\"status\\\":\\\"draft\\\"},\\\"version\\\":1,\\\"valid_from\\\":\\\"<time@step 29>\\\",\\\"valid_to\\\":null,\\\"created_at\\\":\\\"<time@step 29>\\\",\\\"updated_at\\\":\\\"<time@step 29>\\\"}\",\"type\":\"text\"}],\"isError\":false}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "result": {
+          "content": [
+            {
+              "text": "{\"id\":\"<uuid:1>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Written by a connected app\",\"body\":\"\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 29>\",\"valid_to\":null,\"created_at\":\"<time@step 29>\",\"updated_at\":\"<time@step 29>\"}",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.created",
+          "actor": "user:<owner>",
+          "project": "<project>",
+          "entity": "<uuid:1>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "title": "string \"Written by a connected app\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 30,
+      "title": "the member's connected apps: one grant, read and write",
+      "actor": "owner",
+      "route": "GET /api/v1/me/connected-apps",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/connected-apps"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<grant>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\",\"client_id\":\"<client>\",\"client_name\":\"Tour Client\",\"scope\":\"openv:read openv:write\",\"created_at\":\"<time@step 13>\",\"last_used_at\":\"<time@step 18>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<grant>",
+          "user_id": "<owner>",
+          "org_id": "<owner.workspace>",
+          "org_name": "Tour Owner's Space",
+          "client_id": "<client>",
+          "client_name": "Tour Client",
+          "scope": "openv:read openv:write",
+          "created_at": "<time@step 13>",
+          "last_used_at": "<time@step 18>"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 31,
+      "title": "the access token is no key to the rest of the API",
+      "actor": "writer",
+      "route": "GET /api/v1/projects",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 26,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid token\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid token"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 32,
+      "title": "the colleague approves read only for the shared workspace",
+      "actor": "colleague",
+      "acting_in": "<other>",
+      "route": "POST /api/v1/oauth/consent",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/oauth/consent",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"client_id\":\"<client>\",\"redirect_uri\":\"https://client.example/oauth/callback\",\"code_challenge\":\"<challenge>\",\"code_challenge_method\":\"S256\",\"state\":\"s3\",\"scope\":\"openv:read\",\"org_id\":\"<other>\",\"approve\":true}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"redirect_to\":\"https://client.example/oauth/callback?code=<code.colleague>\\u0026iss=http%3A%2F%2Flocalhost%3A<port>\\u0026state=s3\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "redirect_to": "https://client.example/oauth/callback?code=<code.colleague>\u0026iss=http%3A%2F%2Flocalhost%3A<port>\u0026state=s3"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 33,
+      "title": "the colleague's app spends its code",
+      "actor": "anonymous",
+      "route": "POST /oauth/token",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/token",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "grant_type=authorization_code&code=<code.colleague>&client_id=<client>&redirect_uri=https://client.example/oauth/callback&code_verifier=<verifier>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store",
+        "Pragma: no-cache"
+      ],
+      "security_headers": "standard",
+      "content_length": 238,
+      "kind": "json",
+      "body": [
+        "{\"access_token\":\"<colleague.app.token>\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"ovrt_<hex64:3>\",\"scope\":\"openv:read\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "access_token": "<colleague.app.token>",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "refresh_token": "ovrt_<hex64:3>",
+        "scope": "openv:read"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 34,
+      "title": "the colleague's app works in the shared workspace: no project there is the colleague's, so the list is empty",
+      "actor": "colleague.app",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"list_projects\",\"arguments\":{}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 91,
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{\"content\":[{\"text\":\"[]\",\"type\":\"text\"}],\"isError\":false}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "result": {
+          "content": [
+            {
+              "text": "[]",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 35,
+      "title": "the colleague's app once they have left the workspace: 403, nothing there",
+      "actor": "colleague.app",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":10,\"method\":\"tools/call\",\"params\":{\"name\":\"list_projects\",\"arguments\":{}}}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 82,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you are no longer a member of the workspace this app was connected to\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you are no longer a member of the workspace this app was connected to"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 36,
+      "title": "an MCP-Protocol-Version the endpoint does not speak",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json",
+          "Mcp-Protocol-Version: <date>"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"ping\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 56,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"unsupported MCP-Protocol-Version <date>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "unsupported MCP-Protocol-Version <date>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 37,
+      "title": "initialize carrying a revision the endpoint does not speak: answered with the newest it does",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json",
+          "Mcp-Protocol-Version: <date>"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"<date>\"}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"capabilities\":{\"tools\":{}},\"protocolVersion\":\"<date>\",\"serverInfo\":{\"name\":\"openv\",\"version\":\"<release-version>\"}}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "result": {
+          "capabilities": {
+            "tools": {}
+          },
+          "protocolVersion": "<date>",
+          "serverInfo": {
+            "name": "openv",
+            "version": "<release-version>"
+          }
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 38,
+      "title": "revoke the app",
+      "actor": "owner",
+      "route": "DELETE /api/v1/me/connected-apps/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/me/connected-apps/<grant>"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 39,
+      "title": "the revoked app's token: 401 invalid_token",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\"}"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [
+        "Www-Authenticate: Bearer realm=\"OpenV\", resource_metadata=\"http://localhost:<port>/.well-known/oauth-protected-resource\", error=\"invalid_token\""
+      ],
+      "security_headers": "standard",
+      "content_length": 69,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"the access token is not valid: it expired or was revoked\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "the access token is not valid: it expired or was revoked"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 40,
+      "title": "revoke it again: gone",
+      "actor": "owner",
+      "route": "DELETE /api/v1/me/connected-apps/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/me/connected-apps/<grant>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"connected app not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "connected app not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 41,
+      "title": "the revocation endpoint, for a token that is gone: 200 all the same",
+      "actor": "anonymous",
+      "route": "POST /oauth/revoke",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/revoke",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "token=<access.refreshed>&client_id=<client>"
+      },
+      "status": 200,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 0,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 42,
+      "title": "GET /mcp: no stream",
+      "actor": "anonymous",
+      "route": "GET /mcp",
+      "request": {
+        "method": "GET",
+        "path": "/mcp"
+      },
+      "status": 405,
+      "content_type": "application/json",
+      "headers": [
+        "Allow: POST"
+      ],
+      "security_headers": "standard",
+      "content_length": 83,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"this endpoint takes POST only: it opens no stream and keeps no session\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "this endpoint takes POST only: it opens no stream and keeps no session"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 43,
+      "title": "DELETE /mcp: no session",
+      "actor": "anonymous",
+      "route": "DELETE /mcp",
+      "request": {
+        "method": "DELETE",
+        "path": "/mcp"
+      },
+      "status": 405,
+      "content_type": "application/json",
+      "headers": [
+        "Allow: POST"
+      ],
+      "security_headers": "standard",
+      "content_length": 83,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"this endpoint takes POST only: it opens no stream and keeps no session\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "this endpoint takes POST only: it opens no stream and keeps no session"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    }
+  ],
+  "uploads": [],
+  "outbound_requests": [
+    "none: the server sent no request through HTTP_PROXY or HTTPS_PROXY"
+  ]
+}

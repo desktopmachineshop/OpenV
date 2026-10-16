@@ -27,6 +27,7 @@ import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import { releasePrerender } from './site/prerenderHandoff';
 import { sendVisitBeacon } from './site/visitBeacon';
 import './index.css';
+import { pendingReturnTo } from './utils/returnTo';
 
 // Route-level code splitting for the heavyweight views so their large
 // dependencies stay out of the main bundle:
@@ -41,6 +42,7 @@ const ManualView = lazy(() =>
   import('./views/ManualView').then((m) => ({ default: m.ManualView }))
 );
 const WhatsNew = lazy(() => import('./views/WhatsNew').then((m) => ({ default: m.WhatsNew })));
+const OAuthConsent = lazy(() => import('./views/OAuthConsent').then((m) => ({ default: m.OAuthConsent })));
 const PlatformAdmin = lazy(() =>
   import('./views/PlatformAdmin').then((m) => ({ default: m.PlatformAdmin }))
 );
@@ -254,7 +256,10 @@ function App() {
         <Route path="/open-source/:id" element={<SharedProjectView source="open-source" />} />
         {/* The front page for visitors; a signed-in user goes straight to work.
             authChecked gates rendering above, so currentUser is settled here. */}
-        <Route path="/" element={currentUser ? <Navigate to="/projects" replace /> : <Landing />} />
+        <Route
+          path="/"
+          element={currentUser ? <Navigate to={pendingReturnTo() || '/projects'} replace /> : <Landing />}
+        />
         <Route path="/pricing" element={<Landing section="pricing" />} />
         {/* The storefront's other pages, public like the landing page. */}
         <Route path="/how-it-works" element={<HowItWorks />} />
@@ -283,6 +288,10 @@ function App() {
         <Route path="/manual" element={<ManualView />} />
         <Route path="/manual/:chapterSlug" element={<ManualView />} />
         <Route path="/whats-new" element={<WhatsNew />} />
+        {/* The consent an AI app asks for (REQ-44): the API's /oauth/authorize
+            sends the member here. Signed out, the 401 sends them to sign in
+            and back. */}
+        <Route path="/connect" element={<OAuthConsent />} />
         <Route path="/admin" element={<PlatformAdmin />} />
         <Route path="/projects/:projectId" element={<ProjectLayout />}>
           <Route index element={<ProductOverview />} />

@@ -84,7 +84,11 @@ client.interceptors.response.use(
       !isPublicPath(window.location.pathname) &&
       !String(error.config?.url || '').includes('/api/v1/auth/')
     ) {
-      window.location.href = '/login';
+      // The consent page an AI app opens (REQ-44) is the one page that asks
+      // to come back after the sign-in: the app is waiting for its answer.
+      const { pathname, search } = window.location;
+      window.location.href =
+        pathname === '/connect' ? `/login?next=${encodeURIComponent(pathname + search)}` : '/login';
     }
     // An unverified account meets the wall: the server refuses everything
     // but the auth endpoints until the emailed link is clicked.

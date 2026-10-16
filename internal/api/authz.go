@@ -78,7 +78,7 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 		return true
 	}
 
-	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
+	user := h.scopedUser(w, r, func() string { return h.orgIDForProject(projectID) }, absent)
 	if user == nil {
 		return false
 	}
@@ -309,7 +309,7 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		absent.write(w)
 		return false
 	}
-	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
+	user := h.scopedUser(w, r, func() string { return orgID }, absent)
 	if user == nil {
 		return false
 	}
