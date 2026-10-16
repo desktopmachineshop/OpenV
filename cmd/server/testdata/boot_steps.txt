@@ -141,6 +141,17 @@ func main()
   call ext.Build
   if
     call os.Exit
+  for
+    if
+      if
+        call fmt.Errorf
+      call internal/domain/orgs.SetPlanPolicy
+    if
+      if
+        call fmt.Errorf
+      call internal/domain/orgs.SetChannelPolicy
+  if
+    call os.Exit
   switch
     case
       call (*internal/billing.Service).SetUsers

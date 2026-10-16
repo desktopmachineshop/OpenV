@@ -1,10 +1,10 @@
-// The deployment policy: the four settings that say how this deployment
+// The deployment policy: the settings that say how this deployment
 // rations its workspaces, the package default instance that holds them, and
 // the package setters boot installs them through.
 
 package orgs
 
-// DeploymentPolicy is the deployment's four settings. What reads them is
+// DeploymentPolicy is the deployment's settings. What reads them is
 // its methods: PlanDefaults (the tiers), MaxPlanUploadMB, ReadOnlyRemedy and
 // EffectiveLimits.
 //
@@ -39,6 +39,10 @@ type DeploymentPolicy struct {
 	// called, which is the hosted service's state — it runs on plan
 	// defaults alone.
 	DeploymentLimits map[string]interface{}
+	// Plans and Channels are what a plan means here (policies.go): nil is
+	// the built-in tiers and channels, a module's policy otherwise.
+	Plans    PlanPolicy
+	Channels ChannelPolicy
 }
 
 // defaultPolicy is the package default instance, at the defaults a hosted
