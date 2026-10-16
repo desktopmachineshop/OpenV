@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.21.5 — 2026-10-16
+
 ### Bug fixes
 
 - **Shared and open-source projects scroll on a phone.** A long artifact
