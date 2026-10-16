@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **A self-hosted OpenV now opens on its sign-in page.** Its front page is
+  your app, not the openv.app marketing site, and it no longer shows a
+  Billing tab, a Plan card or the platform admin's site Visitors
+  dashboard. openv.app is unchanged.
+
 ## 0.21.4 — 2026-10-16
 
 ### Bug fixes

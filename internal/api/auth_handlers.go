@@ -98,6 +98,10 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 		"password_reset_email": h.Mailer != nil && h.Mailer.Enabled(),
 		// Whether the page should offer a sign-up form at all (REQ-95).
 		"registration": h.registrationPolicy(),
+		// What this deployment offers (module_host.go): the app hides the
+		// hosted service's screens, such as billing and the public site,
+		// where they are absent.
+		"capabilities": h.capabilities(),
 	}
 	if h.OIDC.Enabled() {
 		resp["oidc_provider_name"] = h.OIDC.displayName()

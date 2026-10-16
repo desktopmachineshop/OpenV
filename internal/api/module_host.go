@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/ext"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
 // Modules (ext, docs/plans/hosted-edition-separation.md): the parts of the
@@ -120,6 +122,29 @@ func (h *Handler) guardModuleRoute(pathVar, role string, next http.HandlerFunc) 
 		}
 		next(w, r)
 	}
+}
+
+// capabilities is what this deployment offers, sorted, for the app to show
+// or hide what depends on it: hosted on the hosted service (not
+// OPENV_SELF_HOSTED), and what each module names.
+func (h *Handler) capabilities() []string {
+	set := map[string]bool{}
+	if !orgs.SelfHosted() {
+		set[ext.CapabilityHosted] = true
+	}
+	for _, m := range h.Modules {
+		if c, ok := m.(ext.CapabilityModule); ok {
+			for _, name := range c.Capabilities() {
+				set[name] = true
+			}
+		}
+	}
+	out := make([]string, 0, len(set))
+	for name := range set {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // workspaceObservers are the modules that watch workspace changes.

@@ -27,8 +27,10 @@
 # here too, from the build's .openv-prerender/ into prerendered/, which nginx
 # serves for each page's path. Their canonical link, og:url and structured
 # data carry the address: filled in when OPENV_SITE_URL is set, and dropped
-# (one tag per line) when it is not or OPENV_NOINDEX is set. The pages
-# themselves are served either way.
+# (one tag per line) when OPENV_NOINDEX is set. They are the hosted
+# service's public site, so a deployment that names no address and is not
+# staging (a self-hosted copy) publishes none, and its front page is the
+# app, which opens on sign-in (docs/plans/hosted-edition-separation.md).
 #
 # OPENV_WEB_ROOT and OPENV_NGINX_CONF_DIR exist for the test
 # (frontend/scripts/crawl-entrypoint.test.mjs); the image uses the defaults.
@@ -92,7 +94,9 @@ fi
 
 pages="$root/prerendered"
 rm -rf "$pages"
-if [ -d "$root/.openv-prerender" ]; then
+if [ -z "$site" ] && [ -z "$noindex" ]; then
+    echo "openv: no pre-rendered public pages (OPENV_SITE_URL unset)"
+elif [ -d "$root/.openv-prerender" ]; then
     if [ -n "$site" ] && [ -z "$noindex" ]; then
         expr="s|$placeholder|$site|g"
     else
