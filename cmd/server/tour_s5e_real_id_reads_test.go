@@ -384,6 +384,7 @@ var realIdReadsIDs = map[string]string{
 	"interview-sessions": "{{interview.session}}",
 	"interviews":         "{{interview}}",
 	"links":              "{{link}}",
+	"me":                 "claude-code", // provider-tokens/{provider}: the caller's own
 	"orgs":               "{{w}}",
 	"projects":           "{{p}}",
 	"provider-logins":    "{{login}}",

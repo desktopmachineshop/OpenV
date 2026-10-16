@@ -115,4 +115,5 @@ var migrations = []Migration{
 	{Version: 58, Name: "cancel_requeued_cancelled_runs", Run: m0058CancelRequeuedCancelledRuns},
 	{Version: 59, Name: "user_activity_days", Run: m0059UserActivityDays},
 	{Version: 60, Name: "site_visitors", Run: m0060SiteVisitors},
+	{Version: 61, Name: "user_provider_tokens", Run: m0061UserProviderTokens},
 }

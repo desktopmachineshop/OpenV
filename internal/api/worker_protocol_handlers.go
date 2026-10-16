@@ -16,6 +16,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/workerproto"
 )
@@ -106,7 +107,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSONBare(w, workerproto.ClaimResponse{
 		Agent:    agent,
-		Auth:     h.resolveRunAuth(run, agent),
+		Auth:     h.resolveRunAuth(r, run, agent),
 		Run:      run,
 		RunToken: token,
 	})
@@ -124,31 +125,59 @@ func (h *Handler) releaseFailedClaim(runID, workerID string) {
 // resolveRunAuth picks the provider credential mode for a claimed run. A
 // project set to api-key overrides the member's local CLI sign-in: the worker
 // injects the key named by api_key_env (org provider setting, or the
-// provider's native variable) from its host environment. Everything else —
-// including non-project runs — uses the runner's local sign-in.
-func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[string]string {
+// provider's native variable) from its host environment. Otherwise a run
+// launched by a member who stored a subscription token carries that token,
+// but only to a runner that serves that member alone (their personal runner
+// key, or a lease bound to them): a workspace runner is someone else's host,
+// and it keeps using its own sign-in. Everything else uses the runner's local
+// sign-in.
+func (h *Handler) resolveRunAuth(r *http.Request, run *agentruns.Run, agent *agents.Agent) map[string]string {
 	auth := map[string]string{"mode": projects.AgentAuthUserAccount}
-	if run.ProjectID == nil || *run.ProjectID == "" {
-		return auth
-	}
-	project, err := h.ProjectService.GetProject(*run.ProjectID)
-	if err != nil || project == nil || project.AgentAuth != projects.AgentAuthAPIKey {
-		return auth
-	}
-	auth["mode"] = projects.AgentAuthAPIKey
-	keyEnv := providers.DefaultAPIKeyEnv(agent.Provider)
-	if h.ProviderService != nil {
-		if settings, err := h.ProviderService.List(run.OrgID); err == nil {
-			for _, s := range settings {
-				if s.Provider == agent.Provider && s.APIKeyEnv != "" {
-					keyEnv = s.APIKeyEnv
-					break
+	if run.ProjectID != nil && *run.ProjectID != "" {
+		project, err := h.ProjectService.GetProject(*run.ProjectID)
+		if err == nil && project != nil && project.AgentAuth == projects.AgentAuthAPIKey {
+			auth["mode"] = projects.AgentAuthAPIKey
+			keyEnv := providers.DefaultAPIKeyEnv(agent.Provider)
+			if h.ProviderService != nil {
+				if settings, err := h.ProviderService.List(run.OrgID); err == nil {
+					for _, s := range settings {
+						if s.Provider == agent.Provider && s.APIKeyEnv != "" {
+							keyEnv = s.APIKeyEnv
+							break
+						}
+					}
 				}
 			}
+			auth["api_key_env"] = keyEnv
+			return auth
 		}
 	}
-	auth["api_key_env"] = keyEnv
+	if token := h.subscriptionTokenFor(r, run, agent); token != "" {
+		auth["mode"] = workerproto.AuthSubscriptionToken
+		auth["oauth_token"] = token
+	}
 	return auth
+}
+
+// subscriptionTokenFor is the launching member's stored subscription token
+// for a run claimed by a runner that is theirs alone, or "".
+func (h *Handler) subscriptionTokenFor(r *http.Request, run *agentruns.Run, agent *agents.Agent) string {
+	if h.ProviderTokenService == nil || run.LaunchedBy == nil || *run.LaunchedBy == "" {
+		return ""
+	}
+	if WorkerUser(r) != *run.LaunchedBy {
+		return ""
+	}
+	if !h.memberFeatureEnabled(run.OrgID, run.LaunchedBy, release.FeatureSubscriptionToken) {
+		return ""
+	}
+	token, err := h.ProviderTokenService.ForRun(*run.LaunchedBy, agent.Provider)
+	if err != nil {
+		slog.Warn("api: stored provider token unusable; the run uses the runner's own sign-in",
+			"run_id", run.ID, "error", err)
+		return ""
+	}
+	return token
 }
 
 func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {

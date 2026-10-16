@@ -16,6 +16,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
+	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
 // Options configures a Worker.
@@ -338,6 +339,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	if !ok {
 		return
 	}
+	if req.ErrorClass == agentruns.ErrorClassAuth && cliEnv(claim, nil)[subscriptionTokenEnv] != "" {
+		req.Error += subscriptionTokenRefused
+	}
 	w.finish(run.ID, req)
 	if result.DurationMs > 0 {
 		// Split the wall time so a slow run can be read off the runner log:
@@ -557,8 +561,33 @@ func (w *Worker) buildRunSpec(claim *ClaimResponse, workDir string, env map[stri
 		RepoAccess: claim.Agent.RepoAccess,
 		MaxTurns:   claim.Agent.MaxTurns,
 		TimeoutSec: claim.Agent.TimeoutSeconds,
-		Env:        env,
+		Env:        cliEnv(claim, env),
 	}
+}
+
+// subscriptionTokenRefused is added to a sign-in failure of a run that
+// carried the member's stored token, which Claude has then refused.
+const subscriptionTokenRefused = " — Claude refused your saved subscription token; run `claude setup-token` again and save the new token under Settings → Claude subscription token"
+
+// subscriptionTokenEnv is where the Claude Code CLI reads a long-lived
+// subscription token (the one `claude setup-token` prints).
+const subscriptionTokenEnv = "CLAUDE_CODE_OAUTH_TOKEN"
+
+// cliEnv is the CLI's own environment: the run env, plus the member's
+// subscription token when the claim carries one for a Claude Code run. The
+// token goes to the CLI process only — never into the MCP server's env,
+// which the adapter writes into .openv/mcp.json.
+func cliEnv(claim *ClaimResponse, env map[string]string) map[string]string {
+	if claim.Auth == nil || claim.Auth.Mode != workerproto.AuthSubscriptionToken ||
+		claim.Auth.OAuthToken == "" || claim.Agent.Provider != providers.ProviderClaudeCode {
+		return env
+	}
+	out := make(map[string]string, len(env)+1)
+	for k, v := range env {
+		out[k] = v
+	}
+	out[subscriptionTokenEnv] = claim.Auth.OAuthToken
+	return out
 }
 
 // finishRequestFor is the request that finishes a run whose adapter has

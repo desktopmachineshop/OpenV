@@ -37,6 +37,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
@@ -89,19 +90,21 @@ type HandlerDeps struct {
 	ShareLinkService sharelinks.Service
 	// FrontendURL is the origin the app is served from, for absolute links
 	// in social previews and share pages.
-	FrontendURL         string
-	AgentService        agents.Service
-	RunService          agentruns.Service
-	AutomationService   automations.Service
-	ProposalService     proposals.Service
-	RepoConnService     repoconns.Service
-	ProviderService     providers.Service
-	LoginService        providers.LoginService
-	TeamService         teams.Service
-	OrgService          orgs.Service
-	OrgTeamService      orgs.TeamService
-	WorkerKeyService    workerkeys.Service
-	HostedWorkerService hostedworkers.Service
+	FrontendURL       string
+	AgentService      agents.Service
+	RunService        agentruns.Service
+	AutomationService automations.Service
+	ProposalService   proposals.Service
+	RepoConnService   repoconns.Service
+	ProviderService   providers.Service
+	LoginService      providers.LoginService
+	// ProviderTokenService holds members' own provider sign-in tokens.
+	ProviderTokenService usertokens.Service
+	TeamService          teams.Service
+	OrgService           orgs.Service
+	OrgTeamService       orgs.TeamService
+	WorkerKeyService     workerkeys.Service
+	HostedWorkerService  hostedworkers.Service
 	// RunnerSessionService drives transient runners; nil on deployments
 	// with no runner pool configured.
 	RunnerSessionService runnersessions.Service

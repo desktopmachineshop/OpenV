@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 297
-  axios instance calls: 286 (DELETE 34, GET 114, HEAD 1, POST 99, PUT 38)
+call sites: 300
+  axios instance calls: 289 (DELETE 35, GET 115, HEAD 1, POST 99, PUT 39)
   helper calls (a function that passes its argument to the instance): 2
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (4 of them axios calls)
-distinct METHOD PATH lines below: 297; server routes reached: 297
+distinct METHOD PATH lines below: 300; server routes reached: 300
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
@@ -135,6 +135,9 @@ PUT     /api/v1/me/default-workspace                                      defaul
 GET     /api/v1/me/notification-prefs                                     notificationPrefsAPI.get
 PUT     /api/v1/me/notification-prefs                                     notificationPrefsAPI.update
 PUT     /api/v1/me/password                                               passwordAPI.change
+DELETE  /api/v1/me/provider-tokens/{provider}                             providerTokensAPI.remove
+GET     /api/v1/me/provider-tokens/{provider}                             providerTokensAPI.get
+PUT     /api/v1/me/provider-tokens/{provider}                             providerTokensAPI.save
 DELETE  /api/v1/me/push-subscriptions                                     pushAPI.unsubscribe
 GET     /api/v1/me/push-subscriptions                                     pushAPI.list
 POST    /api/v1/me/push-subscriptions                                     pushAPI.subscribe

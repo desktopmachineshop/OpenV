@@ -197,7 +197,8 @@
     "artifact-stepping",
     "workspace-billing",
     "workspace-automations",
-    "workspace-runs"
+    "workspace-runs",
+    "claude-subscription-token"
   ],
   "event_types": [
     "artifact.created",

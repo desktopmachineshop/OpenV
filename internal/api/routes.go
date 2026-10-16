@@ -43,6 +43,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerReleaseRoutes(router)
 	h.registerFeatureRoutes(router)
 	h.registerDefaultWorkspaceRoutes(router)
+	h.registerProviderTokenRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)

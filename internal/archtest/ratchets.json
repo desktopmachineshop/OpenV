@@ -39,6 +39,7 @@
       "internal/domain/projects",
       "internal/domain/proposals",
       "internal/domain/providers",
+      "internal/domain/providers/usertokens",
       "internal/domain/pushsubs",
       "internal/domain/release",
       "internal/domain/repoconns",
@@ -92,6 +93,7 @@
       "internal/domain/projects",
       "internal/domain/proposals",
       "internal/domain/providers",
+      "internal/domain/providers/usertokens",
       "internal/domain/pushsubs",
       "internal/domain/quality",
       "internal/domain/release",
@@ -194,6 +196,9 @@
     ],
     "internal/domain/mentions": [
       "internal/domain/members"
+    ],
+    "internal/domain/providers/usertokens": [
+      "internal/domain/providers"
     ],
     "internal/domain/quality": [
       "internal/domain/artifacts",
@@ -310,6 +315,7 @@
       "internal/domain/projects",
       "internal/domain/proposals",
       "internal/domain/providers",
+      "internal/domain/providers/usertokens",
       "internal/domain/pushsubs",
       "internal/domain/repoconns",
       "internal/domain/runnersessions",

@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -48,6 +49,13 @@ func (a *app) agents() {
 	a.repoConnService = repoconns.NewDefaultService(a.repoConnRepo)
 	a.providerService = providers.NewDefaultService(a.providerRepo)
 	a.loginService = providers.NewLoginService(postgres.NewProviderLoginRepository(a.db))
+	// Members' own provider tokens, sealed under OPENV_SECRETS_KEY; with no
+	// key the store is unavailable rather than the boot failing.
+	providerTokens, err := usertokens.NewDefaultService(postgres.NewProviderTokenRepository(a.db), a.env().SecretsKey())
+	if err != nil {
+		fatal("invalid OPENV_SECRETS_KEY", err)
+	}
+	a.providerTokenService = providerTokens
 	a.teamService = teams.NewDefaultService(a.teamRepo)
 	// Human crew members must belong to the crew's workspace.
 	a.teamService.SetMemberValidator(func(orgID, userID string) bool {

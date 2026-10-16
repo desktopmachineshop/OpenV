@@ -853,7 +853,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 60
+table schema_migrations rows 61
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -986,6 +986,16 @@ table user_activity_days rows 0
   constraint user_activity_days_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   index idx_user_activity_days_day CREATE INDEX idx_user_activity_days_day ON public.user_activity_days USING btree (day)
   index user_activity_days_pkey CREATE UNIQUE INDEX user_activity_days_pkey ON public.user_activity_days USING btree (user_id, day)
+table user_provider_tokens rows 0
+  column user_id uuid NOT NULL
+  column provider character varying(50) NOT NULL
+  column sealed bytea NOT NULL
+  column last4 character varying(4) NOT NULL DEFAULT ''::character varying
+  column created_at timestamp without time zone NOT NULL
+  column expires_at timestamp without time zone NOT NULL
+  constraint user_provider_tokens_pkey PRIMARY KEY (user_id, provider)
+  constraint user_provider_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index user_provider_tokens_pkey CREATE UNIQUE INDEX user_provider_tokens_pkey ON public.user_provider_tokens USING btree (user_id, provider)
 table user_repo_paths rows 0
   column user_id uuid NOT NULL
   column repo_connection_id uuid NOT NULL
@@ -1129,3 +1139,4 @@ ledger 0057 drop_attachment_test_result
 ledger 0058 cancel_requeued_cancelled_runs
 ledger 0059 user_activity_days
 ledger 0060 site_visitors
+ledger 0061 user_provider_tokens

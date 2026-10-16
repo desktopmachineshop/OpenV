@@ -19,6 +19,7 @@ import type {
   Proposal,
   ProviderLogin,
   ProviderSetting,
+  ProviderTokenStatus,
   RepoConnection,
   RunLogEntry,
 } from './types/agents';
@@ -119,6 +120,16 @@ export const providerLoginsAPI = {
   submitCode: (id: string, code: string) =>
     client.post<ProviderLogin>(`/api/v1/provider-logins/${id}/code`, { code }),
   cancel: (id: string) => client.post<ProviderLogin>(`/api/v1/provider-logins/${id}/cancel`),
+};
+
+// A member's own stored subscription token (`claude setup-token`). The API
+// answers its status only, never the token.
+export const providerTokensAPI = {
+  get: (provider: string) =>
+    client.get<ProviderTokenStatus>(`/api/v1/me/provider-tokens/${provider}`),
+  save: (provider: string, token: string) =>
+    client.put<ProviderTokenStatus>(`/api/v1/me/provider-tokens/${provider}`, { token }),
+  remove: (provider: string) => client.delete(`/api/v1/me/provider-tokens/${provider}`),
 };
 
 export const crewsAPI = {

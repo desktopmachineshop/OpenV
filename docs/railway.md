@@ -171,6 +171,18 @@ frontend variable and no rebuild — but it is baked into every subscription a
 member takes, so **rotating the pair invalidates every existing
 subscription** and each device has to be turned on again.
 
+Optional — saved Claude subscription tokens: set one random key on the
+**API** service, and members can save the token `claude setup-token` prints
+so their own and leased runners start signed in (`docs/agents.md`):
+
+```dotenv
+# openssl rand -base64 32 — a secret; changing it voids every saved token
+OPENV_SECRETS_KEY=<32 random bytes, base64>
+```
+
+Unset, the settings card says the server keeps no tokens. Give staging a key
+of its own, never production's.
+
 Push also needs the app served over HTTPS on one origin with a registered
 service worker, which is what section 3's frontend already does. See
 [operations.md](operations.md) for what "high-signal" covers and the

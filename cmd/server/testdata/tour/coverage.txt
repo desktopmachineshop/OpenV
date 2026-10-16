@@ -23,6 +23,7 @@ DELETE /api/v1/evidence-bundles/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/evidence-files/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/links/{id}: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
 DELETE /api/v1/me/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
+DELETE /api/v1/me/provider-tokens/{provider}: s5e (errors only)
 DELETE /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/notifications/cleared: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/org-teams/{id}: s5c, s5e; 2xx or 3xx in s5c
@@ -101,6 +102,7 @@ GET /api/v1/links: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/me/provider-tokens/{provider}: s5e; 2xx or 3xx in s5e
 GET /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/push/config: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/meta/artifact-types: s5a, s5e; 2xx or 3xx in s5a, s5e
@@ -332,6 +334,7 @@ PUT /api/v1/links/{id}/confirm: s5a, s5e; 2xx or 3xx in s5a
 PUT /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/password: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/me/provider-tokens/{provider}: s5e (errors only)
 PUT /api/v1/notifications/{id}/flag: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/org-teams/{id}: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/orgs/{id}: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -355,4 +358,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 344 of 344 routes reached (100.0%), 340 with a 2xx or 3xx answer (98.8%); the floor is 90%, 310 routes
+the tour: 347 of 347 routes reached (100.0%), 341 with a 2xx or 3xx answer (98.3%); the floor is 90%, 313 routes

@@ -141,6 +141,7 @@ buckets live in the API process, so they assume a single API instance.
 | `OPENV_RUN_AUTO_RETRY` | server | `true` | `false` turns off the automatic retry of a run that failed for a retryable reason (provider unavailable, timeout, worker error). |
 | `OPENV_RUN_MAX_ATTEMPTS` | server | `3` | Attempts a run's retry chain may make, the first included; `1` turns retries off. |
 | `OPENV_RUN_TOKEN` | openv-mcp | none | The token minted for one agent run, which the runner hands `openv-mcp`; the tools then reach only what that run may. |
+| `OPENV_SECRETS_KEY` | server | unset: no stored tokens | The base64 of 32 random bytes (`openssl rand -base64 32`) that seals the Claude subscription tokens members save under Settings. Unset, members cannot save one and the card says so; a value that is not 32 bytes stops the boot. Changing it makes every saved token unreadable (runs fall back to the runner's own sign-in), so members save theirs again. A credential: set it on the server only. |
 
 ### runner-fleet
 
@@ -150,6 +151,7 @@ buckets live in the API process, so they assume a single API instance.
 | `AGENT_CONCURRENCY` | agentd | `1` | How many normal runs a runner executes at once (`-concurrency`). |
 | `AGENT_WORKSPACE_RETENTION` | agentd | `24h0m0s` | How long a finished run's workspace is kept before cleanup, a positive Go duration (`-workspace-retention`). |
 | `ANTHROPIC_API_KEY` | agentd | none | When set in the runner's environment, Claude Code counts as signed in (API key mode) without an interactive sign-in. Passed on to the CLI exactly as set. |
+| `CLAUDE_CODE_OAUTH_TOKEN` | agentd | none | A Claude subscription token (`claude setup-token`). The runner sets it in the Claude Code CLI's environment for a run that carries the launching member's saved token, and never in the MCP server's; set on the runner host, the CLI reads it for every run. |
 | `CLOUD_SHELL` | agentd | none | One of the Gemini CLI's auth-mode variables: when it is set, a Gemini run is not switched to the runner's OAuth sign-in (`GOOGLE_GENAI_USE_GCA`). |
 | `CODEX_HOME` | agentd | `$HOME/.codex` | Where the Codex CLI keeps its sign-in; the runner looks for `auth.json` there to tell whether Codex is signed in. |
 | `CONNECTOR_DIST_DIR` | server | `./dist` | Directory holding the Agent Connector downloads that `/api/v1/public/connector/download` serves (`make connector-dist` writes them). |

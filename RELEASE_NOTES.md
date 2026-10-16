@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Keep Claude signed in with a subscription token.** Run
+  `claude setup-token` on your own computer and paste the token it prints
+  under Settings → Claude subscription token. Your chats and agent runs on
+  your own runner, and on cloud runners leased to you, then start already
+  signed in to Claude: no more signing in again on every cloud runner. The
+  token lasts a year; OpenV keeps it encrypted, never shows it again, gives
+  it only to runners that work for you alone, and tells you when it needs
+  replacing.
+
 ### Bug fixes
 
 - **Every baseline picker now says who captured each baseline and when.**

@@ -52,6 +52,7 @@ var Registry = []Feature{
 	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
 	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
 	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
+	{Key: FeatureSubscriptionToken, ShippedIn: "0.18.0", Summary: "Keep Claude signed in: save a long-lived Claude subscription token once, and your own and leased runners start chats already signed in"},
 }
 
 // Feature keys the code gates on.
@@ -144,6 +145,12 @@ const (
 	// feature is on sends the member on to the projects list, where the
 	// link went before.
 	FeatureWorkspaceRuns = "workspace-runs"
+	// FeatureSubscriptionToken is a member's stored Claude subscription
+	// token (`claude setup-token`). It gates SAVING one (the settings card
+	// and PUT /me/provider-tokens) and handing it to a runner in a claim,
+	// on the run's workspace's channel. Reading the status and forgetting a
+	// token are never gated, so a member can always remove what they saved.
+	FeatureSubscriptionToken = "claude-subscription-token"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

@@ -33,6 +33,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
@@ -145,6 +146,7 @@ type app struct {
 	repoConnService      *repoconns.DefaultService
 	providerService      *providers.DefaultService
 	loginService         *providers.DefaultLoginService
+	providerTokenService *usertokens.DefaultService
 	teamService          *teams.DefaultService
 	proposalService      *proposals.DefaultService
 	proposalAppliers     proposals.Appliers

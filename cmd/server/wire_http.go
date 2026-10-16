@@ -87,6 +87,7 @@ func (a *app) handlers() {
 		RepoConnService:      a.repoConnService,
 		ProviderService:      a.providerService,
 		LoginService:         a.loginService,
+		ProviderTokenService: a.providerTokenService,
 		OrgService:           a.orgService,
 		OrgTeamService:       a.orgTeamService,
 		WorkerKeyService:     a.workerKeyService,

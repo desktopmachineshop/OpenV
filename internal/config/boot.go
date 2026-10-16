@@ -251,6 +251,13 @@ func (c *Config) RunAutoRetry() bool {
 	return c.boolean("OPENV_RUN_AUTO_RETRY", true)
 }
 
+// SecretsKey is OPENV_SECRETS_KEY exactly as set, or "": the base64 of 32
+// random bytes that seals the provider tokens members store (stage agents).
+// Unset, the server stores none.
+func (c *Config) SecretsKey() string {
+	return c.secret("OPENV_SECRETS_KEY", "")
+}
+
 // Deployment is the deployment's kind (OPENV_DEPLOYMENT, default shared);
 // dedicated starts the support-window watcher.
 func (c *Config) Deployment() string {

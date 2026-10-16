@@ -1385,6 +1385,9 @@ detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
 | POST | `/api/v1/provider-logins/{id}/cancel` | Cancel sign-in (workspace: org admin; user-targeted: its requester or an org admin) | user |
 | POST | `/api/v1/provider-logins/{id}/progress` | Worker reports flow progress; a completed or cancelled sign-in is answered as it is, unchanged | worker |
 | GET | `/api/v1/provider-logins/{id}/full` | Full login record (incl. code) for the executing worker | worker |
+| GET | `/api/v1/me/provider-tokens/{provider}` | The caller's stored subscription token (`claude-code` only): `{provider, available, connected, last4, created_at, expires_at, expired}`; never the token. `available` is false on a server with no `OPENV_SECRETS_KEY` | user |
+| PUT | `/api/v1/me/provider-tokens/{provider}` | Save the token `claude setup-token` printed `{token}`, replacing any earlier one; answers the status. `400` for a value that is not such a token, `403` with the remedy when the active workspace's channel has not received it, `503` when the server stores no tokens | user |
+| DELETE | `/api/v1/me/provider-tokens/{provider}` | Forget the caller's token → `204` | user |
 
 ### Events
 

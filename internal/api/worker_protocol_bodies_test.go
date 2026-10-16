@@ -51,6 +51,7 @@ func TestWorkerAnswersWriteTheMapsBytes(t *testing.T) {
 		map[string]string{"mode": "user-account"},
 		map[string]string{"mode": "api-key", "api_key_env": "ANTHROPIC_API_KEY"},
 		map[string]string{"mode": "api-key", "api_key_env": ""}, // a provider with no default key variable
+		map[string]string{"mode": "subscription-token", "oauth_token": "sk-ant-oat01-x"},
 		// resolveRunAuth never answers nil, but the map wrote "auth":null for
 		// it: the key is never left out (no omitempty, I12).
 		nil,
