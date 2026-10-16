@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **A Claude sign-in that stalls after you paste the code now says why.**
+  If the sign-in on your runner goes quiet for half a minute after the code,
+  the card shows what the runner's terminal is displaying (with any
+  credential hidden), so you can tell a slow sign-in from one waiting on
+  you, and a sign-in that times out says the same.
+
 ## 0.21.0 — 2026-10-16
 
 ### New features
