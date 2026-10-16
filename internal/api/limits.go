@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 )
 
 // Enforcing workspace limits.
@@ -352,4 +353,22 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 		return 0, false
 	}
 	return used, true
+}
+
+// sessionLimits reads the workspace's lease timings from its effective org
+// limits, falling back to the package defaults.
+func (h *Handler) sessionLimits(orgID string) (sessionMinutes, idleMinutes int) {
+	sessionMinutes, idleMinutes = runnersessions.DefaultSessionMinutes, runnersessions.DefaultIdleMinutes
+	org, err := h.OrgService.Get(orgID)
+	if err != nil || org == nil {
+		return
+	}
+	eff := org.EffectiveLimits()
+	if v, ok := orgs.LimitFloat(eff, orgs.LimitRunnerSessionMinutes); ok && v > 0 {
+		sessionMinutes = int(v)
+	}
+	if v, ok := orgs.LimitFloat(eff, orgs.LimitRunnerSessionIdleMinutes); ok && v > 0 {
+		idleMinutes = int(v)
+	}
+	return
 }

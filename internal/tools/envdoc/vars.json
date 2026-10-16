@@ -496,6 +496,12 @@
       "default": "none",
       "text": "The token minted for one agent run, which the runner hands `openv-mcp`; the tools then reach only what that run may."
     },
+    "OPENV_SECRETS_KEY": {
+      "area": "agent-suite",
+      "read_by": "server",
+      "default": "unset: no stored tokens",
+      "text": "The base64 of 32 random bytes (`openssl rand -base64 32`) that seals the Claude subscription tokens members save under Settings. Unset, members cannot save one and the card says so; a value that is not 32 bytes stops the boot. Changing it makes every saved token unreadable (runs fall back to the runner's own sign-in), so members save theirs again. A credential: set it on the server only."
+    },
     "OPENV_SELF_HOSTED": {
       "area": "tenancy-identity",
       "read_by": "server",

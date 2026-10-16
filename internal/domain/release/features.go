@@ -52,6 +52,7 @@ var Registry = []Feature{
 	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
 	{Key: FeatureWorkspaceAutomations, ShippedIn: "0.16.0", Summary: "Workspace admins make an automation for the whole workspace from any project's Automations page: it runs on events in every project and on workspace membership events"},
 	{Key: FeatureWorkspaceRuns, ShippedIn: "0.17.0", Summary: "Workspace runs, from the workspace menu: the agent runs that belong to no project, with the run beside the list, where a notification about such a run now opens it"},
+	{Key: FeatureAutoCloudRunner, ShippedIn: "0.18.0", Summary: "Send a chat message with no runner online and OpenV starts a cloud runner for you, where your plan has cloud runner minutes"},
 	{Key: FeatureSubscriptionToken, ShippedIn: "0.18.0", Summary: "Keep Claude signed in: save a long-lived Claude subscription token once, and your own and leased runners start chats already signed in"},
 }
 
@@ -151,6 +152,10 @@ const (
 	// on the run's workspace's channel. Reading the status and forgetting a
 	// token are never gated, so a member can always remove what they saved.
 	FeatureSubscriptionToken = "claude-subscription-token"
+	// FeatureAutoCloudRunner is leasing a cloud runner for a member when a
+	// chat turn of theirs is queued with no runner online to take it. It
+	// gates only the automatic lease; starting one by hand is unchanged.
+	FeatureAutoCloudRunner = "auto-cloud-runner"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

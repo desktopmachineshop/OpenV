@@ -35,17 +35,17 @@ export const guidedAPI = {
     state: Record<string, any>,
     artifactId?: string
   ) =>
-    client.post<{ message: GuidedChatMessage; runner_online?: boolean }>(
+    client.post<{ message: GuidedChatMessage; runner_online?: boolean; runner_starting?: boolean }>(
       `/api/v1/guided-sessions/${id}/messages`,
       { content, step, state, artifact_id: artifactId || '' }
     ),
   kickoffChat: (id: string, step: number, state: Record<string, any>, artifactId?: string) =>
-    client.post<{ status: 'launched' | 'pending' | 'skipped' | 'unavailable'; runner_online?: boolean }>(
+    client.post<{ status: 'launched' | 'pending' | 'skipped' | 'unavailable'; runner_online?: boolean; runner_starting?: boolean }>(
       `/api/v1/guided-sessions/${id}/chat/kickoff`,
       { step, state, artifact_id: artifactId || '' }
     ),
   nudgeChat: (id: string, step: number, state: Record<string, any>, event: string) =>
-    client.post<{ status: 'launched' | 'pending' | 'unavailable'; runner_online?: boolean }>(
+    client.post<{ status: 'launched' | 'pending' | 'unavailable'; runner_online?: boolean; runner_starting?: boolean }>(
       `/api/v1/guided-sessions/${id}/chat/nudge`,
       { step, state, event }
     ),

@@ -1166,6 +1166,13 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
 | GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
 
+Each of the three launching answers carries `runner_starting: true` beside
+`runner_online: false` when no runner was online and the caller now holds a
+cloud runner lease that is coming up: queuing a turn with nothing to take it
+leases one for the member where the deployment has a pool and the workspace
+minutes left (`docs/agents.md`, "Starting a transient runner from the chat").
+The key is absent otherwise.
+
 `chat/nudge` takes `{step, state, event}` and answers `{status, runner_online}`.
 `status` is `launched` (a turn was enqueued), `pending` (a turn is already in
 flight, so this nudge was **parked** on the session — the newest parked nudge

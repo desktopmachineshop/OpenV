@@ -2,6 +2,7 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
 import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
 import { ChatMarkdown } from '../ChatMarkdown';
+import { CloudRunnerStartingNotice } from './CloudRunnerStartingNotice';
 import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import type { ArtifactTypeValue } from '../../generated/contract';
 
@@ -330,6 +331,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   // True when the API reports no runner online: turns queue unanswered, so
   // the panel shows connect instructions instead of a thinking indicator.
   const [runnerOffline, setRunnerOffline] = useState(false);
+  // A cloud runner OpenV leased for this turn is coming up: shown instead of
+  // the "not connected" notice until the reply arrives.
+  const [runnerStarting, setRunnerStarting] = useState(false);
   // Which suggestions were applied lives in `applied` (persisted by the
   // wizard in the session answers) — NOT local state, so a remount cannot
   // re-arm Apply buttons and duplicate entries.
@@ -382,14 +386,17 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     // An assistant reply proves a runner is processing turns again.
     if (msg.role === 'assistant') {
       setRunnerOffline(false);
+      setRunnerStarting(false);
     }
   }, []);
 
   // Digest a kickoff/nudge/send response: runner offline wins over any
   // status; otherwise "launched"/"pending" mean a reply is on its way.
-  const applyTurnStatus = useCallback((data?: { status?: string; runner_online?: boolean }) => {
+  const applyTurnStatus = useCallback((data?: { status?: string; runner_online?: boolean; runner_starting?: boolean }) => {
     if (!data) return;
-    if (data.runner_online === false) {
+    const starting = data.runner_online === false && Boolean(data.runner_starting);
+    setRunnerStarting(starting);
+    if (data.runner_online === false && !starting) {
       setRunnerOffline(true);
       setTyping(false);
       return;
@@ -593,7 +600,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       );
       if (sessionRef.current === sentIn) {
         if (res.data.message) appendMessage(res.data.message);
-        if (res.data.runner_online === false) {
+        const starting = res.data.runner_online === false && Boolean(res.data.runner_starting);
+        setRunnerStarting(starting);
+        if (res.data.runner_online === false && !starting) {
           setRunnerOffline(true);
           setTyping(false);
         } else {
@@ -877,6 +886,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             Messages you send are saved and will be answered as soon as a runner connects.
           </div>
         )}
+        {runnerStarting && !runnerOffline && !partial && <CloudRunnerStartingNotice />}
         {partial && (
           <div data-testid="assistant-partial" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
             <div

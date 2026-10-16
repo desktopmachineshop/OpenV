@@ -128,24 +128,6 @@ func (h *Handler) runnerSessionPayload(session *runnersessions.Session) map[stri
 	return payload
 }
 
-// sessionLimits reads the workspace's lease timings from its effective org
-// limits, falling back to the package defaults.
-func (h *Handler) sessionLimits(orgID string) (sessionMinutes, idleMinutes int) {
-	sessionMinutes, idleMinutes = runnersessions.DefaultSessionMinutes, runnersessions.DefaultIdleMinutes
-	org, err := h.OrgService.Get(orgID)
-	if err != nil || org == nil {
-		return
-	}
-	eff := org.EffectiveLimits()
-	if v, ok := orgs.LimitFloat(eff, orgs.LimitRunnerSessionMinutes); ok && v > 0 {
-		sessionMinutes = int(v)
-	}
-	if v, ok := orgs.LimitFloat(eff, orgs.LimitRunnerSessionIdleMinutes); ok && v > 0 {
-		idleMinutes = int(v)
-	}
-	return
-}
-
 // GetRunnerSession returns the member's current cloud runner, if any.
 func (h *Handler) GetRunnerSession(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]

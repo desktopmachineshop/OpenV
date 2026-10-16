@@ -19,6 +19,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   token lasts a year; OpenV keeps it encrypted, never shows it again, gives
   it only to runners that work for you alone, and tells you when it needs
   replacing.
+- **The V&V Assistant starts a cloud runner for you.** Send a message with
+  no runner online and OpenV now leases a cloud runner for you on its own,
+  instead of asking you to go and reserve one first. The chat says a runner
+  is starting and the reply follows when it is up. It happens only where
+  your workspace has cloud runner minutes left this month, never when your
+  own machine or a workspace runner is already online, and the runner stops
+  on its own once it sits idle.
 
 ### Bug fixes
 

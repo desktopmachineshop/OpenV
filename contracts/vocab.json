@@ -198,6 +198,7 @@
     "workspace-billing",
     "workspace-automations",
     "workspace-runs",
+    "auto-cloud-runner",
     "claude-subscription-token"
   ],
   "event_types": [

@@ -255,6 +255,29 @@ All three surface in the same **Agent sign-ins** cards. Sign-ins on a leased
 runner last exactly as long as the lease.
 
 
+### Starting a transient runner from the chat
+
+A member need not lease a transient runner by hand before they chat. When a
+V&V Assistant turn of theirs is queued (a message, the kickoff or a wizard
+nudge) and nothing can take it, the server leases one for them
+(`autoStartCloudRunner`, `internal/api/runner_session_autostart.go`), as the
+Cloud runner card's Start does, with the workspace's lease length and idle
+window, shortened to the month's remaining allowance. "Nothing can take it"
+means none of these is online (a key used in the last 30 seconds): one of the
+member's own keys (their connector, or a lease), or a workspace key, which
+shared and hosted runners use. Another member's personal runner does not
+count, since it takes only its own member's runs. Nothing is leased on a
+deployment with no runner pool, once the month's allowance is spent, while
+the member already holds a lease, or before the workspace's channel has the
+`auto-cloud-runner` feature. A pool with nothing free changes nothing: the
+chat says no runner is connected, as before.
+
+While the lease comes up the chat answers carry `runner_starting: true`
+beside `runner_online: false`, and the panel says a cloud runner is starting
+instead of "not connected". The lease ends by itself after the idle window,
+like one started by hand. Pair it with a saved subscription token (below), or
+the new runner has no Claude sign-in and the turn fails asking for one.
+
 ### Keeping Claude signed in with a subscription token
 
 A sign-in on a transient runner lasts one lease, and a personal runner's CLI
