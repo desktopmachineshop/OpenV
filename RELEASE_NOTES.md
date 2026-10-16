@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.21.3 — 2026-10-16
+
 ### Bug fixes
 
 - **Self-hosted workspaces get every feature of the release you run.** A
