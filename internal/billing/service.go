@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // Service is the sync path: it turns provider subscriptions into workspace
@@ -104,7 +104,7 @@ func (s *Service) RefreshPrices(ctx context.Context) error {
 // post-checkout return page calls this so the entitlement is live before the
 // page renders. A provider failure returns the workspace unchanged with the
 // error — never a downgrade.
-func (s *Service) RefreshOrg(ctx context.Context, orgID string) (*orgs.Org, error) {
+func (s *Service) RefreshOrg(ctx context.Context, orgID string) (*ext.Workspace, error) {
 	org, err := s.orgs.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -203,7 +203,7 @@ func (s *Service) Reconcile(ctx context.Context) {
 // what they paid for until then, and a restore inside the grace period can
 // take it back. Best effort — the reconcile loop shows the real state either
 // way, and a purged workspace's subscription is cancelled outright by it.
-func (s *Service) OnWorkspaceDeleted(ctx context.Context, org *orgs.Org) {
+func (s *Service) OnWorkspaceDeleted(ctx context.Context, org *ext.Workspace) {
 	if !s.Enabled() || org == nil || org.Billing.SubscriptionRef == "" || !org.Billing.Live() {
 		return
 	}
@@ -216,7 +216,7 @@ func (s *Service) OnWorkspaceDeleted(ctx context.Context, org *orgs.Org) {
 // scheduled. A live subscription is always resumed rather than only one
 // the platform itself scheduled: what the snapshot says about the flag may
 // be a reconcile interval old.
-func (s *Service) OnWorkspaceRestored(ctx context.Context, org *orgs.Org) {
+func (s *Service) OnWorkspaceRestored(ctx context.Context, org *ext.Workspace) {
 	if !s.Enabled() || org == nil || org.Billing.SubscriptionRef == "" || !org.Billing.Live() {
 		return
 	}
@@ -234,7 +234,7 @@ func (s *Service) OnWorkspaceRestored(ctx context.Context, org *orgs.Org) {
 // so nobody keeps paying for nothing. A price the registry does not know,
 // or a subscription with more than one item, changes nothing and is counted.
 func (s *Service) apply(ctx context.Context, sub *Subscription, disputed map[string]bool, readAt time.Time) {
-	org, err := s.orgs.FindOrgByBillingRef(orgs.BillingRefSubscription, sub.ID)
+	org, err := s.orgs.FindOrgByBillingRef(ext.BillingRefSubscription, sub.ID)
 	if err != nil {
 		s.log.Warn("could not look up subscription", "subscription", sub.ID, "error", err)
 		return
@@ -242,7 +242,7 @@ func (s *Service) apply(ctx context.Context, sub *Subscription, disputed map[str
 	if org == nil {
 		if orgID := sub.Metadata[OrgMetadataKey]; orgID != "" {
 			candidate, err := s.orgs.Get(orgID)
-			if err != nil && !errors.Is(err, orgs.ErrNotFound) {
+			if err != nil && !errors.Is(err, ext.ErrWorkspaceNotFound) {
 				s.log.Warn("could not look up workspace named by subscription", "subscription", sub.ID, "org_id", orgID, "error", err)
 				return
 			}
@@ -261,7 +261,7 @@ func (s *Service) apply(ctx context.Context, sub *Subscription, disputed map[str
 		}
 	}
 	if org == nil {
-		if MapStatus(sub.Status) != orgs.PlanStatusCanceled && MapStatus(sub.Status) != orgs.PlanStatusIncomplete {
+		if MapStatus(sub.Status) != ext.PlanStatusCanceled && MapStatus(sub.Status) != ext.PlanStatusIncomplete {
 			s.log.Error("live subscription belongs to no workspace; cancelling it", "subscription", sub.ID, "status", sub.Status)
 			if err := s.provider.CancelSubscription(ctx, sub.ID); err != nil {
 				s.log.Error("could not cancel orphaned subscription", "subscription", sub.ID, "error", err)
@@ -280,9 +280,9 @@ func (s *Service) apply(ctx context.Context, sub *Subscription, disputed map[str
 
 	status := MapStatus(sub.Status)
 	if disputed[sub.ID] {
-		status = orgs.PlanStatusDisputed
+		status = ext.PlanStatusDisputed
 	}
-	state := orgs.BillingState{
+	state := ext.WorkspaceBillingState{
 		Plan:              entry.Plan,
 		Status:            status,
 		Interval:          entry.Interval,

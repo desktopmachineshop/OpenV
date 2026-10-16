@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // DefaultMaxSeats is the quantity above which a seat push is refused.
@@ -87,7 +87,7 @@ func (s *Service) FlushSeats(ctx context.Context) int {
 	for id := range dirty {
 		org, err := s.orgs.Get(id)
 		if err != nil {
-			if !errors.Is(err, orgs.ErrNotFound) {
+			if !errors.Is(err, ext.ErrWorkspaceNotFound) {
 				s.log.Warn("seat sync could not read workspace", "org_id", id, "error", err)
 			}
 			continue
@@ -102,8 +102,8 @@ func (s *Service) FlushSeats(ctx context.Context) int {
 // seatsDrifted reports whether a workspace's billed quantity differs from
 // its seat count: only for a live Business subscription with an item to
 // update, and never when the count cannot be read.
-func (s *Service) seatsDrifted(org *orgs.Org) (want int, drifted bool) {
-	if org == nil || org.BilledPlan != orgs.PlanBusiness || !org.Billing.Live() || org.Billing.ItemRef == "" || s.seats == nil {
+func (s *Service) seatsDrifted(org *ext.Workspace) (want int, drifted bool) {
+	if org == nil || org.BilledPlan != ext.PlanBusiness || !org.Billing.Live() || org.Billing.ItemRef == "" || s.seats == nil {
 		return 0, false
 	}
 	n, err := s.seats(org.ID)
@@ -120,7 +120,7 @@ func (s *Service) seatsDrifted(org *orgs.Org) (want int, drifted bool) {
 // pushSeats sets the provider quantity to the workspace's seat count when
 // they differ, then re-reads the subscription so the mirrored snapshot
 // shows the new quantity without waiting for a tick.
-func (s *Service) pushSeats(ctx context.Context, org *orgs.Org) error {
+func (s *Service) pushSeats(ctx context.Context, org *ext.Workspace) error {
 	want, drifted := s.seatsDrifted(org)
 	if !drifted {
 		return nil
@@ -148,7 +148,7 @@ func (s *Service) pushSeats(ctx context.Context, org *orgs.Org) error {
 // repairSeatDrift is the reconcile tick's pass over billed workspaces: every
 // Business subscription whose quantity differs from the count is pushed,
 // and the number that differed is reported.
-func (s *Service) repairSeatDrift(ctx context.Context, billed []*orgs.Org) {
+func (s *Service) repairSeatDrift(ctx context.Context, billed []*ext.Workspace) {
 	drift := 0
 	for _, org := range billed {
 		fresh, err := s.orgs.Get(org.ID)

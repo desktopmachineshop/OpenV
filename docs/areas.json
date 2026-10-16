@@ -510,6 +510,7 @@
         "docs/api-spec.md",
         "docs/contract-quirks.md",
         "docs/data-model.md",
+        "docs/extending.md",
         "docs/release-policy.md",
         "ext/**",
         "frontend/src/api/**/platform*",

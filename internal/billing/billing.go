@@ -4,7 +4,7 @@
 // The provider is the source of truth for money; this package holds none.
 // It keeps a registry of which provider price means which plan, reads
 // subscriptions on a schedule, and writes one snapshot per workspace through
-// orgs.ApplyBillingState. A failed read never changes a plan. With no
+// ext.ApplyBillingState. A failed read never changes a plan. With no
 // provider configured the package is inert: nothing starts, nothing dials
 // out, and the endpoints that would use it answer that billing is
 // unavailable.
@@ -20,8 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openv/requirements-platform/internal/domain/orgs"
-	"github.com/openv/requirements-platform/internal/envparse"
+	"github.com/openv/requirements-platform/ext"
 )
 
 // Intervals a price may recur on.
@@ -184,10 +183,10 @@ type Users interface {
 
 // Orgs is the slice of the workspace service the sync path needs.
 type Orgs interface {
-	Get(id string) (*orgs.Org, error)
-	FindOrgByBillingRef(kind, ref string) (*orgs.Org, error)
-	ListBillingOrgs(limit int) ([]*orgs.Org, error)
-	ApplyBillingState(orgID string, state orgs.BillingState) (bool, error)
+	Get(id string) (*ext.Workspace, error)
+	FindOrgByBillingRef(kind, ref string) (*ext.Workspace, error)
+	ListBillingOrgs(limit int) ([]*ext.Workspace, error)
+	ApplyBillingState(orgID string, state ext.WorkspaceBillingState) (bool, error)
 	SetBillingCustomer(orgID, customerRef, currency string) error
 }
 
@@ -225,19 +224,19 @@ func (NoMetrics) SeatPushRefused()            {}
 func MapStatus(providerStatus string) string {
 	switch providerStatus {
 	case "trialing":
-		return orgs.PlanStatusTrialing
+		return ext.PlanStatusTrialing
 	case "active":
-		return orgs.PlanStatusActive
+		return ext.PlanStatusActive
 	case "past_due":
-		return orgs.PlanStatusPastDue
+		return ext.PlanStatusPastDue
 	case "unpaid":
-		return orgs.PlanStatusUnpaid
+		return ext.PlanStatusUnpaid
 	case "paused":
-		return orgs.PlanStatusPaused
+		return ext.PlanStatusPaused
 	case "canceled":
-		return orgs.PlanStatusCanceled
+		return ext.PlanStatusCanceled
 	case "incomplete", "incomplete_expired":
-		return orgs.PlanStatusIncomplete
+		return ext.PlanStatusIncomplete
 	}
 	return providerStatus
 }
@@ -275,7 +274,7 @@ func (c Config) Enabled() bool { return strings.TrimSpace(c.SecretKey) != "" }
 // error the caller should treat as fatal, like OPENV_LIMITS: a typo that
 // silently sold nothing would look exactly like a price that does not work.
 // So is a malformed count, where every other setting falls back to its
-// default: each is a whole number (internal/envparse.WholeNumber, so 30d,
+// default: each is a whole number (internal/ext.EnvWholeNumber, so 30d,
 // 7x and 1e3 are refused rather than read as 30, 7 and 1), above 0 but for
 // the trial's days, which may be 0. The secret key's absence is not an
 // error — it is the off switch. The key is a credential, used exactly as set
@@ -283,7 +282,7 @@ func (c Config) Enabled() bool { return strings.TrimSpace(c.SecretKey) != "" }
 // or a line break sit around it.
 func ConfigFromEnv(getenv func(string) string) (Config, error) {
 	cfg := Config{
-		SecretKey:         envparse.Secret("STRIPE_SECRET_KEY", getenv("STRIPE_SECRET_KEY")),
+		SecretKey:         ext.EnvSecret("STRIPE_SECRET_KEY", getenv("STRIPE_SECRET_KEY")),
 		APIVersion:        strings.TrimSpace(getenv("OPENV_STRIPE_API_VERSION")),
 		ReconcileInterval: 5 * time.Minute,
 		ReturnURL:         strings.TrimRight(strings.TrimSpace(getenv("OPENV_BILLING_RETURN_URL")), "/"),
@@ -292,14 +291,14 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		MaxSeats:          DefaultMaxSeats,
 	}
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_MAX_SEATS")); raw != "" {
-		n, ok := envparse.WholeNumber(raw)
+		n, ok := ext.EnvWholeNumber(raw)
 		if !ok || n < 1 {
 			return cfg, fmt.Errorf("OPENV_BILLING_MAX_SEATS must be a whole number of seats, got %q", raw)
 		}
 		cfg.MaxSeats = n
 	}
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_TRIAL_DAYS")); raw != "" {
-		days, ok := envparse.WholeNumber(raw)
+		days, ok := ext.EnvWholeNumber(raw)
 		if !ok || days < 0 {
 			return cfg, fmt.Errorf("OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got %q", raw)
 		}
@@ -311,7 +310,7 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 	}
 	cfg.Registry = reg
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_RECONCILE_MINUTES")); raw != "" {
-		minutes, ok := envparse.WholeNumber(raw)
+		minutes, ok := ext.EnvWholeNumber(raw)
 		if !ok || minutes < 1 {
 			return cfg, fmt.Errorf("OPENV_BILLING_RECONCILE_MINUTES must be a whole number of minutes, got %q", raw)
 		}
@@ -338,7 +337,7 @@ type Registry struct {
 // sellablePlans are the plans a price may sell. Everything else — enterprise,
 // open source, self-host, the legacy aliases — is granted, never bought, and
 // a price map naming one is a misconfiguration rather than a sale.
-var sellablePlans = map[string]bool{orgs.PlanBusinessLite: true, orgs.PlanBusiness: true}
+var sellablePlans = map[string]bool{ext.PlanBusinessLite: true, ext.PlanBusiness: true}
 
 // ParseRegistry reads the JSON array OPENV_STRIPE_PRICES holds. An empty
 // value is an empty registry: billing may be on with nothing yet for sale.
