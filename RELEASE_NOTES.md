@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.21.1 — 2026-10-16
+
 ### Maintenance updates
 
 - **OpenV is open source again, under the MIT License.** You may
