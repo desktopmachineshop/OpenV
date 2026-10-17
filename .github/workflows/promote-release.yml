@@ -189,3 +189,43 @@ jobs:
           git push origin "refs/tags/${tag}"
           echo "Tagged $(git rev-parse --short HEAD) as ${tag}"
           echo "Tagged \`${tag}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # openv.app builds from openv-hosted, which pins the OpenV release it
+      # runs (its OPENV_VERSION; docs/railway.md "openv-hosted"). Pointing it
+      # at the tag just made is what ships the release there: a pull request
+      # GitHub merges once openv-hosted's CI passes, and Railway deploys the
+      # merge. Without the OPENV_HOSTED_TOKEN secret (a token that may push to
+      # openv-hosted and open pull requests there) the step says so and does
+      # nothing; the release is still tagged.
+      - name: Ship the release to openv.app (openv-hosted)
+        env:
+          GH_TOKEN: ${{ secrets.OPENV_HOSTED_TOKEN }}
+          HOSTED_REPO: desktopmachineshop/openv-hosted
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::OPENV_HOSTED_TOKEN is not set: openv-hosted was not pointed at this release; set its OPENV_VERSION by hand."
+            exit 0
+          fi
+          tag="v$(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+          branch="openv-${tag}"
+          dir="$(mktemp -d)"
+          git clone --quiet --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${HOSTED_REPO}.git" "$dir"
+          cd "$dir"
+          if [ "$(tr -d ' \n' < OPENV_VERSION)" = "$tag" ]; then
+            echo "openv-hosted already runs ${tag}."
+            exit 0
+          fi
+          git checkout --quiet -b "$branch"
+          echo "$tag" > OPENV_VERSION
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -am "Run OpenV ${tag}"
+          git push --quiet --force origin "$branch"
+          url=$(gh pr create --repo "$HOSTED_REPO" --base main --head "$branch" \
+            --title "Run OpenV ${tag}" \
+            --body "OpenV's *Promote to release* tagged ${tag}; this points openv.app at it. Merged by GitHub once CI passes, and Railway deploys the merge.")
+          if gh pr merge --repo "$HOSTED_REPO" --auto --merge "$url"; then
+            echo "openv-hosted: ${url}, set to merge when its CI passes" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::${url} could not be set to merge itself (auto-merge off in openv-hosted?); merge it once its CI passes."
+            echo "openv-hosted: ${url}, waiting to be merged by hand" >> "$GITHUB_STEP_SUMMARY"
+          fi

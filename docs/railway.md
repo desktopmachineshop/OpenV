@@ -417,6 +417,32 @@ Set each Railway service's **Settings → Source → Branch** to `release`
 promotion workflow needs no Railway-side configuration — Railway just sees
 a normal push to the connected branch.
 
+## openv-hosted
+
+openv.app is OpenV plus a private layer, the
+[`openv-hosted`](https://github.com/desktopmachineshop/openv-hosted)
+repository (`docs/plans/hosted-edition-separation.md`): billing as a server
+module, and the marketing site laid over the frontend. Once its cut-over is
+done, Railway builds the API and frontend services from that repository
+(`Dockerfile.api`, `Dockerfile.frontend`), each image OpenV at the ref
+openv-hosted's `OPENV_VERSION` names. The runner pool service keeps
+building from this repository.
+
+- **Production** builds openv-hosted's `main`. *Promote to release* still
+  cuts and tags the release here; its last step opens a pull request in
+  openv-hosted setting `OPENV_VERSION` to the new tag, set to merge when
+  openv-hosted's CI passes. That merge is the production deploy.
+- **Staging** builds openv-hosted's `staging` branch. On every merge to
+  `master`, `hosted-staging.yml` resets that branch to openv-hosted's `main`
+  with `OPENV_VERSION` set to the merged commit, so staging runs exactly the
+  commit *Staging smoke* waits for; both images report that OpenV commit
+  (`/build.json` and the API's build).
+- Both steps use the **`OPENV_HOSTED_TOKEN`** repository secret: a
+  fine-grained token with *Contents* and *Pull requests* read and write on
+  openv-hosted only. Without it they do nothing, and `OPENV_VERSION` is
+  set by hand. openv-hosted needs *Allow auto-merge* turned on for the
+  release pull request to merge itself; otherwise it waits to be merged.
+
 ## Staging
 
 A second Railway **environment** named `staging` in the same project, with
