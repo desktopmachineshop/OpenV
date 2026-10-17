@@ -9,7 +9,7 @@
 // the site's address at start (docker-entrypoint.d/46-openv-crawl.sh) and
 // nginx serves the copy for that path. In the browser the snapshot stays on
 // screen, and #root hidden (index.css), until the live page has mounted and
-// calls releasePrerender (prerenderHandoff.ts), so a visitor never sees the
+// calls releasePrerender (src/prerenderHandoff.ts), so a visitor never sees the
 // app's "Loading…" between the two.
 //
 // Only pages that need no session and render from bundled content belong

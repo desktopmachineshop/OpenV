@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { MANUAL_CHAPTERS, ManualChapter, getChapter, headingId } from '../manual';
 import { useViewport } from '../hooks/useViewport';
-import { useReleasePrerender } from '../site/prerenderHandoff';
+import { useReleasePrerender } from '../prerenderHandoff';
 
 // ---------------------------------------------------------------------------
 // Helpers

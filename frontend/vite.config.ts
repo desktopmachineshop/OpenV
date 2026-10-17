@@ -1,9 +1,7 @@
 /// <reference types="vitest/config" />
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { defineConfig, runnerImport, type Plugin } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { extPlugins } from './vite.ext';
 
 // Vite replaced Create React App (react-scripts), which had its final release
 // in 2022 and was retired by the React team. See docs/DEVELOPMENT.md.
@@ -12,82 +10,12 @@ import react from '@vitejs/plugin-react';
 // depends on unchanged: the same REACT_APP_ environment prefix, the same
 // build/ output directory, and the same port 3000 for the dev server, so the
 // Dockerfiles, compose files and E2E suite did not have to move with it.
-// robots.txt, sitemap.xml and llms.txt, written into the build with the
-// site's address left as a placeholder (src/site/crawl.ts). They go under a
-// dot-directory, which nginx refuses to serve, and the container copies them
-// to the web root with the address filled in at start
-// (docker-entrypoint.d/46-openv-crawl.sh). The module is loaded through
-// Vite's own runner rather than imported here, so the app's source keeps its
-// bundler-style imports and this file stays loadable by Node unaided.
-const crawlFiles = (): Plugin => ({
-  name: 'openv-crawl-files',
-  apply: 'build',
-  async generateBundle() {
-    const root = fileURLToPath(new URL('.', import.meta.url));
-    const { module: crawl } = await runnerImport<typeof import('./src/site/crawl')>('/src/site/crawl.ts', {
-      root,
-      configFile: false,
-      logLevel: 'error',
-    });
-    const files = {
-      'robots.txt': crawl.robotsTxt(),
-      'sitemap.xml': crawl.sitemapXml(),
-      'llms.txt': crawl.llmsTxt(),
-    };
-    for (const [name, source] of Object.entries(files)) {
-      this.emitFile({ type: 'asset', fileName: `.openv-crawl/${name}`, source });
-    }
-  },
-});
-
-// The public pages rendered ahead of time (src/site/prerender.tsx): one copy
-// of the built index.html per sitemap page, with the page's markup and head,
-// written under .openv-prerender/ for the container to finish at start like
-// the crawl files. Runs once the bundle is on disk, since each copy is made
-// from the emitted index.html and its asset tags.
-const prerenderPages = (): Plugin => {
-  let outDir = '';
-  return {
-    name: 'openv-prerender-pages',
-    apply: 'build',
-    configResolved(config) {
-      outDir = path.resolve(config.root, config.build.outDir);
-    },
-    async closeBundle() {
-      const root = fileURLToPath(new URL('.', import.meta.url));
-      const { module: pre } = await runnerImport<typeof import('./src/site/prerender')>('/src/site/prerender.tsx', {
-        root,
-        configFile: false,
-        mode: 'production',
-        logLevel: 'error',
-      });
-      const template = fs.readFileSync(path.join(outDir, 'index.html'), 'utf8');
-      const target = path.join(outDir, '.openv-prerender');
-      fs.rmSync(target, { recursive: true, force: true });
-      // react-router's Link uses useLayoutEffect, which React reports once per
-      // server render; it is expected here, and nothing else is silenced.
-      const error = console.error;
-      console.error = (...args: unknown[]) => {
-        if (typeof args[0] === 'string' && args[0].includes('useLayoutEffect does nothing on the server')) return;
-        error(...args);
-      };
-      try {
-        const pages = pre.prerenderedPages();
-        for (const page of pages) {
-          const file = path.join(target, page.file);
-          fs.mkdirSync(path.dirname(file), { recursive: true });
-          fs.writeFileSync(file, pre.pageDocument(template, page, pre.renderBody(page.path)));
-        }
-        this.info(`pre-rendered ${pages.length} public pages into .openv-prerender/`);
-      } finally {
-        console.error = error;
-      }
-    },
-  };
-};
-
+//
+// What the modules this build links in add to it, such as a public site's
+// crawl files and pre-rendered pages, is vite.ext.ts: the one build file a
+// build that links other modules replaces, as it replaces src/ext/modules.ts.
 export default defineConfig({
-  plugins: [react(), crawlFiles(), prerenderPages()],
+  plugins: [react(), ...extPlugins()],
 
   // `REACT_APP_API_URL` is baked into the bundle by both Dockerfiles, named in
   // docker-compose, the E2E harness and the deployment docs. Keeping CRA's

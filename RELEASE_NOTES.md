@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **A self-hosted OpenV no longer serves openv.app's marketing pages.**
+  Pricing, the guides, the comparisons and the other pages about the
+  hosted service now open only on openv.app; on your own OpenV their
+  addresses take you to sign-in or your projects, and the user manual is
+  where it was.
+
 ## 0.22.0 — 2026-10-17
 
 ### New features

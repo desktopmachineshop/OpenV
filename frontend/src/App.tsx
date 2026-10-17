@@ -24,10 +24,10 @@ import { OrgSettings } from './views/OrgSettings';
 import { InterviewChatRoute } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
-import { releasePrerender } from './site/prerenderHandoff';
+import { releasePrerender } from './prerenderHandoff';
 import './ext/modules';
-import { registeredStartHooks } from './ext/registry';
-import { CAPABILITY_HOSTED, hasCapability } from './capabilities';
+import { registeredSite, registeredStartHooks } from './ext/registry';
+import { SiteHome, SitePages } from './ext/SiteSlot';
 import './index.css';
 import { pendingReturnTo } from './utils/returnTo';
 
@@ -48,9 +48,6 @@ const OAuthConsent = lazy(() => import('./views/OAuthConsent').then((m) => ({ de
 const PlatformAdmin = lazy(() =>
   import('./views/PlatformAdmin').then((m) => ({ default: m.PlatformAdmin }))
 );
-// Landing is the public front page; signed-in users never render it, so it
-// stays out of the main bundle they download.
-const Landing = lazy(() => import('./views/Landing').then((m) => ({ default: m.Landing })));
 const CrewBuilder = lazy(() =>
   import('./views/CrewBuilder').then((m) => ({ default: m.CrewBuilder }))
 );
@@ -78,21 +75,6 @@ const WorkspaceRunsPage = lazy(() =>
   import('./views/WorkspaceRunsPage').then((m) => ({ default: m.WorkspaceRunsPage }))
 );
 // ReviewQueue is a focused reviewer view, split out of the main bundle.
-const HowItWorks = lazy(() => import('./site/HowItWorks').then((m) => ({ default: m.HowItWorks })));
-const Demos = lazy(() => import('./site/Demos').then((m) => ({ default: m.Demos })));
-const Faq = lazy(() => import('./site/Faq').then((m) => ({ default: m.Faq })));
-const Privacy = lazy(() => import('./site/Privacy').then((m) => ({ default: m.Privacy })));
-const OpenSourceProjects = lazy(() =>
-  import('./site/OpenSourceProjects').then((m) => ({ default: m.OpenSourceProjects }))
-);
-const Customers = lazy(() => import('./site/Customers').then((m) => ({ default: m.Customers })));
-const WhitePapers = lazy(() => import('./site/WhitePapers').then((m) => ({ default: m.WhitePapers })));
-const Changelog = lazy(() => import('./site/Changelog').then((m) => ({ default: m.Changelog })));
-// The comparison hub, and one lazy layout for every comparison; copy is data in site/compare.
-const CompareHub = lazy(() => import('./site/CompareHub').then((m) => ({ default: m.CompareHub })));
-const ComparePage = lazy(() => import('./site/ComparePage').then((m) => ({ default: m.ComparePage })));
-// One lazy layout for every topic page; its copy is data in site/topics.
-const TopicPage = lazy(() => import('./site/TopicPage').then((m) => ({ default: m.TopicPage })));
 const SharedProjectView = lazy(() =>
   import('./views/SharedProjectView').then((m) => ({ default: m.SharedProjectView }))
 );
@@ -128,9 +110,9 @@ function App() {
     capabilities,
     setCapabilities,
   } = useAppStore();
-  // The public site is the hosted service's; a self-hosted OpenV opens on
-  // its sign-in page.
-  const hosted = hasCapability(capabilities, CAPABILITY_HOSTED);
+  // The public site a module registers (ext/registry.ts), when the
+  // deployment offers it; without one, the front page is sign-in.
+  const site = registeredSite(capabilities);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -276,40 +258,14 @@ function App() {
           element={
             currentUser ? (
               <Navigate to={pendingReturnTo() || '/projects'} replace />
-            ) : hosted ? (
-              <Landing />
             ) : (
-              <Navigate to="/login" replace />
+              <SiteHome site={site} fallback={<Navigate to="/login" replace />} />
             )
           }
         />
-        <Route path="/pricing" element={<Landing section="pricing" />} />
-        {/* The storefront's other pages, public like the landing page. */}
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/demos" element={<Demos />} />
-        <Route path="/faq" element={<Faq />} />
-        <Route path="/security" element={<Navigate to="/faq#security" replace />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/open-source" element={<OpenSourceProjects />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/white-papers" element={<WhitePapers />} />
-        <Route path="/changelog" element={<Changelog />} />
-        <Route path="/compare" element={<CompareHub />} />
-        <Route path="/compare/doors" element={<ComparePage path="/compare/doors" />} />
-        <Route path="/compare/jama" element={<ComparePage path="/compare/jama" />} />
-        <Route path="/compare/polarion" element={<ComparePage path="/compare/polarion" />} />
-        <Route path="/compare/reqview" element={<ComparePage path="/compare/reqview" />} />
-        <Route path="/compare/jira" element={<ComparePage path="/compare/jira" />} />
-        <Route path="/requirements-traceability" element={<TopicPage path="/requirements-traceability" />} />
-        <Route path="/verification-evidence" element={<TopicPage path="/verification-evidence" />} />
-        <Route path="/baselines-and-audit-trail" element={<TopicPage path="/baselines-and-audit-trail" />} />
-        <Route path="/reqif" element={<TopicPage path="/reqif" />} />
-        <Route path="/self-hosted-requirements-management" element={<TopicPage path="/self-hosted-requirements-management" />} />
-        <Route path="/safety-critical" element={<TopicPage path="/safety-critical" />} />
-        <Route path="/ai-connector" element={<TopicPage path="/ai-connector" />} />
-        <Route path="/glossary" element={<TopicPage path="/glossary" />} />
         {walled ? (
-          <Route path="*" element={<Navigate to="/verify-email" replace />} />
+          // The site's pages stay open to a walled account; anything else is the wall.
+          <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/verify-email" replace />} />} />
         ) : (
           <>
         <Route path="/projects" element={<ProjectList />} />
@@ -350,7 +306,7 @@ function App() {
           <Route path="activity" element={<ActivityLog />} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
-          <Route path="*" element={<Navigate to="/projects" replace />} />
+          <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/projects" replace />} />} />
           </>
         )}
         </Routes>

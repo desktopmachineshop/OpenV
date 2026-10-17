@@ -1,4 +1,4 @@
-// The hand-off from a pre-rendered snapshot to the live page (prerender.tsx).
+// The hand-off from a pre-rendered snapshot to the live page (a site's prerender.tsx).
 //
 // A pre-rendered document carries the page's markup in #prerender, beside an
 // empty #root; index.css hides #root while #prerender is there. The live page

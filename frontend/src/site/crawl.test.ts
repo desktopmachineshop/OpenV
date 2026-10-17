@@ -12,13 +12,17 @@ import {
   robotsTxt,
   sitemapXml,
 } from './crawl';
+import { SITE_ROUTES } from './routes';
 
 const disallowed = (path: string) => DISALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p));
 
 describe('crawlPages', () => {
   it('lists every public site page without a parameter, unless it is unlisted on purpose', () => {
     const listed = new Set(crawlPages().map((p) => p.path));
-    const publicPages = PAGES.filter((p) => p.scope === 'site' && p.public && !p.path.includes(':')).map(pagePattern);
+    const publicPages = [
+      ...PAGES.filter((p) => p.scope === 'site' && p.public && !p.path.includes(':')).map(pagePattern),
+      ...SITE_ROUTES.map((r) => r.path),
+    ];
     for (const path of publicPages) {
       expect(listed.has(path) || UNLISTED_PAGES.has(path)).toBe(true);
     }
@@ -30,7 +34,7 @@ describe('crawlPages', () => {
   });
 
   it('keeps no summary for a page the registry no longer has', () => {
-    const patterns = new Set(PAGES.map(pagePattern));
+    const patterns = new Set([...PAGES.map(pagePattern), ...SITE_ROUTES.map((r) => r.path)]);
     for (const path of Object.keys(SITE_PAGE_TEXT)) expect(patterns.has(path)).toBe(true);
   });
 

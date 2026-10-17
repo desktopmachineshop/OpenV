@@ -17,6 +17,9 @@
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import client, { getAPIBaseURL } from '../api/client';
+// The modules this build links in, as App.tsx loads them: the site they
+// register makes its own pages public.
+import '../ext/modules';
 
 const ORG_KEY = 'openv_active_org';
 // Read before any test stubs window.location, as the client does at import.

@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { CAPABILITY_BILLING, CAPABILITY_HOSTED } from '../capabilities';
-import { registerAdminSection, registerOrgSettingsTab, registerStartHook } from './registry';
+import { registerAdminSection, registerOrgSettingsTab, registerSite, registerStartHook } from './registry';
+import { SITE_PUBLIC_PATHS } from '../site/paths';
 import { sendVisitBeacon } from '../site/visitBeacon';
 
 // The modules this build links in (ext/registry.ts). A build that links
@@ -26,3 +27,12 @@ registerAdminSection({
 });
 
 registerStartHook({ key: 'visit-beacon', capabilities: [CAPABILITY_HOSTED], run: sendVisitBeacon });
+
+// The marketing site: its front page and its pages, loaded only when a
+// visitor opens one.
+registerSite({
+  capabilities: [CAPABILITY_HOSTED],
+  publicPaths: SITE_PUBLIC_PATHS,
+  Home: lazy(() => import('../site/routes').then((m) => ({ default: m.SiteHome }))),
+  Pages: lazy(() => import('../site/routes').then((m) => ({ default: m.SitePages }))),
+});
