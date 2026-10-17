@@ -17,6 +17,8 @@
     "zustand": "entry"
   },
   "lazyPages": {
+    "src/components/admin/VisitorDashboard.tsx": "dynamic entry",
+    "src/components/org/OrgBillingTab.tsx": "dynamic entry",
     "src/site/Changelog.tsx": "dynamic entry",
     "src/site/Customers.tsx": "dynamic entry",
     "src/site/Demos.tsx": "dynamic entry",

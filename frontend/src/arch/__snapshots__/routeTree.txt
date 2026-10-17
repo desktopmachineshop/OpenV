@@ -26,6 +26,7 @@ index routes: 1
   ./views/ProjectSettings
   ./views/OrgSettings
   ./views/InterviewChat
+  ./ext/modules  (side effect)
   ./index.css  (side effect)
 
 ## lazy() components, in declaration order
