@@ -430,18 +430,22 @@ building from this repository.
 
 - **Production** builds openv-hosted's `main`. *Promote to release* still
   cuts and tags the release here; its last step opens a pull request in
-  openv-hosted setting `OPENV_VERSION` to the new tag, set to merge when
-  openv-hosted's CI passes. That merge is the production deploy.
+  openv-hosted setting `OPENV_VERSION` to the new tag, waits for
+  openv-hosted's CI on it and merges it when that passes. That merge is the
+  production deploy. If the CI fails, the pull request stays open, the step
+  fails and production keeps the previous release. The workflow merges the
+  pull request itself because GitHub's auto-merge is not offered for a
+  private repository on the free plan.
 - **Staging** builds openv-hosted's `staging` branch. On every merge to
   `master`, `hosted-staging.yml` resets that branch to openv-hosted's `main`
   with `OPENV_VERSION` set to the merged commit, so staging runs exactly the
   commit *Staging smoke* waits for; both images report that OpenV commit
   (`/build.json` and the API's build).
 - Both steps use the **`OPENV_HOSTED_TOKEN`** repository secret: a
-  fine-grained token with *Contents* and *Pull requests* read and write on
-  openv-hosted only. Without it they do nothing, and `OPENV_VERSION` is
-  set by hand. openv-hosted needs *Allow auto-merge* turned on for the
-  release pull request to merge itself; otherwise it waits to be merged.
+  fine-grained token on openv-hosted only. It needs read and write on
+  *Contents* and *Pull requests*, plus read on *Actions* and *Commit
+  statuses* so the promotion can follow the pull request's CI. Without the
+  secret, both steps do nothing and `OPENV_VERSION` is set by hand.
 
 ## Staging
 

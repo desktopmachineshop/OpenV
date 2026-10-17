@@ -193,11 +193,15 @@ jobs:
       # openv.app builds from openv-hosted, which pins the OpenV release it
       # runs (its OPENV_VERSION; docs/railway.md "openv-hosted"). Pointing it
       # at the tag just made is what ships the release there: a pull request
-      # GitHub merges once openv-hosted's CI passes, and Railway deploys the
-      # merge. Without the OPENV_HOSTED_TOKEN secret (a token that may push to
-      # openv-hosted and open pull requests there) the step says so and does
-      # nothing; the release is still tagged.
+      # this step merges once openv-hosted's CI passes, and Railway deploys
+      # the merge. It waits for that CI itself: GitHub's auto-merge is not
+      # offered for a private repository on the free plan. A red CI leaves
+      # the pull request open and fails the step. Without the
+      # OPENV_HOSTED_TOKEN secret (a token that may push to openv-hosted and
+      # open pull requests there) the step says so and does nothing; the
+      # release is still tagged.
       - name: Ship the release to openv.app (openv-hosted)
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.OPENV_HOSTED_TOKEN }}
           HOSTED_REPO: desktopmachineshop/openv-hosted
@@ -222,10 +226,19 @@ jobs:
           git push --quiet --force origin "$branch"
           url=$(gh pr create --repo "$HOSTED_REPO" --base main --head "$branch" \
             --title "Run OpenV ${tag}" \
-            --body "OpenV's *Promote to release* tagged ${tag}; this points openv.app at it. Merged by GitHub once CI passes, and Railway deploys the merge.")
-          if gh pr merge --repo "$HOSTED_REPO" --auto --merge "$url"; then
-            echo "openv-hosted: ${url}, set to merge when its CI passes" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::warning::${url} could not be set to merge itself (auto-merge off in openv-hosted?); merge it once its CI passes."
-            echo "openv-hosted: ${url}, waiting to be merged by hand" >> "$GITHUB_STEP_SUMMARY"
+            --body "OpenV's *Promote to release* tagged ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")
+          # The checks take a moment to register; gh pr checks fails while
+          # there are none.
+          for _ in $(seq 30); do
+            gh pr checks --repo "$HOSTED_REPO" "$url" >/dev/null 2>&1 && break
+            [ "$?" -eq 8 ] && break
+            sleep 10
+          done
+          if ! gh pr checks --repo "$HOSTED_REPO" "$url" --watch --fail-fast --interval 20; then
+            echo "::error::openv-hosted's CI failed on ${url}: openv.app still runs the previous release. Fix it there and merge the pull request by hand."
+            echo "openv-hosted: ${url}, CI failed, not merged" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
+          gh pr merge --repo "$HOSTED_REPO" --merge "$url"
+          gh api -X DELETE "repos/${HOSTED_REPO}/git/refs/heads/${branch}" >/dev/null || true
+          echo "openv-hosted: ${url}, merged; Railway deploys it" >> "$GITHUB_STEP_SUMMARY"
