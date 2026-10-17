@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { PAGES, pagePattern } from '../../pages';
-import { isPublicPath } from '../../utils/publicPaths';
+import { isSitePublic } from '../paths';
+import { SITE_ROUTES } from '../routes';
 import { COMPARISONS, HUB, HUB_COLUMNS, HUB_ROWS, OTHERS } from '.';
 
 // The rules every comparison page keeps (types.ts). Comparative claims are
@@ -30,10 +30,10 @@ const allText = (c: (typeof COMPARISONS)[number]) =>
   ].join('\n');
 
 describe('comparison pages', () => {
-  it('are public site pages the registry routes, each once', () => {
-    const sitePaths = new Set(PAGES.filter((p) => p.scope === 'site' && p.public).map(pagePattern));
+  it('are public site pages the site routes, each once', () => {
+    const sitePaths = new Set(SITE_ROUTES.map((r) => r.path));
     for (const path of [HUB.path, ...COMPARISONS.map((c) => c.path)]) {
-      expect({ path, routed: sitePaths.has(path), public: isPublicPath(path) }).toEqual({ path, routed: true, public: true });
+      expect({ path, routed: sitePaths.has(path), public: isSitePublic(path) }).toEqual({ path, routed: true, public: true });
     }
     expect(new Set(COMPARISONS.map((c) => c.path)).size).toBe(COMPARISONS.length);
   });

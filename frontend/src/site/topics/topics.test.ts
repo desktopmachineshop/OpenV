@@ -1,6 +1,6 @@
 import { MANUAL_CHAPTERS } from '../../manual';
-import { PAGES, pagePattern } from '../../pages';
-import { isPublicPath } from '../../utils/publicPaths';
+import { isSitePublic } from '../paths';
+import { SITE_ROUTES } from '../routes';
 import { TOPICS, getTopic } from '.';
 
 // The rules every topic page keeps (types.ts): the copy is what search
@@ -18,10 +18,10 @@ const allText = (t: (typeof TOPICS)[number]) =>
   ].join('\n');
 
 describe('topic pages', () => {
-  it('are public site pages the registry routes, each once', () => {
-    const sitePaths = new Set(PAGES.filter((p) => p.scope === 'site' && p.public).map(pagePattern));
+  it('are public site pages the site routes, each once', () => {
+    const sitePaths = new Set(SITE_ROUTES.map((r) => r.path));
     for (const t of TOPICS) {
-      expect({ path: t.path, routed: sitePaths.has(t.path), public: isPublicPath(t.path) }).toEqual({
+      expect({ path: t.path, routed: sitePaths.has(t.path), public: isSitePublic(t.path) }).toEqual({
         path: t.path,
         routed: true,
         public: true,

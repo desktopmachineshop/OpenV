@@ -8,12 +8,14 @@
 // staging and every self-hosted copy, and only the first should advertise a
 // sitemap of openv.app.
 //
-// The page list is derived from the page registry and the manual, so a new
-// public page reaches the sitemap without a second list to keep in step;
-// crawl.test.ts fails when one has no summary below.
+// The page list is derived from the page registry, the site's own routes
+// (routes.tsx) and the manual, so a new public page reaches the sitemap
+// without a second list to keep in step; crawl.test.ts fails when one has no
+// summary below.
 import { MANUAL_CHAPTERS } from '../manual';
 import { PAGES, pagePattern } from '../pages';
 import { COMPARISONS, HUB } from './compare';
+import { SITE_ROUTES } from './routes';
 import { TOPICS } from './topics';
 
 export const SITE_URL_PLACEHOLDER = '__OPENV_SITE_URL__';
@@ -142,8 +144,11 @@ export const SITE_PAGE_TEXT: Record<string, { title: string; summary: string }> 
 
 /** Every public page with content, site pages first, then the manual. */
 export function crawlPages(): CrawlPage[] {
-  const site = PAGES.filter((p) => p.scope === 'site' && p.public && !p.path.includes(':'))
-    .map(pagePattern)
+  // The app's own public pages, with the site's pages after the front page.
+  const app = PAGES.filter((p) => p.scope === 'site' && p.public && !p.path.includes(':')).map(pagePattern);
+  const pages = SITE_ROUTES.filter((r) => !r.redirect).map((r) => r.path);
+  const front = app.indexOf('/') + 1;
+  const site = [...app.slice(0, front), ...pages, ...app.slice(front)]
     .filter((path) => !UNLISTED_PAGES.has(path))
     .map((path) => {
       const text = SITE_PAGE_TEXT[path];

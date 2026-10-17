@@ -21,7 +21,7 @@ function copyFrontend(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'scaffold-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   fs.cpSync(path.join(FRONTEND_DIR, 'src'), path.join(dir, 'src'), { recursive: true });
-  for (const f of ['tsconfig.json', 'package.json', 'vite.config.ts']) fs.copyFileSync(path.join(FRONTEND_DIR, f), path.join(dir, f));
+  for (const f of ['tsconfig.json', 'package.json', 'vite.config.ts', 'vite.ext.ts']) fs.copyFileSync(path.join(FRONTEND_DIR, f), path.join(dir, f));
   fs.symlinkSync(path.join(FRONTEND_DIR, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
   return dir;
 }

@@ -20,7 +20,7 @@ code {
 }
 
 /* A pre-rendered page (site/prerender.tsx) shows its snapshot until the live
-   page mounts and removes it (site/prerenderHandoff.ts); the app renders
+   page mounts and removes it (prerenderHandoff.ts); the app renders
    into #root unseen until then. */
 #prerender + #root {
   display: none;

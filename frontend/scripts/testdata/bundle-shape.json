@@ -30,6 +30,7 @@
     "src/site/Privacy.tsx": "dynamic entry",
     "src/site/TopicPage.tsx": "dynamic entry",
     "src/site/WhitePapers.tsx": "dynamic entry",
+    "src/site/routes.tsx": "dynamic entry",
     "src/views/ActivityLog.tsx": "dynamic entry",
     "src/views/BaselineCompare.tsx": "dynamic entry",
     "src/views/CrewBuilder.tsx": "dynamic entry",

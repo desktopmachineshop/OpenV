@@ -4,7 +4,7 @@
 isOpenPath exact: /health, /metrics, /mcp
 isOpenPath prefixes: /api/v1/auth/, /api/v1/public/, /.well-known/oauth-, /oauth/
 401 interceptor exempts calls under: /api/v1/auth/
-PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /changelog, /compare, /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /ai-connector, /privacy, /glossary, /security
+PUBLIC_SEGMENTS: /login, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source
 
 ## Routes (example URL, :param as x)
   public   /login
@@ -15,30 +15,6 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   public   /s/:token
   public   /open-source/:id
   public   /
-  public   /pricing
-  public   /how-it-works
-  public   /demos
-  public   /faq
-  public   /security
-  public   /privacy
-  public   /open-source
-  public   /customers
-  public   /white-papers
-  public   /changelog
-  public   /compare
-  public   /compare/doors
-  public   /compare/jama
-  public   /compare/polarion
-  public   /compare/reqview
-  public   /compare/jira
-  public   /requirements-traceability
-  public   /verification-evidence
-  public   /baselines-and-audit-trail
-  public   /reqif
-  public   /self-hosted-requirements-management
-  public   /safety-critical
-  public   /ai-connector
-  public   /glossary
   session  /projects
   session  /org/settings
   session  /org/runs
@@ -72,35 +48,13 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   session  /projects/:projectId/settings
 
 ## API calls reachable from each public page module (open = isOpenPath)
-site/Changelog.tsx  <- /changelog
-  (no API calls)
-site/CompareHub.tsx  <- /compare
-  (no API calls)
-site/ComparePage.tsx  <- /compare/doors, /compare/jama, /compare/polarion, /compare/reqview, /compare/jira
-  (no API calls)
-site/Customers.tsx  <- /customers
-  (no API calls)
-site/Demos.tsx  <- /demos
-  (no API calls)
-site/Faq.tsx  <- /faq
-  (no API calls)
-site/HowItWorks.tsx  <- /how-it-works
-  (no API calls)
-site/OpenSourceProjects.tsx  <- /open-source
-  open   GET    /api/v1/public/open-source/projects              openSourceAPI.list
-site/Privacy.tsx  <- /privacy
-  (no API calls)
-site/TopicPage.tsx  <- /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /ai-connector, /glossary
-  (no API calls)
-site/WhitePapers.tsx  <- /white-papers
+ext/SiteSlot.tsx  <- /
   (no API calls)
 views/InterviewChat.tsx  <- /interview/:token
   open   GET    /api/v1/public/interviews/{}                     publicInterviewAPI.intro
   open   POST   /api/v1/public/interviews/{}/finish              publicInterviewAPI.finish
   open   POST   /api/v1/public/interviews/{}/messages            publicInterviewAPI.sendMessage
   open   GET    /api/v1/public/interviews/{}/stream              publicInterviewAPI.streamUrl
-views/Landing.tsx  <- /, /pricing
-  open   GET    /api/v1/public/plans                             billingAPI.publicPlans
 views/Login.tsx  <- /login
   open   GET    /api/v1/auth/config                              authAPI.config
   open   GET    /api/v1/auth/google                              authAPI.googleLoginUrl

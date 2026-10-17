@@ -609,7 +609,8 @@
         "frontend/src/views/Landing*",
         "frontend/src/views/ManualView*",
         "frontend/tsconfig.json",
-        "frontend/vite.config.ts"
+        "frontend/vite.config.ts",
+        "frontend/vite.ext.ts"
       ]
     },
     {

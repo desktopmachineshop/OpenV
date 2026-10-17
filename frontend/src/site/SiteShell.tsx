@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import { ISSUES_URL, REPO_URL } from '../landing/content';
-import { useReleasePrerender } from './prerenderHandoff';
+import { useReleasePrerender } from '../prerenderHandoff';
 import { TOPICS } from './topics';
 
 // SiteShell is the storefront's frame: the header, the footer and the

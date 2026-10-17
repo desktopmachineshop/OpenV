@@ -126,6 +126,7 @@ A module can add screens to the app as well, through
 | `registerOrgSettingsTab({key, label, after?, capabilities?, Component})` | a tab of workspace settings, after the tab `after` names; `Component` gets the workspace and whether the caller administers it |
 | `registerAdminSection({key, capabilities?, Component})` | a section of the platform admin page, above the user dashboard |
 | `registerStartHook({key, capabilities?, run})` | runs once the session is known and again whenever the signed-in account changes |
+| `registerSite({capabilities?, publicPaths, Home, Pages})` | a public site, at most one: `Home` is the front page a signed-out visitor sees at `/`, and `Pages` renders the site's own `<Routes>` for any path the app does not route, with the app's own answer as its `fallback`; `publicPaths` are the segments it serves without a session, public even where the site is not offered |
 
 An entry that names `capabilities` shows only where `GET
 /api/v1/auth/config` lists one of them, so a module's server side decides
@@ -135,5 +136,9 @@ file a build that links modules in replaces, as it adds one file to
 `cmd/server`. Load a module's components with `lazy()` there, so a
 deployment that never shows them never downloads them.
 
-Routes are not registered: the app's route table stays hand-written
-(`frontend/src/README.md`, K13).
+Routes are not registered one by one: the app's route table stays
+hand-written (`frontend/src/README.md`, K13), with one slot for the site
+(`frontend/src/ext/SiteSlot.tsx`) at `/` and in its catch-all. A site keeps
+its own route table, and its build steps (crawl files, pre-rendered pages)
+are [`frontend/vite.ext.ts`](../frontend/vite.ext.ts), which a build that
+links modules in replaces beside `modules.ts`.

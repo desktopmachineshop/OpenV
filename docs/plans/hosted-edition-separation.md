@@ -381,7 +381,16 @@ Built, in order:
   how a hosted build adds its routes (a route slot, or the hosted build
   carrying its own `App.tsx`).
 
-Still open: how the marketing site's routes reach a hosted build (above); the cut-over itself (the maintainer's, staging first); and
+- **The site slot** (2026-10-17). The route decision above is taken: a
+  route slot, not a hosted `App.tsx`. `registerSite` (frontend/src/ext)
+  gives a site `/` for a signed-out visitor and the app's catch-all, where
+  it renders its own route table, with its public paths registered beside
+  it; its crawl files and pre-rendered pages are `frontend/vite.ext.ts`.
+  OpenV's own marketing site registers through it from `ext/modules.ts`,
+  offered where the deployment is `hosted`, until it moves to
+  `openv-hosted`.
+
+Still open: the cut-over itself (the maintainer's, staging first); and
 Phase 4. Removing billing's routes from a self-hosted server is subject to
 REQ-143 (a route removal is announced in two stable releases first), which
 the route inventory test enforces.
