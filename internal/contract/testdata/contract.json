@@ -25,7 +25,8 @@
     "remote-mcp",
     "auto-cloud-runner",
     "claude-subscription-token",
-    "cloud-runner-token"
+    "cloud-runner-token",
+    "connected-app-workspaces"
   ],
   "event_types": [
     "artifact.created",

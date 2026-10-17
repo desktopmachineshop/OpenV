@@ -46,7 +46,7 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
     id: 'connected-apps',
     heading: 'AI apps you connect',
     paragraphs: [
-      'When you connect an AI app such as Claude to OpenV, you sign in to OpenV and approve it for one workspace, with read-only or read-and-change access. We keep a record of that approval: the app’s name, the workspace, the access you granted, and when you approved it, last used it and disconnected it. The app’s access tokens are stored only as hashes, last at most an hour (30 days for the token it renews them with), and are deleted when you disconnect the app in Settings → Connected apps.',
+      'When you connect an AI app such as Claude to OpenV, you sign in to OpenV and approve it for the workspaces you choose, with read-only or read-and-change access. We keep a record of that approval: the app’s name, the workspaces, the access you granted, and when you approved it, last used it and disconnected it. The app’s access tokens are stored only as hashes, last at most an hour (30 days for the token it renews them with), and are deleted when you disconnect the app in Settings → Connected apps.',
       'The app sees only what its tools return from that workspace, with your permissions. What the app itself does with that data, for example how Claude stores your conversations, is covered by that app provider’s own privacy policy.',
     ],
   },

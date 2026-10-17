@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
@@ -13,7 +14,8 @@ import (
 
 // ConnectedAppRepository implements connectedapps.Repository over
 // oauth_clients, connected_apps, oauth_codes and oauth_tokens (migration
-// 0062).
+// 0062), and the workspaces each grant reaches, connected_app_workspaces
+// (migration 0065).
 type ConnectedAppRepository struct {
 	db *sql.DB
 }
@@ -70,21 +72,83 @@ func scanConnectedApp(row interface{ Scan(...interface{}) error }) (*connectedap
 }
 
 // SaveGrant records consent: the live grant for the member, client and
-// workspace takes the scope, or a new one is made. The partial unique index
-// keeps one live grant per triple when two consents race.
-func (r *ConnectedAppRepository) SaveGrant(userID, orgID, clientID, scope string, now time.Time) (*connectedapps.Grant, error) {
+// first workspace takes the scope and reaches orgIDs, or a new one is made.
+// The partial unique index keeps one live grant per triple when two
+// consents race.
+func (r *ConnectedAppRepository) SaveGrant(userID string, orgIDs []string, clientID, scope string, now time.Time) (*connectedapps.Grant, error) {
 	var id string
-	err := r.db.QueryRow(`
-		INSERT INTO connected_apps (id, user_id, org_id, client_id, scope, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $6)
-		ON CONFLICT (user_id, org_id, client_id) WHERE revoked_at IS NULL
-		DO UPDATE SET scope = EXCLUDED.scope, updated_at = EXCLUDED.updated_at
-		RETURNING id
-	`, uuid.NewString(), userID, orgID, clientID, scope, now).Scan(&id)
+	err := withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		if err := tx.QueryRow(`
+			INSERT INTO connected_apps (id, user_id, org_id, client_id, scope, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $6)
+			ON CONFLICT (user_id, org_id, client_id) WHERE revoked_at IS NULL
+			DO UPDATE SET scope = EXCLUDED.scope, updated_at = EXCLUDED.updated_at
+			RETURNING id
+		`, uuid.NewString(), userID, orgIDs[0], clientID, scope, now).Scan(&id); err != nil {
+			return err
+		}
+		return replaceGrantWorkspaces(tx, id, orgIDs)
+	})
 	if err != nil {
 		return nil, err
 	}
 	return r.GetGrant(id)
+}
+
+// SetWorkspaces makes the live grant reach orgIDs and nothing else.
+func (r *ConnectedAppRepository) SetWorkspaces(grantID string, orgIDs []string, now time.Time) error {
+	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`UPDATE connected_apps SET updated_at = $2 WHERE id = $1 AND revoked_at IS NULL`, grantID, now); err != nil {
+			return err
+		}
+		return replaceGrantWorkspaces(tx, grantID, orgIDs)
+	})
+}
+
+func replaceGrantWorkspaces(tx *sql.Tx, grantID string, orgIDs []string) error {
+	if _, err := tx.Exec(`DELETE FROM connected_app_workspaces WHERE grant_id = $1`, grantID); err != nil {
+		return err
+	}
+	_, err := tx.Exec(`
+		INSERT INTO connected_app_workspaces (grant_id, org_id)
+		SELECT $1, unnest($2::uuid[])
+		ON CONFLICT DO NOTHING
+	`, grantID, pq.Array(orgIDs))
+	return err
+}
+
+// loadWorkspaces fills in the workspaces each grant reaches, by name, in
+// the order the member's workspaces sort by name.
+func (r *ConnectedAppRepository) loadWorkspaces(grants ...*connectedapps.Grant) error {
+	if len(grants) == 0 {
+		return nil
+	}
+	ids := make([]string, len(grants))
+	byID := make(map[string]*connectedapps.Grant, len(grants))
+	for i, g := range grants {
+		ids[i] = g.ID
+		byID[g.ID] = g
+		g.Workspaces = []connectedapps.Workspace{}
+	}
+	rows, err := r.db.Query(`
+		SELECT w.grant_id, o.id, o.name FROM connected_app_workspaces w
+		JOIN organizations o ON o.id = w.org_id
+		WHERE w.grant_id = ANY($1::uuid[])
+		ORDER BY o.name, o.id
+	`, pq.Array(ids))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var grantID string
+		var w connectedapps.Workspace
+		if err := rows.Scan(&grantID, &w.ID, &w.Name); err != nil {
+			return err
+		}
+		byID[grantID].Workspaces = append(byID[grantID].Workspaces, w)
+	}
+	return rows.Err()
 }
 
 // GetGrant returns a live grant, nil when it does not exist or was revoked.
@@ -94,7 +158,10 @@ func (r *ConnectedAppRepository) GetGrant(id string) (*connectedapps.Grant, erro
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
-	return g, err
+	if err != nil {
+		return nil, err
+	}
+	return g, r.loadWorkspaces(g)
 }
 
 // ListGrants returns the member's live grants, newest first.
@@ -106,15 +173,26 @@ func (r *ConnectedAppRepository) ListGrants(userID string) ([]connectedapps.Gran
 		return nil, err
 	}
 	defer rows.Close()
-	out := []connectedapps.Grant{}
+	list := []*connectedapps.Grant{}
 	for rows.Next() {
 		g, err := scanConnectedApp(rows)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, *g)
+		list = append(list, g)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	if err := r.loadWorkspaces(list...); err != nil {
+		return nil, err
+	}
+	out := make([]connectedapps.Grant, len(list))
+	for i, g := range list {
+		out[i] = *g
+	}
+	return out, nil
 }
 
 // RevokeGrant marks the grant revoked and deletes its codes and tokens, in
@@ -194,7 +272,7 @@ func (r *ConnectedAppRepository) GrantForAccess(hash string, now time.Time) (*co
 	`, g.ID, now); err != nil {
 		return nil, err
 	}
-	return g, nil
+	return g, r.loadWorkspaces(g)
 }
 
 // ConsumeRefresh deletes the pair whose unexpired refresh token has the hash

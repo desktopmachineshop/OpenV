@@ -1170,7 +1170,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"content\":[{\"text\":\"[{\\\"id\\\":\\\"<project>\\\",\\\"org_id\\\":\\\"<owner.workspace>\\\",\\\"name\\\":\\\"Tour connected\\\",\\\"description\\\":\\\"\\\",\\\"agent_auth\\\":\\\"user-account\\\",\\\"parent_project_id\\\":\\\"\\\",\\\"created_at\\\":\\\"<time@before step 1>\\\",\\\"updated_at\\\":\\\"<time@before step 1>\\\"}]\",\"type\":\"text\"}],\"isError\":false}}"
+        "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"content\":[{\"text\":\"[{\\\"agent_auth\\\":\\\"user-account\\\",\\\"created_at\\\":\\\"<time@before step 1>\\\",\\\"description\\\":\\\"\\\",\\\"id\\\":\\\"<project>\\\",\\\"name\\\":\\\"Tour connected\\\",\\\"org_id\\\":\\\"<owner.workspace>\\\",\\\"parent_project_id\\\":\\\"\\\",\\\"updated_at\\\":\\\"<time@before step 1>\\\",\\\"workspace\\\":\\\"Tour Owner's Space\\\"}]\",\"type\":\"text\"}],\"isError\":false}}"
       ],
       "trailing_newline": false,
       "parsed": {
@@ -1179,7 +1179,7 @@
         "result": {
           "content": [
             {
-              "text": "[{\"id\":\"<project>\",\"org_id\":\"<owner.workspace>\",\"name\":\"Tour connected\",\"description\":\"\",\"agent_auth\":\"user-account\",\"parent_project_id\":\"\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}]",
+              "text": "[{\"agent_auth\":\"user-account\",\"created_at\":\"<time@before step 1>\",\"description\":\"\",\"id\":\"<project>\",\"name\":\"Tour connected\",\"org_id\":\"<owner.workspace>\",\"parent_project_id\":\"\",\"updated_at\":\"<time@before step 1>\",\"workspace\":\"Tour Owner's Space\"}]",
               "type": "text"
             }
           ],
@@ -1493,7 +1493,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<grant>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\",\"client_id\":\"<client>\",\"client_name\":\"Tour Client\",\"scope\":\"openv:read openv:write\",\"created_at\":\"<time@step 13>\",\"last_used_at\":\"<time@step 18>\"}]"
+        "[{\"id\":\"<grant>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\",\"workspaces\":[{\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\"}],\"client_id\":\"<client>\",\"client_name\":\"Tour Client\",\"scope\":\"openv:read openv:write\",\"created_at\":\"<time@step 13>\",\"last_used_at\":\"<time@step 18>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1502,6 +1502,12 @@
           "user_id": "<owner>",
           "org_id": "<owner.workspace>",
           "org_name": "Tour Owner's Space",
+          "workspaces": [
+            {
+              "org_id": "<owner.workspace>",
+              "org_name": "Tour Owner's Space"
+            }
+          ],
           "client_id": "<client>",
           "client_name": "Tour Client",
           "scope": "openv:read openv:write",
@@ -1537,6 +1543,242 @@
     },
     {
       "n": 32,
+      "title": "give the app the member's other workspace too",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/connected-apps/{id}/workspaces",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/connected-apps/<grant>/workspaces",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_ids\":[\"<owner.workspace>\",\"<other>\"]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<grant>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\",\"workspaces\":[{\"org_id\":\"<other>\",\"org_name\":\"Tour Elsewhere\"},{\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\"}],\"client_id\":\"<client>\",\"client_name\":\"Tour Client\",\"scope\":\"openv:read openv:write\",\"created_at\":\"<time@step 13>\",\"last_used_at\":\"<time@step 18>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<grant>",
+        "user_id": "<owner>",
+        "org_id": "<owner.workspace>",
+        "org_name": "Tour Owner's Space",
+        "workspaces": [
+          {
+            "org_id": "<other>",
+            "org_name": "Tour Elsewhere"
+          },
+          {
+            "org_id": "<owner.workspace>",
+            "org_name": "Tour Owner's Space"
+          }
+        ],
+        "client_id": "<client>",
+        "client_name": "Tour Client",
+        "scope": "openv:read openv:write",
+        "created_at": "<time@step 13>",
+        "last_used_at": "<time@step 18>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 33,
+      "title": "list_projects: the projects of both workspaces, each naming its workspace",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":12,\"method\":\"tools/call\",\"params\":{\"name\":\"list_projects\",\"arguments\":{}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":12,\"result\":{\"content\":[{\"text\":\"[{\\\"agent_auth\\\":\\\"user-account\\\",\\\"created_at\\\":\\\"<time@before step 1>\\\",\\\"description\\\":\\\"\\\",\\\"id\\\":\\\"<project.other>\\\",\\\"name\\\":\\\"Tour elsewhere\\\",\\\"org_id\\\":\\\"<other>\\\",\\\"parent_project_id\\\":\\\"\\\",\\\"updated_at\\\":\\\"<time@before step 1>\\\",\\\"workspace\\\":\\\"Tour Elsewhere\\\"},{\\\"agent_auth\\\":\\\"user-account\\\",\\\"created_at\\\":\\\"<time@before step 1>\\\",\\\"description\\\":\\\"\\\",\\\"id\\\":\\\"<project>\\\",\\\"name\\\":\\\"Tour connected\\\",\\\"org_id\\\":\\\"<owner.workspace>\\\",\\\"parent_project_id\\\":\\\"\\\",\\\"updated_at\\\":\\\"<time@before step 1>\\\",\\\"workspace\\\":\\\"Tour Owner's Space\\\"}]\",\"type\":\"text\"}],\"isError\":false}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "result": {
+          "content": [
+            {
+              "text": "[{\"agent_auth\":\"user-account\",\"created_at\":\"<time@before step 1>\",\"description\":\"\",\"id\":\"<project.other>\",\"name\":\"Tour elsewhere\",\"org_id\":\"<other>\",\"parent_project_id\":\"\",\"updated_at\":\"<time@before step 1>\",\"workspace\":\"Tour Elsewhere\"},{\"agent_auth\":\"user-account\",\"created_at\":\"<time@before step 1>\",\"description\":\"\",\"id\":\"<project>\",\"name\":\"Tour connected\",\"org_id\":\"<owner.workspace>\",\"parent_project_id\":\"\",\"updated_at\":\"<time@before step 1>\",\"workspace\":\"Tour Owner's Space\"}]",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 34,
+      "title": "get_project_map of the other workspace's project: reached now",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_project_map\",\"arguments\":{\"project_id\":\"<project.other>\"}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"text\":\"# Tour elsewhere — AI map\\nSource: live state · Generated: <time@before step 1>\\nArtifacts: 0 () · Links: 0\\nHouse style: ISO/IEC/IEEE 29148 \\\"shall\\\": state every binding requirement as \\\"\\u003cactor\\u003e shall \\u003caction\\u003e\\\"; should/may/might/could read as weak wording.\\nSyntax: REF Title [status] {→type TARGET; ←type SOURCE} — indent = hierarchy, → links out, ← linked from, trailing ? = suspect link, [status] omitted when draft. Bodies via get_artifact/get_context.\",\"type\":\"text\"}],\"isError\":false}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "result": {
+          "content": [
+            {
+              "text": "# Tour elsewhere — AI map\nSource: live state · Generated: <time@before step 1>\nArtifacts: 0 () · Links: 0\nHouse style: ISO/IEC/IEEE 29148 \"shall\": state every binding requirement as \"\u003cactor\u003e shall \u003caction\u003e\"; should/may/might/could read as weak wording.\nSyntax: REF Title [status] {→type TARGET; ←type SOURCE} — indent = hierarchy, → links out, ← linked from, trailing ? = suspect link, [status] omitted when draft. Bodies via get_artifact/get_context.",
+              "type": "text"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 35,
+      "title": "no workspace at all: refused, disconnecting is how to reach none",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/connected-apps/{id}/workspaces",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/connected-apps/<grant>/workspaces",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_ids\":[]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 115,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"choose at least one workspace for the app, and no more than 50; to stop it reaching any, disconnect it\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "choose at least one workspace for the app, and no more than 50; to stop it reaching any, disconnect it"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 36,
+      "title": "back to the member's own workspace alone",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/connected-apps/{id}/workspaces",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/connected-apps/<grant>/workspaces",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_ids\":[\"<owner.workspace>\"]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<grant>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\",\"workspaces\":[{\"org_id\":\"<owner.workspace>\",\"org_name\":\"Tour Owner's Space\"}],\"client_id\":\"<client>\",\"client_name\":\"Tour Client\",\"scope\":\"openv:read openv:write\",\"created_at\":\"<time@step 13>\",\"last_used_at\":\"<time@step 18>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<grant>",
+        "user_id": "<owner>",
+        "org_id": "<owner.workspace>",
+        "org_name": "Tour Owner's Space",
+        "workspaces": [
+          {
+            "org_id": "<owner.workspace>",
+            "org_name": "Tour Owner's Space"
+          }
+        ],
+        "client_id": "<client>",
+        "client_name": "Tour Client",
+        "scope": "openv:read openv:write",
+        "created_at": "<time@step 13>",
+        "last_used_at": "<time@step 18>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 37,
+      "title": "get_project_map of the other workspace's project once it is taken out: as if it did not exist",
+      "actor": "writer",
+      "route": "POST /mcp",
+      "request": {
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":14,\"method\":\"tools/call\",\"params\":{\"name\":\"get_project_map\",\"arguments\":{\"project_id\":\"<project.other>\"}}}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 166,
+      "kind": "json",
+      "body": [
+        "{\"jsonrpc\":\"2.0\",\"id\":14,\"result\":{\"content\":[{\"text\":\"API 404: {\\\"error\\\":\\\"project not found\\\"}\\n{\\\"error\\\":\\\"project not found\\\"}\",\"type\":\"text\"}],\"isError\":true}}"
+      ],
+      "trailing_newline": false,
+      "parsed": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "result": {
+          "content": [
+            {
+              "text": "API 404: {\"error\":\"project not found\"}\n{\"error\":\"project not found\"}",
+              "type": "text"
+            }
+          ],
+          "isError": true
+        }
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 38,
       "title": "the colleague approves read only for the shared workspace",
       "actor": "colleague",
       "acting_in": "<other>",
@@ -1566,7 +1808,7 @@
       "events": []
     },
     {
-      "n": 33,
+      "n": 39,
       "title": "the colleague's app spends its code",
       "actor": "anonymous",
       "route": "POST /oauth/token",
@@ -1602,7 +1844,7 @@
       "events": []
     },
     {
-      "n": 34,
+      "n": 40,
       "title": "the colleague's app works in the shared workspace: no project there is the colleague's, so the list is empty",
       "actor": "colleague.app",
       "route": "POST /mcp",
@@ -1641,7 +1883,7 @@
       "events": []
     },
     {
-      "n": 35,
+      "n": 41,
       "title": "the colleague's app once they have left the workspace: 403, nothing there",
       "actor": "colleague.app",
       "route": "POST /mcp",
@@ -1657,20 +1899,20 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 82,
+      "content_length": 170,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are no longer a member of the workspace this app was connected to\"}"
+        "{\"error\":\"this app reaches no workspace you are a member of with connected apps available: choose its workspaces under Settings → Connected apps, or connect it again\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are no longer a member of the workspace this app was connected to"
+        "error": "this app reaches no workspace you are a member of with connected apps available: choose its workspaces under Settings → Connected apps, or connect it again"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 36,
+      "n": 42,
       "title": "an MCP-Protocol-Version the endpoint does not speak",
       "actor": "writer",
       "route": "POST /mcp",
@@ -1700,7 +1942,7 @@
       "events": []
     },
     {
-      "n": 37,
+      "n": 43,
       "title": "initialize carrying a revision the endpoint does not speak: answered with the newest it does",
       "actor": "writer",
       "route": "POST /mcp",
@@ -1741,7 +1983,7 @@
       "events": []
     },
     {
-      "n": 38,
+      "n": 44,
       "title": "revoke the app",
       "actor": "owner",
       "route": "DELETE /api/v1/me/connected-apps/{id}",
@@ -1759,7 +2001,7 @@
       "events": []
     },
     {
-      "n": 39,
+      "n": 45,
       "title": "the revoked app's token: 401 invalid_token",
       "actor": "writer",
       "route": "POST /mcp",
@@ -1790,7 +2032,7 @@
       "events": []
     },
     {
-      "n": 40,
+      "n": 46,
       "title": "revoke it again: gone",
       "actor": "owner",
       "route": "DELETE /api/v1/me/connected-apps/{id}",
@@ -1815,7 +2057,7 @@
       "events": []
     },
     {
-      "n": 41,
+      "n": 47,
       "title": "the revocation endpoint, for a token that is gone: 200 all the same",
       "actor": "anonymous",
       "route": "POST /oauth/revoke",
@@ -1837,7 +2079,7 @@
       "events": []
     },
     {
-      "n": 42,
+      "n": 48,
       "title": "GET /mcp: no stream",
       "actor": "anonymous",
       "route": "GET /mcp",
@@ -1863,7 +2105,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 43,
+      "n": 49,
       "title": "DELETE /mcp: no session",
       "actor": "anonymous",
       "route": "DELETE /mcp",

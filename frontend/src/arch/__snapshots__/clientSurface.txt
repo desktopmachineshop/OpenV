@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 221; members of exported objects: 305
+exports: 222; members of exported objects: 306
 
 interface AdminUser
 interface AdminWorkspace
@@ -29,6 +29,7 @@ interface BillingState
 interface BulkProposalOutcome
 interface ChatterEntry
 interface ConnectedApp
+interface ConnectedAppWorkspace
 interface ConnectorPairing
 interface CoverageEntry
 interface CoverageReport
@@ -271,6 +272,7 @@ const     connectedAppsAPI
             .decide
             .list
             .revoke
+            .setWorkspaces
 const     connectorAPI
             .createPairing
             .downloadAvailable

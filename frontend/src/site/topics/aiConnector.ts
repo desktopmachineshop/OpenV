@@ -4,12 +4,12 @@ export const AI_CONNECTOR: Topic = {
   path: '/ai-connector',
   title: 'Connect Claude and other AI apps to OpenV',
   summary:
-    'Add OpenV to Claude, Cursor or any remote MCP client by its address, sign in, approve one workspace, and work on requirements, links and V&V evidence from the chat.',
+    'Add OpenV to Claude, Cursor or any remote MCP client by its address, sign in, approve your workspaces, and work on requirements, links and V&V evidence from the chat.',
   footerLabel: 'Connect Claude to OpenV',
   eyebrow: 'AI connector',
   heading: 'Connect Claude and other AI apps to an OpenV workspace',
   answer:
-    'OpenV is a remote MCP server at https://openv.app/mcp. Add that address to Claude as a connector, or to any app that speaks MCP, then sign in to OpenV and approve one workspace with read-only or read-and-change access. The app then works on that workspace as you, with your permissions, until you disconnect it.',
+    'OpenV is a remote MCP server at https://openv.app/mcp. Add that address to Claude as a connector, or to any app that speaks MCP, then sign in to OpenV and approve the workspaces it may use, with read-only or read-and-change access. The app then works in those workspaces as you, with your permissions, until you disconnect it.',
   updated: '2026-10-16',
   sections: [
     {
@@ -17,7 +17,7 @@ export const AI_CONNECTOR: Topic = {
       bullets: [
         'In Claude (claude.ai, the desktop app or the mobile app), open Settings → Connectors and choose Add custom connector.',
         'Name it OpenV and paste https://openv.app/mcp, without www.',
-        'Claude opens OpenV in your browser: sign in if asked, choose the workspace, choose read and change or read only, and choose Connect.',
+        'Claude opens OpenV in your browser: sign in if asked, tick the workspaces it may use, choose read and change or read only, and choose Connect.',
         'On a Claude Team or Enterprise plan, an owner of the Claude organization adds the connector first; each member then connects their own OpenV account.',
       ],
     },
@@ -45,7 +45,7 @@ export const AI_CONNECTOR: Topic = {
     {
       heading: 'Permissions and disconnecting',
       paragraphs: [
-        'The app acts as you in the one workspace you approved, and can do only what you can do there; a read-only connection is offered only the read tools. Settings → Connected apps lists each app you have connected, the workspace and access it has, and when it was last used. Disconnect stops it at once. To use another workspace, connect the app again and choose that one.',
+        'The app acts as you in the workspaces you approved, and can do only what you can do in each; a read-only connection is offered only the read tools. Settings → Connected apps lists each app you have connected, the workspaces and access it has, and when it was last used. Choose Workspaces beside an app to add or remove a workspace without connecting it again: a workspace you remove is out of its reach at once. Disconnect stops it altogether.',
       ],
     },
     {
@@ -58,7 +58,7 @@ export const AI_CONNECTOR: Topic = {
     },
   ],
   limits: [
-    'One connection reaches one workspace; to work in two, connect the app twice.',
+    'Giving one app more than one workspace waits for that feature to reach your workspaces’ release channel; until then a connection reaches one workspace.',
     'The connector works with the content of a workspace, not its settings: it cannot invite members, change billing or manage runners.',
     'What the AI app does with the data it reads, such as how it keeps your conversations, is governed by that app’s own terms, not OpenV’s.',
   ],

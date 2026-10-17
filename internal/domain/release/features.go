@@ -57,6 +57,7 @@ var Registry = []Feature{
 	{Key: FeatureAutoCloudRunner, ShippedIn: "0.20.0", Summary: "Send a chat message with no runner online and OpenV starts a cloud runner for you, where your plan has cloud runner minutes"},
 	{Key: FeatureSubscriptionToken, ShippedIn: "0.20.0", Summary: "Keep Claude signed in: save a long-lived Claude subscription token once, and your own and leased runners start chats already signed in"},
 	{Key: FeatureCloudRunnerToken, ShippedIn: "0.21.0", Summary: "Get your saved Claude token from your cloud runner: sign in once in the browser, and the runner mints the token and saves it for you"},
+	{Key: FeatureConnectedAppWorkspaces, ShippedIn: "0.22.0", Summary: "Give one connected AI app, such as Claude, more than one workspace, and change which ones from Connected apps without connecting it again"},
 }
 
 // Feature keys the code gates on.
@@ -181,6 +182,13 @@ const (
 	// the runner handing its token in; a token already saved works as any
 	// saved token does.
 	FeatureCloudRunnerToken = "cloud-runner-token"
+	// FeatureConnectedAppWorkspaces is one connected app reaching more than
+	// one workspace (REQ-44): choosing several on the consent page, and
+	// changing a connected app's workspaces under Connected apps. It gates
+	// every workspace a grant is given beyond one, checked on each; a grant
+	// of one workspace, and the endpoint's answers for any grant, are
+	// gated only by FeatureRemoteMCP.
+	FeatureConnectedAppWorkspaces = "connected-app-workspaces"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **One connected AI app can work in several of your workspaces.** When
+  you connect Claude or another AI app to OpenV, tick every workspace it
+  may use, and its project list covers them all, each project labelled
+  with its workspace. Change them later from Settings → Connected apps →
+  Workspaces, with no need to connect the app again: a workspace you
+  untick is out of its reach at once.
+
 ### Maintenance updates
 
 - **Modules can add screens to your OpenV.** A module linked into your

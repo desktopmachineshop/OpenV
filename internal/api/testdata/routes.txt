@@ -336,6 +336,7 @@ PUT /api/v1/guided-sessions/{id}/step
 PUT /api/v1/interviews/{id}/persona
 PUT /api/v1/links/{id}
 PUT /api/v1/links/{id}/confirm
+PUT /api/v1/me/connected-apps/{id}/workspaces
 PUT /api/v1/me/default-workspace
 PUT /api/v1/me/notification-prefs
 PUT /api/v1/me/password

@@ -24,11 +24,12 @@ import (
 //
 // A tool calls the REST API as it does from openv-mcp, but its request
 // never leaves the process: it goes through the server's own router as the
-// member, in the workspace the grant names, so every guard, plan gate and
-// audit record applies to it unchanged, and the project and workspace
-// guards refuse any other workspace (authz.go). A read-only grant is
-// offered only the tools that read, and its requests are refused anything
-// but a GET besides.
+// member, in the workspaces the grant reaches, so every guard, plan gate
+// and audit record applies to it unchanged, and the project and workspace
+// guards refuse any other workspace (authz.go). Listing projects lists them
+// in every workspace the grant reaches. A read-only grant is offered only
+// the tools that read, and its requests are refused anything but a GET
+// besides.
 
 // registerMCPRoutes wires the endpoint. Its tool calls go through the
 // router cmd/server hands SetMCPRouter once every route is registered.
@@ -79,17 +80,25 @@ func (h *Handler) MCP(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "the access token is not valid: its member no longer exists")
 		return
 	}
-	// The tool calls run with the grant's workspace active, which the
-	// session middleware would have checked the member still belongs to;
-	// a member who has left it since the consent reaches nothing there.
-	if ok, err := h.OrgService.IsMember(grant.OrgID, grant.UserID); err != nil || !ok {
-		writeJSONError(w, http.StatusForbidden, "you are no longer a member of the workspace this app was connected to")
+	// The tool calls reach the grant's workspaces as the session middleware
+	// would have let the member: one they have left since the consent, or
+	// whose channel has not reached connected apps, is left out.
+	reach := *grant
+	reach.Workspaces = nil
+	for _, ws := range grant.Workspaces {
+		if ok, err := h.OrgService.IsMember(ws.ID, grant.UserID); err != nil || !ok {
+			continue
+		}
+		if !h.memberFeatureEnabled(ws.ID, &grant.UserID, release.FeatureRemoteMCP) {
+			continue
+		}
+		reach.Workspaces = append(reach.Workspaces, ws)
+	}
+	if len(reach.Workspaces) == 0 {
+		writeJSONError(w, http.StatusForbidden, "this app reaches no workspace you are a member of with connected apps available: choose its workspaces under Settings → Connected apps, or connect it again")
 		return
 	}
-	if !h.memberFeatureEnabled(grant.OrgID, &grant.UserID, release.FeatureRemoteMCP) {
-		writeJSONError(w, http.StatusForbidden, "connected apps are not yet available on this workspace's release channel")
-		return
-	}
+	grant = &reach
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "could not read the request body")
@@ -143,7 +152,10 @@ func mcpInitialize(body []byte) bool {
 }
 
 // memberTransport sends a tool's API request through the router as the
-// grant's member, in the grant's workspace.
+// grant's member. The first of the grant's workspaces is the active one; a
+// request names its project, and the guards check the project's workspace
+// against the grant. Listing projects, which names none, is answered for
+// each workspace and the lists joined.
 type memberTransport struct {
 	h     *Handler
 	outer *http.Request
@@ -159,14 +171,58 @@ func (t *memberTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		rec.body.WriteString(`{"error":"this app was connected to read only"}`)
 		return rec.response(req), nil
 	}
+	if req.Method == http.MethodGet && req.URL.Path == "/api/v1/projects" {
+		return t.listProjects(req)
+	}
+	t.serve(rec, req, t.grant.Workspaces[0].ID)
+	return rec.response(req), nil
+}
+
+// serve runs one request through the router with orgID active.
+func (t *memberTransport) serve(rec *bufferedResponse, req *http.Request, orgID string) {
 	ctx := context.WithValue(t.outer.Context(), ctxUser, t.user)
-	ctx = context.WithValue(ctx, ctxActiveOrg, t.grant.OrgID)
+	ctx = context.WithValue(ctx, ctxActiveOrg, orgID)
 	ctx = context.WithValue(ctx, ctxConnectedApp, t.grant)
 	inner := req.Clone(ctx)
 	inner.RequestURI = req.URL.RequestURI()
 	inner.RemoteAddr = t.outer.RemoteAddr
 	inner.Header.Del("Authorization")
 	t.h.mcpRouter.ServeHTTP(rec, inner)
+}
+
+// listProjects answers GET /api/v1/projects once per workspace the grant
+// reaches and joins the lists, in the grant's workspace order, each project
+// naming its workspace in "workspace" so the app can tell two apart. A
+// workspace whose answer is not a list stops the join and is answered as it
+// is.
+func (t *memberTransport) listProjects(req *http.Request) (*http.Response, error) {
+	all := []json.RawMessage{}
+	for _, ws := range t.grant.Workspaces {
+		rec := &bufferedResponse{header: http.Header{}, status: http.StatusOK}
+		t.serve(rec, req, ws.ID)
+		var list []map[string]json.RawMessage
+		if rec.status != http.StatusOK || json.Unmarshal(rec.body.Bytes(), &list) != nil {
+			return rec.response(req), nil
+		}
+		name, err := json.Marshal(ws.Name)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range list {
+			p["workspace"] = name
+			raw, err := json.Marshal(p)
+			if err != nil {
+				return nil, err
+			}
+			all = append(all, raw)
+		}
+	}
+	body, err := json.Marshal(all)
+	if err != nil {
+		return nil, err
+	}
+	rec := &bufferedResponse{header: http.Header{"Content-Type": {"application/json"}}, status: http.StatusOK}
+	rec.body.Write(body)
 	return rec.response(req), nil
 }
 

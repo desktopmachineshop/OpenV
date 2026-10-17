@@ -17,4 +17,7 @@ export const connectedAppsAPI = {
   decide: (decision: OAuthConsentDecision) => client.post<{ redirect_to: string }>('/api/v1/oauth/consent', decision),
   list: () => client.get<ConnectedApp[]>('/api/v1/me/connected-apps'),
   revoke: (id: string) => client.delete(`/api/v1/me/connected-apps/${id}`),
+  // Change the workspaces an app reaches, without connecting it again.
+  setWorkspaces: (id: string, orgIds: string[]) =>
+    client.put<ConnectedApp>(`/api/v1/me/connected-apps/${id}/workspaces`, { org_ids: orgIds }),
 };
