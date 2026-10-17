@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 57
-  rendering a lazy() component: 34
+<Route> elements: 63
+  rendering a lazy() component: 40
   rendering an eagerly imported component: 18
   redirects only: 5
 index routes: 1
@@ -50,6 +50,8 @@ index routes: 1
   Customers           ./site/Customers#Customers
   WhitePapers         ./site/WhitePapers#WhitePapers
   Changelog           ./site/Changelog#Changelog
+  CompareHub          ./site/CompareHub#CompareHub
+  ComparePage         ./site/ComparePage#ComparePage
   TopicPage           ./site/TopicPage#TopicPage
   SharedProjectView   ./views/SharedProjectView#SharedProjectView
   ReviewQueue         ./views/ReviewQueue#ReviewQueue
@@ -72,6 +74,12 @@ index routes: 1
   /customers                            <Customers>  [lazy ./site/Customers#Customers]
   /white-papers                         <WhitePapers>  [lazy ./site/WhitePapers#WhitePapers]
   /changelog                            <Changelog>  [lazy ./site/Changelog#Changelog]
+  /compare                              <CompareHub>  [lazy ./site/CompareHub#CompareHub]
+  /compare/doors                        <ComparePage path="/compare/doors">  [lazy ./site/ComparePage#ComparePage]
+  /compare/jama                         <ComparePage path="/compare/jama">  [lazy ./site/ComparePage#ComparePage]
+  /compare/polarion                     <ComparePage path="/compare/polarion">  [lazy ./site/ComparePage#ComparePage]
+  /compare/reqview                      <ComparePage path="/compare/reqview">  [lazy ./site/ComparePage#ComparePage]
+  /compare/jira                         <ComparePage path="/compare/jira">  [lazy ./site/ComparePage#ComparePage]
   /requirements-traceability            <TopicPage path="/requirements-traceability">  [lazy ./site/TopicPage#TopicPage]
   /verification-evidence                <TopicPage path="/verification-evidence">  [lazy ./site/TopicPage#TopicPage]
   /baselines-and-audit-trail            <TopicPage path="/baselines-and-audit-trail">  [lazy ./site/TopicPage#TopicPage]
@@ -131,6 +139,12 @@ index routes: 1
   /customers
   /white-papers
   /changelog
+  /compare
+  /compare/doors
+  /compare/jama
+  /compare/polarion
+  /compare/reqview
+  /compare/jira
   /requirements-traceability
   /verification-evidence
   /baselines-and-audit-trail
