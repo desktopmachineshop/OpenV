@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.22.1 — 2026-10-17
+
 ### Maintenance updates
 
 - **A self-hosted OpenV no longer serves openv.app's marketing pages.**
