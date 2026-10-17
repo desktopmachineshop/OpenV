@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.21.6 — 2026-10-17
+
 ### Maintenance updates
 
 - **openv.app compares OpenV with other requirements tools.** A page at
