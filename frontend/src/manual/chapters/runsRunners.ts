@@ -165,16 +165,18 @@ address followed by \`/mcp\`, for example \`https://openv.app/mcp\`;
      \`/mcp\` to sign in.
    - **Another app**: add OpenV as a **remote MCP server** at the address.
 2. The app opens OpenV in your browser. Sign in if asked, choose the
-   **workspace** the app may work in and whether it may **read and change**
+   **workspaces** the app may work in and whether it may **read and change**
    or **read only**, and choose **Connect**.
 3. You go back to the app, which can now list your projects, read and edit
    artifacts and links, record test results and comment, as you.
 
-Everything the app does is recorded as yours, it reaches only the workspace
-you chose, and your role there still applies: a viewer's app cannot edit.
-It cannot start agent runs. To stop it, choose **Disconnect** beside it
-under **Settings → Connected apps**; it stops working at once. To work in
-another workspace, connect the app again and choose that one.
+Everything the app does is recorded as yours, it reaches only the
+workspaces you chose, and your role in each still applies: a viewer's app
+cannot edit. It cannot start agent runs. To change which workspaces it
+reaches, choose **Workspaces** beside it under **Settings → Connected
+apps**, tick the ones you want and choose **Save**: there is no need to
+connect it again, and a workspace you untick is out of its reach at once.
+To stop it altogether, choose **Disconnect**; it stops working at once.
 
 ## How runs are routed
 

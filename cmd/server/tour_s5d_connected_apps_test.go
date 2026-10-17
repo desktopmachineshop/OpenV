@@ -32,7 +32,11 @@ import (
 // member approves read and write (the same grant takes the new scope), and
 // the new token creates an artifact, which the workspace's events record as
 // the member's. The member lists their connected apps, the token is no key
-// to the rest of the API; a colleague connects the app to the owner's shared
+// to the rest of the API; the member gives the app their other workspace
+// too, and the same token lists the projects of both, each naming its
+// workspace, and reaches the project it was refused before; a grant of no
+// workspace is refused, and the member takes the app back to its first
+// workspace alone; a colleague connects the app to the owner's shared
 // workspace, and once removed from that workspace their app is refused
 // there (403) though its grant stands; a request in an MCP revision the endpoint does
 // not speak is refused (400), and the member revokes the app, after which its
@@ -190,6 +194,21 @@ func connectedAppsTour(tr *tour) {
 	tr.step("the member's connected apps: one grant, read and write", o, "GET /api/v1/me/connected-apps").
 		capture("grant", "/0/id")
 	tr.step("the access token is no key to the rest of the API", writer, "GET /api/v1/projects")
+
+	// More than one workspace, given after the app was connected.
+	workspaces := func(title, ids string) *tourResult {
+		return tr.step(title, o, "PUT /api/v1/me/connected-apps/{id}/workspaces", at("id", "{{grant}}"),
+			jsonBody(`{"org_ids":[`+ids+`]}`))
+	}
+	workspaces("give the app the member's other workspace too", `"{{owner.workspace}}","{{other}}"`)
+	mcp("list_projects: the projects of both workspaces, each naming its workspace", writer,
+		connectedAppsCall(12, "list_projects", `{}`))
+	mcp("get_vv_gaps of the other workspace's project: reached now", writer,
+		connectedAppsCall(13, "get_vv_gaps", `{"project_id":"{{project.other}}"}`))
+	workspaces("no workspace at all: refused, disconnecting is how to reach none", ``)
+	workspaces("back to the member's own workspace alone", `"{{owner.workspace}}"`)
+	mcp("get_project_map of the other workspace's project once it is taken out: as if it did not exist", writer,
+		connectedAppsCall(14, "get_project_map", `{"project_id":"{{project.other}}"}`))
 
 	// A member who leaves the workspace an app acts in takes the app's
 	// reach there with them.

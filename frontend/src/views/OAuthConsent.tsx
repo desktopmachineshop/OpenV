@@ -2,13 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Org, OAuthConsentRequest, connectedAppsAPI, orgsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
+import { ConnectedAppsWorkspaces } from '../components/ConnectedAppsWorkspaces';
+import { CONNECTED_APP_WORKSPACES_FEATURE } from '../features';
+import { useFeature } from '../hooks/useFeature';
 import { forgetReturnTo } from '../utils/returnTo';
 
 // The consent an AI app asks for when a member connects it to OpenV over
 // the remote MCP endpoint (REQ-44). The app sent the browser to the API's
 // /oauth/authorize, which checked the app and sent it on here with the
-// request. The member, signed in, picks the workspace the app may act in
-// and whether it may change anything there, then approves or declines; the
+// request. The member, signed in, picks the workspaces the app may act in
+// (one, where the workspace's channel has not reached more) and whether it
+// may change anything there, then approves or declines; the
 // API answers where to send the browser, back to the app with a code or
 // with access_denied.
 
@@ -57,7 +61,8 @@ export const OAuthConsent: React.FC = () => {
   );
   const [app, setApp] = useState<OAuthConsentRequest | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const [orgId, setOrgId] = useState('');
+  const [orgIds, setOrgIds] = useState<string[]>([]);
+  const several = useFeature(CONNECTED_APP_WORKSPACES_FEATURE);
   const [scope, setScope] = useState(request.readOnlyAsked ? READ : READ_WRITE);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -75,7 +80,8 @@ export const OAuthConsent: React.FC = () => {
       .list()
       .then((res) => {
         setOrgs(res.data.orgs);
-        setOrgId(res.data.active_org || res.data.orgs[0]?.id || '');
+        const first = res.data.active_org || res.data.orgs[0]?.id;
+        setOrgIds(first ? [first] : []);
       })
       .catch((err) => setError(apiErrorMessage(err)));
   }, [incomplete, request.clientId, request.redirectUri]);
@@ -91,7 +97,7 @@ export const OAuthConsent: React.FC = () => {
         code_challenge_method: request.codeChallengeMethod,
         state: request.state,
         scope,
-        org_id: orgId,
+        org_ids: orgIds,
         approve,
       });
       window.location.assign(res.data.redirect_to);
@@ -115,7 +121,7 @@ export const OAuthConsent: React.FC = () => {
               Connect {app ? app.client_name : 'an app'} to OpenV
             </h1>
             <p style={para}>
-              <b>{app ? app.client_name : 'The app'}</b> will act as you in the workspace you choose, through the same
+              <b>{app ? app.client_name : 'The app'}</b> will act as you in the workspaces you choose, through the same
               tools an OpenV agent uses. Everything it does is recorded as yours, and you can disconnect it at any time
               from your settings, under Connected apps.
             </p>
@@ -130,16 +136,25 @@ export const OAuthConsent: React.FC = () => {
                 OpenV to Claude Code.
               </p>
             )}
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label htmlFor="consent-workspace">Workspace</label>
-              <select id="consent-workspace" value={orgId} onChange={(e) => setOrgId(e.target.value)} disabled={busy}>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {several && orgs.length > 1 ? (
+              <ConnectedAppsWorkspaces orgs={orgs} chosen={orgIds} onChange={setOrgIds} disabled={busy} />
+            ) : (
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label htmlFor="consent-workspace">Workspace</label>
+                <select
+                  id="consent-workspace"
+                  value={orgIds[0] || ''}
+                  onChange={(e) => setOrgIds([e.target.value])}
+                  disabled={busy}
+                >
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <fieldset style={{ border: 'none', padding: 0, margin: '0 0 16px' }}>
               <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>What it may do</legend>
               {!request.readOnlyAsked && (
@@ -177,7 +192,7 @@ export const OAuthConsent: React.FC = () => {
                 type="button"
                 className="button"
                 onClick={() => decide(true)}
-                disabled={busy || !app || !orgId}
+                disabled={busy || !app || orgIds.length === 0}
                 style={{ flex: 1 }}
               >
                 Connect

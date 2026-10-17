@@ -81,6 +81,7 @@ const WorkspaceRunsPage = lazy(() =>
 const HowItWorks = lazy(() => import('./site/HowItWorks').then((m) => ({ default: m.HowItWorks })));
 const Demos = lazy(() => import('./site/Demos').then((m) => ({ default: m.Demos })));
 const Faq = lazy(() => import('./site/Faq').then((m) => ({ default: m.Faq })));
+const Privacy = lazy(() => import('./site/Privacy').then((m) => ({ default: m.Privacy })));
 const OpenSourceProjects = lazy(() =>
   import('./site/OpenSourceProjects').then((m) => ({ default: m.OpenSourceProjects }))
 );
@@ -288,6 +289,7 @@ function App() {
         <Route path="/demos" element={<Demos />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/security" element={<Navigate to="/faq#security" replace />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/open-source" element={<OpenSourceProjects />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/white-papers" element={<WhitePapers />} />
@@ -304,6 +306,7 @@ function App() {
         <Route path="/reqif" element={<TopicPage path="/reqif" />} />
         <Route path="/self-hosted-requirements-management" element={<TopicPage path="/self-hosted-requirements-management" />} />
         <Route path="/safety-critical" element={<TopicPage path="/safety-critical" />} />
+        <Route path="/ai-connector" element={<TopicPage path="/ai-connector" />} />
         <Route path="/glossary" element={<TopicPage path="/glossary" />} />
         {walled ? (
           <Route path="*" element={<Navigate to="/verify-email" replace />} />

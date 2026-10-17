@@ -119,6 +119,7 @@ PUT /api/v1/automations/{id}: 200, 400, 403, 404; agents_automations
 PUT /api/v1/crew-edges/{id}: 200, 400, 403, 404; crews_teams
 PUT /api/v1/crew-nodes/{id}: 200, 400, 403, 404; crews_teams
 PUT /api/v1/crews/{id}: 200, 400, 403, 404; crews_teams
+PUT /api/v1/me/connected-apps/{id}/workspaces: 200, 400; connected_apps
 PUT /api/v1/provider-api-keys/{env}: 200, 400, 403; providers_repos_pool
 PUT /api/v1/provider-settings: 200, 400, 401, 403; providers_repos_pool
 PUT /api/v1/repo-connections/{id}: 200, 400, 403, 404; providers_repos_pool
@@ -127,4 +128,4 @@ PUT /api/v1/team-edges/{id}: 200, 404; crews_teams
 PUT /api/v1/team-nodes/{id}: 200, 404; crews_teams
 PUT /api/v1/teams/{id}: 200; crews_teams
 
-s5d: 115 of 365 routes reached (31.5%), 111 with a 2xx or 3xx answer (30.4%)
+s5d: 116 of 366 routes reached (31.7%), 112 with a 2xx or 3xx answer (30.6%)

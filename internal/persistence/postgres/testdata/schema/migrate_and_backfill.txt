@@ -348,6 +348,14 @@ table chatter rows 0
   index chatter_pkey CREATE UNIQUE INDEX chatter_pkey ON public.chatter USING btree (id)
   index idx_chatter_artifact_id CREATE INDEX idx_chatter_artifact_id ON public.chatter USING btree (artifact_id)
   index idx_chatter_created_at CREATE INDEX idx_chatter_created_at ON public.chatter USING btree (created_at)
+table connected_app_workspaces rows 0
+  column grant_id uuid NOT NULL
+  column org_id uuid NOT NULL
+  constraint connected_app_workspaces_grant_id_fkey FOREIGN KEY (grant_id) REFERENCES connected_apps(id) ON DELETE CASCADE
+  constraint connected_app_workspaces_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint connected_app_workspaces_pkey PRIMARY KEY (grant_id, org_id)
+  index connected_app_workspaces_pkey CREATE UNIQUE INDEX connected_app_workspaces_pkey ON public.connected_app_workspaces USING btree (grant_id, org_id)
+  index idx_connected_app_workspaces_org CREATE INDEX idx_connected_app_workspaces_org ON public.connected_app_workspaces USING btree (org_id)
 table connected_apps rows 0
   column id uuid NOT NULL
   column user_id uuid NOT NULL
@@ -916,7 +924,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 64
+table schema_migrations rows 65
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1206,3 +1214,4 @@ ledger 0061 provider_api_keys
 ledger 0062 connected_apps
 ledger 0063 user_provider_tokens
 ledger 0064 provider_login_purpose
+ledger 0065 connected_app_workspaces

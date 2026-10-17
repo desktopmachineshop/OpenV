@@ -50,6 +50,7 @@ func testRunTools() []Tool {
 		{
 			Name:        "close_test_run",
 			Description: "Close a test run once its results are recorded: status \"completed\", or \"aborted\" for a run that was abandoned. Only an in-progress run can be closed.",
+			Destructive: true,
 			InputSchema: schema([]string{"run_id", "status"}, map[string]interface{}{
 				"run_id": str("Test run ID"),
 				"status": str("completed or aborted"),

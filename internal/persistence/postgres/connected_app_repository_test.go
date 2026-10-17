@@ -47,7 +47,7 @@ func TestConnectedAppsRoundTrip(t *testing.T) {
 	const verifier = "a-verifier-of-at-least-forty-three-characters-long-xyz"
 	approve := func(scope string) string {
 		t.Helper()
-		code, err := svc.Approve(userID, orgID, client.ID, client.RedirectURIs[0], connectedapps.S256(verifier), scope)
+		code, err := svc.Approve(userID, []string{orgID}, client.ID, client.RedirectURIs[0], connectedapps.S256(verifier), scope)
 		must(err)
 		return code
 	}
@@ -62,6 +62,34 @@ func TestConnectedAppsRoundTrip(t *testing.T) {
 	must(err)
 	if g.UserID != userID || g.OrgID != orgID || g.OrgName != "Acme" || g.ClientName != "Claude" || g.Scope != "openv:read" {
 		t.Fatalf("grant = %+v", g)
+	}
+	if len(g.Workspaces) != 1 || g.Workspaces[0] != (connectedapps.Workspace{ID: orgID, Name: "Acme"}) {
+		t.Fatalf("grant workspaces = %+v, want Acme alone", g.Workspaces)
+	}
+
+	// A second workspace, given and then the first taken away: the same
+	// token reaches the new set at once.
+	otherOrg := uuid.NewString()
+	_, err = db.Exec(`INSERT INTO organizations (id, name, slug) VALUES ($1, 'Beta', $2)`, otherOrg, "beta-"+otherOrg[:8])
+	must(err)
+	if _, err := svc.SetWorkspacesForUser(userID, g.ID, []string{orgID, otherOrg}); err != nil {
+		t.Fatal(err)
+	}
+	g, err = svc.Authenticate(tok.AccessToken)
+	must(err)
+	if !g.Allows(orgID) || !g.Allows(otherOrg) || len(g.Workspaces) != 2 || g.Workspaces[1].Name != "Beta" {
+		t.Fatalf("after adding Beta: %+v", g.Workspaces)
+	}
+	if _, err := svc.SetWorkspacesForUser(userID, g.ID, []string{otherOrg}); err != nil {
+		t.Fatal(err)
+	}
+	g, err = svc.Authenticate(tok.AccessToken)
+	must(err)
+	if g.Allows(orgID) || !g.Allows(otherOrg) || g.OrgID != orgID {
+		t.Fatalf("after taking Acme away: org %s, workspaces %+v; want Beta alone, keyed on Acme still", g.OrgID, g.Workspaces)
+	}
+	if _, err := svc.SetWorkspacesForUser(userID, g.ID, []string{orgID}); err != nil {
+		t.Fatal(err)
 	}
 	var lastUsed *time.Time
 	must(db.QueryRow(`SELECT last_used_at FROM connected_apps WHERE id = $1`, g.ID).Scan(&lastUsed))

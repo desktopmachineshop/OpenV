@@ -4,11 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { mockApi } from '../test/mockApi';
 import { OAuthConsent } from './OAuthConsent';
 import { connectedAppsAPI } from '../api/client';
+import { useAppStore } from '../state/store';
 
 // The consent an AI app asks for (REQ-44): the page names the app and
 // where the browser goes back to, offers the member's workspaces and what
 // the app may do, never more than it asked for, and sends the browser to
-// whatever address the API answers with.
+// whatever address the API answers with. Where a workspace may give an app
+// more than one workspace, they are a checklist instead of a choice of one.
 
 const consentApp = vi.hoisted(() => ({ client_id: 'c1', client_name: 'Claude', redirect_host: 'claude.ai' }));
 
@@ -54,7 +56,18 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   decide.mockClear();
+  useAppStore.setState({ features: null });
 });
+
+const withSeveralWorkspaces = () =>
+  useAppStore.setState({
+    features: {
+      channel: 'nightly',
+      stable_release: '',
+      preview: false,
+      features: { 'connected-app-workspaces': true },
+    },
+  });
 
 const QUERY =
   'client_id=c1&redirect_uri=https%3A%2F%2Fclaude.ai%2Fcb&code_challenge=abc&code_challenge_method=S256&state=s';
@@ -97,10 +110,23 @@ describe('the consent page', () => {
       code_challenge_method: 'S256',
       state: 's',
       scope: 'openv:read',
-      org_id: 'acme',
+      org_ids: ['acme'],
       approve: true,
     });
     expect(assign).toHaveBeenCalledWith('https://claude.ai/cb?code=x&state=s');
+  });
+
+  it('gives the app several workspaces where that is available', async () => {
+    withSeveralWorkspaces();
+    await render(QUERY);
+    expect(container.querySelector('#consent-workspace')).toBeNull();
+    const boxes = Array.from(container.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[];
+    expect(boxes.map((b) => b.checked)).toEqual([false, true]);
+    // The last one chosen cannot be unticked: an app reaches one at least.
+    expect(boxes[1].disabled).toBe(true);
+    await act(async () => boxes[0].click());
+    await act(async () => button('Connect').click());
+    expect(decide.mock.calls[0][0].org_ids).toEqual(['acme', 'personal']);
   });
 
   it('declines with Cancel', async () => {

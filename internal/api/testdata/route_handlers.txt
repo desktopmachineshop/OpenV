@@ -363,5 +363,6 @@ GET /api/v1/oauth/consent -> GetOAuthConsent
 POST /api/v1/oauth/consent -> DecideOAuthConsent [alwaysWritable]
 GET /api/v1/me/connected-apps -> ListConnectedApps
 DELETE /api/v1/me/connected-apps/{id} -> RevokeConnectedApp [alwaysWritable]
+PUT /api/v1/me/connected-apps/{id}/workspaces -> SetConnectedAppWorkspaces [alwaysWritable]
 POST /mcp -> MCP
 GET,DELETE /mcp -> MCPNoStream

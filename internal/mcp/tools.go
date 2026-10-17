@@ -24,9 +24,48 @@ type Tool struct {
 	//
 	// A tool that leaves it false is treated as a writer, so a tool added later
 	// grants nothing until someone deliberately marks it where it is defined.
-	// tools/list serves only the name, description and input schema, so the
-	// flag never reaches the wire.
+	// tools/list serves it as the readOnlyHint annotation.
 	ReadOnly bool
+	// Destructive marks a writer that changes or removes what is already there,
+	// rather than only adding something new; tools/list serves it as the
+	// destructiveHint annotation, so a client asks before calling it. A
+	// read-only tool never sets it.
+	Destructive bool
+}
+
+// toolTitle is a tool's human-readable name, as tools/list serves it: the
+// snake_case name as words, "get_vv_gaps" becoming "Get V&V gaps".
+func toolTitle(name string) string {
+	words := strings.Split(name, "_")
+	for i, w := range words {
+		if w == "vv" {
+			words[i] = "V&V"
+		}
+	}
+	title := strings.Join(words, " ")
+	if title == "" {
+		return title
+	}
+	return strings.ToUpper(title[:1]) + title[1:]
+}
+
+// toolListEntry is one tool as tools/list advertises it: the name, title,
+// description and input schema, and the annotations a client reads to tell
+// the readers from the writers and the writers that delete.
+func toolListEntry(t Tool) map[string]interface{} {
+	title := toolTitle(t.Name)
+	return map[string]interface{}{
+		"name":        t.Name,
+		"title":       title,
+		"description": t.Description,
+		"inputSchema": t.InputSchema,
+		"annotations": map[string]interface{}{
+			"title":           title,
+			"readOnlyHint":    t.ReadOnly,
+			"destructiveHint": !t.ReadOnly && t.Destructive,
+			"openWorldHint":   false,
+		},
+	}
 }
 
 // ServerTools is toolnames.ServerTools, the server-wide allowlist spelling

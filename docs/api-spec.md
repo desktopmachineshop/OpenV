@@ -156,11 +156,12 @@ names such a key in its boot log, never printing it.
 ### 5. Connected apps — the remote MCP endpoint and its OAuth
 
 A member attaches an AI client (Claude, Cursor, any client that speaks MCP's
-Streamable HTTP transport and its authorization profile) to one workspace
-by giving the client the endpoint `${PUBLIC_URL}/mcp` (REQ-44). No runner,
-no binary and no key to copy: the client discovers the authorization server
-from the endpoint's `401`, registers itself, sends the member to approve it,
-and holds a token that acts as that member in that workspace.
+Streamable HTTP transport and its authorization profile) to one or more of
+their workspaces by giving the client the endpoint `${PUBLIC_URL}/mcp`
+(REQ-44). No runner, no binary and no key to copy: the client discovers the
+authorization server from the endpoint's `401`, registers itself, sends the
+member to approve it, and holds a token that acts as that member in those
+workspaces, which the member can change later without connecting again.
 
 - **Where it is.** `PUBLIC_URL` is the issuer and the endpoint's base. On
   a deployment where it names the frontend's origin, as the Railway guide
@@ -182,7 +183,7 @@ and holds a token that acts as that member in that workspace.
   loopback `http` redirect matches a registered one on any port, as RFC 8252
   §7.3 has it, since Claude Code listens on a new port each session), and
   sends the browser to the app's `/connect` page. There the signed-in
-  member chooses the workspace and read only or read and write; the page
+  member chooses the workspaces and read only or read and write; the page
   posts the decision to `POST /api/v1/oauth/consent`, which answers the
   address to send the browser back to, with a code (or `access_denied`),
   `state` and `iss`.
@@ -198,18 +199,24 @@ and holds a token that acts as that member in that workspace.
 - **What the token can do.** Only `/mcp` accepts it: it is not a credential
   for the rest of the API. Each tool call is the tool's REST request sent
   through the server's own router as the member, never a platform admin,
-  with the grant's workspace active and every guard and plan gate applying
-  as they do to the member's own requests; a project or workspace other
-  than the grant's answers as one no row has. A read-only grant is offered
+  with every guard and plan gate applying as they do to the member's own
+  requests; a project or workspace outside the grant's workspaces answers as
+  one no row has. `list_projects` lists the projects of every workspace the
+  grant reaches, each with a `workspace` naming its workspace. A workspace
+  the member has left, or whose channel has not reached `remote-mcp`, is
+  left out; a grant left with none answers `403`. A read-only grant is offered
   only the read-only tools, and its requests are refused anything but a
   `GET`. `delegate_to_agent`, which needs an agent run, is not offered.
 - **The member's list.** `GET /api/v1/me/connected-apps` lists the member's
-  live grants (app, workspace, scope, when made and last used);
+  live grants (app, workspaces, scope, when made and last used);
+  `PUT /api/v1/me/connected-apps/{id}/workspaces` changes the workspaces one
+  reaches, at once and without new tokens;
   `DELETE /api/v1/me/connected-apps/{id}` revokes one, ending its tokens at
   once. A connected app cannot call these, nor the consent.
 - **Release channel.** The feature key `remote-mcp` gates the consent and
-  `/mcp` for a grant's workspace; the metadata, registration and token
-  endpoints act for no workspace and are not gated.
+  `/mcp` for each of a grant's workspaces; `connected-app-workspaces` gates
+  giving a grant more than one, checked on each. The metadata, registration
+  and token endpoints act for no workspace and are not gated.
 
 | Method | Path | Description | Auth |
 |---|---|---|---|
@@ -221,8 +228,9 @@ and holds a token that acts as that member in that workspace.
 | POST | `/oauth/token` | Form `grant_type=authorization_code` with `code`, `client_id`, `redirect_uri`, `code_verifier`; or `grant_type=refresh_token` with `refresh_token`, `client_id` → `{access_token, token_type: "Bearer", expires_in: 3600, refresh_token, scope}`; `400` `invalid_grant`, `invalid_request` or `unsupported_grant_type`; `401` `invalid_client` for a client no longer registered; `429` per client | open |
 | POST | `/oauth/revoke` | Form `token`, `client_id`: ends that token's pair → `200`, whether or not it existed | open |
 | GET | `/api/v1/oauth/consent` | `?client_id=&redirect_uri=` → `{client_id, client_name, redirect_host}` for the consent page; `400` for an unknown client or a redirect URI it did not register | user |
-| POST | `/api/v1/oauth/consent` | `{client_id, redirect_uri, code_challenge, code_challenge_method, state, scope, org_id, approve}` → `{redirect_to}`: the client's redirect URI with `code` (approved) or `error=access_denied`, and `state` and `iss`. Approving needs membership of `org_id` and `remote-mcp` on (`403` otherwise); a workspace over its plan may be chosen | user, org member |
-| GET | `/api/v1/me/connected-apps` | The member's connected apps, newest first: `[{id, user_id, org_id, org_name, client_id, client_name, scope, created_at, last_used_at?}]` | user |
+| POST | `/api/v1/oauth/consent` | `{client_id, redirect_uri, code_challenge, code_challenge_method, state, scope, org_ids, approve}` → `{redirect_to}`: the client's redirect URI with `code` (approved) or `error=access_denied`, and `state` and `iss`. `org_ids` are the workspaces chosen, 1 to 50 (`400` otherwise); `org_id`, one, is still read when `org_ids` is absent. Approving needs membership of each and `remote-mcp` on each, and `connected-app-workspaces` on each when there is more than one (`403` otherwise); a workspace over its plan may be chosen | user, org member |
+| GET | `/api/v1/me/connected-apps` | The member's connected apps, newest first: `[{id, user_id, org_id, org_name, workspaces: [{org_id, org_name}], client_id, client_name, scope, created_at, last_used_at?}]`. `workspaces` is what the app reaches; `org_id` is the workspace it was first connected to | user |
+| PUT | `/api/v1/me/connected-apps/{id}/workspaces` | `{org_ids}` → the grant, now reaching those workspaces (1 to 50; `400` for none: disconnecting is how to reach none). Each needs membership, `remote-mcp` on, and `connected-app-workspaces` on when there is more than one (`403` otherwise); another member's or an unknown id `404` | user, org member |
 | DELETE | `/api/v1/me/connected-apps/{id}` | Revoke one → `204`; another member's or an unknown id `404` | user |
 | POST | `/mcp` | One JSON-RPC message or a batch → `200` JSON (`202` for notifications only): `initialize` (revisions `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`. Bearer access token; `401` with the challenge above; `403` when `remote-mcp` is off for the grant's workspace or its member has left it; `400` for an unsupported `MCP-Protocol-Version` on anything but `initialize` | access token |
 | GET, DELETE | `/mcp` | `405`, `Allow: POST`: no server-initiated stream and no session | open |

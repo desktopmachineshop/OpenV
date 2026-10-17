@@ -26,6 +26,29 @@ func (h *Handler) registerConnectedAppRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/oauth/consent", h.alwaysWritable(h.DecideOAuthConsent)).Methods("POST")
 	router.HandleFunc("/api/v1/me/connected-apps", h.ListConnectedApps).Methods("GET")
 	router.HandleFunc("/api/v1/me/connected-apps/{id}", h.alwaysWritable(h.RevokeConnectedApp)).Methods("DELETE")
+	router.HandleFunc("/api/v1/me/connected-apps/{id}/workspaces", h.alwaysWritable(h.SetConnectedAppWorkspaces)).Methods("PUT")
+}
+
+// grantableWorkspaces checks the workspaces a member is giving a connected
+// app: they are a member of each, each has reached connected apps on its
+// channel, and, beyond the first, each has reached connected apps with
+// more than one workspace. It answers and reports false on the first that
+// fails.
+func (h *Handler) grantableWorkspaces(w http.ResponseWriter, r *http.Request, orgIDs []string) bool {
+	for _, orgID := range orgIDs {
+		if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
+			return false
+		}
+		if !h.featureEnabled(r, orgID, release.FeatureRemoteMCP) {
+			writeJSONError(w, http.StatusForbidden, "connecting an AI app is not yet available on this workspace's release channel")
+			return false
+		}
+		if len(orgIDs) > 1 && !h.featureEnabled(r, orgID, release.FeatureConnectedAppWorkspaces) {
+			writeJSONError(w, http.StatusForbidden, "giving an AI app more than one workspace is not yet available on this workspace's release channel")
+			return false
+		}
+	}
+	return true
 }
 
 // inPersonRefused refuses a connected app, which may not manage connected
@@ -101,8 +124,11 @@ func (h *Handler) DecideOAuthConsent(w http.ResponseWriter, r *http.Request) {
 		CodeChallengeMethod string `json:"code_challenge_method"`
 		State               string `json:"state"`
 		Scope               string `json:"scope"`
-		OrgID               string `json:"org_id"`
-		Approve             bool   `json:"approve"`
+		// OrgIDs are the workspaces the member chose; OrgID, one, is what
+		// the page sent before more than one could be chosen.
+		OrgIDs  []string `json:"org_ids"`
+		OrgID   string   `json:"org_id"`
+		Approve bool     `json:"approve"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -124,14 +150,19 @@ func (h *Handler) DecideOAuthConsent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "the app must use PKCE with S256; start the connection again from the app")
 		return
 	}
-	if !h.requireOrgRole(w, r, req.OrgID, orgs.RoleMember) {
+	orgIDs := req.OrgIDs
+	if len(orgIDs) == 0 && req.OrgID != "" {
+		orgIDs = []string{req.OrgID}
+	}
+	orgIDs, err := connectedapps.NormalizeWorkspaces(orgIDs)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "choose at least one workspace for the app, and no more than 50")
 		return
 	}
-	if !h.featureEnabled(r, req.OrgID, release.FeatureRemoteMCP) {
-		writeJSONError(w, http.StatusForbidden, "connecting an AI app is not yet available on this workspace's release channel")
+	if !h.grantableWorkspaces(w, r, orgIDs) {
 		return
 	}
-	code, err := h.ConnectedApps.Approve(userID, req.OrgID, req.ClientID, req.RedirectURI, req.CodeChallenge, req.Scope)
+	code, err := h.ConnectedApps.Approve(userID, orgIDs, req.ClientID, req.RedirectURI, req.CodeChallenge, req.Scope)
 	switch {
 	case errors.Is(err, connectedapps.ErrInvalidScope):
 		writeJSONError(w, http.StatusBadRequest, "the scope is openv:read, or openv:read and openv:write")
@@ -183,4 +214,41 @@ func (h *Handler) RevokeConnectedApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// SetConnectedAppWorkspaces changes the workspaces one of the member's
+// connected apps reaches, without connecting it again: the app's next call
+// reaches the new set, and a workspace taken out is out at once.
+func (h *Handler) SetConnectedAppWorkspaces(w http.ResponseWriter, r *http.Request) {
+	if h.inPersonRefused(w, r) {
+		return
+	}
+	userID, ok := h.requireHumanUser(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		OrgIDs []string `json:"org_ids"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	orgIDs, err := connectedapps.NormalizeWorkspaces(req.OrgIDs)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "choose at least one workspace for the app, and no more than 50; to stop it reaching any, disconnect it")
+		return
+	}
+	if !h.grantableWorkspaces(w, r, orgIDs) {
+		return
+	}
+	g, err := h.ConnectedApps.SetWorkspacesForUser(userID, mux.Vars(r)["id"], orgIDs)
+	if errors.Is(err, connectedapps.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "connected app not found")
+		return
+	}
+	if err != nil {
+		respondInternal(w, r, "failed to change the connected app's workspaces", err)
+		return
+	}
+	writeJSONOK(w, g)
 }

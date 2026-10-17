@@ -35,3 +35,9 @@ export const WORKSPACE_AUTOMATIONS_FEATURE: FeatureKey = 'workspace-automations'
  * remote MCP endpoint, the consent page, and the list in your settings.
  */
 export const REMOTE_MCP_FEATURE: FeatureKey = 'remote-mcp';
+
+/**
+ * One connected app reaching more than one workspace: several chosen on the
+ * consent page, and changed later under Connected apps.
+ */
+export const CONNECTED_APP_WORKSPACES_FEATURE: FeatureKey = 'connected-app-workspaces';

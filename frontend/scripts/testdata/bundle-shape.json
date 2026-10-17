@@ -27,6 +27,7 @@
     "src/site/Faq.tsx": "dynamic entry",
     "src/site/HowItWorks.tsx": "dynamic entry",
     "src/site/OpenSourceProjects.tsx": "dynamic entry",
+    "src/site/Privacy.tsx": "dynamic entry",
     "src/site/TopicPage.tsx": "dynamic entry",
     "src/site/WhitePapers.tsx": "dynamic entry",
     "src/views/ActivityLog.tsx": "dynamic entry",

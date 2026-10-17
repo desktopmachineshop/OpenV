@@ -4,7 +4,7 @@
 isOpenPath exact: /health, /metrics, /mcp
 isOpenPath prefixes: /api/v1/auth/, /api/v1/public/, /.well-known/oauth-, /oauth/
 401 interceptor exempts calls under: /api/v1/auth/
-PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /changelog, /compare, /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /glossary, /security
+PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /changelog, /compare, /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /ai-connector, /privacy, /glossary, /security
 
 ## Routes (example URL, :param as x)
   public   /login
@@ -20,6 +20,7 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   public   /demos
   public   /faq
   public   /security
+  public   /privacy
   public   /open-source
   public   /customers
   public   /white-papers
@@ -36,6 +37,7 @@ PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-pa
   public   /reqif
   public   /self-hosted-requirements-management
   public   /safety-critical
+  public   /ai-connector
   public   /glossary
   session  /projects
   session  /org/settings
@@ -86,7 +88,9 @@ site/HowItWorks.tsx  <- /how-it-works
   (no API calls)
 site/OpenSourceProjects.tsx  <- /open-source
   open   GET    /api/v1/public/open-source/projects              openSourceAPI.list
-site/TopicPage.tsx  <- /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /glossary
+site/Privacy.tsx  <- /privacy
+  (no API calls)
+site/TopicPage.tsx  <- /requirements-traceability, /verification-evidence, /baselines-and-audit-trail, /reqif, /self-hosted-requirements-management, /safety-critical, /ai-connector, /glossary
   (no API calls)
 site/WhitePapers.tsx  <- /white-papers
   (no API calls)

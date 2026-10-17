@@ -18,16 +18,26 @@ export interface OAuthConsentDecision {
   state: string;
   /** 'openv:read', or 'openv:read openv:write'. */
   scope: string;
-  org_id: string;
+  /** The workspaces the member chose for the app. */
+  org_ids: string[];
   approve: boolean;
+}
+
+/** A workspace a connected app reaches. */
+export interface ConnectedAppWorkspace {
+  org_id: string;
+  org_name: string;
 }
 
 /** One of the member's connected apps. */
 export interface ConnectedApp {
   id: string;
   user_id: string;
+  /** The workspace the app was first connected to; see workspaces for what it reaches. */
   org_id: string;
   org_name: string;
+  /** Every workspace the app reaches. */
+  workspaces: ConnectedAppWorkspace[];
   client_id: string;
   client_name: string;
   scope: string;

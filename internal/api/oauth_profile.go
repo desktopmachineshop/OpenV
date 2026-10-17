@@ -43,15 +43,15 @@ func oauthRedirect(redirectURI string, params map[string]string) string {
 }
 
 // scopedUser is the signed-in user a project or workspace guard decides
-// for, as requireUserMsg answers it, held to the one workspace a connected
-// app's grant names: a project or workspace of another is, to the app, one
-// no row has. org is asked only for a connected app.
+// for, as requireUserMsg answers it, held to the workspaces a connected
+// app's grant reaches: a project or workspace of another is, to the app,
+// one no row has. org is asked only for a connected app.
 func (h *Handler) scopedUser(w http.ResponseWriter, r *http.Request, org func() string, absent notFound) *users.User {
 	user := requireUserMsg(w, r, "authentication required", http.StatusUnauthorized)
 	if user == nil {
 		return nil
 	}
-	if app := ConnectedApp(r); app != nil && org() != app.OrgID {
+	if app := ConnectedApp(r); app != nil && !app.Allows(org()) {
 		absent.write(w)
 		return nil
 	}

@@ -5,9 +5,11 @@
 // tokens and rotating refresh tokens.
 //
 // A client registers itself and holds no secret. A member's consent is a
-// grant: one client, one workspace, read only or read and write. Every token
-// belongs to a grant, so revoking the grant ends every token the client
-// holds. Only hashes of codes and tokens are stored.
+// grant: one client, the workspaces the member chose, read only or read and
+// write. The member may change those workspaces later without connecting
+// again, since a client such as Claude holds one connection per server.
+// Every token belongs to a grant, so revoking the grant ends every token the
+// client holds. Only hashes of codes and tokens are stored.
 package connectedapps
 
 import (
@@ -74,7 +76,13 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 	// ErrNotFound: no grant of the caller's has the id.
 	ErrNotFound = errors.New("connected app not found")
+	// ErrNoWorkspace: a grant must reach at least one workspace, and at most
+	// MaxWorkspaces.
+	ErrNoWorkspace = errors.New("choose at least one workspace")
 )
+
+// MaxWorkspaces bounds the workspaces one grant reaches.
+const MaxWorkspaces = 50
 
 // Client is a registered AI client. It has no secret: a public client
 // proves itself with PKCE on every authorization.
@@ -85,23 +93,51 @@ type Client struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// Grant is a member's consent: client ClientID may act as UserID in
-// workspace OrgID with Scope.
+// Grant is a member's consent: client ClientID may act as UserID in each of
+// Workspaces with Scope. OrgID is the workspace the grant was first made
+// for, its key; it is one of Workspaces only while the member keeps it
+// there.
 type Grant struct {
-	ID         string     `json:"id"`
-	UserID     string     `json:"user_id"`
-	OrgID      string     `json:"org_id"`
-	OrgName    string     `json:"org_name,omitempty"`
-	ClientID   string     `json:"client_id"`
-	ClientName string     `json:"client_name"`
-	Scope      string     `json:"scope"`
-	CreatedAt  time.Time  `json:"created_at"`
-	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
-	RevokedAt  *time.Time `json:"-"`
+	ID         string      `json:"id"`
+	UserID     string      `json:"user_id"`
+	OrgID      string      `json:"org_id"`
+	OrgName    string      `json:"org_name,omitempty"`
+	Workspaces []Workspace `json:"workspaces"`
+	ClientID   string      `json:"client_id"`
+	ClientName string      `json:"client_name"`
+	Scope      string      `json:"scope"`
+	CreatedAt  time.Time   `json:"created_at"`
+	LastUsedAt *time.Time  `json:"last_used_at,omitempty"`
+	RevokedAt  *time.Time  `json:"-"`
+}
+
+// Workspace is one workspace a grant reaches.
+type Workspace struct {
+	ID   string `json:"org_id"`
+	Name string `json:"org_name"`
 }
 
 // CanWrite reports whether the grant allows tools that change the project.
 func (g *Grant) CanWrite() bool { return hasScope(g.Scope, ScopeWrite) }
+
+// Allows reports whether the grant reaches workspace orgID.
+func (g *Grant) Allows(orgID string) bool {
+	for _, w := range g.Workspaces {
+		if w.ID == orgID {
+			return true
+		}
+	}
+	return false
+}
+
+// OrgIDs is the ids of the workspaces the grant reaches, in its order.
+func (g *Grant) OrgIDs() []string {
+	ids := make([]string, len(g.Workspaces))
+	for i, w := range g.Workspaces {
+		ids[i] = w.ID
+	}
+	return ids
+}
 
 // Code is a stored authorization code: its hash, the grant it was issued
 // for, and what the token request must repeat.
@@ -139,9 +175,12 @@ type Repository interface {
 	CreateClient(c *Client) error
 	// GetClient returns nil, nil when no client has the id.
 	GetClient(id string) (*Client, error)
-	// SaveGrant records consent: the member's live grant for this client in
-	// this workspace takes the scope, or a new grant is made.
-	SaveGrant(userID, orgID, clientID, scope string, now time.Time) (*Grant, error)
+	// SaveGrant records consent: the member's live grant for this client
+	// keyed on the first of orgIDs takes the scope and reaches orgIDs, or a
+	// new grant is made.
+	SaveGrant(userID string, orgIDs []string, clientID, scope string, now time.Time) (*Grant, error)
+	// SetWorkspaces makes the live grant reach orgIDs and nothing else.
+	SetWorkspaces(grantID string, orgIDs []string, now time.Time) error
 	// GetGrant returns a live grant, nil, nil when none (revoked included).
 	GetGrant(id string) (*Grant, error)
 	// ListGrants returns the member's live grants, newest first, with the
@@ -170,15 +209,18 @@ type Service interface {
 	// Authorizing checks an authorization request before the member is
 	// asked: the client exists and the redirect URI is its own.
 	Authorizing(clientID, redirectURI string) (*Client, error)
-	// Approve records the member's consent and returns a code for the
-	// client's redirect.
-	Approve(userID, orgID, clientID, redirectURI, codeChallenge, scope string) (string, error)
+	// Approve records the member's consent for the workspaces orgIDs and
+	// returns a code for the client's redirect.
+	Approve(userID string, orgIDs []string, clientID, redirectURI, codeChallenge, scope string) (string, error)
 	Exchange(code, clientID, redirectURI, verifier string) (*Tokens, error)
 	Refresh(refreshToken, clientID string) (*Tokens, error)
 	Revoke(token, clientID string) error
 	Authenticate(accessToken string) (*Grant, error)
 	List(userID string) ([]Grant, error)
 	RevokeForUser(userID, grantID string) error
+	// SetWorkspacesForUser changes the workspaces one of the member's grants
+	// reaches; the caller has checked the member belongs to each.
+	SetWorkspacesForUser(userID, grantID string, orgIDs []string) (*Grant, error)
 }
 
 // DefaultService implements Service over a Repository.
@@ -324,13 +366,17 @@ func hasScope(scope, want string) bool {
 }
 
 // Approve records consent and mints a code. The caller has checked that
-// userID may act in orgID; the code challenge is the S256 one the client
-// sent.
-func (s *DefaultService) Approve(userID, orgID, clientID, redirectURI, codeChallenge, scope string) (string, error) {
-	if userID == "" || orgID == "" || !validChallenge(codeChallenge) {
+// userID may act in each of orgIDs; the code challenge is the S256 one the
+// client sent.
+func (s *DefaultService) Approve(userID string, orgIDs []string, clientID, redirectURI, codeChallenge, scope string) (string, error) {
+	if userID == "" || !validChallenge(codeChallenge) {
 		return "", ErrInvalidRequest
 	}
-	scope, err := NormalizeScope(scope)
+	orgIDs, err := NormalizeWorkspaces(orgIDs)
+	if err != nil {
+		return "", err
+	}
+	scope, err = NormalizeScope(scope)
 	if err != nil {
 		return "", err
 	}
@@ -338,7 +384,7 @@ func (s *DefaultService) Approve(userID, orgID, clientID, redirectURI, codeChall
 		return "", err
 	}
 	now := s.now().UTC()
-	g, err := s.repo.SaveGrant(userID, orgID, clientID, scope, now)
+	g, err := s.repo.SaveGrant(userID, orgIDs, clientID, scope, now)
 	if err != nil {
 		return "", err
 	}
@@ -358,6 +404,26 @@ func (s *DefaultService) Approve(userID, orgID, clientID, redirectURI, codeChall
 		return "", err
 	}
 	return code, nil
+}
+
+// NormalizeWorkspaces turns the workspaces a member chose into what a grant
+// holds: each id once, in the order given, at least one and at most
+// MaxWorkspaces.
+func NormalizeWorkspaces(orgIDs []string) ([]string, error) {
+	seen := make(map[string]bool, len(orgIDs))
+	out := make([]string, 0, len(orgIDs))
+	for _, id := range orgIDs {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	if len(out) == 0 || len(out) > MaxWorkspaces {
+		return nil, ErrNoWorkspace
+	}
+	return out, nil
 }
 
 // validChallenge holds for an S256 challenge: 43 characters of base64url.
@@ -510,4 +576,28 @@ func (s *DefaultService) RevokeForUser(userID, grantID string) error {
 		return ErrNotFound
 	}
 	return s.repo.RevokeGrant(grantID, s.now().UTC())
+}
+
+// SetWorkspacesForUser changes the workspaces one of the member's grants
+// reaches. Its tokens stay valid: the next call the app makes reaches the
+// new set, and a workspace taken out is out at once.
+func (s *DefaultService) SetWorkspacesForUser(userID, grantID string, orgIDs []string) (*Grant, error) {
+	if _, err := uuid.Parse(grantID); err != nil {
+		return nil, ErrNotFound
+	}
+	orgIDs, err := NormalizeWorkspaces(orgIDs)
+	if err != nil {
+		return nil, err
+	}
+	g, err := s.repo.GetGrant(grantID)
+	if err != nil {
+		return nil, err
+	}
+	if g == nil || g.UserID != userID {
+		return nil, ErrNotFound
+	}
+	if err := s.repo.SetWorkspaces(grantID, orgIDs, s.now().UTC()); err != nil {
+		return nil, err
+	}
+	return s.repo.GetGrant(grantID)
 }

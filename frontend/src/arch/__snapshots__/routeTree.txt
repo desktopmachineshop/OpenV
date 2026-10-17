@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 63
-  rendering a lazy() component: 40
+<Route> elements: 65
+  rendering a lazy() component: 42
   rendering an eagerly imported component: 18
   redirects only: 5
 index routes: 1
@@ -46,6 +46,7 @@ index routes: 1
   HowItWorks          ./site/HowItWorks#HowItWorks
   Demos               ./site/Demos#Demos
   Faq                 ./site/Faq#Faq
+  Privacy             ./site/Privacy#Privacy
   OpenSourceProjects  ./site/OpenSourceProjects#OpenSourceProjects
   Customers           ./site/Customers#Customers
   WhitePapers         ./site/WhitePapers#WhitePapers
@@ -70,6 +71,7 @@ index routes: 1
   /demos                                <Demos>  [lazy ./site/Demos#Demos]
   /faq                                  <Faq>  [lazy ./site/Faq#Faq]
   /security                             redirect to="/faq#security" replace
+  /privacy                              <Privacy>  [lazy ./site/Privacy#Privacy]
   /open-source                          <OpenSourceProjects>  [lazy ./site/OpenSourceProjects#OpenSourceProjects]
   /customers                            <Customers>  [lazy ./site/Customers#Customers]
   /white-papers                         <WhitePapers>  [lazy ./site/WhitePapers#WhitePapers]
@@ -86,6 +88,7 @@ index routes: 1
   /reqif                                <TopicPage path="/reqif">  [lazy ./site/TopicPage#TopicPage]
   /self-hosted-requirements-management  <TopicPage path="/self-hosted-requirements-management">  [lazy ./site/TopicPage#TopicPage]
   /safety-critical                      <TopicPage path="/safety-critical">  [lazy ./site/TopicPage#TopicPage]
+  /ai-connector                         <TopicPage path="/ai-connector">  [lazy ./site/TopicPage#TopicPage]
   /glossary                             <TopicPage path="/glossary">  [lazy ./site/TopicPage#TopicPage]
   *                                     redirect to="/verify-email" replace  when walled
   /projects                             <ProjectList>  [eager ./components/ProjectList#ProjectList]  when !walled
@@ -135,6 +138,7 @@ index routes: 1
   /demos
   /faq
   /security
+  /privacy
   /open-source
   /customers
   /white-papers
@@ -151,6 +155,7 @@ index routes: 1
   /reqif
   /self-hosted-requirements-management
   /safety-critical
+  /ai-connector
   /glossary
   /*                                                  when walled
   /projects                                           when !walled

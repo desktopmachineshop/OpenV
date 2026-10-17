@@ -40,6 +40,7 @@ export const FEATURE_KEYS = [
   'auto-cloud-runner',
   'claude-subscription-token',
   'cloud-runner-token',
+  'connected-app-workspaces',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

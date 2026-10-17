@@ -348,6 +348,7 @@ PUT /api/v1/guided-sessions/{id}/step: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/interviews/{id}/persona: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a
 PUT /api/v1/links/{id}/confirm: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/me/connected-apps/{id}/workspaces: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/password: s5c, s5e; 2xx or 3xx in s5c
@@ -376,4 +377,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 365 of 365 routes reached (100.0%), 356 with a 2xx or 3xx answer (97.5%); the floor is 90%, 329 routes
+the tour: 366 of 366 routes reached (100.0%), 357 with a 2xx or 3xx answer (97.5%); the floor is 90%, 330 routes

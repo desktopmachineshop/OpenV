@@ -26,6 +26,7 @@ automations scope org_id,project_id deleted
 baselines scope project_id cascade from projects
 boot_tasks scope - not reached
 chatter scope artifact_id deleted
+connected_app_workspaces scope org_id cascade from connected_apps,organizations
 connected_apps scope org_id cascade from organizations
 connector_pairings scope org_id cascade from organizations
 domain_events scope org_id,project_id deleted

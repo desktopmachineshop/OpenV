@@ -28,16 +28,24 @@ func (m *memRepo) CreateClient(c *Client) error { m.clients[c.ID] = c; return ni
 func (m *memRepo) GetClient(id string) (*Client, error) {
 	return m.clients[id], nil
 }
-func (m *memRepo) SaveGrant(userID, orgID, clientID, scope string, now time.Time) (*Grant, error) {
+func (m *memRepo) SaveGrant(userID string, orgIDs []string, clientID, scope string, now time.Time) (*Grant, error) {
 	for _, g := range m.grants {
-		if g.RevokedAt == nil && g.UserID == userID && g.OrgID == orgID && g.ClientID == clientID {
+		if g.RevokedAt == nil && g.UserID == userID && g.OrgID == orgIDs[0] && g.ClientID == clientID {
 			g.Scope = scope
-			return g, nil
+			return g, m.SetWorkspaces(g.ID, orgIDs, now)
 		}
 	}
-	g := &Grant{ID: uuid.NewString(), UserID: userID, OrgID: orgID, ClientID: clientID, ClientName: m.clients[clientID].Name, Scope: scope, CreatedAt: now}
+	g := &Grant{ID: uuid.NewString(), UserID: userID, OrgID: orgIDs[0], ClientID: clientID, ClientName: m.clients[clientID].Name, Scope: scope, CreatedAt: now}
 	m.grants[g.ID] = g
-	return g, nil
+	return g, m.SetWorkspaces(g.ID, orgIDs, now)
+}
+func (m *memRepo) SetWorkspaces(grantID string, orgIDs []string, now time.Time) error {
+	g := m.grants[grantID]
+	g.Workspaces = nil
+	for _, id := range orgIDs {
+		g.Workspaces = append(g.Workspaces, Workspace{ID: id, Name: id})
+	}
+	return nil
 }
 func (m *memRepo) GetGrant(id string) (*Grant, error) {
 	g := m.grants[id]
@@ -122,7 +130,7 @@ func fixture(t *testing.T) (*DefaultService, *memRepo, *Client, *time.Time) {
 
 func approve(t *testing.T, s *DefaultService, c *Client, scope string) string {
 	t.Helper()
-	code, err := s.Approve("user-1", "org-1", c.ID, c.RedirectURIs[0], S256(verifier), scope)
+	code, err := s.Approve("user-1", []string{"org-1"}, c.ID, c.RedirectURIs[0], S256(verifier), scope)
 	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
@@ -289,7 +297,7 @@ func TestACodeIsBoundToItsClientRedirectAndLifetime(t *testing.T) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
-	if _, err := s.Approve("user-1", "org-1", c.ID, c.RedirectURIs[0], "plain-challenge", ""); !errors.Is(err, ErrInvalidRequest) {
+	if _, err := s.Approve("user-1", []string{"org-1"}, c.ID, c.RedirectURIs[0], "plain-challenge", ""); !errors.Is(err, ErrInvalidRequest) {
 		t.Errorf("a challenge that is not S256: %v", err)
 	}
 }
@@ -371,5 +379,53 @@ func TestRevokeEndsATokenPairAndIgnoresTheUnknown(t *testing.T) {
 	}
 	if _, err := s.Authenticate("Bearer-ish"); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("a token without the prefix: %v", err)
+	}
+}
+
+func TestGrantWorkspaces(t *testing.T) {
+	s := NewService(newMemRepo())
+	c, err := s.Register("Claude", []string{"https://claude.ai/api/mcp/auth_callback"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := strings.Repeat("v", 43)
+	if _, err := s.Approve("user-1", nil, c.ID, c.RedirectURIs[0], S256(verifier), ""); !errors.Is(err, ErrNoWorkspace) {
+		t.Fatalf("approve with no workspace: %v, want ErrNoWorkspace", err)
+	}
+	code, err := s.Approve("user-1", []string{"org-1", " org-2 ", "org-1"}, c.ID, c.RedirectURIs[0], S256(verifier), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, err := s.Exchange(code, c.ID, c.RedirectURIs[0], verifier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := s.Authenticate(tok.AccessToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(g.OrgIDs(), ","); got != "org-1,org-2" {
+		t.Fatalf("workspaces after consent = %s, want org-1,org-2 (deduplicated, trimmed, in order)", got)
+	}
+	if !g.Allows("org-2") || g.Allows("org-3") {
+		t.Fatalf("Allows: org-2 %v, org-3 %v; want true, false", g.Allows("org-2"), g.Allows("org-3"))
+	}
+
+	// Changed later: the same token reaches the new set at once.
+	if _, err := s.SetWorkspacesForUser("user-2", g.ID, []string{"org-3"}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("another member changing the grant: %v, want ErrNotFound", err)
+	}
+	if _, err := s.SetWorkspacesForUser("user-1", g.ID, []string{}); !errors.Is(err, ErrNoWorkspace) {
+		t.Fatalf("emptying the grant: %v, want ErrNoWorkspace", err)
+	}
+	if _, err := s.SetWorkspacesForUser("user-1", g.ID, []string{"org-2", "org-3"}); err != nil {
+		t.Fatal(err)
+	}
+	g, err = s.Authenticate(tok.AccessToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.Allows("org-1") || !g.Allows("org-3") {
+		t.Fatalf("after the change: org-1 %v, org-3 %v; want false, true", g.Allows("org-1"), g.Allows("org-3"))
 	}
 }

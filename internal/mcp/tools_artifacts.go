@@ -234,6 +234,7 @@ func artifactUpdateTools() []Tool {
 		{
 			Name:        "update_artifact",
 			Description: "Update an artifact. Omitted optional fields are left unchanged. A 202 response means the change was diverted to a proposal pending human review.",
+			Destructive: true,
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id":         str("Artifact ID"),
 				"type":       str("Optional artifact type (omit to keep current)"),

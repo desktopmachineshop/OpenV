@@ -30,6 +30,8 @@ const PUBLIC_SEGMENTS = [
   '/reqif',
   '/self-hosted-requirements-management',
   '/safety-critical',
+  '/ai-connector',
+  '/privacy',
   '/glossary',
   '/security',
 ];
