@@ -2,6 +2,26 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.22.0",
+   "date": "2026-10-17",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**One connected AI app can work in several of your workspaces.** When you connect Claude or another AI app to OpenV, tick every workspace it may use, and its project list covers them all, each project labelled with its workspace. Change them later from Settings → Connected apps → Workspaces, with no need to connect the app again: a workspace you untick is out of its reach at once."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Claude and other AI apps now see which OpenV tools only read.** Each tool tells a connected app its name in plain words and whether it only reads, adds to your project, or changes or deletes what is already there, so the app can ask you before it edits an artifact or deletes a link.",
+      "**openv.app now has a privacy policy and a guide to connecting Claude.** The privacy policy at /privacy says what the hosted service collects, who it is shared with and how long it is kept; the guide at /ai-connector shows how to add OpenV to Claude or another AI app, what to ask it, and how to disconnect it. Both are linked from the site footer."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.21.6",
    "date": "2026-10-17",
    "stableSince": "",

@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.22.0 — 2026-10-17
+
 ### New features
 
 - **One connected AI app can work in several of your workspaces.** When
