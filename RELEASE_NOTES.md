@@ -20,14 +20,6 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
-- **Modules can add screens to your OpenV.** A module linked into your
-  build can add its own workspace settings tab, platform admin section or
-  start-up step, shown only where its server side says it is on
-  ([`docs/extending.md`](docs/extending.md#the-app-the-frontend-registry)).
-- **openv.app has a public changelog.** Every release, newest first, with
-  the same notes What's new shows you, is at openv.app/changelog for
-  anyone evaluating OpenV, and linked from the site's footer. What's new
-  in the app is unchanged.
 - **Claude and other AI apps now see which OpenV tools only read.** Each
   tool tells a connected app its name in plain words and whether it only
   reads, adds to your project, or changes or deletes what is already
@@ -38,6 +30,24 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   it is shared with and how long it is kept; the guide at /ai-connector
   shows how to add OpenV to Claude or another AI app, what to ask it, and
   how to disconnect it. Both are linked from the site footer.
+
+## 0.21.6 — 2026-10-17
+
+### Maintenance updates
+
+- **openv.app compares OpenV with other requirements tools.** A page at
+  openv.app/compare sets hosted OpenV beside DOORS Next, Jama Connect,
+  Polarion, ReqView and Jira, with a page for each that says when the
+  other tool is the better choice and links every statement about it to
+  the vendor's own page.
+- **Modules can add screens to your OpenV.** A module linked into your
+  build can add its own workspace settings tab, platform admin section or
+  start-up step, shown only where its server side says it is on
+  ([`docs/extending.md`](docs/extending.md#the-app-the-frontend-registry)).
+- **openv.app has a public changelog.** Every release, newest first, with
+  the same notes What's new shows you, is at openv.app/changelog for
+  anyone evaluating OpenV, and linked from the site's footer. What's new
+  in the app is unchanged.
 
 ## 0.21.5 — 2026-10-16
 

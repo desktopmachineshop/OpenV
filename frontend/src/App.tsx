@@ -88,6 +88,9 @@ const OpenSourceProjects = lazy(() =>
 const Customers = lazy(() => import('./site/Customers').then((m) => ({ default: m.Customers })));
 const WhitePapers = lazy(() => import('./site/WhitePapers').then((m) => ({ default: m.WhitePapers })));
 const Changelog = lazy(() => import('./site/Changelog').then((m) => ({ default: m.Changelog })));
+// The comparison hub, and one lazy layout for every comparison; copy is data in site/compare.
+const CompareHub = lazy(() => import('./site/CompareHub').then((m) => ({ default: m.CompareHub })));
+const ComparePage = lazy(() => import('./site/ComparePage').then((m) => ({ default: m.ComparePage })));
 // One lazy layout for every topic page; its copy is data in site/topics.
 const TopicPage = lazy(() => import('./site/TopicPage').then((m) => ({ default: m.TopicPage })));
 const SharedProjectView = lazy(() =>
@@ -291,6 +294,12 @@ function App() {
         <Route path="/customers" element={<Customers />} />
         <Route path="/white-papers" element={<WhitePapers />} />
         <Route path="/changelog" element={<Changelog />} />
+        <Route path="/compare" element={<CompareHub />} />
+        <Route path="/compare/doors" element={<ComparePage path="/compare/doors" />} />
+        <Route path="/compare/jama" element={<ComparePage path="/compare/jama" />} />
+        <Route path="/compare/polarion" element={<ComparePage path="/compare/polarion" />} />
+        <Route path="/compare/reqview" element={<ComparePage path="/compare/reqview" />} />
+        <Route path="/compare/jira" element={<ComparePage path="/compare/jira" />} />
         <Route path="/requirements-traceability" element={<TopicPage path="/requirements-traceability" />} />
         <Route path="/verification-evidence" element={<TopicPage path="/verification-evidence" />} />
         <Route path="/baselines-and-audit-trail" element={<TopicPage path="/baselines-and-audit-trail" />} />

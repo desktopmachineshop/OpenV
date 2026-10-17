@@ -20,6 +20,8 @@
     "src/components/admin/VisitorDashboard.tsx": "dynamic entry",
     "src/components/org/OrgBillingTab.tsx": "dynamic entry",
     "src/site/Changelog.tsx": "dynamic entry",
+    "src/site/CompareHub.tsx": "dynamic entry",
+    "src/site/ComparePage.tsx": "dynamic entry",
     "src/site/Customers.tsx": "dynamic entry",
     "src/site/Demos.tsx": "dynamic entry",
     "src/site/Faq.tsx": "dynamic entry",

@@ -282,6 +282,7 @@ export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
               { to: '/pricing', label: 'Pricing' },
               { to: '/faq', label: 'Security and FAQ' },
               { to: '/privacy', label: 'Privacy policy' },
+              { to: '/compare', label: 'Compare tools' },
               { to: '/changelog', label: 'Changelog' },
             ]}
           />

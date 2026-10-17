@@ -23,6 +23,9 @@ import { ManualView } from '../views/ManualView';
 import { FAQ_GROUPS } from './content';
 import { Customers } from './Customers';
 import { Changelog } from './Changelog';
+import { COMPARISONS } from './compare';
+import { CompareHub } from './CompareHub';
+import { ComparePage } from './ComparePage';
 import { DESCRIPTOR, SITE_PAGE_TEXT, SITE_URL_PLACEHOLDER, crawlPages } from './crawl';
 import { Demos } from './Demos';
 import { Faq } from './Faq';
@@ -50,6 +53,8 @@ export const PRERENDER_ROUTES: { path: string; element: JSX.Element }[] = [
   { path: '/customers', element: <Customers /> },
   { path: '/white-papers', element: <WhitePapers /> },
   { path: '/changelog', element: <Changelog /> },
+  { path: '/compare', element: <CompareHub /> },
+  ...COMPARISONS.map((c) => ({ path: c.path, element: <ComparePage path={c.path} /> })),
   { path: '/manual', element: <ManualView /> },
   { path: '/manual/:chapterSlug', element: <ManualView /> },
   ...TOPICS.map((t) => ({ path: t.path, element: <TopicPage path={t.path} /> })),
