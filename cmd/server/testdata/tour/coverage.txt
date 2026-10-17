@@ -348,7 +348,7 @@ PUT /api/v1/guided-sessions/{id}/step: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/interviews/{id}/persona: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a
 PUT /api/v1/links/{id}/confirm: s5a, s5e; 2xx or 3xx in s5a
-PUT /api/v1/me/connected-apps/{id}/workspaces: s5d; 2xx or 3xx in s5d
+PUT /api/v1/me/connected-apps/{id}/workspaces: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/password: s5c, s5e; 2xx or 3xx in s5c

@@ -203,8 +203,8 @@ func connectedAppsTour(tr *tour) {
 	workspaces("give the app the member's other workspace too", `"{{owner.workspace}}","{{other}}"`)
 	mcp("list_projects: the projects of both workspaces, each naming its workspace", writer,
 		connectedAppsCall(12, "list_projects", `{}`))
-	mcp("get_project_map of the other workspace's project: reached now", writer,
-		connectedAppsCall(13, "get_project_map", `{"project_id":"{{project.other}}"}`))
+	mcp("get_vv_gaps of the other workspace's project: reached now", writer,
+		connectedAppsCall(13, "get_vv_gaps", `{"project_id":"{{project.other}}"}`))
 	workspaces("no workspace at all: refused, disconnecting is how to reach none", ``)
 	workspaces("back to the member's own workspace alone", `"{{owner.workspace}}"`)
 	mcp("get_project_map of the other workspace's project once it is taken out: as if it did not exist", writer,
