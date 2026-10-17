@@ -428,19 +428,22 @@ done, Railway builds the API and frontend services from that repository
 openv-hosted's `OPENV_VERSION` names. The runner pool service keeps
 building from this repository.
 
-- **Production** builds openv-hosted's `main`. *Promote to release* still
-  cuts and tags the release here; its last step opens a pull request in
-  openv-hosted setting `OPENV_VERSION` to the new tag, waits for
+- **Production** builds openv-hosted's `release` branch. *Promote to
+  release* still cuts and tags the release here. Its last step opens a pull
+  request into that branch setting `OPENV_VERSION` to the new tag, waits for
   openv-hosted's CI on it and merges it when that passes. That merge is the
   production deploy. If the CI fails, the pull request stays open, the step
   fails and production keeps the previous release. The workflow merges the
   pull request itself because GitHub's auto-merge is not offered for a
   private repository on the free plan.
-- **Staging** builds openv-hosted's `staging` branch. On every merge to
-  `master`, `hosted-staging.yml` resets that branch to openv-hosted's `main`
-  with `OPENV_VERSION` set to the merged commit, so staging runs exactly the
-  commit *Staging smoke* waits for; both images report that OpenV commit
-  (`/build.json` and the API's build).
+- **Staging** builds openv-hosted's `main`. On every merge to `master`,
+  `hosted-staging.yml` commits the merged commit to `main`'s
+  `OPENV_VERSION`, so staging runs exactly the commit *Staging smoke* waits
+  for. Both images report that OpenV commit (`/build.json` and the API's
+  build).
+- **openv-hosted's own changes** (billing, the site) merge to `main` and
+  reach staging there. To ship one, merge `main` into `release` and keep
+  `release`'s `OPENV_VERSION`.
 - Both steps use the **`OPENV_HOSTED_TOKEN`** repository secret: a
   fine-grained token on openv-hosted only. It needs read and write on
   *Contents* and *Pull requests*, plus read on *Actions* and *Commit

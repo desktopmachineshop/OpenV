@@ -190,8 +190,9 @@ jobs:
           echo "Tagged $(git rev-parse --short HEAD) as ${tag}"
           echo "Tagged \`${tag}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
 
-      # openv.app builds from openv-hosted, which pins the OpenV release it
-      # runs (its OPENV_VERSION; docs/railway.md "openv-hosted"). Pointing it
+      # openv.app's production builds openv-hosted's `release` branch, which
+      # pins the OpenV release it runs (its OPENV_VERSION; docs/railway.md
+      # "openv-hosted"). Pointing it
       # at the tag just made is what ships the release there: a pull request
       # this step merges once openv-hosted's CI passes, and Railway deploys
       # the merge. It waits for that CI itself: GitHub's auto-merge is not
@@ -213,7 +214,7 @@ jobs:
           tag="v$(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           branch="openv-${tag}"
           dir="$(mktemp -d)"
-          git clone --quiet --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${HOSTED_REPO}.git" "$dir"
+          git clone --quiet --depth 1 --branch release "https://x-access-token:${GH_TOKEN}@github.com/${HOSTED_REPO}.git" "$dir"
           cd "$dir"
           if [ "$(tr -d ' \n' < OPENV_VERSION)" = "$tag" ]; then
             echo "openv-hosted already runs ${tag}."
@@ -224,7 +225,7 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet -am "Run OpenV ${tag}"
           git push --quiet --force origin "$branch"
-          url=$(gh pr create --repo "$HOSTED_REPO" --base main --head "$branch" \
+          url=$(gh pr create --repo "$HOSTED_REPO" --base release --head "$branch" \
             --title "Run OpenV ${tag}" \
             --body "OpenV's *Promote to release* tagged ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")
           # The checks take a moment to register; gh pr checks fails while

@@ -1,8 +1,9 @@
 # Staging runs openv-hosted's build of the commit just merged here
-# (docs/railway.md "openv-hosted"): Railway's staging services build the
-# openv-hosted branch `staging`, which this sets to openv-hosted's `main`
-# with OPENV_VERSION pinned to the merged commit. Staging smoke
-# (staging-smoke.yml) then waits for that commit as it always has.
+# (docs/railway.md "openv-hosted"): Railway's staging API builds
+# openv-hosted's `main`, and this sets its OPENV_VERSION to the merged
+# commit. Staging smoke (staging-smoke.yml) then waits for that commit as it
+# always has. Production builds openv-hosted's `release` branch, which only
+# Promote to release moves.
 #
 # Without the OPENV_HOSTED_TOKEN secret (a token that may push to
 # openv-hosted) it does nothing.
@@ -24,24 +25,27 @@ concurrency:
 
 jobs:
   pin:
-    name: Pin openv-hosted staging to this commit
+    name: Pin openv-hosted main to this commit
     runs-on: ubuntu-latest
     steps:
-      - name: Point openv-hosted's staging branch at this commit
+      - name: Point openv-hosted's main at this commit
         env:
           TOKEN: ${{ secrets.OPENV_HOSTED_TOKEN }}
           HOSTED_REPO: desktopmachineshop/openv-hosted
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "OPENV_HOSTED_TOKEN is not set: openv-hosted's staging branch was not moved." >> "$GITHUB_STEP_SUMMARY"
+            echo "OPENV_HOSTED_TOKEN is not set: openv-hosted's main was not pinned." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           dir="$(mktemp -d)"
           git clone --quiet --depth 1 --branch main "https://x-access-token:${TOKEN}@github.com/${HOSTED_REPO}.git" "$dir"
           cd "$dir"
-          git checkout --quiet -B staging
           echo "$GITHUB_SHA" > OPENV_VERSION
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet -am "Staging: OpenV ${GITHUB_SHA}"
-          git push --quiet --force origin staging
-          echo "openv-hosted staging: main with OpenV \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          # A change merged into openv-hosted meanwhile: replay the pin on it.
+          for _ in 1 2 3; do
+            git push --quiet origin HEAD:main && break
+            git pull --quiet --rebase origin main
+          done
+          echo "openv-hosted main: OpenV \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
