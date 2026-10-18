@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Maintain the OpenV requirements project from any machine or agent session.
 
-The live OpenV project (workspace "Desktop Machine Shop", project "OpenV
-Platform" by default) is the source of truth for WHAT the platform must do.
+The live OpenV project (workspace "Desktop Machine Shop", project "OpenV"
+by default) is the source of truth for WHAT the platform must do.
 This tool exists so that keeping it current is a one-command operation from
 any environment with Python 3 — no PowerShell, no extra dependencies.
 
@@ -19,7 +19,8 @@ Configuration (environment variables, overridable by flags):
                     Ignored when OPENV_API_TOKEN is set: the key already
                     names its workspace, and the server scopes every request
                     to it.
-  OPENV_PROJECT     project name          (default: OpenV Platform)
+  OPENV_PROJECT     project name          (default: OpenV; the hosted-only
+                    requirements are in "OpenV - Hosted")
 
 Prefer the token. A password is unscoped and non-revocable without changing
 it everywhere; a runner key reaches only one workspace's projects, cannot
@@ -444,7 +445,7 @@ def main():
     p.add_argument("--email", default=os.environ.get("OPENV_EMAIL"))
     p.add_argument("--password", default=os.environ.get("OPENV_PASSWORD"))
     p.add_argument("--workspace", default=os.environ.get("OPENV_WORKSPACE", "Desktop Machine Shop"))
-    p.add_argument("--project", default=os.environ.get("OPENV_PROJECT", "OpenV Platform"))
+    p.add_argument("--project", default=os.environ.get("OPENV_PROJECT", "OpenV"))
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("register", help="create the account (open registration)")
