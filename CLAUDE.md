@@ -7,7 +7,18 @@ must do:
 
 - **Instance**: https://openv.app (API: https://api.openv.app)
 - **Workspace**: Desktop Machine Shop
-- **Project**: OpenV Platform (requirements, traceability links, V&V evidence)
+- **Project**: OpenV (requirements, traceability links, V&V evidence)
+
+The requirements are split in two projects, as the code is split across
+repositories (`docs/plans/hosted-edition-separation.md`). **OpenV** holds
+what the open-source product does, for every install. **OpenV - Hosted**
+holds what only openv.app adds: billing and plan tiers, per-workspace
+release channels, the community product pool, the open-source showcase,
+visitor analytics and the marketing site. Work on those goes there, and
+links between the two cross projects. Both carry the refs the single
+project had, but each mints new refs from its own counters, so a new ref
+names an artifact only within its project: say which project when citing
+one across the split.
 
 Repository instruction files — this file and `.github/instructions/*.md` —
 define only **how** to work: architecture rules, coding style, process.
@@ -18,8 +29,9 @@ is the historical bootstrap seed, not a live document.
 ## Keeping the requirements project current
 
 Any change that alters what the platform does — a new capability, a changed
-behavior, a dropped feature — must be reflected in the OpenV Platform
-project as part of the same piece of work, not batched for later:
+behavior, a dropped feature — must be reflected in the OpenV project
+(OpenV - Hosted, for a hosted-only change) as part of the same piece of
+work, not batched for later:
 
 - add or update artifacts (requirements, design items, test cases) and their
   traceability links;
@@ -43,7 +55,7 @@ workspace runner key:
   endpoint without a tool or subcommand.
 
 Requirement **wording** follows the project's quality rule set, not personal
-taste: `get_quality_rules` names the convention in force (the OpenV Platform
+taste: `get_quality_rules` names the convention in force (the OpenV
 project writes ISO/IEC/IEEE 29148 "shall": *the system shall …*), and
 `get_quality_findings` lints a draft before you save it. Note that the
 `priority` attribute is MoSCoW — `must` / `should` / `could` — which is a
