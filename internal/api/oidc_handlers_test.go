@@ -124,12 +124,38 @@ func (s *oidcStub) config(clientID, redirectURL string) *OIDCConfig {
 // --- in-memory users.Repository --------------------------------------------
 
 type memUserRepo struct {
-	users    map[string]*users.User
-	sessions map[string]*users.Session
+	users      map[string]*users.User
+	sessions   map[string]*users.Session
+	links      map[string]*users.IdentityLink // by token hash
+	identities map[string]bool                // by user id + "/" + provider
 }
 
 func newMemUserRepo() *memUserRepo {
-	return &memUserRepo{users: map[string]*users.User{}, sessions: map[string]*users.Session{}}
+	return &memUserRepo{users: map[string]*users.User{}, sessions: map[string]*users.Session{},
+		links: map[string]*users.IdentityLink{}, identities: map[string]bool{}}
+}
+
+func (m *memUserRepo) HasIdentity(userID, provider string) (bool, error) {
+	return m.identities[userID+"/"+provider], nil
+}
+func (m *memUserRepo) SaveIdentityLink(l *users.IdentityLink) error {
+	m.links[l.TokenHash] = l
+	return nil
+}
+func (m *memUserRepo) FindIdentityLink(hash string, now time.Time) (*users.IdentityLink, error) {
+	if l := m.links[hash]; l != nil && !l.Used && l.ExpiresAt.After(now) {
+		return l, nil
+	}
+	return nil, nil
+}
+func (m *memUserRepo) LinkIdentity(hash string, now time.Time) (*users.IdentityLink, error) {
+	l, _ := m.FindIdentityLink(hash, now)
+	if l == nil {
+		return nil, nil
+	}
+	l.Used = true
+	m.identities[l.UserID+"/"+l.Provider] = true
+	return l, nil
 }
 
 func (m *memUserRepo) SaveUser(u *users.User) error   { m.users[u.ID] = u; return nil }
@@ -400,19 +426,22 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 }
 
 // TestOIDCCallbackRejectsCrossProviderAccount: an OIDC login whose email
-// already belongs to an account created with a DIFFERENT provider is rejected
-// with 409 and does not log in or re-label the account (issue #242).
+// already belongs to an account created with a DIFFERENT provider and no
+// password is rejected with 409 and does not log in or re-label the account
+// (issue #242). A password account is offered a link instead
+// (auth_link_handlers_test.go).
 func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
 	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
 	h, repo := newOIDCTestHandler(t, cfg)
 
-	// Pre-existing password account with the same email.
-	existing, err := h.UserService.Register("collide@example.com", "hunter2pw", "Pw User")
+	// Pre-existing Google account with the same email: it has no password
+	// to confirm a link with.
+	existing, _, err := h.UserService.LoginWithGoogle("collide@example.com", "Google User", "")
 	if err != nil {
-		t.Fatalf("seed password account: %v", err)
+		t.Fatalf("seed google account: %v", err)
 	}
-	if existing.AuthProvider != users.ProviderPassword {
+	if existing.AuthProvider != users.ProviderGoogle {
 		t.Fatalf("precondition: seeded account provider = %q", existing.AuthProvider)
 	}
 
@@ -432,22 +461,22 @@ func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("expected 409 for cross-provider collision, got %d (%s)", rec.Code, rec.Body.String())
 	}
-	// No session cookie was issued.
+	// No session cookie and no link request were issued.
 	for _, c := range rec.Result().Cookies() {
-		if c.Name == SessionCookieName && c.Value != "" {
-			t.Error("a session cookie was issued despite the provider collision")
+		if (c.Name == SessionCookieName || c.Name == identityLinkCookie) && c.Value != "" {
+			t.Errorf("cookie %s was issued despite the provider collision", c.Name)
 		}
 	}
-	// The existing account is untouched: still a password account, name not
+	// The existing account is untouched: still a Google account, name not
 	// overwritten by the OIDC claim.
 	after, _ := repo.FindUserByEmail("collide@example.com")
 	if after == nil {
 		t.Fatal("existing account vanished")
 	}
-	if after.AuthProvider != users.ProviderPassword {
-		t.Errorf("account was re-labelled to %q; must keep %q", after.AuthProvider, users.ProviderPassword)
+	if after.AuthProvider != users.ProviderGoogle {
+		t.Errorf("account was re-labelled to %q; must keep %q", after.AuthProvider, users.ProviderGoogle)
 	}
-	if after.Name != "Pw User" {
+	if after.Name != "Google User" {
 		t.Errorf("account name overwritten to %q by rejected login", after.Name)
 	}
 }

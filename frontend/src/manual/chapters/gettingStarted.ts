@@ -17,6 +17,13 @@ Open the app in your browser and you land on the sign-in screen.
 - **Sign in with Google** appears when the server has been configured with a
   Google OAuth client. If it is not configured, a note on the sign-in screen
   says so.
+- **Already have a password account?** Signing in with Google (or your
+  server's single sign-on) at the same address brings you back to the
+  sign-in screen, which asks for that account's password once. Enter it and
+  Google is connected: from then on either one signs you in to the same
+  account. The password is what proves the account is yours, so an account
+  made with Google or single sign-on cannot be joined to another provider
+  this way.
 
 The **first user to register becomes the server admin**.
 

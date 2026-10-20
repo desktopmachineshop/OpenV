@@ -309,7 +309,25 @@ func sessionsAuthTour(tr *tour, google *tourGoogle) {
 	googler := tr.adopt(ok, "googler", fmt.Sprintf("the account Google's sign-on made (step %d)", ok.step.n))
 	tr.step("the account Google made", googler, "GET /api/v1/auth/me")
 	callback("an address Google does not vouch for", "state={{google.state}}&code=tour-code-unverified", state)
-	callback("an address a password account holds: never linked", "state={{google.state}}&code=tour-code-password", state)
+	// Linking Google to a password account: the callback opens no session,
+	// it hands the browser a link request, which the account's password
+	// spends; after that Google signs the account in.
+	offer := callback("an address a password account holds: no session, a link request in a cookie, and the sign-in "+
+		"page to confirm it on", "state={{google.state}}&code=tour-code-password", state)
+	offer.captureCookie("google.link", "openv_identity_link")
+	link := withCookie("openv_identity_link", "{{google.link}}")
+	tr.step("the pending link with no link cookie", anon, "GET /api/v1/auth/link", fromGoogle)
+	tr.step("the pending link: Google, for the password account's address", anon, "GET /api/v1/auth/link",
+		fromGoogle, link)
+	tr.step("confirm the link with a malformed body", anon, "POST /api/v1/auth/link", fromGoogle, link, jsonBody(`{`))
+	tr.step("confirm the link with a wrong password: refused, the link kept", anon, "POST /api/v1/auth/link",
+		fromGoogle, link, jsonBody(`{"password":"not the password"}`))
+	tr.step("confirm the link with the account's password: the account, and a session", anon,
+		"POST /api/v1/auth/link", fromGoogle, link, jsonBody(`{"password":"`+tourPassword+`"}`))
+	tr.step("confirm the spent link again", anon, "POST /api/v1/auth/link", fromGoogle, link,
+		jsonBody(`{"password":"`+tourPassword+`"}`))
+	callback("the password account's address again: linked, so signed in and sent to the frontend",
+		"state={{google.state}}&code=tour-code-password", state)
 	tr.step("sign in with a password to the account Google made: refused as any wrong password is, since it is "+
 		"bound to Google (OpenV REQ-18)", anon, "POST /api/v1/auth/login",
 		jsonBody(`{"email":"tour-googler@example.com","password":"tour password 1"}`))

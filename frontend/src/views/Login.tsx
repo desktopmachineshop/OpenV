@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   DEFAULT_MIN_PASSWORD_LENGTH,
+  IdentityLinkPreview,
   InvitationOutcome,
   InvitationPreview,
   authAPI,
@@ -36,6 +37,12 @@ import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
 //     colleague is signed in must not quietly put THEIR account into the
 //     workspace.
 //
+// A Google or OIDC sign-on whose address belongs to an account made with a
+// password lands here as ?link=<provider>, holding a link request the server
+// keeps in an HttpOnly cookie. The page names the account and asks for its
+// password; confirming adds the provider to the account's sign-in methods
+// and signs in, and from then on that provider goes straight in.
+//
 // Whatever the path, a conversion that did NOT happen is said out loud: the
 // register call reports what the token did (`invitation`), and a failed
 // accept is shown rather than swallowed. Somebody who followed a link to
@@ -54,6 +61,7 @@ export const Login: React.FC = () => {
   // A page that sent the person here to sign in and wants them back (the
   // consent an AI app asks for, REQ-44): only a path inside the app.
   const returnTo = safeReturnPath(searchParams.get('next'));
+  const linkProvider = searchParams.get('link') || '';
   // The landing page links straight to registration with ?mode=register, and
   // an invite link means registration too — that is what the link is for.
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(
@@ -95,6 +103,10 @@ export const Login: React.FC = () => {
   // either nobody is signed in, or there was no invitation and the effect
   // has already navigated away.
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  // The pending link of a sign-on provider to a password account, once the
+  // server has named it; linkError when the request is gone.
+  const [linkPreview, setLinkPreview] = useState<IdentityLinkPreview | null>(null);
+  const [linkError, setLinkError] = useState('');
 
   useEffect(() => {
     authAPI
@@ -163,6 +175,29 @@ export const Login: React.FC = () => {
     };
   }, [inviteToken]);
 
+  // Resolve the link request so the form can name the account it confirms.
+  useEffect(() => {
+    if (!linkProvider) return;
+    let cancelled = false;
+    authAPI
+      .identityLink()
+      .then((res) => {
+        if (cancelled) return;
+        setLinkPreview(res.data);
+        setEmail(res.data.email);
+        setMode('login');
+      })
+      .catch(() => {
+        if (!cancelled)
+          setLinkError(
+            'That sign-in has expired. Sign in again, with your password or with the button below.'
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkProvider]);
+
   // An invitation is a door of its own: the sign-up form stays available on
   // a closed deployment when the link checks out.
   const signUpAvailable = !registrationClosed || !!invite;
@@ -177,6 +212,9 @@ export const Login: React.FC = () => {
   const decidingAsSignedIn = !!inviteToken && sessionEmail !== null;
   const inviteIsForThisSession =
     !!invite && sessionEmail !== null && sameAddress(invite.email, sessionEmail);
+  // Linking happens on the sign-in form only.
+  const linking = !!linkPreview && activeMode === 'login';
+  const linkProviderName = linkPreview?.provider === 'oidc' ? oidcName : 'Google';
 
   // join takes the invitation up for the account already signed in. It is
   // only reachable when the addresses match: the server refuses anything
@@ -291,6 +329,14 @@ export const Login: React.FC = () => {
           return;
         }
         navigate(await afterSignIn(verificationRequired && !res.data.email_verified));
+        return;
+      }
+      if (linking) {
+        // The password confirms the link and signs in; the server takes up
+        // any invitation waiting for the provider-verified address itself.
+        const linked = await authAPI.confirmIdentityLink(password);
+        setCurrentUser(linked.data);
+        navigate(await afterSignIn(verificationRequired && !linked.data.email_verified));
         return;
       }
       const res = await authAPI.login(email, password);
@@ -548,8 +594,28 @@ export const Login: React.FC = () => {
             </button>
           </>
         )}
+        {!decidingAsSignedIn && linking && linkPreview && (
+          <div
+            role="status"
+            style={{
+              background: 'var(--tint-blue)',
+              border: '1px solid var(--accent)',
+              borderRadius: 4,
+              padding: '10px 12px',
+              marginBottom: 16,
+              fontSize: 13,
+              color: 'var(--text)',
+            }}
+          >
+            An OpenV account already uses <b>{linkPreview.email}</b>. Enter its password to connect{' '}
+            {linkProviderName}; after that, either one signs you in.
+          </div>
+        )}
         {!decidingAsSignedIn && activeMode !== 'forgot' && (
           <>
+            {linkError && (
+              <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{linkError}</div>
+            )}
             {inviteError && (
               <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{inviteError}</div>
             )}
@@ -579,15 +645,15 @@ export const Login: React.FC = () => {
                   inputMode="email"
                   value={email}
                   required
-                  readOnly={!!invite}
-                  aria-readonly={!!invite}
+                  readOnly={!!invite || linking}
+                  aria-readonly={!!invite || linking}
                   title={invite ? `This invitation was sent to ${invite.email}` : undefined}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{
                     width: '100%',
                     padding: 10,
                     boxSizing: 'border-box',
-                    ...(invite ? { background: 'var(--neutral-soft)', cursor: 'not-allowed' } : {}),
+                    ...(invite || linking ? { background: 'var(--neutral-soft)', cursor: 'not-allowed' } : {}),
                   }}
                 />
                 {invite && (
@@ -616,7 +682,13 @@ export const Login: React.FC = () => {
                 <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
               )}
               <button className="button" type="submit" disabled={busy} style={{ width: '100%' }}>
-                {busy ? 'Please wait…' : activeMode === 'login' ? 'Sign in' : 'Create account'}
+                {busy
+                  ? 'Please wait…'
+                  : linking
+                    ? `Connect ${linkProviderName} and sign in`
+                    : activeMode === 'login'
+                      ? 'Sign in'
+                      : 'Create account'}
               </button>
               {activeMode === 'login' && (
                 <div style={{ textAlign: 'center', marginTop: 10 }}>

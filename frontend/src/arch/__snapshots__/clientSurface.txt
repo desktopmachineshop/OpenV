@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 222; members of exported objects: 306
+exports: 223; members of exported objects: 308
 
 interface AdminUser
 interface AdminWorkspace
@@ -61,6 +61,7 @@ interface GuidedChatMessage
 interface GuidedSession
 interface HostedRunnerRecord
 interface HostedRunnerStatus
+interface IdentityLinkPreview
 type      ImpactDirection
 interface ImpactGroup
 interface ImpactNode
@@ -223,8 +224,10 @@ const     authAPI
             .acceptShareLink
             .changeVerificationEmail
             .config
+            .confirmIdentityLink
             .confirmPasswordReset
             .googleLoginUrl
+            .identityLink
             .invitation
             .listUsers
             .login

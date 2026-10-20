@@ -225,9 +225,10 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	user, token, err := h.UserService.LoginWithSSO(users.ProviderOIDC, claims.Email, claims.Name, claims.Picture)
 	if err != nil {
 		// A cross-provider collision (an account with this email that signed up
-		// via a different method) is a client-visible 409, not a 500.
+		// via a different method): a password account is offered the link,
+		// any other is a client-visible 409, not a 500.
 		if errors.Is(err, users.ErrProviderMismatch) {
-			writeJSONError(w, http.StatusConflict, err.Error())
+			h.offerIdentityLink(w, r, users.ProviderOIDC, claims.Email, h.OIDC.FrontendURL)
 			return
 		}
 		respondInternal(w, r, "failed to sign in with sso", err)

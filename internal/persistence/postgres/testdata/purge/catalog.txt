@@ -37,6 +37,7 @@ evidence_files scope - deleted
 guided_session_messages scope - cascade from guided_sessions
 guided_sessions scope org_id,project_id deleted
 hosted_workers scope org_id cascade from organizations
+identity_link_requests scope - not reached
 interview_invites scope - cascade from interviews
 interview_messages scope - cascade from interview_sessions
 interview_sessions scope - cascade from interviews
@@ -78,6 +79,7 @@ templates scope org_id deleted
 test_results scope - cascade from test_runs
 test_runs scope project_id deleted
 user_activity_days scope - not reached
+user_identities scope - not reached
 user_provider_tokens scope - not reached
 user_repo_paths scope - cascade from repo_connections
 users scope - not reached

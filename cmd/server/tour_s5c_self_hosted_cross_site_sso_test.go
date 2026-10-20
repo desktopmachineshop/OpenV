@@ -252,7 +252,8 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 		state, nonceCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an address the provider does not assert as verified",
 		"state={{oidc.state}}&code=tour-code-unverified", state, nonceCookie)
-	selfHostedCrossSiteSsoCallback(tr, "an address a password account holds: never linked",
+	selfHostedCrossSiteSsoCallback(tr, "an address a password account holds: no session, a link request in a "+
+		"cross-site cookie, and the sign-in page to confirm it on (the sessions area confirms one)",
 		"state={{oidc.state}}&code=tour-code-password", state, nonceCookie)
 	ok := selfHostedCrossSiteSsoCallback(tr, "a verified address: the account is made, joins W by its pending "+
 		"invitation, and is sent to http://localhost:3000 (Q12's second chain)",

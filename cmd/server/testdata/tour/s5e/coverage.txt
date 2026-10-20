@@ -82,6 +82,7 @@ GET /api/v1/attribute-definitions: 200, 400, 401, 404; phantom_matrix, real_id_r
 GET /api/v1/auth/config: 200; phantom_matrix
 GET /api/v1/auth/google: 404; phantom_matrix (errors only)
 GET /api/v1/auth/google/callback: 404; phantom_matrix (errors only)
+GET /api/v1/auth/link: 404; phantom_matrix (errors only)
 GET /api/v1/auth/me: 200, 401; phantom_matrix
 GET /api/v1/auth/oidc/callback: 404; phantom_matrix (errors only)
 GET /api/v1/auth/oidc/login: 404; phantom_matrix (errors only)
@@ -228,6 +229,7 @@ POST /api/v1/attachments/{id}/versions/{version}/restore: 401, 404; phantom_matr
 POST /api/v1/attribute-definitions: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
 POST /api/v1/auth/invitations/accept: 400, 401, 404; phantom_matrix (errors only)
 POST /api/v1/auth/invitations/preview: 400, 404; phantom_matrix (errors only)
+POST /api/v1/auth/link: 400; phantom_matrix (errors only)
 POST /api/v1/auth/login: 400; phantom_matrix (errors only)
 POST /api/v1/auth/logout: 204; phantom_matrix
 POST /api/v1/auth/password-reset: 400; phantom_matrix (errors only)
@@ -378,4 +380,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 365 of 366 routes reached (99.7%), 169 with a 2xx or 3xx answer (46.2%)
+s5e: 367 of 368 routes reached (99.7%), 169 with a 2xx or 3xx answer (45.9%)

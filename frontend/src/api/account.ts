@@ -7,6 +7,7 @@ import { API_BASE_URL, client, uploadConfig } from './http';
 import type {
   AuthConfig,
   DefaultWorkspace,
+  IdentityLinkPreview,
   InvitationPreview,
   RegisterResult,
   User,
@@ -88,6 +89,15 @@ export const authAPI = {
       '/api/v1/auth/share/accept',
       { token }
     ),
+  // Linking Google or OIDC to a password account. A sign-on that meets one
+  // sends the browser to /login?link=<provider> holding the request in an
+  // HttpOnly cookie: identityLink names the provider and address (404 when
+  // the request is gone), and confirmIdentityLink spends it with the
+  // account's password (401 wrong password, the request kept; 404 gone),
+  // answering the user and a session as login does.
+  identityLink: () => client.get<IdentityLinkPreview>('/api/v1/auth/link'),
+  confirmIdentityLink: (password: string) =>
+    client.post<User>('/api/v1/auth/link', { password }),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
   oidcLoginUrl: () => `${API_BASE_URL}/api/v1/auth/oidc/login`,
   listUsers: () => client.get<User[]>('/api/v1/users'),

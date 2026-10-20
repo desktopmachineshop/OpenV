@@ -14,6 +14,8 @@ type memRepo struct {
 	sessions      map[string]*Session
 	verifications map[string]*EmailVerification // by token hash
 	resets        map[string]*PasswordReset     // by token hash
+	links         map[string]*IdentityLink      // by token hash
+	identities    map[string]bool               // by user id + "/" + provider
 	// touches counts TouchSession calls, so the session tests can assert
 	// that last_seen_at is not rewritten on every single request.
 	touches int
@@ -25,7 +27,7 @@ type memRepo struct {
 }
 
 func newMemRepo() *memRepo {
-	return &memRepo{users: map[string]*User{}, sessions: map[string]*Session{}, verifications: map[string]*EmailVerification{}, resets: map[string]*PasswordReset{}}
+	return &memRepo{users: map[string]*User{}, sessions: map[string]*Session{}, verifications: map[string]*EmailVerification{}, resets: map[string]*PasswordReset{}, links: map[string]*IdentityLink{}, identities: map[string]bool{}}
 }
 
 func (m *memRepo) SavePasswordReset(v *PasswordReset) error {
@@ -45,6 +47,38 @@ func (m *memRepo) ConsumePasswordReset(tokenHash string, now time.Time) (*Passwo
 	}
 	v.Used = true
 	return v, nil
+}
+
+func (m *memRepo) HasIdentity(userID, provider string) (bool, error) {
+	return m.identities[userID+"/"+provider], nil
+}
+
+func (m *memRepo) SaveIdentityLink(l *IdentityLink) error {
+	for hash, existing := range m.links {
+		if existing.UserID == l.UserID && !existing.Used {
+			delete(m.links, hash)
+		}
+	}
+	m.links[l.TokenHash] = l
+	return nil
+}
+
+func (m *memRepo) FindIdentityLink(tokenHash string, now time.Time) (*IdentityLink, error) {
+	l := m.links[tokenHash]
+	if l == nil || l.Used || !l.ExpiresAt.After(now) {
+		return nil, nil
+	}
+	return l, nil
+}
+
+func (m *memRepo) LinkIdentity(tokenHash string, now time.Time) (*IdentityLink, error) {
+	l, _ := m.FindIdentityLink(tokenHash, now)
+	if l == nil {
+		return nil, nil
+	}
+	l.Used = true
+	m.identities[l.UserID+"/"+l.Provider] = true
+	return l, nil
 }
 
 func (m *memRepo) SaveEmailVerification(v *EmailVerification) error {

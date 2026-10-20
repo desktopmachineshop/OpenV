@@ -105,10 +105,12 @@ func reap(
 		slog.Warn("reaper ended stale runs", "count", len(ids))
 	}
 	_ = userRepo.DeleteExpiredSessions(time.Now(), sessionPolicy.MaxAge, sessionPolicy.Idle)
-	// Verification and reset links that were used or have expired are of no
-	// further use; a live one is kept (#379 bug 163: nothing removed them).
+	// Verification, reset and sign-in link requests that were used or have
+	// expired are of no further use; a live one is kept (#379 bug 163:
+	// nothing removed them).
 	_ = userRepo.DeleteSpentEmailVerifications(time.Now())
 	_ = userRepo.DeleteSpentPasswordResets(time.Now())
+	_ = userRepo.DeleteSpentIdentityLinks(time.Now())
 	// Invitations that nobody accepted expire; the rows are of
 	// no further use to anyone.
 	_ = invitationService.PurgeExpired(time.Now())
