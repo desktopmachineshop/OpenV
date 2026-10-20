@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   DEFAULT_MIN_PASSWORD_LENGTH,
-  IdentityLinkPreview,
   InvitationOutcome,
   InvitationPreview,
   authAPI,
 } from '../api/client';
 import { API_ERROR, apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
+import { useIdentityLink } from '../hooks/useIdentityLink';
 import { useAppStore } from '../state/store';
 import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
 
@@ -105,8 +105,10 @@ export const Login: React.FC = () => {
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   // The pending link of a sign-on provider to a password account, once the
   // server has named it; linkError when the request is gone.
-  const [linkPreview, setLinkPreview] = useState<IdentityLinkPreview | null>(null);
-  const [linkError, setLinkError] = useState('');
+  const { preview: linkPreview, error: linkError } = useIdentityLink(linkProvider, (p) => {
+    setEmail(p.email);
+    setMode('login');
+  });
 
   useEffect(() => {
     authAPI
@@ -174,29 +176,6 @@ export const Login: React.FC = () => {
       cancelled = true;
     };
   }, [inviteToken]);
-
-  // Resolve the link request so the form can name the account it confirms.
-  useEffect(() => {
-    if (!linkProvider) return;
-    let cancelled = false;
-    authAPI
-      .identityLink()
-      .then((res) => {
-        if (cancelled) return;
-        setLinkPreview(res.data);
-        setEmail(res.data.email);
-        setMode('login');
-      })
-      .catch(() => {
-        if (!cancelled)
-          setLinkError(
-            'That sign-in has expired. Sign in again, with your password or with the button below.'
-          );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [linkProvider]);
 
   // An invitation is a door of its own: the sign-up form stays available on
   // a closed deployment when the link checks out.
