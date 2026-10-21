@@ -69,6 +69,7 @@ GET /api/v1/attribute-definitions
 GET /api/v1/auth/config
 GET /api/v1/auth/google
 GET /api/v1/auth/google/callback
+GET /api/v1/auth/link
 GET /api/v1/auth/me
 GET /api/v1/auth/oidc/callback
 GET /api/v1/auth/oidc/login
@@ -215,6 +216,7 @@ POST /api/v1/attachments/{id}/versions/{version}/restore
 POST /api/v1/attribute-definitions
 POST /api/v1/auth/invitations/accept
 POST /api/v1/auth/invitations/preview
+POST /api/v1/auth/link
 POST /api/v1/auth/login
 POST /api/v1/auth/logout
 POST /api/v1/auth/password-reset

@@ -132,6 +132,7 @@ func main()
           call (*internal/persistence/postgres.UserRepository).DeleteExpiredSessions
           call (*internal/persistence/postgres.UserRepository).DeleteSpentEmailVerifications
           call (*internal/persistence/postgres.UserRepository).DeleteSpentPasswordResets
+          call (*internal/persistence/postgres.UserRepository).DeleteSpentIdentityLinks
           call (*internal/domain/invitations.DefaultService).PurgeExpired
           if
             call (internal/domain/runnersessions.Service).Sweep

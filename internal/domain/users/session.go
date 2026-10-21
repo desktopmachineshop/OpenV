@@ -60,8 +60,8 @@ func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, 
 // LoginWithSSO upserts a user from a verified external (OIDC) identity and
 // creates a session. New accounts record the given provider as auth_provider.
 // An existing account is entered only when it was created with the SAME
-// provider (its name/avatar are refreshed); an account created with a different
-// provider is rejected with ErrProviderMismatch rather than silently
+// provider, or has linked it (its name/avatar are refreshed); any other
+// account is rejected with ErrProviderMismatch rather than silently
 // auto-linked (issue #242) — proving control of the same email at a second IdP
 // is not proof of the same person.
 func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error) {
@@ -106,20 +106,29 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 		// that first signed up with a different method (password, Google, another
 		// OIDC provider) must not be silently entered through this provider just
 		// because the two share an email string. Same-provider logins proceed and
-		// refresh profile fields; a mismatch is rejected for the caller to resolve
-		// (explicit verified linking is a follow-up).
+		// refresh profile fields. Logins through a provider the account's owner
+		// has linked with their password (identity_link.go) proceed and leave
+		// the profile the account already has; any other mismatch is rejected
+		// for the caller to resolve.
 		if user.AuthProvider != "" && user.AuthProvider != provider {
-			return nil, "", ErrProviderMismatch
-		}
-		user.Name = name
-		// A picture the member uploaded outranks the provider's: it is only
-		// refreshed from the provider while none is stored.
-		if user.AvatarPath == "" {
-			user.AvatarURL = avatarURL
-		}
-		user.UpdatedAt = time.Now().UTC()
-		if err := s.repo.UpdateUser(user); err != nil {
-			return nil, "", err
+			linked, err := s.repo.HasIdentity(user.ID, provider)
+			if err != nil {
+				return nil, "", err
+			}
+			if !linked {
+				return nil, "", ErrProviderMismatch
+			}
+		} else {
+			user.Name = name
+			// A picture the member uploaded outranks the provider's: it is only
+			// refreshed from the provider while none is stored.
+			if user.AvatarPath == "" {
+				user.AvatarURL = avatarURL
+			}
+			user.UpdatedAt = time.Now().UTC()
+			if err := s.repo.UpdateUser(user); err != nil {
+				return nil, "", err
+			}
 		}
 	}
 

@@ -498,6 +498,19 @@ table hosted_workers rows 0
   constraint hosted_workers_pkey PRIMARY KEY (id)
   index hosted_workers_org_id_key CREATE UNIQUE INDEX hosted_workers_org_id_key ON public.hosted_workers USING btree (org_id)
   index hosted_workers_pkey CREATE UNIQUE INDEX hosted_workers_pkey ON public.hosted_workers USING btree (id)
+table identity_link_requests rows 0
+  column id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column provider character varying(32) NOT NULL
+  column token_hash character varying(128) NOT NULL
+  column expires_at timestamp without time zone NOT NULL
+  column used boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint identity_link_requests_pkey PRIMARY KEY (id)
+  constraint identity_link_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index identity_link_requests_pkey CREATE UNIQUE INDEX identity_link_requests_pkey ON public.identity_link_requests USING btree (id)
+  index idx_identity_link_requests_token CREATE UNIQUE INDEX idx_identity_link_requests_token ON public.identity_link_requests USING btree (token_hash)
+  index idx_identity_link_requests_user CREATE INDEX idx_identity_link_requests_user ON public.identity_link_requests USING btree (user_id)
 table interview_invites rows 0
   column id uuid NOT NULL
   column interview_id uuid NOT NULL
@@ -924,7 +937,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 65
+table schema_migrations rows 66
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1057,6 +1070,13 @@ table user_activity_days rows 0
   constraint user_activity_days_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   index idx_user_activity_days_day CREATE INDEX idx_user_activity_days_day ON public.user_activity_days USING btree (day)
   index user_activity_days_pkey CREATE UNIQUE INDEX user_activity_days_pkey ON public.user_activity_days USING btree (user_id, day)
+table user_identities rows 0
+  column user_id uuid NOT NULL
+  column provider character varying(32) NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint user_identities_pkey PRIMARY KEY (user_id, provider)
+  constraint user_identities_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index user_identities_pkey CREATE UNIQUE INDEX user_identities_pkey ON public.user_identities USING btree (user_id, provider)
 table user_provider_tokens rows 0
   column user_id uuid NOT NULL
   column provider character varying(50) NOT NULL
@@ -1215,3 +1235,4 @@ ledger 0062 connected_apps
 ledger 0063 user_provider_tokens
 ledger 0064 provider_login_purpose
 ledger 0065 connected_app_workspaces
+ledger 0066 user_identities

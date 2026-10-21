@@ -203,7 +203,8 @@
     "auto-cloud-runner",
     "claude-subscription-token",
     "cloud-runner-token",
-    "connected-app-workspaces"
+    "connected-app-workspaces",
+    "linked-sign-in"
   ],
   "event_types": [
     "artifact.created",

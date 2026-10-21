@@ -1,8 +1,12 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+	"net/url"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
 func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
@@ -91,4 +95,46 @@ func (h *Handler) setVisitorCookie(w http.ResponseWriter, id string) {
 		Partitioned: h.partitionedCookies(),
 		MaxAge:      int(visitorCookieMaxAge.Seconds()),
 	})
+}
+
+// identityLinkCookie holds the raw link request token between the callback
+// and the password form; it lives as long as the request does.
+const identityLinkCookie = "openv_identity_link"
+
+// offerIdentityLink answers a callback whose sign-on met an account of
+// another method (users.ErrProviderMismatch). An account with a password is
+// offered the link: the browser goes to the sign-in page holding the
+// request. Any other account keeps the 409, since it has no password to
+// prove itself with.
+func (h *Handler) offerIdentityLink(w http.ResponseWriter, r *http.Request, provider, email, frontendURL string) {
+	token, err := h.UserService.RequestIdentityLink(provider, email)
+	if err != nil {
+		if errors.Is(err, users.ErrNoPassword) || errors.Is(err, users.ErrUserNotFound) {
+			writeJSONError(w, http.StatusConflict, users.ErrProviderMismatch.Error())
+			return
+		}
+		respondInternal(w, r, "failed to start linking the sign-in method", err)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:        identityLinkCookie,
+		Value:       token,
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      int(users.IdentityLinkTTL.Seconds()),
+	})
+	http.Redirect(w, r, linkPageURL(frontendURL, provider), http.StatusFound)
+}
+
+// linkPageURL is the sign-in page on the app's origin, where a sign-on
+// would have landed, opened to ask for the password.
+func linkPageURL(frontendURL, provider string) string {
+	page := "/login?link=" + url.QueryEscape(provider)
+	if u, err := url.Parse(frontendURL); err == nil && u.Scheme != "" && u.Host != "" {
+		return u.Scheme + "://" + u.Host + page
+	}
+	return page
 }

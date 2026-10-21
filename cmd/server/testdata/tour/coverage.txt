@@ -81,6 +81,7 @@ GET /api/v1/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/auth/config: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/auth/google: s5c, s5e; 2xx or 3xx in s5c
 GET /api/v1/auth/google/callback: s5c, s5e; 2xx or 3xx in s5c
+GET /api/v1/auth/link: s5c, s5e; 2xx or 3xx in s5c
 GET /api/v1/auth/me: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/auth/oidc/callback: s5c, s5e; 2xx or 3xx in s5c
 GET /api/v1/auth/oidc/login: s5c, s5e; 2xx or 3xx in s5c
@@ -227,6 +228,7 @@ POST /api/v1/attachments/{id}/versions/{version}/restore: s5a, s5e; 2xx or 3xx i
 POST /api/v1/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/auth/invitations/accept: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/invitations/preview: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/auth/link: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/login: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/logout: s5c, s5e; 2xx or 3xx in s5c, s5e
 POST /api/v1/auth/password-reset: s5c, s5e; 2xx or 3xx in s5c
@@ -377,4 +379,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 366 of 366 routes reached (100.0%), 357 with a 2xx or 3xx answer (97.5%); the floor is 90%, 330 routes
+the tour: 368 of 368 routes reached (100.0%), 359 with a 2xx or 3xx answer (97.6%); the floor is 90%, 332 routes

@@ -48,6 +48,14 @@ export interface AuthConfig {
   capabilities?: string[];
 }
 
+// A pending link of a single sign-on provider to a password account: the
+// provider's callback met an account with this address that was made with a
+// password, and the account's password confirms the link.
+export interface IdentityLinkPreview {
+  provider: 'google' | 'oidc';
+  email: string;
+}
+
 // What a sign-up that carried an invite token did with it. Absent when the
 // form carried no token at all.
 //
