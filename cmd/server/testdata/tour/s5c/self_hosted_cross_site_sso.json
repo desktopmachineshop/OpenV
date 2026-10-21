@@ -1507,7 +1507,7 @@
     },
     {
       "n": 30,
-      "title": "an address a password account holds: never linked",
+      "title": "an address a password account holds: no session, a link request in a cross-site cookie, and the sign-in page to confirm it on (the sessions area confirms one)",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/oidc/callback",
       "request": {
@@ -1518,22 +1518,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>"
         ]
       },
-      "status": 409,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?link=oidc",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
-        "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
+        "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
+        "Set-Cookie: openv_identity_link=<hex64:2>; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 86,
-      "kind": "json",
+      "content_length": 60,
+      "kind": "text",
       "body": [
-        "{\"error\":\"an account with this email already exists with a different sign-in method\"}"
+        "<a href=\"http://localhost:3000/login?link=oidc\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "an account with this email already exists with a different sign-in method"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1986,7 +1986,7 @@
         "Location: http://localhost:3000",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
-        "Set-Cookie: openv_session=<hex64:2>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; Secure; SameSite=None; Partitioned"
+        "Set-Cookie: openv_session=<hex64:3>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
       "content_length": 44,
@@ -2111,7 +2111,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:3>\",\"project_id\":\"<p>\",\"role\":\"public\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 44>\",\"token\":\"<hex64:3>\",\"url\":\"https://api.tour.example/share/<hex64:3>\"}"
+        "{\"id\":\"<uuid:3>\",\"project_id\":\"<p>\",\"role\":\"public\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 44>\",\"token\":\"<hex64:4>\",\"url\":\"https://api.tour.example/share/<hex64:4>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2121,8 +2121,8 @@
         "label": "",
         "created_by": "<owner>",
         "created_at": "<time@step 44>",
-        "token": "<hex64:3>",
-        "url": "https://api.tour.example/share/<hex64:3>"
+        "token": "<hex64:4>",
+        "url": "https://api.tour.example/share/<hex64:4>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2145,15 +2145,15 @@
       "status": 302,
       "content_type": "text/html; charset=utf-8",
       "headers": [
-        "Location: https://idp.tour.example/authorize?client_id=tour-oidc&nonce=<hex64:4>&redirect_uri=https%3A%2F%2Fapi.tour.example%2Fapi%2Fv1%2Fauth%2Foidc%2Fcallback&response_type=code&scope=openid+email+profile&state=<hex64:5>",
-        "Set-Cookie: openv_oidc_state=<hex64:5>; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=None; Partitioned",
-        "Set-Cookie: openv_oidc_nonce=<hex64:4>; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=None; Partitioned"
+        "Location: https://idp.tour.example/authorize?client_id=tour-oidc&nonce=<hex64:5>&redirect_uri=https%3A%2F%2Fapi.tour.example%2Fapi%2Fv1%2Fauth%2Foidc%2Fcallback&response_type=code&scope=openid+email+profile&state=<hex64:6>",
+        "Set-Cookie: openv_oidc_state=<hex64:6>; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=None; Partitioned",
+        "Set-Cookie: openv_oidc_nonce=<hex64:5>; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
       "content_length": 365,
       "kind": "text",
       "body": [
-        "<a href=\"https://idp.tour.example/authorize?client_id=tour-oidc&amp;nonce=<hex64:4>&amp;redirect_uri=https%3A%2F%2Fapi.tour.example%2Fapi%2Fv1%2Fauth%2Foidc%2Fcallback&amp;response_type=code&amp;scope=openid+email+profile&amp;state=<hex64:5>\">Found</a>.",
+        "<a href=\"https://idp.tour.example/authorize?client_id=tour-oidc&amp;nonce=<hex64:5>&amp;redirect_uri=https%3A%2F%2Fapi.tour.example%2Fapi%2Fv1%2Fauth%2Foidc%2Fcallback&amp;response_type=code&amp;scope=openid+email+profile&amp;state=<hex64:6>\">Found</a>.",
         ""
       ],
       "trailing_newline": true,

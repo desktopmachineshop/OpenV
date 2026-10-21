@@ -29,6 +29,7 @@ type Calls = {
   acceptInvitation: any[][];
   logout: any[][];
   requestPasswordReset: any[][];
+  confirmIdentityLink: any[][];
 };
 
 const authFixtures: {
@@ -45,6 +46,8 @@ const authFixtures: {
   acceptError: any;
   // What requestPasswordReset answers with when it rejects; null resolves.
   resetError: any;
+  // The pending sign-on link identityLink() names; null rejects (gone).
+  identityLink: any;
   calls: Calls;
 } = {
   config: null,
@@ -55,7 +58,15 @@ const authFixtures: {
   registerOutcome: null,
   acceptError: null,
   resetError: null,
-  calls: { login: [], register: [], acceptInvitation: [], logout: [], requestPasswordReset: [] },
+  identityLink: null,
+  calls: {
+    login: [],
+    register: [],
+    acceptInvitation: [],
+    logout: [],
+    requestPasswordReset: [],
+    confirmIdentityLink: [],
+  },
 };
 
 const record = (name: keyof Calls, data: any) => (...args: any[]) => {
@@ -95,6 +106,14 @@ vi.mock('../api/client', async (orig) =>
           email_verified: true,
           ...(authFixtures.registerOutcome ? { invitation: authFixtures.registerOutcome } : {}),
         })(...args),
+      identityLink: () =>
+        authFixtures.identityLink
+          ? Promise.resolve({ data: authFixtures.identityLink })
+          : Promise.reject(new Error('no link')),
+      confirmIdentityLink: (...args: any[]) =>
+        record('confirmIdentityLink', { id: 'u1', email: 'dave@example.com', email_verified: true })(
+          ...args
+        ),
       oidcLoginUrl: () => '/oidc',
       googleLoginUrl: () => '/google',
       requestPasswordReset: (...args: any[]) => {
@@ -121,7 +140,15 @@ beforeEach(() => {
   authFixtures.registerOutcome = null;
   authFixtures.acceptError = null;
   authFixtures.resetError = null;
-  authFixtures.calls = { login: [], register: [], acceptInvitation: [], logout: [], requestPasswordReset: [] };
+  authFixtures.identityLink = null;
+  authFixtures.calls = {
+    login: [],
+    register: [],
+    acceptInvitation: [],
+    logout: [],
+    requestPasswordReset: [],
+    confirmIdentityLink: [],
+  };
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {
@@ -610,5 +637,34 @@ describe('Login', () => {
     navigate.mockClear();
     await render('/login?next=%2F%2Fevil.example%2F');
     expect(navigate).toHaveBeenCalledWith('/projects');
+  });
+
+  // A Google sign-on met an account made with a password: the page names the
+  // account, locks its address, and the password confirms the link.
+  it('connects Google to a password account with its password', async () => {
+    const { useNavigate } = await import('react-router-dom');
+    const navigate = vi.mocked(useNavigate());
+    navigate.mockClear();
+    authFixtures.identityLink = { provider: 'google', email: 'dave@example.com' };
+    await render('/login?link=google');
+    expect(container.textContent).toContain('An OpenV account already uses dave@example.com');
+    const address = container.querySelector('input[type="email"]') as HTMLInputElement;
+    expect(address.value).toBe('dave@example.com');
+    expect(address.readOnly).toBe(true);
+    expect(container.textContent).toContain('Connect Google and sign in');
+
+    await submitForm('password1');
+    expect(authFixtures.calls.confirmIdentityLink).toEqual([['password1']]);
+    expect(authFixtures.calls.login).toEqual([]);
+    expect(navigate).toHaveBeenCalledWith('/projects');
+  });
+
+  it('falls back to an ordinary sign-in when the link has expired', async () => {
+    await render('/login?link=google');
+    expect(container.textContent).toContain('That sign-in has expired');
+    expect(container.textContent).not.toContain('Connect Google');
+    await submitForm('password1');
+    expect(authFixtures.calls.confirmIdentityLink).toEqual([]);
+    expect(authFixtures.calls.login.length).toBe(1);
   });
 });

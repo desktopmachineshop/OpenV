@@ -32,8 +32,8 @@ var (
 	// a password or Google account, when an OIDC login arrives). We refuse to
 	// silently sign the caller into that account: proving control of the same
 	// email string at a second IdP is not proof it is the same person, so
-	// auto-linking would be an account-takeover vector. Explicit verified
-	// account linking is a documented follow-up (issue #242).
+	// auto-linking would be an account-takeover vector. A password account
+	// links the provider by confirming its password (identity_link.go).
 	ErrProviderMismatch = errors.New("an account with this email already exists with a different sign-in method")
 	// ErrVerificationInvalid covers every way a verification link can fail —
 	// unknown, already used, expired — with one message, so a probe learns
@@ -140,6 +140,21 @@ type Repository interface {
 	// (unused, unexpired at now) and returns it; nil, nil when the hash is
 	// unknown, spent or expired.
 	ConsumePasswordReset(tokenHash string, now time.Time) (*PasswordReset, error)
+	// HasIdentity reports whether provider is a linked sign-in method of the
+	// account (identity_link.go); the method it was created with is
+	// User.AuthProvider and is not recorded here.
+	HasIdentity(userID, provider string) (bool, error)
+	// SaveIdentityLink stores a link request after discarding the account's
+	// unused pending ones, so at most one is live per account.
+	SaveIdentityLink(l *IdentityLink) error
+	// FindIdentityLink returns the link request with this hash while it is
+	// unused and unexpired at now; nil, nil otherwise.
+	FindIdentityLink(tokenHash string, now time.Time) (*IdentityLink, error)
+	// LinkIdentity atomically spends the link request with this hash
+	// (unused, unexpired at now) and records its provider as a sign-in
+	// method of its account. Returns the request; nil, nil when the hash is
+	// unknown, spent or expired.
+	LinkIdentity(tokenHash string, now time.Time) (*IdentityLink, error)
 
 	SaveSession(s *Session) error
 	FindSessionByTokenHash(hash string) (*Session, error)
@@ -235,6 +250,18 @@ type Service interface {
 	// link. An emailed link also marks the address verified. Errors:
 	// ErrWeakPassword, ErrResetInvalid.
 	ResetPassword(token, newPassword string) (*User, error)
+	// RequestIdentityLink mints a link request after a single sign-on
+	// through provider met the password account at email
+	// (ErrProviderMismatch); see identity_link.go. Returns the raw token.
+	// ErrNoPassword when that account has no password to confirm it with.
+	RequestIdentityLink(provider, email string) (string, error)
+	// PreviewIdentityLink names the provider and address of a live link
+	// request; ErrLinkInvalid otherwise.
+	PreviewIdentityLink(token string) (*IdentityLinkPreview, error)
+	// ConfirmIdentityLink spends a link request with the account's password,
+	// adds the provider to its sign-in methods and opens a session.
+	// Errors: ErrLinkInvalid, ErrPasswordIncorrect.
+	ConfirmIdentityLink(token, password string) (*User, string, error)
 }
 
 // DefaultService implements Service.

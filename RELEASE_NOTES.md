@@ -9,6 +9,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Sign in with Google to the account you made with a password.** Until
+  now Google sign-in refused an address that already had a password
+  account. Now OpenV asks for that account's password once, to make sure
+  it is yours, and connects Google to it: after that, either the password
+  or Google signs you in, to the same account with the same workspaces.
+  Single sign-on through your company's identity provider works the same
+  way.
+
+### Security fixes
+
+- **Updated components with published security fixes.** The server is
+  rebuilt on Go 1.26.10, the Excel export library is updated, and the
+  app's web request library is patched, closing advisories about a crash
+  from a malformed spreadsheet and sign-in headers leaking on a redirect.
+
+## 0.22.1 — 2026-10-17
+
 ### Maintenance updates
 
 - **A self-hosted OpenV no longer serves openv.app's marketing pages.**

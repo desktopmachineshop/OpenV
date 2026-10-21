@@ -60,6 +60,8 @@ views/Login.tsx  <- /login
   open   GET    /api/v1/auth/google                              authAPI.googleLoginUrl
   open   POST   /api/v1/auth/invitations/accept                  authAPI.acceptInvitation
   open   POST   /api/v1/auth/invitations/preview                 authAPI.invitation
+  open   GET    /api/v1/auth/link                                authAPI.identityLink
+  open   POST   /api/v1/auth/link                                authAPI.confirmIdentityLink
   open   POST   /api/v1/auth/login                               authAPI.login
   open   POST   /api/v1/auth/logout                              authAPI.logout
   open   GET    /api/v1/auth/me                                  authAPI.me

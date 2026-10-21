@@ -57,6 +57,7 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/auth/google", h.GoogleLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google/callback", h.GoogleCallback).Methods("GET")
 	h.registerOIDCRoutes(router)
+	h.registerIdentityLinkRoutes(router)
 
 	router.HandleFunc("/api/v1/users", h.ListUsers).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/members", h.ListProjectMembers).Methods("GET")
@@ -446,10 +447,12 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	googleUser, token, err := h.UserService.LoginWithGoogle(info.Email, info.Name, info.Picture)
 	if err != nil {
-		// An email already registered via a different sign-in method is a
-		// client-visible 409, not a 500 (issue #242): we refuse to auto-link.
+		// An email already registered via a different sign-in method is
+		// never entered on the email alone (issue #242): a password account
+		// is offered the link, confirmed with its password; any other is a
+		// client-visible 409.
 		if errors.Is(err, users.ErrProviderMismatch) {
-			writeJSONError(w, http.StatusConflict, err.Error())
+			h.offerIdentityLink(w, r, users.ProviderGoogle, info.Email, h.GoogleOAuth.FrontendURL)
 			return
 		}
 		respondInternal(w, r, "failed to sign in with google", err)

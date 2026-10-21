@@ -58,6 +58,10 @@ var Registry = []Feature{
 	{Key: FeatureSubscriptionToken, ShippedIn: "0.20.0", Summary: "Keep Claude signed in: save a long-lived Claude subscription token once, and your own and leased runners start chats already signed in"},
 	{Key: FeatureCloudRunnerToken, ShippedIn: "0.21.0", Summary: "Get your saved Claude token from your cloud runner: sign in once in the browser, and the runner mints the token and saves it for you"},
 	{Key: FeatureConnectedAppWorkspaces, ShippedIn: "0.22.0", Summary: "Give one connected AI app, such as Claude, more than one workspace, and change which ones from Connected apps without connecting it again"},
+	// Like password reset, linking happens before there is a session, so no
+	// workspace's channel can gate it: the key is registered for the
+	// features endpoint and What's new, and the flow is unconditional.
+	{Key: FeatureLinkedSignIn, ShippedIn: "0.23.0", Summary: "Sign in with Google to an account you made with a password: confirm the password once, and either way signs you in after that"},
 }
 
 // Feature keys the code gates on.
@@ -189,6 +193,10 @@ const (
 	// of one workspace, and the endpoint's answers for any grant, are
 	// gated only by FeatureRemoteMCP.
 	FeatureConnectedAppWorkspaces = "connected-app-workspaces"
+	// FeatureLinkedSignIn is adding Google or the deployment's OIDC provider
+	// to a password account's sign-in methods, confirmed with the password
+	// (users/identity_link.go). Unconditional; see its registry entry.
+	FeatureLinkedSignIn = "linked-sign-in"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

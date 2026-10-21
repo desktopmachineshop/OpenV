@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.22.1",
+   "date": "2026-10-17",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**A self-hosted OpenV no longer serves openv.app's marketing pages.** Pricing, the guides, the comparisons and the other pages about the hosted service now open only on openv.app; on your own OpenV their addresses take you to sign-in or your projects, and the user manual is where it was."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.22.0",
    "date": "2026-10-17",
    "stableSince": "",
