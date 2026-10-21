@@ -19,6 +19,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Single sign-on through your company's identity provider works the same
   way.
 
+### Security fixes
+
+- **Updated components with published security fixes.** The server is
+  rebuilt on Go 1.26.10, the Excel export library is updated, and the
+  app's web request library is patched, closing advisories about a crash
+  from a malformed spreadsheet and sign-in headers leaking on a redirect.
+
 ## 0.22.1 — 2026-10-17
 
 ### Maintenance updates
