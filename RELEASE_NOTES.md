@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.23.0 — 2026-10-23
+
 ### New features
 
 - **Sign in with Google to the account you made with a password.** Until
