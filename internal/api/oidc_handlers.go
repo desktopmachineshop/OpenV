@@ -14,12 +14,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
-// Cookies carrying the CSRF state and the OIDC replay-binding nonce between the
-// login redirect and the callback. Short-lived and HttpOnly, mirroring the
-// Google flow's state cookie.
+// Cookies carrying the CSRF state, the OIDC replay-binding nonce and the PKCE
+// code verifier between the login redirect and the callback. Short-lived and
+// HttpOnly, mirroring the Google flow's state cookie.
 const (
-	oidcStateCookie = "openv_oidc_state"
-	oidcNonceCookie = "openv_oidc_nonce"
+	oidcStateCookie    = "openv_oidc_state"
+	oidcNonceCookie    = "openv_oidc_nonce"
+	oidcVerifierCookie = "openv_oidc_pkce"
 )
 
 // OIDCConfig enables generic OIDC single sign-on ("Sign in with SSO") when
@@ -107,8 +108,10 @@ func (h *Handler) registerOIDCRoutes(router *mux.Router) {
 }
 
 // OIDCLogin redirects to the configured provider's authorization endpoint with
-// a fresh state (CSRF) and nonce (ID-token replay binding), each stored in a
-// short-lived HttpOnly cookie for validation on the callback.
+// a fresh state (CSRF), nonce (ID-token replay binding) and PKCE challenge
+// (S256, binding the code to this browser; some providers, the Desktop Machine
+// Shop sign-in among them, require it), each secret stored in a short-lived
+// HttpOnly cookie for the callback.
 func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	if !h.OIDC.Enabled() {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
@@ -134,10 +137,12 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to start sso sign-in", err)
 		return
 	}
+	verifier := oauth2.GenerateVerifier()
 	h.setOIDCFlowCookie(w, oidcStateCookie, state)
 	h.setOIDCFlowCookie(w, oidcNonceCookie, nonce)
+	h.setOIDCFlowCookie(w, oidcVerifierCookie, verifier)
 
-	http.Redirect(w, r, h.OIDC.oauth.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
+	http.Redirect(w, r, h.OIDC.oauth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)), http.StatusFound)
 }
 
 // OIDCCallback completes the code flow: it validates state, exchanges the code,
@@ -168,9 +173,15 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "missing oauth nonce")
 		return
 	}
+	verifierCookie, err := r.Cookie(oidcVerifierCookie)
+	if err != nil || verifierCookie.Value == "" {
+		writeJSONError(w, http.StatusBadRequest, "missing oauth code verifier")
+		return
+	}
 	// One-shot: clear the flow cookies so a state/nonce pair cannot be replayed.
 	h.clearOIDCFlowCookie(w, oidcStateCookie)
 	h.clearOIDCFlowCookie(w, oidcNonceCookie)
+	h.clearOIDCFlowCookie(w, oidcVerifierCookie)
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -178,7 +189,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauthToken, err := h.OIDC.oauth.Exchange(ctx, code)
+	oauthToken, err := h.OIDC.oauth.Exchange(ctx, code, oauth2.VerifierOption(verifierCookie.Value))
 	if err != nil {
 		respondError(w, r, http.StatusBadGateway, "sso token exchange failed", err)
 		return

@@ -417,7 +417,7 @@
     "OPENV_OIDC_ISSUER": {
       "area": "tenancy-identity",
       "read_by": "server",
-      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured."
+      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured. Sign-in sends a PKCE challenge (S256). For Desktop Machine Shop accounts, the issuer is the OpenD control plane's `PUBLIC_URL`, with the client registered there (OpenD-hosted ADR 0009)."
     },
     "OPENV_OIDC_NAME": {
       "area": "tenancy-identity",

@@ -7,6 +7,7 @@ package users
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -83,6 +84,11 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 			return nil, "", err
 		}
 		now := time.Now().UTC() // TIMESTAMP columns hold UTC wall clocks (#379 bug 154)
+		// A provider may send no name (the Desktop Machine Shop sign-in sends
+		// none): the address's local part stands in until the member sets one.
+		if name == "" {
+			name, _, _ = strings.Cut(email, "@")
+		}
 		// The identity provider asserted a verified address (both callbacks
 		// refuse anything else), so the account is verified from the start.
 		user = &User{
@@ -119,7 +125,10 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 				return nil, "", ErrProviderMismatch
 			}
 		} else {
-			user.Name = name
+			// A provider that sends no name leaves the one the account has.
+			if name != "" {
+				user.Name = name
+			}
 			// A picture the member uploaded outranks the provider's: it is only
 			// refreshed from the provider while none is stored.
 			if user.AvatarPath == "" {
