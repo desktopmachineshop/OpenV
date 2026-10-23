@@ -11,6 +11,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.23.0 — 2026-10-23
 
+Stable channel release since 2026-10-23.
+
 ### New features
 
 - **Sign in with Google to the account you made with a password.** Until
