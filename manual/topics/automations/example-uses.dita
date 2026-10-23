@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="example-uses">
+  <title>Example uses</title>
+  <conbody>
+    <ul>
+      <li>Nightly gap-analysis review of requirement coverage (scheduled, daily).</li>
+      <li>Testability review whenever a requirement is created (triggered on artifact.created with a type filter).</li>
+      <li>Summarize an agent run's results into the board card when it finishes (triggered on agentrun.finished).</li>
+    </ul>
+  </conbody>
+</concept>

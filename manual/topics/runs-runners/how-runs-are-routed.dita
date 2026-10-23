@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="how-runs-are-routed">
+  <title>How runs are routed</title>
+  <conbody>
+    <ul>
+      <li>When you launch a run and a runner of yours is online — your own machine or a cloud runner you hold — the run is <b>reserved for your runner</b> for a grace period (default 60 seconds). If it isn't claimed in time, hosted/workspace runners take over.</li>
+      <li><b>Ownerless runs</b> (automations, board triggers, crew delegations) are claimable immediately, first come first served, by every workspace or hosted runner, and by the personal runner of every member who could see the run: one with a role in its project, or a workspace admin. A personal runner never takes a run its owner could not see, so an ownerless run with no project, which only workspace admins can open, goes to an admin's personal runner or to the workspace and hosted runners.</li>
+      <li>Runs another member launched are never routed to your personal runner.</li>
+    </ul>
+  </conbody>
+</concept>

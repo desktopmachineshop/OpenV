@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="a-provider-shows-never-detected-or-not-logged-in">
+  <title>A provider shows "never detected" or not logged in</title>
+  <shortdesc>The vendor CLI isn't installed on the runner machine, isn't on its PATH, or hasn't been signed in. Install the CLI on the machine that runs your runner, then sign in — from your user settings → Agent sign-ins (personal runner) or Workspace settings → AI Providers → Connect (shared workers).</shortdesc>
+  <conbody/>
+</concept>

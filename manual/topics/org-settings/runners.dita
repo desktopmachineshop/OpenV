@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="runners">
+  <title>Runners</title>
+  <shortdesc>Everything that executes agent work:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Hosted runner</b> — admins can provision the always-on, platform-managed runner container by entering the org's provider API keys. Status, stop/start and remove (optionally purging its data volume) are managed here. Non-admins see read-only status.</li>
+      <li><b>My runner</b> — your personal runner key and online status, with the Agent Connector pairing flow. Also reachable from your user settings.</li>
+      <li><b>Worker keys</b> — shared workspace keys for self-managed always-on workers. The plaintext key is shown <b>once</b>, right after creation — store it safely. Keys can be revoked at any time.</li>
+    </ul>
+  </conbody>
+</concept>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="connecting-nodes">
+  <title>Connecting nodes</title>
+  <shortdesc>Click <b>Connect</b>, then click the source node and the target node. Pick the connection type:</shortdesc>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Edge type</stentry><stentry>Meaning</stentry></sthead>
+      <strow><stentry>Delegates to</stentry><stentry>The source agent can hand work down to the target agent</stentry></strow>
+      <strow><stentry>Hands off to</stentry><stentry>Work passes to the target when the source finishes</stentry></strow>
+      <strow><stentry>Reviews</stentry><stentry>The target reviews the source's output</stentry></strow>
+    </simpletable>
+    <p><b>Human targets are special</b>: you can't delegate to a person. "Hands off to" and "Reviews" edges pointing at a person instead create a <b>Board card assigned to that person</b> when the work reaches them — so human review steps show up on the kanban board. The person must be a member of the workspace with a role in the project, or an admin of the workspace. Otherwise the hand-off is refused, no card is made, and the run's log and its card say why; give them a role in the project to hand work to them. Someone who has left the workspace is refused even if they kept a role in the project, and the reason says they are no longer a member: add them back to the workspace, with a role in the project, to hand work to them.</p>
+    <p>If the workspace has reached an enforced monthly AI budget when a run finishes, the agents it hands off to or is reviewed by are not started. The run's log names them and the budget, and the project's Activity page shows an <codeph>agentrun.successors_skipped</codeph> event. Hand-offs to people still happen.</p>
+  </conbody>
+</concept>

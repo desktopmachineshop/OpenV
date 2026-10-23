@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="inside-a-project">
+  <title>Inside a project</title>
+  <shortdesc>Opening a project shows the dark left sidebar with the project's modules:</shortdesc>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Entry</stentry><stentry>What it is</stentry></sthead>
+      <strow><stentry>Overview</stentry><stentry>Product definition, metrics, personas, needs, interviews</stentry></strow>
+      <strow><stentry>Requirements</stentry><stentry>The artifact tree — create, edit, link, baseline</stentry></strow>
+      <strow><stentry>Guided Definition</stentry><stentry>Step-by-step wizard from framing to committed requirements</stentry></strow>
+      <strow><stentry>V&amp;V</stentry><stentry>Coverage, gaps, test runs, PDF report</stentry></strow>
+      <strow><stentry>Matrix</stentry><stentry>Traceability matrix grid</stentry></strow>
+      <strow><stentry>Board</stentry><stentry>Kanban board with human and agent assignees</stentry></strow>
+      <strow><stentry>Crew</stentry><stentry>Crew builder — org chart of agents and people</stentry></strow>
+      <strow><stentry>Agents</stentry><stentry>Agent definitions and launcher</stentry></strow>
+      <strow><stentry>Automations</stentry><stentry>Scheduled and event-triggered agent runs</stentry></strow>
+      <strow><stentry>Runs</stentry><stentry>Agent run history and proposal review</stentry></strow>
+      <strow><stentry>Settings</stentry><stentry>Project access, repositories, agent auth, danger zone</stentry></strow>
+    </simpletable>
+    <p>The project name under the workspace switcher takes you back to all projects. Your user block at the bottom of the sidebar opens <b>Settings</b> (personal runner and agent sign-ins) and <b>Sign out</b>.</p>
+  </conbody>
+</concept>

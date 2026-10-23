@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-projects-page">
+  <title>The Projects page</title>
+  <shortdesc>After signing in you land on the Projects page for the active workspace. Each project appears as a card showing its name, description, short ID, and creation date. Hovering a card reveals its action buttons:</shortdesc>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Icon</stentry><stentry>Action</stentry></sthead>
+      <strow><stentry>⧉</stentry><stentry><b>Save as template</b> — snapshot this project as a reusable template</stentry></strow>
+      <strow><stentry>✎</stentry><stentry><b>Edit project</b> — rename it or change the description</stentry></strow>
+      <strow><stentry>↓</stentry><stentry><b>Download</b> — opens the download wizard (format, sections, attachments)</stentry></strow>
+      <strow><stentry>✕</stentry><stentry><b>Delete project</b> — removes the project and all its artifacts</stentry></strow>
+    </simpletable>
+    <p>Click anywhere else on the card to open the project.</p>
+  </conbody>
+</concept>

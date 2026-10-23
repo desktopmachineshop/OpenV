@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="moving-cards">
+  <title>Moving cards</title>
+  <shortdesc>Drag any unlocked card between columns or within a column. Human-assigned and unassigned cards behave like a normal kanban; only agent/crew cards with live runs are locked.</shortdesc>
+  <conbody>
+    <p>Work items can also be <b>created by crews</b>: when a crew edge hands work off to (or requests review from) a <i>person</i> who can open the project, a board card assigned to that person appears automatically — see <i>Crews</i>.</p>
+  </conbody>
+</concept>

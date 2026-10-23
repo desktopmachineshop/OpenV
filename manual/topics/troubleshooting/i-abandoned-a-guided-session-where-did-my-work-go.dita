@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="i-abandoned-a-guided-session-where-did-my-work-go">
+  <title>I abandoned a guided session — where did my work go?</title>
+  <shortdesc>Draft artifacts that were already materialized (green dot) are <b>kept</b> in the project with draft status; only unsaved entries were discarded. Find them in the Requirements view; delete the ones you don't want.</shortdesc>
+  <conbody/>
+</concept>

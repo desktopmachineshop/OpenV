@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="coverage-rollup">
+  <title>Coverage rollup</title>
+  <shortdesc>Every requirement gets a <b>rollup status</b> computed from its verification method and linked test results:</shortdesc>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Rollup</stentry><stentry>Meaning</stentry></sthead>
+      <strow><stentry>pass</stentry><stentry>Method is <i>test</i> and the latest results for all verifying tests pass</stentry></strow>
+      <strow><stentry>fail</stentry><stentry>At least one verifying test's latest result is a fail</stentry></strow>
+      <strow><stentry>blocked</stentry><stentry>No fails, but a verifying test is blocked</stentry></strow>
+      <strow><stentry>unrun</stentry><stentry>No fails or blocks, but a verifying test has no recorded result yet</stentry></strow>
+      <strow><stentry>verified-manually</stentry><stentry>A non-test method (inspection, analysis, demonstration) marked verified on the requirement</stentry></strow>
+      <strow><stentry>uncovered</stentry><stentry>Method is <i>test</i> but no test case verifies the requirement, or a non-test method not yet marked verified</stentry></strow>
+      <strow><stentry>method-missing</stentry><stentry>The requirement has no verification method set</stentry></strow>
+    </simpletable>
+    <p>The dashboard shows summary cards and a stacked bar for the distribution, plus a <b>Requirement coverage</b> table listing every requirement with its method and rollup chip.</p>
+  </conbody>
+</concept>

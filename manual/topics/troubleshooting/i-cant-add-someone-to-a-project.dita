@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="i-cant-add-someone-to-a-project">
+  <title>I can't add someone to a project</title>
+  <shortdesc>Adding a member by email requires that the person <b>already has an OpenV account</b>. Ask them to sign up first, then add them with the same email under Project Settings → Access.</shortdesc>
+  <conbody/>
+</concept>

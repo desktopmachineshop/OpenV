@@ -1,0 +1,32 @@
+# Context-sensitive help for the OpenV web app. Topics declare keys with
+# <resourceid appname="openv-web" appid="vv.runs"/>. The app sends the key
+# from frontend/src/pages.ts; these routes are the fallback for a bare path.
+# Keys fall back to their parents (vv.runs -> vv), then to the default, and
+# never to a topic the reader cannot see.
+apps:
+  openv-web:
+    default: start
+    routes:
+      /projects: projects
+      /projects/:projectId: overview
+      /projects/:projectId/guided: guided
+      /projects/:projectId/requirements: requirements
+      /projects/:projectId/baselines/**: baselines
+      /projects/:projectId/interviews: interviews
+      /projects/:projectId/vv: vv
+      /projects/:projectId/vv/runs/:runId: vv.runs
+      /projects/:projectId/evidence: evidence
+      /projects/:projectId/matrix: matrix
+      /projects/:projectId/review: review
+      /projects/:projectId/board: board
+      /projects/:projectId/todos: todos
+      /projects/:projectId/crew/**: crew
+      /projects/:projectId/team/**: crew
+      /projects/:projectId/agents: agents
+      /projects/:projectId/agent-runs: agent-runs
+      /projects/:projectId/automations: automations
+      /projects/:projectId/activity: activity
+      /projects/:projectId/settings: settings
+      /org/settings: org.settings
+      /org/runs: org.runs
+      /admin: admin

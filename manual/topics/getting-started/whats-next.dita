@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="whats-next">
+  <title>What's next</title>
+  <conbody>
+    <ul>
+      <li>Create your first project — see <i>Projects &amp; members</i>.</li>
+      <li>If you want AI agents working in your projects, set up a runner — see <i>Runs &amp; runners</i>.</li>
+    </ul>
+  </conbody>
+</concept>

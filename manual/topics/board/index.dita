@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="board">
+  <title>Kanban board</title>
+  <shortdesc>The <b>Board</b> is a kanban view of the project's work items. Its special trick: cards can be assigned to AI agents or crews, and dragging an agent's card to <b>To Do</b> kicks off an agent run.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="board"/>
+  </prolog>
+  <conbody/>
+</concept>

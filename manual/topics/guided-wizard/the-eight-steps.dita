@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-eight-steps">
+  <title>The eight steps</title>
+  <conbody>
+    <ol>
+      <li><b>Product framing</b> — vision, problem statement, target users. Saved to the product profile and shown on the Overview page.</li>
+      <li><b>Personas</b> — the key people who will use the product (name, role, goals, pain points). Each becomes a draft <i>persona</i> artifact.</li>
+      <li><b>User needs</b> — per persona, "As <i>persona</i>, I need <i>capability</i> so that <i>outcome</i>". Each becomes a draft <i>user-need</i> linked to its persona.</li>
+      <li><b>Requirements</b> — turn each need into testable "The system shall …" statements with a <b>fit criterion</b> and a <b>verification method</b> (inspection, analysis, demonstration, or test). Each becomes a draft <i>requirement</i> linked <i>derives-from</i> its need.</li>
+      <li><b>NFRs &amp; constraints</b> — quality-attribute requirements grouped by category (Performance, Reliability, Usability, Security, Maintainability, Regulatory). Each category you use becomes its own section under <i>Non-Functional Requirements &amp; Constraints</i>, so the category is the requirement's place in the document rather than a prefix on its title.</li>
+      <li><b>Hazards</b> (optional) — what could go wrong, the potential harm, and a severity. Skip if not applicable.</li>
+      <li><b>Verification stubs</b> (optional) — every requirement with method <b>test</b> is listed; checked ones get a draft test case ("Verify: …") linked with <i>verifies</i>, filed under <i>Functional</i> or the quality attribute of the requirement it verifies.</li>
+      <li><b>Review &amp; commit</b> — all draft artifacts created during the flow, grouped by type. <b>Discard</b> any you don't want, then <b>Commit</b> to make them all live. A reopened definition that adds nothing new has no drafts to review; <b>Commit definition</b> still closes it.</li>
+    </ol>
+    <p>Moving <b>Next</b> from a step saves it and materializes any new entries as <b>draft artifacts</b> — you'll see a green dot appear next to each one, and its fields lock (it's now a real artifact; edit it later in Requirements). You can jump back to any step you've reached from the step header.</p>
+    <p>After committing you're offered <b>Create baseline</b> — a snapshot named "Initial requirements" — plus shortcuts to the Requirements view or straight back into <i>Modify guided definition</i>.</p>
+  </conbody>
+</concept>

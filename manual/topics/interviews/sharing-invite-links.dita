@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="sharing-invite-links">
+  <title>Sharing invite links</title>
+  <shortdesc>Click <b>Copy invite link</b> on an interview to create an invite and copy its URL. The link opens a public, mobile-friendly chat page:</shortdesc>
+  <conbody>
+    <ol>
+      <li>The participant enters their name.</li>
+      <li>They chat with the interviewer agent — replies stream in live.</li>
+      <li>When they're done, the session is complete.</li>
+    </ol>
+    <p>Invite links are token-authenticated and can be revoked: <b>Close</b> an interview and its invite links stop working (you'll be asked to confirm). Closing is permanent — a closed interview can't issue new invites, so create a new interview if you need more sessions.</p>
+    <p>The interviewer agent needs a runner online to reply — automations-style ownerless routing applies, so a hosted runner keeps interviews responsive even when no one is at their desk (see <i>Runs &amp; runners</i>).</p>
+  </conbody>
+</concept>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="creating-and-organizing-artifacts">
+  <title>Creating and organizing artifacts</title>
+  <conbody>
+    <ul>
+      <li>Click <b>+ New Artifact</b>, choose a type, enter a title and a body (the body is markdown — headings, lists, tables, and images all render).</li>
+      <li>Artifacts form a <b>hierarchy</b>: right-click an artifact in the list for <b>create before / create after / create child</b>. New siblings inherit the type and parent of the artifact you clicked.</li>
+      <li>The same menu offers <b>copy</b>, <b>paste before / paste after</b> and <b>duplicate</b> (a copy placed directly after the original). A copy carries the type, title, body and attributes; links and figures stay with the original, because a copy that inherited "verifies REQ-12" would assert a verification nobody made. Pasted artifacts are titled "… (copy)", and the copy's own history starts with a single note — <i>Copied from REQ-12 (version 3)</i> — so you can always tell where it came from.</li>
+      <li><b>Drag an artifact</b> onto another to move it. Where you let go decides what happens: the <b>top half</b> drops it before that artifact, the <b>bottom left</b> after it, and the <b>bottom right</b> makes it a <b>child</b> of it. The row shows which it will be — a line on the edge it will land against, or an outline around the artifact it will go inside — so re-parenting and reordering are the same gesture. Dropping into a collapsed artifact expands it, and an artifact can never be dropped into its own subtree.</li>
+      <li><b>Collapse all / Expand all</b> manage the tree at once.</li>
+    </ul>
+  </conbody>
+</concept>

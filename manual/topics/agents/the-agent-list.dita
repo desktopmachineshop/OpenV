@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-agent-list">
+  <title>The agent list</title>
+  <shortdesc>Each agent card shows:</shortdesc>
+  <conbody>
+    <ul>
+      <li>Its <b>provider</b> badge (which AI vendor/CLI runs it).</li>
+      <li>Its <b>write mode</b> badge — <i>proposal</i> (orange) or <i>direct</i> (red).</li>
+      <li>📁 if the agent has <b>repository access</b>.</li>
+      <li><b>▶ Launch run</b> and <b>Delete</b> buttons.</li>
+    </ul>
+    <p><b>Sync from disk</b> re-reads agent definition files from the server's data directory — agents are stored as plain markdown files with YAML frontmatter, so they can also be edited outside the app and synced in.</p>
+  </conbody>
+</concept>

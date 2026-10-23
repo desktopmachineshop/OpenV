@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="starting-resuming-modifying">
+  <title>Starting, resuming, modifying</title>
+  <shortdesc>Open <b>Guided Definition</b> from the project sidebar (the Overview page also has a shortcut whose label reflects where you are: <i>Start</i>, <i>Resume</i>, or <i>Modify guided definition</i>).</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Start guided definition</b> — begins a fresh session.</li>
+      <li>If a session is <b>in progress</b>, it resumes exactly where you left off.</li>
+      <li>If a definition was already <b>committed</b>, you can <b>Modify guided definition</b>: the wizard reopens seeded with the committed answers. Entries that already became artifacts are shown locked (green dot); anything you add becomes new drafts to review and commit. <b>Start over from scratch</b> is also offered.</li>
+      <li><b>Abandon session</b> (top right) drops the current in-progress session and returns to the start page. Draft artifacts already created are <b>kept</b> — only unsaved entries are discarded.</li>
+    </ul>
+  </conbody>
+</concept>

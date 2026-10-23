@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="viewing-links">
+  <title>Viewing links</title>
+  <shortdesc>On the artifact details:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Links from this artifact</b> — outgoing links, grouped by type.</li>
+      <li><b>Links to this artifact</b> — incoming links, shown with inverse labels.</li>
+    </ul>
+    <p>Clicking a linked artifact navigates to it.</p>
+  </conbody>
+</concept>

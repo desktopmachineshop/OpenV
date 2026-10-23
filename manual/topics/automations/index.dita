@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="automations">
+  <title>Automations</title>
+  <shortdesc>Automations launch agent (or crew) runs without anyone clicking a button. Open <b>Automations</b> in the project sidebar.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="automations"/>
+  </prolog>
+  <conbody/>
+</concept>

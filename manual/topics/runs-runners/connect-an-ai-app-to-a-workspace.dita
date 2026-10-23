@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="connect-an-ai-app-to-a-workspace">
+  <title>Connect an AI app to a workspace</title>
+  <shortdesc>An AI app that speaks MCP, such as Claude or Cursor, can use OpenV's tools directly, with no runner and no key to copy. Its address is your OpenV address followed by <codeph>/mcp</codeph>, for example <codeph>https://openv.app/mcp</codeph>; <b>Settings → Connected apps</b> shows the exact one.</shortdesc>
+  <conbody>
+    <ol>
+      <li>Add OpenV to the app:
+        <ul>
+          <li><b>Claude</b> (claude.ai, the desktop app and the mobile app): open <b>Settings → Connectors</b>, choose <b>Add custom connector</b>, name it OpenV and paste the address. On a Claude Team or Enterprise plan an owner of your Claude organization adds it first, and each member then connects.</li>
+          <li><b>Claude Code</b>: run <codeph>claude mcp add --transport http openv https://openv.app/mcp</codeph>, then <codeph>/mcp</codeph> to sign in.</li>
+          <li><b>Another app</b>: add OpenV as a <b>remote MCP server</b> at the address.</li>
+        </ul>
+      </li>
+      <li>The app opens OpenV in your browser. Sign in if asked, choose the <b>workspaces</b> the app may work in and whether it may <b>read and change</b> or <b>read only</b>, and choose <b>Connect</b>.</li>
+      <li>You go back to the app, which can now list your projects, read and edit artifacts and links, record test results and comment, as you.</li>
+    </ol>
+    <p>Everything the app does is recorded as yours, it reaches only the workspaces you chose, and your role in each still applies: a viewer's app cannot edit. It cannot start agent runs. To change which workspaces it reaches, choose <b>Workspaces</b> beside it under <b>Settings → Connected apps</b>, tick the ones you want and choose <b>Save</b>: there is no need to connect it again, and a workspace you untick is out of its reach at once. To stop it altogether, choose <b>Disconnect</b>; it stops working at once.</p>
+  </conbody>
+</concept>

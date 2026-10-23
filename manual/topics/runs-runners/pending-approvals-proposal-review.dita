@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="pending-approvals-proposal-review">
+  <title>Pending approvals (proposal review)</title>
+  <shortdesc>Agents with <i>proposal</i> write mode don't change your project directly — each write becomes a proposal. The <b>Pending approvals</b> counter at the top of the Runs page opens the review panel where you <b>approve</b> or <b>reject</b> each proposed artifact change, link, or test result. Only approved proposals are applied.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agent-runs.approvals"/>
+  </prolog>
+  <conbody/>
+</concept>

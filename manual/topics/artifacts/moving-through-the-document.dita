@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="moving-through-the-document">
+  <title>Moving through the document</title>
+  <conbody>
+    <p>The artifact you are reading carries <b>‹</b> and <b>›</b> and its place in the project — <i>12 of 148</i>. They step through it in the order the tree shows: a heading, then what is under it, then the next heading. They follow whatever your search and filters have left in view, so narrowing the tree to one type or one owner turns ‹ / › into a reader for just those.</p>
+    <p>On a keyboard, <b>J</b> goes to the next artifact and <b>K</b> to the previous one. They work from anywhere on the page except inside a field, an open editor or a dialog — so typing a <i>j</i> into the search box stays a <i>j</i>. (They are the physical J and K keys on a standard layout; on a layout that puts those letters elsewhere, use the ‹ / › buttons.)</p>
+    <p>On a phone or tablet, swipe the document sideways: <b>left</b> for the next artifact, <b>right</b> for the one before. Scrolling up and down is never interrupted, and a table or code block wide enough to scroll keeps its own sideways swipe. The <b>Tree / Document / Notes</b> buttons still switch panes.</p>
+    <p>Wherever a step lands, the tree opens the sections above it so you can see where you are — and only those, so a section you collapsed on purpose stays shut.</p>
+  </conbody>
+</concept>

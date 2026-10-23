@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="agents">
+  <title>Agents</title>
+  <shortdesc>Agents are AI workers that operate inside your projects — drafting requirements, reviewing for testability, running interviews, doing V&amp;V chores. The <b>Agents</b> page in the project sidebar lists them and hosts the editor.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents"/>
+  </prolog>
+  <conbody/>
+</concept>

@@ -1,0 +1,11 @@
+# Sample readers for `opend preview manual --as <name>`: one per OpenV plan family.
+contexts:
+  personal:
+    products: [free]
+    version: '0.23'
+  business:
+    products: [business]
+    version: '0.23'
+  self-hoster:
+    products: [self-host]
+    version: '0.23'

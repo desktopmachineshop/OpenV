@@ -21,6 +21,11 @@
 # - the shipped commit is tagged `v<version>`, so a release is a point in
 #   history you can check out and compare against rather than only a branch
 #   position and a notes section
+# - the user manual ships with the code: master's Docs check (OpenD
+#   validates manual/) is among the checks that must be green, the release
+#   commit stamps the manual's `release:` with the version's line, and the
+#   shipped commit is pushed to `docs/<major.minor>`, the branch the docs
+#   site publishes that line from (docs/docs-maintenance.md)
 
 name: Promote to release
 
@@ -153,6 +158,19 @@ jobs:
             git commit -m "Stable release $after (security fix)"
           fi
 
+      # The manual on master describes master, so the release commit names
+      # the line it now documents: 0.24 for 0.24.0 and every 0.24.x after.
+      # A patch release leaves it as it is.
+      - name: Stamp the manual's release line
+        run: |
+          python3 scripts/manual/docs.py stamp RELEASE_NOTES.md manual/opend.config.yaml
+          if ! git diff --quiet -- manual/opend.config.yaml; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add manual/opend.config.yaml
+            git commit -m "Manual documents $(python3 scripts/manual/docs.py line RELEASE_NOTES.md)"
+          fi
+
       - name: Push release
         run: |
           git push origin HEAD:master
@@ -189,6 +207,19 @@ jobs:
           git push origin "refs/tags/${tag}"
           echo "Tagged $(git rev-parse --short HEAD) as ${tag}"
           echo "Tagged \`${tag}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # The docs site publishes each minor line from its own branch, so a
+      # workspace on 0.22 keeps the 0.22 manual while nightly reads 0.24.
+      # The branch follows the newest release of its line: a patch release
+      # moves it on. Forced, because a docs fix backported to the line
+      # (docs/docs-maintenance.md) is a cherry-pick of a master commit this
+      # release already carries, so moving past it loses nothing. Like the
+      # tag, after the push: only a release that shipped gets its docs.
+      - name: Publish the manual's release line
+        run: |
+          line=$(python3 scripts/manual/docs.py line RELEASE_NOTES.md)
+          git push --force origin "HEAD:refs/heads/docs/${line}"
+          echo "Manual for ${line} published from \`docs/${line}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
 
       # openv.app's production builds openv-hosted's `release` branch, which
       # pins the OpenV release it runs (its OPENV_VERSION; docs/railway.md

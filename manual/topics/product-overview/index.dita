@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="product-overview">
+  <title>Product Overview</title>
+  <shortdesc>The <b>Overview</b> page (the project's landing page) is the single source of truth for what the product is and how success is measured.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="overview"/>
+  </prolog>
+  <conbody/>
+</concept>

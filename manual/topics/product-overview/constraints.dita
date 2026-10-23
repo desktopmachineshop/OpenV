@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="constraints">
+  <title>Constraints</title>
+  <shortdesc>Named constraints with descriptions (regulatory limits, budget, platform requirements…). <b>+ Add constraint</b>, then <b>Save constraints</b>.</shortdesc>
+  <conbody/>
+</concept>

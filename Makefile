@@ -199,7 +199,13 @@ test:
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
-## carries the no-release-notes label. From
+## carries the no-release-notes label. From .github/workflows/docs.yml: the
+## docs job (the manual matches the chapters, OpenD validates it, and a pull
+## request that changes what users see changes the manual; set
+## NO_DOCS_CHANGE=1 for one that carries the no-docs-change label). The
+## OpenD validation builds a pinned OpenD into .cache/opend on first use,
+## which needs network, Node 22.12+ and corepack; set SKIP_OPEND=1 to skip
+## it offline (CI runs it). From
 ## .github/workflows/refactor-guard.yml: the Refactor guard job, over the
 ## commits since that merge base, with the labels the pull request will carry
 ## in LABELS (space-separated): `make check LABELS="refactor refactor:tooling
@@ -293,6 +299,18 @@ check:
 		python3 scripts/release_notes.py check-pr --base "$$base_notes" RELEASE_NOTES.md; rc=$$?; \
 		rm -f "$$base_notes"; exit $$rc; \
 	fi
+	python3 -m unittest scripts/manual/docs_test.py
+	python3 scripts/manual/docs.py sync --check
+	@if [ -n "$(SKIP_OPEND)" ]; then \
+		echo "SKIP_OPEND is set: OpenD's validation of the manual skipped (CI runs it)"; \
+	else scripts/manual/validate.sh; fi
+	@if [ -n "$(NO_DOCS_CHANGE)" ]; then \
+		echo "NO_DOCS_CHANGE is set: not requiring a manual update (the no-docs-change label)"; \
+	else \
+		base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
+			echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
+		python3 scripts/manual/docs.py check-pr --base "$$base"; \
+	fi
 	@base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
 		echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
 	guard=scripts/refactor/refactor_guard.py; tmp=""; \
@@ -329,7 +347,9 @@ check:
 ## sent from internal/orchestration, say), S13's Go vocabularies in
 ## internal/vocabparity and X4a's generated contract in internal/contract,
 ## which parse packages they do not import (an error code in internal/api,
-## an event type), and the frontend type check; then
+## an event type), that manual/ matches the manual's chapters (a chapter
+## edit needs `python3 scripts/manual/docs.py sync`), and the frontend type
+## check; then
 ## refactor plan S12b's CSS cascade test, which walks the whole frontend
 ## import graph, S10's table of the notification bell's deep links, which
 ## reads the Go notification goldens under internal/notify/testdata (so a
@@ -366,6 +386,7 @@ check-fast:
 	go test ./internal/archtest
 	go test -short -run '^(TestSSE|TestEventPayload)' ./internal/api
 	go test ./internal/vocabparity ./internal/contract
+	python3 scripts/manual/docs.py sync --check
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx vitest run src/arch/cssOrder.test.ts src/components/NotificationBell.paths.test.tsx
 	cd frontend && npm run build --silent -- --logLevel warn && node scripts/bundle-check.mjs

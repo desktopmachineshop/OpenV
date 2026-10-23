@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-vv-assistant-chat">
+  <title>The V&amp;V Assistant chat</title>
+  <shortdesc>The panel on the right is the V&amp;V Assistant, which sees your current step and everything you've entered so far.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="guided.assistant"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li>Ask it anything — brainstorming personas, tightening a requirement, challenging your framing.</li>
+      <li>Its replies can include <b>suggestion cards</b> (persona, need, requirement, NFR, hazard, or framing text). Click a card's add button to insert it into the wizard — replacement suggestions update an existing entry in place. Entries already materialized as artifacts can't be replaced from chat.</li>
+      <li><b>Quick actions</b> (like <i>Review step</i>) send canned prompts, e.g. a quality-check of the current step's entries for clarity and testability.</li>
+      <li>The assistant is nudged automatically when you advance or skip a step, so it follows along with context.</li>
+    </ul>
+    <p>The same assistant is also in the <b>Notes</b> panel on the Requirements page, under its own tab beside History. It is one conversation per project, so what you asked in the wizard is there in the notes and the other way round. With an artifact selected the assistant is told which one you are reading and answers about it; with nothing selected it answers for the project as a whole. An artifact's history stays where it was — it belongs to that artifact, the conversation does not.</p>
+    <p>Suggestion cards appear in the notes chat too, but they can only be added from the wizard, which is where the entry sections they fill in live.</p>
+    <p>Assistant turns execute on an agent runner like any other agent work. If no runner is online the panel says so and pauses replies — messages you send are saved and answered as soon as a runner connects (see <i>Runs &amp; runners</i>).</p>
+  </conbody>
+</concept>

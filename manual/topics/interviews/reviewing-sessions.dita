@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="reviewing-sessions">
+  <title>Reviewing sessions</title>
+  <shortdesc>Expand an interview to see its <b>sessions</b> — one per participant, with name, status, and start time.</shortdesc>
+  <conbody>
+    <ul>
+      <li>Open a session to read the full <b>transcript</b>.</li>
+      <li>Sessions can carry a <b>summary</b> produced by the agent, highlighted above the transcript.</li>
+      <li>Use the <b>persona filter</b> above the interview list to focus on interviews linked to one persona (or those with none).</li>
+    </ul>
+    <p>Candidate user needs recorded by the interviewer land in the project as <b>draft</b> user-need artifacts, tagged with the interview session they came from — review them in the Requirements view. Generated content never masquerades as reviewed work.</p>
+  </conbody>
+</concept>

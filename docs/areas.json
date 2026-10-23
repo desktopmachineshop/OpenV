@@ -561,9 +561,11 @@
     },
     {
       "name": "frontend-shell",
-      "description": "The single-page app around the features: entry and routing (App.tsx), the API client barrel and its axios instance, state, hooks, the UI kit, navigation and project layout, theme and help, the landing page, public site and user manual, the test mock, the guides of frontend/src, frontend/src/api and e2e, the build configuration, the nginx image's runtime files and public assets, and the Playwright harness.",
+      "description": "The single-page app around the features: entry and routing (App.tsx), the API client barrel and its axios instance, state, hooks, the UI kit, navigation and project layout, theme and help, the landing page, public site and user manual (and its OpenD project in manual/), the test mock, the guides of frontend/src, frontend/src/api and e2e, the build configuration, the nginx image's runtime files and public assets, and the Playwright harness.",
       "globs": [
+        "docs/docs-maintenance.md",
         "docs/plans/mobile-support.md",
+        "docs/plans/opend-help.md",
         "docs/plans/search-and-ai-visibility.md",
         "docs/research/**",
         "e2e/*",
@@ -610,7 +612,8 @@
         "frontend/src/views/ManualView*",
         "frontend/tsconfig.json",
         "frontend/vite.config.ts",
-        "frontend/vite.ext.ts"
+        "frontend/vite.ext.ts",
+        "manual/**"
       ]
     },
     {

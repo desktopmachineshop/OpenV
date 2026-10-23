@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="quick-links">
+  <title>Quick links</title>
+  <shortdesc>At the top: a shortcut into the guided definition (labeled <i>Start</i>, <i>Resume</i>, or <i>Modify guided definition</i> depending on where the project is), the <b>V&amp;V dashboard</b>, and the <b>Board</b>.</shortdesc>
+  <conbody/>
+</concept>

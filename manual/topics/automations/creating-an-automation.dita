@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="creating-an-automation">
+  <title>Creating an automation</title>
+  <conbody>
+    <p><b>New automation</b> opens the form:</p>
+    <ol>
+      <li>Name it.</li>
+      <li>A workspace admin chooses what it <b>covers</b>: this project or the whole workspace.</li>
+      <li>Choose the <b>target</b> — a single agent or a crew.</li>
+      <li>Pick the kind and its schedule/event settings.</li>
+      <li>Write the <b>prompt template</b> — the prompt each run starts with. Keep it lean; the agent fetches artifact content itself at run time.</li>
+    </ol>
+    <p>Automations are created <b>enabled</b>; toggle them on/off from the table at any time. The table also shows each automation's last run and (for scheduled ones) the next run time. If a scheduled automation's cron expression can no longer be read, it is not run: it is switched off, so correct its schedule and switch it back on.</p>
+  </conbody>
+</concept>

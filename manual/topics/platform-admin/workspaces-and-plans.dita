@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="workspaces-and-plans">
+  <title>Workspaces and plans</title>
+  <conbody>
+    <p>The <i>Workspaces</i> table lists every workspace on the deployment with its type, plan, member count and creation date. Change a plan from the selector: a plan decides the workspace's limits and its default release channel. A workspace you move from Single User, Business Lite, Self-hosted or Open source onto Business or Enterprise stays on the nightly channel, as it would after a checkout, so none of the features its members use switch off; its admins can choose stable in its settings.</p>
+    <p>The <b>Open source</b> plan is how an open-source project is hosted free: choose it and every project in that workspace is published, as of its latest baseline, on the site's <xref href="https://openv.app/open-source" scope="external" format="html">open-source page</xref>. Live work stays private until the next baseline. The page asks you to confirm before it changes a plan.</p>
+    <p>The same change is available from the command line for scripts: <codeph>PUT /api/v1/orgs/&lt;id&gt;/plan {"plan": "open_source"}</codeph> signed in as a platform admin.</p>
+  </conbody>
+</concept>

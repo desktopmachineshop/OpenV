@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="crews-elsewhere-in-the-app">
+  <title>Crews elsewhere in the app</title>
+  <conbody>
+    <ul>
+      <li>Board cards can be <b>assigned to a crew</b> (👥) to track crew work — but moving the card doesn't launch the crew; launch it from the Crew page or through an automation.</li>
+      <li><b>Automations</b> can target a crew instead of a single agent.</li>
+      <li>Runs launched through a crew are tagged <i>(crew)</i> on the Runs page, and delegation between agents shows up as follow-up runs.</li>
+    </ul>
+  </conbody>
+</concept>

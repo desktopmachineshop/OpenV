@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="downloading-a-project">
+  <title>Downloading a project</title>
+  <shortdesc>There is one way out of a project, and it is the <b>↓ Download</b> button — on the project card here, and in the Requirements toolbar inside the project. It opens a two-step wizard.</shortdesc>
+  <conbody>
+    <p><b>1. Format</b> — what shape you need it in:</p>
+    <simpletable>
+      <sthead><stentry>Format</stentry><stentry>What it is</stentry></sthead>
+      <strow><stentry>PDF specification</stentry><stentry>The document as a reader sees it: sections, artifacts, figures, traceability and each requirement's V&amp;V status</stentry></strow>
+      <strow><stentry>Word document</stentry><stentry>The same specification as a .docx, for editing or review outside OpenV</stentry></strow>
+      <strow><stentry>JSON data</stentry><stentry>The complete project, which an OpenV import restores in full</stentry></strow>
+      <strow><stentry>CSV table</stentry><stentry>One row per artifact for a spreadsheet; links fold into a single column</stentry></strow>
+      <strow><stentry>Excel workbook (.xlsx)</stentry><stentry>A sheet per artifact type, a sheet of traceability links, and a cover naming the snapshot</stentry></strow>
+      <strow><stentry>ReqIF interchange</stentry><stentry>The OMG requirements interchange format, for other requirements tools; an OpenV import reads it back too</stentry></strow>
+    </simpletable>
+    <p><b>2. Content</b> — how much of it:</p>
+    <ul>
+      <li><b>Sections</b> — tick the top-level sections to include. A section brings everything underneath it, however deep. Each shows how many artifacts it holds, so you can see what leaving one out costs.</li>
+      <li><b>Artifact types</b> — tick the types to include (requirements, test cases, and whatever else this project holds), and whether <b>Headings</b> come with them. Untick headings for a plain list of artifacts with no document structure around them.</li>
+      <li><b>Attachments</b> — tick the categories of file to bring along: figures, unnumbered images, documents, data files. Only the categories this project actually holds are offered. Ticking any makes the download a <b>.zip</b>: the document plus an <codeph>attachments/</codeph> folder, each file named by its figure reference where it has one.</li>
+    </ul>
+    <p>The line at the foot of the wizard says what you are about to get — "1 of 3 sections, no headings, with figures" — and the button refuses to download a selection that would produce an empty file.</p>
+    <p>Whatever you pick applies to whichever format you chose: the filters are applied once, to the project snapshot, before the PDF or the CSV is built from it. A baseline selected in the Requirements toolbar is downloaded instead of the live project.</p>
+  </conbody>
+</concept>

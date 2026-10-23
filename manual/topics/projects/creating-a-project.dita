@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="creating-a-project">
+  <title>Creating a project</title>
+  <shortdesc>Click <b>+ New Project</b>. The form offers a <b>Project Type</b>:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Blank Project</b> — start empty; enter a name and optional description.</li>
+      <li><b>Templates</b> — start from a template you previously saved with ⧉.</li>
+      <li><b>Examples</b> — start from a bundled example project (when the server ships any), useful for exploring the product with realistic data.</li>
+      <li><b>🎲 Random product (for testing)</b> — start from a made-up product, when what you want is something to try OpenV on rather than your real work.</li>
+    </ul>
+    <p>Choosing a template or example pre-fills the name and description; you can change both before creating.</p>
+    <section id="random-products-and-the-community-pool">
+      <title>Random products and the community pool</title>
+      <p>The random mode rolls a fake product — a name, a category, a one-line description, a vision and an audience — and pre-fills the form with it. <b>Creating</b> then drops you into the Guided Wizard with that framing already in place.</p>
+      <p>Three things feed the roll: the built-in concepts, the products your own connected agent invents (<b>✨ Invent with agent</b>, available while a runner is online), and the <b>community pool</b> — the fake products other OpenV users have shared. The pool is the one thing in OpenV every workspace reads and writes: anything published there is visible to everyone, so it is deliberately jokes and nothing else. What your agent invents joins it automatically, which is how it grows without anyone doing chores — so keep real people, customers and unreleased work out of the invention brief.</p>
+      <p>Above the card is a filter:</p>
+      <ul>
+        <li><b>🎲 Random</b> — reroll over the whole pool, which is the mode's original behaviour.</li>
+        <li><b>Top 5 all time</b> — the five most-voted products ever.</li>
+        <li><b>Top 5 this week</b> — the five most-voted products of the last seven days, a rolling window rather than a Monday-to-Sunday one.</li>
+      </ul>
+      <p>Each entry in a Top 5 list shows its votes and a <b>Use this</b> button that puts it on the card and in the form.</p>
+      <p><b>▲ Vote</b> on the card says "keep this one": one vote per account, pressed again to take it back, and the counts you see are everyone's. The hint beside it (<i>· N this week</i>) is that product's votes inside the weekly window. Only products that actually reached the shared pool can be voted for — a built-in concept, or an invention that stayed in this browser because the pool was full or the name was taken, has nothing for anyone else to vote on, and the arrow says so.</p>
+      <p><b>⚑ Report</b> is the other side of the same coin: flag anything that does not belong, and three different people reporting it hides it from everyone's roll list pending review.</p>
+    </section>
+  </conbody>
+</concept>

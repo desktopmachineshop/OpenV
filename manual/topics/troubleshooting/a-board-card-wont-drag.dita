@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="a-board-card-wont-drag">
+  <title>A board card won't drag</title>
+  <shortdesc>A card assigned to an agent or crew is locked while its run is live (pulsing blue dot). Wait for the run to finish, or cancel it from the Runs page.</shortdesc>
+  <conbody/>
+</concept>
