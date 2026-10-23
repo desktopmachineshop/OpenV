@@ -557,3 +557,26 @@ func TestSetAdmin(t *testing.T) {
 }
 
 func (m *memRepo) SetBillingTrialUsed(userID string, at time.Time) error { return nil }
+
+// TestLoginWithSSOWithoutName: a provider that sends no name names a new
+// account after its address and leaves an existing account's name alone.
+func TestLoginWithSSOWithoutName(t *testing.T) {
+	svc := NewDefaultService(newMemRepo())
+	user, _, err := svc.LoginWithSSO(ProviderOIDC, "dana@example.com", "", "")
+	if err != nil {
+		t.Fatalf("first login: %v", err)
+	}
+	if user.Name != "dana" {
+		t.Errorf("new account name = %q, want dana", user.Name)
+	}
+	if _, _, err := svc.LoginWithSSO(ProviderOIDC, "dana@example.com", "Dana Scully", ""); err != nil {
+		t.Fatalf("named login: %v", err)
+	}
+	user, _, err = svc.LoginWithSSO(ProviderOIDC, "dana@example.com", "", "")
+	if err != nil {
+		t.Fatalf("unnamed login: %v", err)
+	}
+	if user.Name != "Dana Scully" {
+		t.Errorf("name = %q, want it kept", user.Name)
+	}
+}

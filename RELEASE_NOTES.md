@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Single sign-on works with identity providers that require PKCE.**
+  OpenV now protects each single sign-on with a one-time check that ties
+  the sign-in to your browser, which some identity providers insist on,
+  the Desktop Machine Shop account among them. A provider that sends no
+  name no longer clears the name on your OpenV account; a new account it
+  creates is named after your email address until you change it.
+
 ## 0.23.0 — 2026-10-23
 
 Stable channel release since 2026-10-23.

@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/oauth2"
+
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -33,6 +35,8 @@ type oidcStub struct {
 	// idToken is the raw ID token the /token endpoint returns; the test sets it
 	// per case (controlling nonce/email/verified).
 	idToken string
+	// verifier is the PKCE code_verifier the last token request carried.
+	verifier string
 }
 
 func newOIDCStub(t *testing.T, clientID string) *oidcStub {
@@ -66,6 +70,8 @@ func newOIDCStub(t *testing.T, clientID string) *oidcStub {
 		})
 	})
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		stub.verifier = r.PostForm.Get("code_verifier")
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "stub-access-token",
@@ -285,6 +291,56 @@ func TestOIDCLoginBuildsAuthorizeURL(t *testing.T) {
 	if cookies[oidcNonceCookie] != nonce {
 		t.Errorf("nonce cookie %q != authorize nonce %q", cookies[oidcNonceCookie], nonce)
 	}
+	// PKCE: the challenge is the S256 of the verifier kept for the callback.
+	if q.Get("code_challenge_method") != "S256" {
+		t.Errorf("code_challenge_method = %q, want S256", q.Get("code_challenge_method"))
+	}
+	if v := cookies[oidcVerifierCookie]; v == "" || q.Get("code_challenge") != oauth2.S256ChallengeFromVerifier(v) {
+		t.Errorf("code_challenge %q does not match the verifier cookie %q", q.Get("code_challenge"), v)
+	}
+}
+
+// testVerifier is the PKCE code verifier the callback tests' browser holds.
+const testVerifier = "test-code-verifier-0123456789-0123456789-0123456789"
+
+// TestOIDCCallbackSendsCodeVerifier: the token request carries the verifier
+// from the cookie, and a callback without one exchanges nothing.
+func TestOIDCCallbackSendsCodeVerifier(t *testing.T) {
+	stub := newOIDCStub(t, "client-abc")
+	h, repo := newOIDCTestHandler(t, stub.config("client-abc", "https://app/api/v1/auth/oidc/callback"))
+	stub.idToken = stub.signIDToken(t, map[string]any{
+		"email":          "pkce@example.com",
+		"email_verified": true,
+		"nonce":          "n",
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=c&state=s", nil)
+	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "s"})
+	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "n"})
+	rec := httptest.NewRecorder()
+	h.OIDCCallback(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 without a code verifier, got %d (%s)", rec.Code, rec.Body.String())
+	}
+	if stub.verifier != "" {
+		t.Fatal("a callback without a code verifier must not exchange the code")
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=c&state=s", nil)
+	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "s"})
+	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "n"})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
+	rec = httptest.NewRecorder()
+	h.OIDCCallback(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d (%s)", rec.Code, rec.Body.String())
+	}
+	if stub.verifier != testVerifier {
+		t.Errorf("token request code_verifier = %q, want the cookie's", stub.verifier)
+	}
+	if u, _ := repo.FindUserByEmail("pkce@example.com"); u == nil {
+		t.Error("user not created")
+	}
 }
 
 func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
@@ -303,6 +359,7 @@ func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
@@ -392,6 +449,7 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 			req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 			req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+			req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 			rec := httptest.NewRecorder()
 			h.OIDCCallback(rec, req)
 
@@ -455,6 +513,7 @@ func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
@@ -496,6 +555,7 @@ func TestOIDCCallbackRejectsBadNonce(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "session-nonce"})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
@@ -516,6 +576,7 @@ func TestOIDCCallbackRejectsBadState(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=c&state=fromquery", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "different"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "n"})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 

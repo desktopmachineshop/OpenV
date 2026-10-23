@@ -20,6 +20,7 @@ func oidcSignOn(t *testing.T, h *Handler, stub *oidcStub, email string) *httptes
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 	return rec
