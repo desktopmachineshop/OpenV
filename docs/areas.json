@@ -592,6 +592,7 @@
         "frontend/src/api/contentDisposition*",
         "frontend/src/api/errors*",
         "frontend/src/api/http*",
+        "frontend/src/components/DocsHelp*",
         "frontend/src/components/ExpandableText*",
         "frontend/src/components/HelpSidebar*",
         "frontend/src/components/Navbar*",
