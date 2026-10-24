@@ -27,6 +27,8 @@ Everything here is the tooling area of `docs/areas.json`, through
 | `openv/sync.py` | the OpenV requirements project from any machine: `register`, `bootstrap`, `vv`, `status`, `export`, and `api` for any endpoint (root `CLAUDE.md`, `docs/requirements-maintenance.md`) |
 | `openv/mcp-server.sh` | builds and starts `openv-mcp` for an agent session in this repository; `.mcp.json` runs it |
 | `release_notes.py` | the release-notes rules CI and the release workflows apply: `check`, `check-pr`, `cut`, `check-release`, `version`, `next`, `stable-version`, `cut-stable`, and `site`, which writes the released history the public `/changelog` page renders (`frontend/src/site/changelog/releases.json`; the release workflows regenerate it with every cut) |
+| `manual/docs.py` | the user manual's rules (`docs/docs-maintenance.md`): `sync` generates `manual/` from the chapters, `check-pr` requires a manual update with a user-visible change, `line` and `stamp` name and stamp the release line Promote to release publishes |
+| `manual/validate.sh` | OpenD's validation of `manual/`, with a pinned OpenD built into `.cache/opend` |
 | `refactor/refactor_guard.py` | the Refactor guard (S14b): `GOLDEN_LIST`, `FROZEN_DATA`, `PROTECTED_PATHS`, `GUARD_CODE`, and the per-commit class checks |
 | `refactor/classify_commits.py` | the layers and files each commit touches, and the hub-touch rates of plan §10 |
 | `backup.sh` | the backup recipe `make backup` and the backup sidecar run |
@@ -34,6 +36,7 @@ Everything here is the tooling area of `docs/areas.json`, through
 | `.github/workflows/ci.yml` | the jobs every pull request runs: backend, backend-pgvector, frontend, vuln, secrets, docker, e2e |
 | `.github/workflows/refactor-guard.yml` | the Refactor guard, on every pull request and every label change |
 | `.github/workflows/release-notes.yml` | a pull request adds a release note, or carries `no-release-notes` |
+| `.github/workflows/docs.yml` | the manual matches the chapters, OpenD validates it, and a pull request that changes what users see changes it, or carries `no-docs-change` |
 | `.github/workflows/codeql.yml` | CodeQL |
 | `.github/workflows/promote-release.yml`, `.github/workflows/nightly-promote.yml`, `.github/workflows/cut-stable.yml`, `.github/workflows/staging-smoke.yml` | the release pipeline (`docs/railway.md`, `docs/release-policy.md`) |
 | `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/**`, `.github/instructions/*.md` | the PR template, issue templates, and agent instructions |
@@ -52,8 +55,8 @@ Everything here is the tooling area of `docs/areas.json`, through
 - **Plan §7.9.** The release workflows are out of the refactor's scope:
   `promote-release.yml`, `nightly-promote.yml`, `cut-stable.yml` and
   `staging-smoke.yml`.
-- **`make check` mirrors CI** (the backend, frontend, release-notes and
-  Refactor guard jobs, without Docker); `make check-fast` is its subset
+- **`make check` mirrors CI** (the backend, frontend, release-notes, docs
+  and Refactor guard jobs, without Docker); `make check-fast` is its subset
   of under a minute.
 
 ## Recipes
@@ -94,5 +97,9 @@ Each line: the guard, what it pins, and the command that runs it.
   with the labels the pull request will carry:
   `make check LABELS="refactor refactor:tooling no-release-notes"`, or
   `python3 scripts/refactor/refactor_guard.py --base <merge base> --head HEAD --label refactor --label refactor:tooling --label no-release-notes`.
+- **The user manual** the script's suite, the generated files and OpenD's
+  validation. `python3 -m unittest scripts/manual/docs_test.py`,
+  `python3 scripts/manual/docs.py sync --check` and
+  `scripts/manual/validate.sh`
 - **Everything CI runs that needs no Docker:** `make check`; while
   working, `make check-fast`.

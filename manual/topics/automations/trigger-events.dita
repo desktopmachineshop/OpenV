@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="trigger-events">
+  <title>Trigger events</title>
+  <shortdesc>Triggered automations listen to the workspace's events. Available events:</shortdesc>
+  <conbody>
+    <ul>
+      <li>artifact.created / artifact.updated / artifact.deleted / artifact.status_changed / artifact.restored</li>
+      <li>link.created / link.updated / link.deleted</li>
+      <li>baseline.captured / baseline.deleted</li>
+      <li>project.review_round_started</li>
+      <li>chatter.created</li>
+      <li>testrun.recorded</li>
+      <li>workitem.created / workitem.moved / workitem.updated</li>
+      <li>agentrun.finished / agentrun.successors_skipped</li>
+      <li>proposal.created</li>
+      <li>project.member_added / project.member_role_changed / project.member_removed</li>
+      <li>org.member_added / org.member_role_changed / org.member_removed / org.invitation_sent / org.invitation_accepted</li>
+    </ul>
+    <p>The org.<i> events belong to the workspace, not to a project, so they fire only automations that cover the whole workspace (see </i>What an automation covers*); an automation that covers one project never sees them.</p>
+    <p><b>Filters</b> narrow the match with key/value pairs on the event payload (for example only artifacts of a certain type). Two safety valves keep triggered automations from running away:</p>
+    <ul>
+      <li><b>Cooldown (seconds)</b> — minimum time between runs.</li>
+      <li><b>Max runs per hour</b> — hard cap.</li>
+    </ul>
+  </conbody>
+</concept>

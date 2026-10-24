@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="crews">
+  <title>Crews</title>
+  <shortdesc>A <b>crew</b> is a group of agents (and optionally people) arranged in an org-chart graph. Use a crew when a task naturally splits — one agent drafts requirements, another reviews for testability, a person signs off.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="crew"/>
+  </prolog>
+  <conbody>
+    <p>Open <b>Crew</b> in the project sidebar.</p>
+  </conbody>
+</concept>

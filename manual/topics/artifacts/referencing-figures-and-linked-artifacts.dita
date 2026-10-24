@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="referencing-figures-and-linked-artifacts">
+  <title>Referencing figures and linked artifacts</title>
+  <shortdesc>Type <b><codeph>#</codeph></b> in an artifact's description to cite something: its own figures (<codeph>REQ-17-FIG-1</codeph>) and the artifacts it is already linked to. Filter by typing, choose with the arrow keys or the mouse, and the reference is inserted as <codeph>#REQ-17-FIG-1</codeph>.</shortdesc>
+  <conbody>
+    <p>Type <b><codeph>##</codeph></b> to reach the <b>whole project</b>: every figure, and every other artifact, whether or not this one is linked to it. The menu lists this artifact's own figures first, then everyone else's with the artifact each belongs to, then the project's artifacts. The citation is written <codeph>##REQ-99-FIG-2</codeph> so a reader can see at a glance that it reaches outside what they are reading.</p>
+    <p>Outside edit mode a reference is a link: clicking an artifact reference selects that artifact, and clicking a figure reference opens the figure itself — the drawing, the datasheet, the model — wherever in the project it lives, so following a citation never loses your place.</p>
+    <p><b>The two markers mean different things, and that is the point.</b> A single <codeph>#</codeph> offers only what this artifact is already connected to, so a citation written with one marker is a claim the traceability matrix can see. <codeph>##</codeph> says out loud, in the text as well as in the menu, that the citation reaches outside those connections — useful for pointing at a drawing or a neighbouring requirement, but not a substitute for linking two artifacts that genuinely relate. If the relationship matters, link it, and it appears under <codeph>#</codeph>.</p>
+    <p><b>The quality linter checks this for you.</b> Citing an artifact you have no traceability link to raises <b>Citation with no link</b>, an error carrying the same weight as unfinished placeholder text: the description claims a connection the matrix does not hold, so coverage and impact analyses reading the links will disagree with the requirement as written. Link the two artifacts and the finding goes. Citing a <b>figure</b> never raises it — a drawing is evidence, not a claim about how two artifacts relate. If your project wants the check quieter, its severity is yours to set in the quality rules, down to off.</p>
+  </conbody>
+</concept>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="making-room">
+  <title>Making room</title>
+  <shortdesc>The <b>project menu</b> and the <b>Notes</b> panel each have three states, chosen from the control at the foot of the menu and the button in the Notes header:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Pinned</b> — always open, taking its width from the page.</li>
+      <li><b>Auto-hide</b> — a thin strip at the edge; hovering it opens the panel over the document, and moving away closes it. The document does not reflow.</li>
+      <li><b>Hidden</b> — only the strip remains, which brings the panel back.</li>
+    </ul>
+    <p>Each choice is remembered per person and per panel. The artifact tree fills the height of its column, so a taller window shows more of the document rather than more empty space.</p>
+    <p>The menu's groups — Define, Verify, Plan, Agents — start collapsed, so the menu is a handful of lines instead of a full column of links. Click a group heading to open or close it; the group holding the page you are on opens by itself until you close it, and your choices are remembered. A menu longer than the window scrolls on its own.</p>
+    <p>Nothing on the page is sized to the browser window, so the window itself never scrolls: the tree, the document, and the Notes panel each scroll inside their own column, and the toolbar takes a second row on a narrow window without pushing anything off the bottom.</p>
+  </conbody>
+</concept>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-agent-editor">
+  <title>The agent editor</title>
+  <conbody>
+    <p><b>New agent</b> or clicking an existing agent opens the editor. Fields:</p>
+    <simpletable>
+      <sthead><stentry>Field</stentry><stentry>Meaning</stentry></sthead>
+      <strow><stentry>Slug</stentry><stentry>Stable identifier (can't change after creation)</stentry></strow>
+      <strow><stentry>Name / Description</stentry><stentry>Display info</stentry></strow>
+      <strow><stentry>Provider</stentry><stentry>claude-code, codex-cli, gemini-cli, anthropic-api, openai-api, google-api</stentry></strow>
+      <strow><stentry>Model</stentry><stentry>Dropdown of the provider's known models, or <i>provider default</i>, or <b>Custom…</b> to type any model id the vendor accepts</stentry></strow>
+      <strow><stentry>Effort</stentry><stentry>Reasoning effort: low, medium, high, xhigh, max — or provider default. Applies to claude-code; codex-cli caps it at high; gemini-cli ignores it</stentry></strow>
+      <strow><stentry>Write mode</stentry><stentry><i>proposal</i> (changes need approval) or <i>direct</i> (writes immediately)</stentry></strow>
+      <strow><stentry>Repository access</stentry><stentry>Allow runs that clone a connected repository</stentry></strow>
+      <strow><stentry>Max turns</stentry><stentry>Cap on agentic turns per run</stentry></strow>
+      <strow><stentry>Timeout (seconds)</stentry><stentry>Wall-clock limit per run</stentry></strow>
+      <strow><stentry>Allowed tools</stentry><stentry>Comma-separated tool allowlist — <b>required</b>, see below</stentry></strow>
+      <strow><stentry>System prompt</stentry><stentry>The agent's instructions (markdown)</stentry></strow>
+    </simpletable>
+    <p>Existing agents also have a <b>Raw markdown</b> tab showing the underlying definition file (frontmatter + system prompt) for direct editing.</p>
+  </conbody>
+</concept>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-layout">
+  <title>The layout</title>
+  <shortdesc>The view has three resizable columns (drag the dividers to resize; widths are remembered):</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Left</b> — the artifact list/tree with search and filters.</li>
+      <li><b>Center</b> — the selected artifact: header, body, links, attachments.</li>
+      <li><b>Right</b> — the <b>Chatter</b> panel: comments on the selected artifact.</li>
+    </ul>
+    <p>The <b>?</b> button beside the notification bell opens a quick-reference help sidebar with artifact and link type definitions.</p>
+  </conbody>
+</concept>

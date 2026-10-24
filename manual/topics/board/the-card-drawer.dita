@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-card-drawer">
+  <title>The card drawer</title>
+  <shortdesc>Click a card to open its drawer:</shortdesc>
+  <conbody>
+    <ul>
+      <li>Edit the <b>title</b> and <b>description</b>.</li>
+      <li>See <b>linked artifacts</b> (from the artifact IDs) with links into the Requirements view.</li>
+      <li>Follow the <b>activity feed</b> — comments, moves, status changes, and agent run events — and add your own comments.</li>
+      <li>Delete the card.</li>
+    </ul>
+  </conbody>
+</concept>

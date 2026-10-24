@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="managing-crews">
+  <title>Managing crews</title>
+  <shortdesc>The header holds a crew selector plus:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>New crew</b> — create an empty crew for this project.</li>
+      <li><b>Start from default crew</b> — clone the workspace's default crew as a starting point.</li>
+      <li><b>Delete</b> — available for non-default crews.</li>
+      <li><b>▶ Run crew</b> — launch the crew with a prompt (what should the crew work on?). You're taken to the Runs page to follow along.</li>
+    </ul>
+  </conbody>
+</concept>

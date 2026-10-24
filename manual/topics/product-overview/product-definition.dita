@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="product-definition">
+  <title>Product definition</title>
+  <shortdesc>Three fields, editable in place with <b>Edit</b>:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Vision</b> — what the world looks like once this product succeeds.</li>
+      <li><b>Problem statement</b> — what problem, for whom, and why now.</li>
+      <li><b>Target users</b> — the primary users and buyers.</li>
+    </ul>
+    <p>Step 1 of the guided wizard reads and writes the same fields, so the wizard and the overview always agree.</p>
+  </conbody>
+</concept>

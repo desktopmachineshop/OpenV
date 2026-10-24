@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="getting-started">
+  <title>Getting started</title>
+  <shortdesc>OpenV is a requirements management platform with full traceability, verification &amp; validation (V&amp;V) tracking, and a built-in multi-agent suite. This chapter gets you from the sign-in screen to your first workspace.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="start"/>
+  </prolog>
+  <conbody/>
+</concept>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="import">
+  <title>Import</title>
+  <conbody>
+    <ul>
+      <li><b>↑ Import Project</b> creates a new project from either of two files:
+        <ul>
+          <li>a JSON file produced by the wizard's <b>JSON data</b> format, which restores the project in full (attachment files aside);</li>
+          <li>a ReqIF file (<codeph>.reqif</codeph> or <codeph>.xml</codeph>), from OpenV or from another requirements tool, which brings the hierarchy, links, statuses and attributes. Attachments and embedded objects are not carried, and a file from another tool is read on a best-effort basis, so check the new project against the source before relying on it.</li>
+        </ul>
+      </li>
+      <li>Download/import is a simple way to move a project between servers or keep an offline copy.</li>
+      <li>CSV, Excel, PDF and Word are one-way: snapshots to read or to hand to another tool, not something OpenV reads back.</li>
+    </ul>
+  </conbody>
+</concept>

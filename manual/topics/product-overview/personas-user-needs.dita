@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="personas-user-needs">
+  <title>Personas &amp; user needs</title>
+  <shortdesc>Two cards summarizing the project's <i>persona</i> and <i>user-need</i> artifacts — usually created by the guided wizard (which links each need to its persona). Click <b>View in Requirements</b> to see and edit them as artifacts.</shortdesc>
+  <conbody/>
+</concept>

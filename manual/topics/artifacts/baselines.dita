@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="baselines">
+  <title>Baselines</title>
+  <shortdesc>A <b>baseline</b> is an immutable snapshot of the whole project at a point in time: its artifacts and links, the attribute definitions in effect, and each attachment's name, type and size (the files themselves are not copied). The top bar of the Requirements view controls them:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="baselines"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>Capture Baseline</b> — name and save a snapshot of the live project.</li>
+      <li>The <b>baseline dropdown</b> switches between "Live Project" and any baseline. Baseline views are <b>read-only</b> — you can browse but not edit.</li>
+      <li>🗑 deletes the selected baseline (project owners only; the live project can't be deleted here). The deletion is recorded in the activity log.</li>
+      <li><b>↓ Download</b> — opens the download wizard for the live project or the selected baseline: PDF, Word, JSON, CSV, Excel or ReqIF, narrowed to the sections, types and attachments you pick. See the Projects chapter.</li>
+    </ul>
+    <p>Baselines also drive comparisons in the <b>V&amp;V</b> dashboard and the <b>Matrix</b> view, both of which have their own baseline selector.</p>
+  </conbody>
+</concept>

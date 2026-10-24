@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="teams">
+  <title>Teams</title>
+  <conbody>
+    <p><b>Teams</b> are named groups of workspace members (e.g. "Design engineering", "QA"). Their purpose is project access management: a project can grant a team access as a unit (Project Settings → Access → team access), with a role per grant. Admins create teams, add/remove members, rename, and delete them — deleting a team also removes its project access grants.</p>
+    <note>Not to be confused with <b>Crews</b>, which are graphs of AI agents (and people) that execute work — see the <i>Crews</i> chapter.</note>
+  </conbody>
+</concept>

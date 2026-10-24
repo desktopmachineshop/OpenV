@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="write-mode-proposal-vs-direct">
+  <title>Write mode: proposal vs direct</title>
+  <conbody>
+    <ul>
+      <li><b>proposal</b> (default, recommended) — every write the agent makes (create or update an artifact, create a link, record a test result) is captured as a <b>proposal</b>. You review and approve or reject it on the Runs page before it is applied. Nothing merges unreviewed.</li>
+      <li><b>direct</b> — writes apply immediately. Reserve for low-risk, well-trusted agents.</li>
+    </ul>
+    <p>Agent-drafted artifacts can also carry a <i>draft</i> status so generated content never silently masquerades as reviewed work.</p>
+  </conbody>
+</concept>

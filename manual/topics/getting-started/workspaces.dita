@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="workspaces">
+  <title>Workspaces</title>
+  <shortdesc>Everything in OpenV lives inside a <b>workspace</b> (also called an org):</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Personal workspace</b> — created for you automatically. Marked with a "personal" pill. Good for solo work and trying things out.</li>
+      <li><b>Company workspace</b> — a shared workspace for a team or organization. Anyone can create one: open the workspace switcher and choose <b>+ Create a company workspace</b>. The creator becomes its admin (shown with an "admin" pill).</li>
+    </ul>
+    <section id="switching-workspaces">
+      <title>Switching workspaces</title>
+      <p>The workspace switcher appears in two places:</p>
+      <ul>
+        <li>On the <b>Projects</b> page, in the "Workspace:" box at the top right.</li>
+        <li>Inside a project, at the top of the dark left sidebar.</li>
+      </ul>
+      <p>Click the workspace name to open the dropdown. It lists all your workspaces (a green check marks the active one) and offers:</p>
+      <ul>
+        <li><b>Workspace settings</b> — opens the settings page for the active workspace (see the <i>Workspace settings &amp; teams</i> chapter).</li>
+        <li><b>+ Create a company workspace</b></li>
+      </ul>
+      <p>Switching workspaces returns you to the Projects page and shows that workspace's projects. Your choice is remembered between visits.</p>
+    </section>
+    <section id="where-you-start">
+      <title>Where you start</title>
+      <p>OpenV opens in your <b>personal workspace</b> unless you say otherwise. If you do most of your work in a company workspace, open the account menu → <b>Settings</b> → <i>Default workspace</i> and pick it: every sign-in then starts there. The list holds your personal workspace and every company workspace you belong to; leaving a workspace quietly returns your sign-in to your personal one. Switching workspaces during a session is unchanged, and a tab you reload stays in the workspace it was in. On a stable-channel workspace this setting arrives with the workspace's next stable release.</p>
+    </section>
+  </conbody>
+</concept>

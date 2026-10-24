@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="driving-agents-from-the-board">
+  <title>Driving agents from the board</title>
+  <conbody>
+    <note>Tip shown on the board itself: <i>assign a card to an agent and drag it to To Do to launch the agent.</i></note>
+    <ul>
+      <li>When <b>you</b> move a card assigned to an <b>agent</b> into <b>To Do</b>, an <b>agent run</b> is enqueued for that card (skipped if a live run is already attached). Only human moves trigger this — the automatic card moves that track run progress don't. Crew-assigned cards don't launch from the board; launch crews from the Crew page or an automation.</li>
+      <li>A <b>pulsing blue dot</b> on a card means a run is live (queued, claimed, or running). While a run is live the card is <b>locked</b> — it can't be dragged until the run finishes.</li>
+      <li>The agent's progress and comments land back on the card's <b>activity feed</b>.</li>
+    </ul>
+  </conbody>
+</concept>

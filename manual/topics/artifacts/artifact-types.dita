@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="artifact-types">
+  <title>Artifact types</title>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Type</stentry><stentry>Purpose</stentry></sthead>
+      <strow><stentry>requirement</stentry><stentry>What the system shall do (functional and non-functional)</stentry></strow>
+      <strow><stentry>test-case</stentry><stentry>A procedure that verifies requirements or validates needs</stentry></strow>
+      <strow><stentry>hazard</stentry><stentry>A potential source of harm, for safety-critical work</stentry></strow>
+      <strow><stentry>design-item</stentry><stentry>A design decision or component that realizes requirements</stentry></strow>
+      <strow><stentry>persona</stentry><stentry>A key user archetype (usually created by the guided wizard)</stentry></strow>
+      <strow><stentry>user-need</stentry><stentry>A need in "As persona, I need capability so that outcome" form</stentry></strow>
+      <strow><stentry>other</stentry><stentry>Anything else — assumptions, constraints, notes</stentry></strow>
+    </simpletable>
+  </conbody>
+</concept>

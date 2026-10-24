@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="deleting-a-project">
+  <title>Deleting a project</title>
+  <shortdesc>Use the ✕ on the project card, or <b>Settings → Danger Zone</b> inside the project. Deletion removes the project and all of its artifacts — download first if you might need it again.</shortdesc>
+  <conbody/>
+</concept>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="creating-links">
+  <title>Creating links</title>
+  <shortdesc>Links are created from an artifact's editor / link panel:</shortdesc>
+  <conbody>
+    <ol>
+      <li>Select the source artifact and open its editor.</li>
+      <li>Pick a <b>link type</b> — only types valid for the source artifact's type are offered.</li>
+      <li>Pick the <b>target artifact</b> — the list is filtered to types the chosen link type allows.</li>
+    </ol>
+    <p>Both the app and the server enforce these rules, so an invalid combination (say, a requirement "verifying" a hazard) is rejected with an explanation.</p>
+  </conbody>
+</concept>

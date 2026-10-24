@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="search-filters">
+  <title>Search &amp; filters</title>
+  <shortdesc>Two boxes search, and they do different jobs. The one in the <b>sidebar</b> searches every project you can see; the one above the <b>tree</b> narrows the project you are in.</shortdesc>
+  <conbody>
+    <p>The sidebar box matches titles and bodies, and it also matches <b>refs</b>: type <b>REQ-30</b> and REQ-30 comes back first, ahead of anything that merely mentions it. Case does not matter, so <b>req-30</b> works, and a ref pasted out of a report with spaces around it still finds its artifact. Every result shows its ref beside the title, which is what tells two similarly named requirements apart. A longer ref that contains what you typed still appears below the exact match: <b>REQ-3</b> finds REQ-3 first and leaves REQ-30 further down.</p>
+    <p>The tree box matches title, body, type, IDs and attributes. The ⚙ button opens the filter panel:</p>
+    <ul>
+      <li><b>Filter rows</b> — combine conditions on any field (Type, Title, Body, Version, dates, …) with comparators like contains, equals, starts with, greater than.</li>
+      <li><b>Filter logic</b> — AND (all rows must match) or OR (any row).</li>
+      <li><b>Presets</b> — name the current search + filters and save it; apply or delete saved presets from the dropdown. Presets are stored in your browser.</li>
+    </ul>
+  </conbody>
+</concept>

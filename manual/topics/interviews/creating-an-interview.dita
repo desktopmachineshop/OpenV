@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="creating-an-interview">
+  <title>Creating an interview</title>
+  <shortdesc>Click <b>+ New interview</b>:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Interview name</b> — e.g. "Machinist onboarding feedback".</li>
+      <li><b>Brief for the interviewer agent</b> — what the interview should find out: topics, tone, questions to cover.</li>
+      <li><b>Persona</b> (optional) — link the interview to the persona the participant represents. Several interviews can share one persona, so you can compare how different people in the same role describe their needs. The persona's title and description are included in the interviewer agent's context.</li>
+    </ul>
+  </conbody>
+</concept>

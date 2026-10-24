@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="signing-in">
+  <title>Signing in</title>
+  <shortdesc>Open the app in your browser and you land on the sign-in screen.</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Sign in</b> with your email and password.</li>
+      <li><b>Create a new account</b> switches the form to registration: enter your name, email, and a password (minimum 8 characters).</li>
+      <li><b>Sign in with Google</b> appears when the server has been configured with a Google OAuth client. If it is not configured, a note on the sign-in screen says so.</li>
+      <li><b>Already have a password account?</b> Signing in with Google (or your server's single sign-on) at the same address brings you back to the sign-in screen, which asks for that account's password once. Enter it and Google is connected: from then on either one signs you in to the same account. The password is what proves the account is yours, so an account made with Google or single sign-on cannot be joined to another provider this way.</li>
+    </ul>
+    <p>The <b>first user to register becomes the server admin</b>.</p>
+    <p>After signing in you are taken to the <b>Projects</b> page. On a server that sends email, a new account first sees a <b>Check your inbox</b> page: click the link in the email (valid for 24 hours) and you are through. The page can resend the email, send it to a corrected address, or sign you out.</p>
+    <p>Some servers <b>close registration</b>: there is then no <i>Create a new account</i> button, and the sign-in screen tells you to ask a workspace admin for an invitation. The invitation <b>link</b> is the way in — it opens the sign-up form with your address already filled in, and joins you to the workspace that invited you. Use the link itself, whether you are creating an account or signing in to one you already have; typing the invited address into a sign-up form without the link joins nothing, and on a closed server does not let you sign up at all. If you are already signed in when you open the link, OpenV shows you the invitation and you press <b>Join</b> — and if you are signed in as a different address, it says which address to sign in as instead. Single sign-on is unaffected: an invited address joins its workspaces as it signs in, because the identity provider vouches for the address.</p>
+    <section id="your-password-and-your-sessions">
+      <title>Your password and your sessions</title>
+      <p>Open <b>your settings</b> from the user block at the bottom-left of the sidebar to <b>change your password</b> — current password, then the new one twice. Changing it signs out every other browser and device you are signed in on, which is what you want if you are changing it because the old one may have leaked; the browser you are using stays signed in. Accounts that sign in with Google or single sign-on have no password here — change it at that provider.</p>
+    </section>
+    <section id="forgot-your-password">
+      <title>Forgot your password?</title>
+      <p>On the sign-in screen, <b>Forgot your password?</b> asks for the address you sign in with and emails it a link to set a new password. The link works once and expires after an hour; the page says the same thing whether or not the address has an account, so it cannot be used to find out who has one. Setting the new password signs the account out everywhere, and you sign in again with it. If nothing arrives, check the address and your spam folder.</p>
+      <p>On a server that cannot send email the screen says so, and the way in is your <b>OpenV administrator</b>: a platform admin can make a reset link for your account (see the <i>Platform admin</i> chapter) and pass it to you. That link lasts a day and works once.</p>
+      <p>Accounts that sign in with Google or single sign-on have no password to reset — sign in there.</p>
+      <p>Sessions do not last forever: one expires a set time after you sign in, and sooner if you stop using it. Your server's administrator sets both limits (30 days and 7 days unless they shortened them), and you simply sign in again.</p>
+    </section>
+  </conbody>
+</concept>

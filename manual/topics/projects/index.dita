@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="projects">
+  <title>Projects &amp; members</title>
+  <shortdesc>A <b>project</b> holds everything for one product or system: its requirements artifacts, traceability links, board, agents, runs, interviews, and V&amp;V data.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="projects"/>
+  </prolog>
+  <conbody/>
+</concept>

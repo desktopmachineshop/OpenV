@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-runs-page">
+  <title>The Runs page</title>
+  <conbody>
+    <p><b>Runs</b> in the project sidebar lists agent runs with status, start time, duration, token usage, and cost. Statuses:</p>
+    <p>queued · running · awaiting_approval · succeeded · failed · timed_out · cancelled</p>
+    <ul>
+      <li>Click a run to open the <b>detail panel</b>: the prompt, live progress/log, results, and links to related runs (e.g. crew delegations).</li>
+      <li>The <b>Status</b> dropdown filters the list.</li>
+      <li>A queued run may show <b>"reserved for launcher's runner"</b> — it's waiting briefly for the launcher's personal runner before other runners may claim it.</li>
+    </ul>
+  </conbody>
+</concept>

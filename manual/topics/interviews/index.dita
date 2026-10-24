@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="interviews">
+  <title>Interviews</title>
+  <shortdesc>Interviews let stakeholders talk to an <b>AI interviewer</b> through a public link — no account needed. The agent asks questions based on your brief and records candidate user needs as it learns them.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="interviews"/>
+  </prolog>
+  <conbody>
+    <p>Interviews live on the project's <b>Overview</b> page, in the <b>User interviews</b> section.</p>
+  </conbody>
+</concept>

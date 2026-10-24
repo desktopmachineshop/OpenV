@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="who-is-a-platform-admin">
+  <title>Who is a platform admin</title>
+  <conbody>
+    <ul>
+      <li>The <b>first account registered</b> on a deployment is the platform admin. On a fresh self-hosted OpenV, register first and that account is it.</li>
+      <li>A platform admin makes others: open <b>Platform admin</b> from the account menu (top right), find the person under <i>Platform admins</i> and click <b>Make admin</b>. <b>Remove</b> takes it away again. You cannot remove your own standing, and the last platform admin cannot be removed.</li>
+    </ul>
+  </conbody>
+</concept>

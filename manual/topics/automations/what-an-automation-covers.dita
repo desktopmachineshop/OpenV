@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="what-an-automation-covers">
+  <title>What an automation covers</title>
+  <shortdesc>An automation covers either <b>this project</b>, the one whose Automations page it was made on, or the <b>whole workspace</b>:</shortdesc>
+  <conbody>
+    <ul>
+      <li>A project's automation fires on that project's events, and its runs work in that project.</li>
+      <li>A whole-workspace automation fires on matching events in every project of the workspace, each run working in the project of the event that set it off, and on the workspace's own membership and invitation events, whose runs belong to no project. A scheduled or manual one runs with no project.</li>
+    </ul>
+    <p>Only a <b>workspace admin</b> makes, edits, runs or deletes a whole-workspace automation: the form's <b>Covers</b> choice (<i>This project</i> or <i>Whole workspace</i>) is theirs alone, and they can move an existing automation between its project and the whole workspace. Every project's Automations page lists the whole workspace's automations beside its own, marked <i>Whole workspace</i>; other members see them there but cannot change them.</p>
+    <p>A whole-workspace automation runs an agent, or one of the workspace's own crews such as its default crew; a crew made in one project runs only that project's automations.</p>
+  </conbody>
+</concept>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="signing-the-clis-in">
+  <title>Signing the CLIs in</title>
+  <shortdesc>Personal and cloud runners both use your own CLI sign-ins:</shortdesc>
+  <conbody>
+    <ul>
+      <li>Open your user settings (bottom-left of the sidebar) → <b>Agent sign-ins</b>. Each provider card relays the CLI's own sign-in flow to whichever runner of yours is online, and each CLI does it differently.</li>
+      <li><b>On your own machine:</b> <b>Gemini</b> shows an "Open sign-in page" link plus a field to paste the authorization code back; <b>Codex</b> opens its sign-in page in a browser on that machine; <b>Claude Code</b> opens its sign-in in a terminal window there. Credentials stay on your machine and persist.</li>
+      <li><b>On a cloud runner:</b> there is no terminal or browser to open, so every step comes back to this browser. <b>Claude Code</b> and <b>Gemini</b> show a link and a paste-back field. <b>Codex</b> sends you to its sign-in page and then redirects your browser to an address only the runner can serve — you'll see a connection error, which is expected: copy that whole address from the address bar and paste it into the card. These sign-ins last only as long as the runner does.</li>
+      <li>Alternatively sign in from a terminal on your own runner machine.</li>
+      <li>Workspace admins can run workspace-targeted sign-ins from <b>Workspace settings → AI Providers → Connect</b> for shared workers.</li>
+    </ul>
+  </conbody>
+</concept>

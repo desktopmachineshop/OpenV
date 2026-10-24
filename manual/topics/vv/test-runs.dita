@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="test-runs">
+  <title>Test runs</title>
+  <shortdesc>A <b>test run</b> is one execution campaign: run your test cases and record the results.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="vv.runs"/>
+  </prolog>
+  <conbody>
+    <ol>
+      <li>Click <b>New Run</b> — name it (e.g. "Design verification — rev B"), add a description, and optionally pin it to a <b>baseline</b>. A project owner can still delete that baseline later: the run keeps the reference as part of its record, and the runs table shows <b>Baseline deleted</b> for it.</li>
+      <li>Open the run from the table. Every <i>test-case</i> artifact in the project gets a row with:
+        <ul>
+          <li><b>Status</b> — pass, fail, blocked, or not-run (colored dropdown).</li>
+          <li><b>Notes</b> — free text, edited inline.</li>
+          <li><b>Version tested</b> — which version of the test case the result was recorded against.</li>
+          <li><b>Evidence</b> — the capture the result rests on (see below).</li>
+          <li><b>Executed at</b> — timestamp of the recorded result.</li>
+        </ul>
+      </li>
+      <li>Record results as you execute. Each change saves immediately.</li>
+      <li><b>Complete run</b> when finished (or <b>Abort run</b>). Completed and aborted runs become <b>read-only</b>.</li>
+    </ol>
+    <p>The latest recorded result per test case is what feeds the coverage rollup and the result chips in the <b>Matrix</b> view.</p>
+    <p>Agents can also record test results — with <i>proposal</i> write mode those arrive as proposals for approval first.</p>
+  </conbody>
+</concept>

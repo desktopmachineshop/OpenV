@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-traceability-matrix">
+  <title>The Traceability Matrix</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="matrix"/>
+  </prolog>
+  <conbody>
+    <p><b>Matrix</b> in the project sidebar shows one row per requirement with columns for:</p>
+    <ul>
+      <li><b>Linked needs</b> — user needs the requirement derives from</li>
+      <li><b>Design outputs</b> — design items that satisfy it</li>
+      <li><b>Test cases + latest result</b> — verifying tests, each chip showing its latest recorded result (pass / fail / blocked / not-run)</li>
+      <li><b>Linked hazards</b></li>
+    </ul>
+    <p>Extras:</p>
+    <ul>
+      <li><b>Baseline selector</b> — view the matrix as of any baseline (read-only).</li>
+      <li><b>Quick filter</b> — type to filter rows across all columns.</li>
+      <li><b>Export CSV</b> — download the matrix for spreadsheets or reports.</li>
+    </ul>
+  </conbody>
+</concept>

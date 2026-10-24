@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="whose-ai-subscription-pays-for-a-run">
+  <title>Whose AI subscription pays for a run?</title>
+  <conbody>
+    <ul>
+      <li>Runs on your <b>personal runner</b> use your own CLI subscription. Your runner claims the runs you launched, never a teammate's, and ownerless work (automations, board triggers) only in projects you have a role in, or anywhere in the workspace if you are its admin.</li>
+      <li>Runs on the <b>hosted runner</b> bill against the org's provider API keys.</li>
+      <li>Projects set to <b>API key</b> auth (Project Settings → Agents) always use the workspace's key regardless of who launches.</li>
+    </ul>
+  </conbody>
+</concept>

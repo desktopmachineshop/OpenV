@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="share-links">
+  <title>Share links</title>
+  <shortdesc>Under <b>Settings → Access → Share links</b> an owner mints links for people who are not members:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="settings.share-links"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li>A <b>public</b> link opens the live project <b>read only</b>, to anyone who holds it, with no account: the tree, every artifact, its attributes and traceability. Attachments and comments are not part of the shared view.</li>
+      <li>A <b>reviewer</b> link asks the holder to sign in (or create an account) and then makes them a <b>reviewer</b> of the project. A member who already holds a stronger role keeps it.</li>
+    </ul>
+    <p>Give each link a label saying who it is for and, if you like, an expiry. The link is shown <b>once</b>, when it is created — copy it then. <b>Revoke</b> a link and it stops opening anything for everyone who has it. Pasted into Slack, Discord, LinkedIn, Teams and the like, a link shows a preview card naming the project and its workspace.</p>
+    <p>Contributor (editor) access is never a link: grant it by name or team above.</p>
+  </conbody>
+</concept>

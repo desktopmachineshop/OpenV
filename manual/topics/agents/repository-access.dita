@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="repository-access">
+  <title>Repository access</title>
+  <shortdesc>Agents with repository access can clone repositories connected in <b>Project Settings → Repositories</b>. Such runs only execute on personal or workspace runners — never on the hosted runner (see <i>Runs &amp; runners</i>).</shortdesc>
+  <conbody/>
+</concept>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="kinds-of-automation">
+  <title>Kinds of automation</title>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Kind</stentry><stentry>When it runs</stentry></sthead>
+      <strow><stentry>manual</stentry><stentry>Only when you click <b>Run now</b></stentry></strow>
+      <strow><stentry>scheduled</stentry><stentry>On a cron schedule, read in UTC (presets: Hourly, Daily at 9am, Every 15 minutes — or any cron expression)</stentry></strow>
+      <strow><stentry>triggered</stentry><stentry>When a matching event happens in the project (or, for a whole-workspace automation, anywhere in the workspace)</stentry></strow>
+    </simpletable>
+  </conbody>
+</concept>

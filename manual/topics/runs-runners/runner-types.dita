@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="runner-types">
+  <title>Runner types</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="org.settings.runners"/>
+  </prolog>
+  <conbody>
+    <section id="personal-runner-your-machine-your-subscription">
+      <title>Personal runner (your machine, your subscription)</title>
+      <p>Runs on <b>your own computer</b>, signed into the vendor CLIs (Claude Code, Codex, Gemini) with <b>your own subscription</b>. It claims <b>the runs you launched</b> — never a teammate's — and ownerless work only where you could see it yourself (see <i>How runs are routed</i> below).</p>
+      <p>The easiest setup is the <b>Agent Connector</b>:</p>
+      <ol>
+        <li>When a run is queued and no runner is online, the app prompts you — or open your user settings (bottom-left of the sidebar) → <b>My Runner</b>.</li>
+        <li><b>Download</b> the connector bundle, unzip it somewhere permanent, and run it once so it registers itself.</li>
+        <li>Click <b>Pair connector</b> in OpenV — the browser opens the connector with a one-time pairing code, which it exchanges for your personal runner key.</li>
+        <li>From then on, opening the connector starts your runner; closing its window stops it. Online/offline status shows live in the UI.</li>
+      </ol>
+      <p>You can also mint a personal runner key manually and run the <i>agentd</i> worker yourself. One personal key is active per member; minting a new one rotates the old.</p>
+    </section>
+    <section id="cloud-runner-nothing-to-install-yours-for-a-while">
+      <title>Cloud runner (nothing to install, yours for a while)</title>
+      <p>A <b>transient runner</b>: a runner the platform already has warm, leased to <b>you alone</b> for a stretch of time. Press <b>Start a cloud runner</b> (user settings → <b>Cloud runner</b>, or the prompt a queued run shows), sign your agents into it from this browser, and launch runs — no download, no pairing, no machine of your own involved.</p>
+      <p>The trade is that it doesn't last:</p>
+      <ul>
+        <li>It ends on its <b>idle window</b> (default 15 minutes after you stop using it) or its <b>maximum lifetime</b> (default 60 minutes), whichever comes first. The card counts down to whichever is nearer, and the clock resets whenever the runner is actually working.</li>
+        <li><b>Extend</b> pushes both clocks out; <b>End now</b> hands it back immediately.</li>
+        <li>When it ends it is <b>wiped</b> — including the agent sign-ins you made on it. Your next cloud runner starts by signing in again. Sign-ins on your own machine are untouched, as is your Agent Connector pairing.</li>
+      </ul>
+      <p>The card shows how busy the shared pool is as a traffic light rather than a count — <b>Runners available</b> (green), <b>Runners busy</b> (amber) or <b>All runners in use</b> (red). You can hold one runner at a time, so the only question it needs to answer is whether starting one now is likely to work. If every cloud runner is in use, the card says so: they're leased one member at a time, so you either wait or use your own machine.</p>
+      <p><b>On a phone</b> the whole lease is one column: the status, the countdown and the pool's traffic light, each under its own label, with <b>Start a cloud runner</b> / <b>Extend the lease</b> / <b>End now</b> as full-width buttons you can hit with a thumb. The sign-in relay below it is built for a phone too — the <b>Open sign-in page</b> link hands the vendor's page to your browser, and the field it comes back to takes a paste from your password manager (there's a <b>Paste</b> button where the browser allows it) and submits with the keyboard's send key.</p>
+    </section>
+    <section id="hosted-runner-always-on-org-api-keys">
+      <title>Hosted runner (always-on, org API keys)</title>
+      <p>A workspace admin can provision a <b>hosted runner</b> — a platform-managed container — under <b>Workspace settings → Runners</b>. At setup the admin enters the org's provider <b>API keys</b> (Anthropic / OpenAI / Gemini); they are injected into the container only and never stored by the platform.</p>
+      <ul>
+        <li>Always on: claims <b>ownerless work</b> (automations, cron and event triggers, board-driven runs) and <b>overflow</b> — runs whose launcher has no runner online once the grace window expires.</li>
+        <li><b>No repository access</b>: runs that need a cloned repo are refused and wait for a personal or workspace runner (the Runs page shows a banner when this happens).</li>
+        <li>Billed against the org's API keys, not anyone's subscription.</li>
+      </ul>
+    </section>
+    <section id="workspace-worker-keys">
+      <title>Workspace worker keys</title>
+      <p>Admins can also mint shared <b>worker keys</b> (Workspace settings → Runners) for self-managed always-on workers, e.g. a machine in your shop that serves the whole workspace. Give the key to the worker in its environment, as <codeph>WORKER_API_KEY</codeph>, not on its command line, where every user of the machine can see it.</p>
+      <p>On a deployment you run yourself, the server's own key (<codeph>WORKER_API_KEY</codeph> in the server's settings) is listed there as <b>env-bootstrap</b> once the server has registered it. Revoking it stops it at once, even while the server still has that value, and it stays revoked across restarts until the operator sets a new one.</p>
+    </section>
+    <section id="what-an-agent-can-read-on-its-runner">
+      <title>What an agent can read on its runner</title>
+      <p>An agent runs as the same operating-system user as the runner it runs on, so it can read whatever that user can: on a personal runner that includes your files and the Agent Connector's key file, and on Windows and macOS the runner's own environment, where its key is. The runner never hands its keys to the programs it starts, and on Linux it also stops them reading its environment, but it cannot keep an agent from your user's own files. For agents you don't fully trust, use a <b>cloud runner</b> or the <b>hosted runner</b>, which run on Linux with nothing of yours on them, or run the worker as a separate user on your machine.</p>
+    </section>
+  </conbody>
+</concept>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="default-model-providers">
+  <title>Default model &amp; providers</title>
+  <shortdesc>Workspace admins set each provider's <b>default model</b> and see CLI detection status under <b>Workspace settings → AI Providers</b>. An agent whose Model field is <i>provider default</i> inherits that setting.</shortdesc>
+  <conbody/>
+</concept>

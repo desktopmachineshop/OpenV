@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="troubleshooting">
+  <title>Troubleshooting &amp; FAQ</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="troubleshooting"/>
+    <resourceid appname="openv-web" appid="activity"/>
+  </prolog>
+  <conbody/>
+</concept>

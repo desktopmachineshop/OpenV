@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="vv">
+  <title>V&amp;V &amp; test runs</title>
+  <shortdesc>The <b>V&amp;V</b> view rolls up how well your requirements are verified: coverage, gaps, test runs, and a downloadable status report.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="vv"/>
+  </prolog>
+  <conbody/>
+</concept>

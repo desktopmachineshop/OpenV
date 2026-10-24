@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="adding-nodes">
+  <title>Adding nodes</title>
+  <conbody>
+    <p><b>+ Add node</b> adds either:</p>
+    <ul>
+      <li>an <b>Agent</b> — pick from the workspace's agent definitions, or</li>
+      <li>a <b>Person</b> — pick a workspace member.</li>
+    </ul>
+    <p>Both take an optional label and department (departments group nodes on the chart).</p>
+    <p>Click a node to open its configuration panel (label, department, bound agent or person); click an edge to configure or delete it.</p>
+  </conbody>
+</concept>

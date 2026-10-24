@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-canvas">
+  <title>The canvas</title>
+  <shortdesc>Two view modes:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>Org Chart</b> — hierarchical layout.</li>
+      <li><b>Network</b> — free-form layout.</li>
+    </ul>
+    <p>Node positions are saved per view — drag nodes to arrange them. The filter toggle shows <b>Employees</b>, <b>Agents</b>, or <b>All</b> nodes. Nodes with a live run pulse so you can see who is working.</p>
+  </conbody>
+</concept>

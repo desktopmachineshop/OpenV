@@ -96,13 +96,36 @@ batched — nightly or weekly — at the maintainer's discretion. Merging to
 waiting, then leave promotion alone unless asked. Approval to merge is not
 approval to promote.
 
+## The user manual
+
+The user manual travels with the code (`docs/docs-maintenance.md`). It is
+the OpenD project in `manual/`, published at docs.openv.app with one
+release line per minor version, so each workspace reads the manual for the
+version it is on. `docs/plans/opend-help.md` moves the app's help onto it.
+
+- **A pull request that changes what users see updates the manual.** That
+  means a new feature, a page, a feature key or a changed behaviour. The
+  *Docs* CI job refuses one that doesn't, unless it carries the
+  `no-docs-change` label.
+- **Until the help drawer moves, edit the chapters.** The chapters are in
+  `frontend/src/manual/chapters`. Then run
+  `python3 scripts/manual/docs.py sync` to regenerate `manual/`.
+- **The manual on master describes master.** Context keys are an
+  interface: add them, never rename them.
+- **Promotion carries the docs.** It refuses a master whose *Docs* check is
+  red. The release commit stamps `manual/opend.config.yaml`. The shipped
+  commit goes to `docs/<major.minor>`, which the docs site publishes.
+- **Before asking for a release,** read the manual's topic for each new
+  feature going out. Never push to a `docs/*` branch by hand: corrections
+  land on master and are cherry-picked onto the lines still served.
+
 ## Where things live
 
 `docs/areas.json` divides the repository into 12 areas, each a slice of the
 product through every layer, with a glossary of the words the UI and the
 code use differently (workspace and org, crew and team, runner and worker).
 `go run ./internal/tools/areas which <path>` names the area a file belongs
-to, or a new one would. Ten directories hold an area guide, a `README.md`
+to, or a new one would. Eleven directories hold an area guide, a `README.md`
 (a map, the invariants, recipes for the common changes, the guards) and a
 `CLAUDE.md` (what to run before finishing there, and what not to do):
 
@@ -116,6 +139,7 @@ to, or a new one would. Ten directories hold an area guide, a `README.md`
 - `frontend/src/api/`: the API client
 - `e2e/`: the Playwright journeys
 - `scripts/`: the scripts, `.github/workflows/` and the `Makefile` gates
+- `manual/`: the user manual, an OpenD project
 
 ## Before you finish
 
@@ -131,5 +155,8 @@ From the repository root, after the area's own commands in its `CLAUDE.md`:
   pull request labelled `no-release-notes`, and the labels of a refactor in
   `LABELS`, as in
   `make check NO_RELEASE_NOTES=1 LABELS="refactor refactor:tooling no-release-notes"`.
+  Likewise `NO_DOCS_CHANGE=1` for a pull request labelled `no-docs-change`,
+  and `SKIP_OPEND=1` offline (OpenD's validation of the manual needs
+  network the first time).
 - After a change to the Refactor guard or its lists:
   `python3 scripts/refactor/refactor_guard_test.py`.
