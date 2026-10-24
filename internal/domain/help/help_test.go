@@ -14,7 +14,8 @@ import (
 	"testing"
 )
 
-const secret = "0123456789abcdef0123456789abcdef"
+// secret is the fake embed secret both sides of the tests sign with.
+var secret = strings.Repeat("k", 32)
 
 // fakeOpenD answers the embed help API for the lines in published, checks
 // every token, and records entitlement syncs.

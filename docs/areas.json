@@ -628,6 +628,7 @@
         ".gitattributes",
         ".github/**",
         ".gitignore",
+        ".gitleaksignore",
         ".mcp.json",
         "CLAUDE.md",
         "CONTRIBUTING.md",
