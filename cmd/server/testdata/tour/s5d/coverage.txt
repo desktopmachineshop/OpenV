@@ -128,4 +128,4 @@ PUT /api/v1/team-edges/{id}: 200, 404; crews_teams
 PUT /api/v1/team-nodes/{id}: 200, 404; crews_teams
 PUT /api/v1/teams/{id}: 200; crews_teams
 
-s5d: 116 of 368 routes reached (31.5%), 112 with a 2xx or 3xx answer (30.4%)
+s5d: 116 of 371 routes reached (31.3%), 112 with a 2xx or 3xx answer (30.2%)

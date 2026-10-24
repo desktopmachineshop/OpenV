@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 223; members of exported objects: 308
+exports: 228; members of exported objects: 311
 
 interface AdminUser
 interface AdminWorkspace
@@ -59,6 +59,10 @@ interface EvidenceFile
 type      ExecutionMethod
 interface GuidedChatMessage
 interface GuidedSession
+interface HelpHit
+interface HelpRelated
+interface HelpResults
+interface HelpTopic
 interface HostedRunnerRecord
 interface HostedRunnerStatus
 interface IdentityLinkPreview
@@ -335,6 +339,10 @@ const     guidedAPI
             .saveStep
             .sendMessage
             .start
+const     helpAPI
+            .context
+            .search
+            .topic
 const     hostedRunnerAPI
             .enable
             .get

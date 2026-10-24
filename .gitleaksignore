@@ -1,0 +1,7 @@
+# Known false positives of the CI secret scan (gitleaks reads this file):
+# one fingerprint per line, commit:file:rule:line. Add one only for a value
+# that was never a credential, with the reason above it.
+
+# A fake 32-character embed secret in the help service's tests, since
+# replaced by a value built at run time.
+9efec0472635885741b214dfeec5d1ac520cb870:internal/domain/help/help_test.go:generic-api-key:17

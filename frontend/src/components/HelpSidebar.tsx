@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { helpTopicForPath } from './helpTopics';
+import { DocsHelp } from './DocsHelp';
+import { useAppStore } from '../state/store';
 import './HelpSidebar.css';
 
 // Context-aware help panel: a floating ? button that expands into the help
@@ -13,6 +15,14 @@ import './HelpSidebar.css';
 //
 // Chapter slugs must match MANUAL_CHAPTERS in src/manual/index.ts — they are
 // deep-linked as /manual/<slug>.
+//
+// Where the deployment serves help from the user manual on OpenD (capability
+// help-docs, docs/plans/opend-help.md), the panel shows the manual's own
+// topic for the page instead, for the release the workspace is on
+// (DocsHelp); it falls back to the summary below if the docs cannot answer.
+
+/** The deployment capability that serves help from the docs site. */
+export const CAPABILITY_HELP_DOCS = 'help-docs';
 
 interface HelpSidebarProps {
   /** Controlled open state. Every shell keeps it now, with the ? button in
@@ -32,6 +42,14 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) 
   };
   const location = useLocation();
   const topic = helpTopicForPath(location.pathname);
+  // Help from the docs site only where the server says it has one: unlike
+  // other capabilities, an unknown answer means no.
+  const docsOffered = useAppStore((s) => s.capabilities?.includes(CAPABILITY_HELP_DOCS) ?? false);
+  const orgId = useAppStore((s) => s.activeOrgId);
+  const [docsFailed, setDocsFailed] = useState(false);
+  useEffect(() => setDocsFailed(false), [orgId]);
+  const onDocsUnavailable = useCallback(() => setDocsFailed(true), []);
+  const showDocs = docsOffered && !!orgId && !docsFailed;
 
   return (
     <div className={`help-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
@@ -56,7 +74,13 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) 
         </button>
       )}
 
-      {isExpanded && (
+      {isExpanded && showDocs && (
+        <div className="help-content">
+          <DocsHelp orgId={orgId} path={location.pathname} onUnavailable={onDocsUnavailable} />
+        </div>
+      )}
+
+      {isExpanded && !showDocs && (
         <div className="help-content">
           <h3>{topic.title}</h3>
 

@@ -117,6 +117,9 @@ GET /api/v1/orgs: session
 GET /api/v1/orgs/{id}: org:member
 GET /api/v1/orgs/{id}/billing: org:admin
 GET /api/v1/orgs/{id}/features: org:member
+GET /api/v1/orgs/{id}/help/context: org:member
+GET /api/v1/orgs/{id}/help/search: org:member
+GET /api/v1/orgs/{id}/help/topic: org:member
 GET /api/v1/orgs/{id}/hosted-runner: org:admin
 GET /api/v1/orgs/{id}/invitations: org:admin
 GET /api/v1/orgs/{id}/limits: org:member

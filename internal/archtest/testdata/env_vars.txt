@@ -72,6 +72,9 @@ OPENV_BUILD_SHA	internal/config:Config.text(name)	(computed)
 OPENV_CLIENT_IP_HEADER	os.Getenv	-
 OPENV_DATA_DIR	internal/config:Config.text(name)	"./data"
 OPENV_DEPLOYMENT	internal/config:Config.text(name)	"shared"
+OPENV_DOCS_ADMIN_TOKEN	internal/config:Config.text(name)	""
+OPENV_DOCS_EMBED_SECRET	internal/config:Config.text(name)	""
+OPENV_DOCS_URL	internal/config:Config.text(name)	""
 OPENV_EMAIL_NOTIFICATION_TYPES	internal/config:Config.typeList(name)	(computed)
 OPENV_EMAIL_VERIFICATION	internal/config:Config.getenv(name)	-
 OPENV_EMBEDDING_API_KEY	internal/config:Config.secret(name)	""

@@ -124,13 +124,22 @@ func (h *Handler) guardModuleRoute(pathVar, role string, next http.HandlerFunc) 
 	}
 }
 
+// capabilityHelpDocs is offered when a docs site serves the in-app help.
+const capabilityHelpDocs = "help-docs"
+
 // capabilities is what this deployment offers, sorted, for the app to show
 // or hide what depends on it: hosted on the hosted service (not
-// OPENV_SELF_HOSTED), and what each module names.
+// OPENV_SELF_HOSTED), help-docs with a docs site, and what each module
+// names.
 func (h *Handler) capabilities() []string {
 	set := map[string]bool{}
 	if !orgs.SelfHosted() {
 		set[ext.CapabilityHosted] = true
+	}
+	// help-docs: the in-app help reads the user manual from an OpenD docs
+	// site (OPENV_DOCS_URL), through GET /orgs/{id}/help/*.
+	if h.HelpService != nil {
+		set[capabilityHelpDocs] = true
 	}
 	for _, m := range h.Modules {
 		if c, ok := m.(ext.CapabilityModule); ok {
