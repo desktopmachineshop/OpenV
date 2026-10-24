@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="help-on-every-page">
+  <title>Help on every page</title>
+  <conbody>
+    <p>Press <b>?</b> beside the notification bell to open the help panel. It shows the page of this manual for the screen you are on, written for the release your workspace is on, so what it describes matches what you see. Links between pages open in the panel, <b>Back</b> returns, and the search box at the top searches the whole manual. <b>Open in the docs</b> opens the same page on the docs site, where a menu lets you read the manual for other releases.</p>
+  </conbody>
+</concept>

@@ -159,6 +159,15 @@ icon offers shortcuts straight to your **review queue**, your **board** and
 your **notifications**. The review queue and board shortcuts open your most
 recent project; the first time, they ask you to pick one.
 
+## Help on every page
+
+Press **?** beside the notification bell to open the help panel. It shows
+the page of this manual for the screen you are on, written for the release
+your workspace is on, so what it describes matches what you see. Links
+between pages open in the panel, **Back** returns, and the search box at
+the top searches the whole manual. **Open in the docs** opens the same page
+on the docs site, where a menu lets you read the manual for other releases.
+
 ## What's next
 
 - Create your first project — see *Projects & members*.
