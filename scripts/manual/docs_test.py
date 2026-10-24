@@ -140,5 +140,65 @@ class Stamp(unittest.TestCase):
             self.assertEqual(cfg.read_text(), "release: '0.23'\n")
 
 
+class FakeSite(docs.Site):
+    """The admin API of a docs site whose lines go live one call at a time."""
+
+    def __init__(self, live_after, granularity='major'):
+        super().__init__('https://docs.example', 't')
+        self.live = ['0.21', '0.22']
+        self.live_after = live_after
+        self.granularity = granularity
+        self.calls = []
+
+    def call(self, method, path, body=None):
+        self.calls.append((method, path, body))
+        if path == '/repos':
+            return [{'id': 1, 'fullName': 'other/docs'}, {'id': 7, 'fullName': 'desktopmachineshop/OpenV', 'releaseLines': self.granularity}]
+        if path == '/repos/7/releases':
+            self.live_after -= 1
+            if self.live_after <= 0 and '0.23' not in self.live:
+                self.live.append('0.23')
+            return [{'releaseLine': l} for l in self.live]
+        return {}
+
+
+class PointSite(unittest.TestCase):
+    def test_waits_for_the_line_then_sets_default_and_picker(self):
+        site = FakeSite(live_after=3)
+        lines = docs.point_site(site, '0.23', wait=100, every=10, sleep=lambda s: None)
+        self.assertEqual(lines, ['0.23', '0.22', '0.21'])
+        writes = [(m, p, b) for m, p, b in site.calls if m == 'PUT']
+        self.assertEqual(writes[0], ('PUT', '/repos/7/release-lines', {'releaseLines': 'minor'}))
+        self.assertEqual(writes[1][1], '/repos/7/access')
+        self.assertEqual(writes[1][2]['publicEntitlements']['version'], '0.23')
+        self.assertEqual(writes[2], ('PUT', '/repos/7/versions', {'mode': 'list', 'versions': ['0.23', '0.22', '0.21']}))
+
+    def test_minor_lines_are_not_set_again(self):
+        site = FakeSite(live_after=0, granularity='minor')
+        docs.point_site(site, '0.23', sleep=lambda s: None)
+        self.assertNotIn('/repos/7/release-lines', [p for _, p, _ in site.calls])
+
+    def test_versions_sort_as_numbers(self):
+        site = FakeSite(live_after=0, granularity='minor')
+        site.live = ['0.3', '0.23', '0.22']
+        self.assertEqual(docs.point_site(site, '0.23', sleep=lambda s: None), ['0.23', '0.22', '0.3'])
+
+    def test_a_line_that_never_goes_live_fails(self):
+        site = FakeSite(live_after=99)
+        with self.assertRaises(docs.DocsError):
+            docs.point_site(site, '0.23', wait=30, every=10, sleep=lambda s: None)
+        self.assertFalse([p for m, p, _ in site.calls if m == 'PUT' and p != '/repos/7/release-lines'])
+
+    def test_without_credentials_it_only_warns(self):
+        with tempfile.TemporaryDirectory() as d:
+            notes = Path(d, 'n.md')
+            notes.write_text(NOTES)
+            env = {k: os.environ.pop(k) for k in ('OPEND_DOCS_URL', 'OPEND_DOCS_ADMIN_TOKEN') if k in os.environ}
+            try:
+                self.assertEqual(docs.main(['point-site', str(notes)]), 0)
+            finally:
+                os.environ.update(env)
+
+
 if __name__ == '__main__':
     unittest.main()

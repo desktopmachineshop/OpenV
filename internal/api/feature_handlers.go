@@ -186,7 +186,9 @@ func (h *Handler) helpProfile(w http.ResponseWriter, r *http.Request) (help.Prof
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return help.Profile{}, false
 	}
-	if h.HelpService == nil {
+	// Off where no docs site is configured, and for a member whose channel
+	// has not reached the feature yet: the panel then keeps its summary.
+	if h.HelpService == nil || !h.featureEnabled(r, orgID, release.FeatureManualHelp) {
 		writeJSONError(w, http.StatusNotFound, "help is not configured")
 		return help.Profile{}, false
 	}

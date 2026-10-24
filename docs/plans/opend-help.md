@@ -6,7 +6,11 @@ frontend. Status: **in progress**. Decided:
 - the docs source lives in this repository under `manual/`;
 - docs.openv.app is a public site that shows the latest line by default,
   with a version menu to switch lines;
-- help is drawn natively in OpenV's own drawer, through OpenV's backend.
+- help is drawn natively in OpenV's own drawer, through OpenV's backend;
+- the docs site is a **shared** OpenD-hosted site (plan `oss`, OpenD-hosted
+  ADR 0004) at `https://openv.opend.app`: shared plans take no custom
+  domain, which the native drawer does not need, since OpenV's server is
+  the only caller.
 
 ## Where we start
 
@@ -104,9 +108,10 @@ frontend. Status: **in progress**. Decided:
 
 | | Work | Repo | State |
 |---|---|---|---|
-| A | OpenD-hosted tenant `openv`:<br>• domain docs.openv.app, embed origins openv.app and staging<br>• repo `desktopmachineshop/openv`, `docsPath: manual`, `releaseRefs: ['docs/*']`<br>• public, minor release lines | openv-hosted ops | to do (needs the control plane's admin token) |
+| A | OpenD-hosted **shared** tenant `openv` (plan `oss`) at `https://openv.opend.app`:<br>• embed origins `https://openv.app`<br>• repo `desktopmachineshop/OpenV`, `docsPath: manual`, `releaseRefs: ['docs/*']`<br>• public; minor release lines (set by the release workflow)<br>• `OPENV_DOCS_*` on OpenV's Railway service, `OPEND_DOCS_URL`/`OPEND_DOCS_ADMIN_TOKEN` on the GitHub repo | openv-hosted ops | to do: needs the control plane's admin token (an operator step) |
 | B | The manual as DITA: one topic per section, context keys, `help-contexts.yaml`, `redirects.json` for the old links | openv | **done**, generated from the chapters until D ships |
 | C | Help proxy (`internal/domain/help`, the `help-docs` capability, `OPENV_DOCS_*`):<br>• `GET /api/v1/orgs/{id}/help/{context,topic,search}` (nav to come)<br>• profile and version, embed token, allowlist sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | **done**, without the image proxy and nav; off until `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set |
+| D' | Turn it on: the `manual-help` feature key on the routes and the panel, its release note, the manual's help section, and the release workflow's `point-site` step | openv | **done** in the switch-on PR |
 | D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | **drawer done** (`DocsHelp` in `HelpSidebar`, on the `help-docs` capability); `HelpLink`, "?" on every shell, the `/manual` reader and the feature key to do. The key and its release note come with the PR that turns help on for openv.app, once A exists |
 | E1 | `GET /api/v1/help/nav` for embed tokens | opend | **done** (OpenD #39) |
 | E2 | Public context redirect `/context/<app>/<key>`, at the version the request is served, for self-hosted OpenV | opend | **done** (OpenD #39) |

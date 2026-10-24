@@ -62,6 +62,7 @@ var Registry = []Feature{
 	// workspace's channel can gate it: the key is registered for the
 	// features endpoint and What's new, and the flow is unconditional.
 	{Key: FeatureLinkedSignIn, ShippedIn: "0.23.0", Summary: "Sign in with Google to an account you made with a password: confirm the password once, and either way signs you in after that"},
+	{Key: FeatureManualHelp, ShippedIn: "0.24.0", Summary: "The help panel shows the user manual's own page for the screen you are on, written for the release your workspace is on, with links between pages and a search of the manual"},
 }
 
 // Feature keys the code gates on.
@@ -197,6 +198,11 @@ const (
 	// to a password account's sign-in methods, confirmed with the password
 	// (users/identity_link.go). Unconditional; see its registry entry.
 	FeatureLinkedSignIn = "linked-sign-in"
+	// FeatureManualHelp is the help panel reading the user manual from the
+	// docs site (docs/plans/opend-help.md): GET /orgs/{id}/help/* and the
+	// panel's DocsHelp. It gates both, per member, on top of the deployment's
+	// help-docs capability; without it the panel keeps its shipped summary.
+	FeatureManualHelp = "manual-help"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

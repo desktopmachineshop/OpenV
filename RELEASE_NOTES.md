@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Help for the page you are on, from the manual for your release.** The
+  help panel (the **?** beside the notification bell) now shows the user
+  manual's own page for the screen you are on, written for the release
+  your workspace runs, so it matches what you see. Follow links between
+  pages without leaving the panel, go **Back**, search the whole manual
+  from the top of the panel, or open the page on the docs site, where you
+  can switch to the manual of another release.
+
 ### Maintenance updates
 
 - **The help panel can show the user manual from a docs site.** A

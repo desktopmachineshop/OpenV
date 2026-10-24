@@ -13,6 +13,10 @@ manual/maps are generated from them: edit the chapter, then run `sync`.
                            changes the manual, or carries no-docs-change
   line NOTES               the docs line (major.minor) of the newest release
   stamp NOTES CONFIG       set CONFIG's `release:` to that line
+  point-site NOTES         once the docs site has published the newest
+                           release's line, make it the public default and
+                           list every live line in its version picker
+                           (OPEND_DOCS_URL, OPEND_DOCS_ADMIN_TOKEN)
 
 Stdlib-only Python 3, like every script in scripts/.
 """
@@ -20,9 +24,13 @@ Stdlib-only Python 3, like every script in scripts/.
 import argparse
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
+import time
+import urllib.error
+import urllib.request
 import sys
 import tempfile
 from pathlib import Path
@@ -423,6 +431,77 @@ def cmd_stamp(args):
     print(f'{config}: release {line}')
 
 
+# --- point-site: the docs site follows each release ------------------------
+
+REPO = 'desktopmachineshop/openv'
+# What anonymous visitors of the docs site read: the free plan's manual.
+PUBLIC_PRODUCTS = ['free']
+
+
+class Site:
+    """The docs site's admin API (OpenD), with its admin token."""
+
+    def __init__(self, url, token, opener=None):
+        self.url = url.rstrip('/')
+        self.token = token
+        self.opener = opener or urllib.request.urlopen
+
+    def call(self, method, path, body=None):
+        data = None if body is None else json.dumps(body).encode()
+        req = urllib.request.Request(self.url + '/admin/api' + path, data=data, method=method)
+        req.add_header('authorization', 'Bearer ' + self.token)
+        if data is not None:
+            req.add_header('content-type', 'application/json')
+        try:
+            with self.opener(req, timeout=30) as resp:
+                text = resp.read().decode() or 'null'
+        except urllib.error.HTTPError as e:
+            raise DocsError(f'{method} {path} answered {e.code}: {e.read().decode()[:200]}') from None
+        return json.loads(text)
+
+
+def line_key(line):
+    return tuple(int(n) for n in line.split('.'))
+
+
+def point_site(site, line, wait=900, every=20, sleep=time.sleep):
+    """Waits for `line` to be live, then sets the public version to it and the
+    picker to every live line, newest first. Returns that list."""
+    repos = [r for r in site.call('GET', '/repos') if r.get('fullName', '').lower() == REPO]
+    if not repos:
+        raise DocsError(f'the docs site has no repository {REPO}')
+    repo = repos[0]
+    rid = repo['id']
+    if repo.get('releaseLines') != 'minor':
+        site.call('PUT', f'/repos/{rid}/release-lines', {'releaseLines': 'minor'})
+    waited = 0
+    while True:
+        live = [r['releaseLine'] for r in site.call('GET', f'/repos/{rid}/releases')]
+        if line in live:
+            break
+        if waited >= wait:
+            raise DocsError(f'line {line} is not live on the docs site after {wait}s; live: {", ".join(live) or "none"}')
+        sleep(every)
+        waited += every
+    lines = sorted(set(live), key=line_key, reverse=True)[:50]
+    site.call('PUT', f'/repos/{rid}/access', {
+        'access': 'public',
+        'publicEntitlements': {'products': PUBLIC_PRODUCTS, 'features': [], 'version': line},
+    })
+    site.call('PUT', f'/repos/{rid}/versions', {'mode': 'list', 'versions': lines})
+    return lines
+
+
+def cmd_point_site(args):
+    url, token = os.environ.get('OPEND_DOCS_URL', ''), os.environ.get('OPEND_DOCS_ADMIN_TOKEN', '')
+    if not url or not token:
+        print('::warning::OPEND_DOCS_URL or OPEND_DOCS_ADMIN_TOKEN is not set: the docs site was not pointed at this release')
+        return
+    line = docs_line(Path(args.notes).read_text())
+    lines = point_site(Site(url, token), line, wait=args.wait)
+    print(f'docs site: {line} is the public default; the version menu lists {", ".join(lines)}')
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--root', default=str(ROOT), help=argparse.SUPPRESS)
@@ -440,6 +519,10 @@ def main(argv=None):
     s.add_argument('notes')
     s.add_argument('config')
     s.set_defaults(func=cmd_stamp)
+    s = sub.add_parser('point-site')
+    s.add_argument('notes')
+    s.add_argument('--wait', type=int, default=900, help='seconds to wait for the line to go live')
+    s.set_defaults(func=cmd_point_site)
     args = p.parse_args(argv)
     try:
         args.func(args)

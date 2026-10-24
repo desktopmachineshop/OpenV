@@ -42,6 +42,7 @@ export const FEATURE_KEYS = [
   'cloud-runner-token',
   'connected-app-workspaces',
   'linked-sign-in',
+  'manual-help',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
