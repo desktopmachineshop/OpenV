@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.23.1 — 2026-10-24
+
 ### Bug fixes
 
 - **Single sign-on works with identity providers that require PKCE.**

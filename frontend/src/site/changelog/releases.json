@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.23.1",
+   "date": "2026-10-24",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Single sign-on works with identity providers that require PKCE.** OpenV now protects each single sign-on with a one-time check that ties the sign-in to your browser, which some identity providers insist on, the Desktop Machine Shop account among them. A provider that sends no name no longer clears the name on your OpenV account; a new account it creates is named after your email address until you change it."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.23.0",
    "date": "2026-10-23",
    "stableSince": "2026-10-23",
