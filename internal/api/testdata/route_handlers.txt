@@ -368,3 +368,6 @@ DELETE /api/v1/me/connected-apps/{id} -> RevokeConnectedApp [alwaysWritable]
 PUT /api/v1/me/connected-apps/{id}/workspaces -> SetConnectedAppWorkspaces [alwaysWritable]
 POST /mcp -> MCP
 GET,DELETE /mcp -> MCPNoStream
+GET /api/v1/orgs/{id}/help/context -> GetHelpContext
+GET /api/v1/orgs/{id}/help/topics/{topic:.+} -> GetHelpTopic
+GET /api/v1/orgs/{id}/help/search -> SearchHelp

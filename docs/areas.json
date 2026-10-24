@@ -585,6 +585,7 @@
         "frontend/public/**",
         "frontend/security-headers.conf",
         "frontend/src/*",
+        "frontend/src/api/**/help*",
         "frontend/src/api/*.md",
         "frontend/src/api/baseURL*",
         "frontend/src/api/client*",
@@ -613,6 +614,7 @@
         "frontend/tsconfig.json",
         "frontend/vite.config.ts",
         "frontend/vite.ext.ts",
+        "internal/domain/help/**",
         "manual/**"
       ]
     },

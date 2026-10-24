@@ -242,6 +242,7 @@ the area that owns them; the area guide of
 | community | `internal/domain/sharedproducts` | the community pool of demo products |
 | | `internal/domain/sharelinks` | share links |
 | platform-http | `internal/domain/release` | the release notes the binary carries, the feature registry |
+| frontend-shell | `internal/domain/help` | the in-app help: the user manual's topics fetched from OpenD for a workspace's docs line and plan, sanitized |
 
 **Refactor tools and guards**
 

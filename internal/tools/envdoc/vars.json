@@ -345,6 +345,21 @@
       "read_by": "server",
       "text": "Interview event-stream connects per client address per hour, steady state."
     },
+    "OPENV_DOCS_ADMIN_TOKEN": {
+      "area": "frontend-shell",
+      "read_by": "server",
+      "text": "The docs site's `OPEND_ADMIN_TOKEN`, read only when `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set. With it the server creates each help profile (an OpenD organization and service reader per docs line and plan family) the first time it asks for help; without it the docs site's operator creates them. Secret."
+    },
+    "OPENV_DOCS_EMBED_SECRET": {
+      "area": "frontend-shell",
+      "read_by": "server",
+      "text": "The docs site's `OPEND_EMBED_SECRET`, which signs the embed tokens the in-app help reads the manual with. Help from the docs site is on only when this and `OPENV_DOCS_URL` are both set; otherwise the app keeps the help it ships. Secret."
+    },
+    "OPENV_DOCS_URL": {
+      "area": "frontend-shell",
+      "read_by": "server",
+      "text": "The OpenD docs site that publishes the user manual (`manual/`), such as `https://docs.openv.app`, without a trailing slash: the in-app help reads each workspace's manual from it (`docs/plans/opend-help.md`)."
+    },
     "OPENV_INVITE_BURST": {
       "area": "tenancy-identity",
       "read_by": "server",

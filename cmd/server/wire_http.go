@@ -10,6 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/billing/stripe"
 	"github.com/openv/requirements-platform/internal/config"
+	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
@@ -68,6 +69,13 @@ func (a *app) billing() {
 // nudges.
 func (a *app) handlers() {
 	cfg := a.env()
+	// The in-app help reads the user manual from OpenD when a docs site is
+	// configured (docs/plans/opend-help.md); otherwise the app keeps the
+	// help it ships.
+	var helpService *help.Service
+	if docs := cfg.HelpDocs(); docs != nil {
+		helpService = help.NewService(help.Config{URL: docs.URL, Secret: docs.EmbedSecret, AdminToken: docs.AdminToken}, nil)
+	}
 	a.handler = api.NewHandler(api.HandlerDeps{
 		ArtifactService:      a.artifactService,
 		LinkService:          a.linkService,
@@ -90,6 +98,7 @@ func (a *app) handlers() {
 		EvidenceService:      a.evidenceService,
 		SettingsService:      a.settingsService,
 		ReleaseService:       a.releaseService,
+		HelpService:          helpService,
 		DeploymentKind:       a.deploymentKind,
 		BuildSHA:             a.buildSHA,
 		WorkItemService:      a.workItemService,

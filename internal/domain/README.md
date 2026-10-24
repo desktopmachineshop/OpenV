@@ -23,6 +23,7 @@ Each package belongs to one area of `docs/areas.json` through its
 | events-notifications | `events/`, `notifications/`, `pushsubs/` |
 | community | `sharedproducts/`, `sharelinks/` |
 | platform-http | `release/`, and this directory's `*.md` |
+| frontend-shell | `help/` |
 
 Billing has no domain package: it is `internal/billing` (see
 `internal/notify/README.md`), and a workspace's plan and limits are

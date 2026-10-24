@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 311
-  axios instance calls: 300 (DELETE 37, GET 119, HEAD 1, POST 102, PUT 41)
+call sites: 314
+  axios instance calls: 303 (DELETE 37, GET 122, HEAD 1, POST 102, PUT 41)
   helper calls (a function that passes its argument to the instance): 2
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (4 of them axios calls)
-distinct METHOD PATH lines below: 310; server routes reached: 310
+distinct METHOD PATH lines below: 313; server routes reached: 313
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
@@ -176,6 +176,9 @@ POST    /api/v1/orgs/{id}/billing/portal                                  billin
 POST    /api/v1/orgs/{id}/billing/refresh                                 billingAPI.refresh
 POST    /api/v1/orgs/{id}/connector-pairing                               connectorAPI.createPairing
 GET     /api/v1/orgs/{id}/features                                        orgsAPI.features
+GET     /api/v1/orgs/{id}/help/context                                    helpAPI.context
+GET     /api/v1/orgs/{id}/help/search                                     helpAPI.search
+GET     /api/v1/orgs/{id}/help/topics/{topic:.+}                          helpAPI.topic
 DELETE  /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.remove
 GET     /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.get
 POST    /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.enable

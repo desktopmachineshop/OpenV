@@ -111,6 +111,9 @@ GET /api/v1/orgs
 GET /api/v1/orgs/{id}
 GET /api/v1/orgs/{id}/billing
 GET /api/v1/orgs/{id}/features
+GET /api/v1/orgs/{id}/help/context
+GET /api/v1/orgs/{id}/help/search
+GET /api/v1/orgs/{id}/help/topics/{topic:.+}
 GET /api/v1/orgs/{id}/hosted-runner
 GET /api/v1/orgs/{id}/invitations
 GET /api/v1/orgs/{id}/limits

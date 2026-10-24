@@ -2,10 +2,11 @@
 
 Move the user manual and the in-app help onto OpenD-hosted docs, served for
 the release each workspace is on, and retire the manual compiled into the
-frontend. Status: **in progress**. Decided: the docs source lives in this
-repository under `manual/`; docs.openv.app is a public site. Open: how the
-help is drawn (the native drawer or OpenD's iframe panel), and which
-release the public site shows by default.
+frontend. Status: **in progress**. Decided:
+- the docs source lives in this repository under `manual/`;
+- docs.openv.app is a public site that shows the latest line by default,
+  with a version menu to switch lines;
+- help is drawn natively in OpenV's own drawer, through OpenV's backend.
 
 ## Where we start
 
@@ -29,7 +30,7 @@ release the public site shows by default.
 
 ## Decisions
 
-1. **Draw help natively, through OpenV's backend.** *(Open.)* The browser
+1. **Draw help natively, through OpenV's backend.** *(Decided.)* The browser
    calls only OpenV; OpenV's API calls OpenD's JSON help API and returns
    sanitized topics that render in OpenV's own drawer.
    - What it buys: OpenV's CSP and `X-Frame-Options` are untouched, no
@@ -53,8 +54,9 @@ release the public site shows by default.
    help links send child keys (`vv.coverage`), which fall back to the
    page's key until their topic exists.
 5. **Public site.** *(Decided.)* docs.openv.app serves anonymous visitors
-   the public entitlements: the free plan on the latest line. That keeps the
-   manual's search traffic and serves self-hosters.
+   the public entitlements: the free plan, on the line labelled *latest* by
+   default, with the version menu to read any other public line. That keeps
+   the manual's search traffic and serves self-hosters.
 
 ## Versions
 
@@ -98,8 +100,8 @@ release the public site shows by default.
 |---|---|---|---|
 | A | OpenD-hosted tenant `openv`:<br>• domain docs.openv.app, embed origins openv.app and staging<br>• repo `desktopmachineshop/openv`, `docsPath: manual`, `releaseRefs: ['docs/*']`<br>• public, minor release lines | openv-hosted ops | to do (needs the control plane's admin token) |
 | B | The manual as DITA: one topic per section, context keys, `help-contexts.yaml`, `redirects.json` for the old links | openv | **done**, generated from the chapters until D ships |
-| C | Help proxy:<br>• `GET /api/v1/help/{context,topics/{id},search,nav}`<br>• profile and version, embed token, bluemonday sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | to do |
-| D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | to do |
+| C | Help proxy (`internal/domain/help`, the `help-docs` capability, `OPENV_DOCS_*`):<br>• `GET /api/v1/orgs/{id}/help/{context,topics/{id},search}` (nav to come)<br>• profile and version, embed token, allowlist sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | **done**, without the image proxy and nav; off until `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set |
+| D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | **drawer done** (`DocsHelp` in `HelpSidebar`, on the `help-docs` capability); `HelpLink`, "?" on every shell, the `/manual` reader and the feature key to do. The key and its release note come with the PR that turns help on for openv.app, once A exists |
 | E1 | `GET /api/v1/help/nav` for embed tokens | opend | to do |
 | E2 | Public context redirect, per version: `/v/<line>/context/<app>/<key>`, for self-hosted OpenV | opend | to do |
 | E3 | Release lines by `minor` as well as `major`, per repository | opend | to do |

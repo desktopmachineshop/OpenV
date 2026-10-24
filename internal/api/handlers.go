@@ -14,6 +14,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/release"
@@ -76,6 +77,9 @@ type HandlerDeps struct {
 	EvidenceService evidence.Service
 	SettingsService settings.Service
 	ReleaseService  release.Service
+	// HelpService serves the user manual's topics from OpenD; nil when
+	// OPENV_DOCS_URL and OPENV_DOCS_EMBED_SECRET are unset.
+	HelpService *help.Service
 	// DeploymentKind is "shared" (default) or "dedicated" (REQ-139).
 	DeploymentKind string
 	// BuildSHA is the git commit this binary was built from, empty where

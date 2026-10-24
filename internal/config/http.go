@@ -122,6 +122,27 @@ func (c *Config) PublicAPIURL() string {
 	return c.text("PUBLIC_URL", "http://localhost:"+c.Port())
 }
 
+// HelpDocs is where the in-app help reads the user manual from: the OpenD
+// docs site that publishes manual/ (docs/plans/opend-help.md). Help is off,
+// and the app keeps the help it ships, unless OPENV_DOCS_URL and
+// OPENV_DOCS_EMBED_SECRET are both set; only then is OPENV_DOCS_ADMIN_TOKEN
+// read.
+type HelpDocs struct {
+	URL         string // OPENV_DOCS_URL: the docs site's PUBLIC_URL
+	EmbedSecret string // OPENV_DOCS_EMBED_SECRET: its OPEND_EMBED_SECRET
+	AdminToken  string // OPENV_DOCS_ADMIN_TOKEN: its OPEND_ADMIN_TOKEN, to provision profiles
+}
+
+// HelpDocs is nil unless the docs site and its embed secret are set.
+func (c *Config) HelpDocs() *HelpDocs {
+	url := c.text("OPENV_DOCS_URL", "")
+	secret := c.text("OPENV_DOCS_EMBED_SECRET", "")
+	if url == "" || secret == "" {
+		return nil
+	}
+	return &HelpDocs{URL: url, EmbedSecret: secret, AdminToken: c.text("OPENV_DOCS_ADMIN_TOKEN", "")}
+}
+
 // ConnectorDistDir is where the connector downloads are served from
 // (CONNECTOR_DIST_DIR, default ./dist).
 func (c *Config) ConnectorDistDir() string {
