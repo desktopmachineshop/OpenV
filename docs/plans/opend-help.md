@@ -72,9 +72,15 @@ frontend. Status: **in progress**. Decided:
 - **Release gating needs no conditions:** the 0.21 line only describes
   0.21. If a line is not live yet, the backend falls back to the newest
   older live line and says which it shows.
-- **The public site** gets a version menu. It is a `<details>` menu,
-  because the docs pages run no script. It lists the public lines labelled
-  *latest* and *stable* and links to the same topic under `/v/<line>/`.
+- **The public site** uses OpenD's version picker (OpenD ADR 0016), a
+  `<details>` menu that works without script. The repository is on `minor`
+  release lines (OpenD PR #39), so a chosen version serves that minor's
+  own build. After each release's `docs/<minor>` build is live, the
+  release workflow makes two OpenD admin calls:
+  - `PUT /admin/api/repos/:id/access` with the new version as the public
+    entitlements' `version`, so `/` shows the latest release;
+  - `PUT /admin/api/repos/:id/versions` with `{"mode":"list","versions":[…]}`
+    listing the lines still served, newest first, so readers can switch.
 - **Inside the app** there is no menu: the drawer reads *"Docs for OpenV
   0.21 · stable channel"*, with a link to other versions on the public site.
 
@@ -102,10 +108,10 @@ frontend. Status: **in progress**. Decided:
 | B | The manual as DITA: one topic per section, context keys, `help-contexts.yaml`, `redirects.json` for the old links | openv | **done**, generated from the chapters until D ships |
 | C | Help proxy (`internal/domain/help`, the `help-docs` capability, `OPENV_DOCS_*`):<br>• `GET /api/v1/orgs/{id}/help/{context,topic,search}` (nav to come)<br>• profile and version, embed token, allowlist sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | **done**, without the image proxy and nav; off until `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set |
 | D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | **drawer done** (`DocsHelp` in `HelpSidebar`, on the `help-docs` capability); `HelpLink`, "?" on every shell, the `/manual` reader and the feature key to do. The key and its release note come with the PR that turns help on for openv.app, once A exists |
-| E1 | `GET /api/v1/help/nav` for embed tokens | opend | to do |
-| E2 | Public context redirect, per version: `/v/<line>/context/<app>/<key>`, for self-hosted OpenV | opend | to do |
-| E3 | Release lines by `minor` as well as `major`, per repository | opend | to do |
-| E4 | Line labels (`latest`, `stable`), public lines, retention, the public version menu | opend | to do |
+| E1 | `GET /api/v1/help/nav` for embed tokens | opend | **done** (OpenD #39) |
+| E2 | Public context redirect `/context/<app>/<key>`, at the version the request is served, for self-hosted OpenV | opend | **done** (OpenD #39) |
+| E3 | Release lines by `minor` as well as `major`, per repository | opend | **done** (OpenD #39) |
+| E4 | The public version menu | opend | **done** by OpenD's own version picker (#34); OpenV's release workflow sets its list and the public version once the tenant (A) exists |
 | F | Guards: the *Docs* job, `make check`/`check-fast`, the promote steps (`docs/docs-maintenance.md`) | openv | **done**; key resolution for `pages.ts` and `HelpLink` comes with D |
 | G | Retire:<br>• delete `frontend/src/manual`, `helpTopics.ts` and the site pre-render of the manual, here and in openv-hosted<br>• 301 `/manual/*` to docs.openv.app; sitemap and `llms.txt` there<br>• flip the source to `manual/` and drop `docs.py sync` | openv, openv-hosted | after stable carries `opend-help` |
 | H | Requirements:<br>• help for the current screen in one action from every signed-in page<br>• help served for the workspace's release<br>• public version menu<br>• docs gate on promotion<br>• a design item for the proxy, a Playwright help journey<br>• a baseline | OpenV, OpenD projects | with C/D and E |
@@ -115,7 +121,7 @@ frontend. Status: **in progress**. Decided:
 1. A and E3, then the site goes live from `docs/0.x` with B's content.
 2. C and D behind `opend-help`, with E1, on nightly and staging.
 3. `HelpLink`s across the UI, with authors writing the child topics.
-4. E2 and E4.
+4. The release workflow's two OpenD calls (public version, picker list), once A exists.
 5. G, once stable carries `opend-help`.
 
 ## Risks
