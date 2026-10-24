@@ -369,5 +369,5 @@ PUT /api/v1/me/connected-apps/{id}/workspaces -> SetConnectedAppWorkspaces [alwa
 POST /mcp -> MCP
 GET,DELETE /mcp -> MCPNoStream
 GET /api/v1/orgs/{id}/help/context -> GetHelpContext
-GET /api/v1/orgs/{id}/help/topics/{topic:.+} -> GetHelpTopic
+GET /api/v1/orgs/{id}/help/topic -> GetHelpTopic
 GET /api/v1/orgs/{id}/help/search -> SearchHelp

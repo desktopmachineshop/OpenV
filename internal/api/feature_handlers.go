@@ -175,7 +175,7 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) registerHelpRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/help/context", h.GetHelpContext).Methods("GET")
-	router.HandleFunc("/api/v1/orgs/{id}/help/topics/{topic:.+}", h.GetHelpTopic).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/help/topic", h.GetHelpTopic).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/help/search", h.SearchHelp).Methods("GET")
 }
 
@@ -245,13 +245,13 @@ func (h *Handler) GetHelpContext(w http.ResponseWriter, r *http.Request) {
 	writeJSONBare(w, topic)
 }
 
-// GetHelpTopic answers one topic by its page id.
+// GetHelpTopic answers one topic by its page id: ?id=topics/vv/test-runs.
 func (h *Handler) GetHelpTopic(w http.ResponseWriter, r *http.Request) {
 	profile, ok := h.helpProfile(w, r)
 	if !ok {
 		return
 	}
-	topic, err := h.HelpService.TopicByID(r.Context(), profile, mux.Vars(r)["topic"])
+	topic, err := h.HelpService.TopicByID(r.Context(), profile, r.URL.Query().Get("id"))
 	if err != nil {
 		writeHelpError(w, err)
 		return

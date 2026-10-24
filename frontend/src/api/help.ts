@@ -13,7 +13,7 @@ export const helpAPI = {
     client.get<HelpTopic>(`/api/v1/orgs/${orgId}/help/context`, { params: ctx }),
   // One topic by its page id, such as "topics/vv/test-runs".
   topic: (orgId: string, topicId: string) =>
-    client.get<HelpTopic>(`/api/v1/orgs/${orgId}/help/topics/${topicId}`),
+    client.get<HelpTopic>(`/api/v1/orgs/${orgId}/help/topic`, { params: { id: topicId } }),
   search: (orgId: string, q: string) =>
     client.get<HelpResults>(`/api/v1/orgs/${orgId}/help/search`, { params: { q } }),
 };

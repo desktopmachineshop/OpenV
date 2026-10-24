@@ -178,7 +178,7 @@ POST    /api/v1/orgs/{id}/connector-pairing                               connec
 GET     /api/v1/orgs/{id}/features                                        orgsAPI.features
 GET     /api/v1/orgs/{id}/help/context                                    helpAPI.context
 GET     /api/v1/orgs/{id}/help/search                                     helpAPI.search
-GET     /api/v1/orgs/{id}/help/topics/{topic:.+}                          helpAPI.topic
+GET     /api/v1/orgs/{id}/help/topic                                      helpAPI.topic
 DELETE  /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.remove
 GET     /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.get
 POST    /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.enable

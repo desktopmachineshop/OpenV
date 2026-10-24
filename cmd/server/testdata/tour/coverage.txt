@@ -123,6 +123,9 @@ GET /api/v1/orgs: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/billing: s5c, s5e; 2xx or 3xx in s5c
 GET /api/v1/orgs/{id}/features: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/orgs/{id}/help/context: s5e (errors only)
+GET /api/v1/orgs/{id}/help/search: s5e (errors only)
+GET /api/v1/orgs/{id}/help/topic: s5e (errors only)
 GET /api/v1/orgs/{id}/hosted-runner: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/invitations: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/limits: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -379,4 +382,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 368 of 368 routes reached (100.0%), 359 with a 2xx or 3xx answer (97.6%); the floor is 90%, 332 routes
+the tour: 371 of 371 routes reached (100.0%), 359 with a 2xx or 3xx answer (96.8%); the floor is 90%, 334 routes
