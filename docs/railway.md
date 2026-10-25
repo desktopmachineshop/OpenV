@@ -447,7 +447,9 @@ building from this repository.
 - Both steps use the **`OPENV_HOSTED_TOKEN`** repository secret: a
   fine-grained token on openv-hosted only. It needs read and write on
   *Contents* and *Pull requests*, plus read on *Actions* and *Commit
-  statuses* so the promotion can follow the pull request's CI. Without the
+  statuses* so the promotion can follow the pull request's CI: it waits on
+  the Actions runs of the pull request's commit, since this token cannot
+  read the check results themselves. Without the
   secret, both steps do nothing and `OPENV_VERSION` is set by hand.
 
 ## Staging
