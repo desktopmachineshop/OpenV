@@ -5,7 +5,7 @@ title: OpenV User Manual
 # The OpenV release this branch documents, as major.minor. Promote to release
 # stamps it when it cuts a version, and each docs/<minor> branch publishes as
 # its own release line (see docs/docs-maintenance.md).
-release: '0.23'
+release: '0.24'
 
 map: maps/manual.ditamap
 
