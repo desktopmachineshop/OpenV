@@ -124,23 +124,26 @@ func (c *Config) PublicAPIURL() string {
 
 // HelpDocs is where the in-app help reads the user manual from: the OpenD
 // docs site that publishes manual/ (docs/plans/opend-help.md). Help is off,
-// and the app keeps the help it ships, unless OPENV_DOCS_URL and
-// OPENV_DOCS_EMBED_SECRET are both set; only then is OPENV_DOCS_ADMIN_TOKEN
-// read.
+// and the app keeps the help it ships, unless OPENV_DOCS_URL is set. With
+// the URL alone it reads the site's public view; OPENV_DOCS_EMBED_SECRET
+// reads per profile instead, and only with it is OPENV_DOCS_ADMIN_TOKEN read.
 type HelpDocs struct {
 	URL         string // OPENV_DOCS_URL: the docs site's PUBLIC_URL
 	EmbedSecret string // OPENV_DOCS_EMBED_SECRET: its OPEND_EMBED_SECRET
 	AdminToken  string // OPENV_DOCS_ADMIN_TOKEN: its OPEND_ADMIN_TOKEN, to provision profiles
 }
 
-// HelpDocs is nil unless the docs site and its embed secret are set.
+// HelpDocs is nil unless the docs site is set.
 func (c *Config) HelpDocs() *HelpDocs {
 	url := c.text("OPENV_DOCS_URL", "")
-	secret := c.text("OPENV_DOCS_EMBED_SECRET", "")
-	if url == "" || secret == "" {
+	if url == "" {
 		return nil
 	}
-	return &HelpDocs{URL: url, EmbedSecret: secret, AdminToken: c.text("OPENV_DOCS_ADMIN_TOKEN", "")}
+	d := &HelpDocs{URL: url, EmbedSecret: c.text("OPENV_DOCS_EMBED_SECRET", "")}
+	if d.EmbedSecret != "" {
+		d.AdminToken = c.text("OPENV_DOCS_ADMIN_TOKEN", "")
+	}
+	return d
 }
 
 // ConnectorDistDir is where the connector downloads are served from

@@ -305,7 +305,8 @@ func accessorCases() []accessorCase {
 	} {
 		cases = append(cases, rateCases(l.burstVar, l.refillVar, l.field, l.burst, l.refill, l.pick)...)
 	}
-	// The in-app help's docs site: nil unless the URL and the secret are set.
+	// The in-app help's docs site: nil unless the URL is set; the admin token
+	// is read only with the secret.
 	docsOn := map[string]string{"OPENV_DOCS_URL": "https://docs.example.test", "OPENV_DOCS_EMBED_SECRET": "secret"}
 	helpDocs := func(field func(*HelpDocs) any) func(*Config) any {
 		return func(c *Config) any {
@@ -316,7 +317,7 @@ func accessorCases() []accessorCase {
 		}
 	}
 	cases = append(cases,
-		accessorCase{name: "OPENV_DOCS_URL", read: "internal/config:Config.text(name)", accessor: "HelpDocs().URL", with: map[string]string{"OPENV_DOCS_EMBED_SECRET": "secret"},
+		accessorCase{name: "OPENV_DOCS_URL", read: "internal/config:Config.text(name)", accessor: "HelpDocs().URL",
 			def: "", get: helpDocs(func(d *HelpDocs) any { return d.URL })},
 		accessorCase{name: "OPENV_DOCS_EMBED_SECRET", read: "internal/config:Config.text(name)", accessor: "HelpDocs().EmbedSecret", with: map[string]string{"OPENV_DOCS_URL": "https://docs.example.test"},
 			def: "", get: helpDocs(func(d *HelpDocs) any { return d.EmbedSecret })},

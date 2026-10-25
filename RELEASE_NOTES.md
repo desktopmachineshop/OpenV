@@ -22,11 +22,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 ### Maintenance updates
 
 - **The help panel can show the user manual from a docs site.** A
-  deployment that sets `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` to an
-  OpenD docs site shows, in the help panel, the manual's own page for the
+  deployment that sets `OPENV_DOCS_URL` to a public OpenD docs site shows, in the help panel, the manual's own page for the
   screen you are on, written for the release your workspace is on, with
   links between pages, Back, and a search of the manual. Without them the
-  help panel is unchanged.
+  help panel is unchanged. `OPENV_DOCS_EMBED_SECRET` is optional, for a
+  manual with pages kept to some plans.
 
 ## 0.23.1 — 2026-10-24
 

@@ -1,6 +1,13 @@
 // Package help serves the user manual's context help from OpenD, the docs
 // server that publishes manual/ (docs/plans/opend-help.md).
 //
+// Two ways to read it. With only the docs site's address it reads the
+// site's public view, which a public OpenD site answers without a token:
+// every workspace reads the manual anonymous visitors see, for the version
+// it asks for, and nothing has to be shared with the docs site. With the
+// site's embed secret as well, it reads per profile, as below, so the
+// manual can also carry content gated by plan.
+//
 // OpenV's API calls OpenD's embed JSON help API server to server and hands
 // the browser sanitized topics, so the app's CSP never admits the docs
 // origin and the embed secret never leaves the server. OpenD decides what
@@ -46,7 +53,8 @@ type Config struct {
 	// URL is the docs site's PUBLIC_URL, without a trailing slash. It is
 	// also the audience of every embed token.
 	URL string
-	// Secret is the docs site's OPEND_EMBED_SECRET.
+	// Secret is the docs site's OPEND_EMBED_SECRET. Without it the service
+	// reads the site's public view.
 	Secret string
 	// AdminToken is the docs site's OPEND_ADMIN_TOKEN, used only to upsert
 	// a profile's organization and reader.
@@ -175,11 +183,11 @@ const (
 	responseMax = 4 << 20
 )
 
-// NewService returns a service for cfg, or nil when cfg names no docs site
-// or secret: help is then off and the app keeps the help it ships.
+// NewService returns a service for cfg, or nil when cfg names no docs site:
+// help is then off and the app keeps the help it ships.
 func NewService(cfg Config, client *http.Client) *Service {
 	cfg.URL = strings.TrimRight(cfg.URL, "/")
-	if cfg.URL == "" || cfg.Secret == "" {
+	if cfg.URL == "" {
 		return nil
 	}
 	if cfg.ReaderDomain == "" {
@@ -306,6 +314,9 @@ func (s *Service) finish(t *Topic, line string) *Topic {
 // get fetches path for profile p into out, falling back to older lines while
 // the profile's own is not published, and returns the line that answered.
 func (s *Service) get(ctx context.Context, p Profile, path string, out any) (string, error) {
+	if s.cfg.Secret == "" {
+		return s.getPublic(ctx, p.Line, path, out)
+	}
 	line := s.servedLine(p.Line)
 	for i := 0; line != "" && i <= fallbackMax; i++ {
 		body, status, err := s.fetch(ctx, Profile{Line: line, Plan: p.Plan}, path)
@@ -329,6 +340,63 @@ func (s *Service) get(ctx context.Context, p Profile, path string, out any) (str
 		}
 	}
 	return "", ErrNotFound
+}
+
+// getPublic fetches path from the site's public view at version line. The
+// site answers a version it does not offer with its default, and names the
+// line it answered from in OpenD-Release-Line.
+func (s *Service) getPublic(ctx context.Context, line, path string, out any) (string, error) {
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+	path += sep + url.Values{"version": {line}}.Encode()
+	key := "public " + path
+	body, served, ok := s.cachedPublic(key)
+	if !ok {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.cfg.URL+path, nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Accept", "application/json")
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+		defer resp.Body.Close()
+		body, err = io.ReadAll(io.LimitReader(resp.Body, responseMax))
+		if err != nil {
+			return "", fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+		switch {
+		case resp.StatusCode == http.StatusNotFound:
+			return "", ErrNotFound
+		case resp.StatusCode != http.StatusOK:
+			return "", fmt.Errorf("%w: %s answered %d", ErrUnavailable, path, resp.StatusCode)
+		}
+		served = resp.Header.Get("OpenD-Release-Line")
+		if served == "" {
+			served = line
+		}
+		s.store(key, append([]byte(served+"\n"), body...))
+	}
+	if err := json.Unmarshal(body, out); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	return served, nil
+}
+
+// cachedPublic is a cached public answer: the line it came from, then its body.
+func (s *Service) cachedPublic(key string) (body []byte, line string, ok bool) {
+	raw, ok := s.cached(key)
+	if !ok {
+		return nil, "", false
+	}
+	first, rest, found := strings.Cut(string(raw), "\n")
+	if !found {
+		return nil, "", false
+	}
+	return []byte(rest), first, true
 }
 
 // lineMissing reports whether a 404 from OpenD means the reader's release

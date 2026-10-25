@@ -274,19 +274,3 @@ jobs:
           gh pr merge --repo "$HOSTED_REPO" --merge "$url"
           gh api -X DELETE "repos/${HOSTED_REPO}/git/refs/heads/${branch}" >/dev/null || true
           echo "openv-hosted: ${url}, merged; Railway deploys it" >> "$GITHUB_STEP_SUMMARY"
-
-      # The docs site (OpenD, docs/docs-maintenance.md) builds the line the
-      # step above pushed to docs/<major.minor>. Once that build is live, make
-      # it what anonymous visitors read by default and list every live line in
-      # the site's version menu, so the public manual follows each release
-      # while older releases stay one click away. Last, so it never holds up
-      # shipping. Without OPEND_DOCS_URL (a repository variable) and
-      # OPEND_DOCS_ADMIN_TOKEN (the docs site's admin token) it says so and
-      # does nothing.
-      - name: Point the docs site at this release
-        timeout-minutes: 20
-        env:
-          OPEND_DOCS_URL: ${{ vars.OPEND_DOCS_URL }}
-          OPEND_DOCS_ADMIN_TOKEN: ${{ secrets.OPEND_DOCS_ADMIN_TOKEN }}
-        run: |
-          python3 scripts/manual/docs.py point-site RELEASE_NOTES.md --wait 900 | tee -a "$GITHUB_STEP_SUMMARY"

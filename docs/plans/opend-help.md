@@ -10,7 +10,11 @@ frontend. Status: **in progress**. Decided:
 - the docs site is a **shared** OpenD-hosted site (plan `oss`, OpenD-hosted
   ADR 0004) at `https://openv.opend.app`: shared plans take no custom
   domain, which the native drawer does not need, since OpenV's server is
-  the only caller.
+  the only caller;
+- **no secrets cross between the two:** OpenV reads the site's public view,
+  anonymously, asking for the workspace's line. The only setting is
+  `OPENV_DOCS_URL`. Per-plan content (an embed secret and a reader per
+  profile, decision 2) stays available for when the manual needs it.
 
 ## Where we start
 
@@ -43,7 +47,8 @@ frontend. Status: **in progress**. Decided:
    - The alternative is OpenD's iframe panel. It is quicker to ship, but
      needs `frame-src`/`script-src` for the docs origin and is styled by
      the docs theme, not by the app.
-2. **Service readers per profile.** OpenD only exchanges tokens for
+2. **Service readers per profile** *(optional; off without
+   `OPENV_DOCS_EMBED_SECRET`)*. OpenD only exchanges tokens for
    registered readers, and what a reader may see is set per organization.
    So OpenV signs tokens for one reader per *profile*, not per user.
    - A profile is the docs version × the plan family.
@@ -79,12 +84,13 @@ frontend. Status: **in progress**. Decided:
 - **The public site** uses OpenD's version picker (OpenD ADR 0016), a
   `<details>` menu that works without script. The repository is on `minor`
   release lines (OpenD PR #39), so a chosen version serves that minor's
-  own build. After each release's `docs/<minor>` build is live, the
-  release workflow makes two OpenD admin calls:
-  - `PUT /admin/api/repos/:id/access` with the new version as the public
-    entitlements' `version`, so `/` shows the latest release;
-  - `PUT /admin/api/repos/:id/versions` with `{"mode":"list","versions":[…]}`
-    listing the lines still served, newest first, so readers can switch.
+  own build. The picker is in `live` mode and the public version is
+  `latest`, so the site follows releases by itself: each `docs/<minor>`
+  build joins the menu and becomes the default once live. Nothing in the
+  release workflow calls the docs site.
+- **The in-app help** asks the public help API for `version=<line>`; the
+  site answers from that line, or from its default when the line is not
+  live yet, and names the line it served in `OpenD-Release-Line`.
 - **Inside the app** there is no menu: the drawer reads *"Docs for OpenV
   0.21 · stable channel"*, with a link to other versions on the public site.
 
@@ -108,10 +114,10 @@ frontend. Status: **in progress**. Decided:
 
 | | Work | Repo | State |
 |---|---|---|---|
-| A | OpenD-hosted **shared** tenant `openv` (plan `oss`) at `https://openv.opend.app`:<br>• embed origins `https://openv.app`<br>• repo `desktopmachineshop/OpenV`, `docsPath: manual`, `releaseRefs: ['docs/*']`<br>• public; minor release lines (set by the release workflow)<br>• `OPENV_DOCS_*` on OpenV's Railway service, `OPEND_DOCS_URL`/`OPEND_DOCS_ADMIN_TOKEN` on the GitHub repo | openv-hosted ops | to do: needs the control plane's admin token (an operator step) |
+| A | OpenD-hosted **shared** tenant `openv` (plan `oss`) at `https://openv.opend.app`:<br>• repo `desktopmachineshop/OpenV` through the GitHub app, `docsPath: manual`, `releaseRefs: ['docs/*']`<br>• public; minor release lines; picker `live`, public version `latest`<br>• `OPENV_DOCS_URL` on OpenV's Railway service, nothing else | openv-hosted ops | tenant **created**; the GitHub app and docs source are the maintainer's step in the site's console |
 | B | The manual as DITA: one topic per section, context keys, `help-contexts.yaml`, `redirects.json` for the old links | openv | **done**, generated from the chapters until D ships |
-| C | Help proxy (`internal/domain/help`, the `help-docs` capability, `OPENV_DOCS_*`):<br>• `GET /api/v1/orgs/{id}/help/{context,topic,search}` (nav to come)<br>• profile and version, embed token, allowlist sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | **done**, without the image proxy and nav; off until `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set |
-| D' | Turn it on: the `manual-help` feature key on the routes and the panel, its release note, the manual's help section, and the release workflow's `point-site` step | openv | **done** in the switch-on PR |
+| C | Help proxy (`internal/domain/help`, the `help-docs` capability, `OPENV_DOCS_*`):<br>• `GET /api/v1/orgs/{id}/help/{context,topic,search}` (nav to come)<br>• profile and version, embed token, allowlist sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | **done**, without the image proxy and nav; off until `OPENV_DOCS_URL` is set (public mode without the embed secret) |
+| D' | Turn it on: the `manual-help` feature key on the routes and the panel, its release note, the manual's help section, and public mode (no secret) for the help service | openv | **done** in the switch-on PR |
 | D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | **drawer done** (`DocsHelp` in `HelpSidebar`, on the `help-docs` capability); `HelpLink`, "?" on every shell, the `/manual` reader and the feature key to do. The key and its release note come with the PR that turns help on for openv.app, once A exists |
 | E1 | `GET /api/v1/help/nav` for embed tokens | opend | **done** (OpenD #39) |
 | E2 | Public context redirect `/context/<app>/<key>`, at the version the request is served, for self-hosted OpenV | opend | **done** (OpenD #39) |
@@ -126,7 +132,7 @@ frontend. Status: **in progress**. Decided:
 1. A and E3, then the site goes live from `docs/0.x` with B's content.
 2. C and D behind `opend-help`, with E1, on nightly and staging.
 3. `HelpLink`s across the UI, with authors writing the child topics.
-4. The release workflow's two OpenD calls (public version, picker list), once A exists.
+4. The site's picker on `live` and public version `latest` (OpenD), so releases need no calls to it.
 5. G, once stable carries `opend-help`.
 
 ## Risks
@@ -135,5 +141,7 @@ frontend. Status: **in progress**. Decided:
   per profile, or the manual keeps gated images out.
 - **Profile count** is lines × plan families. Lines retire as stable moves
   on.
-- **The embed secret** signs in as any reader of the tenant. The tenant
+- **Public mode serves the public view:** content gated by plan stays
+  hidden from every workspace until the embed secret is set.
+- **The embed secret**, when used, signs in as any reader of the tenant. The tenant
   only hosts this manual; rotate the secret through the ops API.

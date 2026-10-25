@@ -70,11 +70,10 @@ promotion, never on their own.
    tagged, the shipped commit is pushed to `docs/<major.minor>`. The docs
    site builds each `docs/*` branch as its own release line. A patch moves
    its line's branch on, so 0.24.2's docs replace 0.24.1's.
-   Once that build is live, the last step makes the line the docs site's
-   public default and lists every live line in its version menu
-   (`docs.py point-site`, with the `OPEND_DOCS_URL` variable and the
-   `OPEND_DOCS_ADMIN_TOKEN` secret); it fails if the line is not live within
-   15 minutes.
+   The docs site follows on its own: its version menu lists every live line
+   and its public default is the newest, so a new line becomes what
+   visitors read as soon as its build is live. No credentials for the docs
+   site are kept here.
 
 9. **Before asking for a release, read the manual for what is going out.**
    The checks prove the manual builds; only a person can say it is right.
@@ -105,8 +104,8 @@ promotion, never on their own.
 
 12. **The version menu lists the live lines.** OpenD's version picker
     offers every line still live, newest first; the public default is the
-    latest release. Retiring a line (rule 11) takes it off the menu at the
-    next release.
+    latest release. Retiring a line (rule 11) means deleting its
+    `docs/<line>` branch, which takes it off the menu.
 
 ## Where this lives
 
