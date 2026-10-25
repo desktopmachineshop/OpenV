@@ -72,8 +72,11 @@ promotion, never on their own.
    its line's branch on, so 0.24.2's docs replace 0.24.1's.
    The docs site follows on its own: its version menu lists every live line
    and its public default is the newest, so a new line becomes what
-   visitors read as soon as its build is live. No credentials for the docs
-   site are kept here.
+   visitors read as soon as its build is live. How the site is set up
+   (release branches, minor lines, public access, the version menu) is the
+   `site:` block of `manual/opend.config.yaml`, which the site applies when
+   the newest line goes live; change it there, never in the site's console.
+   No credentials for the docs site are kept here.
 
 9. **Before asking for a release, read the manual for what is going out.**
    The checks prove the manual builds; only a person can say it is right.

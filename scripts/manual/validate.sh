@@ -7,7 +7,7 @@
 set -euo pipefail
 
 OPEND_REPO="${OPEND_REPO:-https://github.com/desktopmachineshop/OpenD.git}"
-OPEND_REF="${OPEND_REF:-764eac1c70af2e4e091c9a23ea3a090348d85757}"
+OPEND_REF="${OPEND_REF:-90958ffe1dd6bd21f13d934040776a46d9b4cb06}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 dir="${OPEND_DIR:-$root/.cache/opend}"
 
