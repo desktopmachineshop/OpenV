@@ -53,6 +53,22 @@ Clicking a linked artifact navigates to it.
 - **Agents** can propose links; with the default proposal write mode you
   approve them before they land (see *Runs & runners*).
 
+## Impact analysis
+
+**Impact**, under *Verify* in the project menu, traces what a change to one
+artifact would reach through its traceability links. Pick an artifact, or
+choose **Show impact** on an artifact or in the matrix, then a direction:
+
+- **Downstream (dependents)**: the artifacts that depend on this one, which
+  a change here could affect.
+- **Upstream (dependencies)**: the artifacts this one depends on, its
+  sources and rationale.
+- **Both**: the two together.
+
+The artifacts it reaches are grouped by type, each with the link type that
+reached it and how many hops away it is. Hover one to see the path of links
+that leads to it, and click it to open it in Requirements.
+
 ## The Traceability Matrix
 
 **Matrix** in the project sidebar shows one row per requirement with columns

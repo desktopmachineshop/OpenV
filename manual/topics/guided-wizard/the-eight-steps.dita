@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-eight-steps">
   <title>The eight steps</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="guided.step"/>
+  </prolog>
   <conbody>
     <ol>
       <li><b>Product framing</b> — vision, problem statement, target users. Saved to the product profile and shown on the Overview page.</li>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, Artifact, linkAPI, LinkedArtifact, qualifiedRef } from '../api/client';
 import { getAvailableLinkTypes, getAllowedTargetTypes, getLinkTypeLabel } from '../config/linkTypeRules';
-import { useAlert } from './ui';
+import { HelpLink, useAlert } from './ui';
+import { useHelpContext } from '../hooks/useHelp';
 
 interface LinkPanelProps {
   artifacts: Artifact[];
@@ -40,6 +41,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 }) => {
   const alertDialog = useAlert();
   const [isCreating, setIsCreating] = useState(false);
+  useHelpContext(isCreating ? 'links.create' : null);
   const [linkType, setLinkType] = useState('');
   const [toArtifactId, setToArtifactId] = useState('');
   const [artifactSearch, setArtifactSearch] = useState('');
@@ -254,7 +256,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 
   return (
     <div className="card">
-      <h3>{title}</h3>
+      <h3>{title}<HelpLink helpKey="links" label="traceability links" /></h3>
 
       {/* Existing Links */}
       {(outgoingLinks.length > 0 || incomingLinks.length > 0) ? (

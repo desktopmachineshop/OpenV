@@ -37,6 +37,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 | `views/*.tsx` | the pages; a split view keeps its path and export, with its panes in `views/moduleView/`, `views/projectSettings/` or `views/guidedWizard/` |
 | `components/**` | shared components; `components/ui/**` is the UI kit, and `components/agents/`, `components/crews/`, `components/kanban/`, `components/org/` and `components/wizard/` hold one feature each |
 | `components/ProjectLayout.tsx`, `components/navSections.ts`, `components/helpTopics.ts` | the project shell: the menu (its list is `navSections` from `pages.ts`), the menu state, the help topic per path |
+| `hooks/useHelp.tsx`, `components/ui/HelpLink.tsx` | the help panel's shared state: open from anywhere (`HelpLink`, `?`, F1), and the context it shows, a help link's key over a dialog's over a tab's or step's (`useHelpContext`) over the page's `help.key` |
 | `hooks/**`, `state/**`, `utils/**`, `config/**` | `useFeature` and other hooks, the store and the active-workspace storage, helpers, the link-rule UI config |
 | `landing/**`, `site/**`, `manual/**`, `push/**` | the front page, the public site, the user manual's chapters, web push |
 | `test/mockApi.ts` | `mockApi`: stubs every method of `api/client` for a `vi.mock` (F2) |
@@ -69,7 +70,9 @@ Every area has files here, matched by these `docs/areas.json` globs
 1. The view in `views/`, then its `<Route>` in `App.tsx`, through `lazy()`
    unless it must be eager.
 2. Its entry in `pages.ts`, which records the route (path, eager or lazy,
-   public) and the page's help topic or why it has none. For a page the
+   public), the page's help topic or why it has none, and its manual
+   context key (`help.key`, required on a signed-in page; it must name a
+   topic, `docs/docs-maintenance.md` rule 5). For a page the
    project menu lists, give the entry a `nav` (group, label) in the position
    the menu should show it: the menu is derived from `PAGES`, so
    `ProjectLayout.tsx` is not edited. `projectPath()` builds the page's URL.
@@ -90,6 +93,13 @@ Every area has files here, matched by these `docs/areas.json` globs
 Scaffold: `node frontend/scripts/scaffold.mjs [-n] page <name>` writes the
 stub view, the lazy `<Route>` and the `pages.ts` entry (no menu entry and no
 help topic; steps 2 and 3 above), and prints what is left.
+
+**Give a dialog, tab or heading its help.** A `Modal` takes
+`help={{ key, label }}`; a tab, step or panel calls `useHelpContext(key)`
+(`{ dialog: true }` for a dialog of its own); a heading or empty state gets
+`<HelpLink helpKey=… label=… />`. Write the key as a literal (or in a
+`*_HELP_KEYS` map) so `docs.py sync --check` can find it, and give its
+section the key in `SECTION_KEYS` or let it fall back to its parent.
 
 **Add an API call.** In `api/`; see `api/README.md`.
 

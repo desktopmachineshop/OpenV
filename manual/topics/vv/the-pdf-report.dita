@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-pdf-report">
   <title>The PDF report</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="vv.report"/>
+  </prolog>
   <conbody>
     <p><b>Download V&amp;V report (PDF)</b> produces a status report for the current selection (live or baseline) — coverage rollups, gaps, and test run status in a shareable document.</p>
   </conbody>

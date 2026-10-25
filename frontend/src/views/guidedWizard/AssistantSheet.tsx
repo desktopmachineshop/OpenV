@@ -1,6 +1,7 @@
 import React from 'react';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../../components/wizard/GuidedChatPanel';
 import { WizardAnswers } from './wizardAnswers';
+import { useHelpContext } from '../../hooks/useHelp';
 
 interface AssistantSheetProps {
   assistantOpen: boolean;
@@ -31,6 +32,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({
   applied,
   onApplySuggestions,
 }) => {
+  useHelpContext(assistantOpen ? 'guided.assistant' : null, { dialog: true });
   return (
     <>
       {assistantOpen && (

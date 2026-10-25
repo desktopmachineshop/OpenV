@@ -3,6 +3,9 @@
 <concept id="downloading-a-project">
   <title>Downloading a project</title>
   <shortdesc>There is one way out of a project, and it is the <b>↓ Download</b> button — on the project card here, and in the Requirements toolbar inside the project. It opens a two-step wizard.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="projects.download"/>
+  </prolog>
   <conbody>
     <p><b>1. Format</b> — what shape you need it in:</p>
     <simpletable>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { QualityScore, QualityFinding } from '../api/client';
+import { HelpLink } from './ui/HelpLink';
 
 /**
  * Rule-based requirement quality UI (issue #217): a compact score badge for
@@ -111,7 +112,10 @@ export const QualityFindingsPanel: React.FC<QualityFindingsPanelProps> = ({ scor
   return (
     <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-        <h4 style={{ margin: 0 }}>Quality</h4>
+        <h4 style={{ margin: 0 }}>
+          Quality
+          <HelpLink helpKey="quality" label="quality findings" />
+        </h4>
         <QualityBadge score={score.score} band={score.band} findingCount={score.findings.length} />
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           {score.findings.length === 0

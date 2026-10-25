@@ -53,7 +53,12 @@ export const EvidencePicker: React.FC<EvidencePickerProps> = ({
   };
 
   return (
-    <Modal title={`Evidence for ${testCaseTitle}`} width={560} onClose={onClose}>
+    <Modal
+      title={`Evidence for ${testCaseTitle}`}
+      width={560}
+      onClose={onClose}
+      help={{ key: 'evidence', fragment: 'citing-a-capture', label: 'citing evidence' }}
+    >
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
 
       {bundles.length === 0 ? (

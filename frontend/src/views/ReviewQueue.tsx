@@ -12,7 +12,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
+import { ErrorBanner, HelpLink, Modal, SegmentedControl, useConfirm } from '../components/ui';
 import { NoteComposer, postNote } from '../components/NoteComposer';
 import { NOTE_TAGGING_FEATURE } from '../components/noteTagging';
 import { useFeature } from '../hooks/useFeature';
@@ -187,6 +187,7 @@ const RejectDialog: React.FC<{
       title={many ? `Send ${artifacts.length} artifacts back` : 'Send back for changes'}
       width={560}
       onClose={onCancel}
+      help={{ key: 'review', label: 'review status' }}
     >
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0 }}>
         {many
@@ -543,7 +544,7 @@ export const ReviewQueue: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Review Queue</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Review Queue<HelpLink helpKey="review" label="the review queue" /></h2>
         <SegmentedControl<Section>
           aria-label="Filter review queue"
           value={section}

@@ -11,7 +11,8 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { StepShell } from '../components/wizard/StepShell';
-import { ErrorBanner, useConfirm } from '../components/ui';
+import { ErrorBanner, HelpLink, useConfirm } from '../components/ui';
+import { useHelpContext } from '../hooks/useHelp';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
 import {
   ASSISTANT_EDITS_FEATURE,
@@ -48,6 +49,7 @@ import {
   isSkippable,
   nudgeEvent,
   planEntryDrafts,
+  STEP_HELP_KEYS,
 } from './guidedWizard/steps';
 import {
   WizardAnswers,
@@ -322,6 +324,10 @@ export const GuidedWizard: React.FC = () => {
     if (step === REVIEW_STEP && session) loadDrafts();
   }, [step, session, loadDrafts]);
 
+  // The help panel follows the step: the start page, then each step's topic.
+  const helpKey = !session ? 'guided.start' : committed ? 'guided.step.review' : STEP_HELP_KEYS[step - 1];
+  useHelpContext(helpKey);
+
   // -------------------------------------------------------------------------
   // Per-step Next handlers (materialize + save + advance)
   // -------------------------------------------------------------------------
@@ -583,7 +589,10 @@ export const GuidedWizard: React.FC = () => {
   return (
     <div style={{ padding: compact ? 12 : 24, maxWidth: 1560, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: compact ? 20 : undefined }}>Guided requirements definition</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: compact ? 20 : undefined }}>
+          Guided requirements definition
+          <HelpLink helpKey={helpKey || 'guided'} label="this step" />
+        </h2>
         <button
           onClick={handleAbandon}
           disabled={busy}

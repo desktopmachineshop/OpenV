@@ -3,7 +3,6 @@
 <concept id="org-settings">
   <title>Workspace settings &amp; teams</title>
   <prolog>
-    <resourceid appname="openv-web" appid="settings"/>
     <resourceid appname="openv-web" appid="org.settings"/>
   </prolog>
   <conbody>

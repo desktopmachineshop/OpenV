@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="quality-rules-and-findings">
+  <title>Quality rules and findings</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="quality"/>
+    <resourceid appname="openv-web" appid="settings.quality"/>
+    <resourceid appname="openv-web" appid="org.settings.quality"/>
+  </prolog>
+  <conbody>
+    <p>Every requirement is linted as you write it. Its <b>quality badge</b> scores it from 0 to 100, banded <b>Good</b>, <b>Fair</b> or <b>Poor</b>, and the <b>Quality</b> section of its details lists each finding: the rule, how serious it is, and what it found. Findings are advisory: they score a requirement and explain themselves, and never block a save. The checks are weak wording, vague quantifiers, placeholder text, passive voice, over-long sentences, statements that are not testable, a keyword off the project's convention, and a citation with no link.</p>
+    <p>The <b>quality rules</b> decide how a requirement is judged:</p>
+    <ul>
+      <li><b>Normative convention</b>: which keywords state a binding requirement, ISO/IEC/IEEE 29148 <i>shall</i> or RFC 2119 <i>MUST / SHOULD / MAY</i>. Agents read it before they draft, so a project keeps one vocabulary.</li>
+      <li><b>Rules</b>: how loudly each check speaks, <b>Error</b>, <b>Warning</b> or <b>Info</b>, or <b>Off</b> to silence it.</li>
+    </ul>
+    <p>A workspace sets its house style under <b>Workspace settings → Quality rules</b>. A project follows it until it overrides something under <b>Settings → Quality rules</b>; a value that differs from the workspace's is called out under the control, and picking the workspace's value again clears the override.</p>
+  </conbody>
+</concept>

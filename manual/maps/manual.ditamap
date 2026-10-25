@@ -9,6 +9,7 @@
     <topicref href="../topics/getting-started/workspaces.dita"/>
     <topicref href="../topics/getting-started/notifications.dita"/>
     <topicref href="../topics/getting-started/help-on-every-page.dita"/>
+    <topicref href="../topics/getting-started/whats-new.dita"/>
     <topicref href="../topics/getting-started/whats-next.dita"/>
   </topicref>
   <topicref href="../topics/projects/index.dita">
@@ -41,6 +42,7 @@
     <topicref href="../topics/artifacts/review-status.dita"/>
     <topicref href="../topics/artifacts/figures.dita"/>
     <topicref href="../topics/artifacts/history.dita"/>
+    <topicref href="../topics/artifacts/quality-rules-and-findings.dita"/>
     <topicref href="../topics/artifacts/baselines.dita"/>
   </topicref>
   <topicref href="../topics/links/index.dita">
@@ -48,6 +50,7 @@
     <topicref href="../topics/links/creating-links.dita"/>
     <topicref href="../topics/links/viewing-links.dita"/>
     <topicref href="../topics/links/where-links-come-from-automatically.dita"/>
+    <topicref href="../topics/links/impact-analysis.dita"/>
     <topicref href="../topics/links/the-traceability-matrix.dita"/>
   </topicref>
   <topicref href="../topics/guided-wizard/index.dita">

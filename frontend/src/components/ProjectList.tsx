@@ -43,9 +43,10 @@ import {
 } from './SharedProductVotes';
 import { Navbar } from './Navbar';
 import { HelpSidebar } from './HelpSidebar';
+import { useHelp, useHelpContext } from '../hooks/useHelp';
 import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
-import { SegmentedControl, useConfirm, usePrompt } from './ui';
+import { HelpLink, SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import './ProjectList.css';
@@ -74,13 +75,14 @@ export const ProjectList: React.FC = () => {
   const [error, setError] = useState<string>('');
   // The ? button sits in the navbar beside the bell, so this page owns the
   // panel's open state rather than a floating button owning it.
-  const [helpOpen, setHelpOpen] = useState<boolean>(false);
+  const { open: helpOpen, setOpen: setHelpOpen } = useHelp();
   // The project whose download wizard is open, if any.
   const [downloadProjectId, setDownloadProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [newProjectName, setNewProjectName] = useState<string>('');
   const [newProjectDesc, setNewProjectDesc] = useState<string>('');
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  useHelpContext(isCreating ? 'projects.create' : null);
   const [isEditingProject, setIsEditingProject] = useState<boolean>(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editProjectName, setEditProjectName] = useState<string>('');
@@ -623,7 +625,7 @@ export const ProjectList: React.FC = () => {
           <div className="projects-grid">
             {projects.length === 0 ? (
               <div className="create-import-placeholder">
-                <h3>Get Started</h3>
+                <h3>Get Started<HelpLink helpKey="projects.create" label="creating a project" /></h3>
                 <p>Create a new project or import an existing one</p>
                 <div className="placeholder-actions">
                   <button
@@ -760,7 +762,7 @@ export const ProjectList: React.FC = () => {
             </div>
           ) : isCreating ? (
             <div className="create-project-form">
-              <h3>Create New Project</h3>
+              <h3>Create New Project<HelpLink helpKey="projects.create" label="creating a project" /></h3>
               <form onSubmit={handleCreateProject}>
                 <div className="form-group">
                   <label htmlFor="mode">Project Type</label>

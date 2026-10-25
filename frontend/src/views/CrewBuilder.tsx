@@ -709,7 +709,7 @@ export const CrewBuilder: React.FC = () => {
 
       {/* Edge-type picker popup */}
       {pendingEdge && (
-        <Modal title="Connection type" width={360} onClose={() => setPendingEdge(null)}>
+        <Modal title="Connection type" width={360} onClose={() => setPendingEdge(null)} help={{ key: 'crew.connect', label: 'connecting nodes' }}>
           <p style={{ fontSize: 13 }}>
               <strong>{nodeLabel(pendingEdge.from)}</strong> → <strong>{nodeLabel(pendingEdge.to)}</strong>
             </p>

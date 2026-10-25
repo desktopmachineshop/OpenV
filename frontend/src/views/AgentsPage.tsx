@@ -285,6 +285,7 @@ export const AgentsPage: React.FC = () => {
           title={`Launch run: ${launchAgent.name}`}
           width={520}
           onClose={() => setLaunchAgent(null)}
+          help={{ key: 'agents.launch', label: 'launching a run' }}
         >
             <div className="form-group">
               <label>Prompt</label>

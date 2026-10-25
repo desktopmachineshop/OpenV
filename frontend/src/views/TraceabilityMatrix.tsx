@@ -16,6 +16,7 @@ import {
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
 import { baselineLabel } from '../utils/baselines';
+import { HelpLink } from '../components/ui';
 
 const resultColor = (status: string): string => {
   switch ((status || '').toLowerCase()) {
@@ -327,7 +328,7 @@ export const TraceabilityMatrix: React.FC = () => {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Traceability Matrix</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Traceability Matrix<HelpLink helpKey="matrix" label="the traceability matrix" /></h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
           <select

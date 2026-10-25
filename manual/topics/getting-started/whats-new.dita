@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="whats-new">
+  <title>What's new</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="whats-new"/>
+  </prolog>
+  <conbody>
+    <p><b>What's new</b>, in the menu under your name, lists what changed in OpenV, newest release first. It follows your workspace's channel: a workspace on the stable channel sees the stable release it is on and the one scheduled next, and a nightly workspace the release it runs. When OpenV is upgraded while you have it open, a note at the bottom of the screen says so, with <b>See what's new</b> and <b>Reload</b>.</p>
+  </conbody>
+</concept>

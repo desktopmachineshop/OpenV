@@ -10,9 +10,10 @@ import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, HelpLink } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
+import { useHelpContext } from '../hooks/useHelp';
 import { CAPABILITY_HOSTED, useCapability } from '../capabilities';
 import { orgSettingsTab, withOrgSettingsTabs } from '../ext/registry';
 
@@ -29,6 +30,20 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'quality', label: 'Quality rules' },
   { key: 'usage', label: 'Usage' },
 ];
+
+// The help panel follows the tab; a key with no section of its own falls
+// back to the chapter (org.settings).
+const ORG_SETTINGS_HELP_KEYS: Record<string, string> = {
+  general: 'org.settings.general',
+  members: 'org.settings.members',
+  limits: 'org.settings.limits',
+  teams: 'org.settings.teams',
+  providers: 'org.settings.providers',
+  'worker-keys': 'org.settings.runners',
+  quality: 'org.settings.quality',
+  usage: 'org.settings.usage',
+  billing: 'org.settings.billing',
+};
 
 // Workspace (org) settings: general info, members, people-teams, AI providers
 // and worker keys. Rendered outside any project (route /org/settings).
@@ -50,6 +65,7 @@ export const OrgSettings: React.FC = () => {
   const tabParam = searchParams.get('tab');
   const tab: Tab = tabs.some((t) => t.key === tabParam) ? (tabParam as Tab) : tabs[0].key;
   const registeredTab = orgSettingsTab(tab, TABS);
+  useHelpContext(ORG_SETTINGS_HELP_KEYS[tab] ?? 'org.settings');
   const setTab = (next: Tab) =>
     setSearchParams(
       (prev) => {
@@ -594,7 +610,10 @@ export const OrgSettings: React.FC = () => {
         {tab === 'worker-keys' && <WorkerKeysTab org={org} isAdmin={isAdmin} />}
         {tab === 'quality' && (
           <div className="card">
-            <h3>Requirement quality rules</h3>
+            <h3>
+              Requirement quality rules
+              <HelpLink helpKey="org.settings.quality" label="quality rules" />
+            </h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               The house style every project in this workspace inherits: which keywords state a
               binding requirement, and how loudly each wording check speaks. A project can override

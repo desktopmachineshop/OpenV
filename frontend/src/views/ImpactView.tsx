@@ -10,6 +10,7 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import type { ArtifactTypeValue } from '../generated/contract';
+import { HelpLink } from '../components/ui';
 
 // Human labels for artifact type buckets; unknown types fall back to the raw
 // value so the view never hides a group it can't name.
@@ -185,7 +186,7 @@ export const ImpactView: React.FC = () => {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis<HelpLink helpKey="impact" label="impact analysis" /></h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Artifact</label>
           <select
@@ -224,6 +225,7 @@ export const ImpactView: React.FC = () => {
         <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
           Pick an artifact above — or open this view from an artifact's{' '}
           <em>Show impact</em> link — to trace what a change to it would affect.
+          <HelpLink helpKey="impact" label="impact analysis" />
         </div>
       )}
 

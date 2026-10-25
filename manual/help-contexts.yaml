@@ -1,6 +1,9 @@
 # Context-sensitive help for the OpenV web app. Topics declare keys with
 # <resourceid appname="openv-web" appid="vv.runs"/>. The app sends the key
-# from frontend/src/pages.ts; these routes are the fallback for a bare path.
+# from frontend/src/pages.ts (each page's help.key), and dialogs, tabs and
+# help links send more specific ones; these routes are the fallback for a
+# bare path and the public /context/ links, and list every routed page.
+# `docs.py sync --check` fails a key here or in the app that no topic holds.
 # Keys fall back to their parents (vv.runs -> vv), then to the default, and
 # never to a topic the reader cannot see.
 apps:
@@ -17,6 +20,7 @@ apps:
       /projects/:projectId/vv/runs/:runId: vv.runs
       /projects/:projectId/evidence: evidence
       /projects/:projectId/matrix: matrix
+      /projects/:projectId/impact: impact
       /projects/:projectId/review: review
       /projects/:projectId/board: board
       /projects/:projectId/todos: todos
@@ -29,4 +33,6 @@ apps:
       /projects/:projectId/settings: settings
       /org/settings: org.settings
       /org/runs: org.runs
+      /whats-new: whats-new
+      /connect: connect
       /admin: admin

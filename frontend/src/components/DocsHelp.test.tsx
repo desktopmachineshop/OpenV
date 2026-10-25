@@ -32,7 +32,7 @@ vi.mock('../api/client', async (orig) =>
   }),
 );
 
-import { DocsHelp } from './DocsHelp';
+import { DocsHelp, docsSiteLink } from './DocsHelp';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -59,6 +59,17 @@ describe('DocsHelp', () => {
     container.remove();
   });
 
+  it('shows the short description once, from the topic itself', async () => {
+    context.mockResolvedValue({
+      data: topic('topics/vv/index', 'V&V', {
+        html: '<article><p class="shortdesc">V&amp;V in short.</p><p>More.</p></article>',
+      }),
+    });
+    act(() => root.render(<DocsHelp orgId="o1" path="/projects/p1/vv" onUnavailable={unavailable} />));
+    await flush();
+    expect(container.textContent!.split('V&V in short.').length - 1).toBe(1);
+  });
+
   const render = async (path = '/projects/p1/vv') => {
     act(() => {
       root.render(<DocsHelp orgId="org-1" path={path} onUnavailable={unavailable} />);
@@ -72,7 +83,27 @@ describe('DocsHelp', () => {
     expect(context).toHaveBeenCalledWith('org-1', { path: '/projects/p1/vv' });
     expect(container.querySelector('h3')?.textContent).toBe('V&V');
     expect(container.textContent).toContain('Manual for OpenV 0.23');
-    expect(container.querySelector('.help-docs-footer a')?.getAttribute('href')).toBe('https://docs.example/topics/vv/index.html');
+    // At the workspace's docs line: the site sets the version only through
+    // its version menu's route, which then returns to the page.
+    const links = [...container.querySelectorAll('.help-docs-footer a')];
+    expect(links.map((l) => l.textContent)).toEqual(['Open in the docs ↗', 'Full manual ↗']);
+    expect(links[0].getAttribute('href')).toBe(
+      'https://docs.example/_version?v=0.23&returnTo=%2Ftopics%2Fvv%2Findex.html',
+    );
+    expect(links[1].getAttribute('href')).toBe('https://docs.example/_version?v=0.23&returnTo=%2F');
+    expect(links.every((l) => l.getAttribute('target') === '_blank')).toBe(true);
+  });
+
+  it('asks for the context key when it has one, and scrolls to its section', async () => {
+    context.mockResolvedValue({ data: topic('topics/vv/coverage-rollup', 'Coverage rollup') });
+    act(() => {
+      root.render(
+        <DocsHelp orgId="org-1" path="/projects/p1/vv" helpKey="vv.coverage" fragment="intro" onUnavailable={unavailable} />,
+      );
+    });
+    await flush();
+    expect(context).toHaveBeenCalledWith('org-1', { key: 'vv.coverage' });
+    expect(container.querySelector('h3')?.textContent).toBe('Coverage rollup');
   });
 
   it('opens a linked topic in the panel, and Back returns', async () => {
@@ -125,5 +156,17 @@ describe('DocsHelp', () => {
     context.mockRejectedValue({ response: { status: 502, data: { error: 'the help could not be loaded' } } });
     await render();
     expect(unavailable).toHaveBeenCalled();
+  });
+});
+
+describe('docsSiteLink', () => {
+  it('takes the origin from the topic and reads at the line', () => {
+    expect(docsSiteLink('https://openv.opend.app/topics/vv/index.html', '0.24', '/')).toBe(
+      'https://openv.opend.app/_version?v=0.24&returnTo=%2F',
+    );
+    expect(docsSiteLink('https://openv.opend.app/topics/vv/index.html', '')).toBe(
+      'https://openv.opend.app/topics/vv/index.html',
+    );
+    expect(docsSiteLink('not a url', '0.24')).toBe('');
   });
 });

@@ -358,6 +358,31 @@ the **Add to-do** control on a comment that names somebody lets you set the
 title, the person and a due date. \`@@\` is the shortcut, not a replacement —
 it takes the note's first line as the title and no due date.
 
+## Quality rules and findings
+
+Every requirement is linted as you write it. Its **quality badge** scores
+it from 0 to 100, banded **Good**, **Fair** or **Poor**, and the **Quality**
+section of its details lists each finding: the rule, how serious it is,
+and what it found. Findings are
+advisory: they score a requirement and explain themselves, and never block
+a save. The checks are weak wording, vague quantifiers, placeholder text,
+passive voice, over-long sentences, statements that are not testable, a
+keyword off the project's convention, and a citation with no link.
+
+The **quality rules** decide how a requirement is judged:
+
+- **Normative convention**: which keywords state a binding requirement,
+  ISO/IEC/IEEE 29148 *shall* or RFC 2119 *MUST / SHOULD / MAY*. Agents read
+  it before they draft, so a project keeps one vocabulary.
+- **Rules**: how loudly each check speaks, **Error**, **Warning** or
+  **Info**, or **Off** to silence it.
+
+A workspace sets its house style under **Workspace settings → Quality
+rules**. A project follows it until it overrides something under
+**Settings → Quality rules**; a value that differs from the workspace's is
+called out under the control, and picking the workspace's value again
+clears the override.
+
 ## Baselines
 
 A **baseline** is an immutable snapshot of the whole project at a point in

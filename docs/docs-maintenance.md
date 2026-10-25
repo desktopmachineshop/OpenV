@@ -41,14 +41,22 @@ keep it true. CI enforces the ones marked **(enforced)**.
    applies to some plans is marked with `product=` (the plan families in
    `opend.config.yaml`), not with prose.
 
-5. **Context keys are an interface.** The app sends a key per page
-   (`frontend/src/pages.ts`) and per help link. Renaming or dropping a
-   key breaks help in every release that sends it, so:
+5. **Context keys are an interface.** The app sends a key per page (each
+   entry's `help.key` in `frontend/src/pages.ts`), and a more specific one
+   for a tab, wizard step or dialog (`useHelpContext`, `Modal`'s `help`)
+   and per help link (`HelpLink`). A key falls back to its parents
+   (`vv.coverage` to `vv`), so a new one can ship before its section is
+   written. Renaming or dropping a key breaks help in every release that
+   sends it, so:
    - add keys freely;
    - retire one by keeping it on the topic that replaced it.
 
    A new page gets a key, and a route in `manual/help-contexts.yaml`, in
-   the pull request that adds the page.
+   the pull request that adds the page. **(enforced)**
+   `frontend/src/pagesHelp.test.ts` fails a signed-in page with no key,
+   and `docs.py sync --check` a key the app or `help-contexts.yaml` sends
+   that no topic holds, directly or through a parent. A section takes a
+   key in `SECTION_KEYS` (`scripts/manual/docs.py`).
 
 ## Before a release
 

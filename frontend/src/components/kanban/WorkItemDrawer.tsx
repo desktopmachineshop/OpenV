@@ -7,7 +7,8 @@ import {
   workItemsAPI,
 } from '../../api/client';
 import { ExpandableText } from '../ExpandableText';
-import { ErrorBanner, useConfirm } from '../ui';
+import { ErrorBanner, HelpLink, useConfirm } from '../ui';
+import { useHelpContext } from '../../hooks/useHelp';
 
 interface WorkItemDrawerProps {
   workItemId: string;
@@ -44,6 +45,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   onDeleted,
 }) => {
   const confirm = useConfirm();
+  useHelpContext('board.card', { dialog: true });
   const [item, setItem] = useState<WorkItem | null>(null);
   const [activity, setActivity] = useState<WorkItemActivity[]>([]);
   const [error, setError] = useState('');
@@ -183,6 +185,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
             {item?.title || '…'}
           </h3>
         )}
+        <HelpLink helpKey="board.card" label="the card drawer" />
         <button
           onClick={onClose}
           aria-label="Close"

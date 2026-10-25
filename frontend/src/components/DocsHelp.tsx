@@ -8,15 +8,43 @@ import type { HelpHit, HelpTopic } from '../api/client';
 // manual's topic for the page you are on, for the release your workspace is
 // on. Links between topics open in the panel, with Back to return; search
 // covers the topics your workspace may read; "Open in the docs" opens the
-// same page on the public docs site.
+// same page on the public docs site and "Full manual" the site's home, both
+// at the docs line the workspace reads.
 //
 // The server sanitizes every topic's HTML (internal/domain/help), so it is
 // rendered as given.
 
+/**
+ * A page of the docs site, read at the docs line `line`. The site picks the
+ * version a visitor reads from a cookie that only its version menu sets: the
+ * menu links to `/_version?v=<version>&returnTo=<page>` (OpenD's
+ * versionHref), which stores the choice and redirects to the page. A plain
+ * link would show the site's public default, the newest line, so these go
+ * through the same route. The origin comes from the topic's own page, so
+ * nothing here names the docs site.
+ */
+export const docsSiteLink = (fullUrl: string, line: string, page?: string): string => {
+  let url: URL;
+  try {
+    url = new URL(fullUrl);
+  } catch {
+    return '';
+  }
+  const target = page ?? `${url.pathname}${url.search}${url.hash}`;
+  if (!line) return `${url.origin}${target}`;
+  return `${url.origin}/_version?v=${encodeURIComponent(line)}&returnTo=${encodeURIComponent(target)}`;
+};
+
 interface DocsHelpProps {
   orgId: string;
-  /** The app path the panel follows, such as /projects/p1/vv. */
+  /** The app path the panel follows, such as /projects/p1/vv. Asked for
+   *  only when there is no key. */
   path: string;
+  /** The context key to show: the page's, or a dialog's, tab's or help
+   *  link's (hooks/useHelp.tsx). */
+  helpKey?: string;
+  /** The section of the topic to scroll to. */
+  fragment?: string;
   /** Called when the docs cannot serve help here at all, so the panel can
    *  fall back to the help the app ships. */
   onUnavailable: () => void;
@@ -24,7 +52,7 @@ interface DocsHelpProps {
 
 type Status = 'loading' | 'ready' | 'missing';
 
-export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }) => {
+export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, helpKey, fragment, onUnavailable }) => {
   const [topic, setTopic] = useState<HelpTopic | null>(null);
   const [history, setHistory] = useState<HelpTopic[]>([]);
   const [status, setStatus] = useState<Status>('loading');
@@ -32,17 +60,19 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
   const [hits, setHits] = useState<HelpHit[] | null>(null);
   const body = useRef<HTMLDivElement>(null);
 
-  // The topic for the page, whenever the page changes.
+  // The topic for what the member is looking at, whenever that changes: the
+  // key when there is one, the path only for a page without.
+  const askPath = helpKey ? '' : path;
   useEffect(() => {
     let live = true;
     setStatus('loading');
     setHistory([]);
     setHits(null);
     helpAPI
-      .context(orgId, { path })
+      .context(orgId, helpKey ? { key: helpKey } : { path: askPath })
       .then(({ data }) => {
         if (!live) return;
-        setTopic(data);
+        setTopic(fragment ? { ...data, fragment } : data);
         setStatus('ready');
       })
       .catch((err) => {
@@ -59,7 +89,7 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
     return () => {
       live = false;
     };
-  }, [orgId, path, onUnavailable]);
+  }, [orgId, helpKey, askPath, fragment, onUnavailable]);
 
   // Scroll to the section a context or a link names.
   useEffect(() => {
@@ -169,8 +199,8 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
         <>
           <article className="help-docs-topic" aria-labelledby="help-docs-title">
             <h3 id="help-docs-title">{topic.title}</h3>
-            {topic.shortdesc && <p className="help-intro">{topic.shortdesc}</p>}
-            {/* Sanitized by the server: see the note at the top. */}
+            {/* Sanitized by the server: see the note at the top. The topic's HTML
+                carries its own short description, so it is not repeated here. */}
             <div
               ref={body}
               className="help-docs-body"
@@ -197,9 +227,14 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
           <footer className="help-docs-footer">
             <span>Manual for OpenV {topic.line}</span>
             {topic.full_url && (
-              <a href={topic.full_url} target="_blank" rel="noopener noreferrer">
-                Open in the docs ↗
-              </a>
+              <span className="help-docs-out">
+                <a href={docsSiteLink(topic.full_url, topic.line)} target="_blank" rel="noopener noreferrer">
+                  Open in the docs ↗
+                </a>
+                <a href={docsSiteLink(topic.full_url, topic.line, '/')} target="_blank" rel="noopener noreferrer">
+                  Full manual ↗
+                </a>
+              </span>
             )}
           </footer>
         </>

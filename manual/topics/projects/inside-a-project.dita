@@ -3,6 +3,9 @@
 <concept id="inside-a-project">
   <title>Inside a project</title>
   <shortdesc>Opening a project shows the dark left sidebar with the project's modules:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="settings"/>
+  </prolog>
   <conbody>
     <simpletable>
       <sthead><stentry>Entry</stentry><stentry>What it is</stentry></sthead>

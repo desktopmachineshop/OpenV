@@ -3,6 +3,9 @@
 <concept id="the-card-drawer">
   <title>The card drawer</title>
   <shortdesc>Click a card to open its drawer:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="board.card"/>
+  </prolog>
   <conbody>
     <ul>
       <li>Edit the <b>title</b> and <b>description</b>.</li>

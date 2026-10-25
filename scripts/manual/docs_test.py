@@ -99,6 +99,44 @@ class Convert(unittest.TestCase):
         self.assertIn('appid="evidence"', files['topics/vv/evidence-for-physical-and-manual-tests.dita'])
 
 
+class Keys(unittest.TestCase):
+    """Every context key the app sends lands on a topic, directly or through a parent."""
+
+    def test_a_key_resolves_through_its_parents(self):
+        known = {'vv', 'org.settings'}
+        self.assertTrue(docs.resolves('vv.coverage', known))
+        self.assertTrue(docs.resolves('org.settings.usage', known))
+        self.assertFalse(docs.resolves('org.runs', known))
+
+    def test_every_key_the_app_sends_has_a_topic(self):
+        keys = docs.app_keys(docs.ROOT)
+        # Each kind of site is read: a page, a tab map, a step list, a
+        # dialog, a help link and a context hook.
+        for key in ('org.settings', 'org.settings.runners', 'guided.step.review', 'projects.download',
+                    'vv.coverage', 'links.create'):
+            self.assertIn(key, keys)
+        docs.check_keys(docs.ROOT)
+
+    def test_an_unknown_key_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = Path(d, docs.FRONTEND)
+            (src / 'views').mkdir(parents=True)
+            (src / 'pages.ts').write_text("help: { topic: 'vv', key: 'vv' },\n")
+            (src / 'views' / 'X.tsx').write_text(
+                "useHelpContext(open ? 'nowhere.at.all' : null);\n"
+                "<HelpLink helpKey={`vv.${x}`} label=\"x\" />\n"
+                "<Modal help={{ key: 'vv.runs', fragment: 'not-a-key-site', label: 'l' }} />\n"
+            )
+            Path(d, docs.MANUAL).mkdir()
+            Path(d, docs.MANUAL, 'help-contexts.yaml').write_text('    default: start\n    routes:\n      /a: zzz\n')
+            keys = docs.app_keys(d)
+            self.assertEqual(sorted(keys), ['nowhere.at.all', 'vv', 'vv.runs'])
+            with self.assertRaises(docs.DocsError) as err:
+                docs.check_keys(d)
+            self.assertIn('nowhere.at.all', str(err.exception))
+            self.assertIn('zzz', str(err.exception))
+
+
 class CheckPr(unittest.TestCase):
     base = NOTES.replace('- Pending feature\n', '- Older feature\n')
 

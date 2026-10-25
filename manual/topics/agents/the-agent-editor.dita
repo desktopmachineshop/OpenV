@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-agent-editor">
   <title>The agent editor</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents.editor"/>
+  </prolog>
   <conbody>
     <p><b>New agent</b> or clicking an existing agent opens the editor. Fields:</p>
     <simpletable>

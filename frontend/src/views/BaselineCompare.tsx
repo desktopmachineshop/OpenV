@@ -10,7 +10,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { baselineLabel } from '../utils/baselines';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, HelpLink } from '../components/ui';
 
 const typeChipStyle: React.CSSProperties = {
   display: 'inline-block',
@@ -225,7 +225,7 @@ export const BaselineCompare: React.FC = () => {
   return (
     <div style={{ padding: 24, maxWidth: 960 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Compare Baseline</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Compare Baseline<HelpLink helpKey="baselines" label="baselines" /></h2>
         <div style={{ flex: 1 }} />
         <RouterLink
           to={`/projects/${projectId}/requirements`}
