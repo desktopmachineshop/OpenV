@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.23.2 — 2026-10-25
+
 ### Maintenance updates
 
 - **Signing in with DMSid says what it covers.** Where OpenV signs people
