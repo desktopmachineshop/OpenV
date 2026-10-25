@@ -11,6 +11,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Signing in with DMSid says what it covers.** Where OpenV signs people
+  in with DMSid, the sign-in page now says that the same login also opens
+  OpenD and the other DMS SaaS products.
+
 - **The help panel can show the user manual from a docs site.** A
   deployment that sets `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` to an
   OpenD docs site shows, in the help panel, the manual's own page for the
