@@ -59,6 +59,17 @@ describe('DocsHelp', () => {
     container.remove();
   });
 
+  it('shows the short description once, from the topic itself', async () => {
+    context.mockResolvedValue({
+      data: topic('topics/vv/index', 'V&V', {
+        html: '<article><p class="shortdesc">V&amp;V in short.</p><p>More.</p></article>',
+      }),
+    });
+    act(() => root.render(<DocsHelp orgId="o1" path="/projects/p1/vv" onUnavailable={unavailable} />));
+    await flush();
+    expect(container.textContent!.split('V&V in short.').length - 1).toBe(1);
+  });
+
   const render = async (path = '/projects/p1/vv') => {
     act(() => {
       root.render(<DocsHelp orgId="org-1" path={path} onUnavailable={unavailable} />);

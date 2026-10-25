@@ -199,8 +199,8 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, helpKey, fragme
         <>
           <article className="help-docs-topic" aria-labelledby="help-docs-title">
             <h3 id="help-docs-title">{topic.title}</h3>
-            {topic.shortdesc && <p className="help-intro">{topic.shortdesc}</p>}
-            {/* Sanitized by the server: see the note at the top. */}
+            {/* Sanitized by the server: see the note at the top. The topic's HTML
+                carries its own short description, so it is not repeated here. */}
             <div
               ref={body}
               className="help-docs-body"
