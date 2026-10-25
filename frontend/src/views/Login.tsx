@@ -47,6 +47,9 @@ import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
 // register call reports what the token did (`invitation`), and a failed
 // accept is shown rather than swallowed. Somebody who followed a link to
 // join a workspace must never be dropped into an empty account instead.
+/** The name DMS SaaS deployments give their single sign-on: DMSid, one login for every product. */
+const DMSID = 'DMSid';
+
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -713,6 +716,12 @@ export const Login: React.FC = () => {
               >
                 Sign in with {oidcName}
               </a>
+            )}
+            {oidcEnabled && oidcName === DMSID && (
+              <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: 'var(--neutral-mid)' }}>
+                One login, lots of services: your DMSid signs you in to OpenV, OpenD and every other
+                DMS SaaS product.
+              </div>
             )}
             {googleEnabled ? (
               <a
