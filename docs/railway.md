@@ -448,9 +448,8 @@ building from this repository.
   fine-grained token on openv-hosted only. It needs read and write on
   *Contents* and *Pull requests*, plus read on *Actions* and *Commit
   statuses* so the promotion can follow the pull request's CI: it waits on
-  the Actions runs of the pull request's commit, since reading check
-  results would need *Checks*, which a fine-grained token cannot be given
-  on another repository's checks. Without the
+  the Actions runs of the pull request's commit, since this token cannot
+  read the check results themselves. Without the
   secret, both steps do nothing and `OPENV_VERSION` is set by hand.
 
 ## Staging
