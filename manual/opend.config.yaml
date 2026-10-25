@@ -21,3 +21,15 @@ attributes:
 
 # Applied to every reader at build time.
 buildFilter: filters/publish.ditaval
+
+# How the docs site is set up (OpenD ADR 0017): OpenD applies this block
+# whenever the newest docs line goes live, and the site's console shows these
+# settings as set here. Each docs/<minor> branch is its own release line; the
+# public site serves anonymous visitors the free plan's manual on the newest
+# line, and its version menu lists every live line.
+site:
+  releaseRefs: ['docs/*']
+  releaseLines: minor
+  access: public
+  publicEntitlements: { products: [free], version: latest }
+  versionPicker: { mode: live }

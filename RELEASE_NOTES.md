@@ -19,6 +19,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   from the top of the panel, or open the page on the docs site, where you
   can switch to the manual of another release.
 
+### Maintenance updates
+
+- **The user manual has its own site, one version per release.** The
+  manual is published at openv.opend.app for every OpenV release still
+  in use, with a menu to switch between them; it opens on the newest.
+
 ## 0.23.2 — 2026-10-25
 
 ### Maintenance updates
