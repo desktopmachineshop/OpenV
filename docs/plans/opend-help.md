@@ -108,7 +108,9 @@ frontend. Status: **in progress**. Decided:
   section" and search over what this workspace may see. It follows the
   route while it is open.
 - **"Open full manual"** goes to an in-app `/manual/<topicId>` reader with
-  the navigation tree, never a new tab.
+  the navigation tree, never a new tab. Until that reader exists, **Full
+  manual** opens the docs site's front page at the workspace's line in a
+  new tab, beside **Open in the docs** for the topic itself.
 
 ## Workstreams
 
@@ -118,12 +120,12 @@ frontend. Status: **in progress**. Decided:
 | B | The manual as DITA: one topic per section, context keys, `help-contexts.yaml`, `redirects.json` for the old links | openv | **done**, generated from the chapters until D ships |
 | C | Help proxy (`internal/domain/help`, the `help-docs` capability, `OPENV_DOCS_*`):<br>• `GET /api/v1/orgs/{id}/help/{context,topic,search}` (nav to come)<br>• profile and version, embed token, allowlist sanitize, links rewritten to `/manual/…`, image proxy<br>• per-profile cache, graceful "help unavailable" | openv | **done**, without the image proxy and nav; off until `OPENV_DOCS_URL` is set (public mode without the embed secret) |
 | D' | Turn it on: the `manual-help` feature key on the routes and the panel, its release note, the manual's help section, and public mode (no secret) for the help service | openv | **done** in the switch-on PR |
-| D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | **drawer done** (`DocsHelp` in `HelpSidebar`, on the `help-docs` capability); `HelpLink`, "?" on every shell, the `/manual` reader and the feature key to do. The key and its release note come with the PR that turns help on for openv.app, once A exists |
+| D | Frontend:<br>• `HelpSidebar` on the proxy<br>• `HelpLink` and `useHelp()`, "?" on every shell<br>• `help.key` in `pages.ts`<br>• native `/manual` reader<br>• behind the `opend-help` feature key | openv | **done but the reader**, behind `manual-help` (the key D' shipped; this rides it as a fix to the drawer):<br>• `DocsHelp` in `HelpSidebar` sends a key, never a bare path: `help.key` on every signed-in page of `pages.ts`<br>• `hooks/useHelp.tsx`: the panel's shared state, `useHelpContext(key)` for tabs, steps and (with `dialog`) dialogs, the innermost and latest winning, and the panel following it live; `Modal`'s `help` prop<br>• `HelpLink` (`components/ui`) beside headings, empty states and dialog titles; `?` and F1<br>• "?" on every shell: `Navbar` mounts the panel on workspace settings, runs, admin and What's new<br>• "Full manual" and "Open in the docs" open the docs site at the workspace's line, in a new tab, through the site's `/_version` route<br>The native `/manual` reader is still to do |
 | E1 | `GET /api/v1/help/nav` for embed tokens | opend | **done** (OpenD #39) |
 | E2 | Public context redirect `/context/<app>/<key>`, at the version the request is served, for self-hosted OpenV | opend | **done** (OpenD #39) |
 | E3 | Release lines by `minor` as well as `major`, per repository | opend | **done** (OpenD #39) |
 | E4 | The public version menu | opend | **done** by OpenD's own version picker (#34); OpenV's release workflow sets its list and the public version once the tenant (A) exists |
-| F | Guards: the *Docs* job, `make check`/`check-fast`, the promote steps (`docs/docs-maintenance.md`) | openv | **done**; key resolution for `pages.ts` and `HelpLink` comes with D |
+| F | Guards: the *Docs* job, `make check`/`check-fast`, the promote steps (`docs/docs-maintenance.md`) | openv | **done**, with key resolution: `docs.py sync --check` fails a key that `pages.ts`, a `useHelpContext`, a `HelpLink`, a dialog or `help-contexts.yaml` sends and no topic holds, directly or through a parent; `pagesHelp.test.ts` fails a signed-in page with no key |
 | G | Retire:<br>• delete `frontend/src/manual`, `helpTopics.ts` and the site pre-render of the manual, here and in openv-hosted<br>• 301 `/manual/*` to docs.openv.app; sitemap and `llms.txt` there<br>• flip the source to `manual/` and drop `docs.py sync` | openv, openv-hosted | after stable carries `opend-help` |
 | H | Requirements:<br>• help for the current screen in one action from every signed-in page<br>• help served for the workspace's release<br>• public version menu<br>• docs gate on promotion<br>• a design item for the proxy, a Playwright help journey<br>• a baseline | OpenV, OpenD projects | with C/D and E |
 

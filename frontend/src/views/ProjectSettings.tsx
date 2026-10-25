@@ -24,6 +24,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
+import { useHelpContext } from '../hooks/useHelp';
 import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE, SHARE_LINKS_FEATURE } from '../features';
 import { QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { AttributeForm, RepoForm, emptyAttributeForm, emptyRepoForm } from './projectSettings/shared';
@@ -53,6 +54,18 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'danger', label: 'Danger Zone' },
 ];
 
+// The help panel follows the tab; a key with no section of its own falls
+// back to the page's (settings). General is the page itself.
+const SETTINGS_HELP_KEYS: Record<Tab, string | null> = {
+  general: null,
+  members: 'settings.members',
+  repos: 'settings.repos',
+  agents: 'settings.agents',
+  attributes: 'settings.attributes',
+  quality: 'settings.quality',
+  danger: 'settings.danger',
+};
+
 export const ProjectSettings: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
@@ -71,6 +84,7 @@ export const ProjectSettings: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : TABS[0].key;
+  useHelpContext(SETTINGS_HELP_KEYS[tab]);
   const setTab = (next: Tab) =>
     setSearchParams(
       (prev) => {

@@ -120,7 +120,12 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
   );
 
   return (
-    <Modal title="Download this project" width={560} onClose={onClose}>
+    <Modal
+      title="Download this project"
+      width={560}
+      onClose={onClose}
+      help={{ key: 'projects.download', label: 'downloading a project' }}
+    >
       {error && (
         <div
           style={{

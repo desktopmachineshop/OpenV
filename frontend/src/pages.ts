@@ -15,6 +15,7 @@
 // Adding a page: add its entry here, in the position the menu should show it,
 // beside its <Route> in App.tsx. projectPath() builds the URL of a project's
 // page for new code; existing call sites keep their template strings.
+import { matchPath } from 'react-router-dom';
 import type { FeatureKey } from './generated/contract';
 import { TODO_LIST_FEATURE } from './features';
 
@@ -37,9 +38,14 @@ export interface PageNav {
 /**
  * The help panel's topic for a page: the key helpTopics.ts keeps it under,
  * or an explicit statement that the page has none of its own and shows the
- * overview's, with the reason.
+ * overview's, with the reason. `key` is the manual's context key the panel
+ * asks the docs for (manual/help-contexts.yaml, the topics' resourceid):
+ * every page a signed-in member reaches has one (pagesHelp.test.ts), and
+ * `docs.py sync --check` fails a key no topic answers, directly or through a
+ * parent (`vv.runs` falls back to `vv`). A key is an interface: add keys,
+ * never rename one (docs/docs-maintenance.md, rule 5).
  */
-export type PageHelp = { topic: string } | { fallback: string };
+export type PageHelp = ({ topic: string } | { fallback: string }) & { key?: string };
 
 export interface Page {
   /**
@@ -64,6 +70,10 @@ export interface Page {
 
 const NO_PANEL: PageHelp = { fallback: 'the page has no help panel' };
 const NOT_WRITTEN: PageHelp = { fallback: 'no topic is written for the page' };
+// A page whose help comes from the manual alone: the panel on its bar opens
+// only where the manual serves help (the manual-help feature, the help-docs
+// capability), so the app's own help has no topic for it.
+const MANUAL_ONLY: PageHelp = { fallback: 'the page has help from the manual only' };
 
 // The project's pages first, in the order of the menu (a group's entries run
 // in the order they appear here), then the project routes the menu does not
@@ -74,7 +84,7 @@ export const PAGES: readonly Page[] = [
     path: '',
     load: 'eager',
     public: false,
-    help: { fallback: 'the overview is the default topic' },
+    help: { fallback: 'the overview is the default topic', key: 'overview' },
     nav: { group: 'Define', label: 'Overview', end: true },
   },
   {
@@ -82,7 +92,7 @@ export const PAGES: readonly Page[] = [
     path: 'guided',
     load: 'eager',
     public: false,
-    help: { topic: 'guided' },
+    help: { topic: 'guided', key: 'guided' },
     nav: { group: 'Define', label: 'Guided Definition' },
   },
   {
@@ -90,7 +100,7 @@ export const PAGES: readonly Page[] = [
     path: 'requirements',
     load: 'lazy',
     public: false,
-    help: { topic: 'requirements' },
+    help: { topic: 'requirements', key: 'requirements' },
     nav: { group: 'Define', label: 'Requirements' },
   },
   {
@@ -98,7 +108,7 @@ export const PAGES: readonly Page[] = [
     path: 'interviews',
     load: 'eager',
     public: false,
-    help: { topic: 'interviews' },
+    help: { topic: 'interviews', key: 'interviews' },
     nav: { group: 'Define', label: 'Interviews' },
   },
   {
@@ -106,7 +116,7 @@ export const PAGES: readonly Page[] = [
     path: 'vv',
     load: 'eager',
     public: false,
-    help: { topic: 'vv' },
+    help: { topic: 'vv', key: 'vv' },
     nav: { group: 'Verify', label: 'V&V' },
   },
   {
@@ -114,7 +124,7 @@ export const PAGES: readonly Page[] = [
     path: 'evidence',
     load: 'eager',
     public: false,
-    help: NOT_WRITTEN,
+    help: { ...NOT_WRITTEN, key: 'evidence' },
     nav: { group: 'Verify', label: 'Evidence' },
   },
   {
@@ -122,7 +132,7 @@ export const PAGES: readonly Page[] = [
     path: 'matrix',
     load: 'lazy',
     public: false,
-    help: { topic: 'matrix' },
+    help: { topic: 'matrix', key: 'matrix' },
     nav: { group: 'Verify', label: 'Traceability' },
   },
   {
@@ -130,7 +140,7 @@ export const PAGES: readonly Page[] = [
     path: 'impact',
     load: 'lazy',
     public: false,
-    help: NOT_WRITTEN,
+    help: { ...NOT_WRITTEN, key: 'impact' },
     nav: { group: 'Verify', label: 'Impact' },
   },
   {
@@ -138,7 +148,7 @@ export const PAGES: readonly Page[] = [
     path: 'review',
     load: 'lazy',
     public: false,
-    help: NOT_WRITTEN,
+    help: { ...NOT_WRITTEN, key: 'review' },
     nav: { group: 'Verify', label: 'Review Queue' },
   },
   {
@@ -146,7 +156,7 @@ export const PAGES: readonly Page[] = [
     path: 'board',
     load: 'eager',
     public: false,
-    help: { topic: 'board' },
+    help: { topic: 'board', key: 'board' },
     nav: { group: 'Plan', label: 'Board' },
   },
   {
@@ -154,7 +164,7 @@ export const PAGES: readonly Page[] = [
     path: 'todos',
     load: 'eager',
     public: false,
-    help: NOT_WRITTEN,
+    help: { ...NOT_WRITTEN, key: 'todos' },
     nav: { group: 'Plan', label: 'To-dos', feature: TODO_LIST_FEATURE },
   },
   {
@@ -162,7 +172,7 @@ export const PAGES: readonly Page[] = [
     path: 'agents',
     load: 'eager',
     public: false,
-    help: { topic: 'agents' },
+    help: { topic: 'agents', key: 'agents' },
     nav: { group: 'Agents', label: 'Agents' },
   },
   {
@@ -170,7 +180,7 @@ export const PAGES: readonly Page[] = [
     path: 'crew',
     load: 'lazy',
     public: false,
-    help: { topic: 'crew' },
+    help: { topic: 'crew', key: 'crew' },
     nav: { group: 'Agents', label: 'Crew' },
   },
   {
@@ -178,7 +188,7 @@ export const PAGES: readonly Page[] = [
     path: 'automations',
     load: 'eager',
     public: false,
-    help: { topic: 'automations' },
+    help: { topic: 'automations', key: 'automations' },
     nav: { group: 'Agents', label: 'Automations' },
   },
   {
@@ -186,7 +196,7 @@ export const PAGES: readonly Page[] = [
     path: 'agent-runs',
     load: 'eager',
     public: false,
-    help: { topic: 'agent-runs' },
+    help: { topic: 'agent-runs', key: 'agent-runs' },
     nav: { group: 'Agents', label: 'Runs' },
   },
   {
@@ -194,7 +204,7 @@ export const PAGES: readonly Page[] = [
     path: 'activity',
     load: 'lazy',
     public: false,
-    help: { topic: 'activity' },
+    help: { topic: 'activity', key: 'activity' },
     nav: { group: null, label: 'Activity' },
   },
   {
@@ -202,15 +212,15 @@ export const PAGES: readonly Page[] = [
     path: 'settings',
     load: 'eager',
     public: false,
-    help: { topic: 'settings' },
+    help: { topic: 'settings', key: 'settings' },
     nav: { group: null, label: 'Settings' },
   },
 
-  { scope: 'project', path: 'baselines/:baselineId/compare', load: 'lazy', public: false, help: { topic: 'baselines' } },
-  { scope: 'project', path: 'vv/runs/:runId', load: 'lazy', public: false, help: { topic: 'vv' } },
-  { scope: 'project', path: 'crew/network', load: 'lazy', public: false, help: { topic: 'crew' } },
-  { scope: 'project', path: 'team', load: 'redirect', public: false, help: NOT_WRITTEN },
-  { scope: 'project', path: 'team/network', load: 'redirect', public: false, help: NOT_WRITTEN },
+  { scope: 'project', path: 'baselines/:baselineId/compare', load: 'lazy', public: false, help: { topic: 'baselines', key: 'baselines' } },
+  { scope: 'project', path: 'vv/runs/:runId', load: 'lazy', public: false, help: { topic: 'vv', key: 'vv.runs' } },
+  { scope: 'project', path: 'crew/network', load: 'lazy', public: false, help: { topic: 'crew', key: 'crew' } },
+  { scope: 'project', path: 'team', load: 'redirect', public: false, help: { ...NOT_WRITTEN, key: 'crew' } },
+  { scope: 'project', path: 'team/network', load: 'redirect', public: false, help: { ...NOT_WRITTEN, key: 'crew' } },
 
   { scope: 'site', path: 'login', load: 'eager', public: true, help: NO_PANEL },
   { scope: 'site', path: 'verify-email', load: 'eager', public: true, help: NO_PANEL },
@@ -220,20 +230,33 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 's/:token', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'open-source/:id', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: '', load: 'eager', public: true, help: NO_PANEL },
-  { scope: 'site', path: 'projects', load: 'eager', public: false, help: { topic: 'projects' } },
-  { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'projects', load: 'eager', public: false, help: { topic: 'projects', key: 'projects' } },
+  { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: { ...MANUAL_ONLY, key: 'org.settings' } },
+  { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: { ...MANUAL_ONLY, key: 'org.runs' } },
   { scope: 'site', path: 'manual', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'manual/:chapterSlug', load: 'lazy', public: true, help: NO_PANEL },
-  { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'connect', load: 'lazy', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'admin', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: { ...MANUAL_ONLY, key: 'whats-new' } },
+  { scope: 'site', path: 'connect', load: 'lazy', public: false, help: { ...MANUAL_ONLY, key: 'connect' } },
+  { scope: 'site', path: 'admin', load: 'lazy', public: false, help: { ...MANUAL_ONLY, key: 'admin' } },
 ];
 
 /** The full route pattern of a page, as react-router matches it. */
 export const pagePattern = (page: Page): string => {
   const base = page.scope === 'project' ? '/projects/:projectId' : '';
   return page.path ? `${base}/${page.path}` : base || '/';
+};
+
+/**
+ * The manual's context key for the page at `pathname` (its entry's
+ * `help.key`), or '' for a path no page with a key matches. The help panel
+ * sends it; a dialog, tab or help link may send a more specific one
+ * (hooks/useHelp.tsx).
+ */
+export const helpKeyForPath = (pathname: string): string => {
+  for (const page of PAGES) {
+    if (page.help.key && matchPath({ path: pagePattern(page), end: true }, pathname)) return page.help.key;
+  }
+  return '';
 };
 
 /**

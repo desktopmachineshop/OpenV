@@ -3,6 +3,9 @@
 <concept id="starting-resuming-modifying">
   <title>Starting, resuming, modifying</title>
   <shortdesc>Open <b>Guided Definition</b> from the project sidebar (the Overview page also has a shortcut whose label reflects where you are: <i>Start</i>, <i>Resume</i>, or <i>Modify guided definition</i>).</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="guided.start"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Start guided definition</b> — begins a fresh session.</li>

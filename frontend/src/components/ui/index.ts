@@ -15,3 +15,4 @@ export type { SegmentedOption } from './SegmentedControl';
 export { ArtifactPicker } from './ArtifactPicker';
 export { TokenMenu } from './TokenMenu';
 export type { TokenMenuRow } from './TokenMenu';
+export { HelpLink } from './HelpLink';

@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="limits">
   <title>Limits</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="org.settings.limits"/>
+  </prolog>
   <conbody>
     <p><b>Settings → Limits</b> shows everything this workspace is allowed to do, with how much of each is used. It is there so you find out before you are stopped, rather than at the moment something refuses you.</p>
     <simpletable>

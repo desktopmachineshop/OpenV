@@ -28,6 +28,7 @@ import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
 import { GlobalSearch } from './GlobalSearch';
 import { HelpSidebar } from './HelpSidebar';
+import { useHelp } from '../hooks/useHelp';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
@@ -72,7 +73,9 @@ export const ProjectLayout: React.FC = () => {
   const compact = viewport.isCompact;
   // On phones the help panel opens from the top bar rather than a floating
   // button, which sat on top of every composer at the bottom of the page.
-  const [helpOpen, setHelpOpen] = useState(false);
+  // The panel's state is shared (hooks/useHelp.tsx), so a help link or the
+  // ? key anywhere in the project opens this panel.
+  const { open: helpOpen, setOpen: setHelpOpen } = useHelp();
 
   useEffect(() => {
     if (!projectId) return;

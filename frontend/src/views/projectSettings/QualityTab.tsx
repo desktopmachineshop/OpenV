@@ -1,6 +1,7 @@
 import React from 'react';
 import { QualityRulesEditor, QualityRulesHeld } from '../../components/QualityRulesEditor';
 import { Setter } from './shared';
+import { HelpLink } from '../../components/ui';
 
 // The Quality rules tab of project settings.
 // Props-only (refactor plan F6): the ProjectSettings shell owns the state, the
@@ -17,7 +18,10 @@ interface QualityTabProps {
 
 export const QualityTab: React.FC<QualityTabProps> = ({ projectId, canEditRules, flash, qualityRules, setQualityRules }) => (
   <div className="card">
-    <h3>Requirement quality rules</h3>
+    <h3>
+      Requirement quality rules
+      <HelpLink helpKey="settings.quality" label="quality rules" />
+    </h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
       How this project's requirements are worded and judged. Set nothing and the project
       follows its workspace's house style (Workspace settings → Quality rules); override only

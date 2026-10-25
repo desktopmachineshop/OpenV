@@ -357,6 +357,7 @@ export const AutomationsPage: React.FC = () => {
           title={form.id ? 'Edit automation' : 'New automation'}
           width={720}
           onClose={() => setForm(null)}
+          help={{ key: 'automations.create', label: 'creating an automation' }}
         >
           <div className="form-group">
             <label>Name</label>

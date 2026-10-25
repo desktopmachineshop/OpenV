@@ -3,6 +3,8 @@ import { AgentDef, agentsAPI, ProviderSetting, providerSettingsAPI } from '../..
 import { ModelSelect } from './ModelSelect';
 import { useViewport } from '../../hooks/useViewport';
 import { useFeature } from '../../hooks/useFeature';
+import { useHelpContext } from '../../hooks/useHelp';
+import { HelpLink } from '../ui';
 import { AGENT_PROVIDERS, FeatureKey } from '../../generated/contract';
 
 // Used until the provider settings load (or if they fail to) — the server
@@ -67,6 +69,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
 
 export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCancel }) => {
   const { isPhone } = useViewport();
+  useHelpContext('agents.editor', { dialog: true });
   const isNew = !agent;
   const [mode, setMode] = useState<'form' | 'raw'>('form');
   const [form, setForm] = useState<FormState>(toForm(agent));
@@ -183,7 +186,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   return (
     <div className="card measure" style={{ marginBottom: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
+        <h3 style={{ margin: 0, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}<HelpLink helpKey="agents.editor" label="the agent editor" /></h3>
         {!isNew && (
           <div style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
             {(['form', 'raw'] as const).map((m) => (

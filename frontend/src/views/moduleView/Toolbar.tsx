@@ -2,6 +2,7 @@ import React from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { baselineLabel } from '../../utils/baselines';
 import type { Artifact, Baseline, Setter } from './shared';
+import { HelpLink } from '../../components/ui';
 
 // The requirements toolbar: the baseline picker, compare, delete and capture,
 // test-case drafting and the download wizard. A wide screen shows it in the
@@ -67,6 +68,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </option>
       ))}
     </select>
+    <HelpLink helpKey="baselines" label="baselines" />
     <button
       onClick={() => {
         // Compare the selected baseline (or the newest one when viewing

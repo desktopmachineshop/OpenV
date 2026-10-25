@@ -3,6 +3,8 @@ import { useViewport } from '../hooks/useViewport';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
+import { HelpSidebar } from './HelpSidebar';
+import { useDocsHelp, useHelp } from '../hooks/useHelp';
 
 interface NavbarProps {
   title?: React.ReactNode;
@@ -10,7 +12,9 @@ interface NavbarProps {
   showWorkspaceControls?: boolean;
   /** Page help. Pass both to put a ? button beside the notification bell —
    *  the two belong together, being about the person rather than the page.
-   *  Omitted on bars whose page mounts no help panel. */
+   *  Omitted, the bar mounts the panel itself where help comes from the
+   *  manual (workspace settings, runs, admin, What's new), and shows none
+   *  elsewhere. */
   helpOpen?: boolean;
   onHelpToggle?: () => void;
 }
@@ -22,6 +26,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onHelpToggle,
 }) => {
   const { isPhone } = useViewport();
+  // A page with no panel of its own gets the manual's, behind its gate.
+  const help = useHelp();
+  const docsHelp = useDocsHelp();
+  const ownHelp = !onHelpToggle && docsHelp;
+  const toggleHelp = onHelpToggle ?? (ownHelp ? () => help.setOpen((o) => !o) : undefined);
+  const isHelpOpen = onHelpToggle ? helpOpen : help.open;
   return (
     <div
       className="safe-area-top"
@@ -67,12 +77,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 4 : '10px', flexShrink: 0 }}>
-        {onHelpToggle && (
+        {toggleHelp && (
           <button
             type="button"
             aria-label="Help"
-            aria-expanded={!!helpOpen}
-            onClick={onHelpToggle}
+            aria-expanded={!!isHelpOpen}
+            onClick={toggleHelp}
             title="Help for this page"
             style={{
               width: 44,
@@ -92,6 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {showWorkspaceControls && <NotificationBell variant="light" />}
         {showWorkspaceControls && <UserMenu variant="light" />}
       </div>
+      {ownHelp && <HelpSidebar open={help.open} onOpenChange={help.setOpen} />}
     </div>
   );
 };

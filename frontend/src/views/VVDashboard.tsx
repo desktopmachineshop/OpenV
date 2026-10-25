@@ -10,7 +10,8 @@ import {
   vvAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, useConfirm } from '../components/ui';
+import { ErrorBanner, HelpLink, useConfirm } from '../components/ui';
+import { useHelpContext } from '../hooks/useHelp';
 import { useViewport } from '../hooks/useViewport';
 import { gapLabel } from './vvGapLabels';
 import { runBaselineLabel, baselineLabel } from '../utils/baselines';
@@ -80,6 +81,7 @@ export const VVDashboard: React.FC = () => {
 
   // New run form state
   const [showNewRun, setShowNewRun] = useState(false);
+  useHelpContext(showNewRun ? 'vv.runs' : null);
   const [runName, setRunName] = useState('');
   const [runDescription, setRunDescription] = useState('');
   const [runBaselineId, setRunBaselineId] = useState('');
@@ -207,6 +209,7 @@ export const VVDashboard: React.FC = () => {
               </option>
             ))}
           </select>
+          <HelpLink helpKey="vv.baselines" label="baselines in V&V" />
         </div>
         <div style={{ flex: 1 }} />
         <button
@@ -215,6 +218,7 @@ export const VVDashboard: React.FC = () => {
         >
           Download V&amp;V report (PDF)
         </button>
+        <HelpLink helpKey="vv.report" label="the V&V report" />
       </div>
 
       {baselineId !== 'live' && (
@@ -286,7 +290,7 @@ export const VVDashboard: React.FC = () => {
 
       {/* Coverage table */}
       <div className="card">
-        <h3>Requirement coverage</h3>
+        <h3>Requirement coverage<HelpLink helpKey="vv.coverage" label="coverage rollup" /></h3>
         <div style={{ overflowX: 'auto' }}>
           <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -348,7 +352,7 @@ export const VVDashboard: React.FC = () => {
       </div>
 
       {/* Gaps */}
-      <h3 style={{ color: 'var(--text)', marginBottom: 10 }}>Gaps</h3>
+      <h3 style={{ color: 'var(--text)', marginBottom: 10 }}>Gaps<HelpLink helpKey="vv.gaps" label="gaps" /></h3>
       {gapEntries.length === 0 && !loading && (
         <div style={{ color: 'var(--success)', fontSize: 13, marginBottom: 20 }}>
           No gaps detected — nice work.
@@ -375,7 +379,7 @@ export const VVDashboard: React.FC = () => {
       {/* Test runs */}
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, flex: 1 }}>Test runs</h3>
+          <h3 style={{ margin: 0, flex: 1 }}>Test runs<HelpLink helpKey="vv.runs" label="test runs" /></h3>
           <button className="button" onClick={() => setShowNewRun(!showNewRun)}>
             {showNewRun ? 'Cancel' : 'New Run'}
           </button>

@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Help opens on what you are doing, not just the page.** The help panel
+  now opens on the manual's topic for the screen you are on, workspace
+  settings, Runs, Impact and What's new included, and follows you into the
+  tab, wizard step or dialog you open, turning back when you close it.
+  Small **?** buttons beside headings and dialog titles open help for that
+  part of the screen, **?** or **F1** opens it from the keyboard, and
+  **Full manual** opens the whole manual for your release in a new tab.
+
 ## 0.24.0 — 2026-10-25
 
 ### New features

@@ -3,6 +3,9 @@
 <concept id="coverage-rollup">
   <title>Coverage rollup</title>
   <shortdesc>Every requirement gets a <b>rollup status</b> computed from its verification method and linked test results:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="vv.coverage"/>
+  </prolog>
   <conbody>
     <simpletable>
       <sthead><stentry>Rollup</stentry><stentry>Meaning</stentry></sthead>

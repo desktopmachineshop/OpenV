@@ -23,6 +23,7 @@ import { ProjectSettings } from './views/ProjectSettings';
 import { OrgSettings } from './views/OrgSettings';
 import { InterviewChatRoute } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
+import { HelpProvider } from './hooks/useHelp';
 import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import { releasePrerender } from './prerenderHandoff';
 import './ext/modules';
@@ -237,6 +238,7 @@ function App() {
   return (
     <div className="app-container">
       <DialogProvider>
+        <HelpProvider>
         {currentUser && !walled && <ReleaseUpdateBanner />}
         <Suspense fallback={<RouteFallback />}>
         <Routes>
@@ -311,6 +313,7 @@ function App() {
         )}
         </Routes>
         </Suspense>
+        </HelpProvider>
       </DialogProvider>
     </div>
   );

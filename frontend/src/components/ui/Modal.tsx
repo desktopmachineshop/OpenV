@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { useViewport } from '../../hooks/useViewport';
 import { dialogCardStyle } from './dialogCard';
+import { HelpLink } from './HelpLink';
+import { useHelpContext } from '../../hooks/useHelp';
 
 interface ModalProps {
   title?: React.ReactNode;
@@ -9,14 +11,18 @@ interface ModalProps {
   children: React.ReactNode;
   /** Extra styles for the inner card (e.g. maxHeight overrides). */
   cardStyle?: React.CSSProperties;
+  /** The manual's topic for the dialog: while it is open the help panel
+   *  follows it, and a ? beside the title opens it (hooks/useHelp.tsx). */
+  help?: { key: string; label: string; fragment?: string };
 }
 
 /**
  * Shared modal shell: token-styled overlay + card, closes on overlay click
  * and Escape. Render it conditionally — mounting the component opens it.
  */
-export const Modal: React.FC<ModalProps> = ({ title, width = 520, onClose, children, cardStyle }) => {
+export const Modal: React.FC<ModalProps> = ({ title, width = 520, onClose, children, cardStyle, help }) => {
   const { isPhone } = useViewport();
+  useHelpContext(help?.key, { fragment: help?.fragment, dialog: true });
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -52,7 +58,12 @@ export const Modal: React.FC<ModalProps> = ({ title, width = 520, onClose, child
           ...cardStyle,
         }}
       >
-        {title != null && <h3 style={{ marginTop: 0, color: 'var(--text)', fontSize: 16 }}>{title}</h3>}
+        {title != null && (
+          <h3 style={{ marginTop: 0, color: 'var(--text)', fontSize: 16 }}>
+            {title}
+            {help && <HelpLink helpKey={help.key} fragment={help.fragment} label={help.label} />}
+          </h3>
+        )}
         {children}
       </div>
     </div>

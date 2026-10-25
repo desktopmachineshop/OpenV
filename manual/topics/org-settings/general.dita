@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="general">
   <title>General</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="org.settings.general"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Workspace name</b> — admins can rename the workspace.</li>

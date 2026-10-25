@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="teams">
   <title>Teams</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="org.settings.teams"/>
+  </prolog>
   <conbody>
     <p><b>Teams</b> are named groups of workspace members (e.g. "Design engineering", "QA"). Their purpose is project access management: a project can grant a team access as a unit (Project Settings → Access → team access), with a role per grant. Admins create teams, add/remove members, rename, and delete them — deleting a team also removes its project access grants.</p>
     <note>Not to be confused with <b>Crews</b>, which are graphs of AI agents (and people) that execute work — see the <i>Crews</i> chapter.</note>

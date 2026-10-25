@@ -8,7 +8,9 @@ manual/maps are generated from them: edit the chapter, then run `sync`.
 
   sync [--check]           regenerate manual/topics, manual/maps and
                            manual/redirects.json from the chapters; --check
-                           fails instead when they are out of date
+                           fails instead when they are out of date. Both
+                           fail on a context key the app sends that no
+                           topic answers (check_keys)
   check-pr --base REF      a pull request that changes what users see also
                            changes the manual, or carries no-docs-change
   line NOTES               the docs line (major.minor) of the newest release
@@ -75,7 +77,10 @@ CHAPTER_KEYS = {
     'automations': ['automations'],
     'interviews': ['interviews'],
     'vv': ['vv'],
-    'org-settings': ['settings', 'org.settings'],
+    # `settings` was the project settings page's key here before the page's
+    # topic moved to Projects & members; it stays on the workspace settings
+    # chapter's overview only through org.settings.
+    'org-settings': ['org.settings'],
     'platform-admin': ['admin'],
     'troubleshooting': ['troubleshooting', 'activity'],
 }
@@ -97,6 +102,34 @@ SECTION_KEYS = {
     ('projects', 'project-access-members'): ['settings.members'],
     ('projects', 'share-links'): ['settings.share-links'],
     ('guided-wizard', 'the-vv-assistant-chat'): ['guided.assistant'],
+    # In-page help (hooks/useHelp.tsx, HelpLink): tabs, steps, dialogs and
+    # section headings. Each falls back to its page's key until it has one.
+    ('getting-started', 'help-on-every-page'): ['help'],
+    ('getting-started', 'whats-new'): ['whats-new'],
+    ('projects', 'inside-a-project'): ['settings'],
+    ('projects', 'creating-a-project'): ['projects.create'],
+    ('projects', 'downloading-a-project'): ['projects.download'],
+    ('projects', 'import'): ['projects.import'],
+    ('projects', 'deleting-a-project'): ['settings.danger'],
+    ('artifacts', 'quality-rules-and-findings'): ['quality', 'settings.quality', 'org.settings.quality'],
+    ('links', 'creating-links'): ['links.create'],
+    ('links', 'impact-analysis'): ['impact'],
+    ('guided-wizard', 'starting-resuming-modifying'): ['guided.start'],
+    ('guided-wizard', 'the-eight-steps'): ['guided.step'],
+    ('board', 'the-card-drawer'): ['board.card'],
+    ('agents', 'launching-a-run'): ['agents.launch'],
+    ('agents', 'the-agent-editor'): ['agents.editor'],
+    ('crews', 'connecting-nodes'): ['crew.connect'],
+    ('automations', 'creating-an-automation'): ['automations.create'],
+    ('runs-runners', 'connect-an-ai-app-to-a-workspace'): ['connect'],
+    ('runs-runners', 'repositories'): ['settings.repos'],
+    ('runs-runners', 'per-project-agent-auth'): ['settings.agents'],
+    ('vv', 'coverage-rollup'): ['vv.coverage'],
+    ('vv', 'gaps'): ['vv.gaps'],
+    ('vv', 'the-pdf-report'): ['vv.report'],
+    ('org-settings', 'general'): ['org.settings.general'],
+    ('org-settings', 'limits'): ['org.settings.limits'],
+    ('org-settings', 'teams'): ['org.settings.teams'],
 }
 
 
@@ -303,6 +336,82 @@ def generate(chapters_dir):
     return files
 
 
+# --- keys: every context key the app sends has a topic ------------------------
+
+FRONTEND = 'frontend/src'
+KEY = r'[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)*'
+# Where the app names a key: pages.ts's `key:`, useHelpContext(...), a
+# HelpLink's helpKey=, a Modal's help={{ key: ... }}, the wizard's helpKey,
+# and a *_HELP_KEYS list or map (hooks/useHelp.tsx). A template literal
+# stands for its static prefix (`guided.${x}` must resolve as guided).
+LITERAL = re.compile(r"['\"](" + KEY + r")['\"]|`(" + KEY + r"\.?)\$\{")
+# In a map, the values: a quoted property name is not a key.
+VALUE = re.compile(r"['\"](" + KEY + r")['\"](?!\s*:)")
+KEY_FIELD = re.compile(r"\bkey: ['\"](" + KEY + r")['\"]")
+KEY_SITES = [
+    (re.compile(r'useHelpContext\((.*?)\);', re.S), LITERAL),
+    (re.compile(r'helpKey=(\"[^\"]*\"|\{[^}]*\})'), LITERAL),
+    (re.compile(r'help=\{\{(.*?)\}\}', re.S), KEY_FIELD),
+    (re.compile(r'const helpKey = (.*?);', re.S), LITERAL),
+    (re.compile(r'[A-Z_]*HELP_KEYS\b[^=\n]*= [\[{](.*?)[\]}];', re.S), VALUE),
+]
+
+
+def app_keys(root):
+    """Each context key the app sends, with the files that send it."""
+    found = {}
+    src = Path(root) / FRONTEND
+    pages = src / 'pages.ts'
+    for m in re.finditer(r"\bkey: '(" + KEY + r")'", pages.read_text()):
+        found.setdefault(m.group(1), set()).add('frontend/src/pages.ts')
+    for f in sorted(src.rglob('*.ts*')):
+        if '.test.' in f.name or f.suffix not in ('.ts', '.tsx') or f == pages:
+            continue
+        text = f.read_text()
+        if 'elp' not in text:
+            continue
+        for site, literal in KEY_SITES:
+            for m in site.finditer(text):
+                for lit in literal.finditer(m.group(1)):
+                    key = next(g for g in lit.groups() if g).rstrip('.')
+                    found.setdefault(key, set()).add(f.relative_to(root).as_posix())
+    return found
+
+
+def route_keys(root):
+    """The keys manual/help-contexts.yaml's routes and default name."""
+    text = (Path(root) / MANUAL / 'help-contexts.yaml').read_text()
+    keys = re.findall(r'^\s+/\S*: (' + KEY + r')\s*$', text, re.M)
+    keys += re.findall(r'^\s+default: (' + KEY + r')\s*$', text, re.M)
+    return keys
+
+
+def topic_keys():
+    """Every key a topic carries."""
+    keys = {k for ks in CHAPTER_KEYS.values() for k in ks}
+    return keys | {k for ks in SECTION_KEYS.values() for k in ks}
+
+
+def resolves(key, known):
+    """Whether key, or a parent of it (vv.runs -> vv), is a topic's key."""
+    parts = key.split('.')
+    return any('.'.join(parts[:i]) in known for i in range(len(parts), 0, -1))
+
+
+def check_keys(root):
+    """Fails on a key the app or help-contexts.yaml sends that no topic answers."""
+    known = topic_keys()
+    missing = sorted(
+        f'{key} ({", ".join(sorted(where))})' for key, where in app_keys(root).items() if not resolves(key, known)
+    )
+    missing += sorted(f'{k} (manual/help-contexts.yaml)' for k in route_keys(root) if not resolves(k, known))
+    if missing:
+        raise DocsError(
+            'context keys with no topic, directly or through a parent: ' + '; '.join(missing)
+            + '. Give a section the key in SECTION_KEYS (scripts/manual/docs.py) and sync'
+        )
+
+
 GENERATED = ('topics', 'maps', 'redirects.json')
 
 
@@ -323,6 +432,7 @@ def cmd_sync(args):
     root = Path(args.root)
     manual = root / MANUAL
     want = generate(root / CHAPTERS)
+    check_keys(root)
     have = existing(manual)
     if args.check:
         drift = sorted(p for p in set(want) | set(have) if want.get(p) != have.get(p))

@@ -8,7 +8,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, Modal, useConfirm } from '../components/ui';
+import { ErrorBanner, HelpLink, Modal, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { formatConditions, humanBytes, parseConditions } from '../utils/evidence';
 
@@ -125,7 +125,7 @@ export const EvidenceView: React.FC = () => {
           marginBottom: 4,
         }}
       >
-        <h2 style={{ margin: 0 }}>Evidence</h2>
+        <h2 style={{ margin: 0 }}>Evidence<HelpLink helpKey="evidence" label="evidence" /></h2>
         <button className="button" onClick={() => setCreating(true)}>
           Record a capture
         </button>
@@ -142,7 +142,7 @@ export const EvidenceView: React.FC = () => {
         <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
       ) : bundles.length === 0 ? (
         <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-          <p style={{ marginTop: 0 }}>No evidence recorded yet.</p>
+          <p style={{ marginTop: 0 }}>No evidence recorded yet.<HelpLink helpKey="evidence" label="recording evidence" /></p>
           <p style={{ margin: 0, fontSize: 14 }}>
             A capture can be a dataset, a photograph of the rig, or simply a
             written account of what was observed.
@@ -309,7 +309,12 @@ const BundleForm: React.FC<BundleFormProps> = ({ projectId, bundle, onClose, onS
   const field = { width: '100%', marginBottom: 12 } as React.CSSProperties;
 
   return (
-    <Modal title={bundle ? `Edit ${bundle.ref}` : 'Record a capture'} width={560} onClose={onClose}>
+    <Modal
+      title={bundle ? `Edit ${bundle.ref}` : 'Record a capture'}
+      width={560}
+      onClose={onClose}
+      help={{ key: 'evidence', label: 'recording evidence' }}
+    >
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
       <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }} htmlFor="evidence-title">
         What was done

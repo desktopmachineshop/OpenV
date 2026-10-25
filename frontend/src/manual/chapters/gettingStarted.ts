@@ -161,12 +161,38 @@ recent project; the first time, they ask you to pick one.
 
 ## Help on every page
 
-Press **?** beside the notification bell to open the help panel. It shows
-the page of this manual for the screen you are on, written for the release
-your workspace is on, so what it describes matches what you see. Links
-between pages open in the panel, **Back** returns, and the search box at
-the top searches the whole manual. **Open in the docs** opens the same page
-on the docs site, where a menu lets you read the manual for other releases.
+Press **?** beside the notification bell to open the help panel. It is on
+every page you reach signed in, workspace settings, Runs and What's new
+included. It shows the page of this manual for what you are doing, written
+for the release your workspace is on, so what it describes matches what you
+see:
+
+- **It follows what you are doing.** The panel opens on the topic for the
+  screen you are on, and goes further where the manual does: the tab of a
+  settings page, the step of a guided definition, a dialog such as citing
+  evidence or downloading a project. Open a dialog with the panel open and
+  it turns to the dialog's topic; close the dialog and it turns back.
+- **Small ? buttons** beside section headings, dialog titles and empty
+  pages open the panel at that part of the manual: coverage, gaps and test
+  runs on the V&V page, a requirement's quality findings, the traceability
+  matrix, a board card.
+- **From the keyboard,** press **?** anywhere you are not typing, or **F1**,
+  to open help for what is on screen.
+
+Links between pages open in the panel, **Back** returns, and the search box
+at the top searches the whole manual. **Open in the docs** opens the same
+page on the docs site and **Full manual** the docs site's front page, each
+in a new tab and at the release your workspace is on; a menu there lets you
+read the manual for other releases.
+
+## What's new
+
+**What's new**, in the menu under your name, lists what changed in OpenV,
+newest release first. It follows your workspace's channel: a workspace on
+the stable channel sees the stable release it is on and the one scheduled
+next, and a nightly workspace the release it runs. When OpenV is upgraded
+while you have it open, a note at the bottom of the screen says so, with
+**See what's new** and **Reload**.
 
 ## What's next
 

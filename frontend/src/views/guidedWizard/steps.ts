@@ -69,6 +69,22 @@ export const STEP_LABELS = [
   'Review & commit',
 ];
 
+/**
+ * Each step's help context, in step order: `guided.step.<name>`, which falls
+ * back to `guided.step`, the manual's section on the eight steps. Keys are an
+ * interface (docs/docs-maintenance.md, rule 5): add, never rename.
+ */
+export const STEP_HELP_KEYS = [
+  'guided.step.framing',
+  'guided.step.personas',
+  'guided.step.needs',
+  'guided.step.requirements',
+  'guided.step.nfrs',
+  'guided.step.hazards',
+  'guided.step.stubs',
+  'guided.step.review',
+];
+
 /** The steps that offer Skip. */
 export const SKIPPABLE_STEPS = [6, 7];
 
