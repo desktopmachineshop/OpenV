@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { helpTopicForPath } from './helpTopics';
 import { DocsHelp } from './DocsHelp';
 import { useAppStore } from '../state/store';
+import { useFeature } from '../hooks/useFeature';
+import type { FeatureKey } from '../generated/contract';
 import './HelpSidebar.css';
 
 // Context-aware help panel: a floating ? button that expands into the help
@@ -23,6 +25,9 @@ import './HelpSidebar.css';
 
 /** The deployment capability that serves help from the docs site. */
 export const CAPABILITY_HELP_DOCS = 'help-docs';
+
+/** The release gate on it: the member's channel must have reached it too. */
+export const MANUAL_HELP_FEATURE: FeatureKey = 'manual-help';
 
 interface HelpSidebarProps {
   /** Controlled open state. Every shell keeps it now, with the ? button in
@@ -49,7 +54,8 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) 
   const [docsFailed, setDocsFailed] = useState(false);
   useEffect(() => setDocsFailed(false), [orgId]);
   const onDocsUnavailable = useCallback(() => setDocsFailed(true), []);
-  const showDocs = docsOffered && !!orgId && !docsFailed;
+  const manualHelp = useFeature(MANUAL_HELP_FEATURE);
+  const showDocs = docsOffered && manualHelp && !!orgId && !docsFailed;
 
   return (
     <div className={`help-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>

@@ -248,8 +248,8 @@ buckets live in the API process, so they assume a single API instance.
 | Variable | Read by | Default | What it does |
 |---|---|---|---|
 | `OPENV_DOCS_ADMIN_TOKEN` | server | none | The docs site's `OPEND_ADMIN_TOKEN`, read only when `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set. With it the server creates each help profile (an OpenD organization and service reader per docs line and plan family) the first time it asks for help; without it the docs site's operator creates them. Secret. |
-| `OPENV_DOCS_EMBED_SECRET` | server | none | The docs site's `OPEND_EMBED_SECRET`, which signs the embed tokens the in-app help reads the manual with. Help from the docs site is on only when this and `OPENV_DOCS_URL` are both set; otherwise the app keeps the help it ships. Secret. |
-| `OPENV_DOCS_URL` | server | none | The OpenD docs site that publishes the user manual (`manual/`), such as `https://docs.openv.app`, without a trailing slash: the in-app help reads each workspace's manual from it (`docs/plans/opend-help.md`). |
+| `OPENV_DOCS_EMBED_SECRET` | server | none | The docs site's `OPEND_EMBED_SECRET`, which signs the embed tokens the in-app help reads the manual with, per docs line and plan family. Without it the help reads the site's public view, which needs nothing from the docs site but its address. Secret. |
+| `OPENV_DOCS_URL` | server | none | The OpenD docs site that publishes the user manual (`manual/`), such as `https://docs.openv.app`, without a trailing slash: the in-app help reads each workspace's manual from it (`docs/plans/opend-help.md`). Help from the docs site is on only when this is set; otherwise the app keeps the help it ships. |
 
 <!-- END GENERATED -->
 

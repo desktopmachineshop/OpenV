@@ -27,7 +27,7 @@ Everything here is the tooling area of `docs/areas.json`, through
 | `openv/sync.py` | the OpenV requirements project from any machine: `register`, `bootstrap`, `vv`, `status`, `export`, and `api` for any endpoint (root `CLAUDE.md`, `docs/requirements-maintenance.md`) |
 | `openv/mcp-server.sh` | builds and starts `openv-mcp` for an agent session in this repository; `.mcp.json` runs it |
 | `release_notes.py` | the release-notes rules CI and the release workflows apply: `check`, `check-pr`, `cut`, `check-release`, `version`, `next`, `stable-version`, `cut-stable`, and `site`, which writes the released history the public `/changelog` page renders (`frontend/src/site/changelog/releases.json`; the release workflows regenerate it with every cut) |
-| `manual/docs.py` | the user manual's rules (`docs/docs-maintenance.md`): `sync` generates `manual/` from the chapters, `check-pr` requires a manual update with a user-visible change, `line` and `stamp` name and stamp the release line Promote to release publishes |
+| `manual/docs.py` | the user manual's rules (`docs/docs-maintenance.md`): `sync` generates `manual/` from the chapters, `check-pr` requires a manual update with a user-visible change, and `line` and `stamp` name and stamp the release line Promote to release publishes |
 | `manual/validate.sh` | OpenD's validation of `manual/`, with a pinned OpenD built into `.cache/opend` |
 | `refactor/refactor_guard.py` | the Refactor guard (S14b): `GOLDEN_LIST`, `FROZEN_DATA`, `PROTECTED_PATHS`, `GUARD_CODE`, and the per-commit class checks |
 | `refactor/classify_commits.py` | the layers and files each commit touches, and the hub-touch rates of plan §10 |

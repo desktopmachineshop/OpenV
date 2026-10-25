@@ -135,9 +135,72 @@ func service(f *fakeOpenD, admin string) *Service {
 	return NewService(Config{URL: f.url + "/", Secret: secret, AdminToken: admin}, nil)
 }
 
-func TestNewServiceIsOffWithoutURLOrSecret(t *testing.T) {
-	if NewService(Config{URL: "https://docs"}, nil) != nil || NewService(Config{Secret: secret}, nil) != nil {
-		t.Fatal("help must be off unless both the docs URL and the secret are set")
+func TestNewServiceIsOffWithoutURL(t *testing.T) {
+	if NewService(Config{Secret: secret}, nil) != nil {
+		t.Fatal("help must be off without the docs URL")
+	}
+	if NewService(Config{URL: "https://docs"}, nil) == nil {
+		t.Fatal("the docs URL alone turns public help on")
+	}
+}
+
+// publicOpenD answers the help API anonymously, as a public OpenD site
+// does: a version it offers is served from its own line, any other from
+// the default, and the line served is named in OpenD-Release-Line.
+func publicOpenD(t *testing.T, lines ...string) (*httptest.Server, *[]string) {
+	var seen []string
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		seen = append(seen, r.URL.RequestURI())
+		mu.Unlock()
+		if r.Header.Get("Authorization") != "" {
+			t.Errorf("public read sent credentials: %s", r.Header.Get("Authorization"))
+		}
+		line := lines[0]
+		for _, l := range lines {
+			if l == r.URL.Query().Get("version") {
+				line = l
+			}
+		}
+		w.Header().Set("OpenD-Release-Line", line)
+		switch r.URL.Path {
+		case "/api/v1/help/context":
+			_ = json.NewEncoder(w).Encode(map[string]any{"topicId": "topics/vv/test-runs", "title": "Test runs " + line,
+				"html": `<p>Runs<script>x()</script></p>`, "fullUrl": "https://docs/topics/vv/test-runs.html"})
+		case "/api/v1/help/search":
+			_ = json.NewEncoder(w).Encode(map[string]any{"query": r.URL.Query().Get("q"), "hits": []any{}})
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &seen
+}
+
+func TestPublicModeAsksForTheLineAndReportsTheOneServed(t *testing.T) {
+	srv, seen := publicOpenD(t, "0.23", "0.22")
+	s := NewService(Config{URL: srv.URL}, nil)
+	for _, c := range []struct{ asked, served string }{{"0.22", "0.22"}, {"0.24", "0.23"}} {
+		topic, err := s.Context(context.Background(), Profile{Line: c.asked, Plan: "free"}, "vv.runs", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if topic.Line != c.served || topic.Title != "Test runs "+c.served || strings.Contains(topic.HTML, "<script") {
+			t.Fatalf("asked %s: topic = %+v", c.asked, topic)
+		}
+	}
+	if _, err := s.Context(context.Background(), Profile{Line: "0.22", Plan: "business"}, "vv.runs", ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(*seen) != 2 || !strings.Contains((*seen)[0], "version=0.22") {
+		t.Fatalf("requests = %v; want one per line, cached across plans", *seen)
+	}
+	if _, err := s.Search(context.Background(), Profile{Line: "0.23"}, "gaps"); err != nil {
+		t.Fatal(err)
+	}
+	if last := (*seen)[len(*seen)-1]; !strings.Contains(last, "q=gaps") || !strings.Contains(last, "&version=0.23") {
+		t.Fatalf("search request = %s", last)
 	}
 }
 

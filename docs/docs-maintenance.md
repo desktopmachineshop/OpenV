@@ -70,6 +70,10 @@ promotion, never on their own.
    tagged, the shipped commit is pushed to `docs/<major.minor>`. The docs
    site builds each `docs/*` branch as its own release line. A patch moves
    its line's branch on, so 0.24.2's docs replace 0.24.1's.
+   The docs site follows on its own: its version menu lists every live line
+   and its public default is the newest, so a new line becomes what
+   visitors read as soon as its build is live. No credentials for the docs
+   site are kept here.
 
 9. **Before asking for a release, read the manual for what is going out.**
    The checks prove the manual builds; only a person can say it is right.
@@ -98,11 +102,10 @@ promotion, never on their own.
     workspace, dedicated instance or supported self-hosted version is on
     it. The stable line and the latest line always are.
 
-12. **Stable releases are labelled.** When *Cut stable release* designates
-    a version, its line is labelled `stable` on the docs site, so the public
-    version menu says which line Business and Enterprise readers have.
-    This waits on OpenD's version menu (`docs/plans/opend-help.md`, E4).
-    Until then, the operator sets the label.
+12. **The version menu lists the live lines.** OpenD's version picker
+    offers every line still live, newest first; the public default is the
+    latest release. Retiring a line (rule 11) means deleting its
+    `docs/<line>` branch, which takes it off the menu.
 
 ## Where this lives
 

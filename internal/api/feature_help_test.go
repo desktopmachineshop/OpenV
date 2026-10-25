@@ -12,6 +12,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
 // fakeDocs is an OpenD docs site that answers every help request with the
@@ -39,6 +40,15 @@ func fakeDocs(t *testing.T) *httptest.Server {
 	return srv
 }
 
+// helpFixture is featureFixture with the manual-help gate shipped in 0.2.0,
+// so a stable workspace on 0.2.0 and a nightly one have it.
+func helpFixture(t *testing.T, plan, stableRelease string) *Handler {
+	t.Helper()
+	h, _ := featureFixture(t, plan, stableRelease)
+	release.Registry = append(release.Registry, release.Feature{Key: release.FeatureManualHelp, ShippedIn: "0.2.0"})
+	return h
+}
+
 func helpReq(t *testing.T, userID, query string) *http.Request {
 	ctx := featuresReq(t, http.MethodGet, userID, "").Context()
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/orgs/org-1/help/context?"+query, nil).WithContext(ctx)
@@ -54,7 +64,7 @@ func TestHelpContextReadsTheWorkspacesDocsLine(t *testing.T) {
 		{orgs.PlanBusiness, "0.2.0", "openv-0-2-business"},
 		{orgs.PlanSingle, "", "openv-0-3-free"},
 	} {
-		h, _ := featureFixture(t, tc.plan, tc.stable)
+		h := helpFixture(t, tc.plan, tc.stable)
 		h.HelpService = help.NewService(help.Config{URL: docs.URL, Secret: "s", AdminToken: "a"}, nil)
 		w := httptest.NewRecorder()
 		h.GetHelpContext(w, helpReq(t, "member", "key=vv"))
@@ -72,7 +82,7 @@ func TestHelpContextReadsTheWorkspacesDocsLine(t *testing.T) {
 // TestHelpIsOffWithoutADocsSite: no docs site configured answers 404, and
 // a caller outside the workspace is refused before that.
 func TestHelpIsOffWithoutADocsSite(t *testing.T) {
-	h, _ := featureFixture(t, orgs.PlanBusiness, "0.2.0")
+	h := helpFixture(t, orgs.PlanBusiness, "0.2.0")
 	w := httptest.NewRecorder()
 	h.GetHelpContext(w, helpReq(t, "member", "key=vv"))
 	if w.Code != http.StatusNotFound {
@@ -86,11 +96,24 @@ func TestHelpIsOffWithoutADocsSite(t *testing.T) {
 }
 
 func TestHelpContextNeedsKeyOrPath(t *testing.T) {
-	h, _ := featureFixture(t, orgs.PlanBusiness, "0.2.0")
+	h := helpFixture(t, orgs.PlanBusiness, "0.2.0")
 	h.HelpService = help.NewService(help.Config{URL: fakeDocs(t).URL, Secret: "s"}, nil)
 	w := httptest.NewRecorder()
 	h.GetHelpContext(w, helpReq(t, "member", ""))
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", w.Code)
+	}
+}
+
+// TestHelpWaitsForTheWorkspacesChannel: a stable workspace whose stable
+// release predates the feature keeps the shipped help, docs site or not.
+func TestHelpWaitsForTheWorkspacesChannel(t *testing.T) {
+	h, _ := featureFixture(t, orgs.PlanBusiness, "0.2.0")
+	release.Registry = append(release.Registry, release.Feature{Key: release.FeatureManualHelp, ShippedIn: "0.3.0"})
+	h.HelpService = help.NewService(help.Config{URL: fakeDocs(t).URL, Secret: "s"}, nil)
+	w := httptest.NewRecorder()
+	h.GetHelpContext(w, helpReq(t, "member", "key=vv"))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 before the stable release carries the feature", w.Code)
 	}
 }

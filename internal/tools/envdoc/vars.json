@@ -353,12 +353,12 @@
     "OPENV_DOCS_EMBED_SECRET": {
       "area": "frontend-shell",
       "read_by": "server",
-      "text": "The docs site's `OPEND_EMBED_SECRET`, which signs the embed tokens the in-app help reads the manual with. Help from the docs site is on only when this and `OPENV_DOCS_URL` are both set; otherwise the app keeps the help it ships. Secret."
+      "text": "The docs site's `OPEND_EMBED_SECRET`, which signs the embed tokens the in-app help reads the manual with, per docs line and plan family. Without it the help reads the site's public view, which needs nothing from the docs site but its address. Secret."
     },
     "OPENV_DOCS_URL": {
       "area": "frontend-shell",
       "read_by": "server",
-      "text": "The OpenD docs site that publishes the user manual (`manual/`), such as `https://docs.openv.app`, without a trailing slash: the in-app help reads each workspace's manual from it (`docs/plans/opend-help.md`)."
+      "text": "The OpenD docs site that publishes the user manual (`manual/`), such as `https://docs.openv.app`, without a trailing slash: the in-app help reads each workspace's manual from it (`docs/plans/opend-help.md`). Help from the docs site is on only when this is set; otherwise the app keeps the help it ships."
     },
     "OPENV_INVITE_BURST": {
       "area": "tenancy-identity",
