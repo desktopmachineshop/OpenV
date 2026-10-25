@@ -2,6 +2,25 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.24.0",
+   "date": "2026-10-25",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Help for the page you are on, from the manual for your release.** The help panel (the **?** beside the notification bell) now shows the user manual's own page for the screen you are on, written for the release your workspace runs, so it matches what you see. Follow links between pages without leaving the panel, go **Back**, search the whole manual from the top of the panel, or open the page on the docs site, where you can switch to the manual of another release."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**The user manual has its own site, one version per release.** The manual is published at openv.opend.app for every OpenV release still in use, with a menu to switch between them; it opens on the newest."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.23.2",
    "date": "2026-10-25",
    "stableSince": "",
