@@ -2,6 +2,20 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.23.2",
+   "date": "2026-10-25",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Signing in with DMSid says what it covers.** Where OpenV signs people in with DMSid, the sign-in page now says that the same login also opens OpenD and the other DMS SaaS products.",
+      "**The help panel can show the user manual from a docs site.** A deployment that sets `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` to an OpenD docs site shows, in the help panel, the manual's own page for the screen you are on, written for the release your workspace is on, with links between pages, Back, and a search of the manual. Without them the help panel is unchanged."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.23.1",
    "date": "2026-10-24",
    "stableSince": "",

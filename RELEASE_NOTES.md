@@ -19,14 +19,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   from the top of the panel, or open the page on the docs site, where you
   can switch to the manual of another release.
 
+## 0.23.2 — 2026-10-25
+
 ### Maintenance updates
 
+- **Signing in with DMSid says what it covers.** Where OpenV signs people
+  in with DMSid, the sign-in page now says that the same login also opens
+  OpenD and the other DMS SaaS products.
+
 - **The help panel can show the user manual from a docs site.** A
-  deployment that sets `OPENV_DOCS_URL` to a public OpenD docs site shows, in the help panel, the manual's own page for the
+  deployment that sets `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` to an
+  OpenD docs site shows, in the help panel, the manual's own page for the
   screen you are on, written for the release your workspace is on, with
   links between pages, Back, and a search of the manual. Without them the
-  help panel is unchanged. `OPENV_DOCS_EMBED_SECRET` is optional, for a
-  manual with pages kept to some plans.
+  help panel is unchanged.
 
 ## 0.23.1 — 2026-10-24
 
