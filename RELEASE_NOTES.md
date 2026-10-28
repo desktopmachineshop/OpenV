@@ -18,6 +18,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   page you came from. An account made earlier with a password connects to
   the provider with that password once. Other deployments are unchanged.
 
+- **Help pages from the docs site are read with an updated HTML parser.**
+  The library that reads the user manual's pages into the help panel is
+  updated to a release that no longer slows down on pages with very many
+  pieces of text.
+
 ## 0.24.0 — 2026-10-25
 
 ### New features
