@@ -83,7 +83,11 @@ vi.mock('../api/client', async (orig) =>
           ? Promise.resolve({ data: authFixtures.config })
           : new Promise(() => {}),
       me: () =>
-        authFixtures.me ? Promise.resolve({ data: authFixtures.me }) : new Promise(() => {}),
+        authFixtures.me === 'signed-out'
+          ? Promise.reject(new Error('not authenticated'))
+          : authFixtures.me
+            ? Promise.resolve({ data: authFixtures.me })
+            : new Promise(() => {}),
       invitation: () =>
         authFixtures.invitationPending
           ? new Promise(() => {})
@@ -114,7 +118,7 @@ vi.mock('../api/client', async (orig) =>
         record('confirmIdentityLink', { id: 'u1', email: 'dave@example.com', email_verified: true })(
           ...args
         ),
-      oidcLoginUrl: () => '/oidc',
+      oidcLoginUrl: (signUp?: boolean) => (signUp ? '/oidc?signup=1' : '/oidc'),
       googleLoginUrl: () => '/google',
       requestPasswordReset: (...args: any[]) => {
         authFixtures.calls.requestPasswordReset.push(args);
@@ -666,5 +670,117 @@ describe('Login', () => {
     await submitForm('password1');
     expect(authFixtures.calls.confirmIdentityLink).toEqual([]);
     expect(authFixtures.calls.login.length).toBe(1);
+  });
+
+  describe('where single sign-on is the only way in', () => {
+    const ssoOnly = {
+      google_enabled: false,
+      oidc_enabled: true,
+      oidc_only: true,
+      oidc_provider_name: 'DMSid',
+      password_enabled: false,
+      email_verification_required: false,
+      registration: 'open',
+    };
+    let assign: ReturnType<typeof vi.fn>;
+    const original = window.location;
+    beforeEach(() => {
+      sessionStorage.clear();
+      authFixtures.config = ssoOnly;
+      authFixtures.me = 'signed-out';
+      assign = vi.fn();
+      Object.defineProperty(window, 'location', { configurable: true, value: { ...original, assign } });
+    });
+    afterEach(() => {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    });
+
+    it('goes straight to the provider, with no password form or other buttons', async () => {
+      await render('/login?next=%2Fconnect%3Fclient_id%3Dc1');
+      expect(assign).toHaveBeenCalledWith('/oidc');
+      expect(sessionStorage.getItem('openv_return_to')).toBe('/connect?client_id=c1');
+      expect(container.textContent).toContain('Taking you to DMSid');
+      expect(container.querySelector('a[href="/oidc"]')).not.toBeNull();
+      expect(container.querySelector('input[type="password"]')).toBeNull();
+      expect(container.textContent).not.toContain('Sign in with');
+      expect(container.textContent).not.toContain('Create a new account');
+    });
+
+    it('sends sign-up to the provider\'s sign-up page', async () => {
+      await render('/login?mode=register');
+      expect(assign).toHaveBeenCalledWith('/oidc?signup=1');
+      expect(container.textContent).toContain('Create your account');
+    });
+
+    it('comes back to a shared project after signing in', async () => {
+      await render('/login?share=tok');
+      expect(assign).toHaveBeenCalledWith('/oidc');
+      expect(sessionStorage.getItem('openv_return_to')).toBe('/s/tok');
+    });
+
+    it('waits for the session check, and leaves a signed-in visitor to go home', async () => {
+      const { useNavigate } = await import('react-router-dom');
+      const navigate = vi.mocked(useNavigate());
+      navigate.mockClear();
+      authFixtures.me = { id: 'u1', email: 'member@example.com', email_verified: true };
+      await render('/login');
+      expect(navigate).toHaveBeenCalledWith('/projects');
+      expect(assign).not.toHaveBeenCalled();
+    });
+
+    it('does not send the browser round again, but offers to try again', async () => {
+      await render('/login');
+      expect(assign).toHaveBeenCalledTimes(1);
+      act(() => root.unmount());
+      act(() => {
+        root = createRoot(container);
+      });
+      await render('/login');
+      expect(assign).toHaveBeenCalledTimes(1);
+      expect(container.textContent).toContain('Signing in through DMSid did not finish');
+      const retry = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Try again')!;
+      await act(async () => retry.click());
+      expect(assign).toHaveBeenCalledTimes(2);
+    });
+
+    it('stays put after a sign-out or a sign-on error', async () => {
+      await render('/login?signed_out=1');
+      expect(container.textContent).toContain('You are signed out of OpenV');
+      expect(container.textContent).toContain('Continue with DMSid');
+      await render('/login?error=access_denied');
+      expect(container.textContent).toContain('did not finish');
+      expect(container.textContent).toContain('Try again');
+      expect(assign).not.toHaveBeenCalled();
+    });
+
+    it('names the invitation and lets the invitee continue to sign up', async () => {
+      authFixtures.invitation = { email: 'invited@example.com', org_name: 'Acme', role: 'member' };
+      await render('/login?invite=tok');
+      expect(assign).not.toHaveBeenCalled();
+      expect(container.textContent).toContain('You have been invited to Acme as member');
+      expect(container.textContent).toContain('as invited@example.com to join');
+      const go = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Continue with DMSid')!;
+      await act(async () => go.click());
+      expect(assign).toHaveBeenCalledWith('/oidc?signup=1');
+    });
+
+    it('still links the provider to a password account with its password', async () => {
+      authFixtures.identityLink = { provider: 'oidc', email: 'dave@example.com' };
+      await render('/login?link=oidc');
+      expect(assign).not.toHaveBeenCalled();
+      expect(container.textContent).toContain('Connect DMSid and sign in');
+      expect(container.textContent).not.toContain('Forgot your password?');
+      expect(container.textContent).not.toContain('Sign in with DMSid');
+      await submitForm('password1');
+      expect(authFixtures.calls.confirmIdentityLink).toEqual([['password1']]);
+    });
+
+    it('offers to try again when the link has expired', async () => {
+      await render('/login?link=oidc');
+      expect(assign).not.toHaveBeenCalled();
+      expect(container.textContent).toContain('That sign-in has expired.');
+      expect(container.querySelector('input[type="password"]')).toBeNull();
+      expect(container.textContent).toContain('Try again');
+    });
   });
 });

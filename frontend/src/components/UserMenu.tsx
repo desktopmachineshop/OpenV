@@ -41,7 +41,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
       await authAPI.logout();
     } finally {
       setCurrentUser(null);
-      navigate('/login');
+      navigate('/login?signed_out=1');
     }
   };
 

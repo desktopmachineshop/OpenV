@@ -102,6 +102,7 @@ OPENV_OIDC_CLIENT_ID	internal/config:Config.text(name)	""
 OPENV_OIDC_CLIENT_SECRET	internal/config:Config.secret(name)	""
 OPENV_OIDC_ISSUER	internal/config:Config.text(name)	""
 OPENV_OIDC_NAME	internal/config:Config.text(name)	"SSO"
+OPENV_OIDC_ONLY	internal/config:Config.boolean(name)	false
 OPENV_OIDC_REDIRECT_URL	internal/config:Config.text(name)	(computed)
 OPENV_OIDC_SCOPES	internal/config:Config.getenv(name)	-
 OPENV_PASSWORD_RESET_BURST	internal/config:Config.rateLimit(burstVar)	3

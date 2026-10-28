@@ -99,7 +99,9 @@ export const authAPI = {
   confirmIdentityLink: (password: string) =>
     client.post<User>('/api/v1/auth/link', { password }),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
-  oidcLoginUrl: () => `${API_BASE_URL}/api/v1/auth/oidc/login`,
+  // signUp asks the provider for its sign-up page (prompt=create).
+  oidcLoginUrl: (signUp = false) =>
+    `${API_BASE_URL}/api/v1/auth/oidc/login${signUp ? '?signup=1' : ''}`,
   listUsers: () => client.get<User[]>('/api/v1/users'),
 };
 

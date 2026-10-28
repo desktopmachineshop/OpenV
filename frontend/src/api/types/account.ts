@@ -36,6 +36,11 @@ export interface AuthConfig {
   google_enabled: boolean;
   oidc_enabled: boolean;
   oidc_provider_name: string;
+  // Single sign-on is the only way in (OPENV_OIDC_ONLY): the sign-in page
+  // goes straight to the provider. Absent from an older server.
+  oidc_only?: boolean;
+  // Whether the email and password form is offered, to sign in and sign up.
+  password_enabled?: boolean;
   email_verification_required: boolean;
   // Whether the sign-in page can email a password reset link (REQ-158).
   // Without a mailer, a platform admin mints the link instead.

@@ -5,7 +5,7 @@ call sites: 314
   axios instance calls: 303 (DELETE 37, GET 122, HEAD 1, POST 102, PUT 41)
   helper calls (a function that passes its argument to the instance): 2
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
-  needing normalisation: 6 (4 of them axios calls)
+  needing normalisation: 7 (4 of them axios calls)
 distinct METHOD PATH lines below: 313; server routes reached: 313
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -325,6 +325,7 @@ POST    /api/v1/work-items/{id}/move                                      workIt
 ## Normalised call sites (the path the client writes is not literally a route template)
   attachmentAPI.fetchFile: ${version ? `?version=${version}` : ''} is a query-string suffix
   attachmentAPI.getDownloadUrl (url): ${version ? `?version=${version}` : ''} is a query-string suffix
+  authAPI.oidcLoginUrl (url): ${signUp ? '?signup=1' : ''} is a query-string suffix
   crewsAPI.import: ${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''} is a query-string suffix
   projectAPI.download: ${format} is one of csv|docx|excel|json|pdf|reqif; ${query ? `?${query}` : ''} is a query-string suffix
   projectAPI.downloadOptions: ${params} is a query-string suffix

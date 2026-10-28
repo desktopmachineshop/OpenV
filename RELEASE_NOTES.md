@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Sign-in can go straight to single sign-on.** Where a deployment signs
+  everyone in through single sign-on only, the sign-in and sign-up pages
+  take you straight to the provider (its sign-up page when you are creating
+  an account) instead of showing a password form, and bring you back to the
+  page you came from. An account made earlier with a password connects to
+  the provider with that password once. Other deployments are unchanged.
+
 ## 0.24.0 — 2026-10-25
 
 ### New features

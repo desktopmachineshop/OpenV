@@ -2,9 +2,9 @@
 # and the query strings built with URLSearchParams for API calls.
 # Regenerate: npx vitest run src/arch -u. Emails, pushes, Stripe returns, shortcuts and bookmarks carry these names.
 
-page parameters read: 22 (against, artifact, checkout, client_id, code_challenge, code_challenge_method, go, invite, item, link, mode, next, panel, redirect_uri, reset, run, scope, session_id, share, state, tab, token)
+page parameters read: 24 (against, artifact, checkout, client_id, code_challenge, code_challenge_method, error, go, invite, item, link, mode, next, panel, redirect_uri, reset, run, scope, session_id, share, signed_out, state, tab, token)
 page parameters written: 8
-parameters carried by in-app links: 8
+parameters carried by in-app links: 9
 API query parameters built with URLSearchParams: 10
 
 ## Page URL parameters (modules using useSearchParams)
@@ -23,6 +23,8 @@ client_id
 code_challenge
   get
 code_challenge_method
+  get
+error
   get
 go
   get
@@ -55,6 +57,8 @@ session_id
   get
 share
   get
+signed_out
+  get
 state
   get
 tab
@@ -80,6 +84,8 @@ run
   /projects/{}/agent-runs?run={}
 share
   /login?share={}
+signed_out
+  /login?signed_out=1
 tab
   /org/settings?tab=billing
   /org/settings?tab=members

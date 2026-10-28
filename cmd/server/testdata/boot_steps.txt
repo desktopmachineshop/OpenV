@@ -136,6 +136,9 @@ func main()
           call (*internal/domain/invitations.DefaultService).PurgeExpired
           if
             call (internal/domain/runnersessions.Service).Sweep
+  call (*internal/config.Config).OIDCOnlyUnusable
+  if
+    call os.Exit
   call (*internal/config.Config).Billing
   if
     call os.Exit

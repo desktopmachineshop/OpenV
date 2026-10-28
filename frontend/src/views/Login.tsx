@@ -9,7 +9,8 @@ import {
 import { API_ERROR, apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
 import { useIdentityLink } from '../hooks/useIdentityLink';
 import { useAppStore } from '../state/store';
-import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
+import { safeReturnPath } from '../utils/returnTo';
+import { SsoButtons, SsoOnlySignIn } from './LoginSso';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
 // register mode. The first registered user becomes the admin.
@@ -47,8 +48,9 @@ import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
 // register call reports what the token did (`invitation`), and a failed
 // accept is shown rather than swallowed. Somebody who followed a link to
 // join a workspace must never be dropped into an empty account instead.
-/** The name DMS SaaS deployments give their single sign-on: DMSid, one login for every product. */
-const DMSID = 'DMSid';
+//
+// Where single sign-on is the only way in (oidc_only), SsoOnlySignIn takes
+// the page's place, but for linking a provider and deciding on an invitation.
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -89,6 +91,8 @@ export const Login: React.FC = () => {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [oidcName, setOidcName] = useState('SSO');
+  const [oidcOnly, setOidcOnly] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
   const [registrationClosed, setRegistrationClosed] = useState(false);
   // The server's password rule, so the form states what will actually be
   // enforced. DEFAULT_MIN_PASSWORD_LENGTH stands in while the policy is in
@@ -119,6 +123,7 @@ export const Login: React.FC = () => {
       .then((res) => {
         setGoogleEnabled(res.data.google_enabled);
         setOidcEnabled(res.data.oidc_enabled);
+        setOidcOnly(!!res.data.oidc_only);
         if (res.data.oidc_provider_name) setOidcName(res.data.oidc_provider_name);
         setVerificationRequired(!!res.data.email_verification_required);
         setEmailVerificationRequired(!!res.data.email_verification_required);
@@ -156,7 +161,7 @@ export const Login: React.FC = () => {
         }
         setSessionEmail(res.data.email);
       })
-      .catch(() => {});
+      .catch(() => setSignedOut(true));
   }, [navigate, setCurrentUser, setEmailVerificationRequired, inviteToken, shareToken, returnTo]);
 
   // Resolve the invite link so the form can name the workspace and prefill
@@ -365,6 +370,13 @@ export const Login: React.FC = () => {
       setBusy(false);
     }
   };
+
+  if (oidcOnly && !decidingAsSignedIn && !linking) {
+    const back = shareToken ? `/s/${encodeURIComponent(shareToken)}` : returnTo;
+    const problem = linkError ? 'That sign-in has expired.' : inviteError;
+    const props = { name: oidcName, returnTo: back, ready: signedOut, invite, problem };
+    return <SsoOnlySignIn {...props} signUp={mode === 'register' || !!inviteToken} />;
+  }
 
   return (
     <div
@@ -672,7 +684,7 @@ export const Login: React.FC = () => {
                       ? 'Sign in'
                       : 'Create account'}
               </button>
-              {activeMode === 'login' && (
+              {activeMode === 'login' && !oidcOnly && (
                 <div style={{ textAlign: 'center', marginTop: 10 }}>
                   <button
                     type="button"
@@ -707,41 +719,10 @@ export const Login: React.FC = () => {
                 Continue to OpenV
               </button>
             )}
-            {oidcEnabled && (
-              <a
-                href={authAPI.oidcLoginUrl()}
-                onClick={() => rememberReturnTo(returnTo)}
-                className="button-secondary button"
-                style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
-              >
-                Sign in with {oidcName}
-              </a>
+            {!oidcOnly && (
+              <SsoButtons {...{ oidcEnabled, oidcName, googleEnabled, returnTo }} signingIn={activeMode === 'login'} />
             )}
-            {oidcEnabled && oidcName === DMSID && (
-              <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: 'var(--neutral-mid)' }}>
-                One login, lots of services: your DMSid signs you in to OpenV, OpenD and every other
-                DMS SaaS product.
-              </div>
-            )}
-            {googleEnabled ? (
-              <a
-                href={authAPI.googleLoginUrl()}
-                onClick={() => rememberReturnTo(returnTo)}
-                className="button-secondary button"
-                style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
-              >
-                Sign in with Google
-              </a>
-            ) : (
-              !oidcEnabled &&
-              activeMode === 'login' && (
-                <div style={{ marginTop: 12, fontSize: 11, textAlign: 'center', color: 'var(--neutral-mid)' }}>
-                  Google sign-in is available once the server is configured with a Google OAuth
-                  client (see docs/agents.md).
-                </div>
-              )
-            )}
-            <div style={{ margin: '20px 0 0', borderTop: '1px solid var(--neutral-soft)', paddingTop: 16 }}>
+            <div hidden={oidcOnly} style={{ margin: '20px 0 0', borderTop: '1px solid var(--neutral-soft)', paddingTop: 16 }}>
               {!signUpAvailable ? (
                 <div style={{ fontSize: 13, textAlign: 'center', color: 'var(--text-muted)' }}>
                   Registration is closed; ask a workspace admin for an invitation.
