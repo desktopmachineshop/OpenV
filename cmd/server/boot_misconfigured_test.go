@@ -46,7 +46,8 @@ import (
 // refusing a price map that does not parse, and once more refusing a trial
 // with a unit after its number, which billing's counts, unlike every other
 // setting, refuse rather than fall back from (#379, question 15);
-// CORS_ORIGIN; and the database credentials, which are used exactly as set
+// CORS_ORIGIN; OPENV_OIDC_ONLY twice, with no issuer and with no client id;
+// and the database credentials, which are used exactly as set
 // (#379, question 24): a DATABASE_URL with a line break after it, which does
 // not parse; one with a space in front of it, as Railway's has no query,
 // which lib/pq would read as key=value settings and whose parse error would
@@ -145,6 +146,10 @@ var misconfiguredBoots = []misconfiguredBoot{
 	{name: "fatal_db_password_line_break", about: "no DATABASE_URL, and a DB_PASSWORD with a line break after it, which the stand-in database receives exactly as set and refuses",
 		env:     map[string]string{"DATABASE_URL": "", "DB_PASSWORD": bootDatabasePassword + "\n"},
 		standIn: true, secret: bootDatabasePassword},
+	{name: "fatal_oidc_only", about: "OPENV_OIDC_ONLY on with no OPENV_OIDC_ISSUER, so nobody could sign in",
+		env: map[string]string{"OPENV_OIDC_ONLY": "true"}},
+	{name: "fatal_oidc_only_no_client", about: "OPENV_OIDC_ONLY on with an OPENV_OIDC_ISSUER and no OPENV_OIDC_CLIENT_ID, so nobody could sign in",
+		env: map[string]string{"OPENV_OIDC_ONLY": "true", "OPENV_OIDC_ISSUER": "https://idp.example.test"}},
 	{name: "fatal_secrets_key_short", about: "an OPENV_SECRETS_KEY shorter than 32 characters, which would seal pasted API keys weakly",
 		env:    map[string]string{"OPENV_SECRETS_KEY": shortSecretsKey},
 		secret: shortSecretsKey},

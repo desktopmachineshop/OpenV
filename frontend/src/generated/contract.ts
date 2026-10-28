@@ -112,6 +112,7 @@ export const API_ERROR_CODES = [
   'no_password',
   'reset_invalid',
   'reset_email_unavailable',
+  'sso_only',
   'billing_unavailable',
   'billing_upstream',
   'unknown_plan',

@@ -439,6 +439,11 @@
       "read_by": "server",
       "text": "The provider's name on the sign-in button."
     },
+    "OPENV_OIDC_ONLY": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "`true` makes single sign-on through the OIDC provider the only way in: the sign-in and sign-up pages go straight to the provider (sign-up asks it for its sign-up page with `prompt=create`), and password sign-in, sign-up and reset and Google sign-in are refused. An account made with a password still links the provider with its password once. Needs `OPENV_OIDC_ISSUER` and `OPENV_OIDC_CLIENT_ID`; without them the server refuses to start."
+    },
     "OPENV_OIDC_REDIRECT_URL": {
       "area": "tenancy-identity",
       "read_by": "server",

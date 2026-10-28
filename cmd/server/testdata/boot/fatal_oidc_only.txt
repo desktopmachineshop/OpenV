@@ -1,0 +1,47 @@
+# The server binary (go build -cover ./cmd/server) booted on a fresh
+# database with one malformed setting, and how it refused to start (refactor
+# plan §6.4 S4b; invariant I13). Written by TestBootMisconfigured
+# (cmd/server/boot_misconfigured_test.go) through the S4a harness
+# (cmd/server/harness_test.go); the server's HTTP_PROXY and HTTPS_PROXY are
+# the test's recording proxy, which refuses everything. Regenerate with
+#   OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootMisconfigured$'
+# against a server with or without the vector extension.
+# Normalised: log timestamps dropped; durations, ports, the release version,
+# UUIDs and the temporary directory replaced by <...>; a no-vector server's
+# warning taken out; the recording proxy's address shown as <recording proxy
+# port>; lines logged from boot goroutines left out.
+
+== misconfigured boot fatal_oidc_only: OPENV_OIDC_ONLY on with no OPENV_OIDC_ISSUER, so nobody could sign in
+HTTPS_PROXY=http://127.0.0.1:<recording proxy port>
+HTTP_PROXY=http://127.0.0.1:<recording proxy port>
+OPENV_OIDC_ONLY=true
+
+== boot log, in order (lines logged from boot goroutines left out)
+level=INFO msg="using DATABASE_URL (Railway.app mode)"
+level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
+level=INFO msg="upload sweep: nothing to remove: the database names no figure or evidence file, and <tmp>/uploads holds none"
+level=INFO msg="upload sweep: done" dir=<tmp>/uploads removed=0 logos_removed=0 avatars_removed=0 bytes=0 failed=0 kept_recent=0 named=0
+level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
+level=INFO msg="transient runners disabled (set RUNNER_POOL_KEY to enable)"
+level=INFO msg="Hosted runners disabled (HOSTED_RUNNERS=off)"
+level=INFO msg="shared product pool seeded" added=15 of=15
+level=INFO msg="email: OPENV_SMTP_HOST unset; email notifications disabled (in-app + SSE delivery unaffected)"
+level=INFO msg="email verification: disabled (no OPENV_SMTP_HOST; accounts are verified at sign-up)"
+level=INFO msg="session lifetime" max_age=720h0m0s idle=168h0m0s
+level=INFO msg="registration: open (set OPENV_REGISTRATION=closed to require an invitation)"
+level=INFO msg="push: OPENV_VAPID_PUBLIC_KEY unset; web push disabled (in-app + SSE delivery unaffected)"
+level=INFO msg=release version=<version>
+level=ERROR msg="OPENV_OIDC_ONLY is not usable" error="OPENV_OIDC_ONLY is on but OPENV_OIDC_ISSUER is not set, so nobody could sign in"
+
+== stdout
+(none)
+
+== exit
+exit status 1
+the server exited before it answered /health
+
+== the boot's database after the exit
+migrations ran before the exit: all (the schema_migrations ledger records every registered migration)
+
+== outbound requests (the recording proxy, after exit)
+none: the server sent no request through HTTP_PROXY or HTTPS_PROXY

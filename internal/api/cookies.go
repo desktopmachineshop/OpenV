@@ -138,3 +138,25 @@ func linkPageURL(frontendURL, provider string) string {
 	}
 	return page
 }
+
+// ownSignInRefused guards OpenV's own ways in: password sign-in, sign-up and
+// reset, and Google. On a deployment that signs everyone in through its
+// single sign-on provider only (OPENV_OIDC_ONLY) it answers 403 sso_only,
+// naming the provider, and returns true: the caller stops. Linking a
+// provider to a password account is not one of them: it stays open in that
+// mode.
+func (h *Handler) ownSignInRefused(w http.ResponseWriter) bool {
+	if !h.ssoOnly() {
+		return false
+	}
+	writeJSONErrorCode(w, http.StatusForbidden,
+		"this server signs everyone in through "+h.OIDC.displayName()+" only", ErrCodeSSOOnly)
+	return true
+}
+
+// ssoOnly reports whether single sign-on through the configured provider is
+// the only way in (OPENV_OIDC_ONLY). It needs the provider configured: the
+// setting alone turns nothing off.
+func (h *Handler) ssoOnly() bool {
+	return h.OIDC.Enabled() && h.OIDC.Only
+}

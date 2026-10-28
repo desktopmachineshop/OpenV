@@ -9,6 +9,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Sign-in can go straight to single sign-on.** Where a deployment signs
+  everyone in through single sign-on only, the sign-in and sign-up pages
+  take you straight to the provider (its sign-up page when you are creating
+  an account) instead of showing a password form, and bring you back to the
+  page you came from. An account made earlier with a password connects to
+  the provider with that password once. Other deployments are unchanged.
+
+- **Help pages from the docs site are read with an updated HTML parser.**
+  The library that reads the user manual's pages into the help panel is
+  updated to a release that no longer slows down on pages with very many
+  pieces of text.
+
 ## 0.24.0 — 2026-10-25
 
 ### New features

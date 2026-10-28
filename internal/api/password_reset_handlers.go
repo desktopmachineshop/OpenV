@@ -44,6 +44,10 @@ func (h *Handler) passwordResetEmailAvailable() bool {
 // account. Open, and deliberately uninformative: 202 whether or not the
 // address is known, with the lookup and the send done after the answer.
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	// Without a password sign-in there is no password to reset.
+	if h.ownSignInRefused(w) {
+		return
+	}
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -108,6 +112,10 @@ func (h *Handler) sendPasswordResetFor(email string) {
 
 // ConfirmPasswordReset spends a reset link and sets the new password.
 func (h *Handler) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
+	// Without a password sign-in there is no password to reset.
+	if h.ownSignInRefused(w) {
+		return
+	}
 	var req struct {
 		Token       string `json:"token"`
 		NewPassword string `json:"new_password"`

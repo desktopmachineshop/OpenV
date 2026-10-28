@@ -48,6 +48,11 @@ type OIDCConfig struct {
 	ProviderName string   // display label for the button, e.g. "Okta"; defaults to "SSO"
 	// FrontendURL is where the callback redirects after a successful login.
 	FrontendURL string
+	// Only makes this provider the only way in (OPENV_OIDC_ONLY): password
+	// sign-in, sign-up and reset and Google refuse, and the sign-in page goes
+	// straight to the provider. Linking a provider to a password account
+	// (auth_link_handlers.go) still asks for the password once.
+	Only bool
 
 	// Lazily-initialized discovery state. Discovery makes a network call to the
 	// issuer, so it is deferred to first use (and retried on each use until it
@@ -112,6 +117,10 @@ func (h *Handler) registerOIDCRoutes(router *mux.Router) {
 // (S256, binding the code to this browser; some providers, the Desktop Machine
 // Shop sign-in among them, require it), each secret stored in a short-lived
 // HttpOnly cookie for the callback.
+//
+// ?signup=1 asks the provider for its sign-up page with prompt=create
+// (OpenID Connect Prompt Create 1.0). It is sent only when asked for: a
+// provider that does not know the value may refuse the request.
 func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	if !h.OIDC.Enabled() {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
@@ -142,7 +151,11 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	h.setOIDCFlowCookie(w, oidcNonceCookie, nonce)
 	h.setOIDCFlowCookie(w, oidcVerifierCookie, verifier)
 
-	http.Redirect(w, r, h.OIDC.oauth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)), http.StatusFound)
+	opts := []oauth2.AuthCodeOption{oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)}
+	if r.URL.Query().Get("signup") == "1" {
+		opts = append(opts, oauth2.SetAuthURLParam("prompt", "create"))
+	}
+	http.Redirect(w, r, h.OIDC.oauth.AuthCodeURL(state, opts...), http.StatusFound)
 }
 
 // OIDCCallback completes the code flow: it validates state, exchanges the code,

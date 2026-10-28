@@ -48,6 +48,10 @@ const (
 	// on a deployment with no mailer (REQ-158).
 	ErrCodeResetInvalid          = "reset_invalid"
 	ErrCodeResetEmailUnavailable = "reset_email_unavailable"
+	// ErrCodeSSOOnly answers a password sign-in, sign-up or reset, or a
+	// Google sign-in, on a deployment that signs everyone in through its
+	// single sign-on provider only (OPENV_OIDC_ONLY).
+	ErrCodeSSOOnly = "sso_only"
 	// ErrCodeBillingUnavailable answers every billing route on a deployment
 	// with no billing provider configured — every self-hosted one.
 	ErrCodeBillingUnavailable = "billing_unavailable"

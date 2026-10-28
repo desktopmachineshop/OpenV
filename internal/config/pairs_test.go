@@ -155,7 +155,7 @@ func TestSSOSettingsOnlyWithTheirSwitch(t *testing.T) {
 		"OPENV_OIDC_CLIENT_ID": "oidc-client", "OPENV_OIDC_CLIENT_SECRET": oidcSecret, "OPENV_OIDC_NAME": "Okta",
 		"OPENV_OIDC_REDIRECT_URL": "https://api.example.test/cb", "OPENV_OIDC_SCOPES": "openid  email",
 		"GOOGLE_CLIENT_SECRET": googleSecret, "PUBLIC_URL": "https://api.example.test", "FRONTEND_URL": "https://app.example.test",
-		"PORT": "9090",
+		"PORT": "9090", "OPENV_OIDC_ONLY": "true",
 	}
 	for _, issuer := range []string{"\x00unset", "", "   "} {
 		env := map[string]string{}
@@ -189,7 +189,8 @@ func TestSSOSettingsOnlyWithTheirSwitch(t *testing.T) {
 	log := captureLog(t)
 	c := loadFrom(env)
 	wantOIDC := &OIDC{Issuer: "https://idp.example.test", ClientID: "oidc-client", ClientSecret: oidcSecret,
-		RedirectURL: "https://api.example.test/cb", Scopes: []string{"openid", "email"}, ProviderName: "Okta", FrontendURL: "https://app.example.test"}
+		RedirectURL: "https://api.example.test/cb", Scopes: []string{"openid", "email"}, ProviderName: "Okta", FrontendURL: "https://app.example.test",
+		Only: true}
 	if got := c.OIDC(); !reflect.DeepEqual(got, wantOIDC) {
 		t.Errorf("OIDC() = %+v, want %+v", got, wantOIDC)
 	}
@@ -215,6 +216,41 @@ func TestSSOSettingsOnlyWithTheirSwitch(t *testing.T) {
 	}
 	if got := c.GoogleOAuth().RedirectURL; got != "http://localhost:9090"+googleRedirectPath {
 		t.Errorf("GoogleOAuth().RedirectURL with PORT=9090 and no PUBLIC_URL = %q", got)
+	}
+}
+
+// TestOIDCOnlyUnusable: OPENV_OIDC_ONLY is a refusal to start (stage sso)
+// when there is no provider to sign in through: no issuer, or an issuer and
+// no client id. With an issuer it reads nothing more than OIDC() did; with
+// none, it reads OPENV_OIDC_ONLY alone.
+func TestOIDCOnlyUnusable(t *testing.T) {
+	quietLog(t)
+	for _, c := range []struct {
+		env     map[string]string
+		wantErr string
+	}{
+		{map[string]string{}, ""},
+		{map[string]string{"OPENV_OIDC_ONLY": "false"}, ""},
+		{map[string]string{"OPENV_OIDC_ONLY": "true"}, "OPENV_OIDC_ISSUER is not set"},
+		{map[string]string{"OPENV_OIDC_ONLY": "1", "OPENV_OIDC_ISSUER": "   "}, "OPENV_OIDC_ISSUER is not set"},
+		{map[string]string{"OPENV_OIDC_ONLY": "true", "OPENV_OIDC_ISSUER": "https://idp.example.test"}, "OPENV_OIDC_CLIENT_ID is not set"},
+		{map[string]string{"OPENV_OIDC_ONLY": "true", "OPENV_OIDC_ISSUER": "https://idp.example.test", "OPENV_OIDC_CLIENT_ID": "c"}, ""},
+		{map[string]string{"OPENV_OIDC_ISSUER": "https://idp.example.test"}, ""},
+	} {
+		cfg := loadFrom(c.env)
+		o := cfg.OIDC()
+		var reads []string
+		err := traced(cfg, &reads).OIDCOnlyUnusable(o)
+		if (err == nil) != (c.wantErr == "") || (err != nil && !strings.Contains(err.Error(), c.wantErr)) {
+			t.Errorf("%v: OIDCOnlyUnusable = %v, want an error naming %q", c.env, err, c.wantErr)
+		}
+		want := []string(nil)
+		if o == nil {
+			want = []string{"OPENV_OIDC_ONLY"}
+		}
+		if !reflect.DeepEqual(reads, want) {
+			t.Errorf("%v: OIDCOnlyUnusable read %v, want %v", c.env, reads, want)
+		}
 	}
 }
 
@@ -589,7 +625,7 @@ func TestAccessorsReadTodaysVariables(t *testing.T) {
 		{"BuildSHA", func(c *Config) { c.BuildSHA() }, []string{"RAILWAY_GIT_COMMIT_SHA", "OPENV_BUILD_SHA"}},
 		{"GoogleOAuth", func(c *Config) { c.GoogleOAuth() }, []string{"GOOGLE_CLIENT_ID", "PORT", "PUBLIC_URL", "GOOGLE_CLIENT_SECRET", "FRONTEND_URL"}},
 		{"OIDC", func(c *Config) { c.OIDC() }, []string{"OPENV_OIDC_ISSUER", "PORT", "PUBLIC_URL", "OPENV_OIDC_REDIRECT_URL", "OPENV_OIDC_SCOPES",
-			"OPENV_OIDC_CLIENT_ID", "OPENV_OIDC_CLIENT_SECRET", "OPENV_OIDC_NAME", "FRONTEND_URL"}},
+			"OPENV_OIDC_CLIENT_ID", "OPENV_OIDC_CLIENT_SECRET", "OPENV_OIDC_NAME", "FRONTEND_URL", "OPENV_OIDC_ONLY"}},
 		{"Billing", func(c *Config) { _, _ = c.Billing() }, []string{"STRIPE_SECRET_KEY", "OPENV_STRIPE_API_VERSION", "OPENV_BILLING_RETURN_URL",
 			"OPENV_BILLING_PORTAL_CONFIG", "OPENV_BILLING_MAX_SEATS", "OPENV_BILLING_TRIAL_DAYS", "OPENV_STRIPE_PRICES", "OPENV_BILLING_RECONCILE_MINUTES"}},
 		{"HandlerFrontendURL", func(c *Config) { c.HandlerFrontendURL() }, []string{"PUBLIC_URL", "FRONTEND_URL"}},

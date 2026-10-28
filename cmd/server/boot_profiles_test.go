@@ -143,6 +143,10 @@ var s4bProfiles = s4b([]bootProfile{
 	{name: "registration_closed", about: "self-service registration closed",
 		env:    map[string]string{"OPENV_REGISTRATION": registrationClosed},
 		signUp: signUpOnOpenServer},
+	{name: "oidc_only", about: "single sign-on the only way in, so the server refuses to register an account",
+		env: map[string]string{"OPENV_OIDC_ISSUER": "https://idp.example.test", "OPENV_OIDC_CLIENT_ID": "boot-harness",
+			"OPENV_OIDC_ONLY": "true"},
+		signUp: signUpOnOpenServer},
 	{name: "limits", about: "a deployment-wide limit override",
 		env: map[string]string{"OPENV_LIMITS": testLimits}},
 	{name: "agent_providers", about: "a deployment offering Claude Code alone, with one name the server does not know, which is ignored with a warning",
@@ -200,10 +204,11 @@ func s4b(profiles []bootProfile) []bootProfile {
 	return profiles
 }
 
-// signUpOnOpenServer is how the registration_closed profile gets the
-// account S4a's later probes use, since its own server refuses to register
-// one: a second server, booted from the same binary with the same variables
-// but registration open, on the same database, registers an account of its
+// signUpOnOpenServer is how the registration_closed and oidc_only profiles
+// get the account S4a's later probes use, since their own server refuses to
+// register one: a second server, booted from the same binary with the same
+// variables but registration open and password sign-up on, on the same
+// database, registers an account of its
 // own (openedEmail, so that a server under test that wrongly let the
 // harness's address in fails on its golden, not here) and is stopped. The
 // session it issued is a row of that database, so the server under test
@@ -214,7 +219,7 @@ func signUpOnOpenServer(r *probeRun) *http.Cookie {
 	r.t.Helper()
 	env := map[string]string{}
 	for k, v := range r.env {
-		if k != "OPENV_REGISTRATION" {
+		if k != "OPENV_REGISTRATION" && k != "OPENV_OIDC_ONLY" {
 			env[k] = v
 		}
 	}

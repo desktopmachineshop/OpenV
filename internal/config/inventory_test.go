@@ -240,6 +240,8 @@ func accessorCases() []accessorCase {
 			get: func(c *Config) any { return c.OIDC().ProviderName }},
 		{name: "FRONTEND_URL", read: "cmd/server:envOr(key)", accessor: "OIDC().FrontendURL", with: oidcOn,
 			def: "http://localhost:3000", get: func(c *Config) any { return c.OIDC().FrontendURL }},
+		{name: "OPENV_OIDC_ONLY", read: "internal/config:Config.boolean(name)", accessor: "OIDC().Only", with: oidcOn,
+			def: false, get: func(c *Config) any { return c.OIDC().Only }},
 		// stage billing
 		{name: "STRIPE_SECRET_KEY", read: "internal/billing:ConfigFromEnv(getenv)", accessor: "Billing().SecretKey", def: "",
 			get: billingField(func(b billing.Config) any { return b.SecretKey })},

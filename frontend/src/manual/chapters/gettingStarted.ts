@@ -25,6 +25,20 @@ Open the app in your browser and you land on the sign-in screen.
   made with Google or single sign-on cannot be joined to another provider
   this way.
 
+Some servers sign everyone in through **single sign-on only** (on
+openv.app, that is DMSid, the one login for every DMS SaaS product). There
+the sign-in screen has no form and no buttons: opening it, or any *Sign up*
+or *Create free account* link, takes you straight to the provider's own
+sign-in or sign-up page and brings you back signed in. After you sign out,
+or if signing in did not finish, the screen stays put with a button to
+continue or **Try again**. An account you made earlier with a password is
+still yours: the first time you sign in through the provider at the same
+address, OpenV asks for that account's password once to connect the two,
+and from then on the provider signs you in. An invitation link names the
+workspace and the address it was sent to; continue to the provider and sign
+in with that address to join. There is no password to reset on such a
+server — use the provider's own reset.
+
 The **first user to register becomes the server admin**.
 
 After signing in you are taken to the **Projects** page. On a server that
