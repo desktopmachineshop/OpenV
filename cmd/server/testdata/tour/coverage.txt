@@ -234,6 +234,7 @@ POST /api/v1/auth/invitations/preview: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/link: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/login: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/logout: s5c, s5e; 2xx or 3xx in s5c, s5e
+POST /api/v1/auth/oidc/account-deletion: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/password-reset: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/password-reset/confirm: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/auth/register: s5c, s5e; 2xx or 3xx in s5c
@@ -382,4 +383,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 371 of 371 routes reached (100.0%), 359 with a 2xx or 3xx answer (96.8%); the floor is 90%, 334 routes
+the tour: 372 of 372 routes reached (100.0%), 360 with a 2xx or 3xx answer (96.8%); the floor is 90%, 335 routes

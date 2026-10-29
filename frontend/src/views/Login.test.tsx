@@ -136,7 +136,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  authFixtures.config = null;
+  authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
   authFixtures.invitation = null;
   authFixtures.invitationPending = false;
   authFixtures.policy = { registration: 'open', min_password_length: 8 };
@@ -643,6 +643,24 @@ describe('Login', () => {
     expect(navigate).toHaveBeenCalledWith('/projects');
   });
 
+  // Until the server has said which ways in it offers, the page shows
+  // none: the password form must not flash on its way to the provider.
+  it('renders no form while the sign-in methods load', async () => {
+    authFixtures.config = null;
+    await render('/login');
+    expect(container.querySelector('form')).toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(container.textContent).toBe('');
+  });
+
+  it('explains a sign-on that came back with an error, beside the form', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: true, oidc_provider_name: 'Okta', registration: 'open' };
+    await render('/login?error=sso_cancelled');
+    expect(container.textContent).toContain('Signing in through Okta was cancelled.');
+    expect(container.querySelector('[role="alert"] a[href="/oidc"]')?.textContent).toBe('Try again');
+    expect(container.querySelector('input[type="password"]')).not.toBeNull();
+  });
+
   // A Google sign-on met an account made with a password: the page names the
   // account, locks its address, and the password confirms the link.
   it('connects Google to a password account with its password', async () => {
@@ -747,7 +765,7 @@ describe('Login', () => {
       await render('/login?signed_out=1');
       expect(container.textContent).toContain('You are signed out of OpenV');
       expect(container.textContent).toContain('Continue with DMSid');
-      await render('/login?error=access_denied');
+      await render('/login?error=sso_failed');
       expect(container.textContent).toContain('did not finish');
       expect(container.textContent).toContain('Try again');
       expect(assign).not.toHaveBeenCalled();
@@ -773,6 +791,43 @@ describe('Login', () => {
       expect(container.textContent).not.toContain('Sign in with DMSid');
       await submitForm('password1');
       expect(authFixtures.calls.confirmIdentityLink).toEqual([['password1']]);
+    });
+
+    // Someone who forgot the password the link step asks for resets it by
+    // email, from that step, for the address being linked.
+    it('offers a reset of the OpenV password from the link step', async () => {
+      authFixtures.identityLink = { provider: 'oidc', email: 'dave@example.com' };
+      await render('/login?link=oidc');
+      const forgot = Array.from(container.querySelectorAll('button')).find(
+        (b) => b.textContent === 'Forgot your OpenV password?'
+      )!;
+      await act(async () => forgot.click());
+      expect(assign).not.toHaveBeenCalled();
+      expect(container.textContent).toContain('Reset your password');
+      expect(container.textContent).toContain('connects DMSid to your OpenV account once');
+      expect((container.querySelector('input[type="email"]') as HTMLInputElement).value).toBe('dave@example.com');
+      const form = container.querySelector('form') as HTMLFormElement;
+      await act(async () => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+      expect(authFixtures.calls.requestPasswordReset).toEqual([['dave@example.com']]);
+      expect(container.textContent).toContain('a reset link is on its way');
+    });
+
+    it('explains each sign-on error in words of its own', async () => {
+      await render('/login?error=sso_cancelled');
+      expect(container.textContent).toContain('Signing in through DMSid was cancelled.');
+      await render('/login?error=sso_unverified');
+      expect(container.textContent).toContain('DMSid has not confirmed your email address');
+      expect(container.textContent).toContain('Try again');
+      expect(assign).not.toHaveBeenCalled();
+    });
+
+    it('stays put after the password was reset, and says what comes next', async () => {
+      await render('/login?reset=done');
+      expect(assign).not.toHaveBeenCalled();
+      expect(container.textContent).toContain('Your OpenV password is set. Continue with DMSid');
+      expect(container.querySelector('input[type="password"]')).toBeNull();
     });
 
     it('offers to try again when the link has expired', async () => {

@@ -84,6 +84,7 @@ type app struct {
 	templateRepo         *postgres.TemplateRepository
 	chatterRepo          *postgres.ChatterRepository
 	userRepo             *postgres.UserRepository
+	userDeletionRepo     *postgres.UserDeletionRepository
 	memberRepo           *postgres.MemberRepository
 	eventRepo            *postgres.EventRepository
 	productProfileRepo   *postgres.ProductProfileRepository
