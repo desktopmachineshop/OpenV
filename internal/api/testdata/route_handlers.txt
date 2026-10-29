@@ -98,6 +98,7 @@ GET /api/v1/auth/google -> GoogleLogin
 GET /api/v1/auth/google/callback -> GoogleCallback
 GET /api/v1/auth/oidc/login -> OIDCLogin
 GET /api/v1/auth/oidc/callback -> OIDCCallback
+POST /api/v1/auth/oidc/account-deletion -> OIDCAccountDeletion
 GET /api/v1/auth/link -> PreviewIdentityLink
 POST /api/v1/auth/link -> ConfirmIdentityLink
 GET /api/v1/users -> ListUsers

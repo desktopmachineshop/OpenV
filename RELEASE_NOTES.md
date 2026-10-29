@@ -9,6 +9,36 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Remove your OpenV account from your DMSid page.** Where OpenV signs
+  people in with DMSid, **Remove my account from OpenV** (and **Delete my
+  DMSid**) on your DMSid page now removes your OpenV account: you are signed
+  out everywhere, your keys, connected apps and notifications go, and any
+  workspace only you belong to is deleted with everything in it. What you
+  wrote in shared workspaces stays for the people who rely on it, shown as
+  by "Deleted user". If you are the only admin of a workspace other people
+  use, or a workspace of yours still has a paid subscription, DMSid tells
+  you what to do first and nothing is removed.
+
+### Bug fixes
+
+- **Forgot the password single sign-on asks for once?** Where everyone
+  signs in through single sign-on, connecting it to an account you made
+  earlier with a password asks for that password once. That step now has
+  **Forgot your OpenV password?**, which emails you a link to set a new
+  one; setting it signs nobody in, it only lets you finish connecting.
+
+- **A cancelled or failed single sign-on comes back to the sign-in page.**
+  Cancelling at the provider, or a sign-in through it that does not
+  finish, now brings you back to OpenV's sign-in page with a short
+  explanation and a **Try again** button, instead of a page of error text.
+
+- **No flash of the password form on the way to single sign-on.** The
+  sign-in page now waits until it knows how this server signs people in
+  before showing anything, so a password form no longer appears for a
+  moment before you are taken to the provider.
+
 ## 0.24.1 — 2026-10-29
 
 ### Maintenance updates

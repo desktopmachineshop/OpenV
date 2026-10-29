@@ -173,6 +173,8 @@ func sessionsAuthTour(tr *tour, google *tourGoogle) {
 	tr.step("the registration policy and the password rule", anon, "GET /api/v1/auth/policy")
 	tr.step("OIDC sign-in, not configured here", anon, "GET /api/v1/auth/oidc/login")
 	tr.step("the OIDC callback, not configured here", anon, "GET /api/v1/auth/oidc/callback")
+	tr.step("an account deletion from the identity provider, not configured here", anon,
+		"POST /api/v1/auth/oidc/account-deletion", rawBody("application/x-www-form-urlencoded", []byte("deletion_token=x")))
 
 	// Registration, from an address of its own: the handler decodes, then
 	// spends the address's budget (5), then applies the policy, then

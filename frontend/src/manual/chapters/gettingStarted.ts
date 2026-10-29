@@ -31,13 +31,18 @@ the sign-in screen has no form and no buttons: opening it, or any *Sign up*
 or *Create free account* link, takes you straight to the provider's own
 sign-in or sign-up page and brings you back signed in. After you sign out,
 or if signing in did not finish, the screen stays put with a button to
-continue or **Try again**. An account you made earlier with a password is
+continue or **Try again**, and says what happened: that you cancelled at the
+provider, that the provider has not confirmed your address, or that the
+sign-in did not complete. An account you made earlier with a password is
 still yours: the first time you sign in through the provider at the same
 address, OpenV asks for that account's password once to connect the two,
-and from then on the provider signs you in. An invitation link names the
+and from then on the provider signs you in. If you no longer know that
+password, **Forgot your OpenV password?** on the same screen emails you a
+link to set a new one (see *Forgot your password?* below); setting it does
+not sign you in, it lets you finish connecting. An invitation link names the
 workspace and the address it was sent to; continue to the provider and sign
-in with that address to join. There is no password to reset on such a
-server — use the provider's own reset.
+in with that address to join. To sign in once connected, use the provider's
+own password and its own reset.
 
 The **first user to register becomes the server admin**.
 
@@ -84,6 +89,34 @@ a day and works once.
 
 Accounts that sign in with Google or single sign-on have no password to
 reset — sign in there.
+
+On a server that signs everyone in through single sign-on only, the reset
+is for one thing: connecting the provider to an account you made earlier
+with a password. Setting the new password does not sign you in and does not
+bring the password form back. The screen says your password is set; continue
+to the provider, and enter the new password when OpenV asks for it.
+
+### Removing your account
+
+On a server that signs people in with DMSid, your DMSid page lists the
+products you can be removed from. **Remove my account from OpenV** (and
+**Delete my DMSid**, which removes you from every product first) ends your
+OpenV account:
+
+- You are signed out everywhere, and your runner keys, connected AI apps,
+  notifications, workspace memberships and pending invitations go.
+- A workspace only you belong to, your personal one among them, is deleted
+  with everything in it.
+- What you wrote in workspaces other people use — requirements, links,
+  comments, test results, baselines — stays for them, shown as written by
+  **Deleted user**. Nothing left there names you or your address.
+
+Two things stop it, and DMSid shows you which, with nothing removed: being
+the **only admin** of a workspace that has other members (make someone else
+an admin, or remove the others, first), and a workspace that only you belong
+to still having a **paid subscription** (cancel it in the workspace's
+billing settings first). Signing in with DMSid again afterwards starts a new,
+empty OpenV account.
 
 Sessions do not last forever: one expires a set time after you sign in, and
 sooner if you stop using it. Your server's administrator sets both limits

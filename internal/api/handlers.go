@@ -70,7 +70,10 @@ type HandlerDeps struct {
 	EmbeddingService     *embeddings.Service
 	UploadsDir           string
 
-	UserService     users.Service
+	UserService users.Service
+	// AccountDeleter removes an account at the single sign-on provider's
+	// request (oidc_account_deletion.go); nil answers that endpoint 404.
+	AccountDeleter  users.AccountDeleter
 	MemberService   members.Service
 	ProductService  products.Service
 	VVService       vv.Service

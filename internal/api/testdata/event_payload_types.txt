@@ -136,9 +136,13 @@ org.member_added              (org)              org-1                    POST /
 org.member_added              role               string                   POST /api/v1/orgs/{id}/members (address with an account)
 org.member_added              user_id            string                   POST /api/v1/orgs/{id}/members (address with an account)
 org.member_removed            (actor)            user:u-admin             DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            (actor)            user:u-known             account removed at the identity provider's request
 org.member_removed            (org)              org-1                    DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            (org)              org-1                    account removed at the identity provider's request
 org.member_removed            self               bool                     DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            self               bool                     account removed at the identity provider's request
 org.member_removed            user_id            string                   DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            user_id            string                   account removed at the identity provider's request
 org.member_role_changed       (actor)            user:u-admin             PUT /api/v1/orgs/{id}/members/{userId}
 org.member_role_changed       (org)              org-1                    PUT /api/v1/orgs/{id}/members/{userId}
 org.member_role_changed       from               string                   PUT /api/v1/orgs/{id}/members/{userId}

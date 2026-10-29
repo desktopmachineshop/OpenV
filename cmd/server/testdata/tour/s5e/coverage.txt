@@ -235,6 +235,7 @@ POST /api/v1/auth/invitations/preview: 400, 404; phantom_matrix (errors only)
 POST /api/v1/auth/link: 400; phantom_matrix (errors only)
 POST /api/v1/auth/login: 400; phantom_matrix (errors only)
 POST /api/v1/auth/logout: 204; phantom_matrix
+POST /api/v1/auth/oidc/account-deletion: 404; phantom_matrix (errors only)
 POST /api/v1/auth/password-reset: 400; phantom_matrix (errors only)
 POST /api/v1/auth/password-reset/confirm: 400; phantom_matrix (errors only)
 POST /api/v1/auth/register: 400; phantom_matrix (errors only)
@@ -383,4 +384,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 370 of 371 routes reached (99.7%), 169 with a 2xx or 3xx answer (45.6%)
+s5e: 371 of 372 routes reached (99.7%), 169 with a 2xx or 3xx answer (45.4%)

@@ -432,7 +432,7 @@
     "OPENV_OIDC_ISSUER": {
       "area": "tenancy-identity",
       "read_by": "server",
-      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured. Sign-in sends a PKCE challenge (S256). For Desktop Machine Shop accounts, the issuer is the OpenD control plane's `PUBLIC_URL`, with the client registered there (OpenD-hosted ADR 0009)."
+      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured. Sign-in sends a PKCE challenge (S256). For Desktop Machine Shop accounts, the issuer is the OpenD control plane's `PUBLIC_URL`, with the client registered there (OpenD-hosted ADR 0009). The provider may also remove accounts through `POST /api/v1/auth/oidc/account-deletion` (DMSid ADR 0002): register `$PUBLIC_URL/api/v1/auth/oidc/account-deletion` as the client's deletion URI."
     },
     "OPENV_OIDC_NAME": {
       "area": "tenancy-identity",
@@ -442,7 +442,7 @@
     "OPENV_OIDC_ONLY": {
       "area": "tenancy-identity",
       "read_by": "server",
-      "text": "`true` makes single sign-on through the OIDC provider the only way in: the sign-in and sign-up pages go straight to the provider (sign-up asks it for its sign-up page with `prompt=create`), and password sign-in, sign-up and reset and Google sign-in are refused. An account made with a password still links the provider with its password once. Needs `OPENV_OIDC_ISSUER` and `OPENV_OIDC_CLIENT_ID`; without them the server refuses to start."
+      "text": "`true` makes single sign-on through the OIDC provider the only way in: the sign-in and sign-up pages go straight to the provider (sign-up asks it for its sign-up page with `prompt=create`), and password sign-in and sign-up and Google sign-in are refused. An account made with a password still links the provider with its password once; the password reset stays open for that step, sets the password only and signs nobody in. Needs `OPENV_OIDC_ISSUER` and `OPENV_OIDC_CLIENT_ID`; without them the server refuses to start."
     },
     "OPENV_OIDC_REDIRECT_URL": {
       "area": "tenancy-identity",

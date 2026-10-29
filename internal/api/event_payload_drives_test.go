@@ -187,6 +187,9 @@ func payloadDrives() []payloadDrive {
 		callDrive("OIDC sign-in with a provider-verified address", func(t *testing.T, fx *payloadFixture) {
 			fx.h.acceptInvitationsForProviderVerifiedEmail("u-sso", "sso@example.com")
 		}),
+		callDrive("account removed at the identity provider's request", func(t *testing.T, fx *payloadFixture) {
+			fx.h.recordAccountRemoved(&users.AccountDeletion{Status: users.DeletionDeleted, UserID: "u-known", LeftWorkspaces: []string{payloadOrg}})
+		}),
 		// Interviews: the public finish link.
 		httpDrive("POST /api/v1/public/interviews/{token}/finish", "/api/v1/public/interviews/good-token/finish", "",
 			anonymous),

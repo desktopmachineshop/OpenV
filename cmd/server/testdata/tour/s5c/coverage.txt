@@ -35,7 +35,7 @@ GET /api/v1/auth/google: 302, 404; self_hosted_cross_site_sso, sessions_auth, ti
 GET /api/v1/auth/google/callback: 302, 400, 403, 404, 429, 502; self_hosted_cross_site_sso, sessions_auth, workspaces_logo
 GET /api/v1/auth/link: 200, 404; sessions_auth
 GET /api/v1/auth/me: 200, 401; mail_password_admin, self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
-GET /api/v1/auth/oidc/callback: 302, 400, 403, 404, 429, 502; self_hosted_cross_site_sso, sessions_auth
+GET /api/v1/auth/oidc/callback: 302, 404, 429; self_hosted_cross_site_sso, sessions_auth
 GET /api/v1/auth/oidc/login: 302, 404, 502; self_hosted_cross_site_sso, sessions_auth
 GET /api/v1/auth/policy: 200; invitations_closed, sessions_auth
 GET /api/v1/me/default-workspace: 200, 401; sessions_auth
@@ -78,6 +78,7 @@ POST /api/v1/auth/invitations/preview: 200, 400, 404, 429; invitations_closed
 POST /api/v1/auth/link: 200, 400, 401, 404; sessions_auth
 POST /api/v1/auth/login: 200, 400, 401, 429; mail_password_admin, self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
 POST /api/v1/auth/logout: 204; self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
+POST /api/v1/auth/oidc/account-deletion: 200, 400, 404; self_hosted_cross_site_sso, sessions_auth
 POST /api/v1/auth/password-reset: 202, 400, 409, 429; mail_password_admin, sessions_auth
 POST /api/v1/auth/password-reset/confirm: 204, 400, 429; mail_password_admin, sessions_auth
 POST /api/v1/auth/register: 200, 400, 403, 429; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
@@ -126,4 +127,4 @@ PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 409; billing, tiers_secure_runne
 PUT /api/v1/projects/{id}/members/{userId}: 204, 400, 403, 404; members_teams
 PUT /api/v1/projects/{id}/team-access: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
 
-s5c: 114 of 371 routes reached (30.7%), 110 with a 2xx or 3xx answer (29.6%)
+s5c: 115 of 372 routes reached (30.9%), 111 with a 2xx or 3xx answer (29.8%)

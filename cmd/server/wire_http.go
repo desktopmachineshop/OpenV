@@ -12,6 +12,7 @@ import (
 	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
@@ -92,6 +93,7 @@ func (a *app) handlers() {
 		EmbeddingService:     a.embeddingService,
 		UploadsDir:           a.uploadsDir,
 		UserService:          a.userService,
+		AccountDeleter:       users.NewAccountDeletionService(a.userDeletionRepo),
 		MemberService:        a.memberService,
 		ProductService:       a.productService,
 		VVService:            a.vvService,

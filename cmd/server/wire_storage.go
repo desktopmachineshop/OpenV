@@ -47,6 +47,7 @@ func (a *app) storage() {
 	a.templateRepo = postgres.NewTemplateRepository(a.db)
 	a.chatterRepo = postgres.NewChatterRepository(a.db)
 	a.userRepo = postgres.NewUserRepository(a.db)
+	a.userDeletionRepo = postgres.NewUserDeletionRepository(a.db)
 	a.memberRepo = postgres.NewMemberRepository(a.db)
 	a.eventRepo = postgres.NewEventRepository(a.db)
 	a.productProfileRepo = postgres.NewProductProfileRepository(a.db)

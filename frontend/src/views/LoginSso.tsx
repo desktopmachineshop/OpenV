@@ -60,6 +60,49 @@ export const SsoButtons: React.FC<{
   </>
 );
 
+/**
+ * What a sign-on that came back to the sign-in page with ?error=<code> says
+ * (the OIDC callback's codes: sso_cancelled, sso_unverified, sso_conflict,
+ * sso_failed). An unknown code reads as the general one.
+ */
+export const ssoErrorMessage = (code: string, name: string): string => {
+  switch (code) {
+    case 'sso_cancelled':
+      return `Signing in through ${name} was cancelled.`;
+    case 'sso_unverified':
+      return `${name} has not confirmed your email address. Confirm it there, then try again.`;
+    case 'sso_conflict':
+      return `An OpenV account already uses this address with another way of signing in, so ${name} cannot sign in to it. Ask your OpenV administrator for help.`;
+    default:
+      return `Signing in through ${name} did not finish.`;
+  }
+};
+
+/** The sign-in page's notice for ?error=, beside the password form, with a way to try again. */
+export const SsoError: React.FC<{ name: string }> = ({ name }) => {
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('error');
+  if (!code) return null;
+  return (
+    <div role="alert" style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
+      {ssoErrorMessage(code, name)}{' '}
+      <a href={authAPI.oidcLoginUrl()}>Try again</a>
+    </div>
+  );
+};
+
+/** While the sign-in methods load: the page's background and nothing else, so no form flashes. */
+export const SignInLoading: React.FC = () => (
+  <div className="app-shell" aria-busy="true" style={{ background: 'var(--sidebar-bg)' }} />
+);
+
+/** Under the reset request where single sign-on is the only way in: what the password is for. */
+export const ResetForLinkNote: React.FC<{ name: string }> = ({ name }) => (
+  <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 0 }}>
+    The password connects {name} to your OpenV account once; after that you sign in with {name}.
+  </p>
+);
+
 // The browser is sent to the provider on arrival at most once a minute. A
 // sign-on that comes back without a session (a refused cookie, a provider
 // that answers at once) would otherwise go round and round; the second
@@ -99,8 +142,10 @@ const notice: React.CSSProperties = {
  * check has said nobody is signed in (`ready`) it sends the browser to the
  * provider, to its sign-up page for `signUp`, and comes back to `returnTo`.
  * It stays put, with a button, after a sign-out (?signed_out=1), after a
- * sign-on error (?error=), while a provider is being linked to a password
- * account (?link=), on an invite link, which it names first, and when it
+ * sign-on error (?error=, which it explains), after the password the link
+ * step asks for was reset (?reset=done), while a provider is being linked
+ * to a password account (?link=), on an invite link, which it names first,
+ * and when it
  * sent the browser a moment ago (sentRecently).
  */
 export const SsoOnlySignIn: React.FC<{
@@ -113,9 +158,16 @@ export const SsoOnlySignIn: React.FC<{
 }> = ({ name, signUp, returnTo, ready, invite, problem }) => {
   const [searchParams] = useSearchParams();
   const signedOut = searchParams.get('signed_out') === '1';
-  const ssoError = !!searchParams.get('error');
+  const ssoError = searchParams.get('error') || '';
+  // Back from setting the OpenV password the link step asks for.
+  const resetDone = searchParams.get('reset') === 'done';
   const held =
-    signedOut || ssoError || !!problem || !!searchParams.get('link') || !!searchParams.get('invite');
+    signedOut ||
+    !!ssoError ||
+    resetDone ||
+    !!problem ||
+    !!searchParams.get('link') ||
+    !!searchParams.get('invite');
   const [stalled, setStalled] = useState(false);
   const url = authAPI.oidcLoginUrl(signUp);
   const go = () => {
@@ -134,7 +186,7 @@ export const SsoOnlySignIn: React.FC<{
     // go reads only props that are fixed once the page has loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto]);
-  const failed = ssoError || stalled;
+  const failed = !!ssoError || stalled;
 
   return (
     <div
@@ -173,8 +225,14 @@ export const SsoOnlySignIn: React.FC<{
         )}
         {failed && (
           <div role="alert" style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
-            Signing in through {name} did not finish.
+            {ssoErrorMessage(ssoError, name)}
           </div>
+        )}
+        {resetDone && !failed && (
+          <p role="status" style={{ fontSize: 13, color: 'var(--text-body)', marginTop: 0 }}>
+            Your OpenV password is set. Continue with {name}, and enter it when you are asked to
+            connect your account.
+          </p>
         )}
         {signedOut && !failed && (
           <p role="status" style={{ fontSize: 13, color: 'var(--text-body)', marginTop: 0 }}>
