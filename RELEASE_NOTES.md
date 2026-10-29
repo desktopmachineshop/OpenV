@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.24.1 — 2026-10-29
+
 ### Maintenance updates
 
 - **Sign-in can go straight to single sign-on.** Where a deployment signs
