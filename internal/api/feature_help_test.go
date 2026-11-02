@@ -117,3 +117,41 @@ func TestHelpWaitsForTheWorkspacesChannel(t *testing.T) {
 		t.Fatalf("status = %d, want 404 before the stable release carries the feature", w.Code)
 	}
 }
+
+// TestHelpContextForwardsActivityOnceTheChannelHasIt: the focused section,
+// the last button and the tab reach the docs site with the page once the
+// member's channel has help-activity, values that are not context keys are
+// dropped, and a stable workspace whose release predates the feature still
+// gets help for the page alone.
+func TestHelpContextForwardsActivityOnceTheChannelHasIt(t *testing.T) {
+	var query string
+	docs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.RawQuery
+		_ = json.NewEncoder(w).Encode(map[string]any{"key": "settings.members", "via": "key", "signal": "pane",
+			"topicId": "topics/projects/project-access-members", "title": "Project access", "html": "<p>x</p>"})
+	}))
+	t.Cleanup(docs.Close)
+	const ask = "path=/projects/p1/settings&focus=settings.share-links&action=a%20b&pane=settings.members"
+	for _, tc := range []struct {
+		shipped string
+		forward bool
+	}{{"0.2.0", true}, {"0.3.0", false}} {
+		h := helpFixture(t, orgs.PlanBusiness, "0.2.0")
+		release.Registry = append(release.Registry, release.Feature{Key: release.FeatureHelpActivity, ShippedIn: tc.shipped})
+		h.HelpService = help.NewService(help.Config{URL: docs.URL}, nil)
+		w := httptest.NewRecorder()
+		h.GetHelpContext(w, helpReq(t, "member", ask))
+		if w.Code != http.StatusOK {
+			t.Fatalf("shipped %s: status %d: %s", tc.shipped, w.Code, w.Body.String())
+		}
+		sent := strings.Contains(query, "focus=settings.share-links") && strings.Contains(query, "pane=settings.members")
+		if sent != tc.forward || strings.Contains(query, "action=") {
+			t.Errorf("shipped %s: docs asked %q, want signals forwarded = %v and no action", tc.shipped, query, tc.forward)
+		}
+		var topic help.Topic
+		_ = json.Unmarshal(w.Body.Bytes(), &topic)
+		if topic.Signal != "pane" {
+			t.Errorf("shipped %s: signal = %q, want the docs site's answer, pane", tc.shipped, topic.Signal)
+		}
+	}
+}

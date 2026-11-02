@@ -63,6 +63,7 @@ var Registry = []Feature{
 	// features endpoint and What's new, and the flow is unconditional.
 	{Key: FeatureLinkedSignIn, ShippedIn: "0.23.0", Summary: "Sign in with Google to an account you made with a password: confirm the password once, and either way signs you in after that"},
 	{Key: FeatureManualHelp, ShippedIn: "0.24.0", Summary: "The help panel shows the user manual's own page for the screen you are on, written for the release your workspace is on, with links between pages and a search of the manual"},
+	{Key: FeatureHelpActivity, ShippedIn: "0.25.0", Summary: "The help panel follows what you are working on: the tab you are in, the section you are working in and the button you pressed last open the manual's page for them"},
 }
 
 // Feature keys the code gates on.
@@ -203,6 +204,12 @@ const (
 	// panel's DocsHelp. It gates both, per member, on top of the deployment's
 	// help-docs capability; without it the panel keeps its shipped summary.
 	FeatureManualHelp = "manual-help"
+	// FeatureHelpActivity is the help panel sending OpenD's activity
+	// signals (OpenD ADR 0018) with the page: the focused section, the last
+	// button pressed and the tab, from data-help-key and data-help-pane in
+	// the app's markup. It gates the panel's tracking and the signals
+	// GET /orgs/{id}/help/context forwards; without it help is per page.
+	FeatureHelpActivity = "help-activity"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

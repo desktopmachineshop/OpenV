@@ -43,6 +43,7 @@ export const FEATURE_KEYS = [
   'connected-app-workspaces',
   'linked-sign-in',
   'manual-help',
+  'help-activity',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

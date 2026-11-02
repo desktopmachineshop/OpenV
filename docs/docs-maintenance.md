@@ -50,6 +50,14 @@ keep it true. CI enforces the ones marked **(enforced)**.
    A new page gets a key, and a route in `manual/help-contexts.yaml`, in
    the pull request that adds the page.
 
+   The app also names finer keys in its markup, which the help panel sends
+   as OpenD's activity signals (`frontend/src/hooks/useHelpActivity.ts`):
+   `data-help-key` on a section, field or button, `data-help-pane` on a
+   tab and its panel. They are the same interface. Use a key the manual
+   tags, or a child of one (`settings.general` falls back to `settings`),
+   and give the section its own key in `SECTION_KEYS` when it deserves its
+   own help.
+
 ## Before a release
 
 Promote to release (`.github/workflows/promote-release.yml`) carries the

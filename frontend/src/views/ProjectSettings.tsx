@@ -678,6 +678,7 @@ export const ProjectSettings: React.FC = () => {
             id={tabId(t.key)}
             aria-selected={tab === t.key}
             aria-controls={PANEL_ID}
+            data-help-pane={`settings.${t.key}`}
             onClick={() => setTab(t.key)}
             style={{
               background: 'none',
@@ -714,7 +715,9 @@ export const ProjectSettings: React.FC = () => {
         </div>
       )}
 
-      <div role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)}>
+      {/* The help panel opens on the manual's topic for the tab in use,
+          settings.<tab>, falling back to settings (hooks/useHelpActivity). */}
+      <div role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)} data-help-pane={`settings.${tab}`}>
         {tab === 'general' && (
           <GeneralTab
             flowDown={flowDown}

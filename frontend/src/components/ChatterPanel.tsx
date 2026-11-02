@@ -305,14 +305,15 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       {/* Tabs: the artifact's own history, and the project's assistant. */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--neutral-soft)' }}>
         {([
-          { id: 'history' as Tab, label: 'History' },
-          { id: 'assistant' as Tab, label: 'V&V Assistant' },
+          { id: 'history' as Tab, label: 'History', help: 'requirements.history' },
+          { id: 'assistant' as Tab, label: 'V&V Assistant', help: 'guided.assistant' },
         ]).map((t) => {
           const active = tab === t.id;
           const disabled = t.id === 'history' && !artifactId;
           return (
             <button
               key={t.id}
+              data-help-pane={t.help}
               onClick={() => !disabled && setTab(t.id)}
               disabled={disabled}
               title={disabled ? 'Select an artifact to read its history and add comments' : undefined}

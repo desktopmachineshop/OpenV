@@ -33,6 +33,7 @@ vi.mock('../api/client', async (orig) =>
 );
 
 import { DocsHelp } from './DocsHelp';
+import type { HelpActivity } from '../hooks/useHelpActivity';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -59,12 +60,15 @@ describe('DocsHelp', () => {
     container.remove();
   });
 
-  const render = async (path = '/projects/p1/vv') => {
+  const render = async (path = '/projects/p1/vv', activity?: HelpActivity) => {
     act(() => {
-      root.render(<DocsHelp orgId="org-1" path={path} onUnavailable={unavailable} />);
+      root.render(<DocsHelp orgId="org-1" path={path} onUnavailable={unavailable} activity={activity} />);
     });
     await flush();
   };
+  const wait = (ms: number) => act(async () => {
+    await new Promise((r) => setTimeout(r, ms));
+  });
 
   it('shows the topic for the page, with its docs line and full page', async () => {
     context.mockResolvedValue({ data: topic('topics/vv/index', 'V&V') });
@@ -125,5 +129,41 @@ describe('DocsHelp', () => {
     context.mockRejectedValue({ response: { status: 502, data: { error: 'the help could not be loaded' } } });
     await render();
     expect(unavailable).toHaveBeenCalled();
+  });
+
+  it('asks for what the reader is doing, and follows it while open', async () => {
+    context.mockResolvedValue({ data: topic('topics/projects/index', 'Settings') });
+    await render('/projects/p1/settings', { pane: 'settings.members' });
+    expect(context).toHaveBeenCalledWith('org-1', { path: '/projects/p1/settings', pane: 'settings.members' });
+    context.mockResolvedValue({ data: topic('topics/projects/share-links', 'Share links') });
+    await render('/projects/p1/settings', { pane: 'settings.members', focus: 'settings.share-links' });
+    // Debounced: nothing yet, then the new topic without a loading flash.
+    expect(context).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('h3')?.textContent).toBe('Settings');
+    await wait(300);
+    expect(context).toHaveBeenLastCalledWith('org-1', {
+      path: '/projects/p1/settings',
+      focus: 'settings.share-links',
+      pane: 'settings.members',
+    });
+    expect(container.querySelector('h3')?.textContent).toBe('Share links');
+  });
+
+  it('stops following once the reader navigates inside the panel, until the page changes', async () => {
+    context.mockResolvedValue({ data: topic('topics/vv/index', 'V&V') });
+    byId.mockResolvedValue({ data: topic('topics/vv/gaps', 'Gaps') });
+    await render('/projects/p1/vv');
+    const link = container.querySelector('a[data-help-topic]') as HTMLAnchorElement;
+    await act(async () => {
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    await flush();
+    await render('/projects/p1/vv', { action: 'vv.baselines' });
+    await wait(300);
+    expect(context).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('h3')?.textContent).toBe('Gaps');
+    await render('/projects/p1/requirements', { action: 'vv.baselines' });
+    expect(context).toHaveBeenCalledTimes(2);
+    expect(container.querySelector('h3')?.textContent).toBe('V&V');
   });
 });

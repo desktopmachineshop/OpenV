@@ -34,7 +34,12 @@ frontend. Status: **in progress**. Decided:
     and then to the app default, and never to a topic the reader can't see;
   - per-reader filtering by products, features and version;
   - a JSON help API (`/api/v1/help/context`, `/topics`, `/search`) behind
-    short-lived HS256 embed tokens signed by the host app's backend.
+    short-lived HS256 embed tokens signed by the host app's backend;
+  - activity signals (OpenD ADR 0018): beside the view, a context request
+    may name the `focus` (the field or section in use), the `action` (the
+    button pressed last) and the `pane` (the tab or dialog). OpenD tries
+    them in that order, each with its parents, before the view, never
+    reveals a hidden topic through one, and says which `signal` answered.
 
 ## Decisions
 
@@ -62,7 +67,26 @@ frontend. Status: **in progress**. Decided:
 4. **Keys come from `pages.ts`.** Each page sends its context key. In-page
    help links send child keys (`vv.coverage`), which fall back to the
    page's key until their topic exists.
-5. **Public site.** *(Decided.)* docs.openv.app serves anonymous visitors
+5. **Help follows the activity on the page.** *(Decided, done.)* The app
+   uses OpenD's activity signals rather than a finer `key` per element.
+   - `frontend/src/hooks/useHelpActivity.ts` does what OpenD's widget does
+     for an iframe host: capturing `focusin` and `click` listeners read
+     `data-help-key` (focus, and action on a press inside it) and
+     `data-help-pane`, ignore anything inside `data-help-ui` (the panel and
+     the ? buttons), and start afresh on each route.
+   - The drawer sends them with the path; the proxy forwards those that are
+     context keys (at most 256 characters) and passes back `signal`.
+   - While open, the drawer follows a change after 250 ms, and stops once
+     the reader follows a link or searches, until the route changes or it
+     opens again (OpenD's "until the reader takes over").
+   - Only author-chosen keys leave the page, never field values or text.
+   - Gated by the `help-activity` feature key, on the route and the panel.
+   - Marked so far: project settings tabs (`settings.<tab>`), the Share
+     links card, an artifact's figures and version History, and the Notes
+     panel's History and V&V Assistant tabs. `HelpLink`s (decision 4) stay
+     for explicit "what is this?" links; activity covers where the reader
+     already is.
+6. **Public site.** *(Decided.)* docs.openv.app serves anonymous visitors
    the public entitlements: the free plan, on the line labelled *latest* by
    default, with the version menu to read any other public line. That keeps
    the manual's search traffic and serves self-hosters.
@@ -103,10 +127,11 @@ frontend. Status: **in progress**. Decided:
 | Quality findings, `QualityBadge` | the rule's topic (`quality.rule.<id>`) |
 | Error toasts, run failure classes | `errors.<code>` |
 | Disabled and plan-gated controls | why it is off and how to get it (`plans.*`) |
+| "?" while working in a tab, section or field marked `data-help-pane` / `data-help-key` | that tab's, section's or button's topic, falling back to the page's (decision 5) |
 
 - **The drawer** shows the topic, scrolled to its section, with "In this
   section" and search over what this workspace may see. It follows the
-  route while it is open.
+  route, and the tab, section and button in use, while it is open.
 - **"Open full manual"** goes to an in-app `/manual/<topicId>` reader with
   the navigation tree, never a new tab.
 
@@ -125,6 +150,7 @@ frontend. Status: **in progress**. Decided:
 | E4 | The public version menu | opend | **done** by OpenD's own version picker (#34); OpenV's release workflow sets its list and the public version once the tenant (A) exists |
 | F | Guards: the *Docs* job, `make check`/`check-fast`, the promote steps (`docs/docs-maintenance.md`) | openv | **done**; key resolution for `pages.ts` and `HelpLink` comes with D |
 | G | Retire:<br>• delete `frontend/src/manual`, `helpTopics.ts` and the site pre-render of the manual, here and in openv-hosted<br>• 301 `/manual/*` to docs.openv.app; sitemap and `llms.txt` there<br>• flip the source to `manual/` and drop `docs.py sync` | openv, openv-hosted | after stable carries `opend-help` |
+| D2 | Activity signals: `useHelpActivity`, the drawer following it, `focus`/`action`/`pane` through the proxy, the first `data-help-*` markup, behind `help-activity` | openv | **done**; more markup as authors write child topics |
 | H | Requirements:<br>• help for the current screen in one action from every signed-in page<br>• help served for the workspace's release<br>• public version menu<br>• docs gate on promotion<br>• a design item for the proxy, a Playwright help journey<br>• a baseline | OpenV, OpenD projects | with C/D and E |
 
 ## Order

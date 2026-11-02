@@ -350,6 +350,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             </button>
             {displayArtifact.version > 1 && (
               <button
+                data-help-key="requirements.versions"
                 onClick={() => setShowVersions(!showVersions)}
                 style={{
                   backgroundColor: 'var(--success)',
@@ -373,6 +374,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       {/* Version History */}
       {!readOnly && showVersions && artifact.version > 1 && (
         <div
+          data-help-key="requirements.versions"
           style={{
             marginTop: '16px',
             paddingTop: '16px',

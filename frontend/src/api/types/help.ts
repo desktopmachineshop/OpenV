@@ -13,6 +13,9 @@ export interface HelpTopic {
   /** How a context resolved: the key, a parent of it, or the default. */
   key?: string;
   via?: 'key' | 'parent' | 'default';
+  /** Which part of the request answered: an activity signal, or the page
+   *  ("view"). Absent when the manual's default topic did. */
+  signal?: 'focus' | 'action' | 'pane' | 'view';
   fragment?: string;
   topic_id: string;
   title: string;

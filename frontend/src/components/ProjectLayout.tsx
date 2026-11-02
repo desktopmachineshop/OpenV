@@ -200,6 +200,7 @@ export const ProjectLayout: React.FC = () => {
             type="button"
             aria-label="Help"
             aria-expanded={helpOpen}
+            data-help-ui=""
             onClick={() => setHelpOpen((o) => !o)}
             title="Help for this page"
             style={{
@@ -450,6 +451,7 @@ export const ProjectLayout: React.FC = () => {
                 type="button"
                 aria-label="Help"
                 aria-expanded={helpOpen}
+                data-help-ui=""
                 onClick={() => setHelpOpen((o) => !o)}
                 title="Help for this page"
                 style={{

@@ -84,6 +84,7 @@ SECTION_KEYS = {
     ('artifacts', 'review-status'): ['review'],
     ('artifacts', 'figures'): ['requirements.figures'],
     ('artifacts', 'history'): ['requirements.history'],
+    ('artifacts', 'editing-versions-history'): ['requirements.versions'],
     ('links', 'the-traceability-matrix'): ['matrix'],
     ('board', 'to-dos-the-same-work-by-person'): ['todos'],
     ('vv', 'evidence-for-physical-and-manual-tests'): ['evidence'],

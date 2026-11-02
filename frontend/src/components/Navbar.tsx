@@ -72,6 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             aria-label="Help"
             aria-expanded={!!helpOpen}
+            data-help-ui=""
             onClick={onHelpToggle}
             title="Help for this page"
             style={{

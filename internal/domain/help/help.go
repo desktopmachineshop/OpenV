@@ -125,8 +125,12 @@ type Related struct {
 type Topic struct {
 	// Key and Via say how a context resolved: the key itself, a parent, or
 	// the app's default. Empty for a topic asked for by id.
-	Key       string    `json:"key,omitempty"`
-	Via       string    `json:"via,omitempty"`
+	Key string `json:"key,omitempty"`
+	Via string `json:"via,omitempty"`
+	// Signal says which part of the request answered: "focus", "action",
+	// "pane" or "view"; empty when the app's default did, or for a topic
+	// asked for by id.
+	Signal    string    `json:"signal,omitempty"`
 	Fragment  string    `json:"fragment,omitempty"`
 	TopicID   string    `json:"topic_id"`
 	Title     string    `json:"title"`
@@ -206,14 +210,54 @@ func NewService(cfg Config, client *http.Client) *Service {
 	}
 }
 
-// Context is the topic for a context key, or for an app path when key is
-// empty.
-func (s *Service) Context(ctx context.Context, p Profile, key, path string) (*Topic, error) {
+// Request is what a context asks help for: the view, as a key or an app
+// path, and optionally what the reader is doing in it. OpenD tries the
+// signals most specific first (focus, then action, then pane, then the
+// view), each with its parents, and answers the first whose help the
+// reader may see (OpenD ADR 0018, "Help for the field, button or pane in
+// use").
+type Request struct {
+	Key  string // the view's context key; Path is used when it is empty
+	Path string // the app path, mapped to a key by help-contexts.yaml
+	// Focus is the field or control that has focus or is selected now.
+	Focus string
+	// Action is the button or command pressed last.
+	Action string
+	// Pane is the tab, pane or dialog last worked in.
+	Pane string
+}
+
+// MaxSignal is the longest activity signal OpenD reads; it ignores longer.
+const MaxSignal = 256
+
+// ValidSignal reports whether v can be sent as an activity signal: a
+// context key of letters, digits, dots, dashes and underscores, as the
+// manual's resourceids are, no longer than MaxSignal.
+func ValidSignal(v string) bool {
+	if v == "" || len(v) > MaxSignal {
+		return false
+	}
+	for _, r := range v {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("._-", r)) {
+			return false
+		}
+	}
+	return true
+}
+
+// Context is the topic for a request: its activity signals first, then its
+// key, or its app path when key is empty.
+func (s *Service) Context(ctx context.Context, p Profile, req Request) (*Topic, error) {
 	q := url.Values{"app": {App}}
-	if key != "" {
-		q.Set("key", key)
+	if req.Key != "" {
+		q.Set("key", req.Key)
 	} else {
-		q.Set("path", path)
+		q.Set("path", req.Path)
+	}
+	for name, v := range map[string]string{"focus": req.Focus, "action": req.Action, "pane": req.Pane} {
+		if ValidSignal(v) {
+			q.Set(name, v)
+		}
 	}
 	var t Topic
 	line, err := s.get(ctx, p, "/api/v1/help/context?"+q.Encode(), &t)
@@ -273,6 +317,7 @@ func validTopicID(id string) bool {
 type openDTopic struct {
 	Key       string  `json:"key"`
 	Via       string  `json:"via"`
+	Signal    *string `json:"signal"`
 	Fragment  *string `json:"fragment"`
 	TopicID   string  `json:"topicId"`
 	Title     string  `json:"title"`
@@ -294,6 +339,9 @@ func (t *Topic) UnmarshalJSON(b []byte) error {
 		HTML: o.HTML, FullURL: o.FullURL, Related: []Related{}}
 	if o.Fragment != nil {
 		t.Fragment = *o.Fragment
+	}
+	if o.Signal != nil {
+		t.Signal = *o.Signal
 	}
 	for _, r := range o.Related {
 		t.Related = append(t.Related, Related{TopicID: r.TopicID, Title: r.Title})

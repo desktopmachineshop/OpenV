@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Help that follows what you are working on.** The help panel now opens
+  on the manual's page for the tab you are on, the section you are working
+  in or the button you pressed last, not only for the screen as a whole: the
+  **Members** and **Share links** parts of project settings, an artifact's
+  version **History** and figures, and the Notes panel's **History** and
+  **V&V Assistant** tabs each open their own page, and anything without one opens the screen's. While the panel is
+  open it moves with you as you change tab or section, until you follow a
+  link or search in it.
+
 ## 0.24.2 — 2026-10-30
 
 ### Maintenance updates
