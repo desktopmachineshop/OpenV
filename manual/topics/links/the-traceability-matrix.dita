@@ -6,7 +6,7 @@
     <resourceid appname="openv-web" appid="matrix"/>
   </prolog>
   <conbody>
-    <p><b>Matrix</b> in the project sidebar shows one row per requirement with columns for:</p>
+    <p><b>Traceability</b>, under <b>Verify</b> in the project menu, shows one row per requirement with columns for:</p>
     <ul>
       <li><b>Linked needs</b> — user needs the requirement derives from</li>
       <li><b>Design outputs</b> — design items that satisfy it</li>

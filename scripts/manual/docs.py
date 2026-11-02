@@ -99,6 +99,9 @@ SECTION_KEYS = {
     ('projects', 'project-access-members'): ['settings.members'],
     ('projects', 'share-links'): ['settings.share-links'],
     ('guided-wizard', 'the-vv-assistant-chat'): ['guided.assistant'],
+    ('getting-started', 'finding-your-way-around'): ['start.navigation'],
+    ('getting-started', 'keyboard-shortcuts'): ['start.shortcuts'],
+    ('links', 'impact-analysis'): ['impact'],
     # Finer keys the app sends as activity signals: data-help-key on a form,
     # field or button and data-help-pane on a tab or dialog
     # (frontend/src/hooks/useHelpActivity.ts). Keys are an interface, rule 5
@@ -111,7 +114,7 @@ SECTION_KEYS = {
     ('artifacts', 'moving-through-the-document'): ['requirements.navigate'],
     ('artifacts', 'referencing-figures-and-linked-artifacts'): ['requirements.references'],
     ('artifacts', 'making-room'): ['requirements.layout'],
-    ('artifacts', 'search-filters'): ['requirements.search'],
+    ('artifacts', 'search-filters'): ['requirements.search', 'search'],
     ('links', 'creating-links'): ['links.create'],
     ('links', 'viewing-links'): ['links.view'],
     ('board', 'driving-agents-from-the-board'): ['board.agents'],

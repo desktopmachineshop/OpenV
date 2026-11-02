@@ -41,3 +41,10 @@ export const REMOTE_MCP_FEATURE: FeatureKey = 'remote-mcp';
  * consent page, and changed later under Connected apps.
  */
 export const CONNECTED_APP_WORKSPACES_FEATURE: FeatureKey = 'connected-app-workspaces';
+
+/**
+ * The compact layout: the project shell's icon rail and top bar, the phone
+ * tab bar, and the ? / F1 help shortcut with a help button on every page
+ * that has a top bar. Shared by ProjectLayout, ProjectList and Navbar.
+ */
+export const COMPACT_LAYOUT_FEATURE: FeatureKey = 'compact-layout';

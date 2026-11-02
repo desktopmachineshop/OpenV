@@ -11,7 +11,7 @@
       <p>Runs on <b>your own computer</b>, signed into the vendor CLIs (Claude Code, Codex, Gemini) with <b>your own subscription</b>. It claims <b>the runs you launched</b> — never a teammate's — and ownerless work only where you could see it yourself (see <i>How runs are routed</i> below).</p>
       <p>The easiest setup is the <b>Agent Connector</b>:</p>
       <ol>
-        <li>When a run is queued and no runner is online, the app prompts you — or open your user settings (bottom-left of the sidebar) → <b>My Runner</b>.</li>
+        <li>When a run is queued and no runner is online, the app prompts you — or open your user settings (the account menu) → <b>My Runner</b>.</li>
         <li><b>Download</b> the connector bundle, unzip it somewhere permanent, and run it once so it registers itself.</li>
         <li>Click <b>Pair connector</b> in OpenV — the browser opens the connector with a one-time pairing code, which it exchanges for your personal runner key.</li>
         <li>From then on, opening the connector starts your runner; closing its window stops it. Online/offline status shows live in the UI.</li>

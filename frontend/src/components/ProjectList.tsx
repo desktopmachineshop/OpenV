@@ -48,6 +48,8 @@ import { CreateOrgModal } from './CreateOrgModal';
 import { SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
+import { useHelpShortcut } from '../hooks/useHelpShortcut';
+import { COMPACT_LAYOUT_FEATURE } from '../features';
 import './ProjectList.css';
 
 // What an invention that outlasts its wait says where the workspace has the
@@ -99,6 +101,8 @@ export const ProjectList: React.FC = () => {
   // run is followed on the workspace Runs page, once the workspace has it.
   const [slowInventionRun, setSlowInventionRun] = useState<string | null>(null);
   const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
+  // ? and F1 open help here too, as on every project page (compact layout).
+  useHelpShortcut(useFeature(COMPACT_LAYOUT_FEATURE), () => setHelpOpen((o) => !o));
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something
   // new rather than re-treading the same joke.

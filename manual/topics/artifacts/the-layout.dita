@@ -9,6 +9,6 @@
       <li><b>Center</b> — the selected artifact: header, body, links, attachments.</li>
       <li><b>Right</b> — the <b>Chatter</b> panel: comments on the selected artifact.</li>
     </ul>
-    <p>The <b>?</b> button beside the notification bell opens a quick-reference help sidebar with artifact and link type definitions.</p>
+    <p><b>Help</b> in the top bar (or <b>?</b> on the keyboard) opens the help panel for this page, with the artifact and link types.</p>
   </conbody>
 </concept>
