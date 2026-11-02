@@ -128,7 +128,7 @@ export const GlobalSearch: React.FC = () => {
   let flatIndex = -1;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div ref={containerRef} style={{ position: 'relative' }} data-help-key="requirements.search">
       <input
         ref={inputRef}
         type="search"

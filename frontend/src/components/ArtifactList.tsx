@@ -413,7 +413,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
             </div>
             {!readOnly && (
               // One column, in the order the buttons act: up, more, down.
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'stretch', flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'stretch', flexShrink: 0 }} data-help-key="requirements.create">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -506,7 +506,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
       {artifacts.length === 0 ? (
         <p>No artifacts yet. Create one to get started.</p>
       ) : (
-        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }} data-help-key="requirements.navigate">
           {hierarchy.map((node) => renderArtifact(node))}
         </div>
       )}
@@ -535,6 +535,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
               zIndex: 1000,
               minWidth: '180px',
             }}
+            data-help-key="requirements.create"
           >
             {([
               { action: 'create-before' as const, label: '➕ Create before' },
@@ -601,6 +602,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
             value={moveTargetId}
             onChange={(e) => setMoveTargetId(e.target.value)}
             style={{ marginBottom: 12 }}
+            data-help-key="requirements.create"
           >
             <option value="">Choose an artifact…</option>
             {flattened
@@ -617,7 +619,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 </option>
               ))}
           </select>
-          <div role="radiogroup" aria-label="Placement" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div role="radiogroup" aria-label="Placement" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="requirements.create">
             {([
               { zone: 'before' as const, label: 'Before it' },
               { zone: 'after' as const, label: 'After it' },
@@ -651,7 +653,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
               </label>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }} data-help-key="requirements.create">
             <button className="button-secondary" onClick={() => setMoveDialogFor(null)} style={{ minHeight: 44 }}>
               Cancel
             </button>

@@ -55,7 +55,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
-  }}>
+  }} data-help-key="requirements.search">
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text)' }}>
         <input

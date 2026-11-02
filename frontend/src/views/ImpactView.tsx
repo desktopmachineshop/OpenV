@@ -184,7 +184,7 @@ export const ImpactView: React.FC = () => {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="impact">
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Artifact</label>

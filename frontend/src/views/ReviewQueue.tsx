@@ -224,7 +224,11 @@ const RejectDialog: React.FC<{
             : 'What needs to change?'
         }
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+      {/* Modal takes no attributes: the dialog's buttons carry its pane. */}
+      <div
+        style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}
+        data-help-pane={many ? 'review.bulk' : 'review.queue'}
+      >
         <button className="button-secondary" onClick={onCancel} disabled={busy}>
           Cancel
         </button>
@@ -556,7 +560,12 @@ export const ReviewQueue: React.FC = () => {
         />
         <div style={{ flex: 1 }} />
         {roundEnabled && (
-          <button className="button-primary" onClick={startRound} disabled={startingRound || loading}>
+          <button
+            className="button-primary"
+            onClick={startRound}
+            disabled={startingRound || loading}
+            data-help-key="review.round"
+          >
             {startingRound ? 'Sending…' : 'Send project for review'}
           </button>
         )}
@@ -596,7 +605,7 @@ export const ReviewQueue: React.FC = () => {
       ) : (
         <>
           {showLinks && (
-            <section style={cardStyle}>
+            <section style={cardStyle} data-help-key="review.queue">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0, color: 'var(--text)', fontSize: 16 }}>
                   Suspect links
@@ -610,6 +619,7 @@ export const ReviewQueue: React.FC = () => {
                     className="button-secondary"
                     onClick={confirmSelected}
                     disabled={selectedIds.length === 0}
+                    data-help-key="review.bulk"
                   >
                     Confirm selected ({selectedIds.length})
                   </button>
@@ -637,6 +647,7 @@ export const ReviewQueue: React.FC = () => {
                         type="checkbox"
                         checked={!!selected[l.id]}
                         aria-label={`Select link ${l.from_title} to ${l.to_title}`}
+                        data-help-key="review.bulk"
                         onChange={(e) => setSelected((s) => ({ ...s, [l.id]: e.target.checked }))}
                         style={{ width: 22, height: 22, marginTop: 2, flexShrink: 0 }}
                       />
@@ -670,6 +681,7 @@ export const ReviewQueue: React.FC = () => {
                           type="checkbox"
                           checked={allSelected}
                           aria-label="Select all suspect links"
+                          data-help-key="review.bulk"
                           onChange={toggleAll}
                         />
                       </th>
@@ -687,6 +699,7 @@ export const ReviewQueue: React.FC = () => {
                             type="checkbox"
                             checked={!!selected[l.id]}
                             aria-label={`Select link ${l.from_title} to ${l.to_title}`}
+                            data-help-key="review.bulk"
                             onChange={(e) =>
                               setSelected((s) => ({ ...s, [l.id]: e.target.checked }))
                             }
@@ -720,7 +733,7 @@ export const ReviewQueue: React.FC = () => {
           )}
 
           {showArtifacts && (
-            <section style={cardStyle}>
+            <section style={cardStyle} data-help-key="review.queue">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0, color: 'var(--text)', fontSize: 16 }}>
                   In review
@@ -734,7 +747,7 @@ export const ReviewQueue: React.FC = () => {
                 {/* Bulk actions act on the selection and say how big it is,
                     so nobody approves forty artifacts thinking it was four. */}
                 {decisionsEnabled && inReview.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} data-help-key="review.bulk">
                     <button
                       className="button-secondary"
                       onClick={approveSelected}
@@ -800,6 +813,7 @@ export const ReviewQueue: React.FC = () => {
                         type="checkbox"
                         checked={!!selectedArtifacts[a.id]}
                         aria-label={`Select ${artifactLabel(a)}`}
+                        data-help-key="review.bulk"
                         onChange={(e) =>
                           setSelectedArtifacts((sel) => ({ ...sel, [a.id]: e.target.checked }))
                         }
@@ -839,6 +853,7 @@ export const ReviewQueue: React.FC = () => {
                             type="checkbox"
                             checked={allArtifactsSelected}
                             aria-label="Select all artifacts in review"
+                            data-help-key="review.bulk"
                             onChange={toggleAllArtifacts}
                           />
                         </th>
@@ -855,6 +870,7 @@ export const ReviewQueue: React.FC = () => {
                               type="checkbox"
                               checked={!!selectedArtifacts[a.id]}
                               aria-label={`Select ${artifactLabel(a)}`}
+                              data-help-key="review.bulk"
                               onChange={(e) =>
                                 setSelectedArtifacts((sel) => ({ ...sel, [a.id]: e.target.checked }))
                               }
