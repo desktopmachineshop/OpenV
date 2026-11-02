@@ -54,7 +54,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
     )}
 
     {flowDown && (
-        <div className="card">
+        <div className="card" data-help-key="settings.general.parent">
           <h3>Parent project</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             A subsystem or supplier project sits under the system it belongs to. Requirements
@@ -98,7 +98,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
     )}
 
     {ownersOn && (
-        <div className="card">
+        <div className="card" data-help-key="settings.general.parties">
           <h3>Reference parties</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             Who can own an artifact here besides the members: the organisations, teams and

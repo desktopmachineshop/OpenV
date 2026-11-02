@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Help that knows what you are doing, on every page.** The help panel
+  now opens the manual's section for the form, field, dialog, tab or button
+  you are using across the whole app, not only on a few screens: creating
+  an artifact or a link, the card drawer, the agent editor's settings,
+  automations, crews, test runs and evidence, the guided wizard's steps,
+  interviews, the product overview and project settings among them.
+
 ## 0.25.1 — 2026-11-02
 
 ### Bug fixes

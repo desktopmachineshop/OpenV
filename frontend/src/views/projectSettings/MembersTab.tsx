@@ -78,7 +78,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   ...shareLinkCard
 }) => (
   <>
-    <div className="card">
+    <div className="card" data-help-key="settings.members">
       <h3>People</h3>
       {membersLoading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
@@ -143,7 +143,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       )}
     </div>
 
-    <div className="card">
+    <div className="card" data-help-key="settings.members.invite">
       <h3>Add member</h3>
       <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
         The person must already have an OpenV account — invite them to sign up first, then add
@@ -174,7 +174,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       </form>
     </div>
 
-    <div className="card">
+    <div className="card" data-help-key="settings.members.teams">
       <h3>Teams</h3>
       <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
         Grant a workspace team access to this project. Manage teams themselves in{' '}

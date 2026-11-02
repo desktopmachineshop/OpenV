@@ -52,7 +52,10 @@ export const EvidencePicker: React.FC<EvidencePickerProps> = ({
     }
   };
 
+  // Modal takes no extra attributes, so a wrapper marks the dialog for the
+  // help panel; the modal is fixed-position, so the wrapper takes no space.
   return (
+    <div data-help-pane="evidence" data-help-key="evidence">
     <Modal title={`Evidence for ${testCaseTitle}`} width={560} onClose={onClose}>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
 
@@ -114,5 +117,6 @@ export const EvidencePicker: React.FC<EvidencePickerProps> = ({
         </button>
       </div>
     </Modal>
+    </div>
   );
 };

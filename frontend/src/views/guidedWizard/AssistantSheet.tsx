@@ -42,6 +42,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({
       <div
         role="dialog"
         aria-label="V&V Assistant"
+        data-help-pane="guided.assistant"
         aria-hidden={!assistantOpen}
         className="safe-area-bottom"
         style={{
@@ -93,6 +94,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({
           type="button"
           onClick={() => setAssistantOpen(true)}
           title="Open the V&V Assistant"
+          data-help-key="guided.assistant"
           style={{
             position: 'fixed',
             right: 16,

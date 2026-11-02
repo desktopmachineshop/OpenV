@@ -280,7 +280,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             )}
           </div>
           {!readOnly && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }} data-help-key="review">
               {NEXT_STATUSES[status].map((next) => (
                 <button
                   key={next}
@@ -313,6 +313,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
         {!readOnly && (
           <div style={{ display: 'flex', gap: '8px', flexDirection: isPhone ? 'row' : 'column', flexWrap: 'wrap' }}>
             <button
+              data-help-key="requirements.versions"
               onClick={() => onEdit(displayArtifact)}
               disabled={localPreviewVersion !== null}
               style={{

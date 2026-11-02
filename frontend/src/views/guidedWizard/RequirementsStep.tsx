@@ -23,7 +23,7 @@ export const renderRequirementsStep = ({ personas, needs, requirements, setRequi
   const usableNeeds = needs.filter((n) => n.capability.trim());
   const orphanReqs = requirements.filter((r) => !needs.some((n) => n.id === r.need_id && n.capability.trim()));
   return (
-    <div>
+    <div data-help-key="guided.steps.requirements">
       <div className="card" style={{ marginBottom: 12 }}>
         <h3>Requirements</h3>
         <div style={{ ...helpText, marginBottom: 0 }}>

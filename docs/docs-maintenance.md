@@ -57,6 +57,8 @@ keep it true. CI enforces the ones marked **(enforced)**.
    tags, or a child of one (`settings.general` falls back to `settings`),
    and give the section its own key in `SECTION_KEYS` when it deserves its
    own help.
+   A new form, dialog, tab or drawer gets its `data-help-*` key in the pull
+   request that adds it, as a new page gets its route.
 
 ## Before a release
 

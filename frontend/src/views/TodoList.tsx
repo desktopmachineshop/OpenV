@@ -256,7 +256,7 @@ export const TodoList: React.FC = () => {
   if (!projectId) return null;
 
   return (
-    <div style={{ padding: isPhone ? '0 12px 24px' : '0 24px 24px' }}>
+    <div style={{ padding: isPhone ? '0 12px 24px' : '0 24px 24px' }} data-help-key="todos">
       <div
         style={{
           display: 'flex',

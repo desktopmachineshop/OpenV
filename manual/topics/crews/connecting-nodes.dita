@@ -3,6 +3,9 @@
 <concept id="connecting-nodes">
   <title>Connecting nodes</title>
   <shortdesc>Click <b>Connect</b>, then click the source node and the target node. Pick the connection type:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="crew.connect"/>
+  </prolog>
   <conbody>
     <simpletable>
       <sthead><stentry>Edge type</stentry><stentry>Meaning</stentry></sthead>

@@ -3,6 +3,9 @@
 <concept id="gaps">
   <title>Gaps</title>
   <shortdesc>The <b>Gaps</b> section groups problems that need attention — e.g. requirements without a verification method, or without any verifying test. An empty gaps section means full coverage.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="vv.gaps"/>
+  </prolog>
   <conbody>
     <p><b>Unverified (demonstration, analysis, inspection)</b> is the section for requirements whose method is not <i>test</i>: nothing links a test case to them, so they can never show up as "without a test case". They stay listed until the requirement is marked verified, which is the same point at which the coverage rollup turns them from <i>uncovered</i> into <i>verified-manually</i>.</p>
   </conbody>

@@ -142,6 +142,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
 
   return (
     <div
+      data-help-pane="board.card"
+      data-help-key="board.card"
       style={{
         position: 'fixed',
         top: 0,
@@ -250,7 +252,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         )}
 
         {item?.agent_run_id && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16 }} data-help-key="board.agents">
             <Link
               to={`/projects/${projectId}/agent-runs?run=${item.agent_run_id}`}
               className="button-secondary"

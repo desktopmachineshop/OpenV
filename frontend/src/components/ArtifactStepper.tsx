@@ -63,6 +63,7 @@ export const ArtifactStepper: React.FC<ArtifactStepperProps> = ({
       style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
       aria-label="Artifact navigation"
       role="group"
+      data-help-key="requirements.navigate"
     >
       <button
         type="button"

@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="driving-agents-from-the-board">
   <title>Driving agents from the board</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="board.agents"/>
+  </prolog>
   <conbody>
     <note>Tip shown on the board itself: <i>assign a card to an agent and drag it to To Do to launch the agent.</i></note>
     <ul>

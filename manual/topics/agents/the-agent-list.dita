@@ -3,6 +3,9 @@
 <concept id="the-agent-list">
   <title>The agent list</title>
   <shortdesc>Each agent card shows:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents.list"/>
+  </prolog>
   <conbody>
     <ul>
       <li>Its <b>provider</b> badge (which AI vendor/CLI runs it).</li>

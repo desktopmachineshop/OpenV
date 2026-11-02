@@ -3,6 +3,9 @@
 <concept id="viewing-links">
   <title>Viewing links</title>
   <shortdesc>On the artifact details:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="links.view"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Links from this artifact</b> — outgoing links, grouped by type.</li>

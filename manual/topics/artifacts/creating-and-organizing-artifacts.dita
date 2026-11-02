@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="creating-and-organizing-artifacts">
   <title>Creating and organizing artifacts</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.create"/>
+  </prolog>
   <conbody>
     <ul>
       <li>Click <b>+ New Artifact</b>, choose a type, enter a title and a body (the body is markdown — headings, lists, tables, and images all render).</li>

@@ -128,6 +128,7 @@ export const AgentsPage: React.FC = () => {
         <div style={{ flex: 1 }} />
         <button
           className="button-secondary"
+          data-help-key="agents.list"
           onClick={handleSync}
           disabled={syncing}
           title="Re-read agent definition files from disk"
@@ -136,6 +137,7 @@ export const AgentsPage: React.FC = () => {
         </button>
         <button
           className="button"
+          data-help-key="agents.editor"
           onClick={() => {
             setCreating(true);
             setSelectedSlug(null);
@@ -149,7 +151,7 @@ export const AgentsPage: React.FC = () => {
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         {/* Agent list */}
-        <div style={isCompact ? { flex: 1, minWidth: 0, overflowY: 'auto' } : { width: 320, flexShrink: 0, overflowY: 'auto' }}>
+        <div data-help-key="agents.list" style={isCompact ? { flex: 1, minWidth: 0, overflowY: 'auto' } : { width: 320, flexShrink: 0, overflowY: 'auto' }}>
           {agents.length === 0 && (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
               No agents defined yet. Create one or sync from disk.
@@ -227,6 +229,7 @@ export const AgentsPage: React.FC = () => {
               <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                 <button
                   className="button"
+                  data-help-key="agents.launch"
                   style={{ padding: '4px 10px', fontSize: 12, minHeight: 36 }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -286,7 +289,7 @@ export const AgentsPage: React.FC = () => {
           width={520}
           onClose={() => setLaunchAgent(null)}
         >
-            <div className="form-group">
+            <div className="form-group" data-help-pane="agents.launch" data-help-key="agents.launch">
               <label>Prompt</label>
               <textarea
                 value={launchPrompt}
@@ -299,7 +302,7 @@ export const AgentsPage: React.FC = () => {
                 Keep prompts lean — the agent fetches requirements itself via its OpenV tools.
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} data-help-pane="agents.launch" data-help-key="agents.launch">
               <button className="button-secondary" onClick={() => setLaunchAgent(null)}>
                 Cancel
               </button>

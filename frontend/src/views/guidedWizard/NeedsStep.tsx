@@ -21,7 +21,7 @@ export const renderNeedsStep = ({ personas, needs, setNeeds }: NeedsStepProps): 
   const usablePersonas = personas.filter((p) => p.name.trim());
   const orphanNeeds = needs.filter((n) => !personas.some((p) => p.id === n.persona_id && p.name.trim()));
   return (
-    <div>
+    <div data-help-key="guided.steps.needs">
       <div className="card" style={{ marginBottom: 12 }}>
         <h3>User needs</h3>
         <div style={{ ...helpText, marginBottom: 0 }}>

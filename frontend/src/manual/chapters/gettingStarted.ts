@@ -216,14 +216,14 @@ the top searches the whole manual. **Open in the docs** opens the same page
 on the docs site, where a menu lets you read the manual for other releases.
 
 Help also follows what you are doing on the page. It opens on the part of
-the manual for the section you are working in, the button you pressed last
-or the tab you are on, where the manual has one, and on the page's own
-topic otherwise: in project settings, the **Members** tab opens *Project
-access (members)* and the **Share links** card opens *Share links*; an
-artifact's **History** button opens *Editing, versions & history*, its
-figures open *Figures*, and the **History** and **V&V Assistant** tabs of
-the Notes panel open theirs, and the board's **+ Add card** opens
-*Creating a card*. While the panel is open it moves with you, a
+the manual for the form, field or dialog you are working in, the button you
+pressed last or the tab you are on, and on the page's own topic where the
+manual has nothing more specific. For example, the board's **+ Add card**
+opens *Creating a card* and a card's drawer *The card drawer*; the agent
+editor's write-mode setting opens *Write mode: proposal vs direct*; **New
+Run** on the V&V page opens *Test runs*; the **Members** tab of project
+settings opens *Project access (members)*; and the link panel's add-link
+form opens *Creating links*. While the panel is open it moves with you, a
 moment after you change section or tab. Once you follow a link or search in
 the panel, it stays on what you chose until you go to another page or open
 it again. Only which section of the screen you are in is used to choose the

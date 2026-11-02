@@ -88,7 +88,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   };
 
   return (
-    <div className="card" style={{ marginBottom: 0 }}>
+    <div className="card" style={{ marginBottom: 0 }} data-help-pane="crew.nodes" data-help-key="crew.nodes">
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
         <h3 style={{ margin: 0, flex: 1, fontSize: 15 }}>
           {isHuman ? 'Person' : 'Node'}{' '}

@@ -3,5 +3,8 @@
 <concept id="success-metrics">
   <title>Success metrics</title>
   <shortdesc>A table of metrics with <b>target</b>, <b>current</b> value, and <b>unit</b> — e.g. "Weekly active users, target 500". Add rows with <b>+ Add metric</b> and press <b>Save metrics</b>.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="overview.metrics"/>
+  </prolog>
   <conbody/>
 </concept>

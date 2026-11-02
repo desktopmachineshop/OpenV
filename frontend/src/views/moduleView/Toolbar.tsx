@@ -47,6 +47,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       value={activeBaselineId}
       onChange={(e) => handleBaselineChange(e.target.value)}
       title="Select baseline"
+      data-help-key="baselines"
       style={{
         height: '36px',
         padding: '0 10px',
@@ -86,6 +87,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         fontSize: '12px',
       }}
       title="Compare this baseline against another baseline or the live project"
+      data-help-key="baselines"
     >
       Compare
     </button>
@@ -103,11 +105,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         fontSize: '12px',
       }}
       title="Delete selected baseline"
+      data-help-key="baselines"
     >
       {stacked ? '🗑 Delete baseline' : '🗑'}
     </button>
     <button
       onClick={handleCaptureBaseline}
+      data-help-key="baselines"
       style={{
         height: '36px',
         padding: '0 12px',
@@ -161,6 +165,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         fontSize: '12px',
       }}
       title="Download this project — choose a format, sections and attachments"
+      data-help-key="projects.download"
     >
       ↓ Download
     </button>

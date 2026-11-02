@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="repositories">
   <title>Repositories</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="settings.repos"/>
+  </prolog>
   <conbody>
     <p><b>Project Settings → Repositories</b> connects repositories (name, remote URL, default branch). The checkout location is <b>per member</b> — each person sets "your local path" for their own machine. Personal runners use the claiming member's path; without one, the repository URL is cloned fresh — which is always what a cloud runner does, since it has no checkout of yours.</p>
   </conbody>

@@ -586,6 +586,7 @@ export const GuidedWizard: React.FC = () => {
         <h2 style={{ color: 'var(--text)', margin: 0, fontSize: compact ? 20 : undefined }}>Guided requirements definition</h2>
         <button
           onClick={handleAbandon}
+          data-help-key="guided.session"
           disabled={busy}
           title="Drop this session and return to the start page (created drafts are kept)"
           style={{
@@ -605,7 +606,7 @@ export const GuidedWizard: React.FC = () => {
       </div>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 0, paddingBottom: compact ? 72 : 0 }}>
+        <div style={{ flex: 1, minWidth: 0, paddingBottom: compact ? 72 : 0 }} data-help-key="guided.steps">
           <StepShell
             steps={STEP_LABELS}
             current={step}

@@ -235,7 +235,7 @@ export const BaselineCompare: React.FC = () => {
         </RouterLink>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 18px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 18px', flexWrap: 'wrap' }} data-help-key="baselines">
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Changes from</span>
         <strong style={{ fontSize: 14, color: 'var(--text)' }}>{baseName}</strong>
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>to</span>
