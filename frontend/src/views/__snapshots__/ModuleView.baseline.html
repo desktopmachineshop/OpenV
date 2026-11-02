@@ -3,36 +3,36 @@
 <h2 style="color: var(--text); margin: 0px;">Requirements</h2>
 <div style="flex: 1 1 0%;">
 </div>
-<select title="Select baseline" style="height: 36px; padding: 0px 10px; border-radius: 4px; border: 1px solid var(--neutral-mid); font-size: 12px; background-color: var(--surface); cursor: pointer; width: auto; min-width: 180px; max-width: 100%;">
+<select title="Select baseline" data-help-key="baselines" style="height: 36px; padding: 0px 10px; border-radius: 4px; border: 1px solid var(--neutral-mid); font-size: 12px; background-color: var(--surface); cursor: pointer; width: auto; min-width: 180px; max-width: 100%;">
 <option value="live">Live Project</option>
 <option value="bl-2">Design freeze · 2026-03-15 · Dana Reyes</option>
 <option value="bl-1">Kickoff · 2026-01-03</option>
 </select>
-<button style="height: 36px; padding: 0px 12px; background-color: var(--accent); color: var(--accent-fg); border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Compare this baseline against another baseline or the live project">Compare</button>
-<button style="height: 36px; padding: 0px 10px; background-color: var(--danger); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Delete selected baseline">🗑</button>
-<button style="height: 36px; padding: 0px 12px; background-color: var(--success-bright); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;">Capture Baseline</button>
+<button style="height: 36px; padding: 0px 12px; background-color: var(--accent); color: var(--accent-fg); border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Compare this baseline against another baseline or the live project" data-help-key="baselines">Compare</button>
+<button style="height: 36px; padding: 0px 10px; background-color: var(--danger); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Delete selected baseline" data-help-key="baselines">🗑</button>
+<button data-help-key="baselines" style="height: 36px; padding: 0px 12px; background-color: var(--success-bright); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;">Capture Baseline</button>
 <button style="height: 36px; padding: 0px 12px; background-color: var(--neutral-mid); color: white; border: medium; border-radius: 4px; cursor: not-allowed; font-size: 12px;" title="Draft test cases for the selected requirement (as proposals)" disabled="">🧪 Draft test cases</button>
-<button style="height: 36px; padding: 0px 12px; background-color: var(--accent-alt); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Download this project — choose a format, sections and attachments">↓ Download</button>
+<button style="height: 36px; padding: 0px 12px; background-color: var(--accent-alt); color: white; border: medium; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Download this project — choose a format, sections and attachments" data-help-key="projects.download">↓ Download</button>
 </div>
 <div style="display: flex; gap: 0px; padding-left: 20px; padding-right: 20px; padding-bottom: 10px; flex: 1 1 0%; min-height: 0px; overflow: hidden;">
 <div style="width: 400px; min-width: 200px; max-width: 800px; display: flex; flex-direction: column; overflow-x: hidden; overflow-y: hidden; min-height: 0px; padding-right: 10px;">
 <div style="margin-bottom: 20px;">
 <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--text);">Filter and Search:</label>
-<div style="display: flex; gap: 8px; align-items: center;">
+<div style="display: flex; gap: 8px; align-items: center;" data-help-key="requirements.search">
 <div style="position: relative; flex: 1 1 0%;">
 <input type="text" placeholder="Search..." style="width: 100%; padding: 8px 160px 8px 8px; border-radius: 4px; border: 1px solid var(--neutral-mid); font-size: 14px; background-color: var(--surface);" value="">
 <div style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); font-size: 12px; color: var(--text-muted); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;" title="No filters applied">No filters applied</div>
 </div>
 <button class="button-secondary" style="padding: 6px 10px; font-size: 14px;" title="Toggle filters">⚙</button>
 </div>
-<div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+<div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;" data-help-key="requirements.navigate">
 <button class="button-secondary" style="padding: 6px 10px; font-size: 12px;">Collapse all</button>
 <button class="button-secondary" style="padding: 6px 10px; font-size: 12px;">Expand all</button>
 </div>
 </div>
 <div style="display: flex; flex-direction: column; flex: 1 1 0%; min-height: 0px;">
 <h3 style="margin-top: 0px;">Artifacts</h3>
-<div style="overflow-y: auto; flex: 1 1 0%; min-height: 0px;">
+<div style="overflow-y: auto; flex: 1 1 0%; min-height: 0px;" data-help-key="requirements.navigate">
 <div draggable="false" style="position: relative; padding: 12px; border-bottom: 1px solid var(--border-soft); cursor: pointer; background-color: transparent; transition: background-color 0.2s; box-shadow: none; outline: none; opacity: 1;">
 <div style="display: flex; justify-content: space-between;">
 <div style="flex: 1 1 0%;">
@@ -79,7 +79,7 @@
 <div role="region" aria-label="Artifact document" style="flex: 1 1 0%; min-width: 0px; overflow: auto; display: flex; flex-direction: column; padding-left: 10px; padding-right: 5px;">
 <div class="measure" style="width: 100%;">
 <div class="card" style="margin-bottom: 20px;">
-<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;" aria-label="Artifact navigation" role="group">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;" aria-label="Artifact navigation" role="group" data-help-key="requirements.navigate">
 <button type="button" class="button-secondary" style="min-width: 28px; min-height: 28px; padding: 0px; line-height: 1; font-size: 16px;" aria-label="Previous artifact" title="Previous artifact (K)">‹</button>
 <button type="button" class="button-secondary" style="min-width: 28px; min-height: 28px; padding: 0px; line-height: 1; font-size: 16px;" aria-label="Next artifact" title="Next artifact (J)">›</button>
 <span aria-hidden="true" style="color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums;">2 of 3</span>
@@ -104,11 +104,11 @@
 <div style="margin-bottom: 15px;">
 <span style="display: inline-block; background-color: var(--accent); color: var(--accent-fg); padding: 4px 8px; border-radius: 3px; font-size: 12px; margin-right: 10px;">requirement</span>
 <span style="font-size: 12px; color: var(--text-muted);">Version 2</span>
-<a title="Trace what a change to this artifact would affect" style="margin-left: 10px; font-size: 12px; color: var(--accent-strong); text-decoration: none; display: inline-block; padding: 9px 0px;" href="/projects/p1/impact?artifact=req-1" data-discover="true">Show impact →</a>
+<a title="Trace what a change to this artifact would affect" data-help-key="impact" style="margin-left: 10px; font-size: 12px; color: var(--accent-strong); text-decoration: none; display: inline-block; padding: 9px 0px;" href="/projects/p1/impact?artifact=req-1" data-discover="true">Show impact →</a>
 </div>
 <div style="margin-bottom: 15px;">
 <strong>Description:</strong>
-<div style="margin-top: 8px;">
+<div style="margin-top: 8px;" data-help-key="requirements.references">
 <div class="markdown-content">
 <p>The pump shall start within 5 seconds.</p>
 </div>
@@ -138,7 +138,7 @@
 </div>
 </div>
 </div>
-<button type="button" class="panel-edge-strip" aria-label="Show the notes panel" aria-expanded="false" title="Show the notes panel (Auto-hide) — the button inside the panel changes the mode" style="width: 24px; min-width: 24px; border-left: 1px solid var(--border); border-top: medium; border-right: medium; border-bottom: medium; background: var(--surface-alt); cursor: pointer; display: flex; align-items: flex-start; justify-content: center; padding: 12px 0px 0px; color: var(--text-muted);">
+<button type="button" class="panel-edge-strip" data-help-key="requirements.layout" aria-label="Show the notes panel" aria-expanded="false" title="Show the notes panel (Auto-hide) — the button inside the panel changes the mode" style="width: 24px; min-width: 24px; border-left: 1px solid var(--border); border-top: medium; border-right: medium; border-bottom: medium; background: var(--surface-alt); cursor: pointer; display: flex; align-items: flex-start; justify-content: center; padding: 12px 0px 0px; color: var(--text-muted);">
 <span class="panel-edge-strip-knob" aria-hidden="true">‹</span>
 </button>
 </div>

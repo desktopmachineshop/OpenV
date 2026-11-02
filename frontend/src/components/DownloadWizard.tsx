@@ -136,7 +136,9 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, fontSize: 12 }}>
+      {/* Modal takes no attributes, so each part of the wizard names the
+          manual's download topic itself. */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, fontSize: 12 }} data-help-pane="projects.download">
         {(['format', 'content'] as const).map((s, i) => (
           <button
             key={s}
@@ -157,7 +159,7 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
       </div>
 
       {step === 'format' && (
-        <div>
+        <div data-help-pane="projects.download">
           {DOWNLOAD_FORMATS.map((choice) => (
             <label
               key={choice.format}
@@ -189,7 +191,7 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
       )}
 
       {step === 'content' && (
-        <div>
+        <div data-help-pane="projects.download">
           {loading && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Reading the project…</div>}
 
           {!loading && options && (
@@ -412,6 +414,7 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
       )}
 
       <div
+        data-help-pane="projects.download"
         style={{
           borderTop: '1px solid var(--border-soft)',
           marginTop: 16,

@@ -97,6 +97,7 @@ export const TreePane: React.FC<TreePaneProps> = ({
         }}
         className="button"
         style={{ width: '100%', marginBottom: stacked ? '10px' : '20px' }}
+        data-help-key="requirements.create"
       >
         {isCreating ? 'Cancel' : '+ New Artifact'}
       </button>
@@ -108,7 +109,7 @@ export const TreePane: React.FC<TreePaneProps> = ({
         Filter and Search:
       </label>
       )}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }} data-help-key="requirements.search">
         <div style={{ position: 'relative', flex: 1 }}>
           <input
             type="text"
@@ -153,7 +154,7 @@ export const TreePane: React.FC<TreePaneProps> = ({
         </button>
       </div>
       {showFilterPanel && filterPanel}
-      <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }} data-help-key="requirements.navigate">
         <button
           onClick={() => {
             setCollapseAllToken((prev) => prev + 1);

@@ -16,7 +16,7 @@ interface QualityTabProps {
 }
 
 export const QualityTab: React.FC<QualityTabProps> = ({ projectId, canEditRules, flash, qualityRules, setQualityRules }) => (
-  <div className="card">
+  <div className="card" data-help-key="settings.quality">
     <h3>Requirement quality rules</h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
       How this project's requirements are worded and judged. Set nothing and the project

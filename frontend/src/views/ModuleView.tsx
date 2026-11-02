@@ -866,6 +866,7 @@ export const ModuleView: React.FC = () => {
         <div
           role="tablist"
           aria-label="Requirements panes"
+          data-help-key="requirements.layout"
           style={{ display: 'flex', margin: '0 12px 8px', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
         >
           {(['tree', 'document', 'notes'] as const).map((pane) => {
@@ -1096,6 +1097,7 @@ export const ModuleView: React.FC = () => {
           <button
             type="button"
             className="panel-edge-strip"
+            data-help-key="requirements.layout"
             aria-label={panelStripLabel('the notes panel', notesOpen)}
             aria-expanded={notesOpen}
             onMouseEnter={() => !viewport.coarsePointer && setNotesHovered(true)}

@@ -221,13 +221,13 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 'open-source/:id', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: '', load: 'eager', public: true, help: NO_PANEL },
   { scope: 'site', path: 'projects', load: 'eager', public: false, help: { topic: 'projects' } },
-  { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: { topic: 'org/settings' } },
+  { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: { topic: 'org/runs' } },
   { scope: 'site', path: 'manual', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'manual/:chapterSlug', load: 'lazy', public: true, help: NO_PANEL },
-  { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: { topic: 'whats-new' } },
   { scope: 'site', path: 'connect', load: 'lazy', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'admin', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'admin', load: 'lazy', public: false, help: { topic: 'admin' } },
 ];
 
 /** The full route pattern of a page, as react-router matches it. */

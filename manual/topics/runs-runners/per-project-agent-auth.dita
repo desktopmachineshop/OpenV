@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="per-project-agent-auth">
   <title>Per-project agent auth</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="settings.agents"/>
+  </prolog>
   <conbody>
     <p><b>Project Settings → Agents</b> chooses how the project's runs authenticate:</p>
     <ul>

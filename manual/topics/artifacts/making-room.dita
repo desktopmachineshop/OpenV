@@ -3,6 +3,9 @@
 <concept id="making-room">
   <title>Making room</title>
   <shortdesc>The project menu takes only a narrow rail at the left of the page (see <i>Getting started</i> → <i>Finding your way around</i>). The <b>Notes</b> panel has three states, chosen from the button in its header:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.layout"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Pinned</b> — always open, taking its width from the page.</li>

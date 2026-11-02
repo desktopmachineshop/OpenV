@@ -114,6 +114,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      data-help-pane="requirements.figures"
     >
       <div className="lightbox-container">
         <div className="lightbox-header">

@@ -4,6 +4,7 @@
   <title>Search &amp; filters</title>
   <shortdesc>Two boxes search, and they do different jobs. The one in the <b>top bar</b> searches every project you can see; the one above the <b>tree</b> narrows the project you are in.</shortdesc>
   <prolog>
+    <resourceid appname="openv-web" appid="requirements.search"/>
     <resourceid appname="openv-web" appid="search"/>
   </prolog>
   <conbody>

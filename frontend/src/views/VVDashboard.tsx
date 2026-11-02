@@ -193,7 +193,7 @@ export const VVDashboard: React.FC = () => {
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Verification &amp; Validation</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} data-help-key="vv.baselines">
           <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
           <select
             value={baselineId}
@@ -212,6 +212,7 @@ export const VVDashboard: React.FC = () => {
         <button
           className="button-secondary"
           onClick={() => vvAPI.report(projectId, effectiveBaseline)}
+          data-help-key="vv.report"
         >
           Download V&amp;V report (PDF)
         </button>
@@ -373,7 +374,7 @@ export const VVDashboard: React.FC = () => {
       </div>
 
       {/* Test runs */}
-      <div className="card">
+      <div className="card" data-help-key="vv.runs">
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0, flex: 1 }}>Test runs</h3>
           <button className="button" onClick={() => setShowNewRun(!showNewRun)}>

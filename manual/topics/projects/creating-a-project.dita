@@ -3,6 +3,9 @@
 <concept id="creating-a-project">
   <title>Creating a project</title>
   <shortdesc>Click <b>+ New Project</b>. The form offers a <b>Project Type</b>:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="projects.create"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Blank Project</b> — start empty; enter a name and optional description.</li>

@@ -321,7 +321,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   return (
     <>
       {artifact && (
-        <div className="card" style={{ marginBottom: '20px' }}>
+        <div className="card" style={{ marginBottom: '20px' }} data-help-pane="requirements.versions">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
               <h3 style={{ margin: '0 0 8px 0' }}>{formData.title || 'Untitled Artifact'}</h3>
@@ -352,9 +352,14 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
         </div>
       )}
 
-      <div className="card">
+      {/* Editing is the manual's "Editing, versions & history"; a new
+          artifact is "Creating & organizing artifacts". */}
+      <div className="card" data-help-pane={artifact ? 'requirements.versions' : 'requirements.create'}>
         <h3>{artifact ? 'Edit Artifact Details' : 'New Artifact'}</h3>
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          data-help-key={artifact ? 'requirements.versions' : 'requirements.create'}
+        >
           <div className="form-group">
             <label htmlFor="parent_id">Parent Artifact (Optional)</label>
             <select
@@ -466,7 +471,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             />
           </div>
 
-          <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group" style={{ position: 'relative' }} data-help-key="requirements.references">
             <label htmlFor="body">Description</label>
             <textarea
               id="body"

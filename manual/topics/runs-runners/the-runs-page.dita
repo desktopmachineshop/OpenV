@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-runs-page">
   <title>The Runs page</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="agent-runs.list"/>
+  </prolog>
   <conbody>
     <p><b>Runs</b> in the project menu lists agent runs with status, start time, duration, token usage, and cost. Statuses:</p>
     <p>queued · running · awaiting_approval · succeeded · failed · timed_out · cancelled</p>

@@ -414,7 +414,10 @@ export const CrewBuilder: React.FC = () => {
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div
+        data-help-key="crew.manage"
+        style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}
+      >
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Crew Builder</h2>
         <select
           value={crewId}
@@ -487,13 +490,16 @@ export const CrewBuilder: React.FC = () => {
           </button>
         )}
         <div style={{ flex: 1 }} />
-        <button className="button" onClick={() => setShowRunModal(true)} disabled={!crewId}>
+        <button className="button" data-help-key="crew" onClick={() => setShowRunModal(true)} disabled={!crewId}>
           ▶ Run crew
         </button>
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div
+        data-help-key="crew.canvas"
+        style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}
+      >
         <SegmentedControl
           aria-label="Crew view"
           options={[
@@ -511,6 +517,7 @@ export const CrewBuilder: React.FC = () => {
           activeColor="var(--purple)"
         />
         <button
+          data-help-key="crew.connect"
           onClick={() => setConnectMode(!connectMode)}
           style={{
             padding: '6px 14px',
@@ -526,13 +533,17 @@ export const CrewBuilder: React.FC = () => {
         </button>
         <button
           className="button-secondary"
+          data-help-key="crew.nodes"
           style={{ padding: '6px 12px', fontSize: 13 }}
           onClick={() => setShowAddNode(!showAddNode)}
         >
           + Add node
         </button>
         {showAddNode && (
-          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span
+            data-help-key="crew.nodes"
+            style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}
+          >
             <SegmentedControl
               aria-label="New node kind"
               options={[
@@ -710,7 +721,7 @@ export const CrewBuilder: React.FC = () => {
       {/* Edge-type picker popup */}
       {pendingEdge && (
         <Modal title="Connection type" width={360} onClose={() => setPendingEdge(null)}>
-          <p style={{ fontSize: 13 }}>
+          <p style={{ fontSize: 13 }} data-help-pane="crew.connect">
               <strong>{nodeLabel(pendingEdge.from)}</strong> → <strong>{nodeLabel(pendingEdge.to)}</strong>
             </p>
             {pendingTargetIsHuman && (
@@ -719,7 +730,12 @@ export const CrewBuilder: React.FC = () => {
                 them. Delegation to people isn't supported.
               </p>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Modal takes no extra props: its content carries the pane. */}
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+              data-help-pane="crew.connect"
+              data-help-key="crew.connect"
+            >
               {pendingEdgeTypes.map((et) => (
                 <button
                   key={et.value}
@@ -757,7 +773,7 @@ export const CrewBuilder: React.FC = () => {
           width={520}
           onClose={() => setShowRunModal(false)}
         >
-            <div className="form-group">
+            <div className="form-group" data-help-pane="crew" data-help-key="crew">
               <label>Prompt</label>
               <textarea
                 value={runPrompt}
@@ -767,7 +783,11 @@ export const CrewBuilder: React.FC = () => {
                 autoFocus
               />
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <div
+              style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}
+              data-help-pane="crew"
+              data-help-key="crew"
+            >
               <button className="button-secondary" onClick={() => setShowRunModal(false)}>
                 Cancel
               </button>
@@ -787,7 +807,7 @@ export const CrewBuilder: React.FC = () => {
             warning.
           </p>
 
-          <div className="form-group">
+          <div className="form-group" data-help-pane="crew.manage" data-help-key="crew.manage">
             <label>Start from a built-in template</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {templates.length === 0 && (
@@ -812,7 +832,12 @@ export const CrewBuilder: React.FC = () => {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginTop: 12 }}>
+          <div
+            className="form-group"
+            data-help-pane="crew.manage"
+            data-help-key="crew.manage"
+            style={{ marginTop: 12 }}
+          >
             <label>Or upload a crew file</label>
             <input
               ref={fileInputRef}
@@ -837,7 +862,11 @@ export const CrewBuilder: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}
+            data-help-pane="crew.manage"
+            data-help-key="crew.manage"
+          >
             <button className="button-secondary" onClick={() => setShowImport(false)}>
               Cancel
             </button>

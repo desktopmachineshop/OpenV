@@ -49,7 +49,7 @@ import { SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
-import { COMPACT_LAYOUT_FEATURE } from './ProjectLayoutRail';
+import { COMPACT_LAYOUT_FEATURE } from '../features';
 import './ProjectList.css';
 
 // What an invention that outlasts its wait says where the workspace has the
@@ -589,11 +589,15 @@ export const ProjectList: React.FC = () => {
           page it explains creating, importing, templating and exporting
           projects. */}
       <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />
+      {/* DownloadWizard's Modal takes no extra attributes, so a wrapper marks
+          the dialog for the help panel; the modal is fixed, so it takes no space. */}
       {downloadProjectId && (
-        <DownloadWizard
-          projectId={downloadProjectId}
-          onClose={() => setDownloadProjectId(null)}
-        />
+        <div data-help-pane="projects.download" data-help-key="projects.download">
+          <DownloadWizard
+            projectId={downloadProjectId}
+            onClose={() => setDownloadProjectId(null)}
+          />
+        </div>
       )}
       <div className="project-list-container">
 
@@ -636,12 +640,14 @@ export const ProjectList: React.FC = () => {
                       setCreateMode('blank');
                       setIsCreating(true);
                     }}
+                    data-help-key="projects.create"
                   >
                     + New Project
                   </button>
                   <button
                     className="button button-secondary"
                     onClick={handleImportClick}
+                    data-help-key="projects.import"
                   >
                     ↑ Import Project
                   </button>
@@ -694,6 +700,7 @@ export const ProjectList: React.FC = () => {
                           setDownloadProjectId(project.id);
                         }}
                         title="Download this project — choose a format, sections and attachments"
+                        data-help-key="projects.download"
                       >
                         ↓
                       </button>
@@ -763,7 +770,7 @@ export const ProjectList: React.FC = () => {
               </form>
             </div>
           ) : isCreating ? (
-            <div className="create-project-form">
+            <div className="create-project-form" data-help-key="projects.create">
               <h3>Create New Project</h3>
               <form onSubmit={handleCreateProject}>
                 <div className="form-group">
@@ -795,7 +802,7 @@ export const ProjectList: React.FC = () => {
                     and stays the default, with the two leaderboards beside
                     it for people who would rather see what the pool likes. */}
                 {createMode === 'random' && (
-                  <div style={{ marginBottom: 10 }}>
+                  <div style={{ marginBottom: 10 }} data-help-key="projects.random">
                     <SegmentedControl<RandomFilter>
                       aria-label="How to pick a product"
                       value={randomFilter}
@@ -820,6 +827,7 @@ export const ProjectList: React.FC = () => {
 
                 {createMode === 'random' && randomProduct && (
                   <div
+                    data-help-key="projects.random"
                     style={{
                       background: 'var(--surface-alt)',
                       border: '1px solid var(--border-soft)',
@@ -1085,12 +1093,14 @@ export const ProjectList: React.FC = () => {
                   setCreateMode('blank');
                   setIsCreating(true);
                 }}
+                data-help-key="projects.create"
               >
                 + New Project
               </button>
               <button
                 className="button button-secondary"
                 onClick={handleImportClick}
+                data-help-key="projects.import"
               >
                 ↑ Import Project
               </button>

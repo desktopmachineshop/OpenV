@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { Project } from '../api/client';
-import type { FeatureKey } from '../generated/contract';
 import type { NavGroup, NavSection } from '../pages';
 import { activeNavPath, sectionHasActive } from './navSections';
 import { NavIcon, SHELL_ICONS, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
@@ -27,9 +26,6 @@ import { UserMenu } from './UserMenu';
 // workspace search, the help button (also ? and F1, hooks/useHelpShortcut.ts),
 // the bell and the account. data-help-key marks the menu and the search for
 // the help panel (start.navigation in Getting started, search in Requirements & artifacts).
-
-/** The gate on the compact layout, its tab bar and the help shortcut. */
-export const COMPACT_LAYOUT_FEATURE: FeatureKey = 'compact-layout';
 
 interface RailProps {
   sections: NavSection[];

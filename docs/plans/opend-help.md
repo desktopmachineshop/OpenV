@@ -81,11 +81,12 @@ frontend. Status: **in progress**. Decided:
      opens again (OpenD's "until the reader takes over").
    - Only author-chosen keys leave the page, never field values or text.
    - Gated by the `help-activity` feature key, on the route and the panel.
-   - Marked so far: project settings tabs (`settings.<tab>`), the Share
-     links card, an artifact's figures and version History, and the Notes
-     panel's History and V&V Assistant tabs. `HelpLink`s (decision 4) stay
-     for explicit "what is this?" links; activity covers where the reader
-     already is.
+   - Marked: the forms, fields, buttons, tabs, dialogs and drawers of every
+     page with a help panel, each with the key of the manual section that
+     describes it (`SECTION_KEYS` in `scripts/manual/docs.py`), or a child
+     of one that falls back to it. Read-only content is left unmarked.
+     `HelpLink`s (decision 4) stay for explicit "what is this?" links;
+     activity covers where the reader already is.
 6. **Public site.** *(Decided.)* docs.openv.app serves anonymous visitors
    the public entitlements: the free plan, on the line labelled *latest* by
    default, with the version menu to read any other public line. That keeps
@@ -150,7 +151,7 @@ frontend. Status: **in progress**. Decided:
 | E4 | The public version menu | opend | **done** by OpenD's own version picker (#34); OpenV's release workflow sets its list and the public version once the tenant (A) exists |
 | F | Guards: the *Docs* job, `make check`/`check-fast`, the promote steps (`docs/docs-maintenance.md`) | openv | **done**; key resolution for `pages.ts` and `HelpLink` comes with D |
 | G | Retire:<br>• delete `frontend/src/manual`, `helpTopics.ts` and the site pre-render of the manual, here and in openv-hosted<br>• 301 `/manual/*` to docs.openv.app; sitemap and `llms.txt` there<br>• flip the source to `manual/` and drop `docs.py sync` | openv, openv-hosted | after stable carries `opend-help` |
-| D2 | Activity signals: `useHelpActivity`, the drawer following it, `focus`/`action`/`pane` through the proxy, the first `data-help-*` markup, behind `help-activity` | openv | **done**; more markup as authors write child topics |
+| D2 | Activity signals: `useHelpActivity`, the drawer following it, `focus`/`action`/`pane` through the proxy, `data-help-*` markup on every page with a help panel, behind `help-activity` | openv | **done**; new controls are marked as they are added |
 | H | Requirements:<br>• help for the current screen in one action from every signed-in page<br>• help served for the workspace's release<br>• public version menu<br>• docs gate on promotion<br>• a design item for the proxy, a Playwright help journey<br>• a baseline | OpenV, OpenD projects | with C/D and E |
 
 ## Order

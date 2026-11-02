@@ -32,7 +32,8 @@ import { navSections } from '../pages';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
 import { useProjectShell, visibleSections } from './ProjectLayoutState';
-import { COMPACT_LAYOUT_FEATURE, RailShell } from './ProjectLayoutRail';
+import { RailShell } from './ProjectLayoutRail';
+import { COMPACT_LAYOUT_FEATURE } from '../features';
 import { PhoneTabBar } from './ProjectLayoutTabs';
 
 // ProjectLayout syncs the URL param into the store and renders the app

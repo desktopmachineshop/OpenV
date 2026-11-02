@@ -262,6 +262,55 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'troubleshooting', title: 'Troubleshooting & FAQ' },
   },
+  // The workspace-level pages outside a project, keyed by their path
+  // (helpTopicForPath tries the first two segments, then the first).
+  'org/settings': {
+    title: 'Workspace settings',
+    summary:
+      'Settings for the whole workspace: its name and plan, members and their roles, teams, limits and usage, AI providers and runners.',
+    tips: [
+      'Workspace membership gets someone into the workspace; project access is granted per project, in its Settings → Access.',
+      'Members are told when they are added, removed or change role, and every other admin hears about arrivals and departures.',
+      'Teams group people for project access; they are not crews, which are graphs of AI agents.',
+      'AI Providers (admin only) sets the default model and the API keys runs use; Runners is where workspace runners are paired.',
+    ],
+    chapter: { slug: 'org-settings', title: 'Workspace settings & teams' },
+    also: [{ slug: 'runs-runners', title: 'Runs & runners' }],
+  },
+  'org/runs': {
+    title: 'Workspace runs',
+    summary:
+      "The agent runs that belong to no project: a whole-workspace automation's runs, products invented from the projects list, and runs of deleted projects.",
+    tips: [
+      "Click a run to follow it, cancel it or retry it, with the same detail panel as a project's Runs page.",
+      'The address names the open run (?run=), so a reload or a shared link opens it again.',
+      'Admins see every such run; other members see the ones they launched.',
+      'A notification that one of these runs failed opens it here.',
+    ],
+    chapter: { slug: 'runs-runners', title: 'Runs & runners' },
+  },
+  admin: {
+    title: 'Platform admin',
+    summary:
+      "The deployment's own administration: who the platform admins are, password reset links for support, and every workspace with its plan.",
+    tips: [
+      'The first account registered on a deployment is its platform admin; Make admin and Remove manage the rest.',
+      'Reset link shows a one-time password reset link once: hand it only to someone you have identified.',
+      "A workspace's plan sets its limits and its default release channel.",
+      'The Open source plan publishes every project in the workspace as of its latest baseline.',
+    ],
+    chapter: { slug: 'platform-admin', title: 'Platform admin' },
+  },
+  'whats-new': {
+    title: "What's new",
+    summary:
+      'Every release of OpenV, newest first: what you can now do, what quietly improved and what stopped being broken.',
+    tips: [
+      'A new feature reaches nightly workspaces in the release it ships in, and stable-channel workspaces with their next stable release.',
+      'Press ? or F1 on any page to open the help for that page.',
+    ],
+    chapter: { slug: 'getting-started', title: 'Getting started' },
+  },
   settings: {
     title: 'Project Settings',
     summary:
@@ -287,6 +336,10 @@ export const helpTopicForPath = (pathname: string): HelpTopic => {
   // its own; inside a project the default topic is the overview.
   if (segments[0] === 'projects' && segments.length === 1) {
     return HELP_TOPICS.projects;
+  }
+  if (segments[0] !== 'projects') {
+    const page = HELP_TOPICS[segments.slice(0, 2).join('/')] || HELP_TOPICS[segments[0]];
+    if (page) return page;
   }
   const moduleSegment = segments[0] === 'projects' ? segments[2] : segments[0];
   return (moduleSegment && HELP_TOPICS[moduleSegment]) || DEFAULT_TOPIC;

@@ -752,6 +752,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
 
   return (
     <div
+      data-help-pane="guided.assistant"
+      data-help-key="guided.assistant"
       style={{
         display: 'flex',
         flexDirection: 'column',

@@ -3,6 +3,9 @@
 <concept id="referencing-figures-and-linked-artifacts">
   <title>Referencing figures and linked artifacts</title>
   <shortdesc>Type <b><codeph>#</codeph></b> in an artifact's description to cite something: its own figures (<codeph>REQ-17-FIG-1</codeph>) and the artifacts it is already linked to. Filter by typing, choose with the arrow keys or the mouse, and the reference is inserted as <codeph>#REQ-17-FIG-1</codeph>.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.references"/>
+  </prolog>
   <conbody>
     <p>Type <b><codeph>##</codeph></b> to reach the <b>whole project</b>: every figure, and every other artifact, whether or not this one is linked to it. The menu lists this artifact's own figures first, then everyone else's with the artifact each belongs to, then the project's artifacts. The citation is written <codeph>##REQ-99-FIG-2</codeph> so a reader can see at a glance that it reaches outside what they are reading.</p>
     <p>Outside edit mode a reference is a link: clicking an artifact reference selects that artifact, and clicking a figure reference opens the figure itself — the drawing, the datasheet, the model — wherever in the project it lives, so following a citation never loses your place.</p>

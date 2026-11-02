@@ -326,7 +326,7 @@ export const TraceabilityMatrix: React.FC = () => {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="matrix">
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Traceability Matrix</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
@@ -374,7 +374,7 @@ export const TraceabilityMatrix: React.FC = () => {
       {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
       {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
-      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: isPhone ? 320 : 480, width: '100%' }}>
+      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: isPhone ? 320 : 480, width: '100%' }} data-help-key="matrix">
         <AgGridReact<MatrixRow>
           ref={gridRef}
           rowData={rows}

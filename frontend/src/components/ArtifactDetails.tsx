@@ -373,7 +373,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
     <div className="card">
       {/* Preview Notification and Side-by-Side Comparison */}
       {previewVersion && (
-        <div>
+        <div data-help-key="requirements.versions">
           <div
             style={{
               backgroundColor: 'var(--tint-yellow)',
@@ -607,6 +607,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           <RouterLink
             to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
             title="Trace what a change to this artifact would affect"
+            data-help-key="impact"
             style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--accent-strong)', textDecoration: 'none', display: 'inline-block', padding: '9px 0' }}
           >
             Show impact →
@@ -615,7 +616,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       </div>
       <div style={{ marginBottom: '15px' }}>
         <strong>Description:</strong>
-        <div style={{ marginTop: '8px' }}>
+        {/* Citations in the body (# figures, ## artifacts) open what they cite. */}
+        <div style={{ marginTop: '8px' }} data-help-key="requirements.references">
           {artifact.body ? (
             <ArtifactBody body={artifact.body} onReferenceClick={onReferenceClick} />
           ) : (
@@ -642,7 +644,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
       {/* Links Section */}
       {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
-        <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid var(--border)' }} data-help-key="links.view">
           <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Traceability Links</h4>
 
           {deleteError && (

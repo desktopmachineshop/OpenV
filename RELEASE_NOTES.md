@@ -18,9 +18,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   shows the workspace, the project and the page you are on, with search,
   **Help**, notifications and your account. On a phone, tabs along the bottom
   reach **Overview**, **Requirements**, **V&V** and **Review**, and **More**
-  opens the full menu. Press **?** or **F1** on any page to open help, and
-  the **Evidence**, **Impact**, **Review Queue** and **To-dos** pages now have
-  help of their own.
+  opens the full menu. Press **?** or **F1** on any page to open help.
+  **Workspace settings**, **Workspace runs**, **Platform admin** and
+  **What's new** gain a **?** help button too, and the **Evidence**,
+  **Impact**, **Review Queue** and **To-dos** pages now have help of their
+  own.
+
+## 0.25.2 — 2026-11-02
+
+### Maintenance updates
+
+- **Help that knows what you are doing, on every page.** The help panel
+  now opens the manual's section for the form, field, dialog, tab or button
+  you are using across the whole app, not only on a few screens: creating
+  an artifact or a link, the card drawer, the agent editor's settings,
+  automations, crews, test runs and evidence, the guided wizard's steps,
+  interviews, the product overview and project settings among them.
 
 ## 0.25.1 — 2026-11-02
 

@@ -141,7 +141,7 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
   }
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: 16 }} data-help-pane="agent-runs.approvals" data-help-key="agent-runs.approvals">
       {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
       {bulkSummary && (
         <div style={{ color: 'var(--text)', fontSize: 13, marginBottom: 8 }}>{bulkSummary}</div>

@@ -38,7 +38,7 @@ export const renderCommittedScreen = ({
           snapshot for traceability.
         </p>
         <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }} data-help-key="guided.session">
           {baselineCreated ? (
             <span style={{ color: 'var(--success)', fontSize: 14, alignSelf: 'center' }}>
               ✓ Baseline "Initial requirements" created

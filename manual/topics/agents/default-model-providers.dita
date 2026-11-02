@@ -3,5 +3,8 @@
 <concept id="default-model-providers">
   <title>Default model &amp; providers</title>
   <shortdesc>Workspace admins set each provider's <b>default model</b> and see CLI detection status under <b>Workspace settings → AI Providers</b>. An agent whose Model field is <i>provider default</i> inherits that setting.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents.model"/>
+  </prolog>
   <conbody/>
 </concept>
