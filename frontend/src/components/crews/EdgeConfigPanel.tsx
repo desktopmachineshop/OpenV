@@ -76,7 +76,7 @@ export const EdgeConfigPanel: React.FC<EdgeConfigPanelProps> = ({
   };
 
   return (
-    <div className="card" style={{ marginBottom: 0 }}>
+    <div className="card" style={{ marginBottom: 0 }} data-help-pane="crew.connect" data-help-key="crew.connect">
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
         <h3 style={{ margin: 0, flex: 1, fontSize: 15 }}>Connection</h3>
         <button

@@ -190,7 +190,10 @@ export const ActivityLog: React.FC = () => {
   const maybeMore = nextCursor !== null;
 
   return (
-    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div
+      data-help-key="activity"
+      style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Activity</h2>
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>

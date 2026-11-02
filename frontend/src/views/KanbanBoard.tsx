@@ -376,6 +376,8 @@ export const KanbanBoard: React.FC = () => {
           return (
             <div
               key={col.key}
+              // A drop target: moving cards (the composer below keeps its own key).
+              data-help-key="board.move"
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragOverColumn(col.key);
@@ -526,6 +528,7 @@ export const KanbanBoard: React.FC = () => {
                     style={{ fontSize: 13, minHeight: 50, marginBottom: 8 }}
                   />
                   <select
+                    data-help-key="board.agents"
                     value={composer.assignee}
                     onChange={(e) => setComposer(col.key, { assignee: e.target.value })}
                     style={{ fontSize: 13, marginBottom: 8 }}
@@ -598,7 +601,7 @@ export const KanbanBoard: React.FC = () => {
 
       {actionsFor && (
         <Modal title={actionsFor.title} width={360} onClose={() => setActionsFor(null)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-help-pane="board.move">
             <button
               className="button"
               style={{ minHeight: 44 }}

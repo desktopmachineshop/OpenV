@@ -23,12 +23,18 @@ export const AutomationRunDetail: React.FC<AutomationRunDetailProps> = ({ runId,
   if (isCompact) {
     return (
       <Sheet label="Run detail" onClose={onClose}>
-        <div style={{ flex: 1, minHeight: 0 }}>{panel}</div>
+        <div style={{ flex: 1, minHeight: 0 }} data-help-pane="automations.runs">
+          {panel}
+        </div>
       </Sheet>
     );
   }
   return (
-    <aside aria-label="Run detail" style={{ width: 460, flexShrink: 0, height: '70vh', minHeight: 360 }}>
+    <aside
+      aria-label="Run detail"
+      data-help-pane="automations.runs"
+      style={{ width: 460, flexShrink: 0, height: '70vh', minHeight: 360 }}
+    >
       {panel}
     </aside>
   );

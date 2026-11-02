@@ -49,7 +49,7 @@ interface ScopeFieldProps {
 export const ScopeField: React.FC<ScopeFieldProps> = ({ scope, canChoose, onChange }) => {
   if (!canChoose && scope === 'project') return null;
   return (
-    <div className="form-group">
+    <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
       <label>Covers</label>
       {canChoose ? (
         <SegmentedControl

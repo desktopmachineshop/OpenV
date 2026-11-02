@@ -130,9 +130,13 @@ export const AgentRunsPage: React.FC = () => {
 
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div
+        data-help-key="agent-runs.list"
+        style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}
+      >
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Runs</h2>
         <button
+          data-help-key="agent-runs.approvals"
           onClick={() => setShowProposals(!showProposals)}
           style={{
             background: pendingCount > 0 ? 'var(--warning)' : 'var(--neutral-soft)',
@@ -229,7 +233,7 @@ export const AgentRunsPage: React.FC = () => {
       )}
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }} data-help-key="agent-runs.list">
           <RunTable
             runs={runs}
             selectedRunId={selectedRunId}

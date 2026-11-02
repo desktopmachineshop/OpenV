@@ -193,7 +193,7 @@ export const AutomationsPage: React.FC = () => {
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <h2 style={{ color: 'var(--text)', margin: 0, flex: 1 }}>Automations</h2>
-        <button className="button" onClick={() => setForm(emptyForm())}>
+        <button className="button" data-help-key="automations.create" onClick={() => setForm(emptyForm())}>
           New automation
         </button>
       </div>
@@ -201,7 +201,7 @@ export const AutomationsPage: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 20 }}>
-      <div className="table-container" style={{ flex: 1, minWidth: 0 }}>
+      <div className="table-container" style={{ flex: 1, minWidth: 0 }} data-help-key="automations">
         <div className="table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -311,6 +311,7 @@ export const AutomationsPage: React.FC = () => {
                   <div style={{ display: 'flex', gap: 6, flexDirection: isPhone ? 'column' : 'row' }}>
                   <button
                     className="button"
+                    data-help-key="automations.runs"
                     style={{ padding: '4px 10px', fontSize: 12, minHeight: 36 }}
                     onClick={() => runNow(a)}
                   >
@@ -358,14 +359,15 @@ export const AutomationsPage: React.FC = () => {
           width={720}
           onClose={() => setForm(null)}
         >
-          <div className="form-group">
+          {/* Modal takes no extra props: each part of the form carries the pane. */}
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
             <label>Name</label>
             <input value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
 
           <ScopeField scope={form.scope} canChoose={canChooseScope} onChange={setScope} />
 
-          <div className="form-group">
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
             <label>Target</label>
             <div style={{ marginBottom: 8 }}>
               <SegmentedControl
@@ -399,7 +401,7 @@ export const AutomationsPage: React.FC = () => {
             )}
           </div>
 
-          <div className="form-group">
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.kinds">
             <label>Kind</label>
             <SegmentedControl
               aria-label="Automation kind"
@@ -413,7 +415,7 @@ export const AutomationsPage: React.FC = () => {
           </div>
 
           {form.kind === 'scheduled' && (
-            <div className="form-group">
+            <div className="form-group" data-help-pane="automations.create" data-help-key="automations.kinds">
               <label>Cron expression</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
@@ -445,7 +447,7 @@ export const AutomationsPage: React.FC = () => {
 
           {form.kind === 'triggered' && (
             <>
-              <div className="form-group">
+              <div className="form-group" data-help-pane="automations.create" data-help-key="automations.triggers">
                 <label>Event type</label>
                 <select value={form.event_type} onChange={(e) => set({ event_type: e.target.value })}>
                   {EVENT_TYPES.map((et) => (
@@ -455,7 +457,7 @@ export const AutomationsPage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="form-group">
+              <div className="form-group" data-help-pane="automations.create" data-help-key="automations.triggers">
                 <label>Event filter (optional key/value matches)</label>
                 {form.filters.map((f, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
@@ -498,7 +500,7 @@ export const AutomationsPage: React.FC = () => {
                   + Add filter
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: 14 }}>
+              <div style={{ display: 'flex', gap: 14 }} data-help-pane="automations.create" data-help-key="automations.triggers">
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Cooldown (seconds)</label>
                   <input
@@ -519,7 +521,7 @@ export const AutomationsPage: React.FC = () => {
             </>
           )}
 
-          <div className="form-group">
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
             <label>Prompt template</label>
             <textarea
               value={form.prompt_template}
@@ -534,7 +536,7 @@ export const AutomationsPage: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} data-help-pane="automations.create" data-help-key="automations.create">
             <button className="button-secondary" onClick={() => setForm(null)}>
               Cancel
             </button>

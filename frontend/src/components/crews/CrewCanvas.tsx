@@ -377,6 +377,7 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
   return (
     <div
       ref={containerRef}
+      data-help-key="crew.canvas"
       style={{
         width: '100%',
         height: '100%',

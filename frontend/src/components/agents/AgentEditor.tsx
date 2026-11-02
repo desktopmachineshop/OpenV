@@ -181,7 +181,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   );
 
   return (
-    <div className="card measure" style={{ marginBottom: 0 }}>
+    <div className="card measure" style={{ marginBottom: 0 }} data-help-pane="agents.editor" data-help-key="agents.editor">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h3 style={{ margin: 0, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
         {!isNew && (
@@ -261,7 +261,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.model">
               <label>Provider</label>
               <select
                 value={form.provider}
@@ -275,7 +275,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.model">
               <label>Model</label>
               <ModelSelect
                 value={form.model}
@@ -289,7 +289,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.model">
               <label>Effort</label>
               <select
                 value={form.effort}
@@ -305,7 +305,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.write-mode">
               <label>Write mode</label>
               <select
                 value={form.write_mode}
@@ -316,7 +316,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 <option value="direct">direct (writes immediately)</option>
               </select>
             </div>
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
+            <div
+              className="form-group"
+              data-help-key="agents.repos"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}
+            >
               <input
                 id="repo-access"
                 type="checkbox"
@@ -346,7 +350,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
+            <div
+              className="form-group"
+              data-help-key="agents.allowlist"
+              style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}
+            >
               <label>Allowed tools (comma-separated, required)</label>
               <input
                 value={form.allowed_tools}
