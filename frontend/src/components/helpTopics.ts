@@ -32,8 +32,9 @@ const DEFAULT_TOPIC: HelpTopic = {
   tips: [
     'The guided definition shortcut here adapts to where you are — its label reads Start, Resume, or Modify.',
     'Stakeholder interviews live on this page, in the User interviews section.',
-    'Switch workspaces from the top of the dark left sidebar; your choice is remembered between visits.',
+    'Switch workspaces from the workspace name at the left of the top bar (at the top of the menu on a phone); your choice is remembered between visits.',
     'For AI agents to work in this project, a runner must be online — see Runs & runners in the manual.',
+    'Press ? or F1 on any page to open this help; the rail down the left reaches every page of the project.',
   ],
   chapter: { slug: 'getting-started', title: 'Getting started' },
 };
@@ -123,6 +124,54 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Download the V&V report (PDF) for the live project or any baseline.',
     ],
     chapter: { slug: 'vv', title: 'V&V & test runs' },
+  },
+  evidence: {
+    title: 'Evidence',
+    summary:
+      'The record behind physical and manual tests: each evidence bundle is one capture session — what was done, what was observed, when, by whom, under which conditions, and the files it produced.',
+    tips: [
+      'Record a capture once and cite it from every test result it supports, rather than attaching the same files to each run.',
+      'Each bundle gets a reference like EVD-1 that is never reused, so a report that cites it keeps meaning the same thing.',
+      'Each file’s SHA-256 is recorded at upload, so the dataset can be checked against the record later.',
+      'Enter conditions one per line as name: value — rig, serial numbers, calibration date, ambient temperature.',
+    ],
+    chapter: { slug: 'vv', title: 'V&V & test runs' },
+  },
+  impact: {
+    title: 'Impact analysis',
+    summary:
+      'What a change to one artifact touches, before you make it: what depends on it downstream, and what it depends on upstream.',
+    tips: [
+      'Open it from Show impact → on an artifact or a row of the Traceability Matrix, or pick the artifact here.',
+      'Downstream is what a change could affect; Upstream is the sources and rationale the artifact rests on.',
+      'Each result shows the link it was reached through and how many hops away it is.',
+      'Run it before editing an approved requirement: the downstream list is what may need review again.',
+    ],
+    chapter: { slug: 'links', title: 'Traceability links' },
+  },
+  review: {
+    title: 'Review Queue',
+    summary:
+      'Where artifacts wait for sign-off. Approve or send back one row at a time or a whole selection, and send the whole project for review in one action.',
+    tips: [
+      'Send project for review moves every draft into review at once; run it again each cycle to pick up only what changed.',
+      'Approving clears the suspect flag on every link that touches the artifact.',
+      'Send back needs a reason, which is posted as a note on the artifact before it returns to draft.',
+      'Tick rows (or the header box) to approve or send back several at once.',
+    ],
+    chapter: { slug: 'artifacts', title: 'Requirements & artifacts' },
+  },
+  todos: {
+    title: 'To-dos',
+    summary:
+      "The board's work items arranged by person instead of by column, so the page answers who owes what.",
+    tips: [
+      'Moving a card on the board updates this page, and the other way round — it is the same work.',
+      'Just mine narrows the page to your own list; Show done brings finished work back.',
+      'Raise a to-do from a note with + Add to-do: the person named and the note’s first line are filled in.',
+      'Work for an agent or a team is under Agents and teams; anything with no assignee is under Unassigned.',
+    ],
+    chapter: { slug: 'board', title: 'Kanban board' },
   },
   matrix: {
     title: 'Traceability Matrix',

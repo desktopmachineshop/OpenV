@@ -131,7 +131,9 @@ the live project.
 
 ## Inside a project
 
-Opening a project shows the dark left sidebar with the project's modules:
+Opening a project shows the project menu with its pages, grouped under
+**Define**, **Verify**, **Plan** and **Agents** on the rail down the left (see
+*Getting started* → *Finding your way around*):
 
 | Entry | What it is |
 | --- | --- |
@@ -139,7 +141,7 @@ Opening a project shows the dark left sidebar with the project's modules:
 | Requirements | The artifact tree — create, edit, link, baseline |
 | Guided Definition | Step-by-step wizard from framing to committed requirements |
 | V&V | Coverage, gaps, test runs, PDF report |
-| Matrix | Traceability matrix grid |
+| Traceability | Traceability matrix grid |
 | Board | Kanban board with human and agent assignees |
 | Crew | Crew builder — org chart of agents and people |
 | Agents | Agent definitions and launcher |
@@ -147,9 +149,10 @@ Opening a project shows the dark left sidebar with the project's modules:
 | Runs | Agent run history and proposal review |
 | Settings | Project access, repositories, agent auth, danger zone |
 
-The project name under the workspace switcher takes you back to all projects.
-Your user block at the bottom of the sidebar opens **Settings** (personal
-runner and agent sign-ins) and **Sign out**.
+**Projects** at the top of the rail takes you back to all projects. The
+account menu at the right end of the top bar (on a phone, your name at the
+foot of the project menu) opens **Settings** (personal runner and agent
+sign-ins) and **Sign out**.
 
 ## Project access (members)
 

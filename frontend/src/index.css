@@ -583,3 +583,257 @@ textarea {
 .panel-edge-strip:hover .panel-edge-strip-knob {
   opacity: 1;
 }
+
+/* The compact project layout (compact-layout feature key; ProjectLayoutRail.tsx
+   and ProjectLayoutTabs.tsx): a 64 px icon rail, one top bar, and on a phone
+   a tab bar along the bottom. The rail and the bar use the sidebar's tokens,
+   so both themes follow; the top bar sits on the page's surface. */
+.ov-layout {
+  display: flex;
+  overflow: hidden;
+}
+.ov-layout-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ov-layout-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-app);
+}
+.ov-rail {
+  position: relative;
+  z-index: 900;
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text-dim);
+}
+.ov-rail-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+}
+.ov-rail-item {
+  width: 54px;
+  min-height: 48px;
+  padding: 6px 0 5px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--sidebar-text-dim);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.ov-rail-item span {
+  max-width: 52px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-rail-item:hover,
+.ov-rail-item[aria-expanded='true'] {
+  background: var(--sidebar-menu-bg);
+  color: var(--sidebar-text);
+}
+.ov-rail-item.active,
+.ov-rail-item.is-current {
+  background: var(--sidebar-menu-bg);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.ov-rail-item:focus-visible,
+.ov-rail-flyout-link:focus-visible,
+.ov-tabbar-item:focus-visible,
+.ov-topbar-help:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ov-rail-rule {
+  width: 32px;
+  height: 1px;
+  margin: 6px 0;
+  background: var(--sidebar-border);
+}
+.ov-rail-flyout {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 64px;
+  width: 232px;
+  box-sizing: border-box;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  background: var(--sidebar-menu-bg);
+  border-left: 1px solid var(--sidebar-border);
+  box-shadow: 6px 0 18px rgba(0, 0, 0, 0.18);
+}
+.ov-rail-flyout-title {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sidebar-text-faint);
+}
+.ov-rail-flyout-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--sidebar-text);
+  font-size: 14px;
+  text-decoration: none;
+}
+.ov-rail-flyout-link:hover {
+  background: var(--sidebar-bg);
+}
+.ov-rail-flyout-link.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+.ov-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.ov-topbar-org {
+  min-width: 0;
+  max-width: 220px;
+  flex: 0 1 auto;
+}
+.ov-topbar-sep {
+  color: var(--neutral-mid);
+  flex-shrink: 0;
+}
+.ov-topbar-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 14px;
+}
+.ov-topbar-project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ov-topbar-project:hover {
+  text-decoration: underline;
+}
+.ov-topbar-page {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.ov-topbar-search {
+  flex: 0 1 320px;
+  min-width: 160px;
+}
+/* GlobalSearch draws its box for the dark sidebar; on the light bar it takes
+   the page's field colours instead. */
+.ov-topbar-search input[type='search'] {
+  background: var(--surface-alt) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+}
+.ov-topbar-search input[type='search']:focus {
+  border-color: var(--accent) !important;
+}
+.ov-topbar-help {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ov-topbar-help:hover,
+.ov-topbar-help[aria-expanded='true'] {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.ov-topbar-help kbd {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+}
+.ov-tabbar {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: 56px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.ov-tabbar-item {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ov-tabbar-item.active {
+  color: var(--accent-strong);
+  font-weight: 700;
+}

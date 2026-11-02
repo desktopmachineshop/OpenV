@@ -119,10 +119,6 @@ describe('the registry agrees with components/helpTopics.ts', () => {
   it('exempts only the pages known to have no topic from the menu', () => {
     expect(PAGES.filter((p) => p.nav && 'fallback' in p.help).map((p) => p.path)).toEqual([
       '',
-      'evidence',
-      'impact',
-      'review',
-      'todos',
     ]);
   });
 });

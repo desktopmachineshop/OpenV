@@ -64,6 +64,7 @@ var Registry = []Feature{
 	{Key: FeatureLinkedSignIn, ShippedIn: "0.23.0", Summary: "Sign in with Google to an account you made with a password: confirm the password once, and either way signs you in after that"},
 	{Key: FeatureManualHelp, ShippedIn: "0.24.0", Summary: "The help panel shows the user manual's own page for the screen you are on, written for the release your workspace is on, with links between pages and a search of the manual"},
 	{Key: FeatureHelpActivity, ShippedIn: "0.25.0", Summary: "The help panel follows what you are working on: the tab you are in, the section you are working in and the button you pressed last open the manual's page for them"},
+	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
 }
 
 // Feature keys the code gates on.
@@ -210,6 +211,11 @@ const (
 	// the app's markup. It gates the panel's tracking and the signals
 	// GET /orgs/{id}/help/context forwards; without it help is per page.
 	FeatureHelpActivity = "help-activity"
+	// FeatureCompactLayout is the project shell's compact layout: the icon
+	// rail with its group flyouts and the top bar on a wide screen, the tab
+	// bar along the bottom of a phone, and ? / F1 opening the help panel.
+	// Frontend only; without it the project keeps its sidebar.
+	FeatureCompactLayout = "compact-layout"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

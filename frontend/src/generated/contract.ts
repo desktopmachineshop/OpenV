@@ -44,6 +44,7 @@ export const FEATURE_KEYS = [
   'linked-sign-in',
   'manual-help',
   'help-activity',
+  'compact-layout',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

@@ -7,6 +7,6 @@
     <resourceid appname="openv-web" appid="crew"/>
   </prolog>
   <conbody>
-    <p>Open <b>Crew</b> in the project sidebar.</p>
+    <p>Open <b>Crew</b> in the project menu.</p>
   </conbody>
 </concept>

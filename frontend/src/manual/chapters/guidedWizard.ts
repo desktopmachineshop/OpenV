@@ -8,7 +8,7 @@ entries you can add with one click.
 
 ## Starting, resuming, modifying
 
-Open **Guided Definition** from the project sidebar (the Overview page also
+Open **Guided Definition** from the project menu (the Overview page also
 has a shortcut whose label reflects where you are: *Start*, *Resume*, or
 *Modify guided definition*).
 

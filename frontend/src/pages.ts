@@ -114,7 +114,7 @@ export const PAGES: readonly Page[] = [
     path: 'evidence',
     load: 'eager',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'evidence' },
     nav: { group: 'Verify', label: 'Evidence' },
   },
   {
@@ -130,7 +130,7 @@ export const PAGES: readonly Page[] = [
     path: 'impact',
     load: 'lazy',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'impact' },
     nav: { group: 'Verify', label: 'Impact' },
   },
   {
@@ -138,7 +138,7 @@ export const PAGES: readonly Page[] = [
     path: 'review',
     load: 'lazy',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'review' },
     nav: { group: 'Verify', label: 'Review Queue' },
   },
   {
@@ -154,7 +154,7 @@ export const PAGES: readonly Page[] = [
     path: 'todos',
     load: 'eager',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'todos' },
     nav: { group: 'Plan', label: 'To-dos', feature: TODO_LIST_FEATURE },
   },
   {

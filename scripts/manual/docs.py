@@ -99,6 +99,10 @@ SECTION_KEYS = {
     ('projects', 'project-access-members'): ['settings.members'],
     ('projects', 'share-links'): ['settings.share-links'],
     ('guided-wizard', 'the-vv-assistant-chat'): ['guided.assistant'],
+    ('getting-started', 'finding-your-way-around'): ['start.navigation'],
+    ('getting-started', 'keyboard-shortcuts'): ['start.shortcuts'],
+    ('artifacts', 'search-filters'): ['search'],
+    ('links', 'impact-analysis'): ['impact'],
 }
 
 

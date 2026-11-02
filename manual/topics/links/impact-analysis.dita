@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="impact-analysis">
+  <title>Impact analysis</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="impact"/>
+  </prolog>
+  <conbody>
+    <p><b>Impact</b>, under <b>Verify</b> in the project menu, answers "what does a change to this artifact touch?" before you make it. Pick the artifact, or open the page from <b>Show impact →</b> on an artifact or a row of the Traceability Matrix.</p>
+    <ul>
+      <li><b>Direction</b> — <b>Downstream</b> lists what depends on the artifact (what a change here could affect), <b>Upstream</b> what it depends on (its sources and rationale), and <b>Both</b> shows the two side by side.</li>
+      <li>Results are grouped by type — user needs, requirements, design items, test cases, hazards — with how each one is reached: the link it came through and how many <b>hops</b> away it is, so a direct dependent reads apart from one three links down the chain.</li>
+    </ul>
+    <p>Run it before changing an approved requirement: the downstream list is the set of artifacts whose links will turn <b>suspect</b> and that may need review again.</p>
+  </conbody>
+</concept>

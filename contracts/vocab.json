@@ -206,7 +206,8 @@
     "connected-app-workspaces",
     "linked-sign-in",
     "manual-help",
-    "help-activity"
+    "help-activity",
+    "compact-layout"
   ],
   "event_types": [
     "artifact.created",

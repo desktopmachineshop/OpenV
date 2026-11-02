@@ -4,7 +4,7 @@ const content = `
 
 Agents are AI workers that operate inside your projects — drafting
 requirements, reviewing for testability, running interviews, doing V&V chores.
-The **Agents** page in the project sidebar lists them and hosts the editor.
+The **Agents** page in the project menu lists them and hosts the editor.
 
 ## The agent list
 

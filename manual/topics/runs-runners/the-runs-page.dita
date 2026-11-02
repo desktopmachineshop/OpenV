@@ -3,7 +3,7 @@
 <concept id="the-runs-page">
   <title>The Runs page</title>
   <conbody>
-    <p><b>Runs</b> in the project sidebar lists agent runs with status, start time, duration, token usage, and cost. Statuses:</p>
+    <p><b>Runs</b> in the project menu lists agent runs with status, start time, duration, token usage, and cost. Statuses:</p>
     <p>queued · running · awaiting_approval · succeeded · failed · timed_out · cancelled</p>
     <ul>
       <li>Click a run to open the <b>detail panel</b>: the prompt, live progress/log, results, and links to related runs (e.g. crew delegations).</li>
