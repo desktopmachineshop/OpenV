@@ -205,7 +205,8 @@
     "cloud-runner-token",
     "connected-app-workspaces",
     "linked-sign-in",
-    "manual-help"
+    "manual-help",
+    "help-activity"
   ],
   "event_types": [
     "artifact.created",

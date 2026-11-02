@@ -630,7 +630,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           editing the artifact, so that changing what the document shows is a
           deliberate edit rather than a stray click on a details page. */}
       {attachments && attachments.length > 0 && (
-        <div style={{ marginBottom: '15px' }}>
+        <div style={{ marginBottom: '15px' }} data-help-key="requirements.figures">
           <ImageGallery
             artifactId={artifact.id}
             attachments={attachments}

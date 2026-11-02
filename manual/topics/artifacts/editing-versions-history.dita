@@ -3,6 +3,9 @@
 <concept id="editing-versions-history">
   <title>Editing, versions &amp; history</title>
   <shortdesc>Select an artifact to see its details; <b>Edit</b> opens the editor.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.versions"/>
+  </prolog>
   <conbody>
     <ul>
       <li>Every save creates a <b>new version</b> — the header shows "Version N". Adding a figure, uploading a new file for one or renaming one creates a version too.</li>

@@ -50,6 +50,16 @@ then `python3 scripts/manual/docs.py sync` and
 `SECTION_KEYS` in `scripts/manual/docs.py`, sync, and (for a page) map the
 page's route in `help-contexts.yaml`.
 
+**Give a tab, section or button its own help.** Tag the section that
+describes it with a key (above), then put the key on the element in the
+app: `data-help-pane="settings.members"` on a tab and its panel,
+`data-help-key="settings.share-links"` on a section, field or button. The
+help panel sends them as OpenD's activity signals (focus, then the last
+button pressed, then the tab, then the page) and opens the most specific
+one the manual has (`frontend/src/hooks/useHelpActivity.ts`). An untagged
+child key falls back to its parent, so a tab can be marked before its topic
+exists.
+
 **Read it as a reader would.** `opend preview manual --as business`, with
 the OpenD CLI that `scripts/manual/validate.sh` builds into `.cache/opend`:
 `node .cache/opend/packages/cli/dist/bin.js preview manual`.

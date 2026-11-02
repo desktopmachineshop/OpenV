@@ -8,8 +8,13 @@ import type { HelpResults, HelpTopic } from './types/help';
 
 export const helpAPI = {
   // The topic for a context key (a page's, or a help link's), or for an app
-  // path when no key is given; a key falls back to its parents.
-  context: (orgId: string, ctx: { key?: string; path?: string }) =>
+  // path when no key is given; a key falls back to its parents. focus,
+  // action and pane (hooks/useHelpActivity.ts) are tried first, in that
+  // order, once the member's channel has help-activity.
+  context: (
+    orgId: string,
+    ctx: { key?: string; path?: string; focus?: string; action?: string; pane?: string },
+  ) =>
     client.get<HelpTopic>(`/api/v1/orgs/${orgId}/help/context`, { params: ctx }),
   // One topic by its page id, such as "topics/vv/test-runs".
   topic: (orgId: string, topicId: string) =>
