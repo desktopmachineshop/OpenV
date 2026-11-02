@@ -2,6 +2,25 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.25.0",
+   "date": "2026-11-02",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Help that follows what you are working on.** The help panel now opens on the manual's page for the tab you are on, the section you are working in or the button you pressed last, not only for the screen as a whole: the **Members** and **Share links** parts of project settings, an artifact's version **History** and figures, and the Notes panel's **History** and **V&V Assistant** tabs each open their own page, and anything without one opens the screen's. While the panel is open it moves with you as you change tab or section, until you follow a link or search in it."
+     ]
+    },
+    {
+     "name": "Security fixes",
+     "notes": [
+      "**Updated components with published security advisories.** OpenV's spreadsheet library is updated past three advisories in how it reads spreadsheet files: one could hang a server for days, and two could crash it. OpenV only writes spreadsheets, for downloads, and never reads one you upload, so we know of no way any of them could have been triggered. The tools the app is built and tested with are updated past their advisories too."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.24.2",
    "date": "2026-10-30",
    "stableSince": "",
