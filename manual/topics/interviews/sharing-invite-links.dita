@@ -3,6 +3,9 @@
 <concept id="sharing-invite-links">
   <title>Sharing invite links</title>
   <shortdesc>Click <b>Copy invite link</b> on an interview to create an invite and copy its URL. The link opens a public, mobile-friendly chat page:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="interviews.invite"/>
+  </prolog>
   <conbody>
     <ol>
       <li>The participant enters their name.</li>

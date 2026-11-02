@@ -3,5 +3,8 @@
 <concept id="launching-a-run">
   <title>Launching a run</title>
   <shortdesc>Click <b>▶ Launch run</b>, enter a prompt, and launch. Keep prompts lean — the agent fetches requirement content itself through its OpenV tools, so name the work rather than pasting requirement text. You're taken to the <b>Runs</b> page to watch progress.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents.launch"/>
+  </prolog>
   <conbody/>
 </concept>

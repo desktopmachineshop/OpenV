@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="creating-an-automation">
   <title>Creating an automation</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="automations.create"/>
+  </prolog>
   <conbody>
     <p><b>New automation</b> opens the form:</p>
     <ol>
