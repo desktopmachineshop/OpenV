@@ -222,7 +222,8 @@ topic otherwise: in project settings, the **Members** tab opens *Project
 access (members)* and the **Share links** card opens *Share links*; an
 artifact's **History** button opens *Editing, versions & history*, its
 figures open *Figures*, and the **History** and **V&V Assistant** tabs of
-the Notes panel open theirs. While the panel is open it moves with you, a
+the Notes panel open theirs, and the board's **+ Add card** opens
+*Creating a card*. While the panel is open it moves with you, a
 moment after you change section or tab. Once you follow a link or search in
 the panel, it stays on what you chose until you go to another page or open
 it again. Only which section of the screen you are in is used to choose the

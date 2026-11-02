@@ -9,6 +9,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Help for adding a card on the board.** With the board's **+ Add card**
+  form open, the help panel now opens the manual's *Creating a card* page
+  instead of the page about the whole board.
+
 ## 0.25.0 — 2026-11-02
 
 Stable channel release since 2026-11-02.
