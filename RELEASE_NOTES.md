@@ -11,6 +11,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.25.0 — 2026-11-02
 
+Stable channel release since 2026-11-02.
+
 ### New features
 
 - **Help that follows what you are working on.** The help panel now opens
