@@ -216,7 +216,7 @@ export const ProductOverview: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
       {/* Quick links */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }} data-help-key="overview.links">
         <Link to="guided" className="button" style={{ background: 'var(--accent)', textDecoration: 'none' }}>
           {guidedCtaLabel}
         </Link>
@@ -229,7 +229,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Product definition */}
-      <div className="card">
+      <div className="card" data-help-key="overview.product">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ ...sectionTitle, marginBottom: 0 }}>Product definition</div>
           {!editingDef && (
@@ -290,7 +290,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Success metrics */}
-      <div className="card">
+      <div className="card" data-help-key="overview.metrics">
         <div style={sectionTitle}>Success metrics</div>
         {metrics.length === 0 && (
           <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No success metrics defined yet.</div>
@@ -352,7 +352,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Constraints */}
-      <div className="card">
+      <div className="card" data-help-key="overview.constraints">
         <div style={sectionTitle}>Constraints</div>
         {constraints.length === 0 && (
           <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No constraints recorded yet.</div>
@@ -395,7 +395,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Personas & user needs */}
-      <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20 }}>
+      <div data-help-key="overview.personas" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20 }}>
         {[
           { label: 'Personas', items: personas },
           { label: 'User needs', items: userNeeds },
@@ -440,7 +440,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Interviews summary — the full feature lives on the Interviews page */}
-      <div className="card">
+      <div className="card" data-help-key="overview.interviews">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <div style={{ ...sectionTitle, marginBottom: 0 }}>User interviews</div>
           <span style={chip(interviews.length > 0 ? 'var(--accent)' : 'var(--neutral)')}>{interviews.length}</span>

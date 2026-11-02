@@ -22,7 +22,7 @@ interface NfrStepProps {
  */
 export const renderNfrStep = ({ nfrs, setNfrs, openNfrCategories, setOpenNfrCategories }: NfrStepProps): React.ReactElement => {
   return (
-    <div>
+    <div data-help-key="guided.steps.nfrs">
       <div className="card" style={{ marginBottom: 12 }}>
         <h3>Non-functional requirements &amp; constraints</h3>
         <div style={{ ...helpText, marginBottom: 0 }}>

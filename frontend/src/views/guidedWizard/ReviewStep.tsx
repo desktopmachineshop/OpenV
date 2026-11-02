@@ -33,7 +33,7 @@ export const renderReviewStep = ({
     (grouped[a.type] = grouped[a.type] || []).push(a);
   });
   return (
-    <div className="card">
+    <div className="card" data-help-key="guided.steps.review">
       <h3>Review &amp; commit</h3>
       <div style={helpText}>
         These draft artifacts were created during this flow. Discard any you don't want, then commit

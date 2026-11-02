@@ -9,7 +9,7 @@ interface DangerTabProps {
 }
 
 export const DangerTab: React.FC<DangerTabProps> = ({ deleting, handleDeleteProject }) => (
-  <div className="card" style={{ border: '1px solid var(--danger)' }}>
+  <div className="card" style={{ border: '1px solid var(--danger)' }} data-help-key="settings.danger">
     <h3 style={{ color: 'var(--danger)' }}>Danger zone</h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
       Deleting the project permanently removes all artifacts, links, baselines, test runs, work

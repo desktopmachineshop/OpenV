@@ -21,7 +21,7 @@ interface FramingStepProps {
  */
 export const renderFramingStep = ({ vision, problem, targetUsers, setVision, setProblem, setTargetUsers }: FramingStepProps): React.ReactElement => {
   return (
-    <div className="card">
+    <div className="card" data-help-key="guided.steps.framing">
       <h3>Product framing</h3>
       <div style={helpText}>
         Frame the product in a few sentences. This is saved to the product profile and shown on the

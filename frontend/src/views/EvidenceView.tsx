@@ -114,7 +114,7 @@ export const EvidenceView: React.FC = () => {
   if (!projectId) return null;
 
   return (
-    <div style={{ padding: isCompact ? 12 : 24 }}>
+    <div style={{ padding: isCompact ? 12 : 24 }} data-help-key="evidence">
       <div
         style={{
           display: 'flex',
@@ -308,7 +308,10 @@ const BundleForm: React.FC<BundleFormProps> = ({ projectId, bundle, onClose, onS
 
   const field = { width: '100%', marginBottom: 12 } as React.CSSProperties;
 
+  // Modal takes no extra attributes; the wrapper marks the dialog for the help
+  // panel and takes no space (the modal is fixed-position).
   return (
+    <div data-help-pane="evidence">
     <Modal title={bundle ? `Edit ${bundle.ref}` : 'Record a capture'} width={560} onClose={onClose}>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
       <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }} htmlFor="evidence-title">
@@ -388,6 +391,7 @@ const BundleForm: React.FC<BundleFormProps> = ({ projectId, bundle, onClose, onS
         </button>
       </div>
     </Modal>
+    </div>
   );
 };
 
@@ -461,6 +465,7 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
   const conditions = Object.entries(bundle.conditions || {});
 
   return (
+    <div data-help-pane="evidence">
     <Modal title={`${bundle.ref} — ${bundle.title}`} width={640} onClose={onClose}>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
 
@@ -584,5 +589,6 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
         </button>
       </div>
     </Modal>
+    </div>
   );
 };

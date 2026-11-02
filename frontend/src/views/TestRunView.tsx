@@ -304,7 +304,7 @@ export const TestRunView: React.FC = () => {
             : '+ evidence';
       return (
         <button
-          onClick={() => setCitingRow(row)}
+          onClick={() => setCitingRow(row)} data-help-key="evidence"
           disabled={readOnly}
           title={
             cited.length
@@ -443,7 +443,7 @@ export const TestRunView: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }} data-help-key="vv.runs">
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
         <Link
           to={`/projects/${projectId}/vv`}

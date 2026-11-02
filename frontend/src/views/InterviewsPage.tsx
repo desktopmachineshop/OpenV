@@ -242,6 +242,7 @@ export const InterviewsPage: React.FC = () => {
               className="button-secondary"
               style={{ padding: '6px 14px', background: 'var(--accent)' }}
               onClick={() => setShowNewInterview(!showNewInterview)}
+              data-help-key="interviews.create"
             >
               {showNewInterview ? 'Cancel' : '+ New interview'}
             </button>
@@ -249,7 +250,11 @@ export const InterviewsPage: React.FC = () => {
         </div>
 
         {showNewInterview && (
-          <form onSubmit={createInterview} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
+          <form
+            onSubmit={createInterview}
+            style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}
+            data-help-key="interviews.create"
+          >
             <div className="form-group">
               <label htmlFor="new-interview-name">Interview name *</label>
               <input
@@ -319,6 +324,7 @@ export const InterviewsPage: React.FC = () => {
                     e.stopPropagation();
                     copyInviteLink(iv);
                   }}
+                  data-help-key="interviews.invite"
                 >
                   {copiedInterviewId === iv.id ? '✓ Copied!' : 'Copy invite link'}
                 </button>
@@ -336,7 +342,7 @@ export const InterviewsPage: React.FC = () => {
                 )}
               </div>
               {expandedInterviewId === iv.id && (
-                <div style={{ borderTop: '1px solid var(--border-soft)', padding: '10px 12px' }}>
+                <div style={{ borderTop: '1px solid var(--border-soft)', padding: '10px 12px' }} data-help-key="interviews.sessions">
                   {iv.brief && (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, whiteSpace: 'pre-wrap' }}>{iv.brief}</div>
                   )}
