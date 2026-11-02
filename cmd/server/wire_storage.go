@@ -73,6 +73,7 @@ func (a *app) storage() {
 	a.userMetricsRepo = postgres.NewUserMetricsRepository(a.db)
 	a.connectedAppRepo = postgres.NewConnectedAppRepository(a.db)
 	a.attributeDefRepo = postgres.NewAttributeDefinitionRepository(a.db)
+	a.targetReleaseRepo = postgres.NewTargetReleaseRepository(a.db)
 	a.sharedProductRepo = postgres.NewSharedProductRepository(a.db)
 
 	// Event bus. The org resolver backfills tenant attribution for events

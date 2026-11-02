@@ -17,6 +17,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 )
 
 // registerArtifactRoutes wires an artifact's create, list, read, update,
@@ -75,6 +76,10 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 			respondError(w, r, http.StatusInternalServerError, "could not validate artifact attributes; please retry", nil)
 			return
 		}
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.validateTargetReleases(req.ProjectID, req.Attributes, nil); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -282,6 +287,10 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		if err := h.validateTargetReleases(oldArtifact.ProjectID, req.Attributes, oldArtifact.Attributes); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	if h.maybePropose(w, r, oldArtifact.ProjectID, proposals.OpUpdateArtifact, &id, req) {
@@ -452,4 +461,44 @@ func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 	h.publish(r, events.ArtifactDeleted, projectID, id, nil)
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// validateTargetReleases checks an artifact write's targeting attributes
+// against the project's releases. On an update (old not nil) only a
+// targeting that changes is checked, so an artifact carrying the ids of
+// another project's releases, as an imported one can, still takes other
+// edits; such ids count as not set (targetreleases.Resolve).
+func (h *Handler) validateTargetReleases(projectID string, attrs, old map[string]interface{}) error {
+	if h.TargetReleaseService == nil || attrs == nil {
+		return nil
+	}
+	from, until := attrs[targetreleases.AttrFrom], attrs[targetreleases.AttrUntil]
+	if from == nil && until == nil {
+		return nil
+	}
+	if _, ok := from.(string); from != nil && !ok {
+		return errors.New(targetreleases.AttrFrom + " must be a release id")
+	}
+	if _, ok := until.(string); until != nil && !ok {
+		return errors.New(targetreleases.AttrUntil + " must be a release id")
+	}
+	if old != nil && sameString(old[targetreleases.AttrFrom], from) && sameString(old[targetreleases.AttrUntil], until) {
+		return nil
+	}
+	list, err := h.TargetReleaseService.List(projectID)
+	if err != nil {
+		return err
+	}
+	return targetreleases.ValidateTargets(attrs, targetreleases.NewOrder(list))
+}
+
+// sameString reports whether a stored attribute value and a submitted one,
+// nil or a string, are the same.
+func sameString(stored, submitted interface{}) bool {
+	a, aok := stored.(string)
+	b, bok := submitted.(string)
+	if !aok || !bok {
+		return stored == nil && submitted == nil
+	}
+	return a == b
 }

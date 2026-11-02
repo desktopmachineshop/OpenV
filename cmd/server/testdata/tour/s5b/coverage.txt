@@ -13,6 +13,7 @@
 
 DELETE /api/v1/evidence-bundles/{id}: 204, 403, 404; evidence
 DELETE /api/v1/evidence-files/{id}: 204, 403, 404; evidence
+DELETE /api/v1/projects/{id}/releases/{releaseId}: 204, 403, 404, 409; target_releases
 DELETE /api/v1/shared-products/{id}: 204, 403, 404; shared_products
 DELETE /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404; evidence
@@ -47,10 +48,13 @@ GET /api/v1/projects/{id}/parties: 200, 404; quality_profile_parties
 GET /api/v1/projects/{id}/profile: 200, 404; quality_profile_parties
 GET /api/v1/projects/{id}/quality: 200, 404; quality_profile_parties
 GET /api/v1/projects/{id}/quality-rules: 200, 404; quality_profile_parties
+GET /api/v1/projects/{id}/releases: 200; target_releases
 GET /api/v1/projects/{id}/test-runs: 200, 404; test_runs_results
 GET /api/v1/projects/{id}/vv/coverage: 200, 404; vv_coverage_report
 GET /api/v1/projects/{id}/vv/gaps: 200, 404; vv_coverage_report
 GET /api/v1/projects/{id}/vv/matrix: 200, 404; vv_coverage_report
+GET /api/v1/projects/{id}/vv/releases: 200; target_releases
+GET /api/v1/projects/{id}/vv/releases/{releaseId}: 200, 404; target_releases
 GET /api/v1/projects/{id}/vv/report: 200, 404; vv_coverage_report
 GET /api/v1/projects/{id}/work-items: 200, 404; work_items
 GET /api/v1/public/interviews/{token}: 200, 404, 429; interviews
@@ -61,6 +65,7 @@ GET /api/v1/test-runs/{id}: 200, 404; test_runs_results
 GET /api/v1/test-runs/{id}/citations: 200, 404; evidence
 GET /api/v1/test-runs/{id}/results: 200, 404; test_runs_results
 GET /api/v1/work-items/{id}: 200, 404; work_items
+POST /api/v1/artifacts: 201, 400; target_releases
 POST /api/v1/evidence-bundles/{id}/files: 201, 400, 403, 404, 413; evidence
 POST /api/v1/guided-sessions: 201, 400, 403, 404; guided_sessions
 POST /api/v1/guided-sessions/{id}/abandon: 200, 403, 404; guided_sessions
@@ -74,6 +79,7 @@ POST /api/v1/interviews/{id}/close: 200, 403, 404; interviews
 POST /api/v1/interviews/{id}/invites: 201, 400, 403, 404; interviews
 POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
+POST /api/v1/projects/{id}/releases: 201, 400, 403, 409; target_releases
 POST /api/v1/projects/{id}/test-runs: 201, 400, 403, 404; test_runs_results
 POST /api/v1/projects/{id}/work-items: 201, 400, 403, 404; work_items
 POST /api/v1/public/interviews/{token}/finish: 204, 404; interviews
@@ -92,8 +98,10 @@ PUT /api/v1/orgs/{id}/quality-rules: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/parties: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/profile: 200, 400, 403, 404; quality_profile_parties
 PUT /api/v1/projects/{id}/quality-rules: 200, 400, 403; quality_profile_parties
+PUT /api/v1/projects/{id}/release-order: 200, 400; target_releases
+PUT /api/v1/projects/{id}/releases/{releaseId}: 200, 404, 409; target_releases
 PUT /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 PUT /api/v1/test-runs/{id}: 200, 400, 403, 404, 409; test_runs_results
 PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
 
-s5b: 84 of 372 routes reached (22.6%), 84 with a 2xx or 3xx answer (22.6%)
+s5b: 92 of 379 routes reached (24.3%), 92 with a 2xx or 3xx answer (24.3%)

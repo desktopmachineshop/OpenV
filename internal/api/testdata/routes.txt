@@ -27,6 +27,7 @@ DELETE /api/v1/orgs/{id}/runner-session
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}
 DELETE /api/v1/projects/{id}
 DELETE /api/v1/projects/{id}/members/{userId}
+DELETE /api/v1/projects/{id}/releases/{releaseId}
 DELETE /api/v1/projects/{id}/team-access/{teamId}
 DELETE /api/v1/provider-api-keys/{env}
 DELETE /api/v1/repo-connections/{id}
@@ -151,6 +152,7 @@ GET /api/v1/projects/{id}/parties
 GET /api/v1/projects/{id}/profile
 GET /api/v1/projects/{id}/quality
 GET /api/v1/projects/{id}/quality-rules
+GET /api/v1/projects/{id}/releases
 GET /api/v1/projects/{id}/repo-connections
 GET /api/v1/projects/{id}/report
 GET /api/v1/projects/{id}/review-queue
@@ -160,6 +162,8 @@ GET /api/v1/projects/{id}/test-runs
 GET /api/v1/projects/{id}/vv/coverage
 GET /api/v1/projects/{id}/vv/gaps
 GET /api/v1/projects/{id}/vv/matrix
+GET /api/v1/projects/{id}/vv/releases
+GET /api/v1/projects/{id}/vv/releases/{releaseId}
 GET /api/v1/projects/{id}/vv/report
 GET /api/v1/projects/{id}/work-items
 GET /api/v1/projects/{projectID}/attachments
@@ -285,6 +289,7 @@ POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
 POST /api/v1/projects/{id}/reindex-embeddings
+POST /api/v1/projects/{id}/releases
 POST /api/v1/projects/{id}/repo-connections
 POST /api/v1/projects/{id}/review-round
 POST /api/v1/projects/{id}/share-links
@@ -359,6 +364,8 @@ PUT /api/v1/projects/{id}/members/{userId}
 PUT /api/v1/projects/{id}/parties
 PUT /api/v1/projects/{id}/profile
 PUT /api/v1/projects/{id}/quality-rules
+PUT /api/v1/projects/{id}/release-order
+PUT /api/v1/projects/{id}/releases/{releaseId}
 PUT /api/v1/projects/{id}/team-access
 PUT /api/v1/provider-api-keys/{env}
 PUT /api/v1/provider-settings

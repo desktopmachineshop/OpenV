@@ -75,6 +75,7 @@ func TestMCPToolsGolden(t *testing.T) {
 // them is an id, so it has to sit where the route template has a parameter.
 const (
 	goldenProjectID       = "11111111-1111-4111-8111-111111111111"
+	goldenReleaseID       = "33333333-3333-4333-8333-333333333333"
 	goldenArtifactID      = "22222222-2222-4222-8222-222222222222"
 	goldenOtherArtifactID = "33333333-3333-4333-8333-333333333333"
 	goldenLinkID          = "44444444-4444-4444-8444-444444444444"
@@ -97,7 +98,7 @@ func toolGoldenIDs() map[string]bool {
 	for _, id := range []string{
 		goldenProjectID, goldenArtifactID, goldenOtherArtifactID,
 		goldenLinkID, goldenBaselineID, goldenTestRunID, goldenTestCaseID,
-		goldenWorkItemID, goldenDelegateRunID, goldenAttachmentID, goldenAgentID,
+		goldenWorkItemID, goldenDelegateRunID, goldenAttachmentID, goldenAgentID, goldenReleaseID,
 	} {
 		ids[id] = true
 	}
@@ -134,6 +135,11 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"get_quality_findings":    {"artifact_id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_vv_coverage":         {"project_id": goldenProjectID, "detail": true},
 		"get_vv_gaps":             {"project_id": goldenProjectID},
+		"list_releases":           {"project_id": goldenProjectID},
+		"create_release":          {"project_id": goldenProjectID, "name": "MVP", "description": "First usable", "target_date": "2027-01-31", "status": "planned"},
+		"update_release":          {"project_id": goldenProjectID, "release_id": goldenReleaseID, "name": "V1.0", "description": "", "target_date": "", "status": "in_progress"},
+		"get_release_progress":    {"project_id": goldenProjectID, "release_id": goldenReleaseID, "detail": true},
+		"set_release_target":      {"artifact_id": goldenArtifactID, "release": "MVP", "until": goldenReleaseID, "clear": false},
 		"list_work_items":         {"project_id": goldenProjectID, "column": "todo", "assignee_id": goldenAgentID},
 		"get_work_item":           {"id": goldenWorkItemID},
 		"get_work_item_history":   {"id": goldenWorkItemID},
@@ -154,7 +160,10 @@ func toolStubBodies() map[string]string {
 		"GET /api/v1/baselines/{id}": `{"project_id":"` + goldenProjectID + `","project_name":"Seal rig","artifacts":[],"links":[]}`,
 		"GET /api/v1/projects/{id}/baselines": `[{"id":"` + goldenBaselineID + `","project_id":"` + goldenProjectID +
 			`","name":"B1","snapshot":null,"created_at":"2026-01-01T09:30:00Z"}]`,
-		"GET /api/v1/projects/{id}/work-items":    `[]`,
+		"GET /api/v1/projects/{id}/work-items": `[]`,
+		"GET /api/v1/projects/{id}/releases":   `[{"id":"` + goldenReleaseID + `","name":"MVP","position":0}]`,
+		"GET /api/v1/artifacts/{id}": `{"id":"` + goldenArtifactID + `","project_id":"` + goldenProjectID +
+			`","attributes":{"priority":"must","target_release":"old"}}`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
 		"GET /api/v1/projects/{id}/quality-rules": `{"effective":{},"summary":"shall"}`,
 		"POST /api/v1/agent-runs/delegate":        `{"run_id":"` + goldenDelegateRunID + `","status":"queued"}`,

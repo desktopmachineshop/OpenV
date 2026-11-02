@@ -163,6 +163,7 @@ func Tools() []Tool {
 		testRunTools(),
 		qualityTools(),
 		vvTools(),
+		releaseTools(),
 		workItemListTools(),
 		workItemTools(),
 		interviewTools(),

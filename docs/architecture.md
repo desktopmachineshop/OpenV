@@ -207,6 +207,7 @@ the area that owns them; the area guide of
 | | `internal/domain/workitems` | the kanban work items |
 | verification | `internal/domain/evidence` | evidence bundles |
 | | `internal/domain/vv` | verification methods, test runs and results, coverage, gaps, change impact |
+| | `internal/domain/targetreleases` | target releases: a project's ordered milestones, the release range a requirement targets, and each release's progress and burn-up |
 | documents | `internal/domain/attachments` | attachments and figures |
 | | `internal/domain/baselines` | baselines and their comparison |
 | | `internal/domain/downloads` | assembles one project download |

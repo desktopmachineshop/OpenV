@@ -22,6 +22,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -55,17 +56,19 @@ import (
 
 // HandlerDeps carries every service the API layer depends on.
 type HandlerDeps struct {
-	ArtifactService      artifacts.Service
-	LinkService          links.Service
-	ProjectService       projects.Service
-	AttachmentService    attachments.Service
-	ExportService        exports.Service
-	DownloadService      downloads.Service
-	BaselineService      baselines.Service
-	ReportService        reports.Service
-	TemplateService      templates.Service
-	ChatterService       chatter.Service
-	AttributeService     attributes.Service
+	ArtifactService   artifacts.Service
+	LinkService       links.Service
+	ProjectService    projects.Service
+	AttachmentService attachments.Service
+	ExportService     exports.Service
+	DownloadService   downloads.Service
+	BaselineService   baselines.Service
+	ReportService     reports.Service
+	TemplateService   templates.Service
+	ChatterService    chatter.Service
+	AttributeService  attributes.Service
+	// TargetReleaseService is a project's target releases (vv_release_handlers.go).
+	TargetReleaseService targetreleases.Service
 	SharedProductService sharedproducts.Service
 	EmbeddingService     *embeddings.Service
 	UploadsDir           string

@@ -372,3 +372,10 @@ GET,DELETE /mcp -> MCPNoStream
 GET /api/v1/orgs/{id}/help/context -> GetHelpContext
 GET /api/v1/orgs/{id}/help/topic -> GetHelpTopic
 GET /api/v1/orgs/{id}/help/search -> SearchHelp
+GET /api/v1/projects/{id}/releases -> ListTargetReleases
+POST /api/v1/projects/{id}/releases -> CreateTargetRelease
+PUT /api/v1/projects/{id}/release-order -> ReorderTargetReleases
+PUT /api/v1/projects/{id}/releases/{releaseId} -> UpdateTargetRelease
+DELETE /api/v1/projects/{id}/releases/{releaseId} -> DeleteTargetRelease
+GET /api/v1/projects/{id}/vv/releases -> GetReleaseOverview
+GET /api/v1/projects/{id}/vv/releases/{releaseId} -> GetReleaseProgress
