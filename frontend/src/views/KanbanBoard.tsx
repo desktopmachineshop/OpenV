@@ -499,9 +499,12 @@ export const KanbanBoard: React.FC = () => {
                 );
               })}
 
-              {/* Composer */}
+              {/* Composer. data-help-key: the help panel opens on the manual's
+                  "Creating a card" while the reader is in it, or has just
+                  pressed + Add card (hooks/useHelpActivity). */}
               {composer.expanded ? (
                 <div
+                  data-help-key="board.add-card"
                   style={{
                     background: 'var(--surface)',
                     borderRadius: 4,
@@ -572,6 +575,7 @@ export const KanbanBoard: React.FC = () => {
                 </div>
               ) : (
                 <button
+                  data-help-key="board.add-card"
                   onClick={() => setComposer(col.key, { expanded: true })}
                   style={{
                     width: '100%',
