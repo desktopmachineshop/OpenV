@@ -20,6 +20,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   open it moves with you as you change tab or section, until you follow a
   link or search in it.
 
+### Security fixes
+
+- **Updated components with published security advisories.** OpenV's
+  spreadsheet library is updated past three advisories in how it reads
+  spreadsheet files: one could hang a server for days, and two could crash
+  it. OpenV only writes spreadsheets, for downloads, and never reads one you
+  upload, so we know of no way any of them could have been triggered. The
+  tools the app is built and tested with are updated past their advisories
+  too.
+
 ## 0.24.2 — 2026-10-30
 
 ### Maintenance updates
