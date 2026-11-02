@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.25.1 — 2026-11-02
+
 ### Bug fixes
 
 - **Help for adding a card on the board.** With the board's **+ Add card**
