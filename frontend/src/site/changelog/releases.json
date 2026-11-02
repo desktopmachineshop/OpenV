@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.25.2",
+   "date": "2026-11-02",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Help that knows what you are doing, on every page.** The help panel now opens the manual's section for the form, field, dialog, tab or button you are using across the whole app, not only on a few screens: creating an artifact or a link, the card drawer, the agent editor's settings, automations, crews, test runs and evidence, the guided wizard's steps, interviews, the product overview and project settings among them."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.25.1",
    "date": "2026-11-02",
    "stableSince": "",

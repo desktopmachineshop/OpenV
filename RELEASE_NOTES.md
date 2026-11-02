@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.25.2 — 2026-11-02
+
 ### Maintenance updates
 
 - **Help that knows what you are doing, on every page.** The help panel
