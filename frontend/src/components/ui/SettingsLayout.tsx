@@ -30,6 +30,12 @@ interface SettingsLayoutProps {
   helpPane?: (key: string) => string;
   /** What sits above the open section: its title and any notices. */
   head?: React.ReactNode;
+  /**
+   * "button" keeps a page's sections as the plain toggle buttons it always
+   * had (the workspace settings, which e2e selects by that role, I21);
+   * "tab" (the default) is the tabs pattern.
+   */
+  itemRole?: 'tab' | 'button';
   children: React.ReactNode;
 }
 
@@ -42,6 +48,7 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
   panelId,
   helpPane,
   head,
+  itemRole = 'tab',
   children,
 }) => {
   const phone = useViewport().isPhone;
@@ -57,10 +64,11 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
         return (
           <button
             key={s.key}
-            role="tab"
+            {...(itemRole === 'tab' ? { role: 'tab' } : {})}
             id={tabId(s.key)}
-            aria-selected={selected}
-            aria-controls={panelId}
+            {...(itemRole === 'tab'
+              ? { 'aria-selected': selected, 'aria-controls': panelId }
+              : { 'aria-pressed': selected })}
             data-help-pane={helpPane?.(s.key)}
             className={[phone ? 'ov-chip-tab' : 'ov-settings-nav-item', s.danger ? 'is-danger' : '']
               .filter(Boolean)

@@ -282,6 +282,7 @@ export const OrgSettings: React.FC = () => {
         onSelect={setTab}
         tabId={(key) => `org-settings-tab-${key}`}
         panelId="org-settings-panel"
+        itemRole="button"
         head={
           <>
             <div className="ov-settings-head">
@@ -328,7 +329,7 @@ export const OrgSettings: React.FC = () => {
           </>
         }
       >
-        <div role="tabpanel" id="org-settings-panel" aria-labelledby={`org-settings-tab-${tab}`}>
+        <div id="org-settings-panel">
         {tab === 'general' && (
           <>
             <div className="card">
