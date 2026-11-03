@@ -188,6 +188,8 @@ describe('compact layout on a phone', () => {
       'Review -> /projects/p1/review',
     ]);
     expect(tabs.querySelector('a.active')?.textContent).toBe('V&V');
+    // Floating buttons at the foot of a page read this to sit above the bar.
+    expect(document.documentElement.style.getPropertyValue('--ov-tabbar-height')).toBe('56px');
     const more = button(tabs, 'More')!;
     expect(more.getAttribute('aria-expanded')).toBe('false');
     await act(async () => more.click());

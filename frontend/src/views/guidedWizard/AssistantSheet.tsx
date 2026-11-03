@@ -98,7 +98,9 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({
           style={{
             position: 'fixed',
             right: 16,
-            bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+            // Above the project's phone tab bar where one is drawn
+            // (ProjectLayoutTabs.tsx sets --ov-tabbar-height).
+            bottom: 'calc(16px + var(--ov-tabbar-height, 0px) + env(safe-area-inset-bottom, 0px))',
             minHeight: 48,
             padding: '0 18px',
             borderRadius: 24,
