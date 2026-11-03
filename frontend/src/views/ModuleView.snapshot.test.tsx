@@ -204,6 +204,25 @@ const CANNED: Record<string, (...args: any[]) => unknown> = {
   'qualityAPI.artifact': (id: string) => score(id, 82, 'good', 1),
   'attachmentAPI.listByProject': () => [],
   'attachmentAPI.listByArtifact': () => [],
+  // The live project's verification: tc-1 passes for req-1. The baseline's
+  // report has no entries.
+  'vvAPI.coverage': (_projectId: string, baselineId?: string) => ({
+    project_id: 'p1',
+    entries: baselineId
+      ? []
+      : [
+          {
+            requirement_id: 'req-1',
+            title: 'The pump shall start within 2 seconds',
+            verification_method: 'test',
+            verification_status: '',
+            test_case_ids: ['tc-1'],
+            latest_results: { 'tc-1': 'pass' },
+            rollup: 'pass',
+          },
+        ],
+    summary: {},
+  }),
   // A pasted copy: the server appends it to its parent's children.
   'artifactAPI.create': (data: { parent_id: string | null; type: string; title: string; body: string }) => ({
     ...art('req-5', 'REQ-5', data.parent_id, 4, data.type, data.title, 1, '2026-06-01T12:00:00Z'),
@@ -406,6 +425,8 @@ const LOAD = [
   'baselineAPI.list("p1")',
   'qualityAPI.project("p1")',
   'attachmentAPI.listByProject("p1")',
+  // The verification column's report, once the project is known.
+  'vvAPI.coverage("p1")',
 ];
 const PARENT_AND_LINKED = [
   'projectAPI.get("p0")',
@@ -430,7 +451,7 @@ describe('ModuleView characterization (S16a)', () => {
     setViewport(1100, false);
     await mount('/projects/p1/requirements?artifact=req-1');
 
-    await click(container.querySelector('button[title="Toggle filters"]')!);
+    await click(container.querySelector('button[title^="Toggle filters"]')!);
     const comparatorSelects = () =>
       Array.from(container.querySelectorAll<HTMLSelectElement>('select')).filter((s) =>
         Array.from(s.options).some((o) => o.value === 'gt')
@@ -513,13 +534,13 @@ describe('ModuleView characterization (S16a)', () => {
     );
     // The baseline's tree arrives collapsed (the live one did not: its first
     // render had no artifacts to collapse), so open it to reach a row.
-    await click(byText('button', 'Expand all'));
-    await click(byText('code', 'REQ-1'));
+    await click(byText('span', 'REQ-1'));
 
     expect(recorder.calls).toEqual([
       ...LOAD,
       ...PARENT_AND_LINKED,
       'baselineAPI.get("bl-2")',
+      'vvAPI.coverage("p1", "bl-2")',
       // A row click loads the document once: the click writes ?artifact=
       // and the selection follows the URL (#379, bug 102; it loaded twice,
       // the selection set, cleared by the sync effect and set again).
@@ -537,7 +558,7 @@ describe('ModuleView characterization (S16a)', () => {
     setViewport(1100, false);
     await mount('/projects/p1/requirements?artifact=req-1');
     recorder.calls = [];
-    await click(byText('code', 'REQ-4'));
+    await click(byText('span', 'REQ-4'));
 
     expect(recorder.calls).toEqual([
       'artifactAPI.getVersions("req-4")',
@@ -598,15 +619,15 @@ describe('ModuleView characterization (S16a)', () => {
     await mount('/projects/p1/requirements?artifact=req-1');
     const openMenu = async (ref: string) => {
       await act(async () => {
-        byText('code', ref).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+        byText('span', ref).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
       });
       await flush();
     };
     await openMenu('REQ-2');
-    await click(byText('button', '📋 Copy'));
+    await click(byText('button', 'Copy'));
     await openMenu('REQ-3');
     recorder.calls = [];
-    await click(byText('button', '📥 Paste after'));
+    await click(byText('button', 'Paste after'));
 
     expect(recorder.calls).toEqual([
       'artifactAPI.create({"project_id":"p1","parent_id":"hdg-1","type":"requirement","title":"The pump shall log faults (copy)","body":"The pump shall log faults.","attributes":{},"copied_from":"req-2"})',

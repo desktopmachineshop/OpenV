@@ -1,9 +1,11 @@
 import React from 'react';
+import { Chip } from '../../components/ui';
 import type { Setter } from './shared';
 
-// The requirements document's header row: its title and, beside it, the
-// toolbar on a wide screen or, stacked, the ⋯ button that opens the phone
-// actions sheet instead.
+// The requirements header row: the title and whether the live project or a
+// baseline is on screen, then, on a wide screen, the toolbar with the one
+// primary action (+ New Artifact) at its end; stacked, the ⋯ button that
+// opens the phone actions sheet instead.
 // Props-only (refactor plan F7): the ModuleView shell owns the state, the
 // effects, the loads and the handlers.
 interface DocumentHeaderProps {
@@ -11,11 +13,35 @@ interface DocumentHeaderProps {
   toolsOpen: boolean;
   setToolsOpen: Setter<boolean>;
   toolbarActions: React.ReactNode;
+  /** The create button, the header's primary action on a wide screen. */
+  newButton?: React.ReactNode;
+  isBaselineView: boolean;
 }
 
-export const DocumentHeader: React.FC<DocumentHeaderProps> = ({ stacked, toolsOpen, setToolsOpen, toolbarActions }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: stacked ? '8px 12px 6px' : '16px 20px 12px', flexWrap: 'wrap', flexShrink: 0 }}>
-    <h2 style={{ color: 'var(--text)', margin: 0, fontSize: stacked ? 20 : undefined }}>Requirements</h2>
+export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
+  stacked,
+  toolsOpen,
+  setToolsOpen,
+  toolbarActions,
+  newButton,
+  isBaselineView,
+}) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: stacked ? '8px 12px 6px' : '10px 20px',
+      flexWrap: 'wrap',
+      flexShrink: 0,
+      background: 'var(--surface)',
+      borderBottom: stacked ? 'none' : '1px solid var(--border)',
+    }}
+  >
+    <h2 style={{ color: 'var(--text)', margin: 0, fontSize: stacked ? 20 : 18 }}>Requirements</h2>
+    <Chip tone={isBaselineView ? 'warning' : 'neutral'} title={isBaselineView ? 'A baseline: read-only' : 'The live project'}>
+      {isBaselineView ? 'Baseline' : 'Working copy'}
+    </Chip>
     <div style={{ flex: 1 }} />
     {stacked ? (
       <button
@@ -40,7 +66,10 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({ stacked, toolsOp
         ⋯
       </button>
     ) : (
-      toolbarActions
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {toolbarActions}
+        {newButton}
+      </div>
     )}
   </div>
 );

@@ -9,12 +9,12 @@ artifactFilterPresets
 openv-connector-downloaded
   localStorage    getItem
   localStorage    setItem
+openv-detailColumnWidth
+  localStorage    getItem
+  localStorage    setItem
 openv-invented-products
   localStorage    getItem
   localStorage    removeItem
-  localStorage    setItem
-openv-leftColumnWidth
-  localStorage    getItem
   localStorage    setItem
 openv-nav-sections
   localStorage    getItem

@@ -15,6 +15,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   button, and the actions beside it are quiet outlined buttons, instead of
   green, grey and blue buttons competing for attention. The first step of
   bringing every page in line with OpenV's new compact design.
+- **Requirements, redesigned.** The list now takes the page, as a dense
+  table grouped by section, the tree, or layers that follow one chain from
+  need to design, with tabs per artifact type and the project's figures above
+  it. Every row shows its status, priority, quality score, trace (with a
+  warning on suspect links) and verification. The selected artifact opens in
+  a panel on the right with its trace, its tests and their results. Moving an
+  artifact up or down is in its ⋯ menu (or Alt+↑ / Alt+↓). On a phone the list
+  has two-line rows, a way down the hierarchy level by level, and a bar under
+  the artifact to comment or move it on in review.
 
 ### Bug fixes
 

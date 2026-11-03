@@ -5,7 +5,7 @@
 page parameters read: 25 (against, artifact, checkout, client_id, code_challenge, code_challenge_method, error, go, invite, item, link, mode, next, panel, redirect_uri, release, reset, run, scope, session_id, share, signed_out, state, tab, token)
 page parameters written: 9
 parameters carried by in-app links: 9
-API query parameters built with URLSearchParams: 10
+API query parameters built with URLSearchParams: 11
 
 ## Page URL parameters (modules using useSearchParams)
 against
@@ -118,3 +118,7 @@ types
   set
 utm_source
   get
+view
+  delete
+  get
+  set

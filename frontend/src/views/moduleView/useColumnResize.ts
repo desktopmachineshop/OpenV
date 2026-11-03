@@ -1,36 +1,40 @@
 import React, { useEffect, useState } from 'react';
 
 export interface ColumnResizeOptions {
-  /** The window's width, which the tree column yields to. */
+  /** The window's width, which the detail column yields to. */
   viewportWidth: number;
   /** Whether the notes column takes width beside the document (pinned). */
   notesTakesSpace: boolean;
 }
 
+/** The narrowest the list beside the detail panel is drawn. */
+export const LIST_MIN = 420;
+
 /**
- * The module's two resizable columns: the tree on the left and the notes on
- * the right. Each width is remembered (openv-leftColumnWidth,
- * openv-rightColumnWidth) and changed by dragging the handle beside its
- * column; the width is saved when the drag ends. The tree is drawn narrower
- * than its saved width when the window cannot give the document its room.
+ * The module's two resizable columns: the detail panel (the selected
+ * artifact's document) to the right of the list, and the notes on the far
+ * right. Each width is remembered (openv-detailColumnWidth,
+ * openv-rightColumnWidth) and changed by dragging the handle on its left
+ * edge; the width is saved when the drag ends. The detail panel is drawn
+ * narrower than its saved width when the window cannot give the list its
+ * room.
  */
 export function useColumnResize({ viewportWidth, notesTakesSpace }: ColumnResizeOptions) {
-  // Resizable columns state
   const [leftColumnWidth, setLeftColumnWidth] = useState<number>(() => {
-    const saved = localStorage.getItem('openv-leftColumnWidth');
-    return saved ? parseInt(saved) : 400;
+    const saved = localStorage.getItem('openv-detailColumnWidth');
+    return saved ? parseInt(saved) : 460;
   });
   const [rightColumnWidth, setRightColumnWidth] = useState<number>(() => {
     const saved = localStorage.getItem('openv-rightColumnWidth');
     return saved ? parseInt(saved) : 320;
   });
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
-  // The tree column as drawn: the saved width, clamped so the document keeps
-  // at least 420px beside the project sidebar and a pinned notes column. The
-  // saved value is untouched — a wider window gets it back.
+  // The detail column as drawn: the saved width, clamped so the list keeps at
+  // least LIST_MIN beside the project rail and a pinned notes column. The
+  // saved value is untouched: a wider window gets it back.
   const leftColumnDrawn = Math.max(
-    200,
-    Math.min(leftColumnWidth, viewportWidth - 260 - (notesTakesSpace ? rightColumnWidth + 10 : 10) - 420)
+    340,
+    Math.min(leftColumnWidth, viewportWidth - 104 - (notesTakesSpace ? rightColumnWidth + 10 : 24) - LIST_MIN)
   );
   // Drag origin for a column resize: the pointer position and column width at
   // mousedown. Resizing is a delta from that origin rather than an absolute
@@ -66,10 +70,10 @@ export function useColumnResize({ viewportWidth, notesTakesSpace }: ColumnResize
       const origin = resizeOrigin.current;
       if (!origin) return;
 
-      // The left column grows as the pointer moves right; the right column
-      // grows as it moves left.
-      const delta = origin.side === 'left' ? e.clientX - origin.startX : origin.startX - e.clientX;
-      const [min, max] = origin.side === 'left' ? [200, 800] : [250, 600];
+      // Both columns sit right of their handles, so both grow as the
+      // pointer moves left.
+      const delta = origin.startX - e.clientX;
+      const [min, max] = origin.side === 'left' ? [340, 900] : [250, 600];
       const newWidth = Math.max(min, Math.min(max, origin.startWidth + delta));
 
       liveWidths.current[origin.side] = newWidth;
@@ -85,7 +89,7 @@ export function useColumnResize({ viewportWidth, notesTakesSpace }: ColumnResize
       if (origin?.side === 'right') {
         localStorage.setItem('openv-rightColumnWidth', liveWidths.current.right.toString());
       } else if (origin?.side === 'left') {
-        localStorage.setItem('openv-leftColumnWidth', liveWidths.current.left.toString());
+        localStorage.setItem('openv-detailColumnWidth', liveWidths.current.left.toString());
       }
       resizeOrigin.current = null;
       setIsResizing(null);

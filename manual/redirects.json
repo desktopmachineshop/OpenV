@@ -26,6 +26,8 @@
   "/manual/artifacts": "topics/artifacts/index",
   "/manual/artifacts#artifact-types": "topics/artifacts/artifact-types",
   "/manual/artifacts#the-layout": "topics/artifacts/the-layout",
+  "/manual/artifacts#table-tree-and-layers": "topics/artifacts/table-tree-and-layers",
+  "/manual/artifacts#the-detail-panel": "topics/artifacts/the-detail-panel",
   "/manual/artifacts#creating-and-organizing-artifacts": "topics/artifacts/creating-and-organizing-artifacts",
   "/manual/artifacts#moving-through-the-document": "topics/artifacts/moving-through-the-document",
   "/manual/artifacts#referencing-figures-and-linked-artifacts": "topics/artifacts/referencing-figures-and-linked-artifacts",

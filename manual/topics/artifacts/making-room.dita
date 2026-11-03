@@ -12,7 +12,7 @@
       <li><b>Auto-hide</b> — a thin strip at the edge; hovering it opens the panel over the document, and moving away closes it. The document does not reflow.</li>
       <li><b>Hidden</b> — only the strip remains, which brings the panel back.</li>
     </ul>
-    <p>The choice is remembered per person. The artifact tree fills the height of its column, so a taller window shows more of the document rather than more empty space.</p>
+    <p>The choice is remembered per person. Until you choose, the panel starts auto-hidden on anything narrower than a wide desktop (1680 pixels), so the list and the detail panel have the room. The list fills the height of the page, so a taller window shows more of it rather than more empty space.</p>
     <p>Nothing on the page is sized to the browser window, so the window itself never scrolls: the tree, the document, and the Notes panel each scroll inside their own column, and the toolbar takes a second row on a narrow window without pushing anything off the bottom.</p>
   </conbody>
 </concept>

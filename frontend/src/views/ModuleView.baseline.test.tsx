@@ -146,15 +146,14 @@ describe('ModuleView baseline document', () => {
     await flush();
 
     // Live, the artifact's header carries its actions.
-    expect(byText('h3', 'REQ-1The pump shall start within 2 seconds')).toBeTruthy();
+    expect(byText('h3', 'The pump shall start within 2 seconds')).toBeTruthy();
     expect(documentButtons()).toEqual(expect.arrayContaining(['Edit', 'Delete', 'History', 'Submit for review']));
 
     // The same artifact as the baseline captured it: read only.
     await choose(container.querySelector<HTMLSelectElement>('select[title="Select baseline"]')!, 'bl-1');
-    await click(byText('button', 'Expand all'));
-    await click(byText('code', 'REQ-1'));
-    expect(byText('h3', 'REQ-1The pump shall start within 5 seconds')).toBeTruthy();
-    expect(container.textContent).toContain('Version 2');
+    await click(byText('span', 'REQ-1'));
+    expect(byText('h3', 'The pump shall start within 5 seconds')).toBeTruthy();
+    expect(container.textContent).toContain('Version2');
     expect(documentButtons().filter((b) => WRITES.includes(b))).toEqual([]);
     expect(vi.mocked(artifactAPI.changeStatus)).not.toHaveBeenCalled();
     expect(vi.mocked(artifactAPI.delete)).not.toHaveBeenCalled();
@@ -178,14 +177,13 @@ describe('ModuleView baseline document', () => {
     const header = () => container.querySelector('[aria-label="Artifact document"]')?.textContent ?? '';
 
     // Live, the count is the live artifact's.
-    expect(header()).toContain('Version 3');
-    expect(header()).toContain('• 3 total');
+    expect(header()).toContain('Version3');
+    expect(header()).toContain('3 · 3 total');
 
     await choose(container.querySelector<HTMLSelectElement>('select[title="Select baseline"]')!, 'bl-1');
-    await click(byText('button', 'Expand all'));
     const loads = vi.mocked(artifactAPI.getVersions).mock.calls.length;
-    await click(byText('code', 'REQ-1'));
-    expect(header()).toContain('Version 2');
+    await click(byText('span', 'REQ-1'));
+    expect(header()).toContain('Version2');
     expect(header()).not.toContain('total');
     expect(vi.mocked(artifactAPI.getVersions).mock.calls.length).toBe(loads);
   });
