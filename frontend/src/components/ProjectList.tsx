@@ -352,18 +352,35 @@ export const ProjectList: React.FC = () => {
   // its Home. The list itself is still where the rail's Projects, Home's
   // All projects and the top bar lead, and where a member with no projects
   // starts one.
-  // Only the first load decides: a member who arrives with no projects and
-  // then creates one goes where creating it leads, not to a Home.
+  // It is decided once, when both the list and the workspace's feature gates
+  // have loaded (the gates can arrive after the list), and never once the
+  // member has started doing something here: a click or a key press on the
+  // list cancels it, so nothing is pulled out from under a form being filled.
+  // A member who arrives with no projects and then creates one goes where
+  // creating it leads, not to a Home.
   const landed = useRef(false);
+  const gatesKnown = useAppStore((s) => s.features != null);
   useEffect(() => {
-    if (!homeDesign || !landing || landed.current || loading) return;
+    if (!landing) return undefined;
+    const stop = () => {
+      landed.current = true;
+    };
+    window.addEventListener('pointerdown', stop, true);
+    window.addEventListener('keydown', stop, true);
+    return () => {
+      window.removeEventListener('pointerdown', stop, true);
+      window.removeEventListener('keydown', stop, true);
+    };
+  }, [landing]);
+  useEffect(() => {
+    if (!landing || landed.current || loading || !gatesKnown) return;
     landed.current = true;
-    if (shortcut || projects.length === 0) return;
+    if (!homeDesign || shortcut || projects.length === 0) return;
     const remembered = lastProject();
     const target = projects.some((p) => p.id === remembered) ? remembered : projects[0].id;
     navigate(`/projects/${target}/home`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeDesign, landing, shortcut, loading, projects]);
+  }, [homeDesign, gatesKnown, landing, shortcut, loading, projects]);
 
   // The top bar's project switcher offers New project on every page; it
   // arrives here with that wish in history state and opens the form.

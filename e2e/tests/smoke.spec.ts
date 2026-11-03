@@ -65,7 +65,9 @@ test('signs in and lands in a workspace', async () => {
     // <provider>" where SSO is configured, and getByRole matches a substring
     // by default.
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(page).toHaveURL(/\/projects$/);
+    // A pre-provisioned account has projects, so signing in may land on the
+    // last one's Home (the redesign) rather than the projects list.
+    await expect(page).toHaveURL(/\/projects(\/[0-9a-f-]{36}\/home)?$/);
     // The account's real display name, which later steps assert against (a
     // baseline says who captured it). The suite picked the name on the
     // register path; here the deployment owns it.
@@ -94,6 +96,9 @@ test('signs in and lands in a workspace', async () => {
 });
 
 test('creates a project', async () => {
+  // The projects list, opened on purpose: signing in may have landed on a
+  // project's Home.
+  if (signsIn) await page.goto('/projects');
   // A fresh account renders the button twice (empty-state placeholder and
   // the footer action row) — either one opens the same form.
   await page.getByRole('button', { name: '+ New Project' }).first().click();
