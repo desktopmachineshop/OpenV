@@ -15,6 +15,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   button, and the actions beside it are quiet outlined buttons, instead of
   green, grey and blue buttons competing for attention. The first step of
   bringing every page in line with OpenV's new compact design.
+- **V&V, test runs and agent proposals in the new design.** The V&V page
+  shows coverage by document section with a bar per section, the run in
+  progress and the gaps to fix first; test runs are cards with their results
+  as a bar. On a phone you now record a run one test case at a time, with
+  large Pass, Fail, Blocked and Not run buttons. Agent proposals read as the
+  change they make, field by field, instead of raw data, and statuses across
+  the matrix, evidence, impact, releases and runs are calm tinted labels.
 - **The Review Queue is a board.** What is in review, the suspect links, and
   what you sent back or approved sit side by side as columns of cards, each
   with its own Open, Approve, Send back or Confirm. A decision moves its card

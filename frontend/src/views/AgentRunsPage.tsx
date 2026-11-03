@@ -11,7 +11,7 @@ import {
 } from '../components/agents/RunTable';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
-import { ErrorBanner, buttonStyle } from '../components/ui';
+import { ErrorBanner, buttonStyle, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
@@ -138,15 +138,14 @@ export const AgentRunsPage: React.FC = () => {
         <button
           data-help-key="agent-runs.approvals"
           onClick={() => setShowProposals(!showProposals)}
+          aria-expanded={showProposals}
+          title={showProposals ? 'Hide the proposals waiting for review' : 'Show the proposals waiting for review'}
           style={{
-            background: pendingCount > 0 ? 'var(--warning)' : 'var(--neutral-soft)',
-            color: pendingCount > 0 ? '#fff' : 'var(--text-muted)',
-            border: 'none',
-            padding: '6px 14px',
-            borderRadius: 14,
-            cursor: 'pointer',
+            ...chipStyle(pendingCount > 0 ? 'agent' : 'neutral', 'md'),
+            minHeight: 32,
+            padding: '0 12px',
             fontSize: 13,
-            fontWeight: 600,
+            cursor: 'pointer',
           }}
         >
           Pending approvals ({pendingCount})
@@ -163,7 +162,7 @@ export const AgentRunsPage: React.FC = () => {
           <div
             style={{
               background: 'var(--tint-yellow)',
-              border: '1px solid var(--warning)',
+              border: '1px solid var(--tint-yellow-border)',
               color: 'var(--warning-text)',
               padding: '10px 14px',
               borderRadius: 4,
@@ -175,7 +174,7 @@ export const AgentRunsPage: React.FC = () => {
             no runner is online.{' '}
             <button
               onClick={() => setShowConnect(true)}
-              style={{ ...buttonStyle('primary', { compact: true }), marginRight: 8 }}
+              style={{ ...buttonStyle('secondary', { compact: true }), minHeight: 32, marginRight: 8 }}
             >
               Open Agent Connector
             </button>
@@ -206,7 +205,7 @@ export const AgentRunsPage: React.FC = () => {
           <div
             style={{
               background: 'var(--tint-blue)',
-              border: '1px solid var(--accent)',
+              border: '1px solid var(--tint-blue-border)',
               color: 'var(--accent-text)',
               padding: '10px 14px',
               borderRadius: 4,
@@ -219,7 +218,7 @@ export const AgentRunsPage: React.FC = () => {
         )}
 
       {showProposals && projectId && (
-        <ProposalReviewPanel projectId={projectId} onCountChange={setPendingCount} />
+        <ProposalReviewPanel projectId={projectId} onCountChange={setPendingCount} onOpenRun={(id) => selectRun(id)} />
       )}
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
