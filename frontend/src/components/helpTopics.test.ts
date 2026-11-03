@@ -20,7 +20,7 @@ describe('helpTopicForPath', () => {
     expect(helpTopicForPath('/projects/abc-123/requirements').title).toBe('Requirements');
     // Deeper routes key off their module segment.
     expect(helpTopicForPath('/projects/abc-123/baselines/b1/compare').title).toBe(
-      'Baseline comparison'
+      'Baselines'
     );
   });
 

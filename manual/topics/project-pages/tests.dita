@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="tests">
+  <title>Tests</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="tests"/>
+    <resourceid appname="openv-web" appid="tests.runs"/>
+    <resourceid appname="openv-web" appid="tests.cases"/>
+  </prolog>
+  <conbody>
+    <p><b>Tests</b> starts with the project's newest test runs as cards. Each bar shows the run's passes in green, fails in red and blocked results in amber out of every test case in the project; the rest are still to go. Select a card to open the run and record results.</p>
+    <p>Below, <b>Test cases</b> lists every test case with its method (automated, manual or physical), the requirements it <b>verifies</b>, its <b>last result</b> and the run that recorded it, and its number of <b>steps</b>: the numbered steps in its text. <b>Last result: fail, blocked</b> narrows the list to what needs attention, and <b>Method</b> to one kind of test. The <b>Runs</b> tab lists the newest runs as a table.</p>
+    <p>On a phone, Tests leads with the run in progress and a button to continue it, then the recent runs and the test cases failing or blocked.</p>
+  </conbody>
+</concept>

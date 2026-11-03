@@ -9,11 +9,15 @@ apps:
     routes:
       /projects: projects
       /projects/:projectId: overview
+      /projects/:projectId/home: home
       /projects/:projectId/guided: guided
       /projects/:projectId/requirements: requirements
+      /projects/:projectId/design: design
       /projects/:projectId/baselines/**: baselines
       /projects/:projectId/interviews: interviews
       /projects/:projectId/vv: vv
+      /projects/:projectId/tests: tests
+      /projects/:projectId/baselines: baselines.timeline
       /projects/:projectId/vv/runs/:runId: vv.runs
       /projects/:projectId/releases: releases
       /projects/:projectId/evidence: evidence

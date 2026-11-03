@@ -51,3 +51,10 @@ export const TARGET_RELEASES_FEATURE: FeatureKey = 'target-releases';
  * that has a top bar. Shared by ProjectLayout, ProjectList and Navbar.
  */
 export const COMPACT_LAYOUT_FEATURE: FeatureKey = 'compact-layout';
+
+/**
+ * The redesign's project pages: Home, Design, Tests and Baselines. Each
+ * reads only what the API already serves; the menu lists them, and each page
+ * renders, only while the gate is on.
+ */
+export const REDESIGN_PAGES_FEATURE: FeatureKey = 'redesign-pages';

@@ -131,9 +131,11 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
   {
     label: 'Define',
     items: [
+      { to: 'home', label: 'Home', feature: 'redesign-pages' },
       { to: '', label: 'Overview', end: true },
       { to: 'guided', label: 'Guided Definition' },
       { to: 'requirements', label: 'Requirements' },
+      { to: 'design', label: 'Design', feature: 'redesign-pages' },
       { to: 'interviews', label: 'Interviews' },
     ],
   },
@@ -141,6 +143,8 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
     label: 'Verify',
     items: [
       { to: 'vv', label: 'V&V' },
+      { to: 'tests', label: 'Tests', feature: 'redesign-pages' },
+      { to: 'baselines', label: 'Baselines', feature: 'redesign-pages' },
       { to: 'releases', label: 'Releases', feature: 'target-releases' },
       { to: 'evidence', label: 'Evidence' },
       { to: 'matrix', label: 'Traceability' },
