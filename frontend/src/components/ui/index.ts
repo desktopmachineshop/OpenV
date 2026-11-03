@@ -15,3 +15,7 @@ export type { SegmentedOption } from './SegmentedControl';
 export { ArtifactPicker } from './ArtifactPicker';
 export { TokenMenu } from './TokenMenu';
 export type { TokenMenuRow } from './TokenMenu';
+export { Chip, chipStyle, toneFor, toneColors } from './Chip';
+export type { ChipTone } from './Chip';
+export { buttonStyle } from './buttonStyles';
+export type { ButtonKind } from './buttonStyles';
