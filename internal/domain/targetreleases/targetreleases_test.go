@@ -255,9 +255,14 @@ func TestBurnUpFollowsTheResultHistory(t *testing.T) {
 
 func TestBurnUpSamplesALongSpan(t *testing.T) {
 	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	end := start.AddDate(0, 0, 400)
-	pts := BurnUp(nil, nil, nil, start, end)
-	if len(pts) > maxPoints+1 || pts[len(pts)-1].Date != end.Format("2006-01-02") {
-		t.Fatalf("%d points, last %s", len(pts), pts[len(pts)-1].Date)
+	for span := 0; span < 1500; span++ {
+		end := start.AddDate(0, 0, span)
+		pts := BurnUp(nil, nil, nil, start, end)
+		if len(pts) > maxPoints || pts[0].Date != "2025-01-01" || pts[len(pts)-1].Date != end.Format("2006-01-02") {
+			t.Fatalf("span %d: %d points, from %s to %s", span, len(pts), pts[0].Date, pts[len(pts)-1].Date)
+		}
+		if span < maxPoints && len(pts) != span+1 {
+			t.Fatalf("span %d: %d points, want one a day", span, len(pts))
+		}
 	}
 }

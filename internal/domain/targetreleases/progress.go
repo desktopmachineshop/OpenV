@@ -267,7 +267,7 @@ func ForRelease(in Inputs, release *Release, history []*vv.TestResult, now time.
 }
 
 // maxPoints caps a burn-up; a longer span is sampled every few days, its
-// last point always the end day.
+// last point always the end day, in at most maxPoints points.
 const maxPoints = 120
 
 func day(t time.Time) time.Time {
@@ -344,7 +344,9 @@ func BurnUp(es []Entry, arts []*artifacts.Artifact, history []*vv.TestResult, st
 	days := int(to.Sub(from).Hours()/24) + 1
 	step := 1
 	if days > maxPoints {
-		step = (days + maxPoints - 1) / maxPoints
+		// The largest index is days-1, so this step keeps the sampled
+		// days, the end day among them, within maxPoints.
+		step = (days - 1 + maxPoints - 2) / (maxPoints - 1)
 	}
 	points := []Point{}
 	for d := 0; ; d += step {
