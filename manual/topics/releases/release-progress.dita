@@ -15,7 +15,8 @@
       <strow><stentry>Ready</stentry><stentry>Requirements that are both approved and verified</stentry></strow>
       <strow><stentry>Failing</stentry><stentry>Requirements whose rollup is <i>fail</i>, shown when there are any</stentry></strow>
     </simpletable>
-    <p>The rollup is the one the <b>V&amp;V</b> page shows, including verification rolled up from child projects. The bar beside each release in the list splits its requirements by rollup, and below the list, a line says how many requirements no release targets yet.</p>
+    <p>The figures stand beside the release's name, above its burn-up and its requirements. The rollup is the one the <b>V&amp;V</b> page shows, including verification rolled up from child projects. The bar beside each release in the list shows its requirements that pass (green, counting those verified by hand), fail (red) and are blocked (amber); the rest are grey. Below the list, a line says how many requirements no release targets yet. The release whose progress is showing is marked with a blue edge in the list.</p>
+    <p>On a phone the page opens on the current release's progress: its figures as four tiles, then <b>Failing or blocked</b>, the burn-up and its requirements. The <b>Releases</b> tab beside it holds the list, <b>Add release</b> and each release's controls; choosing a release there opens its progress.</p>
     <p>The table lists the release's requirements with their review status, their rollup and the releases they are planned for; <i>(inherited)</i> marks a range that comes from a parent.</p>
   </conbody>
 </concept>

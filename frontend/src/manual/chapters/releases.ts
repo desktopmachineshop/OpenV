@@ -57,10 +57,18 @@ releases:
 | Ready | Requirements that are both approved and verified |
 | Failing | Requirements whose rollup is *fail*, shown when there are any |
 
-The rollup is the one the **V&V** page shows, including verification rolled
-up from child projects. The bar beside each release in the list splits its
-requirements by rollup, and below the list, a line says how many
-requirements no release targets yet.
+The figures stand beside the release's name, above its burn-up and its
+requirements. The rollup is the one the **V&V** page shows, including
+verification rolled up from child projects. The bar beside each release in
+the list shows its requirements that pass (green, counting those verified
+by hand), fail (red) and are blocked (amber); the rest are grey. Below the
+list, a line says how many requirements no release targets yet. The release
+whose progress is showing is marked with a blue edge in the list.
+
+On a phone the page opens on the current release's progress: its figures as
+four tiles, then **Failing or blocked**, the burn-up and its requirements.
+The **Releases** tab beside it holds the list, **Add release** and each
+release's controls; choosing a release there opens its progress.
 
 The table lists the release's requirements with their review status, their
 rollup and the releases they are planned for; *(inherited)* marks a range
