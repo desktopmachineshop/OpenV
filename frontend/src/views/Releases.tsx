@@ -266,6 +266,7 @@ export const Releases: React.FC = () => {
           color: 'var(--text-muted)',
           fontSize: 13,
           marginTop: 0,
+          marginBottom: 16,
           maxWidth: 760,
         }}
       >
