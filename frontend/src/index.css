@@ -1547,10 +1547,7 @@ input[type='checkbox'].ov-switch:focus-visible {
 .ov-settings-main select,
 .ov-settings-main input:not([type='checkbox']):not([type='radio']) {
   max-width: 480px;
-
-/* A dense row that reacts to the pointer (V&V tables and lists). */
-.ov-row:hover {
-  background: var(--surface-hover) !important;
+}
 
 /* A dense row that reacts to the pointer: the V&V tables and lists, and the
    requirements table, tree and phone list. The hover tint leaves a selected
