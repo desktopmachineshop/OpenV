@@ -80,8 +80,9 @@ down, **‹** to come back up, **Open full artifact** to read it. The chips
 The selected artifact opens on the right (on a phone, in the **Document**
 pane). Its header carries the **ref**, the **status**, **quality** and
 **priority** chips, and **Edit**, **History** and **Delete**; below the title
-are its type, owner, verification method, version and when it last changed,
-then the review step it can take next (**Submit for review**, **Approve**, …).
+are its type, owner, verification method, the **releases** it is planned for
+(when it sets its own and the project plans target releases, such as *MVP
+onwards*), version and when it last changed, then the review step it can take next (**Submit for review**, **Approve**, …).
 
 - **Trace** lists every artifact this one is linked to, ↑ above and ↓ below,
   with the link's type; a **suspect** link is marked in yellow. Click one to

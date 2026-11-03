@@ -156,6 +156,50 @@ describe('Releases page', () => {
   });
 });
 
+describe('on a phone', () => {
+  const remount = async () => {
+    act(() => root.unmount());
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <DialogProvider>
+          <MemoryRouter initialEntries={['/projects/p1/releases']}>
+            <Routes>
+              <Route path="/projects/:projectId/releases" element={<Releases />} />
+            </Routes>
+          </MemoryRouter>
+        </DialogProvider>
+      );
+    });
+    await flush();
+  };
+  afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+  });
+
+  it('leads with the current release, its tiles and what is failing, the list one tab away', async () => {
+    await remount();
+    const tabs = Array.from(container.querySelectorAll('[role="tablist"][aria-label="Releases view"] [role="tab"]'));
+    expect(tabs.map((t) => t.textContent)).toEqual(['V1.0 progress', 'Releases']);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(container.querySelector('#release-detail')?.textContent).toBe('V1.0: progress');
+    expect(container.querySelector('section[aria-label="Failing or blocked"]')?.textContent).toContain('Nothing in V1.0 is failing or blocked.');
+    expect(container.querySelector('ol[aria-label="Releases in order"]')).toBeNull();
+    await act(async () => (tabs[1] as HTMLButtonElement).click());
+    expect(container.querySelectorAll('ol[aria-label="Releases in order"] > li')).toHaveLength(2);
+  });
+
+  it('opens the progress of a release chosen in the list', async () => {
+    await remount();
+    await act(async () => (container.querySelectorAll('[role="tab"]')[1] as HTMLButtonElement).click());
+    const mvpButton = container.querySelector('ol[aria-label="Releases in order"] > li button') as HTMLButtonElement;
+    await act(async () => mvpButton.click());
+    await flush();
+    expect(container.querySelector('#release-detail')?.textContent).toBe('MVP: progress');
+  });
+});
+
 describe('release ranges', () => {
   const names = { mvp: 'MVP', v1: 'V1.0', v2: 'V2' };
   it('reads a range', () => {

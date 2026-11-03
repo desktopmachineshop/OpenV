@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, ArtifactStatus, artifactAPI } from '../api/client';
 import { Chip, buttonStyle, useAlert, useConfirm } from './ui';
 import { useViewport } from '../hooks/useViewport';
+import { useReleaseRangeLabel } from './ArtifactReleaseFact';
 import { ArtifactStepper, ArtifactStepperProps } from './ArtifactStepper';
 import { ArtifactVersionList } from './ArtifactVersionList';
 import { MONO, QualityChip } from './artifactCells';
@@ -154,6 +155,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   const owner = typeof displayArtifact.attributes?.owner === 'string' ? displayArtifact.attributes.owner : '';
   const priority = priorityOf(displayArtifact);
   const method = verificationMethodOf(displayArtifact);
+  const releases = useReleaseRangeLabel(displayArtifact);
   const action = (kind: 'secondary' | 'danger', disabled = false): React.CSSProperties => ({
     ...buttonStyle(kind, { compact: !touch, disabled }),
     ...(touch ? { minHeight: 40 } : {}),
@@ -164,6 +166,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
     ...(priority ? [['Priority', priority] as [string, React.ReactNode]] : []),
     ...(owner ? [['Owner', owner] as [string, React.ReactNode]] : []),
     ...(method ? [['Verify by', method] as [string, React.ReactNode]] : []),
+    ...(releases ? [['Releases', releases] as [string, React.ReactNode]] : []),
     [
       'Version',
       `${displayArtifact.version}${!readOnly && displayArtifact.version > 1 ? ` · ${versions.length} total` : ''}`,

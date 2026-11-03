@@ -10,8 +10,7 @@ import type {
   ReleaseSummaryCounts,
   TargetReleaseStatus,
 } from '../api/client';
-import { Chip, type ChipTone } from '../components/ui';
-import { rollupFill } from './VVDashboardParts';
+import { Chip, PanelHeader, ResultBar, buttonStyle, mutedStyle, panelStyle, refStyle, type ChipTone } from '../components/ui';
 
 export const STATUS_LABEL: Record<TargetReleaseStatus, string> = {
   planned: 'Planned',
@@ -25,9 +24,8 @@ export const STATUS_TONE: Record<TargetReleaseStatus, ChipTone> = {
   released: 'success',
 };
 
-const ROLLUP_ORDER = ['pass', 'verified-manually', 'fail', 'blocked', 'unrun', 'uncovered', 'method-missing'];
 
-const ROLLUP_LABEL: Record<string, string> = {
+export const ROLLUP_LABEL: Record<string, string> = {
   pass: 'Pass',
   'verified-manually': 'Verified manually',
   fail: 'Fail',
@@ -37,17 +35,14 @@ const ROLLUP_LABEL: Record<string, string> = {
   'method-missing': 'No method',
 };
 
-const REVIEW_LABEL: Record<string, string> = {
+export const REVIEW_LABEL: Record<string, string> = {
   draft: 'Draft',
   in_review: 'In review',
   approved: 'Approved',
   superseded: 'Superseded',
 };
 
-const releaseRollupColor = (rollup: string) =>
-  ['uncovered', 'method-missing'].includes(rollup) ? 'var(--neutral-mid)' : rollupFill(rollup);
-
-const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+export const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
 /** How a release range reads: "MVP onwards", "V1.0 only", "MVP to V1.0". */
 export const rangeLabel = (range: ReleaseRange, names: Record<string, string>): string => {
@@ -57,51 +52,32 @@ export const rangeLabel = (range: ReleaseRange, names: Record<string, string>): 
   return `${from} to ${names[range.until] || 'an unknown release'}`;
 };
 
-export const RollupBar: React.FC<{
-  counts: Record<string, number>;
-  total: number;
-}> = ({ counts, total }) => {
-  if (total === 0) return null;
-  const keys = Object.keys(counts).sort((a, b) => ROLLUP_ORDER.indexOf(a) - ROLLUP_ORDER.indexOf(b));
-  return (
-    <div
-      role="img"
-      aria-label={keys.map((k) => `${ROLLUP_LABEL[k] || k}: ${counts[k]}`).join(', ')}
-      style={{
-        display: 'flex',
-        height: 10,
-        borderRadius: 5,
-        overflow: 'hidden',
-        border: '1px solid var(--border)',
-      }}
-    >
-      {keys.map((k) =>
-        counts[k] > 0 ? (
-          <div
-            key={k}
-            title={`${ROLLUP_LABEL[k] || k}: ${counts[k]}`}
-            style={{
-              width: `${(counts[k] / total) * 100}%`,
-              background: releaseRollupColor(k),
-            }}
-          />
-        ) : null,
-      )}
-    </div>
+/**
+ * A release's V&V as the kit's result bar: passed (a passing rollup, or
+ * verified by hand) in green, failing in red, blocked in amber, and the rest
+ * (not run, uncovered, no method) the bar's grey.
+ */
+export const RollupBar: React.FC<{ counts: Record<string, number>; total: number }> = ({ counts, total }) =>
+  total === 0 ? null : (
+    <ResultBar
+      pass={(counts.pass || 0) + (counts['verified-manually'] || 0)}
+      fail={counts.fail || 0}
+      blocked={counts.blocked || 0}
+      total={total}
+    />
   );
-};
 
-const Tile: React.FC<{
-  label: string;
-  value: React.ReactNode;
-  hint?: string;
-  color?: string;
-}> = ({ label, value, hint, color }) => (
-  <div className="card" style={{ padding: '12px 18px', marginBottom: 0, minWidth: 130 }}>
-    <div style={{ fontSize: 24, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>
-    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</div>
-    {hint && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{hint}</div>}
-  </div>
+/** A headline figure, as Home's head row draws them: the value, then its name. */
+export const Figure: React.FC<{ label: string; value: React.ReactNode; hint?: string; color?: string }> = ({
+  label,
+  value,
+  hint,
+  color,
+}) => (
+  <span title={hint} style={{ whiteSpace: 'nowrap' }}>
+    <b style={{ fontSize: 16, fontWeight: 700, color: color || 'var(--text)' }}>{value}</b>{' '}
+    <span style={mutedStyle}>{label}</span>
+  </span>
 );
 
 /**
@@ -218,6 +194,8 @@ export const emptyForm: ReleaseFormValue = {
   status: 'planned',
 };
 
+const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' };
+
 export const ReleaseForm: React.FC<{
   initial: ReleaseFormValue;
   submitLabel: string;
@@ -230,49 +208,22 @@ export const ReleaseForm: React.FC<{
     setValue((v) => ({ ...v, [k]: e.target.value }));
   return (
     <form
-      className="card"
       data-help-key="releases.form"
       onSubmit={(e) => {
         e.preventDefault();
         if (value.name.trim()) onSubmit(value);
       }}
-      style={{
-        display: 'flex',
-        gap: 12,
-        flexWrap: 'wrap',
-        alignItems: 'flex-end',
-      }}
+      style={{ ...panelStyle, padding: 12, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}
     >
-      <label
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          fontSize: 13,
-        }}
-      >
+      <label style={field}>
         Name
         <input value={value.name} onChange={set('name')} placeholder="MVP" required style={{ width: 160 }} />
       </label>
-      <label
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          fontSize: 13,
-        }}
-      >
+      <label style={field}>
         Target date
         <input type="date" value={value.target_date} onChange={set('target_date')} />
       </label>
-      <label
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          fontSize: 13,
-        }}
-      >
+      <label style={field}>
         Status
         <select value={value.status} onChange={set('status')}>
           {(Object.keys(STATUS_LABEL) as TargetReleaseStatus[]).map((s) => (
@@ -282,24 +233,15 @@ export const ReleaseForm: React.FC<{
           ))}
         </select>
       </label>
-      <label
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          fontSize: 13,
-          flex: 1,
-          minWidth: 200,
-        }}
-      >
+      <label style={{ ...field, flex: 1, minWidth: 200 }}>
         Description
         <input value={value.description} onChange={set('description')} placeholder="What the release is for" />
       </label>
       <div style={{ display: 'flex', gap: 8 }}>
-        <button type="submit" className="button" disabled={busy || !value.name.trim()}>
+        <button type="submit" disabled={busy || !value.name.trim()} style={buttonStyle('primary', { disabled: busy || !value.name.trim() })}>
           {submitLabel}
         </button>
-        <button type="button" className="button-secondary" onClick={onCancel}>
+        <button type="button" onClick={onCancel} style={buttonStyle('secondary')}>
           Cancel
         </button>
       </div>
@@ -308,7 +250,7 @@ export const ReleaseForm: React.FC<{
 };
 
 export const SummaryLine: React.FC<{ s: ReleaseSummaryCounts }> = ({ s }) => (
-  <div style={{ fontSize: 13, color: 'var(--text-body)' }}>
+  <div style={{ fontSize: 12, color: 'var(--text-body)' }}>
     {s.total} requirement{s.total === 1 ? '' : 's'}
     {s.total > 0 && (
       <>
@@ -320,128 +262,89 @@ export const SummaryLine: React.FC<{ s: ReleaseSummaryCounts }> = ({ s }) => (
   </div>
 );
 
-/** One release's detail: its counts, its burn-up and its requirements. */
+/** The release's headline figures: its size, and how much is approved, verified and ready. */
+export const ReleaseFigures: React.FC<{ s: ReleaseSummaryCounts }> = ({ s }) => (
+  <>
+    <Figure label="requirements" value={s.total} hint={`${s.introduced} new in this release`} />
+    <Figure label="approved" value={`${percent(s.approved, s.total)}%`} hint={`${s.approved} of ${s.total}`} />
+    <Figure label="verified" value={`${percent(s.verified, s.total)}%`} hint={`${s.verified} of ${s.total}`} />
+    <Figure label="ready" value={`${percent(s.ready, s.total)}%`} hint="approved and verified" color="var(--success-text)" />
+    {(s.by_rollup.fail || 0) > 0 && <Figure label="failing" value={s.by_rollup.fail} color="var(--danger-strong)" />}
+  </>
+);
+
+/** The release's requirements as a dense table: ref, title, review state, V&V and range. */
+export const ReleaseRequirements: React.FC<{ progress: ReleaseProgress; projectId: string; names: Record<string, string> }> = ({
+  progress,
+  projectId,
+  names,
+}) => (
+  <section aria-label={`Requirements in ${progress.release.name}`} style={panelStyle}>
+    <PanelHeader title={`Requirements in ${progress.release.name}`} count={progress.entries.length} />
+    {progress.entries.length === 0 ? (
+      <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No requirement targets this release yet.</p>
+    ) : (
+      <div className="table-scroll">
+        <table className="ov-dense-table">
+          <thead>
+            <tr>
+              {['Ref', 'Requirement', 'Review', 'V&V', 'Releases'].map((h) => (
+                <th key={h}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {progress.entries.map((e) => (
+              <tr key={e.requirement_id}>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <Link to={`/projects/${projectId}/requirements?artifact=${e.requirement_id}`} style={refStyle}>
+                    {e.ref}
+                  </Link>
+                </td>
+                <td>{e.title}</td>
+                <td>
+                  <Chip>{REVIEW_LABEL[e.status] || e.status}</Chip>
+                </td>
+                <td>
+                  <Chip tone={e.rollup === 'verified-manually' ? 'success' : undefined}>{ROLLUP_LABEL[e.rollup] || e.rollup}</Chip>
+                </td>
+                <td style={{ color: 'var(--text-body)' }}>
+                  {rangeLabel(e.range, names)}
+                  {e.range.inherited_from && <span style={{ color: 'var(--text-muted)' }}> (inherited)</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+);
+
+/** One release's detail: its head with the figures, its burn-up and its requirements. */
 export const ReleaseDetail: React.FC<{
   progress: ReleaseProgress;
   projectId: string;
   names: Record<string, string>;
 }> = ({ progress, projectId, names }) => (
-  <section aria-labelledby="release-detail" style={{ marginTop: 24 }} data-help-key="releases.progress">
-    <h3 id="release-detail" style={{ color: 'var(--text)' }}>
-      {progress.release.name}: progress
-    </h3>
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-      <Tile
-        label="Requirements"
-        value={progress.summary.total}
-        hint={`${progress.summary.introduced} new in this release`}
-      />
-      <Tile
-        label="Approved"
-        value={`${percent(progress.summary.approved, progress.summary.total)}%`}
-        hint={`${progress.summary.approved} of ${progress.summary.total}`}
-      />
-      <Tile
-        label="Verified"
-        value={`${percent(progress.summary.verified, progress.summary.total)}%`}
-        hint={`${progress.summary.verified} of ${progress.summary.total}`}
-        color="var(--success)"
-      />
-      <Tile
-        label="Ready"
-        value={`${percent(progress.summary.ready, progress.summary.total)}%`}
-        hint="approved and verified"
-        color="var(--success)"
-      />
-      {(progress.summary.by_rollup.fail || 0) > 0 && (
-        <Tile label="Failing" value={progress.summary.by_rollup.fail} color="var(--danger)" />
-      )}
+  <section aria-labelledby="release-detail" data-help-key="releases.progress" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px 16px', flexWrap: 'wrap' }}>
+      <h2 id="release-detail" style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+        {progress.release.name}: progress
+      </h2>
+      <Chip tone={STATUS_TONE[progress.release.status]}>{STATUS_LABEL[progress.release.status]}</Chip>
+      {progress.release.target_date && <span style={mutedStyle}>Target {progress.release.target_date}</span>}
+      <span style={{ flex: 1 }} />
+      <ReleaseFigures s={progress.summary} />
     </div>
-
     {progress.burn_up && progress.burn_up.length > 0 && (
-      <div className="card" data-help-key="releases.burnup">
-        <h4 style={{ marginTop: 0 }}>Burn-up</h4>
-        <BurnUpChart points={progress.burn_up} targetDate={progress.release.target_date} />
-      </div>
-    )}
-
-    <div className="card">
-      <h4 style={{ marginTop: 0 }}>Requirements in {progress.release.name}</h4>
-      {progress.entries.length === 0 ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No requirement targets this release yet.</div>
-      ) : (
-        <div className="table-scroll">
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr>
-                {['Ref', 'Requirement', 'Review', 'V&V', 'Releases'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '2px solid var(--neutral-soft)',
-                      padding: '8px 10px',
-                      color: 'var(--text-muted)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {progress.entries.map((e) => (
-                <tr key={e.requirement_id}>
-                  <td
-                    style={{
-                      padding: '8px 10px',
-                      borderBottom: '1px solid var(--neutral-soft)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <Link to={`/projects/${projectId}/requirements?artifact=${e.requirement_id}`}>{e.ref}</Link>
-                  </td>
-                  <td
-                    style={{
-                      padding: '8px 10px',
-                      borderBottom: '1px solid var(--neutral-soft)',
-                    }}
-                  >
-                    {e.title}
-                  </td>
-                  <td
-                    style={{
-                      padding: '8px 10px',
-                      borderBottom: '1px solid var(--neutral-soft)',
-                    }}
-                  >
-                    {REVIEW_LABEL[e.status] || e.status}
-                  </td>
-                  <td
-                    style={{
-                      padding: '8px 10px',
-                      borderBottom: '1px solid var(--neutral-soft)',
-                    }}
-                  >
-                    <Chip tone={e.rollup === 'verified-manually' ? 'success' : undefined}>{ROLLUP_LABEL[e.rollup] || e.rollup}</Chip>
-                  </td>
-                  <td
-                    style={{
-                      padding: '8px 10px',
-                      borderBottom: '1px solid var(--neutral-soft)',
-                      color: 'var(--text-body)',
-                    }}
-                  >
-                    {rangeLabel(e.range, names)}
-                    {e.range.inherited_from && <span style={{ color: 'var(--text-muted)' }}> (inherited)</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section aria-label="Burn-up" style={panelStyle} data-help-key="releases.burnup">
+        <PanelHeader title="Burn-up" />
+        <div style={{ padding: 12 }}>
+          <BurnUpChart points={progress.burn_up} targetDate={progress.release.target_date} />
         </div>
-      )}
-    </div>
+      </section>
+    )}
+    <ReleaseRequirements progress={progress} projectId={projectId} names={names} />
   </section>
 );

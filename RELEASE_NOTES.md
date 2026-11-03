@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Releases in the new design.** The Releases page matches the rest of the
+  app: the releases are one list with the release you are looking at marked,
+  its figures stand beside its name, and the burn-up and its requirements
+  sit below in their own panels. On a phone it opens on the current
+  release's progress and what is failing in it, with the list one tab away.
+  A requirement's detail panel now names the releases it is planned for.
+
 ## 0.27.2 — 2026-11-03
 
 Stable channel release since 2026-11-03.

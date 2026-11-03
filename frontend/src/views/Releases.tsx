@@ -4,11 +4,23 @@
 // requirements. A requirement is in the release it is introduced in and every
 // later one, until its last release when it has one; see
 // internal/domain/targetreleases.
+//
+// In the redesign kit (components/ui): the releases are one panel of rows,
+// the current one marked with the accent edge; the detail heads with its
+// figures inline, then the burn-up and the requirements as panels. The top
+// bar names the page, so the page has no heading of its own. On a phone the
+// page leads with the current release's progress (its figures, then what is
+// failing) and keeps the list one tab away (ReleasesPhone.tsx). The look
+// does not depend on the redesign-pages key: the page shows wherever
+// target-releases is on, in whichever frame the workspace has.
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { releasesAPI, ReleaseOverview, ReleaseProgress, ReleaseSummaryCounts, TargetRelease } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
-import { Chip, ErrorBanner, useConfirm } from '../components/ui';
+import { Chip, ErrorBanner, PanelHeader, buttonStyle, ellipsis, mutedStyle, pageType, panelStyle, useConfirm } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
+import { ReleasesPhone } from './ReleasesPhone';
 import {
   emptyForm,
   ReleaseDetail,
@@ -21,105 +33,99 @@ import {
 } from './ReleasesParts';
 
 /** One release in the list: its name, status, counts, and its controls. */
-const ReleaseRow: React.FC<{
+export const ReleaseRow: React.FC<{
   release: TargetRelease;
   summary: ReleaseSummaryCounts;
   active: boolean;
   first: boolean;
   last: boolean;
   busy: boolean;
+  phone?: boolean;
   onSelect: () => void;
   onMove: (delta: number) => void;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ release: r, summary: s, active, first, last, busy, onSelect, onMove, onEdit, onDelete }) => (
-  <li
-    className="card"
-    style={{
-      display: 'flex',
-      gap: 16,
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      borderColor: active ? 'var(--accent)' : undefined,
-    }}
-  >
-    <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        <button
-          onClick={onSelect}
-          aria-current={active ? 'true' : undefined}
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-            padding: '4px 0',
-            minHeight: 32,
-            background: 'none',
-            border: 'none',
-            color: 'var(--accent)',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-          }}
-        >
-          {r.name}
-        </button>
-        <Chip tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Chip>
-        {r.target_date && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Target {r.target_date}</span>}
-      </div>
-      {r.description && (
-        <div
-          style={{
-            fontSize: 13,
-            color: 'var(--text-muted)',
-            marginTop: 2,
-          }}
-        >
-          {r.description}
+}> = ({ release: r, summary: s, active, first, last, busy, phone, onSelect, onMove, onEdit, onDelete }) => {
+  const small = { compact: !phone };
+  return (
+    <li
+      style={{
+        display: 'flex',
+        gap: '6px 16px',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        padding: '8px 12px',
+        borderBottom: '1px solid var(--border-soft)',
+        background: active ? 'var(--tint-blue)' : 'var(--surface)',
+        boxShadow: active ? 'inset 3px 0 0 var(--accent)' : undefined,
+      }}
+    >
+      <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={onSelect}
+            aria-current={active ? 'true' : undefined}
+            style={{
+              minHeight: 32,
+              padding: 0,
+              background: 'none',
+              border: 'none',
+              font: 'inherit',
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'var(--accent-text)',
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            {r.name}
+          </button>
+          <Chip tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Chip>
+          {r.target_date && <span style={mutedStyle}>Target {r.target_date}</span>}
         </div>
-      )}
-      <SummaryLine s={s} />
-    </div>
-    <div style={{ flex: '1 1 200px', maxWidth: 320 }}>
-      <RollupBar counts={s.by_rollup} total={s.total} />
-    </div>
-    <div style={{ display: 'flex', gap: 4 }}>
-      <button
-        className="button-secondary"
-        onClick={() => onMove(-1)}
-        disabled={busy || first}
-        aria-label={`Move ${r.name} earlier`}
-      >
-        ↑
-      </button>
-      <button
-        className="button-secondary"
-        onClick={() => onMove(1)}
-        disabled={busy || last}
-        aria-label={`Move ${r.name} later`}
-      >
-        ↓
-      </button>
-      <button className="button-secondary" onClick={onEdit}>
-        Edit
-      </button>
-      <button className="button-secondary" onClick={onDelete} disabled={busy}>
-        Delete
-      </button>
-    </div>
-  </li>
-);
+        {r.description && <div style={{ ...mutedStyle, ...ellipsis }}>{r.description}</div>}
+        <SummaryLine s={s} />
+      </div>
+      <div style={{ flex: '1 1 160px', maxWidth: 240 }}>
+        <RollupBar counts={s.by_rollup} total={s.total} />
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          type="button"
+          onClick={() => onMove(-1)}
+          disabled={busy || first}
+          aria-label={`Move ${r.name} earlier`}
+          style={buttonStyle('ghost', { ...small, disabled: busy || first })}
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove(1)}
+          disabled={busy || last}
+          aria-label={`Move ${r.name} later`}
+          style={buttonStyle('ghost', { ...small, disabled: busy || last })}
+        >
+          ↓
+        </button>
+        <button type="button" onClick={onEdit} style={buttonStyle('secondary', small)}>
+          Edit
+        </button>
+        <button type="button" onClick={onDelete} disabled={busy} style={buttonStyle('danger', { ...small, disabled: busy })}>
+          Delete
+        </button>
+      </div>
+    </li>
+  );
+};
 
 export const Releases: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('release') || '';
   const confirm = useConfirm();
+  const { isPhone } = useViewport();
 
   const [overview, setOverview] = useState<ReleaseOverview | null>(null);
   const [progress, setProgress] = useState<ReleaseProgress | null>(null);
@@ -241,64 +247,18 @@ export const Releases: React.FC = () => {
     status: r.status,
   });
 
-  return (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-          marginBottom: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Releases</h2>
-        <div style={{ flex: 1 }} />
-        {!adding && (
-          <button className="button" onClick={() => setAdding(true)} data-help-key="releases.add">
-            Add release
-          </button>
-        )}
-      </div>
-      <p
-        style={{
-          color: 'var(--text-muted)',
-          fontSize: 13,
-          marginTop: 0,
-          marginBottom: 16,
-          maxWidth: 760,
-        }}
-      >
-        Releases run in order. A requirement is in the release it is introduced in and every later one, until its last
-        release if it has one. Set a requirement's releases in its editor; a heading's releases apply to everything
-        under it.
-      </p>
-
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
-      {adding && (
-        <ReleaseForm
-          initial={emptyForm}
-          submitLabel="Add release"
-          busy={busy}
-          onSubmit={create}
-          onCancel={() => setAdding(false)}
-        />
-      )}
-      {loading && !overview && <div style={{ color: 'var(--text-muted)' }}>Loading…</div>}
-      {overview && releases.length === 0 && !adding && (
-        <div className="card" style={{ color: 'var(--text-muted)' }}>
+  const list = (
+    <section aria-label="Releases" style={panelStyle}>
+      <PanelHeader title="Releases" count={releases.length} />
+      {editingId === '' && overview && releases.length === 0 && !adding && (
+        <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>
           No releases yet. Add one, such as MVP, then target requirements at it from their editor.
-        </div>
+        </p>
       )}
-
-      <ol
-        aria-label="Releases in order"
-        style={{ listStyle: 'none', padding: 0, margin: 0 }}
-        data-help-key="releases.list"
-      >
+      <ol aria-label="Releases in order" style={{ listStyle: 'none', padding: 0, margin: 0 }} data-help-key="releases.list">
         {(overview?.releases || []).map(({ release: r, summary: s }, i) =>
           editingId === r.id ? (
-            <li key={r.id}>
+            <li key={r.id} style={{ padding: 8, borderBottom: '1px solid var(--border-soft)' }}>
               <ReleaseForm
                 initial={formFor(r)}
                 submitLabel="Save"
@@ -316,6 +276,7 @@ export const Releases: React.FC = () => {
               first={i === 0}
               last={i === releases.length - 1}
               busy={busy}
+              phone={isPhone}
               onSelect={() => select(r.id)}
               onMove={(delta) => move(i, delta)}
               onEdit={() => setEditingId(r.id)}
@@ -324,18 +285,63 @@ export const Releases: React.FC = () => {
           ),
         )}
       </ol>
-      {overview && overview.unassigned > 0 && (
-        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          {overview.unassigned} requirement
-          {overview.unassigned === 1 ? ' targets' : 's target'} no release.{' '}
-          <Link to={`/projects/${projectId}/requirements`}>Open the requirements</Link> to plan{' '}
-          {overview.unassigned === 1 ? 'it' : 'them'}.
-        </p>
-      )}
+    </section>
+  );
 
-      {progress && progress.release.id === activeId && (
-        <ReleaseDetail progress={progress} projectId={projectId} names={names} />
+  const head = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px 12px', flexWrap: 'wrap' }}>
+      <p style={{ ...mutedStyle, margin: 0, flex: '1 1 320px', maxWidth: 760 }}>
+        Releases run in order. A requirement is in the release it is introduced in and every later one, until its last
+        release if it has one. Set a requirement's releases in its editor; a heading's releases apply to everything
+        under it.
+      </p>
+      {!adding && (
+        <button type="button" onClick={() => setAdding(true)} data-help-key="releases.add" style={buttonStyle('primary')}>
+          Add release
+        </button>
       )}
+    </div>
+  );
+
+  const unassigned = overview && overview.unassigned > 0 && (
+    <p style={{ ...mutedStyle, margin: 0 }}>
+      {overview.unassigned} requirement
+      {overview.unassigned === 1 ? ' targets' : 's target'} no release.{' '}
+      <Link to={`/projects/${projectId}/requirements`}>Open the requirements</Link> to plan{' '}
+      {overview.unassigned === 1 ? 'it' : 'them'}.
+    </p>
+  );
+
+  const form = adding && (
+    <ReleaseForm initial={emptyForm} submitLabel="Add release" busy={busy} onSubmit={create} onCancel={() => setAdding(false)} />
+  );
+  const detail = progress && progress.release.id === activeId ? progress : null;
+
+  if (isPhone) {
+    return (
+      <ReleasesPhone
+        head={head}
+        form={form}
+        list={list}
+        unassigned={unassigned}
+        error={<ErrorBanner message={error} onDismiss={() => setError('')} />}
+        loading={loading && !overview}
+        progress={detail}
+        projectId={projectId}
+        names={names}
+      />
+    );
+  }
+
+  return (
+    <div style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {head}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
+      {form}
+      {loading && !overview && <div style={mutedStyle}>Loading…</div>}
+      {list}
+      {unassigned}
+      {detail && <ReleaseDetail progress={detail} projectId={projectId} names={names} />}
     </div>
   );
 };
