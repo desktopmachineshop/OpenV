@@ -105,7 +105,7 @@ export const DesignTree: React.FC<{
             >
               {open ? '▾' : '▸'}
             </button>
-            {item.ref && <span style={{ ...refStyle, fontSize: 11 }}>{item.ref}</span>}
+            {item.ref && <span style={{ ...refStyle, fontSize: 12 }}>{item.ref}</span>}
             <span
               style={{
                 ...ellipsis,
@@ -116,7 +116,7 @@ export const DesignTree: React.FC<{
             >
               {item.title}
             </span>
-            {hasChildren && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{descendants}</span>}
+            {hasChildren && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{descendants}</span>}
           </li>
         );
       })}

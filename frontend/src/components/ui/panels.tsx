@@ -82,7 +82,7 @@ export const GridHead: React.FC<{ columns: string; names: React.ReactNode[] }> =
       padding: '0 12px',
       background: 'var(--surface-alt)',
       color: 'var(--text-muted)',
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: 600,
       textTransform: 'uppercase',
       letterSpacing: '0.04em',
@@ -139,7 +139,7 @@ export const ResultBar: React.FC<{ pass: number; fail: number; blocked: number; 
 
 /** A thin labelled meter: "Traced ▬▬▬▬── 91%". */
 export const Meter: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
-  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)' }}>
     <span style={{ width: 48 }}>{label}</span>
     <span
       style={{ flex: 1, height: 4, borderRadius: 999, background: 'var(--neutral-soft)', overflow: 'hidden', display: 'flex' }}
