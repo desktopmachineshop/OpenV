@@ -46,6 +46,7 @@ export const FEATURE_KEYS = [
   'help-activity',
   'target-releases',
   'compact-layout',
+  'redesign-pages',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

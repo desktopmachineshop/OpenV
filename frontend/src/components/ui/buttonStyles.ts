@@ -22,6 +22,7 @@ const BASE: React.CSSProperties = {
   lineHeight: 1.2,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
+  textDecoration: 'none',
 };
 
 const KINDS: Record<ButtonKind, React.CSSProperties> = {

@@ -66,6 +66,7 @@ var Registry = []Feature{
 	{Key: FeatureHelpActivity, ShippedIn: "0.25.0", Summary: "The help panel follows what you are working on: the tab you are in, the section you are working in and the button you pressed last open the manual's page for them"},
 	{Key: FeatureTargetReleases, ShippedIn: "0.26.0", Summary: "Target releases: plan requirements for MVP, V1.0 and later releases, and follow each release's review, verification and burn-up on its own page"},
 	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
+	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
 }
 
 // Feature keys the code gates on.
@@ -220,6 +221,9 @@ const (
 	// bar along the bottom of a phone, and ? / F1 opening the help panel.
 	// Frontend only; without it the project keeps its sidebar.
 	FeatureCompactLayout = "compact-layout"
+	// FeatureRedesignPages gates the project pages of the redesign: Home,
+	// Design, Tests and Baselines. Each reads what the API already serves.
+	FeatureRedesignPages = "redesign-pages"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

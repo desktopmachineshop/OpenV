@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 42
-  rendering a lazy() component: 19
+<Route> elements: 46
+  rendering a lazy() component: 23
   rendering an eagerly imported component: 21
   redirects only: 2
 index routes: 1
@@ -46,6 +46,10 @@ index routes: 1
   SharedProjectView   ./views/SharedProjectView#SharedProjectView
   ReviewQueue         ./views/ReviewQueue#ReviewQueue
   Releases            ./views/Releases#Releases
+  ProjectHome         ./views/ProjectHome#ProjectHome
+  DesignItems         ./views/DesignItems#DesignItems
+  TestsPage           ./views/TestsPage#TestsPage
+  BaselinesPage       ./views/BaselinesPage#BaselinesPage
 
 ## Route tree
   /login                           <Login>  [eager ./views/Login#Login]
@@ -89,6 +93,10 @@ index routes: 1
     activity                       <ActivityLog>  [lazy ./views/ActivityLog#ActivityLog]
     settings                       <ProjectSettings>  [eager ./views/ProjectSettings#ProjectSettings]
     releases                       <Releases>  [lazy ./views/Releases#Releases]
+    home                           <ProjectHome>  [lazy ./views/ProjectHome#ProjectHome]
+    design                         <DesignItems>  [lazy ./views/DesignItems#DesignItems]
+    tests                          <TestsPage>  [lazy ./views/TestsPage#TestsPage]
+    baselines                      <BaselinesPage>  [lazy ./views/BaselinesPage#BaselinesPage]
   *                                <SitePages site={site} fallback={<Navigate to="/projects" replace />}>  [eager ./ext/SiteSlot#SitePages]  when !walled
 
 ## Full paths, in declaration order
@@ -133,4 +141,8 @@ index routes: 1
   /projects/:projectId/activity                       when !walled
   /projects/:projectId/settings                       when !walled
   /projects/:projectId/releases                       when !walled
+  /projects/:projectId/home                           when !walled
+  /projects/:projectId/design                         when !walled
+  /projects/:projectId/tests                          when !walled
+  /projects/:projectId/baselines                      when !walled
   /*                                                  when !walled

@@ -13,6 +13,10 @@ const PAGE_ICONS: Record<string, string> = {
   requirements:
     'M5.5 3h9A1.5 1.5 0 0116 4.5v11a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 014 15.5v-11A1.5 1.5 0 015.5 3zM7 7h6M7 10h6M7 13h4',
   interviews: 'M3 4h10v7H7l-3 3v-3H3zM15 8h2v6h-1v3l-3-3h-4',
+  home: 'M3 3h6v8H3zM11 3h6v5h-6zM11 10h6v7h-6zM3 13h6v4H3z',
+  design: 'M10 3l7 4-7 4-7-4zM3 11l7 4 7-4',
+  tests: 'M4 4h12v12H4zM7 8l2 2 4-4M7 13h6',
+  baselines: 'M5 17V3M5 4h10l-2 3 2 3H5',
   vv: 'M3 10a7 7 0 1014 0 7 7 0 10-14 0M7 10l2 2 4-4',
   evidence: 'M14 9l-5 5a3 3 0 01-4.2-4.2L10.5 4a2 2 0 012.8 2.8L8 12.1',
   matrix: 'M3 3h14v14H3zM3 8h14M3 13h14M8 3v14M13 3v14',

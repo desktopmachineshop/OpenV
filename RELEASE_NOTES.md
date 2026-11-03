@@ -9,6 +9,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Home, Design, Tests and Baselines pages.** Four new pages in every
+  project. **Home** shows the project's figures, everything that needs you
+  (reviews, suspect links, test runs in progress, failing tests and new
+  comments), the audit trail, your projects with how far each is traced and
+  verified, and the agent proposals waiting. **Design** shows your design
+  items as a tree, with each one's attributes, the requirements it satisfies
+  and the tests that verify them. **Tests** shows your newest test runs with
+  their pass, fail and blocked counts, and every test case with its method,
+  what it verifies and its last result. **Baselines** lists your baselines as
+  a timeline and compares any two, or a baseline and the working copy, with
+  the text of each change word by word.
+
 ### Maintenance updates
 
 - **Calmer buttons across the app.** A page's main action is now one blue

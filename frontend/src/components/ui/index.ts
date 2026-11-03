@@ -21,3 +21,20 @@ export { buttonStyle } from './buttonStyles';
 export type { ButtonKind } from './buttonStyles';
 export { SettingsLayout } from './SettingsLayout';
 export type { SettingsSection } from './SettingsLayout';
+export { FeatureGate } from './FeatureGate';
+export {
+  MONO,
+  panelStyle,
+  refStyle,
+  eyebrowStyle,
+  mutedStyle,
+  plainLink,
+  tapTarget,
+  pageType,
+  PanelHeader,
+  GridHead,
+  gridRowStyle,
+  ellipsis,
+  ResultBar,
+  Meter,
+} from './panels';

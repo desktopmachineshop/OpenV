@@ -26,7 +26,11 @@ describe('the help topic of each project page', () => {
     ['settings', 'Project Settings'],
     ['crew/network', 'Crew'],
     ['vv/runs/r1', 'V&V'],
-    ['baselines/b1/compare', 'Baseline comparison'],
+    ['home', 'Home'],
+    ['design', 'Design'],
+    ['tests', 'Tests'],
+    ['baselines', 'Baselines'],
+    ['baselines/b1/compare', 'Baselines'],
     ['team', 'Project overview'],
     ['team/network', 'Project overview'],
   ])('/projects/p1/%s shows %j', (segment, title) => {
