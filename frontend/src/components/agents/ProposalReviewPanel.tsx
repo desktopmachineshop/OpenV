@@ -1,33 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BulkProposalOutcome, Proposal, proposalsAPI } from '../../api/client';
-import { ConfirmDialog } from '../ui';
+import { Artifact, artifactAPI, BulkProposalOutcome, Link as TraceLink, linkAPI, Proposal, proposalsAPI } from '../../api/client';
+import { ConfirmDialog, buttonStyle } from '../ui';
+import { ProposalCard } from './ProposalCard';
+import type { ProposalContext } from './proposalChanges';
 
 interface ProposalReviewPanelProps {
   projectId: string;
   onCountChange?: (count: number) => void;
+  /** Opens the run a proposal came from. */
+  onOpenRun?: (runId: string) => void;
 }
-
-const opBadgeColor = (op: string): string => {
-  switch ((op || '').toLowerCase()) {
-    case 'create':
-    case 'create_artifact':
-    case 'create_link':
-      return 'var(--success)';
-    case 'update':
-    case 'update_artifact':
-      return 'var(--accent)';
-    case 'delete':
-    case 'delete_artifact':
-    case 'delete_link':
-      return 'var(--danger)';
-    default:
-      return 'var(--neutral)';
-  }
-};
 
 export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
   projectId,
   onCountChange,
+  onOpenRun,
 }) => {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -39,6 +26,29 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
   const [bulkSummary, setBulkSummary] = useState('');
   const [rowResults, setRowResults] = useState<Record<string, BulkProposalOutcome>>({});
   const [confirmReject, setConfirmReject] = useState(false);
+  // The project's artifacts and links, to name what each proposal touches
+  // and show an edit against the artifact as it is now. Read once there is
+  // something to review, and again when the set of proposals changes.
+  const [ctx, setCtx] = useState<ProposalContext>({ artifacts: {}, links: {} });
+  const proposalKey = proposals.map((p) => p.id).join(',');
+  useEffect(() => {
+    if (!proposalKey) return;
+    let live = true;
+    Promise.all([
+      artifactAPI.list(projectId).catch(() => ({ data: [] as Artifact[] })),
+      linkAPI.list(projectId).catch(() => ({ data: [] as TraceLink[] })),
+    ]).then(([arts, links]) => {
+      if (!live) return;
+      const artifacts: Record<string, Artifact> = {};
+      (arts.data || []).forEach((a) => (artifacts[a.id] = a));
+      const byId: Record<string, TraceLink> = {};
+      (links.data || []).forEach((l) => (byId[l.id] = l));
+      setCtx({ artifacts, links: byId });
+    });
+    return () => {
+      live = false;
+    };
+  }, [projectId, proposalKey]);
 
   const load = useCallback(() => {
     proposalsAPI
@@ -154,6 +164,10 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
             alignItems: 'center',
             flexWrap: 'wrap',
             marginBottom: 10,
+            padding: '8px 12px',
+            background: 'var(--tint-purple)',
+            border: '1px solid var(--tint-purple-border)',
+            borderRadius: 6,
           }}
         >
           <label
@@ -175,27 +189,20 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
             value={bulkNote}
             onChange={(e) => setBulkNote(e.target.value)}
             placeholder="Bulk review note (optional)"
-            style={{ flex: 1, minWidth: 180, maxWidth: 640, fontSize: 13, padding: '7px 10px' }}
+            style={{ flex: 1, minWidth: 180, maxWidth: 640, fontSize: 13, height: 32, padding: '0 10px' }}
             disabled={bulkBusy}
           />
           <button
-            className="button"
-            style={{ padding: '7px 16px', fontSize: 13 }}
+            type="button"
+            style={buttonStyle('primary', { disabled: bulkBusy || selectedIds.length === 0 })}
             disabled={bulkBusy || selectedIds.length === 0}
             onClick={() => bulkAct('approve')}
           >
             Approve Selected ({selectedIds.length})
           </button>
           <button
-            style={{
-              background: 'var(--danger)',
-              color: '#fff',
-              border: 'none',
-              padding: '7px 16px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
+            type="button"
+            style={buttonStyle('danger', { disabled: bulkBusy || selectedIds.length === 0 })}
             disabled={bulkBusy || selectedIds.length === 0}
             onClick={() => setConfirmReject(true)}
           >
@@ -219,107 +226,20 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
         />
       )}
       {proposals.map((p) => (
-        <div
+        <ProposalCard
           key={p.id}
-          className="card"
-          style={{ marginBottom: 10, borderLeft: '4px solid var(--warning)', padding: 16 }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-            <input
-              type="checkbox"
-              checked={!!selected[p.id]}
-              onChange={(e) => setSelected((sel) => ({ ...sel, [p.id]: e.target.checked }))}
-              disabled={bulkBusy}
-              aria-label="Select proposal"
-            />
-            <span
-              style={{
-                background: opBadgeColor(p.op),
-                color: '#fff',
-                borderRadius: 10,
-                padding: '2px 10px',
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-              }}
-            >
-              {p.op}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--text)' }}>
-              Target: <strong>{p.target_id || 'new'}</strong>
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {new Date(p.created_at).toLocaleString()}
-            </span>
-            {p.ref && (
-              <span
-                title="Other proposals in this run can link to this artifact using this reference token."
-                style={{
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: 'var(--text-muted)',
-                  background: 'var(--surface-alt)',
-                  border: '1px solid var(--neutral-soft)',
-                  borderRadius: 4,
-                  padding: '1px 6px',
-                }}
-              >
-                ref: {p.ref}
-              </span>
-            )}
-          </div>
-          {rowResults[p.id] && !rowResults[p.id].ok && (
-            <div style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 8 }}>
-              {rowResults[p.id].error || 'Review failed'}
-            </div>
-          )}
-          <pre
-            style={{
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--neutral-soft)',
-              borderRadius: 4,
-              padding: 10,
-              fontSize: 12,
-              overflowX: 'auto',
-              marginBottom: 10,
-              maxHeight: 260,
-              overflowY: 'auto',
-            }}
-          >
-            {JSON.stringify(p.payload, null, 2)}
-          </pre>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input
-              value={notes[p.id] || ''}
-              onChange={(e) => setNotes((n) => ({ ...n, [p.id]: e.target.value }))}
-              placeholder="Review note (optional)"
-              style={{ flex: 1, minWidth: 180, maxWidth: 640, fontSize: 13, padding: '7px 10px' }}
-            />
-            <button
-              className="button"
-              style={{ padding: '7px 16px', fontSize: 13 }}
-              disabled={busy[p.id] || bulkBusy}
-              onClick={() => act(p, 'approve')}
-            >
-              Approve
-            </button>
-            <button
-              style={{
-                background: 'var(--danger)',
-                color: '#fff',
-                border: 'none',
-                padding: '7px 16px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 13,
-              }}
-              disabled={busy[p.id] || bulkBusy}
-              onClick={() => act(p, 'reject')}
-            >
-              Reject
-            </button>
-          </div>
-        </div>
+          proposal={p}
+          ctx={ctx}
+          selected={!!selected[p.id]}
+          onSelect={(on) => setSelected((sel) => ({ ...sel, [p.id]: on }))}
+          note={notes[p.id] || ''}
+          onNote={(note) => setNotes((n) => ({ ...n, [p.id]: note }))}
+          busy={!!busy[p.id] || bulkBusy}
+          outcome={rowResults[p.id]}
+          onApprove={() => act(p, 'approve')}
+          onReject={() => act(p, 'reject')}
+          onOpenRun={onOpenRun}
+        />
       ))}
     </div>
   );

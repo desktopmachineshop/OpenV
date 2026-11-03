@@ -158,10 +158,10 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'How well your requirements are verified: coverage rollups, gaps, test runs, and a downloadable status report.',
     tips: [
       "Each requirement's rollup comes from its verification method plus the latest result of every verifying test.",
-      'Start with the Gaps section — an empty one means full coverage.',
+      'Start with Top gaps — an empty list means full coverage; click a section to see its requirements.',
       'Pin a test run to a baseline to record a campaign against a fixed snapshot.',
       'Completed or aborted test runs become read-only; the latest result per test case feeds the rollup and the Matrix chips.',
-      'Download the V&V report (PDF) for the live project or any baseline.',
+      'Export report (PDF) downloads the V&V report for the live project or any baseline.',
     ],
     chapter: { slug: 'vv', title: 'V&V & test runs' },
   },
