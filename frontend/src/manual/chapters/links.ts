@@ -55,7 +55,7 @@ Clicking a linked artifact navigates to it.
 
 ## The Traceability Matrix
 
-**Matrix** in the project sidebar shows one row per requirement with columns
+**Traceability**, under **Verify** in the project menu, shows one row per requirement with columns
 for:
 
 - **Linked needs** — user needs the requirement derives from
@@ -69,6 +69,23 @@ Extras:
 - **Baseline selector** — view the matrix as of any baseline (read-only).
 - **Quick filter** — type to filter rows across all columns.
 - **Export CSV** — download the matrix for spreadsheets or reports.
+
+## Impact analysis
+
+**Impact**, under **Verify** in the project menu, answers "what does a change
+to this artifact touch?" before you make it. Pick the artifact, or open the
+page from **Show impact →** on an artifact or a row of the Traceability Matrix.
+
+- **Direction** — **Downstream** lists what depends on the artifact (what a
+  change here could affect), **Upstream** what it depends on (its sources and
+  rationale), and **Both** shows the two side by side.
+- Results are grouped by type — user needs, requirements, design items, test
+  cases, hazards — with how each one is reached: the link it came through and
+  how many **hops** away it is, so a direct dependent reads apart from one
+  three links down the chain.
+
+Run it before changing an approved requirement: the downstream list is the set
+of artifacts whose links will turn **suspect** and that may need review again.
 `;
 
 export default content;

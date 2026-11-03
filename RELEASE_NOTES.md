@@ -20,6 +20,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   still fail or lack evidence, and a burn-up of verification day by day
   from your test results. Agents can plan and report on releases too, with
   the new release tools.
+- **A more compact project layout.** Inside a project, the menu is now a
+  narrow rail down the left instead of a wide sidebar, so your requirements,
+  tables and boards get more of the screen. Click **Define**, **Verify**,
+  **Plan** or **Agents** on the rail to see that part's pages; one top bar
+  shows the workspace, the project and the page you are on, with search,
+  **Help**, notifications and your account. On a phone, tabs along the bottom
+  reach **Overview**, **Requirements**, **V&V** and **Review**, and **More**
+  opens the full menu. Press **?** or **F1** on any page to open help.
+  **Workspace settings**, **Workspace runs**, **Platform admin** and
+  **What's new** gain a **?** help button too, and the **Evidence**,
+  **Impact**, **Review Queue** and **To-dos** pages now have help of their
+  own.
+
+## 0.25.2 — 2026-11-02
 
 ### Maintenance updates
 

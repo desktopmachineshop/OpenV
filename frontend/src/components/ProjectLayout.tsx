@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { rememberProject } from '../appShortcuts';
-import { guidedAPI, projectAPI, Project } from '../api/client';
-import { hasWizardProgress } from './wizard/assistantSession';
 import {
   PanelMode,
   loadPanelMode,
@@ -32,6 +29,12 @@ import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 import { navSections } from '../pages';
+import { useFeature } from '../hooks/useFeature';
+import { useHelpShortcut } from '../hooks/useHelpShortcut';
+import { useProjectShell, visibleSections } from './ProjectLayoutState';
+import { RailShell } from './ProjectLayoutRail';
+import { COMPACT_LAYOUT_FEATURE } from '../features';
+import { PhoneTabBar } from './ProjectLayoutTabs';
 
 // ProjectLayout syncs the URL param into the store and renders the app
 // shell (left nav + top bar) around the active module.
@@ -39,22 +42,13 @@ export const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setProjectId, orgs, activeOrgId, setActiveOrgId } = useAppStore();
   // Read the whole gate map rather than one key: the menu filters on
   // whatever a nav entry declares, so a future gated page needs no change
   // here.
   const features = useAppStore((s) => s.features);
-  const [project, setProject] = useState<Project | null>(null);
-  // Once a guided definition has been worked on, the nav entry disappears —
-  // the wizard is then reached only through the Overview page's adaptive CTA
-  // (Resume / Modify). Rechecked on every route change so starting or
-  // committing a session updates the menu without a reload.
-  //
-  // "Worked on", not "exists": the V&V Assistant's conversation is stored on a
-  // guided session, so opening the notes chat in a project that never ran the
-  // wizard creates one. That must not take the wizard out of the nav, so a
-  // session still on step one with nothing entered does not count.
-  const [hasGuidedSession, setHasGuidedSession] = useState(false);
+  const { project, hasGuidedSession } = useProjectShell(projectId);
+  const sections = visibleSections(navSections, hasGuidedSession, features?.features);
+  const compactLayout = useFeature(COMPACT_LAYOUT_FEATURE);
   // How much room the project menu takes: pinned, auto-hiding on hover, or
   // hidden. Remembered per person so the choice survives a reload.
   const [navMode, setNavMode] = useState<PanelMode>(() => loadPanelMode('project-nav'));
@@ -73,52 +67,6 @@ export const ProjectLayout: React.FC = () => {
   // On phones the help panel opens from the top bar rather than a floating
   // button, which sat on top of every composer at the bottom of the page.
   const [helpOpen, setHelpOpen] = useState(false);
-
-  useEffect(() => {
-    if (!projectId) return;
-    let cancelled = false;
-    guidedAPI
-      .list(projectId)
-      .then((res) => {
-        if (!cancelled) setHasGuidedSession(hasWizardProgress(res.data || []));
-      })
-      .catch(() => {
-        /* menu visibility only — keep the last known state */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, location.pathname]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    setProjectId(projectId);
-    // Remember where we are, so an installed-app shortcut to the review queue
-    // or the board (which have no project-free url) can land in one tap.
-    rememberProject(projectId);
-    projectAPI
-      .get(projectId)
-      .then((res) => setProject(res.data))
-      .catch(() => navigate('/projects'));
-  }, [projectId, setProjectId, navigate]);
-
-  // Deep link into a project from another workspace: silently switch the
-  // active workspace when the project belongs to an org the user is in.
-  // (If they aren't a member, the project fetch 404s and redirects above.)
-  //
-  // Child views can render (and fetch) before this switch resolves, so their
-  // first requests may still carry the previous workspace's X-Org-ID header.
-  // That is harmless for project-keyed endpoints — the backend authorizes
-  // those against the project itself and ignores the header — but any fetch
-  // of an org-scoped resource (agents, agent runs, automations, crews, org
-  // teams, events) must include activeOrgId in its effect deps so it refetches
-  // once the switch lands (issues #99/#111/#112).
-  useEffect(() => {
-    if (!project?.org_id || orgs.length === 0) return;
-    if (project.org_id !== activeOrgId && orgs.some((o) => o.id === project.org_id)) {
-      setActiveOrgId(project.org_id, { clearProjects: false });
-    }
-  }, [project, orgs, activeOrgId, setActiveOrgId]);
 
   // Escape dismisses a revealed menu, the same key that closes every other
   // thing this app floats over the document.
@@ -144,6 +92,21 @@ export const ProjectLayout: React.FC = () => {
     : panelIsOpen(navMode, navHovered && !viewport.coarsePointer, navRevealed);
   const takesSpace = compact ? false : panelTakesSpace(navMode);
   const stripWidth = panelStripWidth(viewport.coarsePointer);
+  useHelpShortcut(compactLayout, () => setHelpOpen((o) => !o));
+  const help = <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />;
+
+  if (compactLayout && !compact) {
+    return (
+      <RailShell
+        project={project}
+        projectId={projectId || ''}
+        sections={sections}
+        helpOpen={helpOpen}
+        onHelpToggle={() => setHelpOpen((o) => !o)}
+        help={help}
+      />
+    );
+  }
 
   return (
     <div
@@ -347,13 +310,9 @@ export const ProjectLayout: React.FC = () => {
         {/* minHeight: 0 is what lets this shrink below its content in the
             column, so a menu taller than the window scrolls here instead of
             pushing the account controls off the bottom. */}
-        <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 0' }}>
-          {navSections.map((section, i) => {
-            const items = section.items.filter(
-              (item) =>
-                (item.to !== 'guided' || !hasGuidedSession) &&
-                (!item.feature || Boolean(features?.features[item.feature]))
-            );
+        <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 0' }} data-help-key="start.navigation">
+          {sections.map((section, i) => {
+            const items = section.items;
             // An unlabelled group has no header to click, so it never collapses.
             const label = section.label;
             const expanded = label
@@ -506,10 +465,13 @@ export const ProjectLayout: React.FC = () => {
       <main style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
+      {compactLayout && compact && (
+        <PhoneTabBar menuOpen={navRevealed} onMore={() => setNavRevealed((shown) => !shown)} />
+      )}
       {/* Context-aware help — mounted once here so it is available on every
           project page (issue #162). Controlled from whichever bar this shell
           is showing: the compact top bar, or the sidebar's account row. */}
-      <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />
+      {help}
     </div>
   );
 };

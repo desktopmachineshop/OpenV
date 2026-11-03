@@ -26,8 +26,8 @@ remembered):
 - **Center** — the selected artifact: header, body, links, attachments.
 - **Right** — the **Chatter** panel: comments on the selected artifact.
 
-The **?** button beside the notification bell opens a quick-reference help sidebar with artifact and
-link type definitions.
+**Help** in the top bar (or **?** on the keyboard) opens the help panel for
+this page, with the artifact and link types.
 
 ## Creating and organizing artifacts
 
@@ -113,23 +113,18 @@ rules, down to off.
 
 ## Making room
 
-The **project menu** and the **Notes** panel each have three states, chosen
-from the control at the foot of the menu and the button in the Notes header:
+The project menu takes only a narrow rail at the left of the page (see
+*Getting started* → *Finding your way around*). The **Notes** panel has three
+states, chosen from the button in its header:
 
 - **Pinned** — always open, taking its width from the page.
 - **Auto-hide** — a thin strip at the edge; hovering it opens the panel over
   the document, and moving away closes it. The document does not reflow.
 - **Hidden** — only the strip remains, which brings the panel back.
 
-Each choice is remembered per person and per panel. The artifact tree fills the
+The choice is remembered per person. The artifact tree fills the
 height of its column, so a taller window shows more of the document rather
 than more empty space.
-
-The menu's groups — Define, Verify, Plan, Agents — start collapsed, so the menu
-is a handful of lines instead of a full column of links. Click a group heading
-to open or close it; the group holding the page you are on opens by itself
-until you close it, and your choices are remembered. A menu longer than the
-window scrolls on its own.
 
 Nothing on the page is sized to the browser window, so the window itself never
 scrolls: the tree, the document, and the Notes panel each scroll inside their
@@ -138,11 +133,11 @@ pushing anything off the bottom.
 
 ## Search & filters
 
-Two boxes search, and they do different jobs. The one in the **sidebar**
+Two boxes search, and they do different jobs. The one in the **top bar**
 searches every project you can see; the one above the **tree** narrows the
 project you are in.
 
-The sidebar box matches titles and bodies, and it also matches **refs**: type
+The top bar's box matches titles and bodies, and it also matches **refs**: type
 **REQ-30** and REQ-30 comes back first, ahead of anything that merely mentions
 it. Case does not matter, so **req-30** works, and a ref pasted out of a
 report with spaces around it still finds its artifact. Every result shows its

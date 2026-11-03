@@ -45,6 +45,7 @@ export const FEATURE_KEYS = [
   'manual-help',
   'help-activity',
   'target-releases',
+  'compact-layout',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

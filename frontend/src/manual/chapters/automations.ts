@@ -3,7 +3,7 @@ const content = `
 # Automations
 
 Automations launch agent (or crew) runs without anyone clicking a button. Open
-**Automations** in the project sidebar.
+**Automations** in the project menu.
 
 ## What an automation covers
 

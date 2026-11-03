@@ -30,7 +30,8 @@
     "linked-sign-in",
     "manual-help",
     "help-activity",
-    "target-releases"
+    "target-releases",
+    "compact-layout"
   ],
   "event_types": [
     "artifact.created",

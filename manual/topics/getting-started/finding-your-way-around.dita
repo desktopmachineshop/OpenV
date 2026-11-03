@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="finding-your-way-around">
+  <title>Finding your way around</title>
+  <shortdesc>Inside a project, the page is framed by a narrow <b>rail</b> down the left and one <b>top bar</b> across the top, so the work itself gets the rest of the screen.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="start.navigation"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>The rail</b> has a button for each part of the project — <b>Define</b>, <b>Verify</b>, <b>Plan</b> and <b>Agents</b> — and links to <b>Activity</b> and <b>Settings</b>. Click a group to open its pages beside the rail (Define holds Overview, Guided Definition, Requirements and Interviews, for example), then click the page. The group holding the page you are on is marked. The list closes when you arrive, or with <b>Esc</b> or a click anywhere else. <b>Projects</b> at the top of the rail returns to all projects in the workspace.</li>
+      <li><b>The top bar</b> reads left to right: the workspace switcher, the project and the page you are on (click the project's name for its overview), the search across every project, <b>Help</b>, the notification bell and the account menu.</li>
+    </ul>
+    <p>On a phone the project menu is a drawer that opens from <b>☰</b> in the top bar, and a row of tabs along the bottom reaches the pages used most on the move: <b>Overview</b>, <b>Reqs</b> (Requirements), <b>V&amp;V</b> and <b>Review</b>. <b>More</b> opens the drawer with every other page.</p>
+  </conbody>
+</concept>

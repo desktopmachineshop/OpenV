@@ -18,6 +18,7 @@ apps:
       /projects/:projectId/releases: releases
       /projects/:projectId/evidence: evidence
       /projects/:projectId/matrix: matrix
+      /projects/:projectId/impact: impact
       /projects/:projectId/review: review
       /projects/:projectId/board: board
       /projects/:projectId/todos: todos

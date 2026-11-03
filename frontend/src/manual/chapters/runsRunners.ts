@@ -8,7 +8,7 @@ itself never runs a model; it queues work and reviews results.
 
 ## The Runs page
 
-**Runs** in the project sidebar lists agent runs with status, start time,
+**Runs** in the project menu lists agent runs with status, start time,
 duration, token usage, and cost. Statuses:
 
 queued · running · awaiting_approval · succeeded · failed · timed_out ·
@@ -59,7 +59,7 @@ see it yourself (see *How runs are routed* below).
 The easiest setup is the **Agent Connector**:
 
 1. When a run is queued and no runner is online, the app prompts you — or open
-   your user settings (bottom-left of the sidebar) → **My Runner**.
+   your user settings (the account menu) → **My Runner**.
 2. **Download** the connector bundle, unzip it somewhere permanent, and run it
    once so it registers itself.
 3. Click **Pair connector** in OpenV — the browser opens the connector with a
@@ -197,7 +197,7 @@ To stop it altogether, choose **Disconnect**; it stops working at once.
 
 Personal and cloud runners both use your own CLI sign-ins:
 
-- Open your user settings (bottom-left of the sidebar) → **Agent sign-ins**.
+- Open your user settings (the account menu) → **Agent sign-ins**.
   Each provider card relays the CLI's own sign-in flow to whichever runner of
   yours is online, and each CLI does it differently.
 - **On your own machine:** **Gemini** shows an "Open sign-in page" link plus a

@@ -6,7 +6,7 @@ A **crew** is a group of agents (and optionally people) arranged in an
 org-chart graph. Use a crew when a task naturally splits — one agent drafts
 requirements, another reviews for testability, a person signs off.
 
-Open **Crew** in the project sidebar.
+Open **Crew** in the project menu.
 
 ## Managing crews
 

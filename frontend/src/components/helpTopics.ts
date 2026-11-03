@@ -32,8 +32,9 @@ const DEFAULT_TOPIC: HelpTopic = {
   tips: [
     'The guided definition shortcut here adapts to where you are — its label reads Start, Resume, or Modify.',
     'Stakeholder interviews live on this page, in the User interviews section.',
-    'Switch workspaces from the top of the dark left sidebar; your choice is remembered between visits.',
+    'Switch workspaces from the workspace name at the left of the top bar (at the top of the menu on a phone); your choice is remembered between visits.',
     'For AI agents to work in this project, a runner must be online — see Runs & runners in the manual.',
+    'Press ? or F1 on any page to open this help; the rail down the left reaches every page of the project.',
   ],
   chapter: { slug: 'getting-started', title: 'Getting started' },
 };
@@ -138,6 +139,54 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     chapter: { slug: 'releases', title: 'Target releases' },
     also: [{ slug: 'vv', title: 'V&V & test runs' }],
   },
+  evidence: {
+    title: 'Evidence',
+    summary:
+      'The record behind physical and manual tests: each evidence bundle is one capture session — what was done, what was observed, when, by whom, under which conditions, and the files it produced.',
+    tips: [
+      'Record a capture once and cite it from every test result it supports, rather than attaching the same files to each run.',
+      'Each bundle gets a reference like EVD-1 that is never reused, so a report that cites it keeps meaning the same thing.',
+      'Each file’s SHA-256 is recorded at upload, so the dataset can be checked against the record later.',
+      'Enter conditions one per line as name: value — rig, serial numbers, calibration date, ambient temperature.',
+    ],
+    chapter: { slug: 'vv', title: 'V&V & test runs' },
+  },
+  impact: {
+    title: 'Impact analysis',
+    summary:
+      'What a change to one artifact touches, before you make it: what depends on it downstream, and what it depends on upstream.',
+    tips: [
+      'Open it from Show impact → on an artifact or a row of the Traceability Matrix, or pick the artifact here.',
+      'Downstream is what a change could affect; Upstream is the sources and rationale the artifact rests on.',
+      'Each result shows the link it was reached through and how many hops away it is.',
+      'Run it before editing an approved requirement: the downstream list is what may need review again.',
+    ],
+    chapter: { slug: 'links', title: 'Traceability links' },
+  },
+  review: {
+    title: 'Review Queue',
+    summary:
+      'Where artifacts wait for sign-off. Approve or send back one row at a time or a whole selection, and send the whole project for review in one action.',
+    tips: [
+      'Send project for review moves every draft into review at once; run it again each cycle to pick up only what changed.',
+      'Approving clears the suspect flag on every link that touches the artifact.',
+      'Send back needs a reason, which is posted as a note on the artifact before it returns to draft.',
+      'Tick rows (or the header box) to approve or send back several at once.',
+    ],
+    chapter: { slug: 'artifacts', title: 'Requirements & artifacts' },
+  },
+  todos: {
+    title: 'To-dos',
+    summary:
+      "The board's work items arranged by person instead of by column, so the page answers who owes what.",
+    tips: [
+      'Moving a card on the board updates this page, and the other way round — it is the same work.',
+      'Just mine narrows the page to your own list; Show done brings finished work back.',
+      'Raise a to-do from a note with + Add to-do: the person named and the note’s first line are filled in.',
+      'Work for an agent or a team is under Agents and teams; anything with no assignee is under Unassigned.',
+    ],
+    chapter: { slug: 'board', title: 'Kanban board' },
+  },
   matrix: {
     title: 'Traceability Matrix',
     summary:
@@ -227,6 +276,55 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'troubleshooting', title: 'Troubleshooting & FAQ' },
   },
+  // The workspace-level pages outside a project, keyed by their path
+  // (helpTopicForPath tries the first two segments, then the first).
+  'org/settings': {
+    title: 'Workspace settings',
+    summary:
+      'Settings for the whole workspace: its name and plan, members and their roles, teams, limits and usage, AI providers and runners.',
+    tips: [
+      'Workspace membership gets someone into the workspace; project access is granted per project, in its Settings → Access.',
+      'Members are told when they are added, removed or change role, and every other admin hears about arrivals and departures.',
+      'Teams group people for project access; they are not crews, which are graphs of AI agents.',
+      'AI Providers (admin only) sets the default model and the API keys runs use; Runners is where workspace runners are paired.',
+    ],
+    chapter: { slug: 'org-settings', title: 'Workspace settings & teams' },
+    also: [{ slug: 'runs-runners', title: 'Runs & runners' }],
+  },
+  'org/runs': {
+    title: 'Workspace runs',
+    summary:
+      "The agent runs that belong to no project: a whole-workspace automation's runs, products invented from the projects list, and runs of deleted projects.",
+    tips: [
+      "Click a run to follow it, cancel it or retry it, with the same detail panel as a project's Runs page.",
+      'The address names the open run (?run=), so a reload or a shared link opens it again.',
+      'Admins see every such run; other members see the ones they launched.',
+      'A notification that one of these runs failed opens it here.',
+    ],
+    chapter: { slug: 'runs-runners', title: 'Runs & runners' },
+  },
+  admin: {
+    title: 'Platform admin',
+    summary:
+      "The deployment's own administration: who the platform admins are, password reset links for support, and every workspace with its plan.",
+    tips: [
+      'The first account registered on a deployment is its platform admin; Make admin and Remove manage the rest.',
+      'Reset link shows a one-time password reset link once: hand it only to someone you have identified.',
+      "A workspace's plan sets its limits and its default release channel.",
+      'The Open source plan publishes every project in the workspace as of its latest baseline.',
+    ],
+    chapter: { slug: 'platform-admin', title: 'Platform admin' },
+  },
+  'whats-new': {
+    title: "What's new",
+    summary:
+      'Every release of OpenV, newest first: what you can now do, what quietly improved and what stopped being broken.',
+    tips: [
+      'A new feature reaches nightly workspaces in the release it ships in, and stable-channel workspaces with their next stable release.',
+      'Press ? or F1 on any page to open the help for that page.',
+    ],
+    chapter: { slug: 'getting-started', title: 'Getting started' },
+  },
   settings: {
     title: 'Project Settings',
     summary:
@@ -252,6 +350,10 @@ export const helpTopicForPath = (pathname: string): HelpTopic => {
   // its own; inside a project the default topic is the overview.
   if (segments[0] === 'projects' && segments.length === 1) {
     return HELP_TOPICS.projects;
+  }
+  if (segments[0] !== 'projects') {
+    const page = HELP_TOPICS[segments.slice(0, 2).join('/')] || HELP_TOPICS[segments[0]];
+    if (page) return page;
   }
   const moduleSegment = segments[0] === 'projects' ? segments[2] : segments[0];
   return (moduleSegment && HELP_TOPICS[moduleSegment]) || DEFAULT_TOPIC;

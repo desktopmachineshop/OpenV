@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="inside-a-project">
   <title>Inside a project</title>
-  <shortdesc>Opening a project shows the dark left sidebar with the project's modules:</shortdesc>
+  <shortdesc>Opening a project shows the project menu with its pages, grouped under <b>Define</b>, <b>Verify</b>, <b>Plan</b> and <b>Agents</b> on the rail down the left (see <i>Getting started</i> → <i>Finding your way around</i>):</shortdesc>
   <conbody>
     <simpletable>
       <sthead><stentry>Entry</stentry><stentry>What it is</stentry></sthead>
@@ -10,7 +10,7 @@
       <strow><stentry>Requirements</stentry><stentry>The artifact tree — create, edit, link, baseline</stentry></strow>
       <strow><stentry>Guided Definition</stentry><stentry>Step-by-step wizard from framing to committed requirements</stentry></strow>
       <strow><stentry>V&amp;V</stentry><stentry>Coverage, gaps, test runs, PDF report</stentry></strow>
-      <strow><stentry>Matrix</stentry><stentry>Traceability matrix grid</stentry></strow>
+      <strow><stentry>Traceability</stentry><stentry>Traceability matrix grid</stentry></strow>
       <strow><stentry>Board</stentry><stentry>Kanban board with human and agent assignees</stentry></strow>
       <strow><stentry>Crew</stentry><stentry>Crew builder — org chart of agents and people</stentry></strow>
       <strow><stentry>Agents</stentry><stentry>Agent definitions and launcher</stentry></strow>
@@ -18,6 +18,6 @@
       <strow><stentry>Runs</stentry><stentry>Agent run history and proposal review</stentry></strow>
       <strow><stentry>Settings</stentry><stentry>Project access, repositories, agent auth, danger zone</stentry></strow>
     </simpletable>
-    <p>The project name under the workspace switcher takes you back to all projects. Your user block at the bottom of the sidebar opens <b>Settings</b> (personal runner and agent sign-ins) and <b>Sign out</b>.</p>
+    <p><b>Projects</b> at the top of the rail takes you back to all projects. The account menu at the right end of the top bar (on a phone, your name at the foot of the project menu) opens <b>Settings</b> (personal runner and agent sign-ins) and <b>Sign out</b>.</p>
   </conbody>
 </concept>

@@ -66,7 +66,7 @@ in, because the identity provider vouches for the address.
 
 ### Your password and your sessions
 
-Open **your settings** from the user block at the bottom-left of the sidebar
+Open **your settings** from the account menu (your picture at the right end of the top bar; on a phone, your name at the foot of the project menu)
 to **change your password** — current password, then the new one twice.
 Changing it signs out every other browser and device you are signed in on,
 which is what you want if you are changing it because the old one may have
@@ -138,7 +138,8 @@ Everything in OpenV lives inside a **workspace** (also called an org):
 The workspace switcher appears in two places:
 
 - On the **Projects** page, in the "Workspace:" box at the top right.
-- Inside a project, at the top of the dark left sidebar.
+- Inside a project, at the left end of the top bar (on a phone, at the top of
+  the project menu).
 
 Click the workspace name to open the dropdown. It lists all your workspaces
 (a green check marks the active one) and offers:
@@ -174,8 +175,8 @@ approval, an artifact entering the review queue, and your workspace crossing
 interviews stay in the bell only — they are too frequent to be worth
 interrupting you for.
 
-Open **your settings** (your name, bottom-left in a project, or the account
-menu) → **Notifications** to choose how the high-signal four reach you:
+Open **your settings** from the account menu (your picture at the right end
+of the top bar) → **Notifications** to choose how the high-signal four reach you:
 
 - **Email me** — one plain-text email per event, with a link straight to it.
   On by default, and only does anything when the server has email configured.
@@ -206,9 +207,49 @@ icon offers shortcuts straight to your **review queue**, your **board** and
 your **notifications**. The review queue and board shortcuts open your most
 recent project; the first time, they ask you to pick one.
 
+## Finding your way around
+
+Inside a project, the page is framed by a narrow **rail** down the left and
+one **top bar** across the top, so the work itself gets the rest of the
+screen.
+
+- **The rail** has a button for each part of the project — **Define**,
+  **Verify**, **Plan** and **Agents** — and links to **Activity** and
+  **Settings**. Click a group to open its pages beside the rail (Define holds
+  Overview, Guided Definition, Requirements and Interviews, for example), then
+  click the page. The group holding the page you are on is marked. The list
+  closes when you arrive, or with **Esc** or a click anywhere else.
+  **Projects** at the top of the rail returns to all projects in the
+  workspace.
+- **The top bar** reads left to right: the workspace switcher, the project
+  and the page you are on (click the project's name for its overview), the
+  search across every project, **Help**, the notification bell and the
+  account menu.
+
+On a phone the project menu is a drawer that opens from **☰** in the top bar,
+and a row of tabs along the bottom reaches the pages used most on the move:
+**Overview**, **Reqs** (Requirements), **V&V** and **Review**. **More** opens
+the drawer with every other page.
+
+## Keyboard shortcuts
+
+| Key | What it does |
+| --- | --- |
+| **?** or **F1** | Opens or closes the help panel for the page you are on |
+| **Esc** | Closes the open project menu or group of pages |
+| **J** / **K** | Next / previous artifact in the Requirements document |
+| **Ctrl + Enter** | Sends your message to the V&V Assistant |
+
+**?** is ignored while you are typing in a field, so it can still be typed;
+**F1** works everywhere.
+
 ## Help on every page
 
-Press **?** beside the notification bell to open the help panel. It shows
+Press **Help** in the top bar, or the **?** or **F1** key, to open the help
+panel (on a phone, tap **?** in the top bar). Outside a project — the
+projects list, workspace settings, workspace runs, platform admin and
+*What's new* — the **?** sits beside the notification bell, and the keys work
+there too. It shows
 the page of this manual for the screen you are on, written for the release
 your workspace is on, so what it describes matches what you see. Links
 between pages open in the panel, **Back** returns, and the search box at

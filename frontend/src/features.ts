@@ -45,3 +45,9 @@ export const CONNECTED_APP_WORKSPACES_FEATURE: FeatureKey = 'connected-app-works
 // A project's target releases (MVP, V1.0, ...): the Releases page and the
 // release range in the artifact editor.
 export const TARGET_RELEASES_FEATURE: FeatureKey = 'target-releases';
+/**
+ * The compact layout: the project shell's icon rail and top bar, the phone
+ * tab bar, and the ? / F1 help shortcut with a help button on every page
+ * that has a top bar. Shared by ProjectLayout, ProjectList and Navbar.
+ */
+export const COMPACT_LAYOUT_FEATURE: FeatureKey = 'compact-layout';

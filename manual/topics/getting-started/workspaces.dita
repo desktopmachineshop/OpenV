@@ -13,7 +13,7 @@
       <p>The workspace switcher appears in two places:</p>
       <ul>
         <li>On the <b>Projects</b> page, in the "Workspace:" box at the top right.</li>
-        <li>Inside a project, at the top of the dark left sidebar.</li>
+        <li>Inside a project, at the left end of the top bar (on a phone, at the top of the project menu).</li>
       </ul>
       <p>Click the workspace name to open the dropdown. It lists all your workspaces (a green check marks the active one) and offers:</p>
       <ul>
