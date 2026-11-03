@@ -403,7 +403,12 @@ branch instead:
   with `fix: true` to designate the newest release at once. The API's
   stable scheduler then moves each stable-channel workspace to it at that
   workspace's upgrade window, with the notes of every release since the
-  previous stable merged group by group.
+  previous stable merged group by group. It pushes `release` but does not
+  tag the release, publish its manual line or point openv-hosted at it:
+  run **Promote to release** after it to ship it to openv.app. Promote ships
+  a version that is cut but not yet tagged as it stands, and both workflows
+  judge master by the CI of the code under the pipeline's own commits
+  (`scripts/release_ci.py judged-commit`), which carry none.
 - **Nightly automation**: the **Nightly promotion** workflow
   (`.github/workflows/nightly-promote.yml`) runs at 03:00 UTC and is a
   no-op until staging exists (below).
