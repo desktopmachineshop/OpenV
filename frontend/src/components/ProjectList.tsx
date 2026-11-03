@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShortcutTarget,
@@ -45,13 +45,15 @@ import { Navbar } from './Navbar';
 import { HelpSidebar } from './HelpSidebar';
 import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
-import { SegmentedControl, useConfirm, usePrompt } from './ui';
+import { PanelHeader, SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
 import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE } from '../features';
-import { ProjectCount, ProjectMeters, useProjectFigures } from './ProjectListFigures';
-import { isLanding } from './ProjectListLanding';
+import { ProjectCount, ProjectMeters } from './ProjectListFigures';
+import { ProjectListHome } from './ProjectListHome';
+import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
+import { useViewport } from '../hooks/useViewport';
 import './ProjectList.css';
 
 // What an invention that outlasts its wait says where the workspace has the
@@ -105,13 +107,30 @@ export const ProjectList: React.FC = () => {
   const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
   // ? and F1 open help here too, as on every project page (compact layout).
   useHelpShortcut(useFeature(COMPACT_LAYOUT_FEATURE), () => setHelpOpen((o) => !o));
-  // The Home design: the list is the Projects panel's rows, with each
-  // project's size and traced and verified share, and arriving in the app
-  // (signing in, or opening it) lands on a project's Home rather than here.
+  // The Home design: this page is the workspace's Home. What needs the
+  // member across every project and the workspace's activity sit above the
+  // project picker, the Projects panel's rows with each project's size and
+  // traced and verified share (ProjectListHome, ProjectListHomeLoad).
   const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
   const location = useLocation();
-  const landing = isLanding(location.state);
-  const figures = useProjectFigures(homeDesign && !landing ? projects.map((p) => p.id) : []);
+  const { isPhone } = useViewport();
+  const [home, setHome] = useState<WorkspaceHomeData | null>(null);
+  const homeKey = projects.map((p) => p.id).join(',');
+  useEffect(() => {
+    if (!homeDesign || loading) return undefined;
+    let live = true;
+    setHome(null);
+    loadWorkspaceHome(projects)
+      .then((d) => live && setHome(d))
+      // A Home that could not be gathered still draws, empty, rather than
+      // saying it is gathering for ever.
+      .catch(() => live && setHome({ todo: [], activity: [], figures: {}, proposals: [], totals: { artifacts: null, traced: null, verified: null, failing: 0 } }));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeDesign, loading, homeKey]);
+  const figures = home?.figures || {};
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something
   // new rather than re-treading the same joke.
@@ -347,40 +366,6 @@ export const ProjectList: React.FC = () => {
     loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOrgId]);
-
-  // Arriving in the app opens the project last opened, or the first one, at
-  // its Home. The list itself is still where the rail's Projects, Home's
-  // All projects and the top bar lead, and where a member with no projects
-  // starts one.
-  // It is decided once, when both the list and the workspace's feature gates
-  // have loaded (the gates can arrive after the list), and never once the
-  // member has started doing something here: a click or a key press on the
-  // list cancels it, so nothing is pulled out from under a form being filled.
-  // A member who arrives with no projects and then creates one goes where
-  // creating it leads, not to a Home.
-  const landed = useRef(false);
-  const gatesKnown = useAppStore((s) => s.features != null);
-  useEffect(() => {
-    if (!landing) return undefined;
-    const stop = () => {
-      landed.current = true;
-    };
-    window.addEventListener('pointerdown', stop, true);
-    window.addEventListener('keydown', stop, true);
-    return () => {
-      window.removeEventListener('pointerdown', stop, true);
-      window.removeEventListener('keydown', stop, true);
-    };
-  }, [landing]);
-  useEffect(() => {
-    if (!landing || landed.current || loading || !gatesKnown) return;
-    landed.current = true;
-    if (!homeDesign || shortcut || projects.length === 0) return;
-    const remembered = lastProject();
-    const target = projects.some((p) => p.id === remembered) ? remembered : projects[0].id;
-    navigate(`/projects/${target}/home`, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeDesign, gatesKnown, landing, shortcut, loading, projects]);
 
   // The top bar's project switcher offers New project on every page; it
   // arrives here with that wish in history state and opens the form.
@@ -652,15 +637,21 @@ export const ProjectList: React.FC = () => {
         </div>
       )}
       <div className="project-list-container">
-      <div className="project-list-head">
-        <h1>Projects</h1>
-        {!loading && (
-          <span>
-            {projects.length} project{projects.length === 1 ? '' : 's'}
-            {activeOrg?.name ? ' in this workspace' : ''}
-          </span>
-        )}
-      </div>
+      {homeDesign && !loading ? (
+        <div style={{ marginBottom: 12 }}>
+          <ProjectListHome workspace={activeOrg?.name || 'Your workspace'} projects={projects.length} data={home} phone={isPhone} />
+        </div>
+      ) : (
+        <div className="project-list-head">
+          <h1>Projects</h1>
+          {!loading && (
+            <span>
+              {projects.length} project{projects.length === 1 ? '' : 's'}
+              {activeOrg?.name ? ' in this workspace' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* An installed-app shortcut that could not guess the project says so
           rather than silently dropping the member on the plain project list. */}
@@ -689,7 +680,8 @@ export const ProjectList: React.FC = () => {
         <div className="loading">Loading projects...</div>
       ) : (
         <>
-          <div className={homeDesign ? 'projects-grid is-rows' : 'projects-grid'}>
+          <div className={homeDesign ? 'projects-grid is-rows' : 'projects-grid'} data-help-key={homeDesign ? 'home.projects' : undefined}>
+            {homeDesign && projects.length > 0 && <PanelHeader title="Projects" count={projects.length} />}
             {projects.length === 0 ? (
               <div className="create-import-placeholder">
                 <h3>Get Started</h3>

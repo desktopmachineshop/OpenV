@@ -75,7 +75,7 @@ export const PAGES: readonly Page[] = [
     load: 'lazy',
     public: false,
     help: { topic: 'home' },
-    nav: { group: 'Define', label: 'Home', feature: REDESIGN_PAGES_FEATURE },
+    nav: { group: 'Define', label: 'Summary', feature: REDESIGN_PAGES_FEATURE },
   },
   {
     scope: 'project',

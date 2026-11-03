@@ -2,9 +2,14 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-projects-page">
   <title>The Projects page</title>
+  <shortdesc>When you sign in, OpenV opens <b>Home</b>: the Projects page of the active workspace, which brings everything in it together. <b>Home</b> is at the top of the rail on every page.</shortdesc>
   <conbody>
-    <p>When you sign in or open the app, OpenV takes you to the <b>Home</b> page of the project you opened last (or of the workspace's first project, the first time). A workspace with no projects yet starts here instead, on the Projects page, so you can create one. To come back to the list, choose <b>Projects</b> in the menu or <b>All projects</b> on Home.</p>
-    <p>The Projects page lists the active workspace's projects as rows. Each row shows the project's name and how many artifacts it holds, a one-line description, and two bars: the share of its requirements that are <b>traced</b> (a test case verifies them) and the share <b>verified</b>. A project with no requirements yet says so instead. The project you opened last is marked with a blue edge, and the head of the page counts the workspace's projects. Each row carries its action buttons:</p>
+    <ul>
+      <li>Along the top are the workspace's figures: how many artifacts its projects hold, the share of their requirements that are <b>traced</b> (a test case verifies them) and <b>verified</b>, and how many test cases fail.</li>
+      <li><b>Needs you</b> lists what waits on you across every project, each line naming its project: artifacts in review to approve, suspect links to confirm, test runs in progress, failing test cases and new comments. The link on the right opens each one where it is dealt with.</li>
+      <li><b>Activity</b> shows the newest events across the workspace's projects, who did what to which artifact. When agents have proposed changes, a card below it counts the proposals waiting.</li>
+      <li><b>Projects</b>, below them, is where you pick a project. Each row shows the project's name and how many artifacts it holds, a one-line description, and two bars: the share of its requirements that are traced and the share verified. A project with no requirements yet says so instead. The project you opened last is marked with a blue edge. Each row carries its action buttons:</li>
+    </ul>
     <simpletable>
       <sthead><stentry>Icon</stentry><stentry>Action</stentry></sthead>
       <strow><stentry>⧉</stentry><stentry><b>Save as template</b> — snapshot this project as a reusable template</stentry></strow>

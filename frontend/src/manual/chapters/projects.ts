@@ -7,19 +7,26 @@ artifacts, traceability links, board, agents, runs, interviews, and V&V data.
 
 ## The Projects page
 
-When you sign in or open the app, OpenV takes you to the **Home** page of
-the project you opened last (or of the workspace's first project, the first
-time). A workspace with no projects yet starts here instead, on the
-Projects page, so you can create one. To come back to the list, choose
-**Projects** in the menu or **All projects** on Home.
+When you sign in, OpenV opens **Home**: the Projects page of the active
+workspace, which brings everything in it together. **Home** is at the top
+of the rail on every page.
 
-The Projects page lists the active workspace's projects as rows. Each row
-shows the project's name and how many artifacts it holds, a one-line
-description, and two bars: the share of its requirements that are
-**traced** (a test case verifies them) and the share **verified**. A project
-with no requirements yet says so instead. The project you opened last is
-marked with a blue edge, and the head of the page counts the workspace's
-projects. Each row carries its action buttons:
+- Along the top are the workspace's figures: how many artifacts its projects
+  hold, the share of their requirements that are **traced** (a test case
+  verifies them) and **verified**, and how many test cases fail.
+- **Needs you** lists what waits on you across every project, each line
+  naming its project: artifacts in review to approve, suspect links to
+  confirm, test runs in progress, failing test cases and new comments. The
+  link on the right opens each one where it is dealt with.
+- **Activity** shows the newest events across the workspace's projects, who
+  did what to which artifact. When agents have proposed changes, a card
+  below it counts the proposals waiting.
+- **Projects**, below them, is where you pick a project. Each row shows the
+  project's name and how many artifacts it holds, a one-line description,
+  and two bars: the share of its requirements that are traced and the share
+  verified. A project with no requirements yet says so instead. The project
+  you opened last is marked with a blue edge. Each row carries its action
+  buttons:
 
 | Icon | Action |
 | --- | --- |

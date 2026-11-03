@@ -1352,13 +1352,16 @@ a.ov-board-title:hover {
   width: 100%;
   box-sizing: border-box;
 }
-.ov-settings-main [role='tabpanel'] {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* A settings pane's cards are spaced by their own margin, the same 12 px
+   whether the pane lists them directly or wraps some in a section of its
+   own (workspace settings is not a tabpanel; several panes nest a group of
+   cards in one element), so no pane can lose or double its gaps. */
+.ov-settings-main [role='tabpanel'],
+.ov-settings-main .ov-settings-panel {
+  display: block;
 }
 .ov-settings-main .card {
-  margin-bottom: 0;
+  margin: 0 0 12px;
   padding: 16px;
   border-radius: 6px;
   box-shadow: none;

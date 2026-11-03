@@ -13,6 +13,8 @@ import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { Chip, ErrorBanner, SettingsLayout } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
+import { useFeature } from '../hooks/useFeature';
+import { COMPACT_LAYOUT_FEATURE } from '../features';
 import { CAPABILITY_HOSTED, useCapability } from '../capabilities';
 import { orgSettingsTab, withOrgSettingsTabs } from '../ext/registry';
 
@@ -34,6 +36,7 @@ const TABS: { key: Tab; label: string }[] = [
 // and worker keys. Rendered outside any project (route /org/settings).
 export const OrgSettings: React.FC = () => {
   const navigate = useNavigate();
+  const compactLayout = useFeature(COMPACT_LAYOUT_FEATURE);
   const { orgs, activeOrgId, orgsLoaded, setOrgs, currentUser } = useAppStore();
   const org = orgs.find((o) => o.id === activeOrgId) || null;
   const isAdmin = Boolean(org && (org.role === 'admin' || currentUser?.is_admin));
@@ -286,20 +289,23 @@ export const OrgSettings: React.FC = () => {
         head={
           <>
             <div className="ov-settings-head">
-              <Link
-                to="/projects"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  alignSelf: 'flex-start',
-                  minHeight: 32,
-                  fontSize: 13,
-                  color: 'var(--accent-text)',
-                  textDecoration: 'none',
-                }}
-              >
-                ← Back to projects
-              </Link>
+              {/* The rail's Home leads back in the compact layout. */}
+              {!compactLayout && (
+                <Link
+                  to="/projects"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    alignSelf: 'flex-start',
+                    minHeight: 32,
+                    fontSize: 13,
+                    color: 'var(--accent-text)',
+                    textDecoration: 'none',
+                  }}
+                >
+                  ← Back to projects
+                </Link>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                 <span className="ov-page-sub" style={{ overflowWrap: 'anywhere' }}>
                   {org.name}
@@ -329,7 +335,7 @@ export const OrgSettings: React.FC = () => {
           </>
         }
       >
-        <div id="org-settings-panel">
+        <div id="org-settings-panel" className="ov-settings-panel">
         {tab === 'general' && (
           <>
             <div className="card">

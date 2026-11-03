@@ -115,7 +115,7 @@ describe('compact layout on a wide screen', () => {
       ['Agents', 'false', false],
     ]);
     expect(links(r)).toEqual([
-      'Projects -> /projects',
+      'Home -> /projects',
       'Activity -> /projects/p1/activity',
       'Settings -> /projects/p1/settings',
     ]);
