@@ -289,7 +289,7 @@ export const TableView: React.FC<TableViewProps> = ({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 32, padding: '0 12px', color: 'var(--text-muted)', fontSize: 12 }}>
           <span>
-            {shown} of {total}
+            {`${shown} of ${total} shown`}
             {groups.some((g) => g.label) ? ' · grouped by section' : ''}
           </span>
         </div>

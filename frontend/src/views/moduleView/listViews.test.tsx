@@ -105,7 +105,7 @@ describe('the table', () => {
     const rows = () => Array.from(container.querySelectorAll('[role="rowgroup"] [role="row"]'));
     expect(rows()).toHaveLength(5);
     expect(container.querySelector('[role="row"][aria-selected="true"]')?.textContent).toContain('REQ-2');
-    expect(container.textContent).toContain('5 of 7 · grouped by section');
+    expect(container.textContent).toContain('5 of 7 shown · grouped by section');
 
     act(() => (rows()[0] as HTMLElement).click());
     expect(onSelect).toHaveBeenCalledWith('loose');
