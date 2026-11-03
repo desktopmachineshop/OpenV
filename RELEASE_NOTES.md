@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Phone tabs easier to read, and nothing sits on them.** The labels of the
+  tab bar along the bottom of a phone are a size larger, and the guided
+  definition's **Assistant** button now sits above the tabs instead of
+  covering **Review** and **More**.
+
 ## 0.26.0 — 2026-11-03
 
 ### New features
