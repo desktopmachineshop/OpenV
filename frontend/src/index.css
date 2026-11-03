@@ -80,34 +80,41 @@ code {
   background-color: var(--accent-strong);
 }
 
+/* One action colour (the design system): .button is a page's primary action
+   in the accent blue, bold so white on it reads; .button-secondary is a quiet
+   outline for everything beside it. Destructive actions keep their own red. */
 .button {
-  background-color: var(--success);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  background-color: var(--accent-strong);
+  color: #fff;
+  border: 1px solid var(--accent-strong);
+  padding: 8px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .button:hover {
-  background-color: var(--success-strong);
+  background-color: var(--accent-text);
+  border-color: var(--accent-text);
 }
 
 .button-secondary {
-  background-color: var(--neutral);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  transition: background-color 0.2s;
 }
 
 .button-secondary:hover {
-  background-color: var(--text-muted);
+  background-color: var(--surface-hover);
+  color: var(--text);
 }
 
 .form-group {

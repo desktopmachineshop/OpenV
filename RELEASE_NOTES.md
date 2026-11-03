@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Calmer buttons across the app.** A page's main action is now one blue
+  button, and the actions beside it are quiet outlined buttons, instead of
+  green, grey and blue buttons competing for attention. The first step of
+  bringing every page in line with OpenV's new compact design.
+
 ### Bug fixes
 
 - **Phone tabs easier to read, and nothing sits on them.** The labels of the
