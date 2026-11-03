@@ -1,72 +1,47 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Artifact,
   artifactAPI,
   Baseline,
   baselineAPI,
   CoverageReport,
+  linkAPI,
+  proposalsAPI,
+  TestResult,
   TestRun,
   vvAPI,
 } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, useConfirm } from '../components/ui';
+import { ErrorBanner, buttonStyle, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
-import { gapLabel } from './vvGapLabels';
-import { runBaselineLabel, baselineLabel } from '../utils/baselines';
+import { baselineLabel } from '../utils/baselines';
+import { FILL, StatCard } from './VVDashboardParts';
+import { countRollups, gapGroups, groupBySection, percent, tracedCount } from './VVDashboardData';
+import { SectionCoverage } from './VVDashboardSections';
+import { ActiveRunCard, GapsCard } from './VVDashboardSide';
+import { NewRunForm, RunsSection } from './VVDashboardRuns';
 
-// ---------------------------------------------------------------------------
-// Shared color helpers for V&V rollup statuses
-// ---------------------------------------------------------------------------
+// The runs whose results the page reads for their bars: the most recent
+// ones, so a project with a long history does not fan out a request per run.
+const RUNS_WITH_RESULTS = 12;
 
-export const rollupColor = (status: string): string => {
-  switch ((status || '').toLowerCase()) {
-    case 'pass':
-      return 'var(--success)';
-    case 'fail':
-      return 'var(--danger)';
-    case 'blocked':
-      return 'var(--warning)';
-    default:
-      // uncovered / unrun / method-missing / not-run
-      return 'var(--neutral)';
-  }
-};
+const EMPTY_FORM: NewRunForm = { name: '', description: '', baselineId: '' };
 
-const chipStyle = (color: string): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '2px 10px',
-  borderRadius: 12,
-  background: color,
-  color: '#fff',
-  fontSize: 12,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-});
-
-const runStatusColor = (status: string): string => {
-  switch (status) {
-    case 'in-progress':
-      return 'var(--accent)';
-    case 'completed':
-      return 'var(--success)';
-    case 'aborted':
-      return 'var(--danger)';
-    default:
-      return 'var(--neutral)';
-  }
-};
-
-const SUMMARY_ORDER = ['pass', 'fail', 'blocked', 'unrun', 'uncovered', 'method-missing'];
+/** Runs in progress first, then the most recently started. */
+const byRecency = (runs: TestRun[]): TestRun[] =>
+  [...runs].sort((a, b) => {
+    const live = Number(b.status === 'in-progress') - Number(a.status === 'in-progress');
+    if (live !== 0) return live;
+    return (b.started_at || '').localeCompare(a.started_at || '');
+  });
 
 export const VVDashboard: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
-  // A phone shows a run's name and status; when it started and which
-  // baseline it tested are on the run's own page.
   const { isPhone } = useViewport();
-  const runColumns = isPhone ? ['Name', 'Status', ''] : ['Name', 'Status', 'Started', 'Baseline', ''];
   const confirm = useConfirm();
 
   const [baselines, setBaselines] = useState<Baseline[]>([]);
@@ -74,20 +49,22 @@ export const VVDashboard: React.FC = () => {
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [gaps, setGaps] = useState<Record<string, string[]>>({});
   const [runs, setRuns] = useState<TestRun[]>([]);
+  const [runResults, setRunResults] = useState<Record<string, TestResult[]>>({});
   const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
+  // Live links flagged suspect; null until read, or when it could not be.
+  const [suspect, setSuspect] = useState<number | null>(null);
+  const [pendingProposals, setPendingProposals] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // New run form state
   const [showNewRun, setShowNewRun] = useState(false);
-  const [runName, setRunName] = useState('');
-  const [runDescription, setRunDescription] = useState('');
-  const [runBaselineId, setRunBaselineId] = useState('');
+  const [form, setForm] = useState<NewRunForm>(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const effectiveBaseline = baselineId === 'live' ? undefined : baselineId;
 
-  // Load baselines + artifact map once
+  // Baselines, the artifact map, suspect links and pending proposals: once.
   useEffect(() => {
     if (!projectId) return;
     baselineAPI
@@ -104,6 +81,14 @@ export const VVDashboard: React.FC = () => {
         setArtifactMap(map);
       })
       .catch(() => setArtifactMap({}));
+    linkAPI
+      .list(projectId)
+      .then((res) => setSuspect((res.data || []).filter((l) => l.suspect).length))
+      .catch(() => setSuspect(null));
+    proposalsAPI
+      .list({ project_id: projectId, status: 'pending' })
+      .then((res) => setPendingProposals((res.data || []).length))
+      .catch(() => setPendingProposals(0));
   }, [projectId]);
 
   const loadVV = useCallback(() => {
@@ -118,11 +103,9 @@ export const VVDashboard: React.FC = () => {
       .then(([cov, gp, rn]) => {
         setCoverage(cov.data);
         setGaps(gp.data || {});
-        setRuns(rn.data || []);
+        setRuns(byRecency(rn.data || []));
       })
-      .catch((err: any) => {
-        setError(err.response?.data?.error || err.message || 'Failed to load V&V data');
-      })
+      .catch((err: unknown) => setError(apiErrorMessage(err, 'Failed to load V&V data')))
       .finally(() => setLoading(false));
   }, [projectId, effectiveBaseline]);
 
@@ -130,46 +113,56 @@ export const VVDashboard: React.FC = () => {
     loadVV();
   }, [loadVV]);
 
-  // Memoized so the object identity is stable between renders — a bare
-  // `coverage?.summary || {}` would be a fresh object every render and make
-  // the summaryKeys useMemo below recompute unnecessarily (and trips
-  // react-hooks/exhaustive-deps).
-  const summary = useMemo(() => coverage?.summary || {}, [coverage]);
-  const summaryKeys = useMemo(() => {
-    const keys = Object.keys(summary);
-    keys.sort((a, b) => {
-      const ia = SUMMARY_ORDER.indexOf(a);
-      const ib = SUMMARY_ORDER.indexOf(b);
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  // Each recent run's results, for its bar. A run whose results cannot be
+  // read simply shows no bar.
+  useEffect(() => {
+    let live = true;
+    runs.slice(0, RUNS_WITH_RESULTS).forEach((run) => {
+      vvAPI
+        .listResults(run.id)
+        .then((res) => {
+          if (live) setRunResults((prev) => ({ ...prev, [run.id]: res.data || [] }));
+        })
+        .catch(() => undefined);
     });
-    return keys;
-  }, [summary]);
-  const summaryTotal = summaryKeys.reduce((sum, k) => sum + (summary[k] || 0), 0);
+    return () => {
+      live = false;
+    };
+  }, [runs]);
 
-  const artifactTitle = (id: string) => artifactMap[id]?.title || id;
+  const entries = useMemo(() => coverage?.entries || [], [coverage]);
+  const totals = useMemo(() => countRollups(entries), [entries]);
+  const sections = useMemo(() => groupBySection(entries, artifactMap), [entries, artifactMap]);
+  const groups = useMemo(() => gapGroups(gaps), [gaps]);
+  const caseCount = useMemo(
+    () => Object.values(artifactMap).filter((a) => a.type === 'test-case').length,
+    [artifactMap]
+  );
+  const activeRun = runs.find((r) => r.status === 'in-progress');
+  const traced = tracedCount(totals);
+  const noTest = (gaps.requirements_without_test_case || []).length;
+  const showSuspect = baselineId === 'live' && suspect !== null;
 
   const handleCreateRun = async () => {
-    if (!runName.trim() || !projectId) return;
+    if (!form.name.trim() || !projectId) return;
     setCreating(true);
     try {
       await vvAPI.createRun(projectId, {
-        name: runName.trim(),
-        description: runDescription,
-        baseline_id: runBaselineId || undefined,
+        name: form.name.trim(),
+        description: form.description,
+        baseline_id: form.baselineId || undefined,
       });
-      setRunName('');
-      setRunDescription('');
-      setRunBaselineId('');
+      setForm(EMPTY_FORM);
       setShowNewRun(false);
       loadVV();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to create run');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to create run'));
     } finally {
       setCreating(false);
     }
   };
 
-  const handleRunStatus = async (runId: string, status: string) => {
+  const handleRunStatus = async (runId: string, status: 'completed' | 'aborted') => {
     if (status === 'aborted') {
       const ok = await confirm({
         title: 'Abort test run',
@@ -182,23 +175,29 @@ export const VVDashboard: React.FC = () => {
     try {
       await vvAPI.updateRun(runId, status);
       loadVV();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to update run');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to update run'));
     }
   };
 
-  const gapEntries = Object.entries(gaps).filter(([, ids]) => ids && ids.length > 0);
+  const openNewRun = () => {
+    setShowNewRun(true);
+    window.requestAnimationFrame(() => formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }));
+  };
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Verification &amp; Validation</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} data-help-key="vv.baselines">
-          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
+    <div style={{ padding: isPhone ? 12 : 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20 }}>V&amp;V coverage</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }} data-help-key="vv.baselines">
+          <label htmlFor="vv-baseline" style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+            Baseline
+          </label>
           <select
+            id="vv-baseline"
             value={baselineId}
             onChange={(e) => setBaselineId(e.target.value)}
-            style={{ width: 220, padding: '6px 10px' }}
+            style={{ width: isPhone ? 180 : 220, maxWidth: '100%', height: 32, padding: '0 8px', fontSize: 13 }}
           >
             <option value="live">Live</option>
             {baselines.map((b) => (
@@ -210,11 +209,16 @@ export const VVDashboard: React.FC = () => {
         </div>
         <div style={{ flex: 1 }} />
         <button
-          className="button-secondary"
+          type="button"
+          style={buttonStyle('secondary')}
           onClick={() => vvAPI.report(projectId, effectiveBaseline)}
           data-help-key="vv.report"
+          title="Download the V&V report as a PDF for the live project or the baseline shown"
         >
-          Download V&amp;V report (PDF)
+          Export report (PDF)
+        </button>
+        <button type="button" style={buttonStyle('primary')} onClick={openNewRun} data-help-key="vv.runs">
+          New test run
         </button>
       </div>
 
@@ -222,11 +226,10 @@ export const VVDashboard: React.FC = () => {
         <div
           style={{
             background: 'var(--tint-yellow)',
-            border: '1px solid var(--warning)',
+            border: '1px solid var(--tint-yellow-border)',
             color: 'var(--warning-text)',
-            borderRadius: 4,
-            padding: '10px 14px',
-            marginBottom: 16,
+            borderRadius: 6,
+            padding: '8px 12px',
             fontSize: 13,
           }}
         >
@@ -235,284 +238,104 @@ export const VVDashboard: React.FC = () => {
         </div>
       )}
 
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
-      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Loading…</div>}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
+      {loading && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>}
 
-      {/* Summary cards */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-        {summaryKeys.map((key) => (
-          <div
-            key={key}
-            className="card"
-            style={{ padding: '14px 20px', marginBottom: 0, minWidth: 120, textAlign: 'center' }}
-          >
-            <div style={{ fontSize: 26, fontWeight: 700, color: rollupColor(key) }}>
-              {summary[key]}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{key}</div>
-          </div>
-        ))}
-        {summaryKeys.length === 0 && !loading && (
-          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No coverage data yet.</div>
+      <div
+        data-help-key="vv.coverage"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(auto-fit, minmax(${isPhone ? 140 : 170}px, 1fr))`,
+          gap: isPhone ? 8 : 10,
+        }}
+      >
+        <StatCard
+          label={isPhone ? 'Traced' : 'Requirements traced'}
+          value={isPhone ? `${percent(traced, totals.total)}%` : traced}
+          sub={isPhone ? undefined : `of ${totals.total} · ${percent(traced, totals.total)}%`}
+          fill={totals.total ? traced / totals.total : 0}
+          barColor={FILL.accent}
+        />
+        <StatCard
+          label={isPhone ? 'Verified' : 'Verified (pass)'}
+          value={isPhone ? `${percent(totals.pass, totals.total)}%` : totals.pass}
+          sub={isPhone ? undefined : `${percent(totals.pass, totals.total)}%`}
+          fill={totals.total ? totals.pass / totals.total : 0}
+          barColor={FILL.pass}
+        />
+        <StatCard
+          label="Failing"
+          value={totals.fail}
+          valueColor={totals.fail ? 'var(--danger-strong)' : undefined}
+          sub={isPhone ? undefined : totals.blocked ? `requirements · ${totals.blocked} blocked` : 'requirements'}
+          fill={isPhone ? undefined : totals.total ? totals.fail / totals.total : 0}
+          barColor={FILL.fail}
+        />
+        {showSuspect && (
+          <StatCard
+            label="Suspect links"
+            value={suspect}
+            valueColor={suspect ? 'var(--warning-text)' : undefined}
+            sub={isPhone ? undefined : 'need confirming'}
+          />
+        )}
+        {(!isPhone || !showSuspect) && (
+          <StatCard
+            label="No test case"
+            value={noTest}
+            sub={isPhone ? undefined : totals.unrun ? `gaps · ${totals.unrun} not run` : 'gaps'}
+            fill={isPhone ? undefined : totals.total ? noTest / totals.total : 0}
+            barColor={FILL.notRun}
+          />
         )}
       </div>
 
-      {/* Stacked bar */}
-      {summaryTotal > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            height: 16,
-            borderRadius: 8,
-            overflow: 'hidden',
-            marginBottom: 24,
-            maxWidth: 720,
-            border: '1px solid var(--border)',
-          }}
-        >
-          {summaryKeys.map((key) =>
-            summary[key] > 0 ? (
-              <div
-                key={key}
-                title={`${key}: ${summary[key]}`}
-                style={{
-                  width: `${(summary[key] / summaryTotal) * 100}%`,
-                  background: rollupColor(key),
-                }}
-              />
-            ) : null
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
+        <SectionCoverage
+          projectId={projectId}
+          sections={sections}
+          totals={totals}
+          artifacts={artifactMap}
+          isPhone={isPhone}
+          loading={loading}
+        />
+        <div style={{ flex: '1 1 320px', maxWidth: isPhone ? undefined : 420, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {activeRun && (
+            <ActiveRunCard
+              projectId={projectId}
+              run={activeRun}
+              results={runResults[activeRun.id]}
+              caseCount={caseCount}
+              baselines={baselines}
+            />
           )}
-        </div>
-      )}
-
-      {/* Coverage table */}
-      <div className="card">
-        <h3>Requirement coverage</h3>
-        <div style={{ overflowX: 'auto' }}>
-          <div className="table-scroll">
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr>
-                {['Requirement', 'Method', 'Rollup'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '2px solid var(--neutral-soft)',
-                      padding: '8px 10px',
-                      color: 'var(--text-muted)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(coverage?.entries || []).map((entry) => (
-                <tr key={entry.requirement_id}>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                    {entry.title || artifactTitle(entry.requirement_id)}
-                  </td>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                    {entry.verification_method || <span style={{ color: 'var(--danger)' }}>missing</span>}
-                  </td>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                    <span style={chipStyle(rollupColor(entry.rollup))}>{entry.rollup}</span>
-                    {(entry.refinements || []).length > 0 && (
-                      <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-muted)' }}>
-                        {entry.via_refinements ? 'From child projects: ' : 'Refined in child projects: '}
-                        {(entry.refinements || []).map((r, i) => (
-                          <span key={r.requirement_id}>
-                            {i > 0 ? ', ' : ''}
-                            {r.project_name} / {r.ref || r.title}{' '}
-                            <span style={{ color: rollupColor(r.rollup), fontWeight: 600 }}>({r.rollup})</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {(coverage?.entries || []).length === 0 && !loading && (
-                <tr>
-                  <td colSpan={3} style={{ padding: 12, color: 'var(--text-muted)' }}>
-                    No requirements found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          </div>
+          <GapsCard
+            projectId={projectId}
+            groups={groups}
+            artifacts={artifactMap}
+            pendingProposals={pendingProposals}
+            isPhone={isPhone}
+            loading={loading}
+          />
         </div>
       </div>
 
-      {/* Gaps */}
-      <h3 style={{ color: 'var(--text)', marginBottom: 10 }}>Gaps</h3>
-      {gapEntries.length === 0 && !loading && (
-        <div style={{ color: 'var(--success)', fontSize: 13, marginBottom: 20 }}>
-          No gaps detected — nice work.
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
-        {gapEntries.map(([key, ids]) => (
-          <div key={key} className="card" style={{ flex: '1 1 260px', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 14 }}>
-              {gapLabel(key)}{' '}
-              <span style={{ color: 'var(--danger)', fontWeight: 700 }}>({ids.length})</span>
-            </h3>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--text-body)' }}>
-              {ids.map((id) => (
-                <li key={id} style={{ marginBottom: 3 }}>
-                  {artifactTitle(id)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      {/* Test runs */}
-      <div className="card" data-help-key="vv.runs">
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, flex: 1 }}>Test runs</h3>
-          <button className="button" onClick={() => setShowNewRun(!showNewRun)}>
-            {showNewRun ? 'Cancel' : 'New Run'}
-          </button>
-        </div>
-
-        {showNewRun && (
-          <div
-            style={{
-              border: '1px solid var(--neutral-soft)',
-              borderRadius: 4,
-              padding: 16,
-              marginBottom: 16,
-              background: 'var(--surface-alt)',
-            }}
-          >
-            <div className="form-group">
-              <label>Name</label>
-              <input
-                value={runName}
-                onChange={(e) => setRunName(e.target.value)}
-                placeholder="e.g. Design verification — rev B"
-              />
-            </div>
-            <div className="form-group">
-              <label>Description</label>
-              <textarea
-                value={runDescription}
-                onChange={(e) => setRunDescription(e.target.value)}
-                style={{ minHeight: 60 }}
-              />
-            </div>
-            <div className="form-group">
-              <label>Baseline (optional)</label>
-              <select value={runBaselineId} onChange={(e) => setRunBaselineId(e.target.value)}>
-                <option value="">None (live artifacts)</option>
-                {baselines.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {baselineLabel(b)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button className="button" onClick={handleCreateRun} disabled={creating || !runName.trim()}>
-              {creating ? 'Creating…' : 'Create run'}
-            </button>
-          </div>
-        )}
-
-        <div className="table-scroll">
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr>
-              {runColumns.map((h, i) => (
-                <th
-                  key={i}
-                  style={{
-                    textAlign: 'left',
-                    borderBottom: '2px solid var(--neutral-soft)',
-                    padding: '8px 10px',
-                    color: 'var(--text-muted)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {runs.map((run) => (
-              <tr key={run.id}>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                  <Link
-                    to={`/projects/${projectId}/vv/runs/${run.id}`}
-                    style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}
-                  >
-                    {run.name}
-                  </Link>
-                  {run.description && (
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{run.description}</div>
-                  )}
-                </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                  <span style={chipStyle(runStatusColor(run.status))}>{run.status}</span>
-                </td>
-                {!isPhone && (
-                  <>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
-                    </td>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {runBaselineLabel(run, baselines)}
-                    </td>
-                  </>
-                )}
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', whiteSpace: 'nowrap' }}>
-                  {run.status === 'in-progress' && (
-                    <>
-                      <button
-                        className="button"
-                        style={{ padding: '4px 10px', fontSize: 12, marginRight: 6, minHeight: 36 }}
-                        onClick={() => handleRunStatus(run.id, 'completed')}
-                      >
-                        Complete
-                      </button>
-                      <button
-                        style={{
-                          padding: '4px 10px',
-                          fontSize: 12,
-                          minHeight: 36,
-                          background: 'var(--danger)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 4,
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => handleRunStatus(run.id, 'aborted')}
-                      >
-                        Abort
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {runs.length === 0 && !loading && (
-              <tr>
-                <td colSpan={runColumns.length} style={{ padding: 12, color: 'var(--text-muted)' }}>
-                  No test runs yet. Create one to start recording results.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <RunsSection
+        projectId={projectId}
+        runs={runs}
+        results={runResults}
+        caseCount={caseCount}
+        baselines={baselines}
+        loading={loading}
+        showNewRun={showNewRun}
+        onToggleNewRun={() => (showNewRun ? setShowNewRun(false) : openNewRun())}
+        form={form}
+        onFormChange={setForm}
+        creating={creating}
+        onCreate={handleCreateRun}
+        onRunStatus={handleRunStatus}
+        formRef={formRef}
+      />
     </div>
   );
 };

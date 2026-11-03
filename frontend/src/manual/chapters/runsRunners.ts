@@ -47,6 +47,21 @@ Runs page opens the review panel where you **approve** or **reject** each
 proposed artifact change, link, or test result. Only approved proposals are
 applied.
 
+Each proposal is a card that reads as the change it makes:
+
+- a chip naming the kind of write — **New artifact**, **Edit**, **Delete**,
+  **New link**, **Remove link** or **Test result**;
+- the artifact it lands on, by reference and title (for a link, the two
+  artifacts and the link type between them);
+- for an edit, each field it changes, with what the field says now struck
+  through above what it would say; a new artifact lists the fields it sets,
+  and a deletion shows what would go;
+- **Raw payload**, which opens the exact data the agent sent;
+- **from its run**, which opens the run that made the proposal beside the list.
+
+Add an optional review note, then **Approve** or **Reject**. Tick several
+cards (or **Select all**) to approve or reject them together with one note.
+
 ## Runner types
 
 ### Personal runner (your machine, your subscription)

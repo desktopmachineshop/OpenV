@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AgentRun } from '../../api/client';
-import { Sheet } from '../ui';
-import { RunDetailPanel, runStatusColor, ErrorClassChip } from './RunDetailPanel';
+import { Sheet, chipStyle } from '../ui';
+import { RunDetailPanel, runStatusTone, ErrorClassChip } from './RunDetailPanel';
 
 // The parts of a Runs page: the status filter, the list of runs and the run
 // detail beside it. A project's Runs page and the workspace's (the runs with
@@ -174,13 +174,7 @@ export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelec
               <td style={cell}>
                 <span
                   style={{
-                    display: 'inline-block',
-                    padding: '2px 10px',
-                    borderRadius: 12,
-                    background: runStatusColor(run.status),
-                    color: '#fff',
-                    fontSize: 12,
-                    fontWeight: 600,
+                    ...chipStyle(runStatusTone(run.status)),
                     animation: run.status === 'running' ? 'ovPulseRun 1.4s ease-in-out infinite' : undefined,
                   }}
                 >

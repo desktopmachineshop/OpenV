@@ -844,3 +844,8 @@ textarea {
   color: var(--accent-strong);
   font-weight: 700;
 }
+
+/* A dense row that reacts to the pointer (V&V tables and lists). */
+.ov-row:hover {
+  background: var(--surface-hover) !important;
+}

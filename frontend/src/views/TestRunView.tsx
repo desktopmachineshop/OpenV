@@ -9,7 +9,6 @@ import {
   Artifact,
   EvidenceBundle,
   EvidenceCitation,
-  ExecutionMethod,
   TestResult,
   TestRun,
   agentsAPI,
@@ -23,66 +22,21 @@ import { moveCitations } from './testRunCitations';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
-
-const STATUS_OPTIONS = ['pass', 'fail', 'blocked', 'not-run'];
-
-const executionLabel: Record<ExecutionMethod, string> = {
-  automated: 'automated',
-  manual: 'manual (human)',
-  physical: 'physical test',
-};
-
-const executionColor = (method: ExecutionMethod): string =>
-  method === 'automated' ? 'var(--text-muted)' : 'var(--purple)';
-
-const statusColor = (status: string): string => {
-  switch (status) {
-    case 'pass':
-      return 'var(--success)';
-    case 'fail':
-      return 'var(--danger)';
-    case 'blocked':
-      return 'var(--warning)';
-    default:
-      return 'var(--neutral)';
-  }
-};
-
-const runStatusColor = (status: string): string => {
-  switch (status) {
-    case 'in-progress':
-      return 'var(--accent)';
-    case 'completed':
-      return 'var(--success)';
-    case 'aborted':
-      return 'var(--danger)';
-    default:
-      return 'var(--neutral)';
-  }
-};
-
-interface ResultRow {
-  testCaseId: string;
-  testCaseTitle: string;
-  executionMethod: ExecutionMethod;
-  versionTested: number | null;
-  status: string;
-  notes: string;
-  executedAt: string | null;
-  byAgent: boolean;
-  /** Null until an outcome has been recorded — there is nothing to cite
-   *  evidence against until then. */
-  resultId: string | null;
-  citations: EvidenceCitation[];
-}
+import { refStyle } from './VVDashboardParts';
+import { AgentMark, EvidenceCell, MethodChip, ResultRow, StatusSelect } from './TestRunViewCells';
+import { RunHeader, RunNotices } from './TestRunViewHeader';
+import { PhoneCaseList } from './TestRunViewPhone';
+import { TestRunStepper } from './TestRunViewStepper';
 
 export const TestRunView: React.FC = () => {
   const { isPhone } = useViewport();
   const { projectId, runId } = useParams<{ projectId: string; runId: string }>();
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const [run, setRun] = useState<TestRun | null>(null);
-  const [testCases, setTestCases] = useState<Artifact[]>([]);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [results, setResults] = useState<TestResult[]>([]);
+  // Test case id -> the requirements it verifies, from the live coverage.
+  const [verifies, setVerifies] = useState<Record<string, string[]>>({});
   // The results as last rendered, for upsert to find the one a new result
   // supersedes without being re-created on every change.
   const resultsRef = useRef<TestResult[]>([]);
@@ -100,31 +54,40 @@ export const TestRunView: React.FC = () => {
   // one per row, and the project's bundles are loaded once for the picker.
   const [citations, setCitations] = useState<Record<string, EvidenceCitation[]>>({});
   const [bundles, setBundles] = useState<EvidenceBundle[]>([]);
-  const [citingRow, setCitingRow] = useState<ResultRow | null>(null);
+  // The case evidence is being cited for, by test case and result.
+  const [citing, setCiting] = useState<{ testCaseId: string; resultId: string } | null>(null);
+  // On a phone: the case the recorder is open at, or null.
+  const [stepAt, setStepAt] = useState<number | null>(null);
 
   const load = useCallback(() => {
     if (!projectId || !runId) return;
     setLoading(true);
     Promise.all([
       vvAPI.getRun(runId),
-      artifactAPI.list(projectId, 'test-case'),
+      artifactAPI.list(projectId),
       vvAPI.listResults(runId),
-      // Evidence must never be the reason the run fails to open, so both
-      // evidence calls degrade to empty rather than rejecting the batch.
+      // Evidence and coverage must never be the reason the run fails to
+      // open, so they degrade to empty rather than rejecting the batch.
       evidenceAPI.citationsForRun(runId).catch(() => ({ data: {} })),
       evidenceAPI.list(projectId).catch(() => ({ data: [] })),
+      vvAPI.coverage(projectId).catch(() => ({ data: null })),
     ])
-      .then(([r, tc, res, cites, pool]) => {
+      .then(([r, arts, res, cites, pool, cov]) => {
         setRun(r.data);
-        setTestCases(tc.data || []);
+        setArtifacts(arts.data || []);
         setResults(res.data || []);
         setCitations(cites.data || {});
         setBundles(pool.data || []);
+        const map: Record<string, string[]> = {};
+        (cov.data?.entries || []).forEach((e) =>
+          (e.test_case_ids || []).forEach((tc) => {
+            (map[tc] = map[tc] || []).push(e.requirement_id);
+          })
+        );
+        setVerifies(map);
         setError('');
       })
-      .catch((err: any) => {
-        setError(err.response?.data?.error || err.message || 'Failed to load test run');
-      })
+      .catch((err: unknown) => setError(apiErrorMessage(err, 'Failed to load test run')))
       .finally(() => setLoading(false));
   }, [projectId, runId]);
 
@@ -148,9 +111,10 @@ export const TestRunView: React.FC = () => {
     // agents (issue #112, same pattern as #111).
   }, [activeOrgId]);
 
+  /** Records an outcome; resolves to the new result's id, or null on failure. */
   const upsert = useCallback(
-    async (testCaseId: string, status: string, notes: string) => {
-      if (!runId) return;
+    async (testCaseId: string, status: string, notes: string): Promise<string | null> => {
+      if (!runId) return null;
       const superseded = resultsRef.current.find((r) => r.test_case_id === testCaseId);
       try {
         const res = await vvAPI.upsertResult(runId, {
@@ -173,8 +137,10 @@ export const TestRunView: React.FC = () => {
           return [...prev, res.data];
         });
         setError('');
-      } catch (err: any) {
-        setError(err.response?.data?.error || err.message || 'Failed to save result');
+        return res.data.id;
+      } catch (err: unknown) {
+        setError(apiErrorMessage(err, 'Failed to save result'));
+        return null;
       }
     },
     [runId]
@@ -186,12 +152,8 @@ export const TestRunView: React.FC = () => {
     if (!runId) return;
     try {
       const res = await evidenceAPI.citationsForRun(runId);
-      const next = res.data || {};
-      setCitations(next);
-      setCitingRow((row) =>
-        row && row.resultId ? { ...row, citations: next[row.resultId] || [] } : row
-      );
-    } catch (err: any) {
+      setCitations(res.data || {});
+    } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to reload the evidence'));
     }
   }, [runId]);
@@ -201,160 +163,67 @@ export const TestRunView: React.FC = () => {
     results.forEach((r) => {
       byCase[r.test_case_id] = r;
     });
-    return testCases.map((tc) => {
-      const r = byCase[tc.id];
-      return {
-        testCaseId: tc.id,
-        testCaseTitle: tc.title,
-        executionMethod: executionMethodOf(tc),
-        versionTested: r ? r.test_case_version : null,
-        status: r ? r.status : 'not-run',
-        notes: r ? r.notes : '',
-        executedAt: r?.executed_at || null,
-        byAgent: Boolean(r?.executed_by_agent_run_id),
-        resultId: r ? r.id : null,
-        citations: r ? citations[r.id] || [] : [],
-      };
+    const byId: Record<string, Artifact> = {};
+    artifacts.forEach((a) => {
+      byId[a.id] = a;
     });
-  }, [testCases, results, citations]);
+    return artifacts
+      .filter((a) => a.type === 'test-case')
+      .map((tc) => {
+        const r = byCase[tc.id];
+        return {
+          testCaseId: tc.id,
+          ref: tc.ref || '',
+          testCaseTitle: tc.title,
+          body: tc.body || '',
+          executionMethod: executionMethodOf(tc),
+          verifies: (verifies[tc.id] || []).map((id) => byId[id]?.ref || byId[id]?.title || id),
+          versionTested: r ? r.test_case_version : null,
+          status: r ? r.status : 'not-run',
+          notes: r ? r.notes : '',
+          executedAt: r?.executed_at || null,
+          byAgent: Boolean(r?.executed_by_agent_run_id),
+          resultId: r ? r.id : null,
+          citations: r ? citations[r.id] || [] : [],
+        };
+      });
+  }, [artifacts, results, citations, verifies]);
 
   const readOnly = run ? run.status !== 'in-progress' : false;
-
-  const StatusRenderer = useCallback(
-    (params: ICellRendererParams<ResultRow>) => {
-      const row = params.data;
-      if (!row) return null;
-      return (
-        <select
-          value={row.status}
-          disabled={readOnly}
-          onChange={(e) => upsert(row.testCaseId, e.target.value, row.notes)}
-          style={{
-            background: statusColor(row.status),
-            color: '#fff',
-            border: 'none',
-            borderRadius: 12,
-            padding: '5px 10px',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: readOnly ? 'default' : 'pointer',
-            width: 'auto',
-          }}
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s} style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-              {s}
-            </option>
-          ))}
-        </select>
-      );
-    },
-    [upsert, readOnly]
-  );
-
-  const ExecutionRenderer = useCallback((params: ICellRendererParams<ResultRow>) => {
-    const row = params.data;
-    if (!row) return null;
-    return (
-      <span
-        title={
-          row.executionMethod === 'automated'
-            ? 'An agent may execute this test case.'
-            : 'Reserved for a person — agents cannot run it or record its result.'
-        }
-        style={{
-          display: 'inline-block',
-          padding: '2px 10px',
-          borderRadius: 12,
-          background: executionColor(row.executionMethod),
-          color: '#fff',
-          fontSize: 12,
-          fontWeight: 600,
-        }}
-      >
-        {executionLabel[row.executionMethod]}
-      </span>
-    );
-  }, []);
-
-  // Evidence lives in its own column because a physical result is only as
-  // good as what backs it. A case that needs a rig or a person shows the
-  // prompt even when nothing is cited yet; an automated one does not nag.
-  const EvidenceRenderer = useCallback(
-    (params: ICellRendererParams<ResultRow>) => {
-      const row = params.data;
-      if (!row) return null;
-      const cited = row.citations || [];
-      const needsEvidence = row.executionMethod !== 'automated';
-      if (!row.resultId) {
-        return (
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-            {needsEvidence ? 'record a result first' : '\u2014'}
-          </span>
-        );
-      }
-      const label = cited.length
-        ? cited.length === 1
-          ? cited[0].bundle_ref || 'cited'
-          : `${cited[0].bundle_ref} +${cited.length - 1}`
-        : readOnly
-          ? '\u2014'
-          : needsEvidence
-            ? '+ evidence needed'
-            : '+ evidence';
-      return (
-        <button
-          onClick={() => setCitingRow(row)} data-help-key="evidence"
-          disabled={readOnly}
-          title={
-            cited.length
-              ? cited.map((c) => `${c.bundle_ref} ${c.bundle_title}`).join(', ')
-              : 'Cite the capture this result rests on'
-          }
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: '4px 6px',
-            minHeight: 32,
-            minWidth: 36,
-            cursor: readOnly ? 'default' : 'pointer',
-            color: cited.length
-              ? 'var(--text)'
-              : needsEvidence
-                ? 'var(--warning)'
-                : 'var(--text-muted)',
-            fontSize: 12,
-            textAlign: 'left',
-          }}
-        >
-          {label}
-        </button>
-      );
-    },
-    [readOnly]
-  );
+  const citingRow = citing ? rows.find((r) => r.testCaseId === citing.testCaseId) : undefined;
 
   const columnDefs: ColDef<ResultRow>[] = useMemo(
     () => [
       {
+        headerName: 'Ref',
+        field: 'ref',
+        pinned: 'left',
+        width: 96,
+        cellRenderer: (p: ICellRendererParams<ResultRow>) => <span style={refStyle}>{p.value}</span>,
+      },
+      {
         headerName: 'Test case',
         field: 'testCaseTitle',
         pinned: 'left',
-        // A pinned column is never scrolled away, so on a phone it must
-        // leave room for the columns beside it.
-        minWidth: isPhone ? 150 : 260,
+        minWidth: 260,
         flex: 2,
       },
       {
         headerName: 'Verified by',
         field: 'executionMethod',
         width: 150,
-        cellRenderer: ExecutionRenderer,
+        cellRenderer: (p: ICellRendererParams<ResultRow>) => (p.data ? <MethodChip method={p.data.executionMethod} /> : null),
+      },
+      {
+        headerName: 'Verifies',
+        field: 'verifies',
+        width: 140,
+        valueFormatter: (p) => (p.value && p.value.length ? p.value.join(', ') : '—'),
+        cellStyle: { fontFamily: 'source-code-pro, Menlo, Monaco, Consolas, monospace', fontSize: 12, color: 'var(--accent-text)' },
       },
       {
         headerName: 'Version tested',
         field: 'versionTested',
-        hide: isPhone,
         width: 140,
         valueFormatter: (p) => (p.value == null ? '—' : `v${p.value}`),
       },
@@ -362,7 +231,18 @@ export const TestRunView: React.FC = () => {
         headerName: 'Status',
         field: 'status',
         width: 140,
-        cellRenderer: StatusRenderer,
+        cellRenderer: (p: ICellRendererParams<ResultRow>) => {
+          const row = p.data;
+          if (!row) return null;
+          return (
+            <StatusSelect
+              value={row.status}
+              disabled={readOnly}
+              label={`Result of ${row.testCaseTitle}`}
+              onChange={(s) => upsert(row.testCaseId, s, row.notes)}
+            />
+          );
+        },
       },
       {
         headerName: 'Notes',
@@ -376,33 +256,34 @@ export const TestRunView: React.FC = () => {
         field: 'citations',
         width: 170,
         sortable: false,
-        cellRenderer: EvidenceRenderer,
+        cellRenderer: (p: ICellRendererParams<ResultRow>) =>
+          p.data ? (
+            <EvidenceCell
+              row={p.data}
+              readOnly={readOnly}
+              onCite={(row) => row.resultId && setCiting({ testCaseId: row.testCaseId, resultId: row.resultId })}
+            />
+          ) : null,
       },
       {
         headerName: 'Executed at',
         field: 'executedAt',
-        width: 210,
+        width: 220,
         valueFormatter: (p) => (p.value ? new Date(p.value).toLocaleString() : '—'),
         cellRenderer: (p: ICellRendererParams<ResultRow>) => (
           <span>
             {p.value ? new Date(p.value).toLocaleString() : '—'}
-            {p.data?.byAgent && (
-              <span
-                title="Recorded by an agent run"
-                style={{ marginLeft: 6, color: 'var(--purple)', fontSize: 12, fontWeight: 600 }}
-              >
-                ⚙ agent
-              </span>
-            )}
+            {p.data?.byAgent && <AgentMark />}
           </span>
         ),
       },
     ],
-    [StatusRenderer, ExecutionRenderer, EvidenceRenderer, readOnly, isPhone]
+    [readOnly, upsert]
   );
 
   const agentRunnable = rows.filter((r) => r.executionMethod === 'automated').length;
   const humanOnly = rows.length - agentRunnable;
+  const firstOpen = rows.findIndex((r) => r.status === 'not-run');
 
   const handleLaunchAgent = async () => {
     if (!runId || !agentSlug) return;
@@ -425,7 +306,7 @@ export const TestRunView: React.FC = () => {
           Results appear here as it records them; use Refresh.
         </>
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to start agent run'));
     } finally {
       setLaunching(false);
@@ -437,161 +318,89 @@ export const TestRunView: React.FC = () => {
     try {
       const res = await vvAPI.updateRun(runId, status);
       setRun(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to update run');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to update run'));
     }
   };
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }} data-help-key="vv.runs">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Link
-          to={`/projects/${projectId}/vv`}
-          style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 13, display: 'inline-block', padding: '9px 0' }}
-        >
-          ← Back to V&amp;V
-        </Link>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>{run?.name || 'Test run'}</h2>
-        {run && (
-          <span
-            style={{
-              padding: '2px 10px',
-              borderRadius: 12,
-              background: runStatusColor(run.status),
-              color: '#fff',
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            {run.status}
-          </span>
-        )}
-        <div style={{ flex: 1 }} />
-        <button
-          className="button-secondary button"
-          style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
-          onClick={load}
-          disabled={loading}
-        >
-          {loading ? 'Refreshing…' : 'Refresh'}
-        </button>
-        {run?.status === 'in-progress' && (
-          <>
-            <select
-              value={agentSlug}
-              onChange={(e) => setAgentSlug(e.target.value)}
-              disabled={agents.length === 0 || launching}
-              style={{ padding: '6px 8px', fontSize: 13, width: 'auto', minWidth: 150 }}
-              title="Agent that will execute the automated test cases"
-            >
-              {agents.length === 0 && <option value="">No agents available</option>}
-              {agents.map((a) => (
-                <option key={a.slug} value={a.slug}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <button
-              className="button"
-              style={{ width: 'auto', padding: '8px 16px' }}
-              onClick={handleLaunchAgent}
-              disabled={launching || !agentSlug || agentRunnable === 0}
-              title={
-                agentRunnable === 0
-                  ? 'Every test case in this run is flagged for human or physical verification'
-                  : `Run the ${agentRunnable} automated test case(s) with an agent`
+    <div
+      style={{ padding: isPhone ? 12 : 16, display: 'flex', flexDirection: 'column', gap: 12, height: isPhone ? undefined : '100%' }}
+      data-help-key="vv.runs"
+    >
+      <RunHeader
+        projectId={projectId || ''}
+        run={run}
+        rows={rows}
+        isPhone={isPhone}
+        loading={loading}
+        onRefresh={load}
+        agents={agents}
+        agentSlug={agentSlug}
+        onAgentSlug={setAgentSlug}
+        launching={launching}
+        agentRunnable={agentRunnable}
+        onLaunch={handleLaunchAgent}
+        onRunStatus={handleRunStatus}
+        onRecord={isPhone ? () => setStepAt(readOnly || firstOpen < 0 ? 0 : firstOpen) : undefined}
+        recordLabel={
+          readOnly
+            ? 'Step through the results'
+            : firstOpen < 0
+              ? 'Review from the first test case'
+              : `Record results · continue at ${rows[firstOpen]?.ref || `test case ${firstOpen + 1}`}`
+        }
+      />
+      <RunNotices
+        run={run}
+        readOnly={readOnly}
+        launchNotice={launchNotice}
+        humanOnly={humanOnly}
+        total={rows.length}
+        error={error}
+        loading={loading}
+      />
+
+      {isPhone ? (
+        <PhoneCaseList rows={rows} readOnly={readOnly} onOpen={setStepAt} />
+      ) : (
+        <div className="ag-theme-quartz" style={{ flex: 1, minHeight: 420, width: '100%' }}>
+          <AgGridReact<ResultRow>
+            rowData={rows}
+            columnDefs={columnDefs}
+            getRowId={(p) => p.data.testCaseId}
+            onCellValueChanged={(event) => {
+              if (event.colDef.field === 'notes' && event.data) {
+                upsert(event.data.testCaseId, event.data.status, event.data.notes || '');
               }
-            >
-              {launching ? 'Starting…' : `Run ${agentRunnable} with agent`}
-            </button>
-            <button className="button" onClick={() => handleRunStatus('completed')}>
-              Complete run
-            </button>
-            <button
-              style={{
-                background: 'var(--danger)',
-                color: '#fff',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 14,
-              }}
-              onClick={() => handleRunStatus('aborted')}
-            >
-              Abort run
-            </button>
-          </>
-        )}
-      </div>
+            }}
+            defaultColDef={{ resizable: true, sortable: true }}
+            suppressCellFocus={false}
+            stopEditingWhenCellsLoseFocus={true}
+          />
+        </div>
+      )}
 
-      {run?.description && (
-        <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>{run.description}</div>
-      )}
-      {readOnly && run && (
-        <div
-          style={{
-            background: 'var(--tint-yellow)',
-            border: '1px solid var(--warning)',
-            color: 'var(--warning-text)',
-            borderRadius: 4,
-            padding: '8px 12px',
-            marginBottom: 12,
-            fontSize: 13,
-          }}
-        >
-          This run is {run.status}; results are read-only.
-        </div>
-      )}
-      {launchNotice && (
-        <div
-          style={{
-            background: 'var(--tint-green)',
-            border: '1px solid var(--success)',
-            color: 'var(--success-text)',
-            borderRadius: 4,
-            padding: '8px 12px',
-            marginBottom: 12,
-            fontSize: 13,
-          }}
-        >
-          {launchNotice}
-        </div>
-      )}
-      {!readOnly && humanOnly > 0 && (
-        <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 10 }}>
-          {humanOnly} of {rows.length} test case{rows.length === 1 ? '' : 's'}{' '}
-          {humanOnly === 1 ? 'is' : 'are'} flagged for human or physical verification — agents skip{' '}
-          {humanOnly === 1 ? 'it' : 'them'} and cannot record {humanOnly === 1 ? 'its' : 'their'} result.
-          Set this per test case in its editor.
-        </div>
-      )}
-      {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
-      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
-
-      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: isPhone ? 320 : 420, width: '100%' }}>
-        <AgGridReact<ResultRow>
-          rowData={rows}
-          columnDefs={columnDefs}
-          getRowId={(p) => p.data.testCaseId}
-          onCellValueChanged={(event) => {
-            if (event.colDef.field === 'notes' && event.data) {
-              upsert(event.data.testCaseId, event.data.status, event.data.notes || '');
-            }
-          }}
-          defaultColDef={{ resizable: true, sortable: true }}
-          suppressCellFocus={false}
-          stopEditingWhenCellsLoseFocus={true}
+      {isPhone && run && stepAt !== null && rows[stepAt] && (
+        <TestRunStepper
+          run={run}
+          rows={rows}
+          index={stepAt}
+          onIndex={setStepAt}
+          readOnly={readOnly}
+          onClose={() => setStepAt(null)}
+          onRecord={(row, status, notes) => upsert(row.testCaseId, status, notes)}
+          onCite={(row, resultId) => setCiting({ testCaseId: row.testCaseId, resultId })}
         />
-      </div>
+      )}
 
-      {citingRow?.resultId && (
+      {citing && (
         <EvidencePicker
-          resultId={citingRow.resultId}
-          testCaseTitle={citingRow.testCaseTitle}
+          resultId={citingRow?.resultId || citing.resultId}
+          testCaseTitle={citingRow?.testCaseTitle || ''}
           bundles={bundles}
-          cited={citingRow.citations}
-          onClose={() => setCitingRow(null)}
+          cited={citingRow?.citations || []}
+          onClose={() => setCiting(null)}
           onChanged={refreshCitations}
         />
       )}
