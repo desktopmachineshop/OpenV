@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Pages look right again.** In 0.27.0 the projects list, and the parts of
+  other pages styled after it, showed as unstyled text and small buttons. A
+  stylesheet had two rules left unclosed, so the browser ignored everything
+  after them; both are closed again.
+
 ## 0.27.0 — 2026-11-03
 
 ### New features
