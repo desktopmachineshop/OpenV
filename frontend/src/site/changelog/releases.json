@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.26.0",
+   "date": "2026-11-03",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**A more compact project layout.** Inside a project, the menu is now a narrow rail down the left instead of a wide sidebar, so your requirements, tables and boards get more of the screen. Click **Define**, **Verify**, **Plan** or **Agents** on the rail to see that part's pages; one top bar shows the workspace, the project and the page you are on, with search, **Help**, notifications and your account. On a phone, tabs along the bottom reach **Overview**, **Requirements**, **V&V** and **Review**, and **More** opens the full menu. Press **?** or **F1** on any page to open help. **Workspace settings**, **Workspace runs**, **Platform admin** and **What's new** gain a **?** help button too, and the **Evidence**, **Impact**, **Review Queue** and **To-dos** pages now have help of their own."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.25.2",
    "date": "2026-11-02",
    "stableSince": "",

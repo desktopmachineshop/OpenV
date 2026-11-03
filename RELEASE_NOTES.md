@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.26.0 — 2026-11-03
+
 ### New features
 
 - **A more compact project layout.** Inside a project, the menu is now a
