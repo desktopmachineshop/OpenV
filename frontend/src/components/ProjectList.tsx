@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShortcutTarget,
@@ -352,8 +352,13 @@ export const ProjectList: React.FC = () => {
   // its Home. The list itself is still where the rail's Projects, Home's
   // All projects and the top bar lead, and where a member with no projects
   // starts one.
+  // Only the first load decides: a member who arrives with no projects and
+  // then creates one goes where creating it leads, not to a Home.
+  const landed = useRef(false);
   useEffect(() => {
-    if (!homeDesign || !landing || shortcut || loading || projects.length === 0) return;
+    if (!homeDesign || !landing || landed.current || loading) return;
+    landed.current = true;
+    if (shortcut || projects.length === 0) return;
     const remembered = lastProject();
     const target = projects.some((p) => p.id === remembered) ? remembered : projects[0].id;
     navigate(`/projects/${target}/home`, { replace: true });

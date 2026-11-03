@@ -25,11 +25,12 @@ const projects = [
   { id: 'p2', name: 'Steering angle sensor', description: '', created_at: '2026-09-02T00:00:00Z' },
 ];
 let redesign = true;
+let storeProjects: typeof projects = projects;
 vi.mock('../state/store', () => {
   const state = () => ({
     projectId: null,
     setProjectId: vi.fn(),
-    projects,
+    projects: storeProjects,
     setProjects: vi.fn(),
     addProject: vi.fn(),
     updateProject: vi.fn(),
@@ -59,6 +60,7 @@ let root: Root;
 beforeEach(() => {
   vi.clearAllMocks();
   redesign = true;
+  storeProjects = projects;
   locationState = null;
   window.localStorage.clear();
   vi.mocked(projectAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: projects });
@@ -105,6 +107,17 @@ describe('arriving in the app', () => {
     locationState = { landing: true };
     await render();
     expect(navigate).toHaveBeenCalledWith('/projects/p1/home', { replace: true });
+  });
+
+  it('does not leave the list when a member with no projects creates one', async () => {
+    storeProjects = [];
+    vi.mocked(projectAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] });
+    locationState = { landing: true };
+    await render();
+    // The new project reaches the store; the arrival was already decided.
+    storeProjects = [projects[0]];
+    await render();
+    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
   });
 
   it('stays on the list when the list is opened on purpose', async () => {
