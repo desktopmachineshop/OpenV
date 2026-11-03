@@ -223,20 +223,21 @@ admin); only the rail's buttons change.
     workspace.
   - **Switch project**: click the project's name (it reads **All projects**
     on a workspace page) for the workspace's projects. Choose one to open
-    it at its Home; **All projects** opens the Projects page and **+ New
+    it at its Summary; **All projects** opens the Projects page and **+ New
     project** starts a project from wherever you are.
 - **The rail inside a project** has a button for each part of the project —
   **Define**, **Verify**, **Plan** and **Agents** — and links to **Activity**
   and **Settings**. Click a group to open its pages beside the rail (Define
-  holds Home, Overview, Guided Definition, Requirements and Interviews, for
+  holds Summary, Overview, Guided Definition, Requirements and Interviews, for
   example), then click the page. The group holding the page you are on is
   marked. The list closes when you arrive, or with **Esc** or a click
   anywhere else.
 - **The rail on a workspace page** lists the workspace's own pages:
-  **Projects**, **Runs** (where the workspace has them), **News** (What's
+  **Home**, **Runs** (where the workspace has them), **News** (What's
   new), **Admin** for platform admins, and **Settings**.
-- **Projects** is at the top of the rail on every page and returns to all
-  projects in the workspace.
+- **Home** is at the top of the rail on every page and opens the
+  workspace's Home: what needs you across every project, the workspace's
+  activity, and its projects to choose from.
 
 On a phone there is no rail. On a workspace page the top bar holds the
 workspace switcher above the project switcher, with help, the bell and your

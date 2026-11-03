@@ -11,7 +11,7 @@
     <resourceid appname="openv-web" appid="home.proposals"/>
   </prolog>
   <conbody>
-    <p><b>Home</b> is the project at a glance, and where OpenV opens when you sign in: on the project you opened last. Along the top are its figures: how many artifacts it holds, the share of requirements that are <b>traced</b> (a test case verifies them) and <b>verified</b>, and how many fail their tests. Beside the project's name are its last baseline and the number of members.</p>
+    <p><b>Summary</b>, a project's own Home, is the project at a glance; the workspace's <b>Home</b>, at the top of the rail, gathers the same for every project. Along the top are its figures: how many artifacts it holds, the share of requirements that are <b>traced</b> (a test case verifies them) and <b>verified</b>, and how many fail their tests. Beside the project's name are its last baseline and the number of members.</p>
     <p><b>Needs you</b> lists what waits on the team, each with a link to deal with it:</p>
     <ul>
       <li><b>approve</b>: an artifact in review.</li>

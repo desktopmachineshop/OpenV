@@ -6,7 +6,6 @@ import { pickActiveOrg } from './utils/activeOrg';
 import { readActiveOrg } from './state/activeOrgStorage';
 import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
-import { LANDING_STATE } from './components/ProjectListLanding';
 import { Login } from './views/Login';
 import { VerifyEmail } from './views/VerifyEmail';
 import { ResetPassword } from './views/ResetPassword';
@@ -273,7 +272,7 @@ function App() {
           path="/"
           element={
             currentUser ? (
-              <Navigate to={pendingReturnTo() || '/projects'} state={pendingReturnTo() ? undefined : LANDING_STATE} replace />
+              <Navigate to={pendingReturnTo() || '/projects'} replace />
             ) : (
               <SiteHome site={site} fallback={<Navigate to="/login" replace />} />
             )

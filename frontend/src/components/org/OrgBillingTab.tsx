@@ -346,13 +346,13 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       {readOnly && (
-        <div role="alert" className="card" style={{ padding: 12, marginBottom: 16, borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
+        <div role="alert" className="card" style={{ padding: 12, borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
           <strong>This workspace is read-only:</strong> it holds more than its plan allows. Subscribing below, or trimming members or projects on their
           tabs, makes it writable again. Everything stays readable and exportable meanwhile.
         </div>
       )}
       {notice && (
-        <div role="status" className="card" style={{ padding: 12, marginBottom: 16, borderLeft: '4px solid var(--success-text)', fontSize: 14 }}>
+        <div role="status" className="card" style={{ padding: 12, borderLeft: '4px solid var(--success-text)', fontSize: 14 }}>
           {notice}
         </div>
       )}

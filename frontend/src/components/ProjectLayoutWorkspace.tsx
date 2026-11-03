@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
-import { NavIcon, SHELL_ICONS, pageIconPath } from './ProjectLayoutIcons';
+import { NavIcon, pageIconPath } from './ProjectLayoutIcons';
 import { TopBar } from './ProjectLayoutRail';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
 import { NotificationBell } from './NotificationBell';
@@ -41,9 +41,9 @@ const WorkspaceRail: React.FC = () => {
   ];
   return (
     <aside className="ov-rail ov-rail-fixed" aria-label="Workspace navigation">
-      <NavLink to="/projects" end className="ov-rail-item" title="All projects in this workspace">
-        <NavIcon d={SHELL_ICONS.projects} />
-        <span>Projects</span>
+      <NavLink to="/projects" end className="ov-rail-item" title="Home: what needs you, the workspace's activity and its projects">
+        <NavIcon d={pageIconPath('')} />
+        <span>Home</span>
       </NavLink>
       <nav className="ov-rail-nav" aria-label="Workspace pages" data-help-key="start.navigation">
         {items.map((item) => (

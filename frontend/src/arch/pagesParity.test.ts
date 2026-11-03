@@ -131,7 +131,7 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
   {
     label: 'Define',
     items: [
-      { to: 'home', label: 'Home', feature: 'redesign-pages' },
+      { to: 'home', label: 'Summary', feature: 'redesign-pages' },
       { to: '', label: 'Overview', end: true },
       { to: 'guided', label: 'Guided Definition' },
       { to: 'requirements', label: 'Requirements' },

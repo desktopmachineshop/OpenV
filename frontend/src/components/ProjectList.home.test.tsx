@@ -2,13 +2,12 @@ import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { mockApi } from '../test/mockApi';
 import { ProjectList } from './ProjectList';
-import { artifactAPI, projectAPI, templateAPI, vvAPI, workerStatusAPI } from '../api/client';
-import { LAST_PROJECT_KEY } from '../appShortcuts';
+import { artifactAPI, eventsAPI, projectAPI, proposalsAPI, reviewAPI, templateAPI, vvAPI, workerStatusAPI } from '../api/client';
 
-// The Home design (redesign-pages): arriving in the app opens a project's
-// Home, and the projects list itself is the Projects panel's rows, each with
-// its size and traced and verified share. Opening the list on purpose (no
-// arrival state) stays on the list.
+// The Home design (redesign-pages): the Projects page is the workspace's Home.
+// What needs the member across every project and the workspace's activity sit
+// above the project picker, whose rows carry each project's size and traced
+// and verified share. Signing in lands here; nothing moves the member on.
 vi.mock('../api/client', async (orig) => mockApi(await orig(), { agentsAPI: { list: () => Promise.resolve({ data: [] }) } }));
 
 const navigate = vi.fn();
@@ -25,7 +24,6 @@ const projects = [
   { id: 'p2', name: 'Steering angle sensor', description: '', created_at: '2026-09-02T00:00:00Z' },
 ];
 let redesign = true;
-let gatesLoaded = true;
 let storeProjects: typeof projects = projects;
 vi.mock('../state/store', () => {
   const state = () => ({
@@ -38,7 +36,7 @@ vi.mock('../state/store', () => {
     removeProject: vi.fn(),
     orgs: [{ id: 'org1', name: 'Sam Space', type: 'company' }],
     activeOrgId: 'org1',
-    features: gatesLoaded ? { channel: 'nightly', features: { 'redesign-pages': redesign } } : null,
+    features: { channel: 'nightly', features: { 'redesign-pages': redesign } },
   });
   return { useAppStore: (select?: (s: ReturnType<typeof state>) => unknown) => (select ? select(state()) : state()) };
 });
@@ -61,10 +59,27 @@ let root: Root;
 beforeEach(() => {
   vi.clearAllMocks();
   redesign = true;
-  gatesLoaded = true;
   storeProjects = projects;
   locationState = null;
-  window.localStorage.clear();
+  vi.mocked(reviewAPI.get, { partial: true, deep: true }).mockImplementation(
+    (id: string) =>
+      Promise.resolve({
+        data: {
+          suspect_links: [],
+          in_review_artifacts: id === 'p1' ? [{ id: 'a1', ref: 'SYS-021', title: 'Wheel-slip detection threshold', updated_at: '2026-09-01T00:00:00Z' }] : [],
+        },
+      }) as any
+  );
+  vi.mocked(vvAPI.listRuns, { partial: true, deep: true }).mockResolvedValue({ data: [] } as any);
+  vi.mocked(eventsAPI.list, { partial: true, deep: true }).mockImplementation(
+    (params: { event_type?: string }) =>
+      Promise.resolve({
+        data: params.event_type
+          ? []
+          : [{ id: 'e1', event_type: 'artifact.status_changed', project_id: 'p2', actor_name: 'Priya Shah', entity_name: 'SAS-4', payload: { to: 'approved' }, created_at: '2026-09-01T09:58:00Z' }],
+      }) as any
+  );
+  vi.mocked(proposalsAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] } as any);
   vi.mocked(projectAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: projects });
   vi.mocked(templateAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] });
   vi.mocked(workerStatusAPI.get, { partial: true, deep: true }).mockResolvedValue({ data: { workers: [] } });
@@ -97,88 +112,56 @@ const render = async () => {
   }
 };
 
-describe('arriving in the app', () => {
-  it('opens the project last opened at its Home', async () => {
-    window.localStorage.setItem(LAST_PROJECT_KEY, 'p2');
-    locationState = { landing: true };
-    await render();
-    expect(navigate).toHaveBeenCalledWith('/projects/p2/home', { replace: true });
-  });
-
-  it('opens the first project when none is remembered', async () => {
-    locationState = { landing: true };
-    await render();
-    expect(navigate).toHaveBeenCalledWith('/projects/p1/home', { replace: true });
-  });
-
-  it('does not leave the list when a member with no projects creates one', async () => {
-    storeProjects = [];
-    vi.mocked(projectAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] });
-    locationState = { landing: true };
-    await render();
-    // The new project reaches the store; the arrival was already decided.
-    storeProjects = [projects[0]];
-    await render();
-    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
-  });
-
-  it('waits for the feature gates, which can arrive after the list', async () => {
-    gatesLoaded = false;
-    locationState = { landing: true };
-    await render();
-    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
-    gatesLoaded = true;
-    await render();
-    expect(navigate).toHaveBeenCalledWith('/projects/p1/home', { replace: true });
-  });
-
-  it('never moves a member who has started using the list', async () => {
-    gatesLoaded = false;
-    locationState = { landing: true };
-    await render();
-    // The staging smoke journey: + New Project clicked before the gates load.
+const settle = async () => {
+  for (let i = 0; i < 12; i++) {
     await act(async () => {
-      window.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      await Promise.resolve();
     });
-    gatesLoaded = true;
+  }
+};
+
+describe('the workspace Home', () => {
+  it('heads with the workspace and its figures, and lists what needs the member across projects', async () => {
     await render();
-    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
+    await settle();
+    expect(container.querySelector('h1')?.textContent).toBe('Sam Space');
+    expect(container.textContent).toContain('2 projects in this workspace');
+    expect(container.textContent).toContain('260 artifacts');
+    expect(container.textContent).toContain('90% traced');
+    const needs = container.querySelector('section[aria-labelledby="home-needs"]')!;
+    expect(needs.textContent).toContain('SYS-021');
+    expect(needs.textContent).toContain('Brake-by-wire ECU · In review');
+    const activity = container.querySelector('section[aria-labelledby="home-activity"]')!;
+    expect(activity.textContent).toContain('Priya Shah approved SAS-4');
+    expect(activity.textContent).toContain('Steering angle sensor');
   });
 
-  it('stays on the list when the list is opened on purpose', async () => {
+  it('puts the project picker below, each row with its size and traced and verified share', async () => {
     await render();
-    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
-  });
-
-  it('stays on the list without the redesign', async () => {
-    redesign = false;
-    locationState = { landing: true };
-    await render();
-    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
-  });
-});
-
-describe('the list as the Projects panel', () => {
-  it('draws rows with each project size and traced and verified share', async () => {
-    await render();
+    await settle();
     expect(container.querySelector('.projects-grid.is-rows')).not.toBeNull();
     const rows = Array.from(container.querySelectorAll('.project-card'));
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('248 artifacts');
-    expect(rows[0].textContent).toContain('Traced');
     expect(rows[0].textContent).toContain('90%');
-    expect(rows[0].textContent).toContain('Verified');
     expect(rows[0].textContent).toContain('80%');
     expect(rows[1].textContent).toContain('No requirements to trace yet');
-    // The actions stay on every row.
     expect(rows[0].querySelector('[title="Delete project"]')).not.toBeNull();
-    expect(rows[0].querySelector('[title="Edit project"]')).not.toBeNull();
   });
 
-  it('keeps the card grid without the redesign', async () => {
+  it('stays here after signing in', async () => {
+    locationState = { landing: true };
+    await render();
+    await settle();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the plain list without the redesign, and loads nothing for the Home', async () => {
     redesign = false;
     await render();
+    await settle();
     expect(container.querySelector('.projects-grid.is-rows')).toBeNull();
+    expect(container.querySelector('section[aria-labelledby="home-needs"]')).toBeNull();
     expect(vvAPI.coverage).not.toHaveBeenCalled();
   });
 });

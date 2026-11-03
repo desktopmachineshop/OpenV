@@ -3,14 +3,14 @@ const content = `
 # Home, Design, Tests and Baselines
 
 Four project pages bring together what you would otherwise collect from
-several others. **Home** and **Design** are under **Define** in the project
+several others. **Summary** (a project's Home) and **Design** are under **Define** in the project
 menu, **Tests** and **Baselines** under **Verify**. They show what the
 project already holds; you edit artifacts, record results and capture
 baselines where you always have.
 
 ## Home
 
-**Home** is the project at a glance, and where OpenV opens when you sign in: on the project you opened last. Along the top are its figures: how many
+**Summary**, a project's own Home, is the project at a glance; the workspace's **Home**, at the top of the rail, gathers the same for every project. Along the top are its figures: how many
 artifacts it holds, the share of requirements that are **traced** (a test
 case verifies them) and **verified**, and how many fail their tests. Beside
 the project's name are its last baseline and the number of members.

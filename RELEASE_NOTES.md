@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **One Home for all your work.** Signing in opens the workspace's Home:
+  what needs you in every project (reviews, suspect links, open test runs,
+  failing tests and new comments, each naming its project), the activity
+  across the workspace, and below them your projects with how many
+  artifacts each holds and how much is traced and verified. **Home** is at
+  the top of the menu on every page; a project's own home is now called
+  **Summary**. Settings cards are evenly spaced again, and workspace
+  settings no longer repeats a link back to the projects.
+
 ## 0.27.3 — 2026-11-03
 
 ### Maintenance updates

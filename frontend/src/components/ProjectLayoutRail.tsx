@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { Project } from '../api/client';
 import type { NavGroup, NavSection } from '../pages';
 import { activeNavPath, sectionHasActive } from './navSections';
-import { NavIcon, SHELL_ICONS, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
+import { NavIcon, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
@@ -63,9 +63,9 @@ const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
 
   return (
     <aside ref={railRef} className="ov-rail" aria-label="Project navigation">
-      <NavLink to="/projects" end className="ov-rail-item" title="All projects in this workspace">
-        <NavIcon d={SHELL_ICONS.projects} />
-        <span>Projects</span>
+      <NavLink to="/projects" end className="ov-rail-item" title="Home: what needs you, the workspace's activity and its projects">
+        <NavIcon d={pageIconPath('')} />
+        <span>Home</span>
       </NavLink>
       <nav className="ov-rail-nav" aria-label="Project pages" data-help-key="start.navigation">
         {grouped.map((section) => {

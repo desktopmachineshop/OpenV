@@ -640,7 +640,7 @@ describe('Login', () => {
 
     navigate.mockClear();
     await render('/login?next=%2F%2Fevil.example%2F');
-    expect(navigate).toHaveBeenCalledWith('/projects', { state: { landing: true } });
+    expect(navigate).toHaveBeenCalledWith('/projects');
   });
 
   // Until the server has said which ways in it offers, the page shows
@@ -678,7 +678,7 @@ describe('Login', () => {
     await submitForm('password1');
     expect(authFixtures.calls.confirmIdentityLink).toEqual([['password1']]);
     expect(authFixtures.calls.login).toEqual([]);
-    expect(navigate).toHaveBeenCalledWith('/projects', { state: { landing: true } });
+    expect(navigate).toHaveBeenCalledWith('/projects');
   });
 
   it('falls back to an ordinary sign-in when the link has expired', async () => {
@@ -742,7 +742,7 @@ describe('Login', () => {
       navigate.mockClear();
       authFixtures.me = { id: 'u1', email: 'member@example.com', email_verified: true };
       await render('/login');
-      expect(navigate).toHaveBeenCalledWith('/projects', { state: { landing: true } });
+      expect(navigate).toHaveBeenCalledWith('/projects');
       expect(assign).not.toHaveBeenCalled();
     });
 

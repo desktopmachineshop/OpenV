@@ -294,7 +294,7 @@ const ShareLinksCard: React.FC<ShareLinksCardProps> = ({
   setShareExpires,
   sharing,
 }) => (
-  <div className="card" style={{ marginTop: 16 }} data-help-key="settings.share-links">
+  <div className="card" data-help-key="settings.share-links">
     <h3>Share links</h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 0 }}>
       A <strong>public</strong> link opens the live project, read only, for anyone who holds
