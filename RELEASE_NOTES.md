@@ -11,6 +11,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.27.2 — 2026-11-03
 
+Stable channel release since 2026-11-03.
+
 ### Maintenance updates
 
 - **Sign in to your project's Home.** Signing in, or opening the app, now
