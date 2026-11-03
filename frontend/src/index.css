@@ -845,9 +845,10 @@ textarea {
   font-weight: 700;
 }
 
-/* The dense rows of the requirements table, tree and phone list: a hover
-   tint that leaves the selected row blue, and a visible focus ring for the
-   keyboard (the rows take Enter, the arrows and Alt+arrows). */
+/* A dense row that reacts to the pointer: the V&V tables and lists, and the
+   requirements table, tree and phone list. The hover tint leaves a selected
+   row's blue alone, and the keyboard gets a visible focus ring (the
+   requirements rows take Enter, the arrows and Alt+arrows). */
 .ov-row:hover:not([aria-selected="true"]) {
   background-color: var(--surface-hover) !important;
 }

@@ -24,6 +24,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   artifact up or down is in its ⋯ menu (or Alt+↑ / Alt+↓). On a phone the list
   has two-line rows, a way down the hierarchy level by level, and a bar under
   the artifact to comment or move it on in review.
+- **V&V, test runs and agent proposals in the new design.** The V&V page
+  shows coverage by document section with a bar per section, the run in
+  progress and the gaps to fix first; test runs are cards with their results
+  as a bar. On a phone you now record a run one test case at a time, with
+  large Pass, Fail, Blocked and Not run buttons. Agent proposals read as the
+  change they make, field by field, instead of raw data, and statuses across
+  the matrix, evidence, impact, releases and runs are calm tinted labels.
 
 ### Bug fixes
 

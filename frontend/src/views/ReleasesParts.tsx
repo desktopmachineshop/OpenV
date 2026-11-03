@@ -10,7 +10,8 @@ import type {
   ReleaseSummaryCounts,
   TargetReleaseStatus,
 } from '../api/client';
-import { rollupColor } from './VVDashboard';
+import { Chip, type ChipTone } from '../components/ui';
+import { rollupFill } from './VVDashboardParts';
 
 export const STATUS_LABEL: Record<TargetReleaseStatus, string> = {
   planned: 'Planned',
@@ -18,10 +19,10 @@ export const STATUS_LABEL: Record<TargetReleaseStatus, string> = {
   released: 'Released',
 };
 
-export const STATUS_COLOR: Record<TargetReleaseStatus, string> = {
-  planned: 'var(--neutral)',
-  in_progress: 'var(--accent)',
-  released: 'var(--success)',
+export const STATUS_TONE: Record<TargetReleaseStatus, ChipTone> = {
+  planned: 'neutral',
+  in_progress: 'info',
+  released: 'success',
 };
 
 const ROLLUP_ORDER = ['pass', 'verified-manually', 'fail', 'blocked', 'unrun', 'uncovered', 'method-missing'];
@@ -44,18 +45,7 @@ const REVIEW_LABEL: Record<string, string> = {
 };
 
 const releaseRollupColor = (rollup: string) =>
-  rollup === 'verified-manually' ? 'var(--success)' : rollupColor(rollup);
-
-export const chip = (color: string): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '2px 10px',
-  borderRadius: 12,
-  background: color,
-  color: '#fff',
-  fontSize: 12,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-});
+  ['uncovered', 'method-missing'].includes(rollup) ? 'var(--neutral-mid)' : rollupFill(rollup);
 
 const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
@@ -434,7 +424,7 @@ export const ReleaseDetail: React.FC<{
                       borderBottom: '1px solid var(--neutral-soft)',
                     }}
                   >
-                    <span style={chip(releaseRollupColor(e.rollup))}>{ROLLUP_LABEL[e.rollup] || e.rollup}</span>
+                    <Chip tone={e.rollup === 'verified-manually' ? 'success' : undefined}>{ROLLUP_LABEL[e.rollup] || e.rollup}</Chip>
                   </td>
                   <td
                     style={{

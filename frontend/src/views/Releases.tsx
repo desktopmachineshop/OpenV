@@ -8,15 +8,14 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { releasesAPI, ReleaseOverview, ReleaseProgress, ReleaseSummaryCounts, TargetRelease } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
-import { ErrorBanner, useConfirm } from '../components/ui';
+import { Chip, ErrorBanner, useConfirm } from '../components/ui';
 import {
-  chip,
   emptyForm,
   ReleaseDetail,
   ReleaseForm,
   ReleaseFormValue,
   RollupBar,
-  STATUS_COLOR,
+  STATUS_TONE,
   STATUS_LABEL,
   SummaryLine,
 } from './ReleasesParts';
@@ -70,7 +69,7 @@ const ReleaseRow: React.FC<{
         >
           {r.name}
         </button>
-        <span style={chip(STATUS_COLOR[r.status])}>{STATUS_LABEL[r.status]}</span>
+        <Chip tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Chip>
         {r.target_date && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Target {r.target_date}</span>}
       </div>
       {r.description && (
