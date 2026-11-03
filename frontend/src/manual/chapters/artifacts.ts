@@ -19,22 +19,91 @@ an editor, version history, image attachments, comments, and baselines.
 
 ## The layout
 
-The view has three resizable columns (drag the dividers to resize; widths are
-remembered):
+The view has two parts side by side, and a third you can call up:
 
-- **Left** — the artifact list/tree with search and filters.
-- **Center** — the selected artifact: header, body, links, attachments.
-- **Right** — the **Chatter** panel: comments on the selected artifact.
+- **The list** — every artifact in the project, as a **table**, a **tree** or
+  **layers** (see below). Above it sit the type tabs, the project search and
+  its filters, and a line of figures for what is in view.
+- **The detail panel** — on the right, the selected artifact: its status,
+  quality and priority, its text, its place in the trace and its tests (see
+  *The detail panel*). Drag its left edge to make it wider; the width is
+  remembered.
+- **Notes** — the **Chatter** panel at the far right: comments on the selected
+  artifact and the V&V Assistant (see *Making room*).
+
+The header holds the baseline picker and the project actions — **Compare**,
+**Capture Baseline**, **Draft test cases**, **↓ Download** — with one blue
+button, **+ New Artifact**, at its end.
 
 **Help** in the top bar (or **?** on the keyboard) opens the help panel for
 this page, with the artifact and link types.
+
+## Table, tree and layers
+
+The **Table / Tree / Layers** switch above the list changes how the project
+is drawn; the choice stays in the page's address (\`?view=\`), so a link or a
+reload keeps it. The **type tabs** (*All*, *Requirement*, *Test Case*, …) show
+one type at a time in any of them, with a count beside each.
+
+- **Table** — one dense row per artifact, grouped under the heading it sits
+  in (click a heading to fold it). The columns are the **ref**, the **title**,
+  the review **status**, the **priority** attribute, the **quality** score,
+  **trace** (↑ how many artifacts this one answers to, ↓ how many answer to it,
+  and ⚠ when one of those links is suspect), **V&V** (the verification
+  rollup: a green dot passes, red fails, orange is blocked, grey is not run or
+  not covered) and how long ago it was **updated**.
+- **Tree** — the document's hierarchy with the same columns: guide lines
+  show where each artifact sits, the caret opens and shuts a branch, and
+  **Depth L1–L4** opens the whole tree to that level (**L1** collapses all,
+  **All** expands all). For a heading or a parent, *V&V below* rolls up the
+  requirements under it, as *passing/total*.
+- **Layers** — one column per level of the hierarchy. Pick an artifact and
+  the next column shows what sits under it, so a whole chain — need,
+  requirement, sub-requirement, design — reads left to right, each card with
+  a bar of how much below it is verified. The last column lists the tests
+  that verify any artifact of the chain, with their latest result.
+
+The figures above the list count what is in view: artifacts, the share
+**traced** (with at least one link), the share **verified** (requirements
+whose verification passes), **suspect links** and **quality findings**.
+
+On a phone the list's views are chips under the search box: **List** (two
+lines per artifact: ref, status and age, then the title, then quality, trace
+and verification), **Outline** (the tree) and **By level**, which walks the
+hierarchy one level at a time — the artifact you are on, what it traces up
+to, what it decomposes into and the tests that verify it; tap a child to go
+down, **‹** to come back up, **Open full artifact** to read it. The chips
+**In review**, **Failing** and **Suspect** narrow the list to what needs you.
+
+## The detail panel
+
+The selected artifact opens on the right (on a phone, in the **Document**
+pane). Its header carries the **ref**, the **status**, **quality** and
+**priority** chips, and **Edit**, **History** and **Delete**; below the title
+are its type, owner, verification method, version and when it last changed,
+then the review step it can take next (**Submit for review**, **Approve**, …).
+
+- **Trace** lists every artifact this one is linked to, ↑ above and ↓ below,
+  with the link's type; a **suspect** link is marked in yellow. Click one to
+  go to it.
+- **Verification** shows how many of the tests verifying it pass, a
+  pass / fail / blocked bar, each test with its latest result, and the
+  requirement's rollup.
+- Below them are the **description** (with **Show impact →**), the
+  attributes, the figures and the full list of **traceability links**, where a
+  link can be deleted.
+
+On a phone the artifact ends in a bar under your thumb: **Comment** opens the
+Notes pane, and the review step forward (**Submit for review**, **Approve**)
+is the blue button beside it.
 
 ## Creating and organizing artifacts
 
 - Click **+ New Artifact**, choose a type, enter a title and a body
   (the body is markdown — headings, lists, tables, and images all render).
-- Artifacts form a **hierarchy**: right-click an artifact in the list for
-  **create before / create after / create child**. New siblings inherit the
+- Artifacts form a **hierarchy**: right-click an artifact in the table or
+  the tree, or click its **⋯** button, for **create before / create after /
+  create child**. New siblings inherit the
   type and parent of the artifact you clicked.
 - The same menu offers **copy**, **paste before / paste after** and
   **duplicate** (a copy placed directly after the original). A copy carries the
@@ -50,7 +119,12 @@ this page, with the artifact and link types.
   around the artifact it will go inside — so re-parenting and reordering are
   the same gesture. Dropping into a collapsed artifact expands it, and an
   artifact can never be dropped into its own subtree.
-- **Collapse all / Expand all** manage the tree at once.
+- **Move up** and **Move down** in the same menu swap an artifact with the
+  one beside it; on the keyboard, focus a row in the tree and press
+  **Alt+↑** or **Alt+↓**. The arrow keys move between rows, **→** and **←**
+  open and shut a branch, and **Enter** opens the artifact.
+- **Depth L1–L4** above the tree opens it to a level at once: **L1**
+  collapses all, **All** expands all.
 
 ## Moving through the document
 
@@ -69,7 +143,8 @@ use the ‹ / › buttons.)
 On a phone or tablet, swipe the document sideways: **left** for the next
 artifact, **right** for the one before. Scrolling up and down is never
 interrupted, and a table or code block wide enough to scroll keeps its own
-sideways swipe. The **Tree / Document / Notes** buttons still switch panes.
+sideways swipe. The **Tree / Document / Notes** buttons still switch panes:
+**Tree** holds the list in whichever view you chose.
 
 Wherever a step lands, the tree opens the sections above it so you can see where
 you are — and only those, so a section you collapsed on purpose stays shut.
@@ -122,9 +197,10 @@ states, chosen from the button in its header:
   the document, and moving away closes it. The document does not reflow.
 - **Hidden** — only the strip remains, which brings the panel back.
 
-The choice is remembered per person. The artifact tree fills the
-height of its column, so a taller window shows more of the document rather
-than more empty space.
+The choice is remembered per person. Until you choose, the panel starts
+auto-hidden on anything narrower than a wide desktop (1680 pixels), so the
+list and the detail panel have the room. The list fills the height of the
+page, so a taller window shows more of it rather than more empty space.
 
 Nothing on the page is sized to the browser window, so the window itself never
 scrolls: the tree, the document, and the Notes panel each scroll inside their
@@ -134,7 +210,7 @@ pushing anything off the bottom.
 ## Search & filters
 
 Two boxes search, and they do different jobs. The one in the **top bar**
-searches every project you can see; the one above the **tree** narrows the
+searches every project you can see; the one above the **list** narrows the
 project you are in.
 
 The top bar's box matches titles and bodies, and it also matches **refs**: type
@@ -145,8 +221,9 @@ ref beside the title, which is what tells two similarly named requirements
 apart. A longer ref that contains what you typed still appears below the exact
 match: **REQ-3** finds REQ-3 first and leaves REQ-30 further down.
 
-The tree box matches title, body, type, IDs and attributes. The ⚙ button
-opens the filter panel:
+The list's box matches title, body, type, IDs and attributes. **Filter**
+beside it opens the filter panel, and while a search or a filter is on, a
+blue chip beside it says what it is; click the chip to clear them all:
 
 - **Filter rows** — combine conditions on any field (Type, Title, Body,
   Version, dates, …) with comparators like contains, equals, starts with,

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-detail-panel">
+  <title>The detail panel</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.detail"/>
+  </prolog>
+  <conbody>
+    <p>The selected artifact opens on the right (on a phone, in the <b>Document</b> pane). Its header carries the <b>ref</b>, the <b>status</b>, <b>quality</b> and <b>priority</b> chips, and <b>Edit</b>, <b>History</b> and <b>Delete</b>; below the title are its type, owner, verification method, version and when it last changed, then the review step it can take next (<b>Submit for review</b>, <b>Approve</b>, …).</p>
+    <ul>
+      <li><b>Trace</b> lists every artifact this one is linked to, ↑ above and ↓ below, with the link's type; a <b>suspect</b> link is marked in yellow. Click one to go to it.</li>
+      <li><b>Verification</b> shows how many of the tests verifying it pass, a pass / fail / blocked bar, each test with its latest result, and the requirement's rollup.</li>
+      <li>Below them are the <b>description</b> (with <b>Show impact →</b>), the attributes, the figures and the full list of <b>traceability links</b>, where a link can be deleted.</li>
+    </ul>
+    <p>On a phone the artifact ends in a bar under your thumb: <b>Comment</b> opens the Notes pane, and the review step forward (<b>Submit for review</b>, <b>Approve</b>) is the blue button beside it.</p>
+  </conbody>
+</concept>

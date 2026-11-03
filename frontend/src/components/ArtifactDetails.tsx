@@ -5,7 +5,8 @@ import { linkAPI, qualityAPI } from '../api/client';
 import { ArtifactBody } from './ArtifactBody';
 import { ImageGallery } from './ImageGallery';
 import { QualityFindingsPanel } from './QualityBadge';
-import { useConfirm } from './ui';
+import { buttonStyle, useConfirm } from './ui';
+import { sectionHeadingStyle } from './artifactCells';
 import { useViewport } from '../hooks/useViewport';
 import { apiErrorMessage } from '../api/errors';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
@@ -26,7 +27,7 @@ const ArtifactAttributes: React.FC<{ attributes?: Record<string, unknown> | null
   if (entries.length === 0) return null;
   return (
     <div style={{ marginBottom: '12px' }}>
-      <strong>Attributes:</strong>
+      <h4 style={sectionHeadingStyle}>Attributes</h4>
       <div
         style={{
           marginTop: '6px',
@@ -276,9 +277,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
   // Render a group of links by type
   const renderLinkGroup = (linksByType: Record<string, Link[]>, direction: 'outgoing' | 'incoming', isPreview: boolean = false) => {
-    const colorScheme = direction === 'outgoing' 
-      ? { header: 'var(--success)', bg: 'var(--tint-green)', border: 'var(--success)' }
-      : { header: 'var(--accent-strong)', bg: 'var(--surface-alt)', border: 'var(--accent-strong)' };
+    // One calm style both ways: the arrow and the label say the direction.
+    const colorScheme = { header: 'var(--text-secondary)', bg: 'var(--surface-alt)', border: 'var(--border)' };
 
     return Object.entries(linksByType).map(([linkType, typeLinks]) => {
       // Deduplicate within each type group by link ID
@@ -330,7 +330,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     onClick={() => onSelectArtifact?.(linkedArtifactId)}
                   >
                     <strong>
-                      <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'var(--accent-text)', cursor: 'pointer', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
                       </span>
                     </strong>
@@ -343,18 +343,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                       onClick={() => handleDeleteLink(link.id)}
                       disabled={deletingLinkId === link.id}
                       style={{
+                        ...buttonStyle('danger', { compact: !isPhone, disabled: deletingLinkId === link.id }),
                         marginLeft: '8px',
-                        padding: '6px 10px',
-                        minHeight: 36,
+                        minHeight: isPhone ? 36 : 26,
                         flexShrink: 0,
-                        backgroundColor: 'var(--danger)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '3px',
-                        cursor: deletingLinkId === link.id ? 'not-allowed' : 'pointer',
-                        fontSize: '12px',
-                        opacity: deletingLinkId === link.id ? 0.6 : 1,
-                        transition: 'opacity 0.2s ease',
                       }}
                     >
                       {deletingLinkId === link.id ? 'Deleting...' : 'Delete'}
@@ -585,39 +577,24 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       {/* Only show standard artifact info if not in preview mode */}
       {!previewVersion && (
         <>
-      <h3>{artifact.title}</h3>
-      <div style={{ marginBottom: '15px' }}>
-        <span
-          style={{
-            display: 'inline-block',
-            backgroundColor: 'var(--accent)',
-            color: 'var(--accent-fg)',
-            padding: '4px 8px',
-            borderRadius: '3px',
-            fontSize: '12px',
-            marginRight: '10px',
-          }}
-        >
-          {artifact.type}
-        </span>
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          Version {artifact.version}
-        </span>
-        {artifact.project_id && (
-          <RouterLink
-            to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
-            title="Trace what a change to this artifact would affect"
-            data-help-key="impact"
-            style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--accent-strong)', textDecoration: 'none', display: 'inline-block', padding: '9px 0' }}
-          >
-            Show impact →
-          </RouterLink>
-        )}
-      </div>
-      <div style={{ marginBottom: '15px' }}>
-        <strong>Description:</strong>
+      {/* The header above carries the title, type and version; this card
+          is the artifact's content and its full set of links. */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <h4 style={sectionHeadingStyle}>Description</h4>
+          {artifact.project_id && (
+            <RouterLink
+              to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
+              title="Trace what a change to this artifact would affect"
+              data-help-key="impact"
+              style={{ fontSize: '12px', color: 'var(--accent-text)', textDecoration: 'none', display: 'inline-block', padding: '9px 0' }}
+            >
+              Show impact →
+            </RouterLink>
+          )}
+        </div>
         {/* Citations in the body (# figures, ## artifacts) open what they cite. */}
-        <div style={{ marginTop: '8px' }} data-help-key="requirements.references">
+        <div style={{ marginTop: '2px', fontSize: 14, lineHeight: 1.55, color: 'var(--text-body)' }} data-help-key="requirements.references">
           {artifact.body ? (
             <ArtifactBody body={artifact.body} onReferenceClick={onReferenceClick} />
           ) : (
@@ -644,8 +621,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
       {/* Links Section */}
       {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
-        <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid var(--border)' }} data-help-key="links.view">
-          <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Traceability Links</h4>
+        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-soft)' }} data-help-key="links.view">
+          <h4 style={{ ...sectionHeadingStyle, marginBottom: 10 }}>Traceability links</h4>
 
           {deleteError && (
             <div
@@ -665,7 +642,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
           {currentOutgoingLinks.length > 0 && (
             <div style={{ marginBottom: '15px' }}>
-              <strong style={{ color: 'var(--success)', fontSize: '13px' }}>↓ Links From This Artifact ({currentOutgoingLinks.length})</strong>
+              <strong style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>↓ Links From This Artifact ({currentOutgoingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
                 {renderLinkGroup(currentOutgoingByType, 'outgoing', !allowLinkDelete)}
               </div>
@@ -674,7 +651,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
           {currentIncomingLinks.length > 0 && (
             <div>
-              <strong style={{ color: 'var(--accent-strong)', fontSize: '13px' }}>↑ Links To This Artifact ({currentIncomingLinks.length})</strong>
+              <strong style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>↑ Links To This Artifact ({currentIncomingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
                 {renderLinkGroup(currentIncomingByType, 'incoming', !allowLinkDelete)}
               </div>

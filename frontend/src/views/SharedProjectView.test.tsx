@@ -114,19 +114,19 @@ describe('SharedProjectView type labels', () => {
     expect(container.textContent).toContain('2 descriptions · 1 other · 3 requirements');
 
     await act(async () => {
-      byText<HTMLElement>('div', 'Scope of the pump').click();
+      byText<HTMLElement>('span', 'Scope of the pump').click();
     });
     await flush();
     expect(typeBadge()).toBe('Description');
 
     await act(async () => {
-      byText<HTMLElement>('div', 'Glossary').click();
+      byText<HTMLElement>('span', 'Glossary').click();
     });
     await flush();
     expect(typeBadge()).toBe('Other');
 
     await act(async () => {
-      byText<HTMLElement>('div', 'The pump shall start within 2 seconds').click();
+      byText<HTMLElement>('span', 'The pump shall start within 2 seconds').click();
     });
     await flush();
     expect(typeBadge()).toBe('Requirement');
