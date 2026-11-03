@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Sign in to your project's Home.** Signing in, or opening the app, now
+  takes you to the Home page of the project you opened last, as in the new
+  design, instead of the list of projects. The Projects page, still under
+  **Projects** in the menu and **All projects** on Home, lists your projects
+  as rows with how many artifacts each holds and how much of it is traced
+  and verified.
+
 ## 0.27.0 — 2026-11-03
 
 ### New features

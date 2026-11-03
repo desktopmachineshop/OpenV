@@ -10,7 +10,7 @@ baselines where you always have.
 
 ## Home
 
-**Home** is the project at a glance. Along the top are its figures: how many
+**Home** is the project at a glance, and where OpenV opens when you sign in: on the project you opened last. Along the top are its figures: how many
 artifacts it holds, the share of requirements that are **traced** (a test
 case verifies them) and **verified**, and how many fail their tests. Beside
 the project's name are its last baseline and the number of members.

@@ -11,6 +11,7 @@ import { useIdentityLink } from '../hooks/useIdentityLink';
 import { useAppStore } from '../state/store';
 import { safeReturnPath } from '../utils/returnTo';
 import { ResetForLinkNote, SignInLoading, SsoButtons, SsoError, SsoOnlySignIn } from './LoginSso';
+import { LANDING_STATE } from '../components/ProjectListLanding';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
 // register mode. The first registered user becomes the admin.
@@ -54,6 +55,9 @@ import { ResetForLinkNote, SignInLoading, SsoButtons, SsoError, SsoOnlySignIn } 
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  // Where a fresh session goes; the project list as the arrival in the app,
+  // which with the redesign opens a project's Home (ProjectListLanding).
+  const land = (to: string) => (to === '/projects' ? navigate(to, { state: LANDING_STATE }) : navigate(to));
   const [searchParams] = useSearchParams();
   const setCurrentUser = useAppStore((s) => s.setCurrentUser);
   const setEmailVerificationRequired = useAppStore((s) => s.setEmailVerificationRequired);
@@ -160,7 +164,8 @@ export const Login: React.FC = () => {
           return;
         }
         if (!inviteToken) {
-          navigate(returnTo || '/projects');
+          if (returnTo) navigate(returnTo);
+          else navigate('/projects', { state: LANDING_STATE });
           return;
         }
         setSessionEmail(res.data.email);
@@ -215,7 +220,7 @@ export const Login: React.FC = () => {
     setBusy(true);
     try {
       await authAPI.acceptInvitation(inviteToken);
-      navigate('/projects');
+      land('/projects');
     } catch (err: any) {
       setError(apiErrorMessage(err, 'Could not join the workspace'));
     } finally {
@@ -319,7 +324,7 @@ export const Login: React.FC = () => {
           );
           return;
         }
-        navigate(await afterSignIn(verificationRequired && !res.data.email_verified));
+        land(await afterSignIn(verificationRequired && !res.data.email_verified));
         return;
       }
       if (linking) {
@@ -327,7 +332,7 @@ export const Login: React.FC = () => {
         // any invitation waiting for the provider-verified address itself.
         const linked = await authAPI.confirmIdentityLink(password);
         setCurrentUser(linked.data);
-        navigate(await afterSignIn(verificationRequired && !linked.data.email_verified));
+        land(await afterSignIn(verificationRequired && !linked.data.email_verified));
         return;
       }
       const res = await authAPI.login(email, password);
@@ -365,7 +370,7 @@ export const Login: React.FC = () => {
       }
       // On a server that sends verification links, an account that has not
       // clicked its link lands on the wall rather than the app.
-      navigate(await afterSignIn(verificationRequired && !res.data.email_verified));
+      land(await afterSignIn(verificationRequired && !res.data.email_verified));
     } catch (err: any) {
       setError(
         apiErrorMessage(err, activeMode === 'login' ? 'Sign-in failed' : 'Registration failed')
@@ -453,7 +458,7 @@ export const Login: React.FC = () => {
                 className="button"
                 type="button"
                 style={{ width: '100%' }}
-                onClick={() => navigate('/projects')}
+                onClick={() => land('/projects')}
               >
                 Continue to OpenV
               </button>
@@ -485,7 +490,7 @@ export const Login: React.FC = () => {
               className="button-secondary button"
               type="button"
               style={{ width: '100%', marginTop: 12 }}
-              onClick={() => navigate('/projects')}
+              onClick={() => land('/projects')}
             >
               Not now
             </button>
@@ -722,7 +727,7 @@ export const Login: React.FC = () => {
                 className="button-secondary button"
                 type="button"
                 style={{ width: '100%', marginTop: 12 }}
-                onClick={() => navigate(continueTo)}
+                onClick={() => land(continueTo)}
               >
                 Continue to OpenV
               </button>
