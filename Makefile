@@ -287,6 +287,7 @@ check:
 		rm -f "$$log"; exit $$rc; \
 	fi
 	python3 -m unittest scripts/release_notes_test.py
+	cd scripts && python3 -m unittest release_ci_test
 	python3 scripts/release_notes.py check RELEASE_NOTES.md
 	python3 scripts/release_notes.py site --check RELEASE_NOTES.md
 	@if [ -n "$(NO_RELEASE_NOTES)" ]; then \

@@ -45,7 +45,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SELF: Cut stable and promote
         run: |
-          sha=$(git rev-parse HEAD)
+          # Judge the code under the pipeline's own commits, which carry no
+          # CI of their own (scripts/release_ci.py).
+          sha=$(python3 scripts/release_ci.py judged-commit)
+          echo "Judged by the CI of $sha"
           runs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
             --jq '[.check_runs[] | select(.name != env.SELF)] | length')
           if [ "$runs" = "0" ]; then
@@ -94,3 +97,7 @@ jobs:
         run: |
           git push origin HEAD:master
           git push origin HEAD:release
+          {
+            echo "Cut and marked stable $(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md) on \`release\`."
+            echo "openv.app runs openv-hosted, which only *Promote to release* points at a new release (and tags it and publishes its manual line): run it to ship this one."
+          } >> "$GITHUB_STEP_SUMMARY"

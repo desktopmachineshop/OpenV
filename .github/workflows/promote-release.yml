@@ -59,8 +59,11 @@ jobs:
           # must be excluded or promotion can never pass.
           SELF_PATH: .github/workflows/promote-release.yml
         run: |
-          sha=$(git rev-parse HEAD)
-          echo "Promoting master commit $sha"
+          # The pipeline's own commits (a cut, a stable marker, a manual
+          # stamp) are pushed with the workflow token and so carry no CI;
+          # judge the code under them (scripts/release_ci.py).
+          sha=$(python3 scripts/release_ci.py judged-commit)
+          echo "Promoting master $(git rev-parse --short HEAD), judged by the CI of $sha"
 
           # Judge the commit by the workflows *this repository* defines.
           #
@@ -138,7 +141,17 @@ jobs:
             git add RELEASE_NOTES.md frontend/src/site/changelog/releases.json
             git commit -m "Release $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           fi
-          python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
+          # A version already cut but never shipped (Cut stable release cuts
+          # and marks one, but only this workflow tags it, publishes its
+          # manual and points openv.app at it) is shipped as it stands: its
+          # tag is what says it went out.
+          version=$(python3 scripts/release_notes.py version RELEASE_NOTES.md)
+          if [ -n "$version" ] && ! git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
+            python3 scripts/release_notes.py check RELEASE_NOTES.md
+            echo "v${version} is cut but not yet shipped: promoting it as it stands."
+          else
+            python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
+          fi
 
       # A release that carries a security fix becomes the stable release in
       # this same promotion, so stable-channel workspaces are told about it
