@@ -4,6 +4,8 @@ import { legacyErrorText } from '../../api/errors';
 import { ExpandableText } from '../ExpandableText';
 import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import { useViewport } from '../../hooks/useViewport';
+import { Chip, buttonStyle } from '../ui';
+import type { ChipTone } from '../ui';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
@@ -21,20 +23,20 @@ const FINISHED_LOG_SETTLE_MS = 2000;
 // Human-readable label + color for a run's structured failure class (issue
 // #184). Retryable classes (provider_unavailable, timeout, worker_error) read
 // amber; terminal-by-design ones (auth, agent_error, workspace) read red.
-const ERROR_CLASS_META: Record<string, { label: string; color: string; retryable: boolean }> = {
-  provider_unavailable: { label: 'provider unavailable', color: 'var(--warning)', retryable: true },
-  timeout: { label: 'timeout', color: 'var(--warning)', retryable: true },
-  worker_error: { label: 'worker error', color: 'var(--warning)', retryable: true },
-  auth: { label: 'auth', color: 'var(--danger)', retryable: false },
-  workspace: { label: 'workspace', color: 'var(--danger)', retryable: false },
-  agent_error: { label: 'agent error', color: 'var(--danger)', retryable: false },
+const ERROR_CLASS_META: Record<string, { label: string; tone: ChipTone; retryable: boolean }> = {
+  provider_unavailable: { label: 'provider unavailable', tone: 'warning', retryable: true },
+  timeout: { label: 'timeout', tone: 'warning', retryable: true },
+  worker_error: { label: 'worker error', tone: 'warning', retryable: true },
+  auth: { label: 'auth', tone: 'danger', retryable: false },
+  workspace: { label: 'workspace', tone: 'danger', retryable: false },
+  agent_error: { label: 'agent error', tone: 'danger', retryable: false },
 };
 
 export const errorClassMeta = (
   errorClass?: string | null
-): { label: string; color: string; retryable: boolean } | null => {
+): { label: string; tone: ChipTone; retryable: boolean } | null => {
   if (!errorClass) return null;
-  return ERROR_CLASS_META[errorClass] || { label: errorClass, color: 'var(--danger)', retryable: false };
+  return ERROR_CLASS_META[errorClass] || { label: errorClass, tone: 'danger', retryable: false };
 };
 
 // ErrorClassChip renders a run's failure class as a small pill (nothing for a
@@ -46,42 +48,30 @@ export const ErrorClassChip: React.FC<{ errorClass?: string | null; title?: stri
   const meta = errorClassMeta(errorClass);
   if (!meta) return null;
   return (
-    <span
-      title={title || `failure class: ${meta.label}${meta.retryable ? ' (retryable)' : ''}`}
-      style={{
-        display: 'inline-block',
-        padding: '2px 8px',
-        borderRadius: 12,
-        background: meta.color,
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 600,
-        marginLeft: 6,
-      }}
-    >
-      {meta.label}
+    <span style={{ marginLeft: 6 }}>
+      <Chip tone={meta.tone} title={title || `failure class: ${meta.label}${meta.retryable ? ' (retryable)' : ''}`}>
+        {meta.label}
+      </Chip>
     </span>
   );
 };
 
-export const runStatusColor = (status: string): string => {
+/** The chip tone of an agent run's status. */
+export const runStatusTone = (status: string): ChipTone => {
   switch (status) {
     case 'queued':
     case 'claimed':
-      return 'var(--neutral)';
     case 'running':
-      return 'var(--accent)';
+      return 'info';
     case 'awaiting_approval':
-      return 'var(--warning)';
+      return 'warning';
     case 'succeeded':
-      return 'var(--success)';
+      return 'success';
     case 'failed':
     case 'timed_out':
-      return 'var(--danger)';
-    case 'cancelled':
-      return 'var(--neutral)';
+      return 'danger';
     default:
-      return 'var(--neutral)';
+      return 'neutral';
   }
 };
 
@@ -177,28 +167,13 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
 // Cancel and Retry are the same control in two shapes: a compact chip in the
 // title row on a pointer-sized screen, a full-width tappable row on a phone.
 const cancelStyle = (phone: boolean): React.CSSProperties => ({
-  background: 'var(--danger)',
-  color: '#fff',
-  border: 'none',
-  padding: phone ? '10px 14px' : '5px 12px',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontSize: phone ? 14 : 12,
-  fontWeight: phone ? 600 : undefined,
-  minHeight: phone ? 44 : undefined,
+  ...buttonStyle('danger', { compact: !phone }),
+  ...(phone ? { minHeight: 44, fontSize: 14 } : {}),
 });
 
 const retryStyle = (phone: boolean, retrying: boolean): React.CSSProperties => ({
-  background: 'var(--accent)',
-  color: 'var(--accent-fg)',
-  border: 'none',
-  padding: phone ? '10px 14px' : '5px 12px',
-  borderRadius: 4,
-  cursor: retrying ? 'default' : 'pointer',
-  fontSize: phone ? 14 : 12,
-  fontWeight: phone ? 600 : undefined,
-  minHeight: phone ? 44 : undefined,
-  opacity: retrying ? 0.6 : 1,
+  ...buttonStyle('primary', { compact: !phone, disabled: retrying }),
+  ...(phone ? { minHeight: 44, fontSize: 14 } : {}),
 });
 
 export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectRun, onClose }) => {
@@ -414,18 +389,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             }}
           >
             <span style={{ color: 'var(--text)' }}>{n.agent_name || n.agent_id}</span>
-            <span
-              style={{
-                fontSize: 12,
-                background: runStatusColor(n.status),
-                color: '#fff',
-                borderRadius: 8,
-                padding: '1px 7px',
-                fontWeight: 600,
-              }}
-            >
-              {n.status}
-            </span>
+            <Chip tone={runStatusTone(n.status)}>{n.status}</Chip>
           </div>
           {renderTree(nodes, n.id, depth + 1)}
         </React.Fragment>
@@ -458,18 +422,8 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
         <strong style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>
           {run?.agent_name || 'Run'}{' '}
           {run && (
-            <span
-              style={{
-                fontSize: 12,
-                background: runStatusColor(run.status),
-                color: '#fff',
-                borderRadius: 10,
-                padding: '2px 9px',
-                fontWeight: 600,
-                marginLeft: 6,
-              }}
-            >
-              {run.status}
+            <span style={{ marginLeft: 6 }}>
+              <Chip tone={runStatusTone(run.status)}>{run.status}</Chip>
             </span>
           )}
           {run && <ErrorClassChip errorClass={run.error_class} />}

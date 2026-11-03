@@ -8,7 +8,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, Modal, useConfirm } from '../components/ui';
+import { Chip, ErrorBanner, Modal, buttonStyle, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { formatConditions, humanBytes, parseConditions } from '../utils/evidence';
 
@@ -175,7 +175,7 @@ export const EvidenceView: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                  <code style={{ color: 'var(--text-muted)', fontSize: 13 }}>{bundle.ref}</code>
+                  <code style={{ color: 'var(--accent-text)', fontSize: 12, fontWeight: 600 }}>{bundle.ref}</code>
                   <strong>{bundle.title}</strong>
                 </div>
                 <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
@@ -206,13 +206,13 @@ export const EvidenceView: React.FC = () => {
                   fontSize: 13,
                 }}
               >
-                <span>
+                <Chip tone="neutral">
                   {bundle.file_count === 0
                     ? 'Written account, no files'
                     : `${bundle.file_count} file${bundle.file_count === 1 ? '' : 's'} · ${humanBytes(
                         bundle.total_size
                       )}`}
-                </span>
+                </Chip>
                 {bundle.captured_by && <span>Captured by {bundle.captured_by}</span>}
               </div>
             </div>
@@ -530,8 +530,8 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
                 {humanBytes(file.file_size)}
               </span>
               <button
-                className="button-secondary"
-                style={{ minHeight: 32, padding: '4px 10px', fontSize: 12 }}
+                type="button"
+                style={{ ...buttonStyle('danger', { compact: true }), minHeight: 32 }}
                 onClick={() => removeFile(file)}
               >
                 Delete
@@ -567,7 +567,7 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
           {(bundle.citations || []).map((c) => (
             <li key={c.id} style={{ marginBottom: 4 }}>
-              {c.test_case_ref ? <code>{c.test_case_ref}</code> : null} {c.test_case_title}
+              {c.test_case_ref ? <code style={{ color: 'var(--accent-text)', fontSize: 12 }}>{c.test_case_ref}</code> : null} {c.test_case_title}
               {c.run_name ? (
                 <span style={{ color: 'var(--text-muted)' }}> — {c.run_name}</span>
               ) : null}
@@ -578,7 +578,7 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
       )}
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-        <button className="button-secondary" onClick={onDelete}>
+        <button type="button" style={{ ...buttonStyle('danger'), marginRight: 'auto' }} onClick={onDelete}>
           Delete capture
         </button>
         <button className="button-secondary" onClick={onEdit}>

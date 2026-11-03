@@ -16,31 +16,24 @@ import {
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
 import { baselineLabel } from '../utils/baselines';
+import { Chip, buttonStyle, chipStyle } from '../components/ui';
 
-const resultColor = (status: string): string => {
-  switch ((status || '').toLowerCase()) {
-    case 'pass':
-      return 'var(--success)';
-    case 'fail':
-      return 'var(--danger)';
-    case 'blocked':
-      return 'var(--warning)';
-    default:
-      return 'var(--neutral)';
-  }
-};
-
-const chip = (text: string, background: string, color = 'var(--surface)'): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: 10,
-  background,
-  color,
-  fontSize: 11,
-  fontWeight: 600,
+// A linked artifact as a chip: neutral, or a warning tint while its link
+// is suspect. Weight 500 rather than the status chip's 700: these name
+// artifacts rather than state a status.
+const linkChip = (suspect: boolean): React.CSSProperties => ({
+  ...chipStyle(suspect ? 'warning' : 'neutral'),
+  fontWeight: 500,
+  color: suspect ? 'var(--warning-text)' : 'var(--text)',
   margin: '2px 4px 2px 0',
-  whiteSpace: 'nowrap',
+  whiteSpace: 'normal',
+  maxWidth: '100%',
+  textDecoration: 'none',
+  cursor: 'pointer',
 });
+
+const SUSPECT_TITLE =
+  'Suspect link: content changed after this link was made — confirm it in the artifact editor or re-approve the artifact';
 
 // Unordered pair key for a link's endpoints: a suspect link between the
 // requirement and a chip's artifact flags that chip whichever way the link
@@ -139,27 +132,21 @@ export const TraceabilityMatrix: React.FC = () => {
               <Link
                 key={id}
                 to={`/projects/${projectId}/requirements?artifact=${id}`}
-                title={
-                  suspect
-                    ? 'Suspect link: content changed after this link was made — confirm it in the artifact editor or re-approve the artifact'
-                    : 'Open in Requirements'
-                }
-                style={{
-                  ...chip(titleOf(id), suspect ? 'var(--tint-yellow)' : 'var(--neutral-soft)', suspect ? 'var(--warning-text)' : 'var(--text)'),
-                  ...(suspect ? { border: '1px solid var(--warning)' } : {}),
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                }}
+                title={suspect ? SUSPECT_TITLE : 'Open in Requirements'}
+                // The link is a finger-sized target around the chip.
+                style={{ display: 'inline-flex', alignItems: 'center', minHeight: isPhone ? 32 : 24, verticalAlign: 'middle', textDecoration: 'none' }}
               >
-                {suspect ? '⚠ ' : ''}
-                {titleOf(id)}
+                <span style={linkChip(suspect)}>
+                  {suspect ? '⚠ ' : ''}
+                  {titleOf(id)}
+                </span>
               </Link>
             );
           })}
         </div>
       );
     },
-    [titleOf, projectId, isSuspectPair]
+    [titleOf, projectId, isSuspectPair, isPhone]
   );
 
   const TestCaseRenderer = useCallback(
@@ -173,41 +160,10 @@ export const TraceabilityMatrix: React.FC = () => {
             const result = row?.latest_results?.[id] || 'not-run';
             const suspect = isSuspectPair(row?.requirement_id, id);
             return (
-              <span
-                key={id}
-                title={
-                  suspect
-                    ? 'Suspect link: content changed after this link was made — confirm it in the artifact editor or re-approve the artifact'
-                    : undefined
-                }
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  border: suspect ? '1px solid var(--warning)' : '1px solid var(--neutral-soft)',
-                  borderRadius: 10,
-                  padding: '2px 8px',
-                  fontSize: 11,
-                  margin: '2px 4px 2px 0',
-                  background: suspect ? 'var(--tint-yellow)' : 'var(--surface)',
-                  color: suspect ? 'var(--warning-text)' : 'var(--text)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <span key={id} title={suspect ? SUSPECT_TITLE : undefined} style={{ ...linkChip(suspect), cursor: 'default' }}>
                 {suspect ? '⚠ ' : ''}
                 {titleOf(id)}
-                <span
-                  title={result}
-                  style={{
-                    padding: '1px 6px',
-                    borderRadius: 8,
-                    background: resultColor(result),
-                    color: '#fff',
-                    fontWeight: 600,
-                  }}
-                >
-                  {result}
-                </span>
+                <Chip title={`latest result: ${result}`}>{result}</Chip>
               </span>
             );
           })}
@@ -324,16 +280,25 @@ export const TraceabilityMatrix: React.FC = () => {
     });
   };
 
+  const compactGrid = rows.length <= 25;
+  // Nothing linked at all: every row is a requirement with empty columns.
+  const nothingLinked =
+    rows.length > 0 &&
+    rows.every((r) => !(r.user_need_ids || []).length && !(r.design_ids || []).length && !(r.test_case_ids || []).length && !(r.hazard_ids || []).length);
+
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="matrix">
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Traceability Matrix</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
+    <div style={{ padding: isPhone ? 12 : 16, display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }} data-help-key="matrix">
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20 }}>Traceability Matrix</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <label htmlFor="matrix-baseline" style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+            Baseline
+          </label>
           <select
+            id="matrix-baseline"
             value={baselineId}
             onChange={(e) => setBaselineId(e.target.value)}
-            style={{ width: 220, padding: '6px 10px' }}
+            style={{ width: isPhone ? 180 : 220, height: 32, padding: '0 8px', fontSize: 13 }}
           >
             <option value="live">Live</option>
             {baselines.map((b) => (
@@ -344,13 +309,15 @@ export const TraceabilityMatrix: React.FC = () => {
           </select>
         </div>
         <input
+          type="search"
+          aria-label="Quick filter"
           value={quickFilter}
           onChange={(e) => setQuickFilter(e.target.value)}
           placeholder="Quick filter…"
-          style={{ width: 220, padding: '6px 10px' }}
+          style={{ width: 220, height: 32, padding: '0 10px', fontSize: 13 }}
         />
         <div style={{ flex: 1 }} />
-        <button className="button-secondary" onClick={exportCsv}>
+        <button type="button" style={buttonStyle('secondary', { disabled: rows.length === 0 })} onClick={exportCsv} disabled={rows.length === 0}>
           Export CSV
         </button>
       </div>
@@ -359,11 +326,10 @@ export const TraceabilityMatrix: React.FC = () => {
         <div
           style={{
             background: 'var(--tint-yellow)',
-            border: '1px solid var(--warning)',
+            border: '1px solid var(--tint-yellow-border)',
             color: 'var(--warning-text)',
-            borderRadius: 4,
+            borderRadius: 6,
             padding: '8px 12px',
-            marginBottom: 12,
             fontSize: 13,
           }}
         >
@@ -371,19 +337,71 @@ export const TraceabilityMatrix: React.FC = () => {
           is a read-only historical snapshot.
         </div>
       )}
-      {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
-      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
+      {error && <div style={{ color: 'var(--danger-strong)', fontSize: 13 }}>{error}</div>}
+      {loading && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>}
 
-      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: isPhone ? 320 : 480, width: '100%' }} data-help-key="matrix">
-        <AgGridReact<MatrixRow>
-          ref={gridRef}
-          rowData={rows}
-          columnDefs={columnDefs}
-          quickFilterText={quickFilter}
-          getRowId={(p) => p.data.requirement_id}
-          defaultColDef={{ resizable: true, sortable: true }}
-        />
-      </div>
+      {nothingLinked && (
+        <div
+          style={{
+            background: 'var(--tint-blue)',
+            border: '1px solid var(--tint-blue-border)',
+            color: 'var(--accent-text)',
+            borderRadius: 6,
+            padding: '8px 12px',
+            fontSize: 13,
+          }}
+        >
+          No requirement is linked to anything yet. Link a requirement to the user need it derives
+          from and the test case that verifies it, and the matrix fills in.
+        </div>
+      )}
+
+      {!loading && !error && rows.length === 0 ? (
+        <section
+          aria-label="Empty matrix"
+          data-help-key="matrix"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            padding: '32px 16px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 16 }}>Nothing to trace yet</h3>
+          <p style={{ margin: 0, maxWidth: 520, color: 'var(--text-muted)', fontSize: 14 }}>
+            {baselineId === 'live'
+              ? 'The matrix has a row for each requirement, showing the user needs it derives from, the design that realises it, the test cases that verify it and the hazards it mitigates. This project has no requirements yet.'
+              : 'This baseline holds no requirements.'}
+          </p>
+          {baselineId === 'live' && (
+            <Link to={`/projects/${projectId}/requirements`} style={{ ...buttonStyle('primary'), textDecoration: 'none' }}>
+              Write requirements
+            </Link>
+          )}
+        </section>
+      ) : (
+        <div
+          className="ag-theme-quartz"
+          style={compactGrid ? { width: '100%' } : { flex: 1, minHeight: isPhone ? 320 : 480, width: '100%' }}
+          data-help-key="matrix"
+        >
+          <AgGridReact<MatrixRow>
+            ref={gridRef}
+            // A short matrix is as tall as its rows, not a near-empty pane.
+            domLayout={compactGrid ? 'autoHeight' : 'normal'}
+            rowData={rows}
+            columnDefs={columnDefs}
+            quickFilterText={quickFilter}
+            getRowId={(p) => p.data.requirement_id}
+            defaultColDef={{ resizable: true, sortable: true }}
+          />
+        </div>
+      )}
     </div>
   );
 };

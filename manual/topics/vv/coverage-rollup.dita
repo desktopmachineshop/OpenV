@@ -17,6 +17,10 @@
       <strow><stentry>uncovered</stentry><stentry>Method is <i>test</i> but no test case verifies the requirement, or a non-test method not yet marked verified</stentry></strow>
       <strow><stentry>method-missing</stentry><stentry>The requirement has no verification method set</stentry></strow>
     </simpletable>
-    <p>The dashboard shows summary cards and a stacked bar for the distribution, plus a <b>Requirement coverage</b> table listing every requirement with its method and rollup chip.</p>
+    <section id="what-the-page-shows">
+      <title>What the page shows</title>
+      <p>The top of the page is a row of figures, each with a small bar: <b>Requirements traced</b> (requirements with a way to be verified — anything but <i>uncovered</i> or <i>method-missing</i>), <b>Verified (pass)</b>, <b>Failing</b>, <b>Suspect links</b> still waiting to be confirmed (live project only) and <b>No test case</b>.</p>
+      <p><b>Coverage by section</b> groups the requirements by the document headings they sit under. Each row gives the section's requirement count, how much of it is traced, a bar of its rollups — pass, fail, blocked and not-run, with the untested rest as the empty track — and the pass, fail, blocked and gap counts. The legend above the table carries the totals. Click a section to list its requirements with their reference, verification method and rollup chip (and any child-project refinements); <b>Show all requirements</b> opens every section at once.</p>
+    </section>
   </conbody>
 </concept>

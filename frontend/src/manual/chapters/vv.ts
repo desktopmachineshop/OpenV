@@ -20,15 +20,33 @@ method and linked test results:
 | uncovered | Method is *test* but no test case verifies the requirement, or a non-test method not yet marked verified |
 | method-missing | The requirement has no verification method set |
 
-The dashboard shows summary cards and a stacked bar for the distribution, plus
-a **Requirement coverage** table listing every requirement with its method and
-rollup chip.
+### What the page shows
+
+The top of the page is a row of figures, each with a small bar:
+**Requirements traced** (requirements with a way to be verified — anything
+but *uncovered* or *method-missing*), **Verified (pass)**, **Failing**,
+**Suspect links** still waiting to be confirmed (live project only) and
+**No test case**.
+
+**Coverage by section** groups the requirements by the document headings
+they sit under. Each row gives the section's requirement count, how much of
+it is traced, a bar of its rollups — pass, fail, blocked and not-run, with
+the untested rest as the empty track — and the pass, fail, blocked and gap
+counts. The legend above the table carries the totals. Click a section to
+list its requirements with their reference, verification method and rollup
+chip (and any child-project refinements); **Show all requirements** opens
+every section at once.
 
 ## Gaps
 
-The **Gaps** section groups problems that need attention — e.g. requirements
-without a verification method, or without any verifying test. An empty gaps
-section means full coverage.
+**Top gaps**, beside the sections, lists the first few artifacts that need
+attention, worst first — failing requirements, then those without a
+verification method, without a test case, and so on — each with the reason.
+**All** opens the full list, grouped by kind of gap (for example
+requirements without a verification method, or without any verifying test).
+An empty list means full coverage. When agents have proposals waiting, the
+card says how many and links to them; otherwise it points you to the agents
+that can draft test cases.
 
 **Unverified (demonstration, analysis, inspection)** is the section for
 requirements whose method is not *test*: nothing links a test case to them,
@@ -44,7 +62,7 @@ snapshots — useful for "where were we at design review?".
 
 ## The PDF report
 
-**Download V&V report (PDF)** produces a status report for the current
+**Export report (PDF)** produces a status report for the current
 selection (live or baseline) — coverage rollups, gaps, and test run status in
 a shareable document.
 
@@ -53,21 +71,41 @@ a shareable document.
 A **test run** is one execution campaign: run your test cases and record the
 results.
 
-1. Click **New Run** — name it (e.g. "Design verification — rev B"), add a
-   description, and optionally pin it to a **baseline**. A project owner can
+1. Click **New test run** — name it (e.g. "Design verification — rev B"), add
+   a description, and optionally pin it to a **baseline**. A project owner can
    still delete that baseline later: the run keeps the reference as part of
-   its record, and the runs table shows **Baseline deleted** for it.
-2. Open the run from the table. Every *test-case* artifact in the project gets
+   its record, and the run's card shows **Baseline deleted** for it.
+2. Every run is a card under **Test runs**, with its status chip, a bar of its
+   pass, fail and blocked results against the project's test cases, and how
+   many are still to go. A run in progress also appears beside the sections
+   as the **active test run**, with **Continue run**; its card has
+   **Complete** and **Abort**.
+3. Open the run from its card. Every *test-case* artifact in the project gets
    a row with:
-   - **Status** — pass, fail, blocked, or not-run (colored dropdown).
+   - **Ref** and **Test case** — the test case's reference and title.
+   - **Verified by** — *automated*, or *manual (human)* / *physical test*
+     tagged in purple, since agents may not run those.
+   - **Verifies** — the requirements the test case verifies.
+   - **Status** — pass, fail, blocked, or not-run, picked from a chip.
    - **Notes** — free text, edited inline.
    - **Version tested** — which version of the test case the result was
      recorded against.
    - **Evidence** — the capture the result rests on (see below).
    - **Executed at** — timestamp of the recorded result.
-3. Record results as you execute. Each change saves immediately.
-4. **Complete run** when finished (or **Abort run**). Completed and aborted
+4. Record results as you execute. Each change saves immediately.
+5. **Complete run** when finished (or **Abort run**). Completed and aborted
    runs become **read-only**.
+
+### Recording on a phone
+
+On a phone the run lists its test cases, each with its reference, what it
+verifies, its method and its result. **Record results** (or tapping a test
+case) opens the recorder, one test case at a time: the test case's
+procedure, four large **Pass**, **Fail**, **Blocked** and **Not run**
+buttons, **Notes and measured values**, and **Attach evidence**. **Record
+and next** saves the result and moves on; the arrow goes back one. A test
+case you leave untouched is skipped, not recorded. On a completed or aborted
+run the recorder steps through the results without changing them.
 
 The latest recorded result per test case is what feeds the coverage rollup and
 the result chips in the **Matrix** view.

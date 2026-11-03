@@ -9,6 +9,7 @@ import {
   vvAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
+import { Chip } from '../components/ui';
 import type { ArtifactTypeValue } from '../generated/contract';
 
 // Human labels for artifact type buckets; unknown types fall back to the raw
@@ -33,16 +34,6 @@ const DIRECTIONS: { value: ImpactDirection; label: string }[] = [
   { value: 'downstream', label: 'Downstream (dependents)' },
   { value: 'upstream', label: 'Upstream (dependencies)' },
 ];
-
-const badge = (background: string, color = 'var(--surface)'): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '1px 7px',
-  borderRadius: 8,
-  background,
-  color,
-  fontSize: 12,
-  fontWeight: 600,
-});
 
 export const ImpactView: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -102,18 +93,23 @@ export const ImpactView: React.FC = () => {
     [artifacts, artifactId]
   );
 
-  const titleOf = useCallback(
-    (id: string) => artifacts.find((a) => a.id === id)?.title || id,
-    [artifacts]
-  );
+  const byId = useMemo(() => {
+    const m: Record<string, Artifact> = {};
+    artifacts.forEach((a) => {
+      m[a.id] = a;
+    });
+    return m;
+  }, [artifacts]);
+
+  const titleOf = useCallback((id: string) => byId[id]?.title || id, [byId]);
 
   const renderGroups = (label: string, hint: string, groups: ImpactGroup[]) => {
     const total = groups.reduce((n, g) => n + g.count, 0);
     return (
-      <div style={{ flex: 1, minWidth: 320 }}>
+      <div style={{ flex: '1 1 320px', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
           <h3 style={{ margin: 0, color: 'var(--text)' }}>{label}</h3>
-          <span style={badge('var(--accent)')}>{total}</span>
+          <Chip tone="info">{total}</Chip>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{hint}</div>
         {total === 0 ? (
@@ -149,26 +145,30 @@ export const ImpactView: React.FC = () => {
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 10px',
-                      background: 'var(--surface-alt)',
+                      background: 'var(--surface)',
                       border: '1px solid var(--border)',
                       borderRadius: 6,
+                      minHeight: 40,
+                      boxSizing: 'border-box',
                       textDecoration: 'none',
                       color: 'var(--text)',
                       fontSize: 13,
                     }}
                   >
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {byId[node.artifact_id]?.ref && (
+                      <span style={{ fontFamily: 'source-code-pro, Menlo, Monaco, Consolas, monospace', fontSize: 12, color: 'var(--accent-text)' }}>
+                        {byId[node.artifact_id]?.ref}
+                      </span>
+                    )}
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {node.title || node.artifact_id}
                     </span>
                     {node.via && (
-                      <span style={badge('var(--neutral-soft)', 'var(--text)')}>{node.via}</span>
+                      <Chip tone="neutral">{node.via}</Chip>
                     )}
-                    <span
-                      title={`${node.distance} hop${node.distance === 1 ? '' : 's'} away`}
-                      style={badge('var(--tint-blue, var(--surface-inset))', 'var(--text-muted)')}
-                    >
+                    <Chip tone="info" title={`${node.distance} hop${node.distance === 1 ? '' : 's'} away`}>
                       {node.distance} hop{node.distance === 1 ? '' : 's'}
-                    </span>
+                    </Chip>
                   </Link>
                 ))}
               </div>
