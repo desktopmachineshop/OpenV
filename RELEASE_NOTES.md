@@ -11,6 +11,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.27.4 — 2026-11-03
 
+Stable channel release since 2026-11-03.
+
 ### Maintenance updates
 
 - **One Home for all your work.** Signing in opens the workspace's Home:
