@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.27.3",
+   "date": "2026-11-03",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Releases in the new design.** The Releases page matches the rest of the app: the releases are one list with the release you are looking at marked, its figures stand beside its name, and the burn-up and its requirements sit below in their own panels. On a phone it opens on the current release's progress and what is failing in it, with the list one tab away. A requirement's detail panel now names the releases it is planned for."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.27.2",
    "date": "2026-11-03",
    "stableSince": "2026-11-03",
