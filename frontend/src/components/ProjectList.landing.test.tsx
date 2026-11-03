@@ -25,6 +25,7 @@ const projects = [
   { id: 'p2', name: 'Steering angle sensor', description: '', created_at: '2026-09-02T00:00:00Z' },
 ];
 let redesign = true;
+let gatesLoaded = true;
 let storeProjects: typeof projects = projects;
 vi.mock('../state/store', () => {
   const state = () => ({
@@ -37,7 +38,7 @@ vi.mock('../state/store', () => {
     removeProject: vi.fn(),
     orgs: [{ id: 'org1', name: 'Sam Space', type: 'company' }],
     activeOrgId: 'org1',
-    features: { channel: 'nightly', features: { 'redesign-pages': redesign } },
+    features: gatesLoaded ? { channel: 'nightly', features: { 'redesign-pages': redesign } } : null,
   });
   return { useAppStore: (select?: (s: ReturnType<typeof state>) => unknown) => (select ? select(state()) : state()) };
 });
@@ -60,6 +61,7 @@ let root: Root;
 beforeEach(() => {
   vi.clearAllMocks();
   redesign = true;
+  gatesLoaded = true;
   storeProjects = projects;
   locationState = null;
   window.localStorage.clear();
@@ -116,6 +118,29 @@ describe('arriving in the app', () => {
     await render();
     // The new project reaches the store; the arrival was already decided.
     storeProjects = [projects[0]];
+    await render();
+    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
+  });
+
+  it('waits for the feature gates, which can arrive after the list', async () => {
+    gatesLoaded = false;
+    locationState = { landing: true };
+    await render();
+    expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
+    gatesLoaded = true;
+    await render();
+    expect(navigate).toHaveBeenCalledWith('/projects/p1/home', { replace: true });
+  });
+
+  it('never moves a member who has started using the list', async () => {
+    gatesLoaded = false;
+    locationState = { landing: true };
+    await render();
+    // The staging smoke journey: + New Project clicked before the gates load.
+    await act(async () => {
+      window.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    });
+    gatesLoaded = true;
     await render();
     expect(navigate).not.toHaveBeenCalledWith(expect.stringMatching(/\/home$/), expect.anything());
   });
