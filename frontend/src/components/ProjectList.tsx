@@ -605,7 +605,7 @@ export const ProjectList: React.FC = () => {
         {!loading && (
           <span>
             {projects.length} project{projects.length === 1 ? '' : 's'}
-            {activeOrg?.name ? ` in ${activeOrg.name}` : ''}
+            {activeOrg?.name ? ' in this workspace' : ''}
           </span>
         )}
       </div>
