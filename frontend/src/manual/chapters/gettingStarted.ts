@@ -209,29 +209,44 @@ recent project; the first time, they ask you to pick one.
 
 ## Finding your way around
 
-Inside a project, the page is framed by a narrow **rail** down the left and
-one **top bar** across the top, so the work itself gets the rest of the
-screen.
+Every page is framed the same way: a narrow **rail** down the left and one
+**top bar** across the top, so the work itself gets the rest of the screen.
+The frame is the same inside a project and on the workspace's own pages
+(Projects, workspace settings, workspace runs, What's new and platform
+admin); only the rail's buttons change.
 
-- **The rail** has a button for each part of the project — **Define**,
-  **Verify**, **Plan** and **Agents** — and links to **Activity** and
-  **Settings**. Click a group to open its pages beside the rail (Define holds
-  Overview, Guided Definition, Requirements and Interviews, for example), then
-  click the page. The group holding the page you are on is marked. The list
-  closes when you arrive, or with **Esc** or a click anywhere else.
-  **Projects** at the top of the rail returns to all projects in the
-  workspace.
-- **The top bar** reads left to right: the workspace switcher, the project
-  and the page you are on (click the project's name for its overview), the
-  search across every project, **Help**, the notification bell and the
-  account menu.
+- **The top bar** reads left to right: the **workspace switcher**, the
+  **project switcher**, the page you are on, the search across every
+  project, **Help**, the notification bell and the account menu.
+  - **Switch workspace**: click the workspace's name for the list of your
+    workspaces, workspace settings and runs, and creating a company
+    workspace.
+  - **Switch project**: click the project's name (it reads **All projects**
+    on a workspace page) for the workspace's projects. Choose one to open
+    it at its Home; **All projects** opens the Projects page and **+ New
+    project** starts a project from wherever you are.
+- **The rail inside a project** has a button for each part of the project —
+  **Define**, **Verify**, **Plan** and **Agents** — and links to **Activity**
+  and **Settings**. Click a group to open its pages beside the rail (Define
+  holds Home, Overview, Guided Definition, Requirements and Interviews, for
+  example), then click the page. The group holding the page you are on is
+  marked. The list closes when you arrive, or with **Esc** or a click
+  anywhere else.
+- **The rail on a workspace page** lists the workspace's own pages:
+  **Projects**, **Runs** (where the workspace has them), **News** (What's
+  new), **Admin** for platform admins, and **Settings**.
+- **Projects** is at the top of the rail on every page and returns to all
+  projects in the workspace.
 
-On a phone the top bar names where you are in two lines: the project, small,
-above the page you are reading. The project menu opens from **☰** in the top
-bar, and a row of tabs along the bottom reaches the pages used most on the
-move: **Overview**, **Reqs** (Requirements), **V&V** and **Review**. **More**
-opens the menu as a page of its own: the project at the top (tap it for all
-projects), the workspace switcher and the search, then each group of pages as
+On a phone there is no rail. On a workspace page the top bar holds the
+workspace switcher above the project switcher, with help, the bell and your
+account beside them. Inside a project the top bar names where you are in
+two lines: the project, small, above the page you are reading. The project
+menu opens from **☰** in the top bar, and a row of tabs along the bottom
+reaches the pages used most on the move: **Overview**, **Reqs**
+(Requirements), **V&V** and **Review**. **More** opens the menu as a page of
+its own: the project at the top (tap it for all projects), the workspace
+switcher, the project switcher and the search, then each group of pages as
 a list under its name (tap the name to fold the group away), **Help**, and
 under **You** your account menu and the bell.
 

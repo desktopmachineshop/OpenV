@@ -365,6 +365,15 @@ export const ProjectList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeDesign, landing, shortcut, loading, projects]);
 
+  // The top bar's project switcher offers New project on every page; it
+  // arrives here with that wish in history state and opens the form.
+  const wantsCreate = (location.state as { create?: unknown } | null)?.create === true;
+  useEffect(() => {
+    if (!wantsCreate) return;
+    setCreateMode('blank');
+    setIsCreating(true);
+  }, [wantsCreate, location.key]);
+
   // A shortcut that knows which project the member was last in goes there
   // without asking. When it does not (first run, or that project is not in
   // this workspace) the list stays put and the banner below explains why.
