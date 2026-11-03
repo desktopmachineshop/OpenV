@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.27.2 — 2026-11-03
+
 ### Maintenance updates
 
 - **Sign in to your project's Home.** Signing in, or opening the app, now
