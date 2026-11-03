@@ -91,7 +91,7 @@ test('signs in and lands in a workspace', async () => {
   // Registration auto-provisions "<name>'s Space" as a personal workspace;
   // the org switcher shows it with a "personal" pill. Only a freshly
   // registered account is known to have exactly that.
-  await expect(page.getByText(`${user.name}'s Space`)).toBeVisible();
+  await expect(page.getByText(`${user.name}'s Space`).first()).toBeVisible();
   await expect(page.getByText('personal', { exact: true })).toBeVisible();
 });
 

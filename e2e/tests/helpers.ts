@@ -54,7 +54,7 @@ export async function registerUser(page: Page, user: TestUser): Promise<void> {
 
   await expect(page).toHaveURL(/\/projects$/);
   // Registration auto-provisions "<name>'s Space" as a personal workspace.
-  await expect(page.getByText(`${user.name}'s Space`)).toBeVisible();
+  await expect(page.getByText(`${user.name}'s Space`).first()).toBeVisible();
 }
 
 /** The page must never be wider than the window: horizontal scrolling on a
