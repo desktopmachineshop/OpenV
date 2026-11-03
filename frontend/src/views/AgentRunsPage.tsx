@@ -134,7 +134,7 @@ export const AgentRunsPage: React.FC = () => {
         data-help-key="agent-runs.list"
         style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}
       >
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Runs</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Runs</h2>
         <button
           data-help-key="agent-runs.approvals"
           onClick={() => setShowProposals(!showProposals)}

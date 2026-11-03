@@ -17,7 +17,7 @@ import { useAppStore } from '../state/store';
 import { CrewCanvas, CrewFilter } from '../components/crews/CrewCanvas';
 import { NodeConfigPanel } from '../components/crews/NodeConfigPanel';
 import { EdgeConfigPanel } from '../components/crews/EdgeConfigPanel';
-import { ErrorBanner, Modal, SegmentedControl, Sheet, useConfirm, usePrompt } from '../components/ui';
+import { ErrorBanner, Modal, SegmentedControl, Sheet, useConfirm, usePrompt, chipStyle, buttonStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 const LIVE_STATUSES = ['queued', 'claimed', 'running'];
@@ -418,7 +418,7 @@ export const CrewBuilder: React.FC = () => {
         data-help-key="crew.manage"
         style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}
       >
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Crew Builder</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Crew Builder</h2>
         <select
           value={crewId}
           onChange={(e) => setCrewId(e.target.value)}
@@ -433,15 +433,7 @@ export const CrewBuilder: React.FC = () => {
           ))}
         </select>
         {selectedCrew?.is_default && (
-          <span
-            style={{
-              fontSize: 12,
-              background: 'var(--accent)',
-              color: 'var(--accent-fg)',
-              borderRadius: 10,
-              padding: '2px 8px',
-            }}
-          >
+          <span style={chipStyle('info')}>
             Default
           </span>
         )}
@@ -474,17 +466,7 @@ export const CrewBuilder: React.FC = () => {
           Import
         </button>
         {selectedCrew && !selectedCrew.is_default && (
-          <button
-            style={{
-              background: 'var(--danger)',
-              color: '#fff',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
-            onClick={handleDeleteCrew}
+          <button style={buttonStyle('danger')} onClick={handleDeleteCrew}
           >
             Delete
           </button>

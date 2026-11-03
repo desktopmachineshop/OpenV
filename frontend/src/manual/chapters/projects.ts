@@ -9,7 +9,8 @@ artifacts, traceability links, board, agents, runs, interviews, and V&V data.
 
 After signing in you land on the Projects page for the active workspace. Each
 project appears as a card showing its name, description, short ID, and creation
-date. Hovering a card reveals its action buttons:
+date; the project you opened last is marked with a blue edge, and the head of
+the page counts the workspace's projects. Each card carries its action buttons:
 
 | Icon | Action |
 | --- | --- |
@@ -147,7 +148,15 @@ Opening a project shows the project menu with its pages, grouped under
 | Agents | Agent definitions and launcher |
 | Automations | Scheduled and event-triggered agent runs |
 | Runs | Agent run history and proposal review |
-| Settings | Project access, repositories, agent auth, danger zone |
+| Settings | Project access, repositories, agent auth, attributes, quality rules, danger zone |
+
+**Settings** lists its sections down the left — General, Access,
+Repositories, Agents, Attributes, Quality rules and, set apart in red, Danger
+Zone — with the open one beside them under its own title and a line on what
+it is for (on a phone the sections are a row of tabs along the top). In
+**Quality rules** each wording check has a switch: off silences it, on brings
+it back at the level it would speak at, and the menu beside it sets that
+level — error, warning or info.
 
 **Projects** at the top of the rail takes you back to all projects. The
 account menu at the right end of the top bar (on a phone, your name at the

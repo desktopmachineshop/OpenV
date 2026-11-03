@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-projects-page">
   <title>The Projects page</title>
-  <shortdesc>After signing in you land on the Projects page for the active workspace. Each project appears as a card showing its name, description, short ID, and creation date. Hovering a card reveals its action buttons:</shortdesc>
+  <shortdesc>After signing in you land on the Projects page for the active workspace. Each project appears as a card showing its name, description, short ID, and creation date; the project you opened last is marked with a blue edge, and the head of the page counts the workspace's projects. Each card carries its action buttons:</shortdesc>
   <conbody>
     <simpletable>
       <sthead><stentry>Icon</stentry><stentry>Action</stentry></sthead>

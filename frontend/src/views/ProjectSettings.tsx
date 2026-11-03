@@ -22,7 +22,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, useConfirm } from '../components/ui';
+import { ErrorBanner, SettingsLayout, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
 import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE, SHARE_LINKS_FEATURE } from '../features';
 import { QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
@@ -52,6 +52,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'quality', label: 'Quality rules' },
   { key: 'danger', label: 'Danger Zone' },
 ];
+
+// The line under each section's title: what the section is for.
+const TAB_BLURBS: Record<Tab, string> = {
+  general: 'Where this project sits among the workspace\'s projects, and the parties its requirements refer to.',
+  members: 'Who can read and change this project: people, teams and share links.',
+  repos: 'The code repositories this project\'s agents and runners work in.',
+  agents: 'How agents working on this project authenticate.',
+  attributes: 'Typed fields this project adds to its artifacts.',
+  quality: 'The rules every requirement is checked against. Findings score a requirement; they never block a save.',
+  danger: 'Actions that cannot be undone.',
+};
 
 export const ProjectSettings: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -667,56 +678,40 @@ export const ProjectSettings: React.FC = () => {
   // -------------------------------------------------------------------------
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--text)', marginBottom: 16 }}>Project settings</h2>
-
-      <div className="tab-strip" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            id={tabId(t.key)}
-            aria-selected={tab === t.key}
-            aria-controls={PANEL_ID}
-            data-help-pane={`settings.${t.key}`}
-            onClick={() => setTab(t.key)}
-            style={{
-              background: 'none',
-              border: 'none',
-              borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',
-              marginBottom: -2,
-              padding: '10px 16px',
-              fontSize: 14,
-              fontWeight: tab === t.key ? 600 : 400,
-              color: tab === t.key ? 'var(--text)' : t.key === 'danger' ? 'var(--danger)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              width: 'auto',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
-      {notice && (
-        <div
-          style={{
-            background: 'var(--tint-green)',
-            border: '1px solid var(--success)',
-            color: 'var(--success-text)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {notice}
-        </div>
-      )}
-
-      {/* The help panel opens on the manual's topic for the tab in use,
-          settings.<tab>, falling back to settings (hooks/useHelpActivity). */}
+    <SettingsLayout
+      group="Project"
+      sections={TABS.map((t) => ({ key: t.key, label: t.label, danger: t.key === 'danger' }))}
+      active={tab}
+      onSelect={(key) => setTab(key as Tab)}
+      tabId={(key) => tabId(key as Tab)}
+      panelId={PANEL_ID}
+      helpPane={(key) => `settings.${key}`}
+      head={
+        <>
+          <div className="ov-settings-head">
+            <span className="ov-page-sub">Project settings</span>
+            <h2>{TABS.find((t) => t.key === tab)?.label}</h2>
+            <p>{TAB_BLURBS[tab]}</p>
+          </div>
+          <ErrorBanner message={error} onDismiss={() => setError('')} />
+          {notice && (
+            <div
+              role="status"
+              style={{
+                background: 'var(--tint-green)',
+                border: '1px solid var(--tint-green-border)',
+                color: 'var(--success-text)',
+                padding: '10px 14px',
+                borderRadius: 6,
+                fontSize: 13,
+              }}
+            >
+              {notice}
+            </div>
+          )}
+        </>
+      }
+    >
       <div role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)} data-help-pane={`settings.${tab}`}>
         {tab === 'general' && (
           <GeneralTab
@@ -827,6 +822,6 @@ export const ProjectSettings: React.FC = () => {
 
         {tab === 'danger' && <DangerTab deleting={deleting} handleDeleteProject={handleDeleteProject} />}
       </div>
-    </div>
+    </SettingsLayout>
   );
 };

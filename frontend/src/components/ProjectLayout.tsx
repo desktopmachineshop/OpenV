@@ -35,6 +35,8 @@ import { useProjectShell, visibleSections } from './ProjectLayoutState';
 import { RailShell } from './ProjectLayoutRail';
 import { COMPACT_LAYOUT_FEATURE } from '../features';
 import { PhoneTabBar } from './ProjectLayoutTabs';
+import { PhoneHeader, phonePageLabel } from './ProjectLayoutPhoneHeader';
+import { PhoneMoreMenu } from './ProjectLayoutMore';
 
 // ProjectLayout syncs the URL param into the store and renders the app
 // shell (left nav + top bar) around the active module.
@@ -64,6 +66,8 @@ export const ProjectLayout: React.FC = () => {
   // preference and is left untouched for when the window is wide again.
   const viewport = useViewport();
   const compact = viewport.isCompact;
+  // In the compact layout a phone's menu is the More page, not the drawer.
+  const phoneMore = compactLayout && compact;
   // On phones the help panel opens from the top bar rather than a floating
   // button, which sat on top of every composer at the bottom of the page.
   const [helpOpen, setHelpOpen] = useState(false);
@@ -114,74 +118,14 @@ export const ProjectLayout: React.FC = () => {
       style={{ display: 'flex', flexDirection: compact ? 'column' : 'row', overflow: 'hidden' }}
     >
       {compact && (
-        <header
-          className="safe-area-top"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            minHeight: 48,
-            paddingRight: 8,
-            background: 'var(--sidebar-bg)',
-            color: 'var(--sidebar-text)',
-            flexShrink: 0,
-          }}
-        >
-          <button
-            type="button"
-            aria-label="Project menu"
-            aria-expanded={navRevealed}
-            onClick={() => setNavRevealed((shown) => !shown)}
-            style={{
-              width: 48,
-              height: 48,
-              background: 'none',
-              border: 'none',
-              color: 'var(--sidebar-text)',
-              fontSize: 22,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            ☰
-          </button>
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              fontSize: 15,
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={project?.name || ''}
-          >
-            {project?.name || '…'}
-          </div>
-          <button
-            type="button"
-            aria-label="Help"
-            aria-expanded={helpOpen}
-            data-help-ui=""
-            onClick={() => setHelpOpen((o) => !o)}
-            title="Help for this page"
-            style={{
-              width: 44,
-              height: 44,
-              background: 'none',
-              border: 'none',
-              color: 'var(--sidebar-text)',
-              fontSize: 20,
-              fontWeight: 700,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            ?
-          </button>
-          <NotificationBell variant="dark" />
-        </header>
+        <PhoneHeader
+          project={project}
+          pageLabel={phonePageLabel(sections, activePath)}
+          menuOpen={navRevealed}
+          onMenuToggle={() => setNavRevealed((shown) => !shown)}
+          helpOpen={helpOpen}
+          onHelpToggle={() => setHelpOpen((o) => !o)}
+        />
       )}
       {/* The edge strip is what brings a hidden or auto-hiding nav back: with
           the nav gone there would otherwise be nothing left to click. */}
@@ -229,10 +173,10 @@ export const ProjectLayout: React.FC = () => {
         onMouseEnter={() => navMode === 'autohide' && !compact && setNavHovered(true)}
         onMouseLeave={() => navMode === 'autohide' && !compact && setNavHovered(false)}
         style={{
-          width: open ? (compact ? 'min(300px, 85vw)' : 200) : 0,
-          minWidth: open ? (compact ? 'min(300px, 85vw)' : 200) : 0,
-          background: 'var(--sidebar-bg)',
-          color: 'var(--sidebar-text)',
+          width: open ? (phoneMore ? '100vw' : compact ? 'min(300px, 85vw)' : 200) : 0,
+          minWidth: open ? (phoneMore ? '100vw' : compact ? 'min(300px, 85vw)' : 200) : 0,
+          background: phoneMore ? 'var(--bg-app)' : 'var(--sidebar-bg)',
+          color: phoneMore ? 'var(--text)' : 'var(--sidebar-text)',
           display: open ? 'flex' : 'none',
           flexDirection: 'column',
           // An auto-hiding nav floats over the document instead of reflowing
@@ -250,6 +194,17 @@ export const ProjectLayout: React.FC = () => {
               }),
         }}
       >
+        {phoneMore ? (
+          <PhoneMoreMenu
+            project={project}
+            sections={sections}
+            activePath={activePath}
+            openSections={navOpenSections}
+            setOpenSections={setNavOpenSections}
+            onClose={() => setNavRevealed(false)}
+          />
+        ) : (
+        <>
         <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)', flexShrink: 0 }}>
           {compact && (
             <button
@@ -461,6 +416,8 @@ export const ProjectLayout: React.FC = () => {
           </button>
           )}
         </div>
+        </>
+        )}
       </aside>
       <main style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />

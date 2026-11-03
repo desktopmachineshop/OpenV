@@ -3,7 +3,9 @@ const content = `
 # Workspace settings & teams
 
 **Workspace settings** (workspace switcher → *Workspace settings*, or the
-Runner settings links around the app) manage the active workspace. Most tabs
+Runner settings links around the app) manage the active workspace. The
+sections are listed down the left (on a phone, as a row of tabs along the
+top), with the workspace's name and kind above the open one. Most sections
 are admin-only; other members see read-only or explanatory views.
 
 ## General

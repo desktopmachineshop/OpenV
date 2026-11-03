@@ -18,6 +18,8 @@ const read = (file: string) => readFileSync(join(__dirname, file), 'utf8');
 
 describe('the help button sits with the notification bell', () => {
   const layout = read('ProjectLayout.tsx');
+  // The phone's top bar moved to its own file beside the layout.
+  const phoneHeader = read('ProjectLayoutPhoneHeader.tsx');
   const list = read('ProjectList.tsx');
   const navbar = read('Navbar.tsx');
   const css = read('HelpSidebar.css');
@@ -44,7 +46,11 @@ describe('the help button sits with the notification bell', () => {
   it('is in both of the project shell bars', () => {
     // Two ? buttons: the compact top bar and the desktop sidebar.
     const matches = layout.match(/aria-label="Help"/g) || [];
-    expect(matches).toHaveLength(2);
+    expect(matches).toHaveLength(1);
+    expect(layout).toContain('<PhoneHeader');
+    const helpAt = phoneHeader.indexOf('aria-label="Help"');
+    expect(helpAt).toBeGreaterThan(-1);
+    expect(phoneHeader.indexOf('<NotificationBell')).toBeGreaterThan(helpAt);
   });
 
   // The regression that prompted the move, and the one that the first fix

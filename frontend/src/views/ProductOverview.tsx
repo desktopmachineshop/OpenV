@@ -14,7 +14,7 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { isUntouchedByWizard } from '../components/wizard/assistantSession';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, chipStyle, toneForColor } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 interface MetricRow {
@@ -38,15 +38,9 @@ const sectionTitle: React.CSSProperties = {
 
 const smallInput: React.CSSProperties = { padding: '6px 8px', fontSize: 13 };
 
-const chip = (bg: string): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: 10,
-  fontSize: 12,
-  fontWeight: 600,
-  color: '#fff',
-  background: bg,
-});
+// A status pill in the tinted chip of the shared look; the colour names the
+// tone it used to be filled with.
+const chip = (bg: string): React.CSSProperties => chipStyle(toneForColor(bg));
 
 export const ProductOverview: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -207,9 +201,11 @@ export const ProductOverview: React.FC = () => {
     : 'Start guided definition';
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--text)', marginBottom: 4 }}>Product Overview</h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
+    <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
+      <div className="ov-page-head">
+        <h2>Product Overview</h2>
+      </div>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 16px' }}>
         The single source of truth for what this product is and how success is measured.
       </p>
 
@@ -217,7 +213,7 @@ export const ProductOverview: React.FC = () => {
 
       {/* Quick links */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }} data-help-key="overview.links">
-        <Link to="guided" className="button" style={{ background: 'var(--accent)', textDecoration: 'none' }}>
+        <Link to="guided" className="button" style={{ textDecoration: 'none' }}>
           {guidedCtaLabel}
         </Link>
         <Link to="vv" className="button-secondary" style={{ textDecoration: 'none' }}>

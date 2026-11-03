@@ -226,10 +226,14 @@ screen.
   search across every project, **Help**, the notification bell and the
   account menu.
 
-On a phone the project menu is a drawer that opens from **☰** in the top bar,
-and a row of tabs along the bottom reaches the pages used most on the move:
-**Overview**, **Reqs** (Requirements), **V&V** and **Review**. **More** opens
-the drawer with every other page.
+On a phone the top bar names where you are in two lines: the project, small,
+above the page you are reading. The project menu opens from **☰** in the top
+bar, and a row of tabs along the bottom reaches the pages used most on the
+move: **Overview**, **Reqs** (Requirements), **V&V** and **Review**. **More**
+opens the menu as a page of its own: the project at the top (tap it for all
+projects), the workspace switcher and the search, then each group of pages as
+a list under its name (tap the name to fold the group away), **Help**, and
+under **You** your account menu and the bell.
 
 ## Keyboard shortcuts
 

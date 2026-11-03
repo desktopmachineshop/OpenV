@@ -46,6 +46,14 @@ const severityNames: Record<QualitySeverity, string> = {
   off: 'Off',
 };
 
+// Each severity in its chip colour, so the list reads loud to quiet.
+const severityColors: Record<QualitySeverity, string> = {
+  error: 'var(--danger-strong)',
+  warning: 'var(--warning-text)',
+  info: 'var(--text-muted)',
+  off: 'var(--text-muted)',
+};
+
 // These buttons take no app class, so they drew at the browser's default
 // 19 px — under the click floor the desktop pass set. .compact-action
 // raises them, and raises them further on a touch screen.
@@ -170,6 +178,14 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
     });
   };
 
+  // The level a rule speaks at when its switch is turned back on.
+  const onSeverity = (rule: string): QualitySeverity => {
+    const inheritedValue = inheritedSeverity(rule);
+    if (inheritedValue !== 'off') return inheritedValue;
+    const platform = rules?.catalog.defaults.severities?.[rule] as QualitySeverity | undefined;
+    return platform && platform !== 'off' ? platform : 'warning';
+  };
+
   const setConvention = (value: string) => {
     setDraft((prev) => ({
       ...prev,
@@ -275,33 +291,35 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
           How loudly each check speaks, or Off to silence it. Findings are advisory: they score a
           requirement and explain themselves, and never block a save.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="ov-rule-list">
           {rules.catalog.rules.map((rule) => {
             const severity = draft.severities?.[rule] ?? inheritedSeverity(rule);
+            const name = ruleNames[rule] || rule;
             return (
-              <div
-                key={rule}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  padding: '6px 0',
-                  borderBottom: '1px solid var(--surface-inset)',
-                  // The select drops under the label when the row is narrow.
-                  flexWrap: 'wrap',
-                }}
-              >
-                <span style={{ ...label, flex: '1 1 200px', minWidth: 0 }}>
-                  {ruleNames[rule] || rule}
+              <div key={rule} className="ov-rule-row">
+                {/* The switch is the rule's Off: turning it on again brings
+                    back the level it would speak at (what this level
+                    inherits, or the platform default). */}
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="ov-switch"
+                  aria-label={name}
+                  checked={severity !== 'off'}
+                  disabled={!canEdit || saving}
+                  onChange={(e) => setSeverity(rule, e.target.checked ? onSeverity(rule) : 'off')}
+                />
+                <span style={{ ...label, flex: '1 1 auto', minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{name}</span>
                   <br />
                   <span style={hint}>{rules.catalog.labels[rule]}</span>
                 </span>
-                <div style={{ flex: '0 1 160px', minWidth: 140 }}>
+                <div style={{ flex: '0 0 112px', minWidth: 0 }}>
                   <select
                     value={severity}
+                    aria-label={`Severity for ${name}`}
                     disabled={!canEdit || saving}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', color: severityColors[severity], fontWeight: 600, fontSize: 13 }}
                     onChange={(e) => setSeverity(rule, e.target.value)}
                   >
                     {rules.catalog.severities.map((severity) => (

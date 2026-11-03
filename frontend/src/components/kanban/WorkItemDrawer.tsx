@@ -7,7 +7,7 @@ import {
   workItemsAPI,
 } from '../../api/client';
 import { ExpandableText } from '../ExpandableText';
-import { ErrorBanner, useConfirm } from '../ui';
+import { ErrorBanner, buttonStyle, chipStyle, useConfirm } from '../ui';
 
 interface WorkItemDrawerProps {
   workItemId: string;
@@ -234,12 +234,9 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
                   key={id}
                   to={`/projects/${projectId}/requirements?artifact=${id}`}
                   style={{
-                    display: 'inline-block',
+                    ...chipStyle('neutral', 'md'),
                     margin: '2px 6px 2px 0',
-                    padding: '3px 10px',
-                    background: 'var(--neutral-soft)',
-                    borderRadius: 10,
-                    fontSize: 12,
+                    fontWeight: 600,
                     color: 'var(--text)',
                     textDecoration: 'none',
                   }}
@@ -255,8 +252,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
           <div style={{ marginBottom: 16 }} data-help-key="board.agents">
             <Link
               to={`/projects/${projectId}/agent-runs?run=${item.agent_run_id}`}
-              className="button-secondary"
-              style={{ textDecoration: 'none', display: 'inline-block', padding: '6px 14px', fontSize: 13, borderRadius: 4, color: '#fff' }}
+              style={{ ...buttonStyle('secondary'), textDecoration: 'none' }}
             >
               View run →
             </Link>
@@ -317,15 +313,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
       <div style={{ borderTop: '1px solid var(--neutral-soft)', padding: 14, textAlign: 'right' }}>
         <button
           onClick={remove}
-          style={{
-            background: 'var(--danger)',
-            color: '#fff',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: 4,
-            cursor: 'pointer',
-            fontSize: 13,
-          }}
+          style={buttonStyle('danger')}
         >
           Delete card
         </button>
