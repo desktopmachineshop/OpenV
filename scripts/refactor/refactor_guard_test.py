@@ -3540,11 +3540,11 @@ class CeilingTest(RepoTest):
             with self.subTest(name=name):
                 self.assertIsNone(rg.read_literal(text, name, "count")[1], f"{name} holds an entry the guard cannot read")
         files = rg.parse_allowlist(text, "FILE_CEILINGS", "count")
-        self.assertEqual(len(files), 16)
+        self.assertEqual(len(files), 15)  # the requirements redesign brought ArtifactList within budget
         self.assertNotIn("api/client.ts", files)  # F1 made it a barrel within budget
         self.assertEqual(files["views/Login.tsx"], 708 + 70)
         components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
-        self.assertEqual(len(components), 40)  # #379 bug 168 moved AgentRunsPage's table out, within budget
+        self.assertEqual(len(components), 38)  # #379 bug 168 moved AgentRunsPage's table out; the requirements redesign brought ArtifactHeader and ArtifactList within budget
         self.assertEqual(components["ModuleView"], 1187 + 118)  # F7 moved the panes out, X16a the data and baseline hooks, X16b resize, ordering and panel mode
 
 

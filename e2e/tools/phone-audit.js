@@ -485,6 +485,9 @@ const SCREENS = [
   // Download button in the toolbar itself.
   { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => press(p.getByRole('button', { name: /Download/ }).first()) },
   { tag: 'requirements-menu', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByRole('button', { name: /Actions for Positioning/ })); } },
+  // The tree and the layers (a phone's outline and its drill-down by level).
+  { tag: 'requirements-tree', path: '/projects/p1/requirements?view=tree&artifact=req-2' },
+  { tag: 'requirements-layers', path: '/projects/p1/requirements?view=layers&artifact=req-2', open: async (p) => { const down = p.getByRole('button', { name: /Functional requirements/ }); if (await down.count()) await press(down.first()); } },
   { tag: 'baseline-compare', path: '/projects/p1/baselines/b1/compare' },
   { tag: 'guided', path: '/projects/p1/guided' },
   { tag: 'guided-assistant', path: '/projects/p1/guided', open: async (p) => { const b = p.getByRole('button', { name: /assistant/i }).first(); if (await b.count()) await press(b); } },

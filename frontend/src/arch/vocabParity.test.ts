@@ -685,22 +685,22 @@ const COPIES: Copy[] = [
     id: 'STATUS_META',
     vocabulary: 'artifact_statuses',
     kind: 'mirror',
-    where: 'components/ArtifactHeader.tsx STATUS_META',
-    read: () => keysOf('components/ArtifactHeader.tsx', 'STATUS_META'),
+    where: 'utils/artifactFacts.ts STATUS_META',
+    read: () => keysOf('utils/artifactFacts.ts', 'STATUS_META'),
   },
   {
     id: 'NEXT_STATUSES',
     vocabulary: 'artifact_statuses',
     kind: 'mirror',
-    where: 'components/ArtifactHeader.tsx NEXT_STATUSES',
-    read: () => keysOf('components/ArtifactHeader.tsx', 'NEXT_STATUSES', 'next'),
+    where: 'components/artifactStatusChange.ts NEXT_STATUSES',
+    read: () => keysOf('components/artifactStatusChange.ts', 'NEXT_STATUSES', 'next'),
   },
   {
     id: 'TRANSITION_LABELS',
     vocabulary: 'artifact_statuses',
     kind: 'mirror',
-    where: 'components/ArtifactHeader.tsx TRANSITION_LABELS',
-    read: () => keysOf('components/ArtifactHeader.tsx', 'TRANSITION_LABELS'),
+    where: 'components/artifactStatusChange.ts TRANSITION_LABELS',
+    read: () => keysOf('components/artifactStatusChange.ts', 'TRANSITION_LABELS'),
   },
   {
     // Every registered feature should gate something in the UI.

@@ -1,17 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Artifact } from '../api/client';
 import { DropZone, dropZoneFor, planMove } from '../utils/artifactDrag';
-import {
-  ArtifactTreeNode,
-  ancestorIds,
-  buildHierarchy,
-  compareArtifacts,
-  documentOrder,
-  normalizeParentId,
-} from '../utils/artifactSequence';
-import { QualityBadge } from './QualityBadge';
-import { Modal } from './ui/Modal';
+import { ArtifactTreeNode, ancestorIds, buildHierarchy } from '../utils/artifactSequence';
+import type { FactsIndex } from '../utils/artifactFacts';
+import { ArtifactActionsMenu, ArtifactContextAction, ArtifactMenuAnchor, siblingNeighbors } from './ArtifactActionsMenu';
+import { ArtifactTreeRow, TREE_COLUMNS } from './ArtifactTreeRow';
 import { useViewport } from '../hooks/useViewport';
+
+export type { ArtifactContextAction } from './ArtifactActionsMenu';
 
 /** Per-artifact quality summary keyed by artifact id (issue #217). */
 export interface QualityRowInfo {
@@ -20,24 +16,15 @@ export interface QualityRowInfo {
   findingCount: number;
 }
 
-/** What the artifact context menu can ask the view to do. */
-export type ArtifactContextAction =
-  | 'create-before'
-  | 'create-after'
-  | 'create-child'
-  | 'copy'
-  | 'paste-before'
-  | 'paste-after'
-  | 'duplicate';
-
 interface ArtifactListProps {
   artifacts: Artifact[];
   allArtifacts: Artifact[];
   selectedId?: string;
   onSelect: (id: string) => void;
   /**
-   * 'swap' comes from the ▲▼ buttons. The rest come from a drag, and say where
-   * the pointer let go: before the target, after it, or inside it.
+   * 'swap' comes from Move up / Move down (the row's menu, or Alt+↑ / Alt+↓ on
+   * a focused row). The rest come from a drag or Move to…, and say where the
+   * artifact goes: before the target, after it, or inside it.
    */
   onReorder: (sourceId: string, targetId: string, mode: 'swap' | DropZone) => void;
   onContextMenuAction?: (action: ArtifactContextAction, artifact: Artifact) => void;
@@ -50,12 +37,28 @@ interface ArtifactListProps {
   defaultCollapsed?: boolean;
   collapseAllTrigger?: number;
   expandAllTrigger?: number;
+  /** Open every level above `depth` (1 = only the top level shows), once per token. */
+  depthTrigger?: { depth: number; token: number };
   readOnly?: boolean;
-  /** Stacked on a phone the pane's segmented control already says "Tree". */
+  /** The requirements module's panes need no "Artifacts" heading over the tree. */
   hideHeading?: boolean;
   /** Quality scores by artifact id; a badge is shown on rows present here. */
   qualityScores?: Record<string, QualityRowInfo>;
+  /** Status, trace and verification per row: given, the rows show them as columns. */
+  facts?: FactsIndex;
+  /** Narrow (a phone, a slim column): one line per row, no columns. */
+  compact?: boolean;
 }
+
+const parentIdsOf = (nodes: ArtifactTreeNode[], maxDepth = Infinity, depth = 0, ids: string[] = []): string[] => {
+  nodes.forEach((node) => {
+    if (node.children.length > 0 && depth < maxDepth) {
+      ids.push(node.artifact.id);
+      parentIdsOf(node.children, maxDepth, depth + 1, ids);
+    }
+  });
+  return ids;
+};
 
 export const ArtifactList: React.FC<ArtifactListProps> = ({
   artifacts,
@@ -68,58 +71,36 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   defaultCollapsed = false,
   collapseAllTrigger = 0,
   expandAllTrigger = 0,
+  depthTrigger,
   readOnly = false,
   qualityScores,
   hideHeading = false,
+  facts,
+  compact = false,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; artifactId: string } | null>(null);
+  const [menu, setMenu] = useState<ArtifactMenuAnchor | null>(null);
   // Which row a drag is over and which quadrant, so the row can show what
   // letting go would do before it happens.
   const [dropTarget, setDropTarget] = useState<{ id: string; zone: DropZone } | null>(null);
   const hasInitialized = useRef(false);
-  // Touch parity (docs/plans/mobile-support.md, REQ-106): a touch screen has
-  // no right-click, so every row carries a visible actions button and the
-  // menu gains a Move to… dialog that does what a drop does. Rows keep the
-  // HTML5 drag: mobile browsers start it from a long press on the row.
-  const viewport = useViewport();
-  const touch = viewport.coarsePointer;
-  const [moveDialogFor, setMoveDialogFor] = useState<Artifact | null>(null);
-  const [moveTargetId, setMoveTargetId] = useState('');
-  const [moveZone, setMoveZone] = useState<DropZone>('after');
-
   const hierarchy = useMemo(() => buildHierarchy(artifacts), [artifacts]);
-
-  const collectParentIds = (nodes: ArtifactTreeNode[]): string[] => {
-    const ids: string[] = [];
-    const walk = (nodeList: ArtifactTreeNode[]) => {
-      nodeList.forEach((node) => {
-        if (node.children.length > 0) {
-          ids.push(node.artifact.id);
-        }
-        if (node.children.length > 0) {
-          walk(node.children);
-        }
-      });
-    };
-    walk(nodes);
-    return ids;
-  };
+  const columns = !!facts && !compact;
+  // A touch screen has no right-click: every row's ⋯ button is a fingertip
+  // wide, and the menu's Move to… does what a drop does (REQ-106). Rows keep
+  // the HTML5 drag, which mobile browsers start from a long press.
+  const touch = useViewport().coarsePointer;
 
   useEffect(() => {
-    if (!defaultCollapsed || hasInitialized.current) {
-      return;
-    }
+    if (!defaultCollapsed || hasInitialized.current) return;
     hasInitialized.current = true;
-    const parentIds = collectParentIds(hierarchy);
-    setCollapsedIds(new Set(parentIds));
+    setCollapsedIds(new Set(parentIdsOf(hierarchy)));
   }, [defaultCollapsed, hierarchy]);
 
   useEffect(() => {
     if (collapseAllTrigger === 0) return;
-    const parentIds = collectParentIds(hierarchy);
-    setCollapsedIds(new Set(parentIds));
+    setCollapsedIds(new Set(parentIdsOf(hierarchy)));
   }, [collapseAllTrigger, hierarchy]);
 
   useEffect(() => {
@@ -127,22 +108,29 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     setCollapsedIds(new Set());
   }, [expandAllTrigger]);
 
+  // Depth L1–L4: every parent at that depth or deeper is shut, everything
+  // above it open. Keyed on the token, so picking the same depth again resets
+  // whatever was opened by hand since.
+  const depthToken = depthTrigger?.token ?? 0;
+  useEffect(() => {
+    if (!depthTrigger || depthToken === 0) return;
+    const open = new Set(parentIdsOf(hierarchy, depthTrigger.depth - 1));
+    setCollapsedIds(new Set(parentIdsOf(hierarchy).filter((id) => !open.has(id))));
+    // Only a new pick re-applies a depth: a refiltered tree keeps what is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depthToken]);
+
   // A selection can arrive from outside the tree — a deep link, a citation, the
   // review queue, the ‹ / › stepper, J / K, a swipe — and land on a row inside a
-  // parent the reader collapsed, which says the artifact is selected while
-  // showing no sign of it. So the chain from the selection up to the root is
-  // opened.
-  //
-  // Only that chain, and only when the chain itself changes: a section closed
-  // on purpose stays closed unless the selection moves into it, and re-filtering
-  // (which rebuilds `artifacts` on every keystroke) re-opens nothing. An
-  // ancestor the filter excluded is not in the tree either — its child is drawn
-  // as a root — so walking the filtered set simply finds nothing to open.
+  // parent the reader collapsed. So the chain from the selection up to the root
+  // is opened: only that chain, and only when the chain itself changes, so a
+  // section closed on purpose stays closed unless the selection moves into it.
+  // An ancestor the filter excluded is not in the tree either, so walking the
+  // filtered set simply finds nothing to open.
   const revealIds = selectedId ? ancestorIds(artifacts, selectedId) : [];
   const revealKey = revealIds.join(' ');
-  // revealIds is re-derived every render, because `artifacts` is a new array
-  // every render; the ref keeps the effect's dependency down to the value that
-  // actually changed.
+  // revealIds is re-derived every render; the ref keeps the effect's
+  // dependency down to the value that actually changed.
   const revealRef = useRef<string[]>(revealIds);
   useEffect(() => {
     revealRef.current = revealIds;
@@ -151,8 +139,6 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     if (!revealKey) return;
     setCollapsedIds((prev) => {
       const closed = revealRef.current.filter((id) => prev.has(id));
-      // Returning the same set keeps the identity, so nothing re-renders when
-      // the path is already open — which is the common case.
       if (closed.length === 0) return prev;
       const next = new Set(prev);
       closed.forEach((id) => next.delete(id));
@@ -160,513 +146,199 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     });
   }, [revealKey]);
 
-  const getSiblingOrder = (artifact: Artifact): Artifact[] => {
-    const parentId = normalizeParentId(artifact.parent_id);
-    return allArtifacts
-      .filter((item) => normalizeParentId(item.parent_id) === parentId)
-      .sort(compareArtifacts);
-  };
-
-  const getNeighborIds = (artifact: Artifact): { up?: string; down?: string } => {
-    const siblings = getSiblingOrder(artifact);
-    const index = siblings.findIndex((item) => item.id === artifact.id);
-    return {
-      up: index > 0 ? siblings[index - 1].id : undefined,
-      down: index >= 0 && index < siblings.length - 1 ? siblings[index + 1].id : undefined,
-    };
-  };
-
-  const isCollapsed = (artifactId: string): boolean => collapsedIds.has(artifactId);
-
-  const toggleCollapsed = (artifactId: string) => {
+  const open = (id: string) =>
     setCollapsedIds((prev) => {
+      if (!prev.has(id)) return prev;
       const next = new Set(prev);
-      if (next.has(artifactId)) {
-        next.delete(artifactId);
-      } else {
-        next.add(artifactId);
-      }
+      next.delete(id);
       return next;
     });
-  };
 
-  const openMoveDialog = (artifact: Artifact) => {
-    // Default to "after the next sibling", the commonest small move; the
-    // dialog only offers placements the planner would accept.
-    const neighbors = getNeighborIds(artifact);
-    setMoveTargetId(neighbors.down || neighbors.up || '');
-    setMoveZone(neighbors.down ? 'after' : 'before');
-    setMoveDialogFor(artifact);
-  };
+  const toggleCollapsed = (id: string) =>
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
-  const submitMove = () => {
-    if (!moveDialogFor || !moveTargetId) return;
-    if (!planMove(allArtifacts, moveDialogFor.id, moveTargetId, moveZone)) return;
-    if (moveZone === 'child') {
-      setCollapsedIds((prev) => {
-        if (!prev.has(moveTargetId)) return prev;
-        const next = new Set(prev);
-        next.delete(moveTargetId);
-        return next;
-      });
-    }
-    onReorder(moveDialogFor.id, moveTargetId, moveZone);
-    setMoveDialogFor(null);
-  };
+  const countDescendants = (node: ArtifactTreeNode): number =>
+    node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
 
-  // Every artifact in document order with its depth, for the Move to…
-  // picker: a flat list the native select can show with indentation. Built
-  // from allArtifacts, not the filtered set: a move has to be able to target a
-  // heading the current filter is hiding.
-  const flattened = useMemo(() => documentOrder(allArtifacts), [allArtifacts]);
-
-  const renderArtifact = (node: ArtifactTreeNode, depth: number = 0): React.ReactNode => {
+  // The rows' own keys: Enter selects, → and ← open and shut, ↑ and ↓ move
+  // the focus, and Alt+↑ / Alt+↓ move the artifact among its siblings, which
+  // is what the stacked ▲ ▼ buttons beside every row used to do.
+  const onRowKey = (event: React.KeyboardEvent<HTMLDivElement>, node: ArtifactTreeNode) => {
     const { artifact } = node;
-    const indentPx = depth * 20;
-    const neighborIds = getNeighborIds(artifact);
-    const hasChildren = node.children.length > 0;
-    const collapsed = isCollapsed(artifact.id);
-    const countDescendants = (current: ArtifactTreeNode): number => {
-      return current.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
-    };
-    const descendantCount = hasChildren ? countDescendants(node) : 0;
-    const drop = dropTarget && dropTarget.id === artifact.id ? dropTarget.zone : null;
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect(artifact.id);
+    } else if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      if (readOnly) return;
+      event.preventDefault();
+      const neighbor = siblingNeighbors(allArtifacts, artifact)[event.key === 'ArrowUp' ? 'up' : 'down'];
+      if (neighbor) onReorder(artifact.id, neighbor, 'swap');
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      const rows = Array.from(
+        event.currentTarget.closest('[role="tree"]')?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? []
+      );
+      const at = rows.indexOf(event.currentTarget);
+      rows[at + (event.key === 'ArrowUp' ? -1 : 1)]?.focus();
+    } else if (event.key === 'ArrowRight' && node.children.length && collapsedIds.has(artifact.id)) {
+      event.preventDefault();
+      toggleCollapsed(artifact.id);
+    } else if (event.key === 'ArrowLeft' && node.children.length && !collapsedIds.has(artifact.id)) {
+      event.preventDefault();
+      toggleCollapsed(artifact.id);
+    }
+  };
 
+  const renderArtifact = (node: ArtifactTreeNode, depth: number, guides: boolean[]): React.ReactNode => {
+    const { artifact } = node;
+    const collapsed = collapsedIds.has(artifact.id);
+    const drop = dropTarget && dropTarget.id === artifact.id ? dropTarget.zone : null;
+    const last = (index: number) => index === node.children.length - 1;
     return (
       <React.Fragment key={artifact.id}>
-        <div
-          onClick={() => onSelect(artifact.id)}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            if (!readOnly) {
-              setContextMenu({ x: event.clientX, y: event.clientY, artifactId: artifact.id });
-            }
-          }}
-          draggable={!readOnly}
-          onDragStart={(event) => {
-            if (readOnly) return;
-            event.dataTransfer.setData('text/plain', artifact.id);
-            event.dataTransfer.effectAllowed = 'move';
-            setDraggingId(artifact.id);
-          }}
-          onDragOver={(event) => {
-            if (readOnly) return;
-            // dataTransfer is unreadable during dragover in most browsers, so
-            // the dragged id comes from state; the id is only read on drop.
-            const draggedId = draggingId;
-            if (!draggedId || draggedId === artifact.id) return;
-            const box = event.currentTarget.getBoundingClientRect();
-            const zone = dropZoneFor(box, event.clientX, event.clientY);
-            // Ask the planner rather than guessing: it refuses a drop into the
-            // dragged artifact's own subtree and one that changes nothing, and
-            // the row should not invite a drop that would be ignored.
-            if (!planMove(allArtifacts, draggedId, artifact.id, zone)) {
+        <ArtifactTreeRow
+          node={node}
+          depth={depth}
+          guides={guides}
+          collapsed={collapsed}
+          descendants={node.children.length ? countDescendants(node) : 0}
+          selected={selectedId === artifact.id}
+          drop={drop}
+          dragging={draggingId === artifact.id}
+          readOnly={readOnly}
+          touch={touch}
+          columns={columns}
+          facts={facts}
+          quality={qualityScores?.[artifact.id]}
+          onSelect={() => onSelect(artifact.id)}
+          onToggle={() => toggleCollapsed(artifact.id)}
+          onKeyDown={(event) => onRowKey(event, node)}
+          onMenu={(x, y) => setMenu({ x, y, artifactId: artifact.id })}
+          dragHandlers={{
+            onDragStart: (event) => {
+              if (readOnly) return;
+              event.dataTransfer.setData('text/plain', artifact.id);
+              event.dataTransfer.effectAllowed = 'move';
+              setDraggingId(artifact.id);
+            },
+            onDragOver: (event) => {
+              if (readOnly) return;
+              // dataTransfer is unreadable during dragover in most browsers, so
+              // the dragged id comes from state; the id is only read on drop.
+              if (!draggingId || draggingId === artifact.id) return;
+              const zone = dropZoneFor(event.currentTarget.getBoundingClientRect(), event.clientX, event.clientY);
+              // The planner refuses a drop into the dragged artifact's own
+              // subtree and one that changes nothing; the row should not invite
+              // a drop that would be ignored.
+              if (!planMove(allArtifacts, draggingId, artifact.id, zone)) {
+                setDropTarget(null);
+                return;
+              }
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              setDropTarget((prev) => (prev && prev.id === artifact.id && prev.zone === zone ? prev : { id: artifact.id, zone }));
+            },
+            onDragLeave: (event) => {
+              // Leaving for a child element of the same row is not leaving.
+              if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+              setDropTarget((prev) => (prev && prev.id === artifact.id ? null : prev));
+            },
+            onDrop: (event) => {
+              if (readOnly) return;
+              event.preventDefault();
+              const draggedId = event.dataTransfer.getData('text/plain') || draggingId;
+              const zone = dropZoneFor(event.currentTarget.getBoundingClientRect(), event.clientX, event.clientY);
               setDropTarget(null);
-              return;
-            }
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-            setDropTarget((prev) =>
-              prev && prev.id === artifact.id && prev.zone === zone
-                ? prev
-                : { id: artifact.id, zone }
-            );
+              setDraggingId(null);
+              if (!draggedId || draggedId === artifact.id) return;
+              if (!planMove(allArtifacts, draggedId, artifact.id, zone)) return;
+              // A drop into a collapsed parent would otherwise vanish from view.
+              if (zone === 'child') open(artifact.id);
+              onReorder(draggedId, artifact.id, zone);
+            },
+            onDragEnd: () => {
+              setDraggingId(null);
+              setDropTarget(null);
+            },
           }}
-          onDragLeave={(event) => {
-            // Leaving for a child element of the same row is not leaving.
-            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-            setDropTarget((prev) => (prev && prev.id === artifact.id ? null : prev));
-          }}
-          onDrop={(event) => {
-            if (readOnly) return;
-            event.preventDefault();
-            const draggedId = event.dataTransfer.getData('text/plain') || draggingId;
-            const box = event.currentTarget.getBoundingClientRect();
-            const zone = dropZoneFor(box, event.clientX, event.clientY);
-            setDropTarget(null);
-            setDraggingId(null);
-            if (!draggedId || draggedId === artifact.id) return;
-            if (!planMove(allArtifacts, draggedId, artifact.id, zone)) return;
-            // A drop into a collapsed parent would otherwise vanish from view.
-            if (zone === 'child') {
-              setCollapsedIds((prev) => {
-                if (!prev.has(artifact.id)) return prev;
-                const next = new Set(prev);
-                next.delete(artifact.id);
-                return next;
-              });
-            }
-            onReorder(draggedId, artifact.id, zone);
-          }}
-          onDragEnd={() => {
-            setDraggingId(null);
-            setDropTarget(null);
-          }}
-          style={{
-            position: 'relative',
-            padding: '12px',
-            paddingLeft: `${12 + indentPx}px`,
-            borderBottom: '1px solid var(--border-soft)',
-            cursor: 'pointer',
-            backgroundColor:
-              drop === 'child'
-                ? 'var(--tint-blue)'
-                : selectedId === artifact.id
-                ? 'var(--tint-blue)'
-                : 'transparent',
-            transition: 'background-color 0.2s',
-            // A sibling drop shows a line on the edge it would land against; a
-            // child drop outlines the row it would go inside.
-            boxShadow:
-              drop === 'before'
-                ? 'inset 0 2px 0 0 var(--accent)'
-                : drop === 'after'
-                ? 'inset 0 -2px 0 0 var(--accent)'
-                : 'none',
-            outline: drop === 'child' ? '2px solid var(--accent)' : 'none',
-            outlineOffset: drop === 'child' ? '-2px' : undefined,
-            opacity: draggingId === artifact.id ? 0.6 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (selectedId !== artifact.id) {
-              e.currentTarget.style.backgroundColor = 'var(--surface-alt)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (selectedId !== artifact.id) {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {depth > 0 && (
-                  <span style={{ color: 'var(--neutral)', fontSize: '12px' }}>└</span>
-                )}
-                {hasChildren && (
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleCollapsed(artifact.id);
-                    }}
-                    aria-label={collapsed ? 'Expand children' : 'Collapse children'}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      padding: 0,
-                      cursor: 'pointer',
-                      color: 'var(--text-muted)',
-                      fontSize: '14px',
-                      width: '32px',
-                      minHeight: '32px',
-                      // Wider than the glyph for a fingertip, without
-                      // taking that room from the row.
-                      margin: '-6px -9px',
-                      textAlign: 'center',
-                    }}
-                    title={collapsed ? 'Expand' : 'Collapse'}
-                  >
-                    {collapsed ? '▸' : '▾'}
-                  </button>
-                )}
-                {/* A section shows where it sits ("1.2"); everything else
-                    shows the address a reader cites ("REQ-12"). */}
-                {artifact.doc_number && (
-                  <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                    {artifact.doc_number}
-                  </span>
-                )}
-                {artifact.title}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                {artifact.ref && !artifact.doc_number && (
-                  <code
-                    style={{
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: 3,
-                      padding: '0 4px',
-                      fontSize: '12px',
-                    }}
-                    title="Stable reference — cite this; it never changes or gets reused"
-                  >
-                    {artifact.ref}
-                  </code>
-                )}
-                <span>
-                  {artifact.type} • v{artifact.version}
-                  {hasChildren && (
-                    <span style={{ marginLeft: '6px', color: 'var(--neutral)' }}>
-                      {collapsed ? `(collapsed · ${descendantCount})` : `(${node.children.length})`}
-                    </span>
-                  )}
-                </span>
-                {qualityScores?.[artifact.id] && (
-                  <QualityBadge
-                    score={qualityScores[artifact.id].score}
-                    band={qualityScores[artifact.id].band}
-                    findingCount={qualityScores[artifact.id].findingCount}
-                  />
-                )}
-              </div>
-            </div>
-            {!readOnly && (
-              // One column, in the order the buttons act: up, more, down.
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'stretch', flexShrink: 0 }} data-help-key="requirements.create">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (neighborIds.up) {
-                      onReorder(artifact.id, neighborIds.up, 'swap');
-                    }
-                  }}
-                  disabled={!neighborIds.up}
-                  title="Move up"
-                  aria-label={`Move ${artifact.title} up`}
-                  style={{
-                    backgroundColor: neighborIds.up ? 'var(--neutral-soft)' : 'var(--surface-inset)',
-                    color: 'var(--text)',
-                    border: '1px solid var(--border)',
-                    padding: 0,
-                    width: touch ? 44 : 24,
-                    minHeight: touch ? 32 : 24,
-                    borderRadius: '3px',
-                    cursor: neighborIds.up ? 'pointer' : 'not-allowed',
-                    fontSize: '12px',
-                    lineHeight: 1,
-                  }}
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Actions for ${artifact.title}`}
-                  title="More actions"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    const box = event.currentTarget.getBoundingClientRect();
-                    setContextMenu({ x: Math.max(8, box.right - 200), y: box.bottom + 4, artifactId: artifact.id });
-                  }}
-                  style={{
-                    width: touch ? 44 : 24,
-                    minHeight: touch ? 44 : 24,
-                    border: '1px solid var(--border)',
-                    borderRadius: 3,
-                    background: 'var(--neutral-soft)',
-                    color: 'var(--text)',
-                    fontSize: touch ? 20 : 14,
-                    lineHeight: 1,
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  ⋯
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (neighborIds.down) {
-                      onReorder(artifact.id, neighborIds.down, 'swap');
-                    }
-                  }}
-                  disabled={!neighborIds.down}
-                  title="Move down"
-                  aria-label={`Move ${artifact.title} down`}
-                  style={{
-                    backgroundColor: neighborIds.down ? 'var(--neutral-soft)' : 'var(--surface-inset)',
-                    color: 'var(--text)',
-                    border: '1px solid var(--border)',
-                    padding: 0,
-                    width: touch ? 44 : 24,
-                    minHeight: touch ? 32 : 24,
-                    borderRadius: '3px',
-                    cursor: neighborIds.down ? 'pointer' : 'not-allowed',
-                    fontSize: '12px',
-                    lineHeight: 1,
-                  }}
-                >
-                  ▼
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        {!collapsed && node.children.map((child) => renderArtifact(child, depth + 1))}
+        />
+        {!collapsed && node.children.map((child, index) => renderArtifact(child, depth + 1, [...guides, !last(index)]))}
       </React.Fragment>
     );
   };
 
   return (
-    // No card around the tree: the list is the column's content, and a panel
-    // inside a panel only wasted the width. It fills the height it is given
-    // rather than stopping at a fixed 500px with empty space beneath.
+    // No card around the tree: the list is the column's content, and it fills
+    // the height it is given rather than stopping at a fixed height.
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       {!hideHeading && <h3 style={{ marginTop: 0 }}>Artifacts</h3>}
       {artifacts.length === 0 ? (
         <p>No artifacts yet. Create one to get started.</p>
       ) : (
-        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }} data-help-key="requirements.navigate">
-          {hierarchy.map((node) => renderArtifact(node))}
+        <div
+          style={{
+            overflow: 'auto',
+            flex: 1,
+            minHeight: 0,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+          }}
+          data-help-key="requirements.navigate"
+        >
+          <div role="tree" aria-label="Requirements tree" style={{ minWidth: columns ? 820 : undefined }}>
+            {columns && (
+              <div
+                aria-hidden="true"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: TREE_COLUMNS,
+                  alignItems: 'center',
+                  height: 30,
+                  padding: '0 8px 0 12px',
+                  background: 'var(--surface-inset)',
+                  borderBottom: '1px solid var(--border)',
+                  color: 'var(--text-muted)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                }}
+              >
+                <span>Ref · Title</span>
+                <span>Status</span>
+                <span>Prio</span>
+                <span>Quality</span>
+                <span>Trace</span>
+                <span>V&amp;V below</span>
+                <span style={{ textAlign: 'right' }}>Upd.</span>
+                <span />
+              </div>
+            )}
+            {hierarchy.map((node) => renderArtifact(node, 0, []))}
+          </div>
         </div>
       )}
 
-      {/* Context Menu */}
-      {contextMenu && (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 999,
-            }}
-            onClick={() => setContextMenu(null)}
-            onContextMenu={(e) => e.preventDefault()}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              left: `${Math.min(contextMenu.x, Math.max(8, window.innerWidth - 208))}px`,
-              top: `${Math.min(contextMenu.y, Math.max(8, window.innerHeight - 340))}px`,
-              backgroundColor: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              zIndex: 1000,
-              minWidth: '180px',
-            }}
-            data-help-key="requirements.create"
-          >
-            {([
-              { action: 'create-before' as const, label: '➕ Create before' },
-              { action: 'create-after' as const, label: '➕ Create after' },
-              { action: 'create-child' as const, label: '➕ Create new child' },
-              { action: 'move-to' as const, label: '↕️ Move to…', separated: true },
-              { action: 'copy' as const, label: '📋 Copy', separated: true },
-              { action: 'duplicate' as const, label: '🧬 Duplicate' },
-              { action: 'paste-before' as const, label: '📥 Paste before', needsClipboard: true },
-              { action: 'paste-after' as const, label: '📥 Paste after', needsClipboard: true },
-            ]).map((item, index, all) => {
-              const disabled = !!item.needsClipboard && !canPaste;
-              return (
-                <button
-                  key={item.action}
-                  disabled={disabled}
-                  title={disabled ? 'Copy an artifact first' : undefined}
-                  onClick={() => {
-                    const artifact = allArtifacts.find((a) => a.id === contextMenu.artifactId);
-                    if (artifact) {
-                      if (item.action === 'move-to') {
-                        openMoveDialog(artifact);
-                      } else if (onContextMenuAction) {
-                        onContextMenuAction(item.action, artifact);
-                      }
-                    }
-                    setContextMenu(null);
-                  }}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: touch ? '12px 14px' : '8px 12px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    textAlign: 'left',
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    fontSize: touch ? '14px' : '12px',
-                    color: disabled ? 'var(--neutral)' : 'var(--text)',
-                    borderBottom: index < all.length - 1 ? '1px solid var(--neutral-soft)' : 'none',
-                    // A rule above Copy separates making new artifacts from
-                    // moving this one around.
-                    borderTop: item.separated ? '1px solid var(--border)' : undefined,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!disabled) e.currentTarget.style.backgroundColor = 'var(--tint-blue)';
-                  }}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {moveDialogFor && (
-        <Modal title={`Move “${moveDialogFor.title}”`} width={420} onClose={() => setMoveDialogFor(null)}>
-          <label htmlFor="move-target" style={{ fontSize: 12 }}>
-            Relative to
-          </label>
-          <select
-            id="move-target"
-            value={moveTargetId}
-            onChange={(e) => setMoveTargetId(e.target.value)}
-            style={{ marginBottom: 12 }}
-            data-help-key="requirements.create"
-          >
-            <option value="">Choose an artifact…</option>
-            {flattened
-              .filter(({ artifact }) => artifact.id !== moveDialogFor.id)
-              .map(({ artifact, depth }) => (
-                <option
-                  key={artifact.id}
-                  value={artifact.id}
-                  disabled={!planMove(allArtifacts, moveDialogFor.id, artifact.id, moveZone)}
-                >
-                  {'\u00a0\u00a0'.repeat(depth)}
-                  {artifact.ref ? `${artifact.ref} ` : ''}
-                  {artifact.title}
-                </option>
-              ))}
-          </select>
-          <div role="radiogroup" aria-label="Placement" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="requirements.create">
-            {([
-              { zone: 'before' as const, label: 'Before it' },
-              { zone: 'after' as const, label: 'After it' },
-              { zone: 'child' as const, label: 'Inside it' },
-            ]).map((opt) => (
-              <label
-                key={opt.zone}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  minHeight: 44,
-                  padding: '0 12px',
-                  border: '1px solid var(--border)',
-                  borderRadius: 4,
-                  background: moveZone === opt.zone ? 'var(--tint-blue)' : 'var(--surface)',
-                  cursor: 'pointer',
-                  flex: '1 1 auto',
-                  fontWeight: 500,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="move-zone"
-                  value={opt.zone}
-                  checked={moveZone === opt.zone}
-                  onChange={() => setMoveZone(opt.zone)}
-                  style={{ width: 'auto' }}
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }} data-help-key="requirements.create">
-            <button className="button-secondary" onClick={() => setMoveDialogFor(null)} style={{ minHeight: 44 }}>
-              Cancel
-            </button>
-            <button
-              className="button"
-              onClick={submitMove}
-              disabled={!moveTargetId || !planMove(allArtifacts, moveDialogFor.id, moveTargetId, moveZone)}
-              style={{ minHeight: 44 }}
-            >
-              Move
-            </button>
-          </div>
-        </Modal>
+      {!readOnly && (
+        <ArtifactActionsMenu
+          menu={menu}
+          onClose={() => setMenu(null)}
+          allArtifacts={allArtifacts}
+          canPaste={canPaste}
+          onContextMenuAction={onContextMenuAction}
+          onReorder={onReorder}
+          onRevealParent={open}
+        />
       )}
     </div>
   );

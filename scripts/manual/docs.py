@@ -118,6 +118,8 @@ SECTION_KEYS = {
     ('artifacts', 'moving-through-the-document'): ['requirements.navigate'],
     ('artifacts', 'referencing-figures-and-linked-artifacts'): ['requirements.references'],
     ('artifacts', 'making-room'): ['requirements.layout'],
+    ('artifacts', 'table-tree-and-layers'): ['requirements.views', 'requirements.layers'],
+    ('artifacts', 'the-detail-panel'): ['requirements.detail'],
     ('artifacts', 'search-filters'): ['requirements.search', 'search'],
     ('links', 'creating-links'): ['links.create'],
     ('links', 'viewing-links'): ['links.view'],

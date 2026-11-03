@@ -845,7 +845,15 @@ textarea {
   font-weight: 700;
 }
 
-/* A dense row that reacts to the pointer (V&V tables and lists). */
-.ov-row:hover {
-  background: var(--surface-hover) !important;
+/* A dense row that reacts to the pointer: the V&V tables and lists, and the
+   requirements table, tree and phone list. The hover tint leaves a selected
+   row's blue alone, and the keyboard gets a visible focus ring (the
+   requirements rows take Enter, the arrows and Alt+arrows). */
+.ov-row:hover:not([aria-selected="true"]) {
+  background-color: var(--surface-hover) !important;
+}
+
+.ov-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }

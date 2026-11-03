@@ -37,9 +37,8 @@ const OVER_1000 = 4;
 
 // Each file over FILE_BUDGET when this test landed: its lines then plus headroom.
 const FILE_CEILINGS = {
-  'components/ArtifactDetails.tsx': 766,
+  'components/ArtifactDetails.tsx': 743,
   'components/ArtifactEditor.tsx': 710,
-  'components/ArtifactList.tsx': 738,
   'components/ImageGallery.tsx': 680,
   'components/ProjectList.tsx': 1202,
   'components/UserSettingsPanel.tsx': 761,
@@ -58,10 +57,8 @@ const FILE_CEILINGS = {
 // Each component over COMPONENT_BUDGET when this test landed: its lines then plus headroom.
 const COMPONENT_CEILINGS = {
   'AgentEditor': 405,
-  'ArtifactDetails': 664,
+  'ArtifactDetails': 640,
   'ArtifactEditor': 551,
-  'ArtifactHeader': 445,
-  'ArtifactList': 673,
   'AutomationsPage': 534,
   'ChatterPanel': 454,
   'CrewBuilder': 880,
