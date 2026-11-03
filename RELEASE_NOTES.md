@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.27.1 — 2026-11-03
+
 ### Bug fixes
 
 - **Pages look right again.** In 0.27.0 the projects list, and the parts of

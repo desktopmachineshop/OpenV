@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.27.1",
+   "date": "2026-11-03",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Pages look right again.** In 0.27.0 the projects list, and the parts of other pages styled after it, showed as unstyled text and small buttons. A stylesheet had two rules left unclosed, so the browser ignored everything after them; both are closed again."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.27.0",
    "date": "2026-11-03",
    "stableSince": "",
