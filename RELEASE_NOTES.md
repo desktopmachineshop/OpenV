@@ -13,6 +13,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### New features
 
+- **Target releases.** Plan your requirements for releases such as MVP,
+  V1.0 and V2.0, and follow each one on the new **Releases** page under
+  **Verify**. Releases run in order: a requirement planned from MVP is in
+  every later release too, unless you give it a last release, and setting
+  the releases on a heading plans everything under it. Each release shows
+  how many of its requirements are approved, verified and ready, which ones
+  still fail or lack evidence, and a burn-up of verification day by day
+  from your test results. Agents can plan and report on releases too, with
+  the new release tools.
 - **A more compact project layout.** Inside a project, the menu is now a
   narrow rail down the left instead of a wide sidebar, so your requirements,
   tables and boards get more of the screen. Click **Define**, **Verify**,

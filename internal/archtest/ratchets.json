@@ -51,6 +51,7 @@
       "internal/domain/settings",
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
+      "internal/domain/targetreleases",
       "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/usermetrics",
@@ -115,6 +116,7 @@
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
       "internal/domain/snapshot",
+      "internal/domain/targetreleases",
       "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/traceability",
@@ -248,6 +250,10 @@
       "internal/domain/links",
       "internal/domain/products"
     ],
+    "internal/domain/targetreleases": [
+      "internal/domain/artifacts",
+      "internal/domain/vv"
+    ],
     "internal/domain/templates": [
       "internal/domain/artifacts",
       "internal/domain/attachments",
@@ -343,6 +349,7 @@
       "internal/domain/settings",
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
+      "internal/domain/targetreleases",
       "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/usermetrics",
@@ -414,7 +421,6 @@
     "internal/domain/reports:pdfRenderer.vvSummary": 147,
     "internal/domain/templates:buildGuidedProductSkeletonSnapshot": 125,
     "internal/mcp:buildContextBundle": 151,
-    "internal/mcp:serve": 113,
     "internal/persistence/postgres:BackfillOrgs": 146,
     "internal/persistence/postgres:InitAgentSchema": 397,
     "internal/persistence/postgres:InitOrgSchema": 261,
@@ -461,7 +467,6 @@
     "internal/api:Handler.projectFeatureEnabled",
     "internal/api:Handler.provisionPersonalWorkspace",
     "internal/api:Handler.qualityRuleSetFor",
-    "internal/api:Handler.seatsChanged",
     "internal/api:Handler.sendVerificationAsync",
     "internal/api:Handler.sessionUser",
     "internal/api:Handler.throttleSSO",

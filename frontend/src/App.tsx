@@ -81,6 +81,9 @@ const SharedProjectView = lazy(() =>
 const ReviewQueue = lazy(() =>
   import('./views/ReviewQueue').then((m) => ({ default: m.ReviewQueue }))
 );
+const Releases = lazy(() =>
+  import('./views/Releases').then((m) => ({ default: m.Releases }))
+);
 
 // How long App waits before each new try of a gate load that failed; after
 // the last, only the window's focus or the browser coming back online tries
@@ -305,6 +308,7 @@ function App() {
           <Route path="agents" element={<AgentsPage />} />
           <Route path="activity" element={<ActivityLog />} />
           <Route path="settings" element={<ProjectSettings />} />
+          <Route path="releases" element={<Releases />} />
         </Route>
           <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/projects" replace />} />} />
           </>

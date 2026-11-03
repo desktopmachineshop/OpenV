@@ -140,14 +140,15 @@ var realIdReadsSends = []string{
 		"/evidence-files, <guided> for /guided-sessions, <interview.session> for /interview-sessions, <interview> " +
 		"for /interviews, <link> for /links, <login> for /provider-logins, <invite.token> for /public/interviews, " +
 		"<share.token> for /public/share, <result> for /test-results, <test.run> for /test-runs, <owner> for " +
-		"/users and <card> for /work-items; /baselines/{id}/diff takes ?against=live (against <b1> itself is a " +
+		"/users, <release> for a second {releaseId}" +
+		" and <card> for /work-items; /baselines/{id}/diff takes ?against=live (against <b1> itself is a " +
 		"400) and /projects/{id}/impact ?artifact=<a> (the row shows them); an answer that is a JSON array or null " +
 		"is counted",
 	"the fixtures, made as setup by the owner in W and P before the matrix: requirement A (<a>), user need N (<n>) " +
 		"and test case TC (<tc>); the link A derives-from N (<link>); a PNG attachment on A (<attachment>); baseline " +
 		"B1 (<b1>); a work item (<card>); test run <test.run> with TC's pass (<result>); evidence bundle <bundle> " +
-		"with a CSV (<file>) that <result> cites; interview <interview> and its invite (<invite.token>); guided " +
-		"session <guided>; a manual automation of tour-matrix pinned to P (<automation>); a workspace-wide crew " +
+		"with a CSV (<file>) that <result> cites; interview <interview> and its invite (<invite.token>); target " +
+		"release MVP of P (<release>); guided session <guided>; a manual automation of tour-matrix pinned to P (<automation>); a workspace-wide crew " +
 		"(<crew>); a sign-in of claude-code on W's shared workers (<login>); a public share link of P " +
 		"(<share.token>); W's logo and the owner's picture; then the participant's first message on the invite, " +
 		"from an address of its own, which opens <interview.session> and queues an interviewer run",
@@ -369,6 +370,11 @@ const realIdReadsImport = `{"project_name":"Tour Matrix import","artifacts":[{"i
 
 // realIdReadsIDs maps the first path segment after /api/v1/ to the fixture
 // whose id fills the route's variable.
+// realIdReadsSecondVars fills a GET route's second path variable.
+var realIdReadsSecondVars = map[string]string{
+	"releaseId": "{{release}}",
+}
+
 var realIdReadsIDs = map[string]string{
 	"agent-runs":         "{{run}}",
 	"agents":             "tour-matrix",
@@ -424,6 +430,16 @@ func realIdReadsPath(tr *tour, route string) []tourOpt {
 			"realIdReadsIDs", route, seg)
 	}
 	opts := []tourOpt{at(vars[0][1:len(vars[0])-1], id)}
+	for _, v := range vars[1:] {
+		if _, isWrite := realIdReadsWrites[route]; isWrite {
+			break // a write's second variable is the viewer's id, which its caller adds
+		}
+		second, ok := realIdReadsSecondVars[v[1:len(v)-1]]
+		if !ok {
+			tr.t.Fatalf("realIdReadsPath: %s has no fixture for %s: add one to realIdReadsSecondVars", route, v)
+		}
+		opts = append(opts, at(v[1:len(v)-1], second))
+	}
 	if q := realIdReadsQuery[route]; q != "" {
 		opts = append(opts, query(q))
 	}
@@ -552,6 +568,8 @@ func realIdReadsFixtures(tr *tour) {
 		jsonBody(`{"invitee_label":"Dana"}`), expect(http.StatusCreated))
 	inv.capture("invite", "/invite/id")
 	inv.capture("invite.token", "/token")
+	tr.setup("a target release MVP", o, "POST /api/v1/projects/{id}/releases", at("id", "{{p}}"),
+		jsonBody(`{"name":"MVP"}`), expect(http.StatusCreated)).capture("release", "/id")
 	tr.setup("a guided session", o, "POST /api/v1/guided-sessions", jsonBody(`{"project_id":"{{p}}"}`)).
 		capture("guided", "/id")
 	tr.setup("a manual automation of tour-matrix in P", o, "POST /api/v1/automations",

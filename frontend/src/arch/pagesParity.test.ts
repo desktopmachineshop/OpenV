@@ -141,6 +141,7 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
     label: 'Verify',
     items: [
       { to: 'vv', label: 'V&V' },
+      { to: 'releases', label: 'Releases', feature: 'target-releases' },
       { to: 'evidence', label: 'Evidence' },
       { to: 'matrix', label: 'Traceability' },
       { to: 'impact', label: 'Impact' },

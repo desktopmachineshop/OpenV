@@ -30,6 +30,7 @@
     "linked-sign-in",
     "manual-help",
     "help-activity",
+    "target-releases",
     "compact-layout"
   ],
   "event_types": [

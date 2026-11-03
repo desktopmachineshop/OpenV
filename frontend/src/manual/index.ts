@@ -15,6 +15,7 @@ import runsRunners from './chapters/runsRunners';
 import automations from './chapters/automations';
 import interviews from './chapters/interviews';
 import vv from './chapters/vv';
+import releases from './chapters/releases';
 import orgSettings from './chapters/orgSettings';
 import troubleshooting from './chapters/troubleshooting';
 import platformAdmin from './chapters/platformAdmin';
@@ -42,6 +43,7 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
   { slug: 'automations', title: 'Automations', content: automations },
   { slug: 'interviews', title: 'Interviews', content: interviews },
   { slug: 'vv', title: 'V&V & test runs', content: vv },
+  { slug: 'releases', title: 'Target releases', content: releases },
   { slug: 'org-settings', title: 'Workspace settings & teams', content: orgSettings },
   { slug: 'platform-admin', title: 'Platform admin', content: platformAdmin },
   { slug: 'troubleshooting', title: 'Troubleshooting & FAQ', content: troubleshooting },

@@ -16,7 +16,7 @@
 // beside its <Route> in App.tsx. projectPath() builds the URL of a project's
 // page for new code; existing call sites keep their template strings.
 import type { FeatureKey } from './generated/contract';
-import { TODO_LIST_FEATURE } from './features';
+import { TARGET_RELEASES_FEATURE, TODO_LIST_FEATURE } from './features';
 
 /** The labelled groups of the project menu, in the order it draws them. */
 export type NavGroup = 'Define' | 'Verify' | 'Plan' | 'Agents';
@@ -108,6 +108,14 @@ export const PAGES: readonly Page[] = [
     public: false,
     help: { topic: 'vv' },
     nav: { group: 'Verify', label: 'V&V' },
+  },
+  {
+    scope: 'project',
+    path: 'releases',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'releases' },
+    nav: { group: 'Verify', label: 'Releases', feature: TARGET_RELEASES_FEATURE },
   },
   {
     scope: 'project',

@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 228; members of exported objects: 311
+exports: 240; members of exported objects: 318
 
 interface AdminUser
 interface AdminWorkspace
@@ -128,9 +128,15 @@ interface QualityScore
 type      QualitySeverity
 interface Refinement
 interface RegisterResult
+interface ReleaseBurnUpPoint
 interface ReleaseCategory
 interface ReleaseEntry
 interface ReleaseInfo
+interface ReleaseOverview
+interface ReleaseProgress
+interface ReleaseProgressEntry
+interface ReleaseRange
+interface ReleaseSummaryCounts
 interface RepoConnection
 interface ReviewQueue
 interface ReviewRoundResult
@@ -151,6 +157,11 @@ interface SiteVisit
 interface StableRelease
 interface StoredProviderAPIKey
 interface SuspectLink
+const     TARGET_RELEASE_ATTR
+const     TARGET_RELEASE_UNTIL_ATTR
+interface TargetRelease
+interface TargetReleaseInput
+type      TargetReleaseStatus
 interface TeamGrant
 interface Template
 interface TestResult
@@ -485,6 +496,14 @@ const     qualityRulesAPI
             .setForWorkspace
 const     releaseAPI
             .current
+const     releasesAPI
+            .create
+            .list
+            .overview
+            .progress
+            .remove
+            .reorder
+            .update
 const     repoConnectionsAPI
             .create
             .list

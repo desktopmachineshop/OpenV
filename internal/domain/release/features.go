@@ -64,6 +64,7 @@ var Registry = []Feature{
 	{Key: FeatureLinkedSignIn, ShippedIn: "0.23.0", Summary: "Sign in with Google to an account you made with a password: confirm the password once, and either way signs you in after that"},
 	{Key: FeatureManualHelp, ShippedIn: "0.24.0", Summary: "The help panel shows the user manual's own page for the screen you are on, written for the release your workspace is on, with links between pages and a search of the manual"},
 	{Key: FeatureHelpActivity, ShippedIn: "0.25.0", Summary: "The help panel follows what you are working on: the tab you are in, the section you are working in and the button you pressed last open the manual's page for them"},
+	{Key: FeatureTargetReleases, ShippedIn: "0.26.0", Summary: "Target releases: plan requirements for MVP, V1.0 and later releases, and follow each release's review, verification and burn-up on its own page"},
 	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
 }
 
@@ -211,6 +212,9 @@ const (
 	// the app's markup. It gates the panel's tracking and the signals
 	// GET /orgs/{id}/help/context forwards; without it help is per page.
 	FeatureHelpActivity = "help-activity"
+	// FeatureTargetReleases gates a project's target releases: the
+	// Releases page, the release range on an artifact, and their writes.
+	FeatureTargetReleases = "target-releases"
 	// FeatureCompactLayout is the project shell's compact layout: the icon
 	// rail with its group flyouts and the top bar on a wide screen, the tab
 	// bar along the bottom of a phone, and ? / F1 opening the help panel.

@@ -33,6 +33,7 @@ DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
+DELETE /api/v1/projects/{id}/releases/{releaseId}: project:editor
 DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
 DELETE /api/v1/provider-api-keys/{env}: org:admin
 DELETE /api/v1/repo-connections/{id}: project:owner
@@ -157,6 +158,7 @@ GET /api/v1/projects/{id}/parties: project:viewer
 GET /api/v1/projects/{id}/profile: project:viewer
 GET /api/v1/projects/{id}/quality: project:viewer
 GET /api/v1/projects/{id}/quality-rules: project:viewer
+GET /api/v1/projects/{id}/releases: project:viewer
 GET /api/v1/projects/{id}/repo-connections: project:viewer
 GET /api/v1/projects/{id}/report: project:viewer
 GET /api/v1/projects/{id}/review-queue: project:viewer
@@ -166,6 +168,8 @@ GET /api/v1/projects/{id}/test-runs: project:viewer
 GET /api/v1/projects/{id}/vv/coverage: project:viewer
 GET /api/v1/projects/{id}/vv/gaps: project:viewer
 GET /api/v1/projects/{id}/vv/matrix: project:viewer
+GET /api/v1/projects/{id}/vv/releases: project:viewer
+GET /api/v1/projects/{id}/vv/releases/{releaseId}: project:viewer
 GET /api/v1/projects/{id}/vv/report: project:viewer
 GET /api/v1/projects/{id}/work-items: project:viewer
 GET /api/v1/projects/{projectID}/attachments: project:viewer
@@ -291,6 +295,7 @@ POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
 POST /api/v1/projects/{id}/reindex-embeddings: project:owner
+POST /api/v1/projects/{id}/releases: project:editor
 POST /api/v1/projects/{id}/repo-connections: project:owner
 POST /api/v1/projects/{id}/review-round: project:editor
 POST /api/v1/projects/{id}/share-links: project:owner
@@ -365,6 +370,8 @@ PUT /api/v1/projects/{id}/members/{userId}: project:owner
 PUT /api/v1/projects/{id}/parties: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
+PUT /api/v1/projects/{id}/release-order: project:editor
+PUT /api/v1/projects/{id}/releases/{releaseId}: project:editor
 PUT /api/v1/projects/{id}/team-access: project:owner, org-visible
 PUT /api/v1/provider-api-keys/{env}: org:admin
 PUT /api/v1/provider-settings: org:admin

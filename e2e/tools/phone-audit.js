@@ -36,6 +36,7 @@
 //                  screenshots, which must declare fixed pixel dimensions:
 //                  <cssWidth>x<cssHeight>@<dpr> replaces the phone profile's
 //                  viewport (e.g. 360x640@3 => 1080x1920 PNGs)
+//   COLOR_SCHEME   dark renders every screen in the dark scheme (default light)
 //   SHOT_FULLPAGE  0 clips each screenshot to the viewport instead of the
 //                  full page, which is what a fixed size needs
 // Exit code is 1 when a screen fails to render or throws a page error;
@@ -46,6 +47,7 @@ const fs = require('fs');
 const path = require('path');
 const OUT = process.env.OUT || path.join(__dirname, '..', 'test-results', 'phone-audit');
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:5000';
+const COLOR_SCHEME = process.env.COLOR_SCHEME === 'dark' ? 'dark' : 'light';
 fs.mkdirSync(OUT, { recursive: true });
 const now = '2026-09-01T09:00:00Z';
 const user = { id: 'u1', email: 'sam@example.com', name: 'Sam Example', avatar_url: '' };
@@ -186,7 +188,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -227,6 +229,10 @@ const routes = [
   [/\/api\/v1\/projects\/p1\/baselines/, [baseline]],
   [/\/api\/v1\/projects\/p1\/quality-rules/, { effective: { convention: 'shall', severities: {} }, workspace: null, project: null, summary: 'shall', catalog: { conventions: ['shall', 'rfc2119'], rules: [], severities: ['error', 'warning', 'info', 'off'], defaults: { convention: 'shall', severities: {} }, labels: {} } }],
   [/\/api\/v1\/projects\/p1\/quality/, { entries: [] }],
+  // Releases: MVP released, V1.0 in progress with one requirement carried
+  // over and one introduced, and a burn-up of a few days.
+  [/\/api\/v1\/projects\/p1\/vv\/releases\/[^/]+$/, { release: { id: 'rel-2', project_id: 'p1', name: 'V1.0', description: 'The first release for customers', target_date: '2026-12-01', status: 'in_progress', position: 1, released_at: null, created_at: '2026-10-01T09:00:00Z', updated_at: '2026-10-01T09:00:00Z' }, summary: { total: 2, introduced: 1, approved: 1, verified: 1, ready: 1, by_status: { approved: 1, draft: 1 }, by_rollup: { pass: 1, uncovered: 1 } }, entries: [{ requirement_id: 'req-1', ref: 'REQ-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', status: 'approved', rollup: 'pass', range: { from: 'rel-1' }, introduced: false, test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' } }, { requirement_id: 'req-2', ref: 'REQ-2', title: 'Positioning accuracy', status: 'draft', rollup: 'uncovered', range: { from: 'rel-2', until: 'rel-2' }, introduced: true, test_case_ids: [], latest_results: {} }], burn_up: [{ date: '2026-10-01', scope: 1, verified: 0 }, { date: '2026-10-08', scope: 2, verified: 0 }, { date: '2026-10-15', scope: 2, verified: 1 }, { date: '2026-10-22', scope: 2, verified: 1 }] }],
+  [/\/api\/v1\/projects\/p1\/vv\/releases/, { releases: [{ release: { id: 'rel-1', project_id: 'p1', name: 'MVP', description: '', target_date: '2026-10-15', status: 'released', position: 0, released_at: '2026-10-15T12:00:00Z', created_at: '2026-09-01T09:00:00Z', updated_at: '2026-10-15T12:00:00Z' }, summary: { total: 1, introduced: 1, approved: 1, verified: 1, ready: 1, by_status: { approved: 1 }, by_rollup: { pass: 1 } } }, { release: { id: 'rel-2', project_id: 'p1', name: 'V1.0', description: 'The first release for customers', target_date: '2026-12-01', status: 'in_progress', position: 1, released_at: null, created_at: '2026-10-01T09:00:00Z', updated_at: '2026-10-01T09:00:00Z' }, summary: { total: 2, introduced: 1, approved: 1, verified: 1, ready: 1, by_status: { approved: 1, draft: 1 }, by_rollup: { pass: 1, uncovered: 1 } } }], unassigned: 0, unassigned_ids: [] }],
   [/\/api\/v1\/projects\/p1\/vv\/coverage/, { project_id: 'p1', entries: [{ requirement_id: 'req-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', verification_method: 'inspection', verification_status: 'verified', test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' }, rollup: 'pass' }, { requirement_id: 'req-2', title: 'Positioning accuracy', verification_method: 'test', verification_status: '', test_case_ids: [], latest_results: {}, rollup: 'uncovered' }], summary: { total: 2, covered: 1, uncovered: 1, verified: 1, pass: 1, fail: 0 } }],
   [/\/api\/v1\/projects\/p1\/vv\/gaps/, { uncovered: ['req-2'], unverified: ['req-2'], failing: [] }],
   [/\/api\/v1\/projects\/p1\/vv\/matrix/, [{ requirement_id: 'req-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', user_need_ids: ['need-1'], design_ids: [], test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' }, hazard_ids: [] }, { requirement_id: 'req-2', title: 'Positioning accuracy', user_need_ids: ['need-1'], design_ids: [], test_case_ids: [], latest_results: {}, hazard_ids: [] }]],
@@ -420,6 +426,7 @@ const SCREENS = [
   { tag: 'guided-assistant', path: '/projects/p1/guided', open: async (p) => { const b = p.getByRole('button', { name: /assistant/i }).first(); if (await b.count()) await press(b); } },
   { tag: 'interviews', path: '/projects/p1/interviews' },
   { tag: 'vv', path: '/projects/p1/vv' },
+  { tag: 'releases', path: '/projects/p1/releases' },
   { tag: 'test-run', path: '/projects/p1/vv/runs/tr1' },
   { tag: 'evidence', path: '/projects/p1/evidence' },
   { tag: 'evidence-detail', path: '/projects/p1/evidence', open: async (p) => { await press(p.getByText('Noise sweep, 90 minutes, all load conditions').first()); await p.waitForTimeout(400); } },
@@ -533,7 +540,7 @@ async function runEngine(engine, device, name, desktop = false) {
     const open = desktop && s.openDesktop ? s.openDesktop : s.open;
     // A fresh context per screen: Chromium flips its hover/pointer media
     // flags after a synthetic mouse event, which real phones never see.
-    const ctx = await browser.newContext({ ...device, baseURL: BASE_URL, serviceWorkers: 'block' });
+    const ctx = await browser.newContext({ ...device, baseURL: BASE_URL, serviceWorkers: 'block', colorScheme: COLOR_SCHEME });
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));

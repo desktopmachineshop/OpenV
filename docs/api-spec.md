@@ -989,6 +989,28 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report PDF: the coverage and gaps `vv/coverage` and `vv/gaps` answer, flow-down included (REQ-146), and the test runs | viewer |
 
+### Target releases
+
+A project's target releases are its ordered milestones ("MVP", "V1.0"). An
+artifact targets a range of them through two attributes holding release ids:
+`target_release`, the release it is introduced in, and the optional
+`target_release_until`, the last release it is in; with no last release it is
+in every later one. An artifact with neither inherits its nearest ancestor's
+range. An artifact write naming a release the project does not have, a last
+release before the first, or a last release with no first is a `400`; on an
+update only a targeting that changes is checked. Writes are gated by the
+`target-releases` feature (`403` on a stable-channel workspace without it).
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/projects/{id}/releases` | The project's releases in order: `[{id, project_id, name, description, target_date, status, position, released_at, created_at, updated_at}]`, `[]` for none. `target_date` is `YYYY-MM-DD` or `null`; `status` is `planned`, `in_progress` or `released` | viewer |
+| POST | `/api/v1/projects/{id}/releases` | Add a release at the end of the order `{name, description?, target_date?, status?}` → `201`. `409` for a name the project already has (in any case), `400` for an empty name, a date not written `YYYY-MM-DD` or an unknown status. A status that becomes `released` stamps `released_at` | editor |
+| PUT | `/api/v1/projects/{id}/releases/{releaseId}` | Change `{name?, description?, target_date?, status?}`; an omitted field is kept, an empty `target_date` clears it. `404` for a release of another project | editor |
+| DELETE | `/api/v1/projects/{id}/releases/{releaseId}` | Delete a release no current artifact targets → `204`; `409` while one does | editor |
+| PUT | `/api/v1/projects/{id}/release-order` | Set the order `{ids}`, naming every release of the project once (`400` otherwise) → the list | editor |
+| GET | `/api/v1/projects/{id}/vv/releases` | Every release's `summary` (`total`, `introduced`, `approved`, `verified` (a rollup of `pass` or `verified-manually`), `ready` (both), `by_status`, `by_rollup`) and `unassigned`, `unassigned_ids`: the requirements no release targets. Rollups are `vv/coverage`'s, flow-down included | viewer |
+| GET | `/api/v1/projects/{id}/vv/releases/{releaseId}` | One release's progress: `release`, `summary`, `entries` (each requirement in it with `ref`, `title`, `status`, `rollup`, `range` `{from, until?, inherited_from?}`, `introduced`, `test_case_ids`, `latest_results`) and `burn_up`, one `{date, scope, verified}` per day (sampled to at most about 120 points) from the release's creation, or its earliest requirement, to today or the day it was released | viewer |
+
 ### Workspace limits
 
 | Method | Path | Purpose | Auth |

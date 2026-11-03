@@ -89,6 +89,7 @@ func (a *app) handlers() {
 		TemplateService:      a.templateService,
 		ChatterService:       a.chatterService,
 		AttributeService:     a.attributeService,
+		TargetReleaseService: a.targetReleaseService,
 		SharedProductService: a.sharedProductService,
 		EmbeddingService:     a.embeddingService,
 		UploadsDir:           a.uploadsDir,

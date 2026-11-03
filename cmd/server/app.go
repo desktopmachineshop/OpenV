@@ -44,6 +44,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
@@ -110,6 +111,7 @@ type app struct {
 	userMetricsRepo      *postgres.UserMetricsRepository
 	connectedAppRepo     *postgres.ConnectedAppRepository
 	attributeDefRepo     *postgres.AttributeDefinitionRepository
+	targetReleaseRepo    *postgres.TargetReleaseRepository
 	sharedProductRepo    *postgres.SharedProductRepository
 	bus                  *eventbus.DefaultBus
 	artifactService      *artifacts.DefaultService
@@ -137,6 +139,7 @@ type app struct {
 	productService       *products.DefaultService
 	settingsService      *settings.DefaultService
 	attributeService     *attributes.DefaultService
+	targetReleaseService *targetreleases.DefaultService
 	sharedProductService *sharedproducts.DefaultService
 	vvService            *vv.DefaultService
 	evidenceService      *evidence.DefaultService

@@ -12,6 +12,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -30,6 +31,9 @@ func (a *app) projects() {
 	// Typed attribute definitions (issue #219). The artifacts catalog validates
 	// a definition's applies_to_type at create/update time.
 	a.attributeService = attributes.NewDefaultService(a.attributeDefRepo, artifacts.ValidType)
+	// Target releases: the milestones a project plans its requirements for.
+	// A release an artifact still targets cannot be deleted.
+	a.targetReleaseService = targetreleases.NewDefaultService(a.targetReleaseRepo, a.targetReleaseRepo.CountTargeting)
 	// The community pool of joke demo products for the new-project wizard.
 	// Limits are env-tunable so a deployment can tighten them without a
 	// release; the defaults bound both abuse and storage cost.

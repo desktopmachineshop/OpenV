@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="planning-releases">
+  <title>Planning releases</title>
+  <shortdesc>Choose <b>Add release</b> and give the release a name, and if you like a target date, a status and a description. A new release goes at the end of the list. Each name is used once per project.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="releases.list"/>
+    <resourceid appname="openv-web" appid="releases.add"/>
+    <resourceid appname="openv-web" appid="releases.form"/>
+  </prolog>
+  <conbody>
+    <p>Releases run in the order of the list: use the arrows beside a release to move it earlier or later. The order matters, because a requirement planned for one release is in every later release too.</p>
+    <p>A release's status is <b>Planned</b>, <b>In progress</b> or <b>Released</b>. Marking a release released records the day it shipped, and its burn-up stops there.</p>
+    <p>You can't delete a release that requirements still target: move them to another release first, or clear their release, then delete it.</p>
+  </conbody>
+</concept>

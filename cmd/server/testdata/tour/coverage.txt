@@ -39,6 +39,7 @@ DELETE /api/v1/orgs/{id}/runner-session: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 DELETE /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/projects/{id}/releases/{releaseId}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/projects/{id}/team-access/{teamId}: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/provider-api-keys/{env}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/repo-connections/{id}: s5d, s5e; 2xx or 3xx in s5d
@@ -163,6 +164,7 @@ GET /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/quality: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/releases: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/repo-connections: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/projects/{id}/report: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/review-queue: s5a, s5e; 2xx or 3xx in s5a, s5e
@@ -172,6 +174,8 @@ GET /api/v1/projects/{id}/test-runs: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/vv/coverage: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/vv/gaps: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/vv/matrix: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/vv/releases: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/vv/releases/{releaseId}: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/vv/report: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/work-items: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{projectID}/attachments: s5a, s5e; 2xx or 3xx in s5a, s5e
@@ -223,7 +227,7 @@ POST /api/v1/agent-runs/{id}/start: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/agents: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/agents/sync: s5d, s5e; 2xx or 3xx in s5d, s5e
 POST /api/v1/agents/{slug}/runs: s5d, s5e; 2xx or 3xx in s5d, s5e
-POST /api/v1/artifacts: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
+POST /api/v1/artifacts: s5a, s5b, s5d, s5e; 2xx or 3xx in s5a, s5b, s5d
 POST /api/v1/artifacts/{id}/restore: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/attachments/upload: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/attachments/{id}/versions: s5a, s5e; 2xx or 3xx in s5a
@@ -297,6 +301,7 @@ POST /api/v1/projects/{id}/evidence-bundles: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/members: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/projects/{id}/reindex-embeddings: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/projects/{id}/releases: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/repo-connections: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/projects/{id}/review-round: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/projects/{id}/share-links: s5a, s5c, s5e; 2xx or 3xx in s5a, s5c
@@ -371,6 +376,8 @@ PUT /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/release-order: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/releases/{releaseId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/team-access: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/provider-api-keys/{env}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/provider-settings: s5d, s5e; 2xx or 3xx in s5d
@@ -383,4 +390,4 @@ PUT /api/v1/teams/{id}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 372 of 372 routes reached (100.0%), 360 with a 2xx or 3xx answer (96.8%); the floor is 90%, 335 routes
+the tour: 379 of 379 routes reached (100.0%), 367 with a 2xx or 3xx answer (96.8%); the floor is 90%, 342 routes

@@ -15,6 +15,7 @@ apps:
       /projects/:projectId/interviews: interviews
       /projects/:projectId/vv: vv
       /projects/:projectId/vv/runs/:runId: vv.runs
+      /projects/:projectId/releases: releases
       /projects/:projectId/evidence: evidence
       /projects/:projectId/matrix: matrix
       /projects/:projectId/impact: impact

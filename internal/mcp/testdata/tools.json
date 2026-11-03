@@ -472,6 +472,116 @@
       "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/vv/gaps"]
     },
     {
+      "name": "list_releases",
+      "read_only": true,
+      "description": "A project's target releases (such as MVP, V1.0) in order, each with its id, name, target date and status (planned, in_progress or released). A requirement introduced in a release is in every later one, until the last release it targets, if it has one.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/releases"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/releases"]
+    },
+    {
+      "name": "create_release",
+      "read_only": false,
+      "description": "Add a target release to the end of a project's release order.",
+      "input_schema": {
+        "properties": {
+          "description": {"description": "Optional description", "type": "string"},
+          "name": {
+            "description": "Release name, unique in the project (for example MVP or V1.0)",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"},
+          "status": {"description": "planned (default), in_progress or released", "type": "string"},
+          "target_date": {"description": "Optional planned date, YYYY-MM-DD", "type": "string"}
+        },
+        "required": ["project_id", "name"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/releases"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/releases {\"description\":\"First usable\",\"name\":\"MVP\",\"status\":\"planned\",\"target_date\":\"2027-01-31\"}"
+      ]
+    },
+    {
+      "name": "update_release",
+      "read_only": false,
+      "description": "Change a target release: its name, description, target date (an empty string clears it) or status. Omitted fields are kept.",
+      "input_schema": {
+        "properties": {
+          "description": {"description": "New description", "type": "string"},
+          "name": {"description": "New name", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"},
+          "release_id": {"description": "Release ID", "type": "string"},
+          "status": {"description": "planned, in_progress or released", "type": "string"},
+          "target_date": {
+            "description": "New planned date, YYYY-MM-DD, or an empty string to clear it",
+            "type": "string"
+          }
+        },
+        "required": ["project_id", "release_id"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/releases/{releaseId}"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/releases/33333333-3333-4333-8333-333333333333 {\"description\":\"\",\"name\":\"V1.0\",\"status\":\"in_progress\",\"target_date\":\"\"}"
+      ]
+    },
+    {
+      "name": "get_release_progress",
+      "read_only": true,
+      "description": "Progress against target releases. Without release_id: every release's counts (requirements in it, introduced in it, approved, verified, ready, and by V&V rollup) and the requirements no release targets. With release_id: that release's counts plus one line per requirement (ref, title, review status, rollup, release range); pass detail=true to add each requirement's test cases and latest results and the day-by-day burn-up.",
+      "input_schema": {
+        "properties": {
+          "detail": {
+            "description": "With release_id: return the full progress, test results and burn-up included",
+            "type": "boolean"
+          },
+          "project_id": {"description": "Project ID", "type": "string"},
+          "release_id": {
+            "description": "Release ID; omit for the overview of every release",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/vv/releases/{releaseId}"],
+      "requests": [
+        "GET /api/v1/projects/11111111-1111-4111-8111-111111111111/vv/releases/33333333-3333-4333-8333-333333333333"
+      ]
+    },
+    {
+      "name": "set_release_target",
+      "read_only": false,
+      "description": "Set the target releases of an artifact: the release it is introduced in (release) and, optionally, the last release it is in (until); it is in every release between them, or every later one when until is empty. Releases are named by id or name. clear=true removes the artifact's own targeting, so it inherits its parent's again. The artifact's other attributes are kept.",
+      "input_schema": {
+        "properties": {
+          "artifact_id": {"description": "Artifact ID", "type": "string"},
+          "clear": {"description": "Remove the artifact's own targeting instead", "type": "boolean"},
+          "release": {"description": "First release, by id or name", "type": "string"},
+          "until": {"description": "Optional last release, by id or name", "type": "string"}
+        },
+        "required": ["artifact_id"],
+        "type": "object"
+      },
+      "calls": [
+        "GET /api/v1/artifacts/{id}",
+        "GET /api/v1/projects/{id}/releases",
+        "PUT /api/v1/artifacts/{id}"
+      ],
+      "requests": [
+        "GET /api/v1/artifacts/22222222-2222-4222-8222-222222222222",
+        "GET /api/v1/projects/11111111-1111-4111-8111-111111111111/releases",
+        "PUT /api/v1/artifacts/22222222-2222-4222-8222-222222222222 {\"attributes\":{\"priority\":\"must\",\"target_release\":\"33333333-3333-4333-8333-333333333333\",\"target_release_until\":\"33333333-3333-4333-8333-333333333333\"}}"
+      ]
+    },
+    {
       "name": "list_work_items",
       "read_only": true,
       "description": "List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.",
@@ -594,6 +704,8 @@
     "mcp__openv__get_quality_findings",
     "mcp__openv__get_vv_coverage",
     "mcp__openv__get_vv_gaps",
+    "mcp__openv__list_releases",
+    "mcp__openv__get_release_progress",
     "mcp__openv__list_work_items",
     "mcp__openv__get_work_item",
     "mcp__openv__get_work_item_history"

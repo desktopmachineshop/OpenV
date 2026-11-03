@@ -125,6 +125,20 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'vv', title: 'V&V & test runs' },
   },
+  releases: {
+    title: 'Releases',
+    summary:
+      "Plan requirements for target releases such as MVP and V1.0, and follow each release's review, verification and burn-up.",
+    tips: [
+      'Releases run in order: a requirement introduced in MVP is in V1.0 and every later release too, unless you give it a last release.',
+      "Set a requirement's releases in its editor; set them on a heading and everything under it inherits them.",
+      'Ready means approved and verified: the review status and the V&V rollup both count.',
+      'The burn-up draws verification day by day from the test result history.',
+      "A release a requirement still targets can't be deleted; move its requirements first.",
+    ],
+    chapter: { slug: 'releases', title: 'Target releases' },
+    also: [{ slug: 'vv', title: 'V&V & test runs' }],
+  },
   evidence: {
     title: 'Evidence',
     summary:
