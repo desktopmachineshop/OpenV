@@ -8,6 +8,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
+import { ProjectSwitcher } from './ProjectLayoutSwitcher';
 
 // The compact project layout on a wide screen (the compact-layout feature
 // key): a 64 px icon rail on the left and one top bar, where the sidebar
@@ -114,14 +115,22 @@ const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
 };
 
 interface TopBarProps {
+  /** The project in view, or null on a workspace page. */
   project: Project | null;
   pageLabel: string;
   helpOpen: boolean;
   onHelpToggle: () => void;
+  /** A phone or tablet: the search stays in the project menu, not the bar. */
+  compact?: boolean;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ project, pageLabel, helpOpen, onHelpToggle }) => (
-  <header className="ov-topbar">
+/**
+ * The one top bar of the compact layout, on project pages and workspace pages
+ * alike: the workspace switcher, the project switcher, the page, the
+ * workspace search, help, the bell and the account.
+ */
+export const TopBar: React.FC<TopBarProps> = ({ project, pageLabel, helpOpen, onHelpToggle, compact = false }) => (
+  <header className="ov-topbar safe-area-top">
     <div className="ov-topbar-org">
       <OrgSwitcher variant="light" />
     </div>
@@ -129,9 +138,7 @@ const TopBar: React.FC<TopBarProps> = ({ project, pageLabel, helpOpen, onHelpTog
       /
     </span>
     <nav className="ov-topbar-crumbs" aria-label="You are here">
-      <NavLink to="" end className="ov-topbar-project" title={project?.name || ''}>
-        {project?.name || '…'}
-      </NavLink>
+      <ProjectSwitcher current={project} />
       {pageLabel && (
         <>
           <span className="ov-topbar-sep" aria-hidden="true">
@@ -143,9 +150,11 @@ const TopBar: React.FC<TopBarProps> = ({ project, pageLabel, helpOpen, onHelpTog
         </>
       )}
     </nav>
-    <div className="ov-topbar-search" data-help-key="search">
-      <GlobalSearch />
-    </div>
+    {!compact && (
+      <div className="ov-topbar-search" data-help-key="search">
+        <GlobalSearch />
+      </div>
+    )}
     <button
       type="button"
       className="ov-topbar-help"

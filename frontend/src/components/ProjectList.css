@@ -341,6 +341,84 @@
   color: var(--text);
 }
 
+/* The Home design's Projects panel (the redesign-pages feature key): one
+   bordered panel of rows instead of a grid of cards. Each row has the name,
+   its size and the actions on one line, the traced and verified meters below,
+   and the description as one muted line. */
+.projects-grid.is-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 760px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.projects-grid.is-rows .project-card {
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
+  padding: 9px 12px;
+  gap: 5px;
+}
+
+.projects-grid.is-rows .project-card:last-child {
+  border-bottom: none;
+}
+
+.projects-grid.is-rows .project-card:hover {
+  background: var(--surface-hover);
+}
+
+.projects-grid.is-rows .project-card.selected {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.projects-grid.is-rows .project-card-header {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.projects-grid.is-rows .project-card-header h3 {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.project-count {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.projects-grid.is-rows .project-actions {
+  flex: none;
+}
+
+.projects-grid.is-rows .project-description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-meters {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 420px;
+}
+
+.projects-grid.is-rows .project-footer {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .project-list-container {
     padding: 20px 10px;

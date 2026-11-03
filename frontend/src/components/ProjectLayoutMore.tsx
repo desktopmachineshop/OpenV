@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import type { Project } from '../api/client';
+import { ProjectSwitcher } from './ProjectLayoutSwitcher';
 import type { NavSection } from '../pages';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
@@ -80,6 +81,7 @@ export const PhoneMoreMenu: React.FC<PhoneMoreMenuProps> = ({
         </button>
         <div className="ov-more-card ov-more-tools">
           <OrgSwitcher variant="light" />
+          <ProjectSwitcher current={project} />
           <div className="ov-more-search">
             <GlobalSearch />
           </div>

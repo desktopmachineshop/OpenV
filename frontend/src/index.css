@@ -766,6 +766,134 @@ textarea {
 .ov-topbar-project:hover {
   text-decoration: underline;
 }
+/* The project switcher (ProjectLayoutSwitcher): the project crumb is a
+   button that opens the workspace's projects, on every page with the bar. */
+.ov-project-switcher {
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+button.ov-topbar-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.ov-topbar-project:hover,
+button.ov-topbar-project[aria-expanded='true'] {
+  text-decoration: none;
+  background: var(--surface-hover);
+}
+.ov-project-switcher-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-project-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+.ov-project-list-items {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.ov-project-list-foot {
+  border-top: 1px solid var(--border-soft);
+  padding: 4px 0;
+}
+.ov-project-list-link {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-project-list-link:hover,
+.ov-project-list-link:focus-visible {
+  background: var(--surface-hover);
+  text-decoration: none;
+}
+.ov-project-list-link[aria-current='true'] {
+  background: var(--tint-blue);
+  box-shadow: inset 3px 0 0 var(--accent);
+  font-weight: 600;
+}
+.ov-project-list-link.is-new {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.ov-project-list-note {
+  display: block;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ov-project-switcher.is-dark button.ov-topbar-project {
+  color: var(--sidebar-text);
+  padding: 0 4px 0 0;
+  min-height: 36px;
+  font-size: 14px;
+}
+.ov-project-switcher.is-dark button.ov-topbar-project:hover,
+.ov-project-switcher.is-dark button.ov-topbar-project[aria-expanded='true'] {
+  background: transparent;
+  text-decoration: underline;
+}
+.ov-phone-header-ws {
+  padding-left: 12px;
+  min-height: 64px;
+}
+.ov-phone-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--sidebar-text);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* A workspace page's rail (ProjectLayoutWorkspace) is fixed to the left
+   edge and the page is padded past it, so the page keeps its own layout. */
+.ov-rail.ov-rail-fixed {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 64px;
+}
+body.ov-has-rail {
+  padding-left: 64px;
+}
+
 .ov-topbar-page {
   flex-shrink: 0;
   color: var(--text-secondary);

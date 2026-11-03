@@ -7,6 +7,7 @@ import { HelpSidebar } from './HelpSidebar';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
+import { WorkspaceFrame } from './ProjectLayoutWorkspace';
 
 interface NavbarProps {
   title?: React.ReactNode;
@@ -35,6 +36,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   useHelpShortcut(ownHelp, toggleOwnHelp);
   const helpToggle = onHelpToggle ?? (ownHelp ? toggleOwnHelp : undefined);
   const isHelpOpen = onHelpToggle ? !!helpOpen : ownHelpOpen;
+  // The compact layout draws one interface everywhere: a workspace page gets
+  // the rail and the top bar a project's pages have (ProjectLayoutWorkspace).
+  if (compactLayout && showWorkspaceControls && helpToggle) {
+    return (
+      <>
+        <WorkspaceFrame
+          pageLabel={typeof title === 'string' ? title : ''}
+          helpOpen={isHelpOpen}
+          onHelpToggle={helpToggle}
+        />
+        {ownHelp && <HelpSidebar open={ownHelpOpen} onOpenChange={setOwnHelpOpen} />}
+      </>
+    );
+  }
   return (
     <>
       <div

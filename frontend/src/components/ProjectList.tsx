@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShortcutTarget,
   SHORTCUT_PARAM,
@@ -49,7 +49,9 @@ import { SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
-import { COMPACT_LAYOUT_FEATURE } from '../features';
+import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE } from '../features';
+import { ProjectCount, ProjectMeters, useProjectFigures } from './ProjectListFigures';
+import { isLanding } from './ProjectListLanding';
 import './ProjectList.css';
 
 // What an invention that outlasts its wait says where the workspace has the
@@ -103,6 +105,13 @@ export const ProjectList: React.FC = () => {
   const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
   // ? and F1 open help here too, as on every project page (compact layout).
   useHelpShortcut(useFeature(COMPACT_LAYOUT_FEATURE), () => setHelpOpen((o) => !o));
+  // The Home design: the list is the Projects panel's rows, with each
+  // project's size and traced and verified share, and arriving in the app
+  // (signing in, or opening it) lands on a project's Home rather than here.
+  const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
+  const location = useLocation();
+  const landing = isLanding(location.state);
+  const figures = useProjectFigures(homeDesign && !landing ? projects.map((p) => p.id) : []);
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something
   // new rather than re-treading the same joke.
@@ -338,6 +347,32 @@ export const ProjectList: React.FC = () => {
     loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOrgId]);
+
+  // Arriving in the app opens the project last opened, or the first one, at
+  // its Home. The list itself is still where the rail's Projects, Home's
+  // All projects and the top bar lead, and where a member with no projects
+  // starts one.
+  // Only the first load decides: a member who arrives with no projects and
+  // then creates one goes where creating it leads, not to a Home.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (!homeDesign || !landing || landed.current || loading) return;
+    landed.current = true;
+    if (shortcut || projects.length === 0) return;
+    const remembered = lastProject();
+    const target = projects.some((p) => p.id === remembered) ? remembered : projects[0].id;
+    navigate(`/projects/${target}/home`, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeDesign, landing, shortcut, loading, projects]);
+
+  // The top bar's project switcher offers New project on every page; it
+  // arrives here with that wish in history state and opens the form.
+  const wantsCreate = (location.state as { create?: unknown } | null)?.create === true;
+  useEffect(() => {
+    if (!wantsCreate) return;
+    setCreateMode('blank');
+    setIsCreating(true);
+  }, [wantsCreate, location.key]);
 
   // A shortcut that knows which project the member was last in goes there
   // without asking. When it does not (first run, or that project is not in
@@ -637,7 +672,7 @@ export const ProjectList: React.FC = () => {
         <div className="loading">Loading projects...</div>
       ) : (
         <>
-          <div className="projects-grid">
+          <div className={homeDesign ? 'projects-grid is-rows' : 'projects-grid'}>
             {projects.length === 0 ? (
               <div className="create-import-placeholder">
                 <h3>Get Started</h3>
@@ -687,6 +722,7 @@ export const ProjectList: React.FC = () => {
                 >
                   <div className="project-card-header">
                     <h3>{project.name}</h3>
+                    {homeDesign && <ProjectCount figures={figures[project.id]} />}
                     <div className="project-actions">
                       <button
                         className="icon-btn template-btn"
@@ -728,6 +764,7 @@ export const ProjectList: React.FC = () => {
                   {project.description && (
                     <p className="project-description">{project.description}</p>
                   )}
+                  {homeDesign && <ProjectMeters figures={figures[project.id]} />}
                   <div className="project-footer">
                     <code className="project-id">{project.id.substring(0, 8)}...</code>
                     <span className="project-date">

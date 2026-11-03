@@ -9,6 +9,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Sign in to your project's Home.** Signing in, or opening the app, now
+  takes you to the Home page of the project you opened last, as in the new
+  design, instead of the list of projects. The Projects page, still under
+  **Projects** in the menu and **All projects** on Home, lists your projects
+  as rows with how many artifacts each holds and how much of it is traced
+  and verified.
+- **One frame on every page, with a project switcher.** The Projects page,
+  workspace settings, workspace runs, What's new and platform admin now have
+  the same left-hand rail and top bar as a project's pages, instead of the
+  old header. The project's name in the top bar opens a list of the
+  workspace's projects on every page, with **All projects** and **+ New
+  project**; the workspace's name beside it switches workspace. On a phone,
+  the workspace and project switchers sit together at the top.
+
 ## 0.27.1 — 2026-11-03
 
 ### Bug fixes
