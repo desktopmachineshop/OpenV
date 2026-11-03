@@ -84,6 +84,18 @@ const ReviewQueue = lazy(() =>
 const Releases = lazy(() =>
   import('./views/Releases').then((m) => ({ default: m.Releases }))
 );
+const ProjectHome = lazy(() =>
+  import('./views/ProjectHome').then((m) => ({ default: m.ProjectHome }))
+);
+const DesignItems = lazy(() =>
+  import('./views/DesignItems').then((m) => ({ default: m.DesignItems }))
+);
+const TestsPage = lazy(() =>
+  import('./views/TestsPage').then((m) => ({ default: m.TestsPage }))
+);
+const BaselinesPage = lazy(() =>
+  import('./views/BaselinesPage').then((m) => ({ default: m.BaselinesPage }))
+);
 
 // How long App waits before each new try of a gate load that failed; after
 // the last, only the window's focus or the browser coming back online tries
@@ -309,6 +321,10 @@ function App() {
           <Route path="activity" element={<ActivityLog />} />
           <Route path="settings" element={<ProjectSettings />} />
           <Route path="releases" element={<Releases />} />
+          <Route path="home" element={<ProjectHome />} />
+          <Route path="design" element={<DesignItems />} />
+          <Route path="tests" element={<TestsPage />} />
+          <Route path="baselines" element={<BaselinesPage />} />
         </Route>
           <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/projects" replace />} />} />
           </>

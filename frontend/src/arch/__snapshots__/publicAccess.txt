@@ -47,6 +47,10 @@ PUBLIC_SEGMENTS: /login, /manual, /interview, /verify-email, /reset-password, /s
   session  /projects/:projectId/activity
   session  /projects/:projectId/settings
   session  /projects/:projectId/releases
+  session  /projects/:projectId/home
+  session  /projects/:projectId/design
+  session  /projects/:projectId/tests
+  session  /projects/:projectId/baselines
 
 ## API calls reachable from each public page module (open = isOpenPath)
 ext/SiteSlot.tsx  <- /
