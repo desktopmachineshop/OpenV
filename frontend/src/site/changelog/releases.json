@@ -2,6 +2,37 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.27.0",
+   "date": "2026-11-03",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Home, Design, Tests and Baselines pages.** Four new pages in every project. **Home** shows the project's figures, everything that needs you (reviews, suspect links, test runs in progress, failing tests and new comments), the audit trail, your projects with how far each is traced and verified, and the agent proposals waiting. **Design** shows your design items as a tree, with each one's attributes, the requirements it satisfies and the tests that verify them. **Tests** shows your newest test runs with their pass, fail and blocked counts, and every test case with its method, what it verifies and its last result. **Baselines** lists your baselines as a timeline and compares any two, or a baseline and the working copy, with the text of each change word by word."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Calmer buttons across the app.** A page's main action is now one blue button, and the actions beside it are quiet outlined buttons, instead of green, grey and blue buttons competing for attention. The first step of bringing every page in line with OpenV's new compact design.",
+      "**Requirements, redesigned.** The list now takes the page, as a dense table grouped by section, the tree, or layers that follow one chain from need to design, with tabs per artifact type and the project's figures above it. Every row shows its status, priority, quality score, trace (with a warning on suspect links) and verification. The selected artifact opens in a panel on the right with its trace, its tests and their results. Moving an artifact up or down is in its ⋯ menu (or Alt+↑ / Alt+↓). On a phone the list has two-line rows, a way down the hierarchy level by level, and a bar under the artifact to comment or move it on in review.",
+      "**V&V, test runs and agent proposals in the new design.** The V&V page shows coverage by document section with a bar per section, the run in progress and the gaps to fix first; test runs are cards with their results as a bar. On a phone you now record a run one test case at a time, with large Pass, Fail, Blocked and Not run buttons. Agent proposals read as the change they make, field by field, instead of raw data, and statuses across the matrix, evidence, impact, releases and runs are calm tinted labels.",
+      "**The Review Queue is a board.** What is in review, the suspect links, and what you sent back or approved sit side by side as columns of cards, each with its own Open, Approve, Send back or Confirm. A decision moves its card to the next column instead of making it disappear. On a phone the columns are tabs along the top.",
+      "**Settings with a side menu.** Project and workspace settings list their sections down the left, with the open one beside them under its own title; on a phone they are a row of tabs. Each quality rule now has an on/off switch next to its level.",
+      "**A clearer phone header and More page.** On a phone the top bar shows the project above the page you are on, and **More** opens a full page of the project's pages, the workspace switcher, search and your account.",
+      "**One look on the other pages.** The board, activity, interviews, overview, agents, crew, automations, runs and the projects list use the same compact headings, tinted status chips and quiet buttons."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Phone tabs easier to read, and nothing sits on them.** The labels of the tab bar along the bottom of a phone are a size larger, and the guided definition's **Assistant** button now sits above the tabs instead of covering **Review** and **More**."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.26.0",
    "date": "2026-11-03",
    "stableSince": "",

@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.27.0 — 2026-11-03
+
 ### New features
 
 - **Home, Design, Tests and Baselines pages.** Four new pages in every
