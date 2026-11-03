@@ -16,6 +16,7 @@ import {
 } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
+import { ArtifactReleaseRange } from './ArtifactReleaseRange';
 import {
   applyLinkDeletion,
   createPendingLinkId,
@@ -426,6 +427,14 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             </datalist>
           </div>
           )}
+
+          <ArtifactReleaseRange
+            projectId={effectiveProjectId}
+            parentId={formData.parent_id}
+            attributes={formData.attributes || {}}
+            artifacts={artifacts}
+            onChange={setAttribute}
+          />
 
           {formData.type === 'test-case' && (
             <div className="form-group">

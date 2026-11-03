@@ -52,6 +52,7 @@ ORDER = [
     ('automations', 'automations'),
     ('interviews', 'interviews'),
     ('vv', 'vv'),
+    ('releases', 'releases'),
     ('org-settings', 'orgSettings'),
     ('platform-admin', 'platformAdmin'),
     ('troubleshooting', 'troubleshooting'),
@@ -75,6 +76,7 @@ CHAPTER_KEYS = {
     'automations': ['automations'],
     'interviews': ['interviews'],
     'vv': ['vv'],
+    'releases': ['releases'],
     'org-settings': ['settings', 'org.settings'],
     'platform-admin': ['admin'],
     'troubleshooting': ['troubleshooting', 'activity'],
@@ -149,6 +151,10 @@ SECTION_KEYS = {
     ('vv', 'coverage-rollup'): ['vv.coverage'],
     ('vv', 'gaps'): ['vv.gaps'],
     ('vv', 'the-pdf-report'): ['vv.report'],
+    ('releases', 'planning-releases'): ['releases.list', 'releases.add', 'releases.form'],
+    ('releases', 'targeting-requirements'): ['requirements.releases'],
+    ('releases', 'release-progress'): ['releases.progress'],
+    ('releases', 'the-burn-up'): ['releases.burnup'],
 }
 
 

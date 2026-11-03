@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 41
-  rendering a lazy() component: 18
+<Route> elements: 42
+  rendering a lazy() component: 19
   rendering an eagerly imported component: 21
   redirects only: 2
 index routes: 1
@@ -45,6 +45,7 @@ index routes: 1
   WorkspaceRunsPage   ./views/WorkspaceRunsPage#WorkspaceRunsPage
   SharedProjectView   ./views/SharedProjectView#SharedProjectView
   ReviewQueue         ./views/ReviewQueue#ReviewQueue
+  Releases            ./views/Releases#Releases
 
 ## Route tree
   /login                           <Login>  [eager ./views/Login#Login]
@@ -87,6 +88,7 @@ index routes: 1
     agents                         <AgentsPage>  [eager ./views/AgentsPage#AgentsPage]
     activity                       <ActivityLog>  [lazy ./views/ActivityLog#ActivityLog]
     settings                       <ProjectSettings>  [eager ./views/ProjectSettings#ProjectSettings]
+    releases                       <Releases>  [lazy ./views/Releases#Releases]
   *                                <SitePages site={site} fallback={<Navigate to="/projects" replace />}>  [eager ./ext/SiteSlot#SitePages]  when !walled
 
 ## Full paths, in declaration order
@@ -130,4 +132,5 @@ index routes: 1
   /projects/:projectId/agents                         when !walled
   /projects/:projectId/activity                       when !walled
   /projects/:projectId/settings                       when !walled
+  /projects/:projectId/releases                       when !walled
   /*                                                  when !walled

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="release-progress">
+  <title>Release progress</title>
+  <shortdesc>Select a release to see its progress. The counts cover every requirement in the release, the ones it introduces and the ones carried over from earlier releases:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="releases.progress"/>
+  </prolog>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Count</stentry><stentry>Meaning</stentry></sthead>
+      <strow><stentry>Requirements</stentry><stentry>Requirements in the release, with how many are new in it</stentry></strow>
+      <strow><stentry>Approved</stentry><stentry>Requirements whose review status is approved</stentry></strow>
+      <strow><stentry>Verified</stentry><stentry>Requirements whose V&amp;V rollup is <i>pass</i> or <i>verified-manually</i></stentry></strow>
+      <strow><stentry>Ready</stentry><stentry>Requirements that are both approved and verified</stentry></strow>
+      <strow><stentry>Failing</stentry><stentry>Requirements whose rollup is <i>fail</i>, shown when there are any</stentry></strow>
+    </simpletable>
+    <p>The rollup is the one the <b>V&amp;V</b> page shows, including verification rolled up from child projects. The bar beside each release in the list splits its requirements by rollup, and below the list, a line says how many requirements no release targets yet.</p>
+    <p>The table lists the release's requirements with their review status, their rollup and the releases they are planned for; <i>(inherited)</i> marks a range that comes from a parent.</p>
+  </conbody>
+</concept>

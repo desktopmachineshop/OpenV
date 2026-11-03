@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="targeting-requirements">
+  <title>Targeting requirements</title>
+  <shortdesc>Set an artifact's releases in its editor, under <b>Releases</b>:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.releases"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>From</b> a release: the artifact is introduced in that release and stays in every later one.</li>
+      <li>With a last release as well, it is in the releases from the first to the last, inclusive. Choose <b>only</b> to plan it for one release alone, or a later release for a capability that is retired after it.</li>
+      <li>Leave the first release unset and the artifact takes its parent's releases. Set the releases on a heading, and every requirement under it is planned for them, unless a requirement sets its own.</li>
+    </ul>
+    <p>The editor says where an inherited range comes from. A project with no releases shows no <b>Releases</b> field.</p>
+    <p>Agents set the same thing with the <codeph>set_release_target</codeph> tool, and read progress with <codeph>get_release_progress</codeph>.</p>
+  </conbody>
+</concept>

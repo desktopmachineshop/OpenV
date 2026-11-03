@@ -15,6 +15,10 @@ import type {
   ImpactDirection,
   ImpactReport,
   MatrixRow,
+  ReleaseOverview,
+  ReleaseProgress,
+  TargetRelease,
+  TargetReleaseInput,
   TestResult,
   TestRun,
 } from './types/vv';
@@ -128,3 +132,26 @@ export const vvAPI = {
       },
     }),
 };
+
+// A project's target releases and the progress against each
+// (internal/api/vv_release_handlers.go).
+export const releasesAPI = {
+  list: (projectId: string) =>
+    client.get<TargetRelease[]>(`/api/v1/projects/${projectId}/releases`),
+  create: (projectId: string, payload: TargetReleaseInput) =>
+    client.post<TargetRelease>(`/api/v1/projects/${projectId}/releases`, payload),
+  update: (projectId: string, releaseId: string, payload: TargetReleaseInput) =>
+    client.put<TargetRelease>(`/api/v1/projects/${projectId}/releases/${releaseId}`, payload),
+  remove: (projectId: string, releaseId: string) =>
+    client.delete(`/api/v1/projects/${projectId}/releases/${releaseId}`),
+  reorder: (projectId: string, ids: string[]) =>
+    client.put<TargetRelease[]>(`/api/v1/projects/${projectId}/release-order`, { ids }),
+  overview: (projectId: string) =>
+    client.get<ReleaseOverview>(`/api/v1/projects/${projectId}/vv/releases`),
+  progress: (projectId: string, releaseId: string) =>
+    client.get<ReleaseProgress>(`/api/v1/projects/${projectId}/vv/releases/${releaseId}`),
+};
+
+/** The artifact attributes a release range is stored under. */
+export const TARGET_RELEASE_ATTR = 'target_release';
+export const TARGET_RELEASE_UNTIL_ATTR = 'target_release_until';

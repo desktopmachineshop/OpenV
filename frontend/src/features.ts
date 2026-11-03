@@ -41,3 +41,7 @@ export const REMOTE_MCP_FEATURE: FeatureKey = 'remote-mcp';
  * consent page, and changed later under Connected apps.
  */
 export const CONNECTED_APP_WORKSPACES_FEATURE: FeatureKey = 'connected-app-workspaces';
+
+// A project's target releases (MVP, V1.0, ...): the Releases page and the
+// release range in the artifact editor.
+export const TARGET_RELEASES_FEATURE: FeatureKey = 'target-releases';

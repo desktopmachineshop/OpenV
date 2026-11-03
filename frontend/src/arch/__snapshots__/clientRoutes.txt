@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 314
-  axios instance calls: 303 (DELETE 37, GET 122, HEAD 1, POST 102, PUT 41)
+call sites: 321
+  axios instance calls: 310 (DELETE 38, GET 125, HEAD 1, POST 103, PUT 43)
   helper calls (a function that passes its argument to the instance): 2
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 7 (4 of them axios calls)
-distinct METHOD PATH lines below: 313; server routes reached: 313
+distinct METHOD PATH lines below: 320; server routes reached: 320
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
@@ -250,6 +250,11 @@ PUT     /api/v1/projects/{id}/profile                                     produc
 GET     /api/v1/projects/{id}/quality                                     qualityAPI.project
 GET     /api/v1/projects/{id}/quality-rules                               qualityRulesAPI.forProject
 PUT     /api/v1/projects/{id}/quality-rules                               qualityRulesAPI.setForProject
+PUT     /api/v1/projects/{id}/release-order                               releasesAPI.reorder
+GET     /api/v1/projects/{id}/releases                                    releasesAPI.list
+POST    /api/v1/projects/{id}/releases                                    releasesAPI.create
+DELETE  /api/v1/projects/{id}/releases/{releaseId}                        releasesAPI.remove
+PUT     /api/v1/projects/{id}/releases/{releaseId}                        releasesAPI.update
 GET     /api/v1/projects/{id}/repo-connections                            repoConnectionsAPI.list
 POST    /api/v1/projects/{id}/repo-connections                            repoConnectionsAPI.create
 GET     /api/v1/projects/{id}/review-queue                                reviewAPI.get
@@ -264,6 +269,8 @@ POST    /api/v1/projects/{id}/test-runs                                   vvAPI.
 GET     /api/v1/projects/{id}/vv/coverage                                 vvAPI.coverage
 GET     /api/v1/projects/{id}/vv/gaps                                     vvAPI.gaps
 GET     /api/v1/projects/{id}/vv/matrix                                   vvAPI.matrix
+GET     /api/v1/projects/{id}/vv/releases                                 releasesAPI.overview
+GET     /api/v1/projects/{id}/vv/releases/{releaseId}                     releasesAPI.progress
 GET     /api/v1/projects/{id}/vv/report                                   vvAPI.report (helper)
 GET     /api/v1/projects/{id}/work-items                                  workItemsAPI.list
 POST    /api/v1/projects/{id}/work-items                                  workItemsAPI.create

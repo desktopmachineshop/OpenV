@@ -231,6 +231,7 @@
         "frontend/src/utils/evidence*",
         "frontend/src/views/EvidenceView*",
         "frontend/src/views/ImpactView*",
+      "frontend/src/views/Releases*",
         "frontend/src/views/TestRunView*",
         "frontend/src/views/TraceabilityMatrix*",
         "frontend/src/views/VVDashboard*",
