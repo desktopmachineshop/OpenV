@@ -10,7 +10,7 @@ import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
-import { ErrorBanner } from '../components/ui';
+import { Chip, ErrorBanner, SettingsLayout } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
 import { CAPABILITY_HOSTED, useCapability } from '../capabilities';
@@ -273,69 +273,62 @@ export const OrgSettings: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', display: 'flex', flexDirection: 'column' }}>
       <Navbar title="Workspace Settings" showWorkspaceControls />
-      <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-        <Link to="/projects" style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'none' }}>
-          ← Back to projects
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 16px', flexWrap: 'wrap' }}>
-          <h2 style={{ color: 'var(--text)', margin: 0, overflowWrap: 'anywhere' }}>{org.name}</h2>
-          <span
-            style={{
-              display: 'inline-block',
-              padding: '2px 10px',
-              borderRadius: 10,
-              fontSize: 12,
-              fontWeight: 600,
-              color: org.type === 'personal' ? 'var(--text-muted)' : 'var(--accent-fg)',
-              background: org.type === 'personal' ? 'var(--neutral-soft)' : 'var(--accent)',
-            }}
-          >
-            {org.type === 'personal' ? 'personal workspace' : 'company workspace'}
-          </span>
-        </div>
-
-        <div className="tab-strip" role="tablist">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',
-                marginBottom: -2,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: tab === t.key ? 600 : 400,
-                color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                width: 'auto',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
-        {notice && (
-          <div
-            style={{
-              background: 'var(--tint-green)',
-              border: '1px solid var(--success)',
-              color: 'var(--success-text)',
-              padding: '10px 14px',
-              borderRadius: 4,
-              marginBottom: 16,
-              fontSize: 13,
-            }}
-          >
-            {notice}
-          </div>
-        )}
-
+      <SettingsLayout
+        group="Workspace"
+        sections={tabs.map((t) => ({ key: t.key, label: t.label }))}
+        active={tab}
+        onSelect={setTab}
+        tabId={(key) => `org-settings-tab-${key}`}
+        panelId="org-settings-panel"
+        head={
+          <>
+            <div className="ov-settings-head">
+              <Link
+                to="/projects"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  alignSelf: 'flex-start',
+                  minHeight: 32,
+                  fontSize: 13,
+                  color: 'var(--accent-text)',
+                  textDecoration: 'none',
+                }}
+              >
+                ← Back to projects
+              </Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                <span className="ov-page-sub" style={{ overflowWrap: 'anywhere' }}>
+                  {org.name}
+                </span>
+                <Chip tone={org.type === 'personal' ? 'neutral' : 'info'}>
+                  {org.type === 'personal' ? 'personal workspace' : 'company workspace'}
+                </Chip>
+              </div>
+              <h2 style={{ overflowWrap: 'anywhere' }}>{tabs.find((t) => t.key === tab)?.label ?? org.name}</h2>
+            </div>
+            <ErrorBanner message={error} onDismiss={() => setError('')} />
+            {notice && (
+              <div
+                role="status"
+                style={{
+                  background: 'var(--tint-green)',
+                  border: '1px solid var(--tint-green-border)',
+                  color: 'var(--success-text)',
+                  padding: '10px 14px',
+                  borderRadius: 6,
+                  fontSize: 13,
+                }}
+              >
+                {notice}
+              </div>
+            )}
+          </>
+        }
+      >
+        <div role="tabpanel" id="org-settings-panel" aria-labelledby={`org-settings-tab-${tab}`}>
         {tab === 'general' && (
           <>
             <div className="card">
@@ -617,7 +610,8 @@ export const OrgSettings: React.FC = () => {
         )}
 
         {tab === 'usage' && <OrgUsageTab org={org} />}
-      </div>
+        </div>
+      </SettingsLayout>
     </div>
   );
 };

@@ -1,13 +1,21 @@
-<div style="padding: 24px; max-width: 900px; margin: 0px auto;">
-<h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
-<div class="tab-strip" role="tablist">
-<button role="tab" id="project-settings-tab-general" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.general" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">General</button>
-<button role="tab" id="project-settings-tab-members" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.members" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
-<button role="tab" id="project-settings-tab-repos" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.repos" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
-<button role="tab" id="project-settings-tab-agents" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.agents" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
-<button role="tab" id="project-settings-tab-attributes" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.attributes" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
-<button role="tab" id="project-settings-tab-quality" aria-selected="true" aria-controls="project-settings-panel" data-help-pane="settings.quality" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">Quality rules</button>
-<button role="tab" id="project-settings-tab-danger" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.danger" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+<div class="ov-settings">
+<nav class="ov-settings-nav" aria-label="Settings sections">
+<span class="ov-section-label">Project</span>
+<div class="ov-settings-tabs" role="tablist" aria-label="Project settings sections" aria-orientation="vertical">
+<button role="tab" id="project-settings-tab-general" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.general" class="ov-settings-nav-item" style="font-weight: 400;">General</button>
+<button role="tab" id="project-settings-tab-members" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.members" class="ov-settings-nav-item" style="font-weight: 400;">Access</button>
+<button role="tab" id="project-settings-tab-repos" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.repos" class="ov-settings-nav-item" style="font-weight: 400;">Repositories</button>
+<button role="tab" id="project-settings-tab-agents" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.agents" class="ov-settings-nav-item" style="font-weight: 400;">Agents</button>
+<button role="tab" id="project-settings-tab-attributes" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.attributes" class="ov-settings-nav-item" style="font-weight: 400;">Attributes</button>
+<button role="tab" id="project-settings-tab-quality" aria-selected="true" aria-controls="project-settings-panel" data-help-pane="settings.quality" class="ov-settings-nav-item" style="font-weight: 600;">Quality rules</button>
+<button role="tab" id="project-settings-tab-danger" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.danger" class="ov-settings-nav-item is-danger" style="font-weight: 400;">Danger Zone</button>
+</div>
+</nav>
+<div class="ov-settings-main">
+<div class="ov-settings-head">
+<span class="ov-page-sub">Project settings</span>
+<h2>Quality rules</h2>
+<p>The rules every requirement is checked against. Findings score a requirement; they never block a save.</p>
 </div>
 <div role="tabpanel" id="project-settings-panel" aria-labelledby="project-settings-tab-quality" data-help-pane="settings.quality">
 <div class="card" data-help-key="settings.quality">
@@ -39,13 +47,16 @@
 <div>
 <h4 style="margin: 0px 0px 4px;">Rules</h4>
 <p style="font-size: 12px; color: var(--text-muted); margin: 0px 0px 10px;">How loudly each check speaks, or Off to silence it. Findings are advisory: they score a requirement and explain themselves, and never block a save.</p>
-<div style="display: flex; flex-direction: column; gap: 6px;">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0px; border-bottom: 1px solid var(--surface-inset); flex-wrap: wrap;">
-<span style="font-size: 13px; color: var(--text); flex: 1 1 200px; min-width: 0px;">Weak wording<br>
+<div class="ov-rule-list">
+<div class="ov-rule-row">
+<input type="checkbox" role="switch" class="ov-switch" aria-label="Weak wording" checked="">
+<span style="font-size: 13px; color: var(--text); flex: 1 1 auto; min-width: 0px;">
+<span style="font-weight: 600;">Weak wording</span>
+<br>
 <span style="font-size: 12px; color: var(--text-muted);">weak or subjective wording</span>
 </span>
-<div style="flex: 0 1 160px; min-width: 140px;">
-<select style="width: 100%;">
+<div style="flex: 0 0 112px; min-width: 0px;">
+<select aria-label="Severity for Weak wording" style="width: 100%; color: var(--danger-strong); font-weight: 600; font-size: 13px;">
 <option value="error">Error</option>
 <option value="warning">Warning</option>
 <option value="info">Info</option>
@@ -54,12 +65,15 @@
 <div style="font-size: 12px; color: var(--danger); margin-top: 4px;">Workspace default is Warning</div>
 </div>
 </div>
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0px; border-bottom: 1px solid var(--surface-inset); flex-wrap: wrap;">
-<span style="font-size: 13px; color: var(--text); flex: 1 1 200px; min-width: 0px;">Passive voice<br>
+<div class="ov-rule-row">
+<input type="checkbox" role="switch" class="ov-switch" aria-label="Passive voice" checked="">
+<span style="font-size: 13px; color: var(--text); flex: 1 1 auto; min-width: 0px;">
+<span style="font-weight: 600;">Passive voice</span>
+<br>
 <span style="font-size: 12px; color: var(--text-muted);">who acts is unstated</span>
 </span>
-<div style="flex: 0 1 160px; min-width: 140px;">
-<select style="width: 100%;">
+<div style="flex: 0 0 112px; min-width: 0px;">
+<select aria-label="Severity for Passive voice" style="width: 100%; color: var(--text-muted); font-weight: 600; font-size: 13px;">
 <option value="error">Error</option>
 <option value="warning">Warning</option>
 <option value="info">Info</option>
@@ -67,12 +81,15 @@
 </select>
 </div>
 </div>
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0px; border-bottom: 1px solid var(--surface-inset); flex-wrap: wrap;">
-<span style="font-size: 13px; color: var(--text); flex: 1 1 200px; min-width: 0px;">Not testable<br>
+<div class="ov-rule-row">
+<input type="checkbox" role="switch" class="ov-switch" aria-label="Not testable" checked="">
+<span style="font-size: 13px; color: var(--text); flex: 1 1 auto; min-width: 0px;">
+<span style="font-weight: 600;">Not testable</span>
+<br>
 <span style="font-size: 12px; color: var(--text-muted);">no measurable criterion</span>
 </span>
-<div style="flex: 0 1 160px; min-width: 140px;">
-<select style="width: 100%;">
+<div style="flex: 0 0 112px; min-width: 0px;">
+<select aria-label="Severity for Not testable" style="width: 100%; color: var(--warning-text); font-weight: 600; font-size: 13px;">
 <option value="error">Error</option>
 <option value="warning">Warning</option>
 <option value="info">Info</option>
@@ -88,6 +105,7 @@
 <button class="compact-action" style="font-size: 13px;" disabled="">Save rules</button>
 <button style="font-size: 13px;" class="secondary compact-action" disabled="">Discard changes</button>
 <button style="font-size: 13px;" class="secondary compact-action" title="Clear this project's overrides so everything follows the workspace">Reset to workspace defaults</button>
+</div>
 </div>
 </div>
 </div>

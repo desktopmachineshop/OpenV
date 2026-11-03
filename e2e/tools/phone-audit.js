@@ -184,11 +184,11 @@ const routes = [
   [/\/api\/v1\/orgs\/[^/]+\/runners/, []],
   [/\/api\/v1\/orgs\/[^/]+\/worker-keys/, []],
   [/\/api\/v1\/orgs\/[^/]+\/provider-keys/, []],
-  [/\/api\/v1\/orgs\/[^/]+\/quality-rules/, { effective: { convention: 'shall', severities: {} }, workspace: null, project: null, summary: 'shall', catalog: { conventions: ['shall', 'rfc2119'], rules: [], severities: ['error', 'warning', 'info', 'off'], defaults: { convention: 'shall', severities: {} }, labels: {} } }],
+  [/\/api\/v1\/orgs\/[^/]+\/quality-rules/, { effective: { convention: 'shall', severities: {} }, workspace: null, project: null, summary: 'shall', catalog: { conventions: ['shall', 'rfc2119'], rules: ['weak-word', 'vague-quantifier', 'placeholder', 'passive-voice', 'long-sentence', 'not-testable'], severities: ['error', 'warning', 'info', 'off'], defaults: { convention: 'shall', severities: { placeholder: 'error', 'passive-voice': 'info', 'long-sentence': 'off' } }, labels: { shall: 'The system shall …', rfc2119: 'MUST, SHOULD, MAY', 'weak-word': 'Words like “appropriate” or “user-friendly” that cannot be checked.', 'vague-quantifier': 'Quantities like “some” or “several” with no number.', placeholder: 'TBD, TODO or XXX left in the text.', 'passive-voice': 'An obligation with no one named to meet it.', 'long-sentence': 'A sentence too long to read as one obligation.', 'not-testable': 'Nothing a test could measure.' } } }],
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'review-queue-decisions': true, 'project-review-round': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -227,7 +227,7 @@ const routes = [
   [/\/api\/v1\/projects\/p1\/interview-sessions/, []],
   [/\/api\/v1\/projects\/p1\/baselines\/b1\/(diff|compare)/, { added: [artifacts[3]], removed: [], modified: [{ before: artifacts[4], after: { ...artifacts[4], title: 'Positioning accuracy (tightened)' } }] }],
   [/\/api\/v1\/projects\/p1\/baselines/, [baseline]],
-  [/\/api\/v1\/projects\/p1\/quality-rules/, { effective: { convention: 'shall', severities: {} }, workspace: null, project: null, summary: 'shall', catalog: { conventions: ['shall', 'rfc2119'], rules: [], severities: ['error', 'warning', 'info', 'off'], defaults: { convention: 'shall', severities: {} }, labels: {} } }],
+  [/\/api\/v1\/projects\/p1\/quality-rules/, { effective: { convention: 'shall', severities: {} }, workspace: null, project: null, summary: 'shall', catalog: { conventions: ['shall', 'rfc2119'], rules: ['weak-word', 'vague-quantifier', 'placeholder', 'passive-voice', 'long-sentence', 'not-testable'], severities: ['error', 'warning', 'info', 'off'], defaults: { convention: 'shall', severities: { placeholder: 'error', 'passive-voice': 'info', 'long-sentence': 'off' } }, labels: { shall: 'The system shall …', rfc2119: 'MUST, SHOULD, MAY', 'weak-word': 'Words like “appropriate” or “user-friendly” that cannot be checked.', 'vague-quantifier': 'Quantities like “some” or “several” with no number.', placeholder: 'TBD, TODO or XXX left in the text.', 'passive-voice': 'An obligation with no one named to meet it.', 'long-sentence': 'A sentence too long to read as one obligation.', 'not-testable': 'Nothing a test could measure.' } } }],
   [/\/api\/v1\/projects\/p1\/quality/, { entries: [] }],
   // Releases: MVP released, V1.0 in progress with one requirement carried
   // over and one introduced, and a burn-up of a few days.
@@ -256,7 +256,7 @@ const routes = [
   [/\/api\/v1\/projects\/p1\/repo-connections/, [{ id: 'rc1', project_id: 'p1', name: 'openv', remote_url: 'https://github.com/desktopmachineshop/OpenV.git', default_branch: 'master', credential_strategy: 'host', created_at: now, updated_at: now }]],
   [/\/api\/v1\/projects\/p1\/activity/, { entries: [{ id: 'ev1', event_type: 'artifact.updated', actor: 'Sam Example', summary: 'Updated REQ-2 Positioning accuracy', created_at: now }] }],
   [/\/api\/v1\/projects\/p1\/impact/, { project_id: 'p1', artifact_id: 'req-2', direction: 'both', downstream: [{ type: 'test-case', count: 1, nodes: [{ artifact_id: 'tc-1', title: 'Accuracy survey with a ballbar', type: 'test-case', distance: 1, via: 'verifies', path: ['req-2', 'tc-1'] }] }], upstream: [{ type: 'user-need', count: 1, nodes: [{ artifact_id: 'need-1', title: 'Cut aluminium parts without a machinist', type: 'user-need', distance: 1, via: 'derives-from', path: ['req-2', 'need-1'] }] }], total: 2 }],
-  [/\/api\/v1\/projects\/p1\/review-queue/, { suspect_links: [links[1]], in_review: [artifacts[4]] }],
+  [/\/api\/v1\/projects\/p1\/review-queue/, { suspect_links: [{ ...links[1], from_title: 'Positioning accuracy', from_type: 'requirement', to_title: 'Cut aluminium parts without a machinist', to_type: 'user-need' }], in_review_artifacts: [artifacts[4], artifacts.find((a) => a.type === 'requirement' && a !== artifacts[4]) || artifacts[5]] }],
   [/\/api\/v1\/projects\/p1$/, project],
   [/\/api\/v1\/projects\/p1\//, []],
   [/\/api\/v1\/projects$/, [project, { ...project, id: 'p2', name: 'Second project' }]],

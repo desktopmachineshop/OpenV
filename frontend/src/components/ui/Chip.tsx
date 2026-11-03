@@ -60,6 +60,21 @@ const WORDS: Record<string, ChipTone> = {
 export const toneFor = (status: string | null | undefined): ChipTone =>
   WORDS[(status || '').toLowerCase().trim()] ?? 'neutral';
 
+/**
+ * The tone of a pill a page used to fill with a theme colour, so the old
+ * solid pills move onto the tinted chip without each page relearning the
+ * vocabulary: the success, danger and warning fills keep their meaning, the
+ * accent is info, purple is agent work, anything else neutral.
+ */
+export const toneForColor = (color: string): ChipTone => {
+  if (/--success/.test(color)) return 'success';
+  if (/--danger/.test(color)) return 'danger';
+  if (/--warning/.test(color)) return 'warning';
+  if (/--purple/.test(color)) return 'agent';
+  if (/--accent/.test(color)) return 'info';
+  return 'neutral';
+};
+
 /** The tone's colours, for a page that draws its own element in the chip's colours. */
 export const toneColors = (tone: ChipTone) => TONES[tone];
 

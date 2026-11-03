@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Artifact,
   Attachment,
@@ -12,17 +12,22 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
-import { NoteComposer, postNote } from '../components/NoteComposer';
+import { ErrorBanner, SegmentedControl, buttonStyle, useConfirm } from '../components/ui';
+import { postNote } from '../components/NoteComposer';
 import { NOTE_TAGGING_FEATURE } from '../components/noteTagging';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
+import { groupAttachments } from './reviewArtifacts';
+import { RejectDialog } from './ReviewQueueParts';
 import {
-  artifactLabel,
-  attachmentLabel,
-  groupAttachments,
-  previewText,
-} from './reviewArtifacts';
+  ArtifactCard,
+  BoardColumn,
+  COLUMNS,
+  ColumnKey,
+  DecidedCard,
+  LinkCard,
+  ReviewDecision,
+} from './ReviewQueueBoard';
 import type { FeatureKey } from '../generated/contract';
 
 // The project-wide review round is gated until a stable release carries it.
@@ -34,211 +39,6 @@ export const REVIEW_ROUND_FEATURE: FeatureKey = 'project-review-round';
 export const REVIEW_DECISIONS_FEATURE: FeatureKey = 'review-queue-decisions';
 
 type Section = 'all' | 'links' | 'artifacts';
-
-// Small pill for an artifact type/kind, matching the V&V chip styling.
-const typeChip = (label: string): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '1px 8px',
-  borderRadius: 10,
-  background: 'var(--surface-alt, var(--surface))',
-  border: '1px solid var(--border)',
-  color: 'var(--text-muted)',
-  fontSize: 12,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-});
-
-const cardStyle: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  padding: 16,
-  marginBottom: 24,
-};
-
-/**
- * One artifact as a reviewer reads it: what it is, what it is called, and
- * enough of what it says to judge without opening it. The title links to the
- * artifact for the times a preview is not enough.
- */
-const ArtifactSummary: React.FC<{ artifact: Artifact; figures: Attachment[] }> = ({
-  artifact,
-  figures,
-}) => {
-  const preview = previewText(artifact.body || '');
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={typeChip(artifact.type)}>{artifact.type}</span>
-        {artifact.ref && (
-          <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}>
-            {artifact.ref}
-          </span>
-        )}
-        <Link
-          to={`../requirements?artifact=${artifact.id}`}
-          style={{ color: 'var(--accent)', textDecoration: 'none' }}
-        >
-          {artifactLabel(artifact)}
-        </Link>
-      </div>
-      {preview ? (
-        <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.45 }}>
-          {preview}
-        </p>
-      ) : (
-        <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>
-          No description.
-        </p>
-      )}
-      {/* On a phone the figures ride along under the text; the table gives
-          them a column of their own. */}
-      {figures.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          <FigureStrip figures={figures} />
-        </div>
-      )}
-    </div>
-  );
-};
-
-/**
- * Small previews of an artifact's figures.
- *
- * A picture is shown as one; a PDF or a CAD file has nothing to show at this
- * size, so it gets a chip naming it instead of a broken thumbnail. Both link
- * to the file itself. Four at most: the point is to recognise the artifact,
- * not to review the drawings here.
- */
-const FigureStrip: React.FC<{ figures: Attachment[] }> = ({ figures }) => {
-  if (figures.length === 0) return null;
-  const shown = figures.slice(0, 4);
-  const rest = figures.length - shown.length;
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-      {shown.map((f) => {
-        const href = attachmentAPI.getDownloadUrl(f.id, f.version);
-        const label = attachmentLabel(f);
-        return f.kind === 'image' ? (
-          <a key={f.id} href={href} target="_blank" rel="noreferrer" title={label}>
-            <img
-              src={href}
-              alt={label}
-              loading="lazy"
-              style={{
-                width: 40,
-                height: 40,
-                objectFit: 'cover',
-                borderRadius: 4,
-                border: '1px solid var(--border)',
-                display: 'block',
-                background: 'var(--surface-alt, var(--surface))',
-              }}
-            />
-          </a>
-        ) : (
-          <a
-            key={f.id}
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            title={label}
-            style={{ ...typeChip(f.kind), textDecoration: 'none', padding: '4px 8px' }}
-          >
-            {f.figure_ref || f.kind}
-          </a>
-        );
-      })}
-      {rest > 0 && (
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>+{rest}</span>
-      )}
-    </div>
-  );
-};
-
-/**
- * Ask for the reason before sending work back.
- *
- * A rejection with no reason is the worst thing a review queue can produce:
- * the author sees an artifact back in draft and has to come and ask what was
- * wrong with it. So the comment is required, and it is written in the SAME
- * composer the notes panel uses — "@name" reaches a person, "@@name" raises
- * them a to-do, "#REQ-12" cites — and posted through the same path, so the
- * reason lands in the artifact's feed as an ordinary note rather than as some
- * second-class rejection field only this screen knows how to read.
- */
-const RejectDialog: React.FC<{
-  artifacts: Artifact[];
-  projectId?: string;
-  busy: boolean;
-  onCancel: () => void;
-  onSubmit: (comment: string) => void;
-}> = ({ artifacts, projectId, busy, onCancel, onSubmit }) => {
-  const [comment, setComment] = useState('');
-  const taggingEnabled = useFeature(NOTE_TAGGING_FEATURE);
-  const many = artifacts.length > 1;
-  const submit = () => {
-    if (comment.trim() && !busy) onSubmit(comment.trim());
-  };
-
-  return (
-    <Modal
-      title={many ? `Send ${artifacts.length} artifacts back` : 'Send back for changes'}
-      width={560}
-      onClose={onCancel}
-    >
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0 }}>
-        {many
-          ? 'Each of these goes back to draft, and your comment is posted on every one of them.'
-          : 'This goes back to draft and your comment is posted on its feed.'}
-      </p>
-      {many && (
-        <ul
-          style={{
-            margin: '0 0 12px',
-            paddingLeft: 18,
-            color: 'var(--text)',
-            fontSize: 13,
-            maxHeight: 120,
-            overflowY: 'auto',
-          }}
-        >
-          {artifacts.map((a) => (
-            <li key={a.id}>{a.ref ? `${a.ref} — ${artifactLabel(a)}` : artifactLabel(a)}</li>
-          ))}
-        </ul>
-      )}
-      <NoteComposer
-        projectId={projectId}
-        artifactId={artifacts.length === 1 ? artifacts[0].id : undefined}
-        value={comment}
-        onChange={setComment}
-        onSubmit={submit}
-        autoFocus
-        minHeight={96}
-        ariaLabel="Reason for sending back"
-        placeholder={
-          taggingEnabled
-            ? 'What needs to change? @name, @@name for a to-do, #REQ-12'
-            : 'What needs to change?'
-        }
-      />
-      {/* Modal takes no attributes: the dialog's buttons carry its pane. */}
-      <div
-        style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}
-        data-help-pane={many ? 'review.bulk' : 'review.queue'}
-      >
-        <button className="button-secondary" onClick={onCancel} disabled={busy}>
-          Cancel
-        </button>
-        <button className="button-primary" onClick={submit} disabled={busy || !comment.trim()}>
-          {busy ? 'Sending back…' : 'Send back'}
-        </button>
-      </div>
-    </Modal>
-  );
-};
 
 /**
  * ReviewQueue is the reviewer's daily driver (issue #183): the suspect links
@@ -286,6 +86,15 @@ export const ReviewQueue: React.FC = () => {
   // The artifacts a rejection is being written for; empty means no dialog.
   const [rejecting, setRejecting] = useState<Artifact[]>([]);
   const [rejectBusy, setRejectBusy] = useState(false);
+  // What was decided on this board, newest first: the Approved and Changes
+  // requested columns. Kept for the visit; a reload starts them empty.
+  const [decided, setDecided] = useState<ReviewDecision[]>([]);
+  // The one column a phone shows at a time.
+  const [phoneColumn, setPhoneColumn] = useState<ColumnKey>('in-review');
+  // The decisions read the queue as it is when they land, not as it was
+  // when the button was pressed.
+  const inReviewRef = useRef<Artifact[]>([]);
+  inReviewRef.current = inReview;
 
   const load = useCallback(() => {
     if (!projectId) return;
@@ -424,8 +233,13 @@ export const ReviewQueue: React.FC = () => {
 
   // Drop the decided artifacts from the list and from the selection, so the
   // queue shows what is still waiting without a round trip.
-  const settleDecided = useCallback((ids: string[]) => {
+  const settleDecided = useCallback((ids: string[], outcome: ReviewDecision['outcome'], comment?: string) => {
     const done = new Set(ids);
+    const at = new Date().toISOString();
+    const moved = inReviewRef.current
+      .filter((a) => done.has(a.id))
+      .map((artifact) => ({ artifact, outcome, comment, at }));
+    if (moved.length > 0) setDecided((prev) => [...moved, ...prev]);
     setInReview((list) => list.filter((a) => !done.has(a.id)));
     setSelectedArtifacts((sel) => {
       const next = { ...sel };
@@ -450,7 +264,7 @@ export const ReviewQueue: React.FC = () => {
       );
       const approved = ids.filter((_, i) => results[i].status === 'fulfilled');
       const failed = results.length - approved.length;
-      settleDecided(approved);
+      settleDecided(approved, 'approved');
       setDeciding((d) => {
         const next = { ...d };
         ids.forEach((id) => delete next[id]);
@@ -494,7 +308,7 @@ export const ReviewQueue: React.FC = () => {
           failures += 1;
         }
       }
-      settleDecided(rejected);
+      settleDecided(rejected, 'sent-back', comment);
       setRejectBusy(false);
       setRejecting([]);
       if (failures > 0) {
@@ -544,24 +358,183 @@ export const ReviewQueue: React.FC = () => {
   const showLinks = section === 'all' || section === 'links';
   const showArtifacts = section === 'all' || section === 'artifacts';
 
+  const sentBack = decided.filter((d) => d.outcome === 'sent-back');
+  const approvedHere = decided.filter((d) => d.outcome === 'approved');
+  const counts: Record<ColumnKey, number> = {
+    'in-review': inReview.length,
+    links: suspectLinks.length,
+    changes: sentBack.length,
+    approved: approvedHere.length,
+  };
+  // Before the decision controls reach a workspace nothing is decided here,
+  // so the two columns of decisions would only ever be empty.
+  const columns = COLUMNS.filter((c) => decisionsEnabled || (c.key !== 'changes' && c.key !== 'approved'));
+  const shown = (key: ColumnKey) =>
+    phone
+      ? phoneColumn === key
+      : key === 'links'
+        ? showLinks
+        : showArtifacts;
+  // Bulk actions appear once something is ticked, and say how much, so
+  // nobody approves forty artifacts thinking it was four.
+  const bulk = buttonStyle('secondary', { compact: !phone });
+
+  const renderColumn = (key: ColumnKey) => {
+    const column = COLUMNS.find((c) => c.key === key)!;
+    if (key === 'links') {
+      return (
+        <BoardColumn
+          key={key}
+          column={column}
+          count={counts.links}
+          phone={phone}
+          helpKey="review.queue"
+          empty="No suspect links. Traceability is trusted."
+          tools={
+            suspectLinks.length > 0 && (
+              <div className="ov-board-tools" data-help-key="review.bulk">
+                <label className="ov-board-selectall">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    aria-label="Select all suspect links"
+                    data-help-key="review.bulk"
+                    onChange={toggleAll}
+                    style={{ width: 'auto', margin: 0 }}
+                  />
+                  All
+                </label>
+                {selectedIds.length === 0 ? (
+                  <span className="ov-board-hint">Tick links to confirm them together</span>
+                ) : (
+                  <button type="button" style={bulk} onClick={confirmSelected}>
+                    Confirm selected ({selectedIds.length})
+                  </button>
+                )}
+              </div>
+            )
+          }
+        >
+          {suspectLinks.map((l) => (
+            <LinkCard
+              key={l.id}
+              link={l}
+              phone={phone}
+              selected={!!selected[l.id]}
+              onSelect={(checked) => setSelected((s) => ({ ...s, [l.id]: checked }))}
+              busy={!!confirming[l.id]}
+              onConfirm={() => confirmLink(l.id)}
+            />
+          ))}
+        </BoardColumn>
+      );
+    }
+    if (key === 'in-review') {
+      return (
+        <BoardColumn
+          key={key}
+          column={column}
+          count={counts['in-review']}
+          phone={phone}
+          helpKey="review.queue"
+          empty="Nothing is in review right now."
+          tools={
+            // Bulk actions act on the selection and say how big it is, so
+            // nobody approves forty artifacts thinking it was four.
+            decisionsEnabled &&
+            inReview.length > 0 && (
+              <div className="ov-board-tools" data-help-key="review.bulk">
+                <label className="ov-board-selectall">
+                  <input
+                    type="checkbox"
+                    checked={allArtifactsSelected}
+                    aria-label="Select all artifacts in review"
+                    data-help-key="review.bulk"
+                    onChange={toggleAllArtifacts}
+                    style={{ width: 'auto', margin: 0 }}
+                  />
+                  All
+                </label>
+                {selectedArtifactIds.length === 0 ? (
+                  <span className="ov-board-hint">Tick cards to decide them together</span>
+                ) : (
+                  <>
+                    <button type="button" style={bulk} onClick={approveSelected}>
+                      Approve selected ({selectedArtifactIds.length})
+                    </button>
+                    <button type="button" style={bulk} onClick={rejectSelected}>
+                      Send back selected ({selectedArtifactIds.length})
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          }
+        >
+          {inReview.map((a) => (
+            <ArtifactCard
+              key={a.id}
+              artifact={a}
+              figures={attachmentsByArtifact[a.id] || []}
+              decisions={decisionsEnabled}
+              phone={phone}
+              selected={!!selectedArtifacts[a.id]}
+              onSelect={(checked) => setSelectedArtifacts((sel) => ({ ...sel, [a.id]: checked }))}
+              busy={!!deciding[a.id]}
+              onApprove={() => approve([a.id])}
+              onSendBack={() => setRejecting([a])}
+            />
+          ))}
+        </BoardColumn>
+      );
+    }
+    const list = key === 'changes' ? sentBack : approvedHere;
+    return (
+      <BoardColumn
+        key={key}
+        column={column}
+        count={list.length}
+        phone={phone}
+        helpKey="review.queue"
+        empty={
+          key === 'changes'
+            ? 'What you send back from this board lands here, with your reason.'
+            : 'What you approve from this board lands here.'
+        }
+      >
+        {list.map((d) => (
+          <DecidedCard key={`${d.outcome}-${d.artifact.id}-${d.at}`} decision={d} phone={phone} />
+        ))}
+      </BoardColumn>
+    );
+  };
+
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Review Queue</h2>
-        <SegmentedControl<Section>
-          aria-label="Filter review queue"
-          value={section}
-          onChange={setSection}
-          options={[
-            { value: 'all', label: 'All' },
-            { value: 'links', label: `Suspect links (${suspectLinks.length})` },
-            { value: 'artifacts', label: `In review (${inReview.length})` },
-          ]}
-        />
+    <div className={phone ? 'ov-page ov-review is-phone' : 'ov-page ov-review'}>
+      <div className="ov-page-head">
+        {/* On a phone the top bar names the page; the heading stays for a
+            screen reader. */}
+        <h2 className={phone ? 'sr-only' : undefined}>Review Queue</h2>
+        <span className="ov-page-sub">
+          {inReview.length} in review · {suspectLinks.length} suspect link{suspectLinks.length === 1 ? '' : 's'}
+        </span>
+        {!phone && (
+          <SegmentedControl<Section>
+            aria-label="Filter review queue"
+            value={section}
+            onChange={setSection}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'links', label: `Suspect links (${suspectLinks.length})` },
+              { value: 'artifacts', label: `In review (${inReview.length})` },
+            ]}
+          />
+        )}
         <div style={{ flex: 1 }} />
         {roundEnabled && (
           <button
-            className="button-primary"
+            type="button"
+            style={buttonStyle('primary', { disabled: startingRound || loading })}
             onClick={startRound}
             disabled={startingRound || loading}
             data-help-key="review.round"
@@ -569,7 +542,7 @@ export const ReviewQueue: React.FC = () => {
             {startingRound ? 'Sending…' : 'Send project for review'}
           </button>
         )}
-        <button className="button-secondary" onClick={load} disabled={loading}>
+        <button type="button" style={buttonStyle('secondary', { disabled: loading })} onClick={load} disabled={loading}>
           Refresh
         </button>
       </div>
@@ -577,338 +550,37 @@ export const ReviewQueue: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       {roundSummary && (
-        <div
-          role="status"
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderLeft: '3px solid var(--accent)',
-            borderRadius: 6,
-            padding: '10px 14px',
-            marginBottom: 16,
-            color: 'var(--text)',
-            fontSize: 14,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
+        <div role="status" className="ov-review-summary">
           <span style={{ flex: 1 }}>{roundSummary}</span>
-          <button className="button-secondary" onClick={() => setRoundSummary('')}>
+          <button type="button" style={buttonStyle('secondary', { compact: true })} onClick={() => setRoundSummary('')}>
             Dismiss
           </button>
+        </div>
+      )}
+
+      {phone && (
+        <div role="tablist" aria-label="Review state" className="ov-chip-tabs">
+          {columns.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              role="tab"
+              aria-selected={phoneColumn === c.key}
+              className="ov-chip-tab"
+              onClick={() => setPhoneColumn(c.key)}
+            >
+              {c.short} {counts[c.key]}
+            </button>
+          ))}
         </div>
       )}
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)' }}>Loading…</div>
       ) : (
-        <>
-          {showLinks && (
-            <section style={cardStyle} data-help-key="review.queue">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, color: 'var(--text)', fontSize: 16 }}>
-                  Suspect links
-                </h3>
-                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                  Links flagged because a linked artifact changed. Confirm each that still holds.
-                </span>
-                <div style={{ flex: 1 }} />
-                {suspectLinks.length > 0 && (
-                  <button
-                    className="button-secondary"
-                    onClick={confirmSelected}
-                    disabled={selectedIds.length === 0}
-                    data-help-key="review.bulk"
-                  >
-                    Confirm selected ({selectedIds.length})
-                  </button>
-                )}
-              </div>
-
-              {suspectLinks.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                  No suspect links. Traceability is trusted.
-                </div>
-              ) : phone ? (
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  {suspectLinks.map((l) => (
-                    <li
-                      key={l.id}
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        alignItems: 'flex-start',
-                        padding: '12px 0',
-                        borderTop: '1px solid var(--border)',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selected[l.id]}
-                        aria-label={`Select link ${l.from_title} to ${l.to_title}`}
-                        data-help-key="review.bulk"
-                        onChange={(e) => setSelected((s) => ({ ...s, [l.id]: e.target.checked }))}
-                        style={{ width: 22, height: 22, marginTop: 2, flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: 'var(--text)' }}>{l.from_title}</div>
-                        <div style={{ margin: '4px 0', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={typeChip(l.from_type)}>{l.from_type}</span>
-                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{l.type} →</span>
-                          <span style={typeChip(l.to_type)}>{l.to_type}</span>
-                        </div>
-                        <div style={{ color: 'var(--text)' }}>{l.to_title}</div>
-                        <button
-                          className="button-secondary"
-                          onClick={() => confirmLink(l.id)}
-                          disabled={!!confirming[l.id]}
-                          style={{ marginTop: 8, minHeight: 44 }}
-                        >
-                          {confirming[l.id] ? 'Confirming…' : 'Confirm'}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="table-scroll">
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
-                      <th style={{ padding: '6px 8px', width: 28 }}>
-                        <input
-                          type="checkbox"
-                          checked={allSelected}
-                          aria-label="Select all suspect links"
-                          data-help-key="review.bulk"
-                          onChange={toggleAll}
-                        />
-                      </th>
-                      <th style={{ padding: '6px 8px' }}>From</th>
-                      <th style={{ padding: '6px 8px' }}>Link</th>
-                      <th style={{ padding: '6px 8px' }}>To</th>
-                      <th style={{ padding: '6px 8px', width: 100 }} />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {suspectLinks.map((l) => (
-                      <tr key={l.id} style={{ borderTop: '1px solid var(--border)' }}>
-                        <td style={{ padding: '8px' }}>
-                          <input
-                            type="checkbox"
-                            checked={!!selected[l.id]}
-                            aria-label={`Select link ${l.from_title} to ${l.to_title}`}
-                            data-help-key="review.bulk"
-                            onChange={(e) =>
-                              setSelected((s) => ({ ...s, [l.id]: e.target.checked }))
-                            }
-                          />
-                        </td>
-                        <td style={{ padding: '8px' }}>
-                          <div style={{ color: 'var(--text)' }}>{l.from_title}</div>
-                          <span style={typeChip(l.from_type)}>{l.from_type}</span>
-                        </td>
-                        <td style={{ padding: '8px', color: 'var(--text-muted)' }}>{l.type}</td>
-                        <td style={{ padding: '8px' }}>
-                          <div style={{ color: 'var(--text)' }}>{l.to_title}</div>
-                          <span style={typeChip(l.to_type)}>{l.to_type}</span>
-                        </td>
-                        <td style={{ padding: '8px', textAlign: 'right' }}>
-                          <button
-                            className="button-secondary"
-                            onClick={() => confirmLink(l.id)}
-                            disabled={!!confirming[l.id]}
-                          >
-                            {confirming[l.id] ? 'Confirming…' : 'Confirm'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </div>
-              )}
-            </section>
-          )}
-
-          {showArtifacts && (
-            <section style={cardStyle} data-help-key="review.queue">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, color: 'var(--text)', fontSize: 16 }}>
-                  In review
-                </h3>
-                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                  {decisionsEnabled
-                    ? 'Approve what reads right, or send it back with a reason.'
-                    : 'Artifacts submitted for review. Open one to approve or send it back.'}
-                </span>
-                <div style={{ flex: 1 }} />
-                {/* Bulk actions act on the selection and say how big it is,
-                    so nobody approves forty artifacts thinking it was four. */}
-                {decisionsEnabled && inReview.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} data-help-key="review.bulk">
-                    <button
-                      className="button-secondary"
-                      onClick={approveSelected}
-                      disabled={selectedArtifactIds.length === 0}
-                    >
-                      Approve selected ({selectedArtifactIds.length})
-                    </button>
-                    <button
-                      className="button-secondary"
-                      onClick={rejectSelected}
-                      disabled={selectedArtifactIds.length === 0}
-                    >
-                      Send back selected ({selectedArtifactIds.length})
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {inReview.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                  Nothing is in review right now.
-                </div>
-              ) : !decisionsEnabled ? (
-                /* Until the controls reach this workspace the queue is what it
-                   was: the list of what is waiting, each opening its artifact
-                   where the same decisions have always been available. */
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  {inReview.map((a) => (
-                    <li
-                      key={a.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: phone ? '12px 0' : '8px 0',
-                        borderTop: '1px solid var(--border)',
-                      }}
-                    >
-                      <span style={typeChip(a.type)}>{a.type}</span>
-                      <Link
-                        to={`../requirements?artifact=${a.id}`}
-                        style={{ color: 'var(--accent)', textDecoration: 'none', flex: 1 }}
-                      >
-                        {artifactLabel(a)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : phone ? (
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  {inReview.map((a) => (
-                    <li
-                      key={a.id}
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        alignItems: 'flex-start',
-                        padding: '12px 0',
-                        borderTop: '1px solid var(--border)',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selectedArtifacts[a.id]}
-                        aria-label={`Select ${artifactLabel(a)}`}
-                        data-help-key="review.bulk"
-                        onChange={(e) =>
-                          setSelectedArtifacts((sel) => ({ ...sel, [a.id]: e.target.checked }))
-                        }
-                        style={{ width: 22, height: 22, marginTop: 2, flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <ArtifactSummary artifact={a} figures={attachmentsByArtifact[a.id] || []} />
-                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                          <button
-                            className="button-secondary"
-                            onClick={() => approve([a.id])}
-                            disabled={!!deciding[a.id]}
-                            style={{ minHeight: 44 }}
-                          >
-                            {deciding[a.id] ? 'Approving…' : 'Approve'}
-                          </button>
-                          <button
-                            className="button-secondary"
-                            onClick={() => setRejecting([a])}
-                            disabled={!!deciding[a.id]}
-                            style={{ minHeight: 44 }}
-                          >
-                            Send back
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="table-scroll">
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                    <thead>
-                      <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
-                        <th style={{ padding: '6px 8px', width: 28 }}>
-                          <input
-                            type="checkbox"
-                            checked={allArtifactsSelected}
-                            aria-label="Select all artifacts in review"
-                            data-help-key="review.bulk"
-                            onChange={toggleAllArtifacts}
-                          />
-                        </th>
-                        <th style={{ padding: '6px 8px' }}>Artifact</th>
-                        <th style={{ padding: '6px 8px', width: 190 }}>Figures</th>
-                        <th style={{ padding: '6px 8px', width: 190 }} />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inReview.map((a) => (
-                        <tr key={a.id} style={{ borderTop: '1px solid var(--border)' }}>
-                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                            <input
-                              type="checkbox"
-                              checked={!!selectedArtifacts[a.id]}
-                              aria-label={`Select ${artifactLabel(a)}`}
-                              data-help-key="review.bulk"
-                              onChange={(e) =>
-                                setSelectedArtifacts((sel) => ({ ...sel, [a.id]: e.target.checked }))
-                              }
-                            />
-                          </td>
-                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                            <ArtifactSummary artifact={a} figures={[]} />
-                          </td>
-                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                            <FigureStrip figures={attachmentsByArtifact[a.id] || []} />
-                          </td>
-                          <td style={{ padding: '8px', textAlign: 'right', verticalAlign: 'top' }}>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                              <button
-                                className="button-secondary"
-                                onClick={() => approve([a.id])}
-                                disabled={!!deciding[a.id]}
-                              >
-                                {deciding[a.id] ? 'Approving…' : 'Approve'}
-                              </button>
-                              <button
-                                className="button-secondary"
-                                onClick={() => setRejecting([a])}
-                                disabled={!!deciding[a.id]}
-                              >
-                                Send back
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          )}
-        </>
+        <div className="ov-board" style={{ ['--ov-board-cols' as string]: phone ? 1 : columns.filter((c) => shown(c.key)).length }}>
+          {columns.filter((c) => shown(c.key)).map((c) => renderColumn(c.key))}
+        </div>
       )}
 
       {rejecting.length > 0 && (

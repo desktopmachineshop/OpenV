@@ -4,7 +4,7 @@ import { AgentDef, agentsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
 import { AgentEditor } from '../components/agents/AgentEditor';
-import { ErrorBanner, Modal, useConfirm, Sheet } from '../components/ui';
+import { ErrorBanner, Modal, useConfirm, Sheet, chipStyle, buttonStyle } from '../components/ui';
 
 const providerBadgeColor = (provider: string): string => {
   switch (provider) {
@@ -124,7 +124,7 @@ export const AgentsPage: React.FC = () => {
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Agents</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Agents</h2>
         <div style={{ flex: 1 }} />
         <button
           className="button-secondary"
@@ -193,25 +193,14 @@ export const AgentsPage: React.FC = () => {
               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                 <span
                   style={{
-                    fontSize: 12,
-                    background: providerBadgeColor(agent.provider),
-                    color: '#fff',
-                    borderRadius: 10,
-                    padding: '2px 8px',
-                    fontWeight: 600,
+                    ...chipStyle('neutral'),
+                    borderLeft: `3px solid ${providerBadgeColor(agent.provider)}`,
                   }}
                 >
                   {agent.provider}
                 </span>
                 <span
-                  style={{
-                    fontSize: 12,
-                    background: agent.write_mode === 'direct' ? 'var(--danger)' : 'var(--warning)',
-                    color: '#fff',
-                    borderRadius: 10,
-                    padding: '2px 8px',
-                    fontWeight: 600,
-                  }}
+                  style={chipStyle(agent.write_mode === 'direct' ? 'danger' : 'warning')}
                   title={
                     agent.write_mode === 'direct'
                       ? 'Writes changes directly'
@@ -240,16 +229,7 @@ export const AgentsPage: React.FC = () => {
                   ▶ Launch run
                 </button>
                 <button
-                  style={{
-                    padding: '4px 10px',
-                    fontSize: 12,
-                    minHeight: 36,
-                    background: 'var(--danger)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                  }}
+                  style={{ ...buttonStyle('danger', { compact: true }), minHeight: 36 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDelete(agent);

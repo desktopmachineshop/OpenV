@@ -11,7 +11,7 @@ import {
 } from '../components/agents/RunTable';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, buttonStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
@@ -134,7 +134,7 @@ export const AgentRunsPage: React.FC = () => {
         data-help-key="agent-runs.list"
         style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}
       >
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Runs</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Runs</h2>
         <button
           data-help-key="agent-runs.approvals"
           onClick={() => setShowProposals(!showProposals)}
@@ -175,17 +175,7 @@ export const AgentRunsPage: React.FC = () => {
             no runner is online.{' '}
             <button
               onClick={() => setShowConnect(true)}
-              style={{
-                background: 'var(--warning)',
-                color: '#fff',
-                border: 'none',
-                padding: '4px 12px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 12.5,
-                fontWeight: 600,
-                marginRight: 8,
-              }}
+              style={{ ...buttonStyle('primary', { compact: true }), marginRight: 8 }}
             >
               Open Agent Connector
             </button>

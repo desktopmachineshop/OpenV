@@ -15,6 +15,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   button, and the actions beside it are quiet outlined buttons, instead of
   green, grey and blue buttons competing for attention. The first step of
   bringing every page in line with OpenV's new compact design.
+- **The Review Queue is a board.** What is in review, the suspect links, and
+  what you sent back or approved sit side by side as columns of cards, each
+  with its own Open, Approve, Send back or Confirm. A decision moves its card
+  to the next column instead of making it disappear. On a phone the columns
+  are tabs along the top.
+- **Settings with a side menu.** Project and workspace settings list their
+  sections down the left, with the open one beside them under its own title;
+  on a phone they are a row of tabs. Each quality rule now has an on/off
+  switch next to its level.
+- **A clearer phone header and More page.** On a phone the top bar shows the
+  project above the page you are on, and **More** opens a full page of the
+  project's pages, the workspace switcher, search and your account.
+- **One look on the other pages.** The board, activity, interviews, overview,
+  agents, crew, automations, runs and the projects list use the same compact
+  headings, tinted status chips and quiet buttons.
 
 ### Bug fixes
 

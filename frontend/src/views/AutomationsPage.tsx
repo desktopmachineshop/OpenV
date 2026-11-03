@@ -9,7 +9,7 @@ import {
   crewsAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
+import { ErrorBanner, Modal, SegmentedControl, useConfirm, chipStyle, toneForColor, buttonStyle } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
 import { WORKSPACE_AUTOMATIONS_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
@@ -190,9 +190,9 @@ export const AutomationsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, flex: 1 }}>Automations</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, flex: 1, fontSize: 20, fontWeight: 700 }}>Automations</h2>
         <button className="button" data-help-key="automations.create" onClick={() => setForm(emptyForm())}>
           New automation
         </button>
@@ -242,17 +242,7 @@ export const AutomationsPage: React.FC = () => {
                   {!a.project_id && <WorkspaceScopePill />}
                 </td>
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 10px',
-                      borderRadius: 12,
-                      background: kindColor(a.kind),
-                      color: '#fff',
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span style={chipStyle(toneForColor(kindColor(a.kind)))}>
                     {kindLabel(a.kind)}
                   </span>
                 </td>
@@ -318,16 +308,7 @@ export const AutomationsPage: React.FC = () => {
                     Run now
                   </button>
                   <button
-                    style={{
-                      padding: '4px 10px',
-                      fontSize: 12,
-                      minHeight: 36,
-                      background: 'var(--danger)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                    }}
+                    style={{ ...buttonStyle('danger', { compact: true }), minHeight: 36 }}
                     onClick={() => remove(a)}
                   >
                     Delete

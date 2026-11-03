@@ -600,6 +600,15 @@ export const ProjectList: React.FC = () => {
         </div>
       )}
       <div className="project-list-container">
+      <div className="project-list-head">
+        <h1>Projects</h1>
+        {!loading && (
+          <span>
+            {projects.length} project{projects.length === 1 ? '' : 's'}
+            {activeOrg?.name ? ` in ${activeOrg.name}` : ''}
+          </span>
+        )}
+      </div>
 
       {/* An installed-app shortcut that could not guess the project says so
           rather than silently dropping the member on the plain project list. */}

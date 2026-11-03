@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { DomainEvent, eventsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, buttonStyle } from '../components/ui';
 import type { DomainEventType } from '../generated/contract';
 
 // Every event type a project's activity can hold: the types the backend
@@ -107,8 +107,8 @@ const formatActor = (event: DomainEvent): { label: string; kind?: string; detail
 const shortId = (id?: string) => (id ? `${id.slice(0, 8)}…` : '—');
 
 const cellStyle: React.CSSProperties = {
-  padding: '9px 12px',
-  borderBottom: '1px solid var(--neutral-soft)',
+  padding: '7px 10px',
+  borderBottom: '1px solid var(--border-soft)',
   color: 'var(--text-body)',
   verticalAlign: 'top',
 };
@@ -192,20 +192,20 @@ export const ActivityLog: React.FC = () => {
   return (
     <div
       data-help-key="activity"
-      style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}
+      style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Activity</h2>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+      <div className="ov-page-head" style={{ marginBottom: 12 }}>
+        <h2>Activity</h2>
+        <span className="ov-page-sub">
           {loading ? 'Loading…' : `${events.length} event${events.length === 1 ? '' : 's'}`}
         </span>
         <div style={{ flex: 1 }} />
-        <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Type</label>
+        <label style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Type</label>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           aria-label="Filter by event type"
-          style={{ width: 200, padding: '6px 10px' }}
+          style={{ width: 200, height: 32, padding: '0 8px', fontSize: 13, borderRadius: 6 }}
         >
           <option value="all">all</option>
           {EVENT_TYPES.map((t) => (
@@ -219,7 +219,7 @@ export const ActivityLog: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-        <div className="table-container">
+        <div className="table-container ov-card" style={{ boxShadow: 'none' }}>
           <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
@@ -229,11 +229,14 @@ export const ActivityLog: React.FC = () => {
                     key={h || `col-${i}`}
                     style={{
                       textAlign: 'left',
-                      borderBottom: '2px solid var(--neutral-soft)',
-                      padding: '10px 12px',
+                      borderBottom: '1px solid var(--border)',
+                      padding: '8px 10px',
                       color: 'var(--text-muted)',
+                      fontSize: 12,
                       fontWeight: 600,
-                      background: 'var(--surface)',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      background: 'var(--surface-alt)',
                     }}
                   >
                     {h}
@@ -370,15 +373,7 @@ export const ActivityLog: React.FC = () => {
             <button
               onClick={() => nextCursor && loadPage(nextCursor)}
               disabled={loading}
-              style={{
-                background: 'var(--surface)',
-                color: 'var(--text)',
-                border: '1px solid var(--border)',
-                padding: '7px 18px',
-                borderRadius: 4,
-                cursor: loading ? 'default' : 'pointer',
-                fontSize: 13,
-              }}
+              style={buttonStyle('secondary', { disabled: loading })}
             >
               {loading ? 'Loading…' : 'Load more'}
             </button>

@@ -200,13 +200,28 @@ a button that did nothing.
 
 ### Working the queue
 
-The **In review** table is where the reviewing happens. Each row carries what
-you need to judge without opening anything: the type and reference, the title,
-the start of the description, and small previews of the artifact's figures —
-pictures as thumbnails, PDFs and CAD files as chips naming them. Any of them
-opens the full file; the title opens the artifact.
+The Review Queue is a board of four columns, so the state of the review reads
+at a glance:
 
-Two buttons sit on every row:
+- **In review** — what is waiting for a decision.
+- **Suspect links** — links flagged because an artifact at one end changed;
+  **Confirm** on a card vouches that the link still holds.
+- **Changes requested** — what you sent back from the board, with your reason.
+- **Approved** — what you approved from the board.
+
+The last two are a record of your visit: a decision moves its card across
+instead of making it vanish, and they start empty again when the page is
+reloaded. Above the board, **All**, **Suspect links** and **In review** narrow
+it to those columns. On a phone the columns become a row of tabs at the top,
+each with its count, and the board shows one column at a time.
+
+Each card in **In review** carries what you need to judge without opening
+anything: the reference and type, how long ago it last changed, the title, the
+start of the description, and small previews of the artifact's figures —
+pictures as thumbnails, PDFs and CAD files as chips naming them. Any of them
+opens the full file; the title and **Open** open the artifact.
+
+Two more buttons sit on every card:
 
 - **Approve** signs the artifact off as it stands. Approving also clears the
   suspect flag on every link that touches it, because you have just vouched
@@ -220,14 +235,15 @@ Two buttons sit on every row:
 
 ### Deciding several at once
 
-Tick the box on any row, or the box in the header to take the whole table, and
-the two buttons above it act on everything selected: **Approve selected** asks
-once and signs them all off, **Send back selected** asks for one reason and
-posts it on every one of them.
+Tick the box on any card, or **All** at the top of the column to take every
+card in it, and the column offers two buttons that act on everything
+selected: **Approve selected** asks once and signs them all off, **Send back
+selected** asks for one reason and posts it on every one of them. Suspect
+links work the same way, with **Confirm selected**.
 
 Anything that could not be decided — a refused permission, an artifact
 somebody else moved while you were reading — is counted and reported, and
-stays in the table. The rest still go through.
+stays in its column. The rest still go through.
 
 ## Figures
 

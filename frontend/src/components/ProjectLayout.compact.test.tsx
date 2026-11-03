@@ -200,6 +200,34 @@ describe('compact layout on a phone', () => {
   });
 });
 
+describe('the More page', () => {
+  it('lists every page by its menu name, with the way back to all projects', async () => {
+    await mount('/projects/p1/vv', { width: 390 });
+    const tabs = document.querySelector('nav[aria-label="Project tabs"]') as HTMLElement;
+    await act(async () => button(tabs, 'More')!.click());
+    const aside = document.querySelector('aside[aria-label="Project navigation"]') as HTMLElement;
+    expect(aside.querySelector('.ov-more-title')?.textContent).toBe('More');
+    expect(aside.textContent).toContain('All projects');
+    expect(aside.querySelector('a.ov-more-row.active')?.textContent).toBe('V&V');
+    expect(aside.querySelector('button[aria-label="Close menu"]')).toBeTruthy();
+    expect(aside.querySelector('button[aria-label^="Account menu"]')).toBeTruthy();
+  });
+});
+
+describe('the phone top bar', () => {
+  it('names the project small above the page being read', async () => {
+    await mount('/projects/p1/vv', { width: 390 });
+    expect(document.querySelector('.ov-phone-title-project')?.textContent).toBe('Pump controller');
+    expect(document.querySelector('.ov-phone-title-page')?.textContent).toBe('V&V');
+  });
+
+  it('shows the project alone on a page the menu does not list', async () => {
+    await mount('/projects/p1/nowhere', { width: 390 });
+    expect(document.querySelector('.ov-phone-title-project')).toBeNull();
+    expect(document.querySelector('.ov-phone-title-page')?.textContent).toBe('Pump controller');
+  });
+});
+
 describe('without the compact-layout key', () => {
   it('keeps the sidebar layout, with no rail, tab bar or help shortcut', async () => {
     await mount('/projects/p1', { compact: false });

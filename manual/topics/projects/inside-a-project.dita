@@ -16,8 +16,9 @@
       <strow><stentry>Agents</stentry><stentry>Agent definitions and launcher</stentry></strow>
       <strow><stentry>Automations</stentry><stentry>Scheduled and event-triggered agent runs</stentry></strow>
       <strow><stentry>Runs</stentry><stentry>Agent run history and proposal review</stentry></strow>
-      <strow><stentry>Settings</stentry><stentry>Project access, repositories, agent auth, danger zone</stentry></strow>
+      <strow><stentry>Settings</stentry><stentry>Project access, repositories, agent auth, attributes, quality rules, danger zone</stentry></strow>
     </simpletable>
+    <p><b>Settings</b> lists its sections down the left — General, Access, Repositories, Agents, Attributes, Quality rules and, set apart in red, Danger Zone — with the open one beside them under its own title and a line on what it is for (on a phone the sections are a row of tabs along the top). In <b>Quality rules</b> each wording check has a switch: off silences it, on brings it back at the level it would speak at, and the menu beside it sets that level — error, warning or info.</p>
     <p><b>Projects</b> at the top of the rail takes you back to all projects. The account menu at the right end of the top bar (on a phone, your name at the foot of the project menu) opens <b>Settings</b> (personal runner and agent sign-ins) and <b>Sign out</b>.</p>
   </conbody>
 </concept>

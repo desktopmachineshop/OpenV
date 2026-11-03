@@ -7,6 +7,6 @@
     <resourceid appname="openv-web" appid="org.settings"/>
   </prolog>
   <conbody>
-    <p><b>Workspace settings</b> (workspace switcher → <i>Workspace settings</i>, or the Runner settings links around the app) manage the active workspace. Most tabs are admin-only; other members see read-only or explanatory views.</p>
+    <p><b>Workspace settings</b> (workspace switcher → <i>Workspace settings</i>, or the Runner settings links around the app) manage the active workspace. The sections are listed down the left (on a phone, as a row of tabs along the top), with the workspace's name and kind above the open one. Most sections are admin-only; other members see read-only or explanatory views.</p>
   </conbody>
 </concept>

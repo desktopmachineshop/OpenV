@@ -17,7 +17,7 @@ import {
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
 import { BOARD_COLUMNS } from '../components/kanban/columns';
-import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl } from '../components/ui';
+import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 const COLUMNS = BOARD_COLUMNS;
@@ -252,17 +252,7 @@ export const KanbanBoard: React.FC = () => {
       return (
         <span
           title={`Agent: ${agent?.name || item.assignee_id}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 12,
-            background: 'var(--tint-purple)',
-            border: '1px solid var(--tint-purple-border)',
-            borderRadius: 10,
-            padding: '2px 8px',
-            color: 'var(--text)',
-          }}
+          style={{ ...chipStyle('agent'), fontWeight: 600 }}
         >
           <span role="img" aria-label="agent">🤖</span>
           {agent?.name || 'agent'}
@@ -275,17 +265,7 @@ export const KanbanBoard: React.FC = () => {
       return (
         <span
           title={`Crew: ${crew?.name || item.assignee_id}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 12,
-            background: 'var(--tint-blue)',
-            border: '1px solid var(--tint-blue-border)',
-            borderRadius: 10,
-            padding: '2px 8px',
-            color: 'var(--text)',
-          }}
+          style={{ ...chipStyle('info'), fontWeight: 600 }}
         >
           <span role="img" aria-label="crew">👥</span>
           {crew?.name || 'crew'}
@@ -320,9 +300,9 @@ export const KanbanBoard: React.FC = () => {
       <style>
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 6, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Board</h2>
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+      <div className="ov-page-head" style={{ marginBottom: 10 }}>
+        <h2>Board</h2>
+        <span className="ov-page-sub">
           {phone
             ? 'Tip: a card’s ⋯ menu moves it between columns.'
             : 'Tip: assign a card to an agent and drag it to To Do to launch the agent.'}
@@ -390,9 +370,9 @@ export const KanbanBoard: React.FC = () => {
               style={{
                 flex: phone ? '1 1 auto' : '0 0 260px',
                 width: phone ? '100%' : undefined,
-                background: dragOverColumn === col.key ? 'var(--tint-blue)' : 'var(--surface-alt)',
-                borderRadius: 6,
-                padding: 10,
+                background: dragOverColumn === col.key ? 'var(--tint-blue)' : 'var(--surface-inset)',
+                borderRadius: 8,
+                padding: 8,
                 maxHeight: '100%',
                 overflowY: 'auto',
                 border: dragOverColumn === col.key ? '2px dashed var(--accent)' : '2px solid transparent',
@@ -430,13 +410,13 @@ export const KanbanBoard: React.FC = () => {
                     title={disabled ? 'Agent run in progress — card is locked' : undefined}
                     style={{
                       background: 'var(--surface)',
-                      borderRadius: 4,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                      padding: '10px 12px',
+                      borderRadius: 12,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      padding: 10,
                       marginBottom: 8,
                       cursor: disabled ? 'not-allowed' : 'grab',
                       opacity: disabled ? 0.85 : 1,
-                      border: '1px solid var(--surface-alt)',
+                      border: '1px solid var(--border)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
