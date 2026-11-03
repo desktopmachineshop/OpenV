@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.27.4",
+   "date": "2026-11-03",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**One Home for all your work.** Signing in opens the workspace's Home: what needs you in every project (reviews, suspect links, open test runs, failing tests and new comments, each naming its project), the activity across the workspace, and below them your projects with how many artifacts each holds and how much is traced and verified. **Home** is at the top of the menu on every page; a project's own home is now called **Summary**. Settings cards are evenly spaced again, and workspace settings no longer repeats a link back to the projects."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.27.3",
    "date": "2026-11-03",
    "stableSince": "",

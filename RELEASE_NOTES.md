@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.27.4 — 2026-11-03
+
 ### Maintenance updates
 
 - **One Home for all your work.** Signing in opens the workspace's Home:
