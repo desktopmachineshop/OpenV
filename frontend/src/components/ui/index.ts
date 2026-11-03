@@ -19,3 +19,20 @@ export { Chip, chipStyle, toneFor, toneColors } from './Chip';
 export type { ChipTone } from './Chip';
 export { buttonStyle } from './buttonStyles';
 export type { ButtonKind } from './buttonStyles';
+export { FeatureGate } from './FeatureGate';
+export {
+  MONO,
+  panelStyle,
+  refStyle,
+  eyebrowStyle,
+  mutedStyle,
+  plainLink,
+  tapTarget,
+  pageType,
+  PanelHeader,
+  GridHead,
+  gridRowStyle,
+  ellipsis,
+  ResultBar,
+  Meter,
+} from './panels';

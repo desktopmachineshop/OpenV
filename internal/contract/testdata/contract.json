@@ -31,7 +31,8 @@
     "manual-help",
     "help-activity",
     "target-releases",
-    "compact-layout"
+    "compact-layout",
+    "redesign-pages"
   ],
   "event_types": [
     "artifact.created",

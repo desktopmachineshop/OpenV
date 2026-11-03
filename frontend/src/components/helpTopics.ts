@@ -75,16 +75,56 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     also: [{ slug: 'links', title: 'Traceability links' }],
   },
   baselines: {
-    title: 'Baseline comparison',
+    title: 'Baselines',
     summary:
-      'A baseline is an immutable snapshot of the whole project — artifacts plus links — captured at a point in time.',
+      'A baseline is an immutable snapshot of the whole project — artifacts plus links — captured at a point in time. The Baselines page lists them as a timeline and compares any two, or a baseline and the working copy.',
     tips: [
-      'Baseline views are read-only — switch back to Live Project in the Requirements view to edit.',
-      'Capture and delete baselines from the top bar of the Requirements view.',
-      'The Download button takes the live project or any baseline away as a PDF, Word file, JSON, CSV, Excel workbook or ReqIF.',
+      'Select a baseline in the timeline to compare from it; choose what to compare to beside the counts.',
+      'Select a change to read its text word by word: struck-out words were removed, underlined words added.',
+      'Text only and Links narrow the list to what you are reviewing.',
+      'Capture and delete baselines from the top bar of the Requirements view; baseline views are read-only.',
       'The V&V dashboard and the Matrix have their own baseline selectors for historical views.',
     ],
-    chapter: { slug: 'artifacts', title: 'Requirements & artifacts' },
+    chapter: { slug: 'project-pages', title: 'Home, Design, Tests and Baselines' },
+    also: [{ slug: 'artifacts', title: 'Requirements & artifacts' }],
+  },
+  home: {
+    title: 'Home',
+    summary:
+      "The project's home: its figures, what needs you, the audit trail, your workspace's projects and the agent proposals waiting for review.",
+    tips: [
+      'Needs you lists the artifacts in review, suspect links, test runs in progress, failing test cases and new comments.',
+      'Traced is the share of requirements with a test case; verified the share verified by their tests.',
+      'Full history opens the Activity page with every event of the project.',
+      'Review proposals opens the agent runs, where proposals are approved or rejected.',
+    ],
+    chapter: { slug: 'project-pages', title: 'Home, Design, Tests and Baselines' },
+  },
+  design: {
+    title: 'Design',
+    summary:
+      "The project's design items as a tree, with the selected item's description, attributes, the requirements it satisfies and the test cases that verify them.",
+    tips: [
+      'Design items nest under one another as they do in the Requirements view; type in Filter to find one.',
+      'Verified through lists the test cases verifying the requirements the item satisfies, with their last result.',
+      'Edit opens the item in the Requirements view; Show in trace opens its impact.',
+      'Add attributes to a design item in its editor; they appear here as a table.',
+    ],
+    chapter: { slug: 'project-pages', title: 'Home, Design, Tests and Baselines' },
+    also: [{ slug: 'links', title: 'Traceability links' }],
+  },
+  tests: {
+    title: 'Tests',
+    summary:
+      "The newest test runs with their pass, fail and blocked counts, and the project's test cases with their method, what they verify and their last result.",
+    tips: [
+      'Each run card opens the run, where results are recorded.',
+      'Last result: fail, blocked narrows the table to what needs attention; Method to automated, manual or physical cases.',
+      "Steps counts the numbered steps in a test case's text.",
+      'Start a new test run on the V&V page.',
+    ],
+    chapter: { slug: 'project-pages', title: 'Home, Design, Tests and Baselines' },
+    also: [{ slug: 'vv', title: 'V&V & test runs' }],
   },
   guided: {
     title: 'Guided Definition',

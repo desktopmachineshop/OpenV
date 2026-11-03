@@ -124,6 +124,70 @@ const coverageOld = { summary: { total_requirements: 3, verified: 1, covered: 2,
 // counts so the Top 5 filters have something to lay out.
 const sharedProduct = (id, name, votes, votesWeek) => ({ id, category: 'kitchen appliance', name, description: `${name} recognises Kevin and locks itself until he owns up.`, vision: `${name} becomes the reason the office bean jar survives a Tuesday.`, problem: 'Beans vanish overnight and nobody admits to owning the grinder.', target_users: 'coffee-obsessed office workers whose beans keep leaving with Kevin', votes, votes_week: votesWeek, voted: false });
 const sharedProducts = [sharedProduct('sp1', 'Kevinproof', 12, 5), sharedProduct('sp2', 'Crustodian', 9, 4), sharedProduct('sp3', 'Loafwatch', 7, 2), sharedProduct('sp4', 'Mugshot Registry', 4, 1), sharedProduct('sp5', 'Fridge Amnesty Box', 2, 1)];
+// The redesign pages (Home, Design, Tests, Baselines): design items in a
+// tree, more test cases with results in two runs, events, a proposal and a
+// second baseline with an older text, so every part of each page lays out.
+const rdArtifacts = [
+  ...artifacts,
+  art('des-1', 'design-item', 'Machine frame', 'A cast-iron frame carries the three axes and the spindle; it sets the work envelope and the stiffness the accuracy depends on.', null, 'approved', { material: 'EN-GJL-250 cast iron', mass_kg: '38', owner: 'Sam Example' }),
+  art('des-2', 'design-item', 'Motion system', 'Three ball-screw axes on linear rails.', 'des-1', 'approved'),
+  art('des-3', 'design-item', 'X axis drive', 'A 12 mm ball screw driven by a closed-loop NEMA 23 stepper.', 'des-2', 'in_review', { supplier_part: 'BSF1204-C7', lead_mm: '4' }),
+  art('des-4', 'design-item', 'Y axis drive', '', 'des-2'),
+  art('des-5', 'design-item', 'Z axis drive', '', 'des-2'),
+  art('des-6', 'design-item', 'Spindle', '', 'des-1'),
+  art('des-7', 'design-item', 'Enclosure and interlock', '', null),
+  art('tc-2', 'test-case', 'Repeatability over 50 moves', '1. Home all axes\n2. Move to the target 50 times\n3. Measure with a dial gauge', 'hdg-4', 'approved', { execution_method: 'physical' }),
+  art('tc-3', 'test-case', 'Envelope travel limits', '1. Jog each axis to its limits\n2. Record the travel', 'hdg-4', 'approved', { execution_method: 'manual' }),
+  art('tc-4', 'test-case', 'Controller step-loss detection', '', 'hdg-4'),
+];
+const rdLinks = [
+  ...links,
+  link('l6', 'des-1', 'req-1', 'satisfies'),
+  link('l7', 'des-1', 'req-2', 'satisfies'),
+  link('l8', 'tc-2', 'req-2', 'verifies'),
+  link('l9', 'tc-3', 'req-1', 'verifies'),
+  link('l10', 'tc-4', 'req-2', 'verifies'),
+];
+const rdCoverage = { project_id: 'p1', entries: [
+  { requirement_id: 'req-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', verification_method: 'inspection', verification_status: 'verified', test_case_ids: ['tc-3'], latest_results: { 'tc-3': 'pass' }, rollup: 'pass' },
+  { requirement_id: 'req-2', title: 'Positioning accuracy', verification_method: 'test', verification_status: '', test_case_ids: ['tc-1', 'tc-2', 'tc-4'], latest_results: { 'tc-1': 'pass', 'tc-2': 'fail', 'tc-4': 'blocked' }, rollup: 'fail' },
+], summary: { total: 2, covered: 2, uncovered: 0, verified: 1, pass: 1, fail: 1 } };
+const rdResult = (id, run, tc, status) => ({ id, run_id: run, test_case_id: tc, test_case_version: 2, status, notes: '', evidence: [], executed_at: now });
+const rdEvent = (id, type, who, entity, payload, kind) => ({ id, event_type: type, project_id: 'p1', actor: `user:${who}`, actor_kind: kind || 'user', actor_name: who, entity_name: entity, payload, created_at: now });
+const rdBaseline0 = { id: 'b0', project_id: 'p1', name: 'Concept review', created_at: '2026-08-02T09:00:00Z', created_by: 'u1', created_by_name: 'Sam Example' };
+const rdRoutes = [
+  [/\/api\/v1\/artifacts\?/, rdArtifacts],
+  [/\/api\/v1\/links/, rdLinks],
+  [/\/api\/v1\/projects\/p1\/vv\/coverage/, rdCoverage],
+  [/\/api\/v1\/projects\/p1\/test-runs/, [openTestRun, testRun]],
+  [/\/api\/v1\/test-runs\/tr2\/results/, [rdResult('x1', 'tr2', 'tc-1', 'pass'), rdResult('x2', 'tr2', 'tc-2', 'fail')]],
+  [/\/api\/v1\/test-runs\/tr1\/results/, [rdResult('x3', 'tr1', 'tc-1', 'pass'), rdResult('x4', 'tr1', 'tc-3', 'pass'), rdResult('x5', 'tr1', 'tc-4', 'blocked')]],
+  [/\/api\/v1\/projects\/p1\/review-queue/, { suspect_links: [{ id: 'l2', type: 'derives-from', from_id: 'req-2', from_title: 'Positioning accuracy', from_type: 'requirement', to_id: 'need-1', to_title: 'Cut aluminium parts without a machinist', to_type: 'user-need', updated_at: now }], in_review_artifacts: [byId['req-2']] }],
+  [/\/api\/v1\/events\?.*chatter/, [rdEvent('c1', 'chatter.created', 'Priya Shah', 'REQ-1', { artifact_id: 'req-1', entry_type: 'comment', message: 'Does the envelope include the vice?' })]],
+  [/\/api\/v1\/events/, [
+    rdEvent('e1', 'proposal.created', 'Requirements Analyst', 'REQ-2', { op: 'update_artifact' }, 'agent'),
+    rdEvent('e2', 'testrun.recorded', 'Sam Example', 'TC-2', { status: 'fail' }),
+    rdEvent('e3', 'artifact.status_changed', 'Sam Example', 'REQ-1', { to: 'approved' }),
+    rdEvent('e4', 'artifact.updated', 'Priya Shah', 'REQ-2', {}),
+    rdEvent('e5', 'baseline.captured', 'Sam Example', 'Release candidate 1', { name: 'Release candidate 1' }),
+  ]],
+  [/\/api\/v1\/proposals/, [{ id: 'pr1', project_id: 'p1', run_id: 'r1', op: 'update_artifact', target_id: 'req-2', payload: { title: 'Positioning accuracy' }, status: 'pending', review_note: '', created_at: now }, { id: 'pr2', project_id: 'p1', run_id: 'r1', op: 'create_artifact', payload: { title: 'Spindle runout test' }, status: 'pending', review_note: '', created_at: now }]],
+  [/\/api\/v1\/projects\/p1\/baselines/, [baseline, rdBaseline0]],
+  [/\/api\/v1\/baselines\/[^/]+\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' },
+    added: [{ id: 'tc-2', type: 'test-case', title: 'Repeatability over 50 moves' }, { id: 'des-3', type: 'design-item', title: 'X axis drive' }],
+    removed: [{ id: 'req-9', type: 'requirement', title: 'Manual lubrication schedule' }],
+    modified: [
+      { id: 'req-2', type: 'requirement', old_title: 'Positioning accuracy', new_title: 'Positioning accuracy', title_changed: false, body_changed: true, type_changed: false, status_changed: true, parent_changed: false },
+      { id: 'req-1', type: 'requirement', old_title: 'Work envelope', new_title: 'Work envelope of at least 300 by 200 by 100 millimetres', title_changed: true, body_changed: false, type_changed: false, status_changed: false, parent_changed: false },
+    ],
+    links_added: [{ from_id: 'tc-2', to_id: 'req-2', type: 'verifies', from_title: 'Repeatability over 50 moves', to_title: 'Positioning accuracy' }], links_removed: [] }],
+  [/\/api\/v1\/baselines\/[^/]+$/, { artifacts: [
+    ...artifacts.filter((a) => a.id !== 'req-2' && a.id !== 'req-1'),
+    { ...byId['req-1'], title: 'Work envelope' },
+    { ...byId['req-2'], body: 'The mill shall position the tool within ±0.05 mm of the commanded position at 20 °C.' },
+    art('req-9', 'requirement', 'Manual lubrication schedule', 'The mill shall need lubrication by hand once a week.', 'hdg-2'),
+  ], links: [] }],
+];
 const routes = [
   [/\/api\/v1\/shared-products/, (url) => (/sort=top/.test(url) ? sharedProducts.slice(0, 5) : sharedProducts)],
   [/\/api\/v1\/auth\/me/, user],
@@ -188,7 +252,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -430,6 +494,10 @@ const SCREENS = [
   { tag: 'interviews', path: '/projects/p1/interviews' },
   { tag: 'vv', path: '/projects/p1/vv' },
   { tag: 'releases', path: '/projects/p1/releases' },
+  { tag: 'home', path: '/projects/p1/home', routes: rdRoutes },
+  { tag: 'design', path: '/projects/p1/design', routes: rdRoutes },
+  { tag: 'tests', path: '/projects/p1/tests', routes: rdRoutes },
+  { tag: 'baselines', path: '/projects/p1/baselines', routes: rdRoutes },
   { tag: 'test-run', path: '/projects/p1/vv/runs/tr1' },
   { tag: 'evidence', path: '/projects/p1/evidence' },
   { tag: 'evidence-detail', path: '/projects/p1/evidence', open: async (p) => { await press(p.getByText('Noise sweep, 90 minutes, all load conditions').first()); await p.waitForTimeout(400); } },

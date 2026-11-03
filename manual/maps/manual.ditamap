@@ -122,6 +122,12 @@
     <topicref href="../topics/releases/release-progress.dita"/>
     <topicref href="../topics/releases/the-burn-up.dita"/>
   </topicref>
+  <topicref href="../topics/project-pages/index.dita">
+    <topicref href="../topics/project-pages/home.dita"/>
+    <topicref href="../topics/project-pages/design.dita"/>
+    <topicref href="../topics/project-pages/tests.dita"/>
+    <topicref href="../topics/project-pages/baselines-page.dita"/>
+  </topicref>
   <topicref href="../topics/org-settings/index.dita">
     <topicref href="../topics/org-settings/general.dita"/>
     <topicref href="../topics/org-settings/members.dita"/>

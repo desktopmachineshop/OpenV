@@ -15,7 +15,7 @@
   3  components/HelpSidebar.css
   4  components/ProjectList.css
 
-## Lazy modules (30), by path, and the stylesheets each adds, in cascade order
+## Lazy modules (34), by path, and the stylesheets each adds, in cascade order
   components/admin/VisitorDashboard.tsx  (none)
   components/org/OrgBillingTab.tsx  (none)
   site/Changelog.tsx  (none)
@@ -32,7 +32,9 @@
   site/routes.tsx  (none)
   views/ActivityLog.tsx  (none)
   views/BaselineCompare.tsx  (none)
+  views/BaselinesPage.tsx  (none)
   views/CrewBuilder.tsx  (none)
+  views/DesignItems.tsx  (none)
   views/ImpactView.tsx  (none)
   views/Landing.tsx  (none)
   views/ManualView.tsx  (none)
@@ -41,12 +43,14 @@
     components/ImageLightbox.css
   views/OAuthConsent.tsx  (none)
   views/PlatformAdmin.tsx  (none)
+  views/ProjectHome.tsx  (none)
   views/Releases.tsx  (none)
   views/ReviewQueue.tsx  (none)
   views/SharedProjectView.tsx  (none)
   views/TestRunView.tsx
     ag-grid-community/styles/ag-grid.css
     ag-grid-community/styles/ag-theme-quartz.css
+  views/TestsPage.tsx  (none)
   views/TraceabilityMatrix.tsx
     ag-grid-community/styles/ag-grid.css
     ag-grid-community/styles/ag-theme-quartz.css

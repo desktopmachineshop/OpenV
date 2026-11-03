@@ -53,6 +53,7 @@ ORDER = [
     ('interviews', 'interviews'),
     ('vv', 'vv'),
     ('releases', 'releases'),
+    ('project-pages', 'projectPages'),
     ('org-settings', 'orgSettings'),
     ('platform-admin', 'platformAdmin'),
     ('troubleshooting', 'troubleshooting'),
@@ -77,6 +78,7 @@ CHAPTER_KEYS = {
     'interviews': ['interviews'],
     'vv': ['vv'],
     'releases': ['releases'],
+    'project-pages': [],
     'org-settings': ['settings', 'org.settings'],
     'platform-admin': ['admin'],
     'troubleshooting': ['troubleshooting', 'activity'],
@@ -160,6 +162,10 @@ SECTION_KEYS = {
     ('releases', 'targeting-requirements'): ['requirements.releases'],
     ('releases', 'release-progress'): ['releases.progress'],
     ('releases', 'the-burn-up'): ['releases.burnup'],
+    ('project-pages', 'home'): ['home', 'home.figures', 'home.needs', 'home.activity', 'home.projects', 'home.proposals'],
+    ('project-pages', 'design'): ['design', 'design.tree', 'design.detail', 'design.attributes', 'design.trace'],
+    ('project-pages', 'tests'): ['tests', 'tests.runs', 'tests.cases'],
+    ('project-pages', 'baselines-page'): ['baselines.timeline', 'baselines.compare', 'baselines.changes', 'baselines.diff'],
 }
 
 
