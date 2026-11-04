@@ -406,7 +406,9 @@ branch instead:
   previous stable merged group by group. It pushes `release` but does not
   tag the release, publish its manual line or point openv-hosted at it:
   run **Promote to release** after it to ship it to openv.app. Promote ships
-  a version that is cut but not yet tagged as it stands, and both workflows
+  a version that is cut but not yet tagged as it stands, and a stable marker
+  cut after its version was tagged by pinning openv-hosted to the marker's
+  commit (the tag stays where it was). Both workflows
   judge master by the CI of the code under the pipeline's own commits
   (`scripts/release_ci.py judged-commit`), which carry none.
 - **Nightly automation**: the **Nightly promotion** workflow
@@ -435,7 +437,9 @@ building from this repository.
 
 - **Production** builds openv-hosted's `release` branch. *Promote to
   release* still cuts and tags the release here. Its last step opens a pull
-  request into that branch setting `OPENV_VERSION` to the new tag, waits for
+  request into that branch setting `OPENV_VERSION` to the new tag (or, for
+  a stable marker cut after the tag, to the full id of the commit carrying
+  it), waits for
   openv-hosted's CI on it and merges it when that passes. That merge is the
   production deploy. If the CI fails, the pull request stays open, the step
   fails and production keeps the previous release. The workflow merges the

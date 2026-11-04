@@ -149,6 +149,14 @@ jobs:
           if [ -n "$version" ] && ! git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
             python3 scripts/release_notes.py check RELEASE_NOTES.md
             echo "v${version} is cut but not yet shipped: promoting it as it stands."
+          elif [ -n "$version" ] && git show "v${version}:RELEASE_NOTES.md" > /tmp/tagged-notes.md 2>/dev/null \
+            && [ "$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)" != "$(python3 scripts/release_notes.py stable-version /tmp/tagged-notes.md)" ]; then
+            # Cut stable release marked a version stable after its tag was
+            # made, so what openv.app runs (the tag) still names the previous
+            # stable release. Ship the marker: openv-hosted is pinned to this
+            # commit below, since the tag stays where it was.
+            python3 scripts/release_notes.py check RELEASE_NOTES.md
+            echo "v${version} is shipped but its stable marker is not: promoting the marker."
           else
             python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
           fi
@@ -256,6 +264,12 @@ jobs:
             exit 0
           fi
           tag="v$(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+          # Pin the tag when it names what is shipping. A stable marker cut
+          # after the tag is a later commit the tag does not reach, so then
+          # pin that commit's full id (openv-hosted takes a tag or a commit).
+          if [ "$(git rev-parse "${tag}^{commit}" 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+            tag="$(git rev-parse HEAD)"
+          fi
           branch="openv-${tag}"
           dir="$(mktemp -d)"
           git clone --quiet --depth 1 --branch release "https://x-access-token:${GH_TOKEN}@github.com/${HOSTED_REPO}.git" "$dir"
@@ -271,7 +285,7 @@ jobs:
           git push --quiet --force origin "$branch"
           url=$(gh pr create --repo "$HOSTED_REPO" --base release --head "$branch" \
             --title "Run OpenV ${tag}" \
-            --body "OpenV's *Promote to release* tagged ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")
+            --body "OpenV's *Promote to release* shipped ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")
           # Wait for openv-hosted's CI on the pull request's commit. It reads
           # the Actions runs (the token needs Actions: read on openv-hosted),
           # not the check results, which need a permission the token lacks.
