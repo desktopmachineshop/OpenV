@@ -11,6 +11,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- On a phone, the traceability matrix is now a coverage list: a summary of how many requirements are fully traced, filters for what needs attention, failing tests and suspect links, and a square per requirement for its needs, design, tests and hazards. Tap a requirement to see everything linked to it.
 - Impact analysis now starts from a requirement: the picker lists only requirements, and **Show impact** appears on requirements. From there it follows every link down to sub-requirements, design items, test cases and the hazards those design items mitigate, and up to user needs and parent requirements. The Design page's **Show in trace** button is gone.
 - Impact analysis is now a tree: the requirement sits in the middle, with what it depends on branching to the left and what depends on it branching to the right. Each line is coloured by its link type, with a key, and **Depth** switches between direct links only (**1 level**) and the whole chain (**All levels**).
 

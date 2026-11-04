@@ -17,6 +17,7 @@ import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
 import { baselineLabel } from '../utils/baselines';
 import { Chip, buttonStyle, chipStyle } from '../components/ui';
+import { TraceabilityMatrixPhone } from './TraceabilityMatrixPhone';
 
 // A linked artifact as a chip: neutral, or a warning tint while its link
 // is suspect. Weight 500 rather than the status chip's 700: these name
@@ -317,9 +318,9 @@ export const TraceabilityMatrix: React.FC = () => {
           style={{ width: 220, height: 32, padding: '0 10px', fontSize: 13 }}
         />
         <div style={{ flex: 1 }} />
-        <button type="button" style={buttonStyle('secondary', { disabled: rows.length === 0 })} onClick={exportCsv} disabled={rows.length === 0}>
+        {!isPhone && <button type="button" style={buttonStyle('secondary', { disabled: rows.length === 0 })} onClick={exportCsv} disabled={rows.length === 0}>
           Export CSV
-        </button>
+        </button>}
       </div>
 
       {baselineId !== 'live' && (
@@ -384,6 +385,14 @@ export const TraceabilityMatrix: React.FC = () => {
             </Link>
           )}
         </section>
+      ) : isPhone ? (
+        <TraceabilityMatrixPhone
+          rows={rows}
+          query={quickFilter}
+          projectId={projectId || ''}
+          artifactMap={artifactMap}
+          isSuspectPair={isSuspectPair}
+        />
       ) : (
         <div
           className="ag-theme-quartz"

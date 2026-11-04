@@ -237,6 +237,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Links are typed and directional (verifies goes from test-case to requirement); invalid combinations are rejected with an explanation.',
       'Use the baseline selector to view the matrix as of any snapshot.',
       'The quick filter matches across all columns; Export CSV downloads the matrix for spreadsheets or reports.',
+      'On a phone, each requirement shows a square per column; Needs attention lists failing tests, suspect links and gaps first. Tap a requirement for its links.',
     ],
     chapter: { slug: 'links', title: 'Traceability links' },
   },

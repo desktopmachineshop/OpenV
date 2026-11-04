@@ -70,6 +70,23 @@ Extras:
 - **Quick filter** — type to filter rows across all columns.
 - **Export CSV** — download the matrix for spreadsheets or reports.
 
+On a phone the matrix is a coverage list instead of a grid:
+
+- A summary at the top counts the requirements that are **fully traced** —
+  a user need, a design output and passing tests — and those failing, with
+  a suspect link or with a gap.
+- **Needs attention**, **Failing**, **Suspect** and **All** filter the list;
+  **Needs attention** puts failing tests first, then suspect links, then
+  missing links and tests not yet run.
+- Each requirement has a square for **Need**, **Design**, **Test** and
+  **Hazard**, holding how many are linked. The square turns green when every
+  test passes, red when one fails, amber for a blocked test or a suspect
+  link, and is a dashed outline when nothing is linked where something
+  should be. A hazard is not required, so an empty one shows a dash.
+- Tap a requirement for a sheet that names what needs attention and every
+  linked artifact, each test with its latest result, with **Show impact**
+  and **Open requirement**. Export CSV is on the desktop view.
+
 ## Impact analysis
 
 **Impact**, under **Verify** in the project menu, answers "what does a change
