@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- On a phone, the Personas and User needs cards on the product Overview are now spaced the same as the other cards, instead of sitting twice as far apart.
+
 ## 0.27.4 — 2026-11-03
 
 Stable channel release since 2026-11-03.
