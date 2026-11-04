@@ -34,6 +34,15 @@ const maxImpactDepth = 25
 //   - UPSTREAM of X = the artifacts X itself depends on (its rationale /
 //     sources). These are reached by walking links forwards: for every link
 //     whose FromID is X, the ToID is upstream.
+//
+// The walk follows every link type, with three exceptions to the convention:
+//   - "impacts" reads the other way: From impacts To, so To depends on From.
+//   - "relates-to" has no direction, so it carries the walk both ways.
+//   - "mitigates" also flows down: a design item that changes changes the
+//     control of the hazard it mitigates, so the hazard is affected too.
+//
+// The seed of an impact analysis is always a requirement (see the API); the
+// walk itself does not care, so it reaches every type the links reach.
 
 // ImpactNode is one artifact reached while traversing the link graph from a
 // seed artifact, with the shortest path and hop distance back to the seed.
@@ -123,18 +132,42 @@ func ComputeImpact(export *snapshot.ProjectExport, artifactID, direction string)
 // depends on).
 func buildImpactAdjacency(export *snapshot.ProjectExport, downstream bool) map[string][]impactEdge {
 	adj := make(map[string][]impactEdge)
+	add := func(from, to, via string) {
+		adj[from] = append(adj[from], impactEdge{to: to, via: via})
+	}
 	for _, l := range export.Links {
 		if l == nil || l.FromID == "" || l.ToID == "" {
 			continue
 		}
+		// dependent depends on source; see the convention above.
+		dependent, source := l.FromID, l.ToID
+		switch l.Type {
+		case linkImpacts:
+			dependent, source = l.ToID, l.FromID
+		case linkRelatesTo:
+			add(l.FromID, l.ToID, l.Type)
+			add(l.ToID, l.FromID, l.Type)
+			continue
+		case linkMitigates:
+			if downstream {
+				add(l.FromID, l.ToID, l.Type)
+			}
+		}
 		if downstream {
-			adj[l.ToID] = append(adj[l.ToID], impactEdge{to: l.FromID, via: l.Type})
+			add(source, dependent, l.Type)
 		} else {
-			adj[l.FromID] = append(adj[l.FromID], impactEdge{to: l.ToID, via: l.Type})
+			add(dependent, source, l.Type)
 		}
 	}
 	return adj
 }
+
+// Link types whose direction the impact walk treats specially.
+const (
+	linkImpacts   = "impacts"
+	linkRelatesTo = "relates-to"
+	linkMitigates = "mitigates"
+)
 
 // traverseImpact runs a breadth-first walk from startID over adj, returning
 // every reached artifact (excluding the seed) with its shortest path. The

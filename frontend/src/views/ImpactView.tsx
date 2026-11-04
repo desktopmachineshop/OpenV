@@ -88,6 +88,13 @@ export const ImpactView: React.FC = () => {
     [searchParams, setSearchParams]
   );
 
+  // Impact analysis starts from a requirement; the walk from it reaches
+  // every artifact type its links lead to.
+  const requirements = useMemo(
+    () => artifacts.filter((a) => a.type === 'requirement'),
+    [artifacts]
+  );
+
   const seed = useMemo(
     () => artifacts.find((a) => a.id === artifactId),
     [artifacts, artifactId]
@@ -187,16 +194,16 @@ export const ImpactView: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="impact">
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Artifact</label>
+          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Requirement</label>
           <select
             value={artifactId}
             onChange={(e) => selectArtifact(e.target.value)}
             style={{ minWidth: 260, padding: '6px 10px' }}
           >
-            <option value="">Select an artifact…</option>
-            {artifacts.map((a) => (
+            <option value="">Select a requirement…</option>
+            {requirements.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.title} ({a.type})
+                {a.ref ? `${a.ref} ` : ''}{a.title}
               </option>
             ))}
           </select>
@@ -222,8 +229,9 @@ export const ImpactView: React.FC = () => {
 
       {!artifactId && (
         <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
-          Pick an artifact above — or open this view from an artifact's{' '}
-          <em>Show impact</em> link — to trace what a change to it would affect.
+          Pick a requirement above — or open this view from a requirement's{' '}
+          <em>Show impact</em> link — to trace everything a change to it would
+          affect, down to its design, tests and hazards and up to its needs.
         </div>
       )}
 

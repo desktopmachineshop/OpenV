@@ -73,12 +73,20 @@ Extras:
 ## Impact analysis
 
 **Impact**, under **Verify** in the project menu, answers "what does a change
-to this artifact touch?" before you make it. Pick the artifact, or open the
-page from **Show impact →** on an artifact or a row of the Traceability Matrix.
+to this requirement touch?" before you make it. Pick the requirement, or open
+the page from **Show impact →** on a requirement or a row of the
+Traceability Matrix. Only requirements can be picked: the analysis always
+starts from one, and flows from it to every artifact its links lead to.
 
-- **Direction** — **Downstream** lists what depends on the artifact (what a
-  change here could affect), **Upstream** what it depends on (its sources and
-  rationale), and **Both** shows the two side by side.
+- **Direction** — **Downstream** lists what depends on the requirement (what
+  a change here could affect), **Upstream** what it depends on (its sources
+  and rationale), and **Both** shows the two side by side.
+- The walk follows every link, hop after hop. Downstream it reaches the
+  sub-requirements, the design items that satisfy them, the test cases that
+  verify them and the hazards those design items mitigate; upstream it reaches
+  the user needs and parent requirements. An **impacts** link counts as the
+  change flowing from its source to its target, and a **relates-to** link,
+  having no direction, is followed both ways.
 - Results are grouped by type — user needs, requirements, design items, test
   cases, hazards — with how each one is reached: the link it came through and
   how many **hops** away it is, so a direct dependent reads apart from one

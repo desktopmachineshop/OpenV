@@ -107,7 +107,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     tips: [
       'Design items nest under one another as they do in the Requirements view; type in Filter to find one.',
       'Verified through lists the test cases verifying the requirements the item satisfies, with their last result.',
-      'Edit opens the item in the Requirements view; Show in trace opens its impact.',
+      'Edit opens the item in the Requirements view; run Impact from a requirement it satisfies to see what a change touches.',
       'Add attributes to a design item in its editor; they appear here as a table.',
     ],
     chapter: { slug: 'project-pages', title: 'Home, Design, Tests and Baselines' },
@@ -194,10 +194,10 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   impact: {
     title: 'Impact analysis',
     summary:
-      'What a change to one artifact touches, before you make it: what depends on it downstream, and what it depends on upstream.',
+      'What a change to one requirement touches, before you make it: what depends on it downstream, and what it depends on upstream.',
     tips: [
-      'Open it from Show impact → on an artifact or a row of the Traceability Matrix, or pick the artifact here.',
-      'Downstream is what a change could affect; Upstream is the sources and rationale the artifact rests on.',
+      'Open it from Show impact → on a requirement or a row of the Traceability Matrix, or pick the requirement here.',
+      'Downstream is what a change could affect, followed through every link to design items, tests and hazards; Upstream is the sources and rationale the requirement rests on.',
       'Each result shows the link it was reached through and how many hops away it is.',
       'Run it before editing an approved requirement: the downstream list is what may need review again.',
     ],

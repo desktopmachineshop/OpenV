@@ -49,8 +49,9 @@ requirements rather than design items, so this is the evidence that reaches
 the item through them. **Properties** gives its parent, how many items it
 contains, its version and when it last changed.
 
-**Edit** opens the item in the **Requirements** view, and **Show in trace**
-opens its impact. On a phone the page walks the tree instead: the path to
+**Edit** opens the item in the **Requirements** view. To see what a change
+would touch, run **Impact** from a requirement the item satisfies: it flows
+down to the item and what it links to. On a phone the page walks the tree instead: the path to
 the item, the item, what it contains and the other items beside it.
 
 ## Tests

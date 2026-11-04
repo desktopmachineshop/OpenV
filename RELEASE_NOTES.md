@@ -9,8 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- Impact analysis now starts from a requirement: the picker lists only requirements, and **Show impact** appears on requirements. From there it follows every link down to sub-requirements, design items, test cases and the hazards those design items mitigate, and up to user needs and parent requirements. The Design page's **Show in trace** button is gone.
+
 ### Bug fixes
 
+- Impact analysis now reads an **impacts** link the right way round: its target is affected by its source. It also follows **relates-to** links in both directions.
 - On a phone, the Personas and User needs cards on the product Overview are now spaced the same as the other cards, instead of sitting twice as far apart.
 
 ## 0.27.4 — 2026-11-03

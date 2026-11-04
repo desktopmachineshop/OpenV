@@ -12,6 +12,6 @@
   <conbody>
     <p><b>Design</b> shows the project's design items as a tree: an item nested under another in the <b>Requirements</b> view is nested here too. The number beside an item counts the design items beneath it. Type in <b>Filter</b> to find an item by its reference or title.</p>
     <p>Select an item to read it: its description, its <b>Attributes</b> as a table, the requirements it <b>satisfies</b> (and anything else it links to, such as the hazards it mitigates), and <b>Verified through</b>: the test cases that verify those requirements, each with its last result. Test cases verify requirements rather than design items, so this is the evidence that reaches the item through them. <b>Properties</b> gives its parent, how many items it contains, its version and when it last changed.</p>
-    <p><b>Edit</b> opens the item in the <b>Requirements</b> view, and <b>Show in trace</b> opens its impact. On a phone the page walks the tree instead: the path to the item, the item, what it contains and the other items beside it.</p>
+    <p><b>Edit</b> opens the item in the <b>Requirements</b> view. To see what a change would touch, run <b>Impact</b> from a requirement the item satisfies: it flows down to the item and what it links to. On a phone the page walks the tree instead: the path to the item, the item, what it contains and the other items beside it.</p>
   </conbody>
 </concept>

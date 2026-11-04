@@ -119,6 +119,17 @@ func TestGetImpact_MissingArtifactParam(t *testing.T) {
 	}
 }
 
+// Impact analysis starts from a requirement.
+func TestGetImpact_NonRequirementSeed(t *testing.T) {
+	for _, id := range []string{"N1", "D1", "T1"} {
+		w := httptest.NewRecorder()
+		newImpactHandler(t).GetImpact(w, impactRequest("viewer-a", "&artifact="+id))
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400 (body %q)", id, w.Code, w.Body.String())
+		}
+	}
+}
+
 func TestGetImpact_UnknownArtifact(t *testing.T) {
 	w := httptest.NewRecorder()
 	newImpactHandler(t).GetImpact(w, impactRequest("viewer-a", "&artifact=nope"))
