@@ -8,9 +8,11 @@
   <conbody>
     <p><b>Impact</b>, under <b>Verify</b> in the project menu, answers "what does a change to this requirement touch?" before you make it. Pick the requirement, or open the page from <b>Show impact →</b> on a requirement or a row of the Traceability Matrix. Only requirements can be picked: the analysis always starts from one, and flows from it to every artifact its links lead to.</p>
     <ul>
-      <li><b>Direction</b> — <b>Downstream</b> lists what depends on the requirement (what a change here could affect), <b>Upstream</b> what it depends on (its sources and rationale), and <b>Both</b> shows the two side by side.</li>
+      <li>The result is a tree with the requirement in the middle. <b>Upstream</b> — what it depends on, its sources and rationale — branches out to the left; <b>Downstream</b> — what depends on it, what a change here could affect — branches out to the right. Each artifact hangs off the one it was reached through.</li>
+      <li>Each line, and the edge of the box it leads to, is coloured by its link type, with a key below the tree, so a <i>satisfies</i> reads apart from a <i>verifies</i> or a <i>mitigates</i> at a glance. Select a box to open the artifact.</li>
+      <li><b>Depth</b> — <b>1 level</b> shows only the artifacts linked directly to the requirement; <b>All levels</b> follows every link to the end of the chain.</li>
       <li>The walk follows every link, hop after hop. Downstream it reaches the sub-requirements, the design items that satisfy them, the test cases that verify them and the hazards those design items mitigate; upstream it reaches the user needs and parent requirements. An <b>impacts</b> link counts as the change flowing from its source to its target, and a <b>relates-to</b> link, having no direction, is followed both ways.</li>
-      <li>Results are grouped by type — user needs, requirements, design items, test cases, hazards — with how each one is reached: the link it came through and how many <b>hops</b> away it is, so a direct dependent reads apart from one three links down the chain.</li>
+      <li>On a phone the tree opens on the requirement; swipe sideways to follow it.</li>
     </ul>
     <p>Run it before changing an approved requirement: the downstream list is the set of artifacts whose links will turn <b>suspect</b> and that may need review again.</p>
   </conbody>

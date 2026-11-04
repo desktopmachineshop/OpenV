@@ -197,8 +197,9 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'What a change to one requirement touches, before you make it: what depends on it downstream, and what it depends on upstream.',
     tips: [
       'Open it from Show impact → on a requirement or a row of the Traceability Matrix, or pick the requirement here.',
-      'Downstream is what a change could affect, followed through every link to design items, tests and hazards; Upstream is the sources and rationale the requirement rests on.',
-      'Each result shows the link it was reached through and how many hops away it is.',
+      'The tree puts the requirement in the middle: Upstream (its sources and rationale) branches left, Downstream (what a change could affect) branches right.',
+      'Lines are coloured by link type, with a key below; Depth shows 1 level or follows every link to the end.',
+      'Select a box to open that artifact.',
       'Run it before editing an approved requirement: the downstream list is what may need review again.',
     ],
     chapter: { slug: 'links', title: 'Traceability links' },

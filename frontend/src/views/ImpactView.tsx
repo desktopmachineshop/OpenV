@@ -1,15 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import {
-  Artifact,
-  artifactAPI,
-  ImpactDirection,
-  ImpactGroup,
-  ImpactReport,
-  vvAPI,
-} from '../api/client';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { Artifact, artifactAPI, ImpactReport, vvAPI } from '../api/client';
 import { useAppStore } from '../state/store';
-import { Chip } from '../components/ui';
+import { ImpactDepth, layoutImpactTree } from './ImpactViewLayout';
+import { ImpactViewTree } from './ImpactViewTree';
 import type { ArtifactTypeValue } from '../generated/contract';
 
 // Human labels for artifact type buckets; unknown types fall back to the raw
@@ -29,10 +23,9 @@ const TYPE_LABELS: Record<string, string> = {
 const typeLabel = (type: string): string =>
   TYPE_LABELS[type] || (type ? type : 'Unknown');
 
-const DIRECTIONS: { value: ImpactDirection; label: string }[] = [
-  { value: 'both', label: 'Both' },
-  { value: 'downstream', label: 'Downstream (dependents)' },
-  { value: 'upstream', label: 'Upstream (dependencies)' },
+const DEPTHS: { value: ImpactDepth; label: string }[] = [
+  { value: 'one', label: '1 level' },
+  { value: 'all', label: 'All levels' },
 ];
 
 export const ImpactView: React.FC = () => {
@@ -43,7 +36,7 @@ export const ImpactView: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const artifactId = searchParams.get('artifact') || '';
 
-  const [direction, setDirection] = useState<ImpactDirection>('both');
+  const [depth, setDepth] = useState<ImpactDepth>('all');
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [report, setReport] = useState<ImpactReport | null>(null);
   const [error, setError] = useState('');
@@ -66,7 +59,7 @@ export const ImpactView: React.FC = () => {
     }
     setLoading(true);
     vvAPI
-      .impact(projectId, artifactId, direction)
+      .impact(projectId, artifactId, 'both')
       .then((res) => {
         setReport(res.data);
         setError('');
@@ -76,7 +69,7 @@ export const ImpactView: React.FC = () => {
         setError(err.response?.data?.error || err.message || 'Failed to load impact');
       })
       .finally(() => setLoading(false));
-  }, [projectId, artifactId, direction]);
+  }, [projectId, artifactId]);
 
   const selectArtifact = useCallback(
     (id: string) => {
@@ -110,84 +103,14 @@ export const ImpactView: React.FC = () => {
 
   const titleOf = useCallback((id: string) => byId[id]?.title || id, [byId]);
 
-  const renderGroups = (label: string, hint: string, groups: ImpactGroup[]) => {
-    const total = groups.reduce((n, g) => n + g.count, 0);
-    return (
-      <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-          <h3 style={{ margin: 0, color: 'var(--text)' }}>{label}</h3>
-          <Chip tone="info">{total}</Chip>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{hint}</div>
-        {total === 0 ? (
-          <div style={{ color: 'var(--neutral-mid)', fontSize: 13 }}>
-            No {label.toLowerCase()} artifacts.
-          </div>
-        ) : (
-          groups.map((group) => (
-            <div key={group.type} style={{ marginBottom: 18 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.4,
-                  color: 'var(--text-muted)',
-                  marginBottom: 6,
-                }}
-              >
-                {typeLabel(group.type)} ({group.count})
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {group.nodes.map((node) => (
-                  <Link
-                    key={node.artifact_id}
-                    to={`/projects/${projectId}/requirements?artifact=${node.artifact_id}`}
-                    title={
-                      'Path: ' +
-                      node.path.map((id) => titleOf(id)).join('  →  ')
-                    }
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 10px',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      minHeight: 40,
-                      boxSizing: 'border-box',
-                      textDecoration: 'none',
-                      color: 'var(--text)',
-                      fontSize: 13,
-                    }}
-                  >
-                    {byId[node.artifact_id]?.ref && (
-                      <span style={{ fontFamily: 'source-code-pro, Menlo, Monaco, Consolas, monospace', fontSize: 12, color: 'var(--accent-text)' }}>
-                        {byId[node.artifact_id]?.ref}
-                      </span>
-                    )}
-                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {node.title || node.artifact_id}
-                    </span>
-                    {node.via && (
-                      <Chip tone="neutral">{node.via}</Chip>
-                    )}
-                    <Chip tone="info" title={`${node.distance} hop${node.distance === 1 ? '' : 's'} away`}>
-                      {node.distance} hop{node.distance === 1 ? '' : 's'}
-                    </Chip>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    );
-  };
-
-  const showDownstream = direction === 'both' || direction === 'downstream';
-  const showUpstream = direction === 'both' || direction === 'upstream';
+  const layout = useMemo(
+    () => (report ? layoutImpactTree(report, depth, titleOf) : null),
+    [report, depth, titleOf]
+  );
+  const shown = useMemo(
+    () => (layout ? new Set(layout.nodes.map((n) => n.id)).size : 0),
+    [layout]
+  );
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -209,13 +132,13 @@ export const ImpactView: React.FC = () => {
           </select>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Direction</label>
+          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Depth</label>
           <select
-            value={direction}
-            onChange={(e) => setDirection(e.target.value as ImpactDirection)}
-            style={{ minWidth: 200, padding: '6px 10px' }}
+            value={depth}
+            onChange={(e) => setDepth(e.target.value as ImpactDepth)}
+            style={{ minWidth: 120, padding: '6px 10px' }}
           >
-            {DIRECTIONS.map((d) => (
+            {DEPTHS.map((d) => (
               <option key={d.value} value={d.value}>
                 {d.label}
               </option>
@@ -235,7 +158,7 @@ export const ImpactView: React.FC = () => {
         </div>
       )}
 
-      {artifactId && report && (
+      {artifactId && report && layout && (
         <>
           <div
             style={{
@@ -243,30 +166,22 @@ export const ImpactView: React.FC = () => {
               border: '1px solid var(--border)',
               borderRadius: 6,
               padding: '10px 14px',
-              marginBottom: 18,
+              marginBottom: 14,
               fontSize: 13,
               color: 'var(--text)',
             }}
           >
-            Impact of <strong>{seed?.title || artifactId}</strong>
-            {seed && <span style={{ color: 'var(--text-muted)' }}> ({seed.type})</span>} —{' '}
-            <strong>{report.total}</strong> affected artifact{report.total === 1 ? '' : 's'}.
+            Impact of <strong>{seed?.title || artifactId}</strong> —{' '}
+            <strong>{shown}</strong> affected artifact{shown === 1 ? '' : 's'}
+            {depth === 'one' ? ' one link away' : ' through every link'}.
           </div>
-
-          <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {showDownstream &&
-              renderGroups(
-                'Downstream',
-                'Artifacts that depend on this one — what a change here could affect.',
-                report.downstream
-              )}
-            {showUpstream &&
-              renderGroups(
-                'Upstream',
-                'Artifacts this one depends on — its sources and rationale.',
-                report.upstream
-              )}
-          </div>
+          <ImpactViewTree
+            layout={layout}
+            seed={{ id: artifactId, title: seed?.title || artifactId, ref: seed?.ref }}
+            projectId={projectId || ''}
+            byId={byId}
+            typeLabel={(t) => typeLabel(t).replace(/s$/, '')}
+          />
         </>
       )}
     </div>
