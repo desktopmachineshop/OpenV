@@ -107,7 +107,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     tips: [
       'Design items nest under one another as they do in the Requirements view; type in Filter to find one.',
       'Verified through lists the test cases verifying the requirements the item satisfies, with their last result.',
-      'Edit opens the item in the Requirements view; Show in trace opens its impact.',
+      'Edit opens the item in the Requirements view; run Impact from a requirement it satisfies to see what a change touches.',
       'Add attributes to a design item in its editor; they appear here as a table.',
     ],
     chapter: { slug: 'project-pages', title: 'Home, Design, Tests and Baselines' },
@@ -194,11 +194,12 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   impact: {
     title: 'Impact analysis',
     summary:
-      'What a change to one artifact touches, before you make it: what depends on it downstream, and what it depends on upstream.',
+      'What a change to one requirement touches, before you make it: what depends on it downstream, and what it depends on upstream.',
     tips: [
-      'Open it from Show impact → on an artifact or a row of the Traceability Matrix, or pick the artifact here.',
-      'Downstream is what a change could affect; Upstream is the sources and rationale the artifact rests on.',
-      'Each result shows the link it was reached through and how many hops away it is.',
+      'Open it from Show impact → on a requirement or a row of the Traceability Matrix, or pick the requirement here.',
+      'The tree puts the requirement in the middle: Upstream (its sources and rationale) branches left, Downstream (what a change could affect) branches right.',
+      'Lines are coloured by link type, with a key below; Depth shows 1 level or follows every link to the end.',
+      'Select a box to open that artifact.',
       'Run it before editing an approved requirement: the downstream list is what may need review again.',
     ],
     chapter: { slug: 'links', title: 'Traceability links' },
@@ -236,6 +237,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Links are typed and directional (verifies goes from test-case to requirement); invalid combinations are rejected with an explanation.',
       'Use the baseline selector to view the matrix as of any snapshot.',
       'The quick filter matches across all columns; Export CSV downloads the matrix for spreadsheets or reports.',
+      'On a phone, each requirement shows a square per column; Needs attention lists failing tests, suspect links and gaps first. Tap a requirement for its links.',
     ],
     chapter: { slug: 'links', title: 'Traceability links' },
   },

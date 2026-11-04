@@ -391,12 +391,12 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Personas & user needs */}
-      <div data-help-key="overview.personas" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20 }}>
+      <div data-help-key="overview.personas" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20, marginBottom: 20 }}>
         {[
           { label: 'Personas', items: personas },
           { label: 'User needs', items: userNeeds },
         ].map((group) => (
-          <div key={group.label} className="card" style={{ marginBottom: 20 }}>
+          <div key={group.label} className="card" style={{ marginBottom: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
               <div style={{ ...sectionTitle, marginBottom: 0 }}>{group.label}</div>
               <span style={chip(group.items.length > 0 ? 'var(--accent)' : 'var(--neutral)')}>{group.items.length}</span>

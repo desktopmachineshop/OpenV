@@ -582,10 +582,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       <div style={{ marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
           <h4 style={sectionHeadingStyle}>Description</h4>
-          {artifact.project_id && (
+          {artifact.project_id && artifact.type === 'requirement' && (
             <RouterLink
               to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
-              title="Trace what a change to this artifact would affect"
+              title="Trace what a change to this requirement would affect"
               data-help-key="impact"
               style={{ fontSize: '12px', color: 'var(--accent-text)', textDecoration: 'none', display: 'inline-block', padding: '9px 0' }}
             >

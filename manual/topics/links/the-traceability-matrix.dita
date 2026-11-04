@@ -19,5 +19,12 @@
       <li><b>Quick filter</b> — type to filter rows across all columns.</li>
       <li><b>Export CSV</b> — download the matrix for spreadsheets or reports.</li>
     </ul>
+    <p>On a phone the matrix is a coverage list instead of a grid:</p>
+    <ul>
+      <li>A summary at the top counts the requirements that are <b>fully traced</b> — a user need, a design output and passing tests — and those failing, with a suspect link or with a gap.</li>
+      <li><b>Needs attention</b>, <b>Failing</b>, <b>Suspect</b> and <b>All</b> filter the list; <b>Needs attention</b> puts failing tests first, then suspect links, then missing links and tests not yet run.</li>
+      <li>Each requirement has a square for <b>Need</b>, <b>Design</b>, <b>Test</b> and <b>Hazard</b>, holding how many are linked. The square turns green when every test passes, red when one fails, amber for a blocked test or a suspect link, and is a dashed outline when nothing is linked where something should be. A hazard is not required, so an empty one shows a dash.</li>
+      <li>Tap a requirement for a sheet that names what needs attention and every linked artifact, each test with its latest result, with <b>Show impact</b> and <b>Open requirement</b>. Export CSV is on the desktop view.</li>
+    </ul>
   </conbody>
 </concept>

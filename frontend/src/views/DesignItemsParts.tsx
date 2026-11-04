@@ -132,9 +132,6 @@ export const ItemHeader: React.FC<{ item: Artifact; projectId: string }> = ({ it
       <Chip>{statusWord(item)}</Chip>
       <Chip tone="neutral">Design item</Chip>
       <span style={{ flexGrow: 1 }} />
-      <Link to={`/projects/${projectId}/impact?artifact=${item.id}`} style={buttonStyle('secondary', { compact: true })}>
-        Show in trace
-      </Link>
       <Link to={`/projects/${projectId}/requirements?artifact=${item.id}`} style={buttonStyle('secondary', { compact: true })}>
         Edit
       </Link>

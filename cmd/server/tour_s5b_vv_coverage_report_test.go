@@ -65,11 +65,13 @@ import (
 //     unlike the /download routes' (I8), and carries the day it was
 //     rendered, an area pattern; a Range request gets the whole PDF with a
 //     200;
-//   - impact walks the link graph from one artifact, downstream, upstream or
-//     both (anything else is both), lists the nodes of a type by title (the
-//     two design items at one link from the passing requirement), and
-//     follows the cross-project link to C's requirement, which it names with
-//     no title or type.
+//   - impact walks the link graph from one requirement, downstream, upstream
+//     or both (anything else is both), following every link: the passing
+//     requirement's downstream reaches the hazard its design item mitigates,
+//     two links away. It lists the nodes of a type by title (the two design
+//     items at one link from the passing requirement), follows the
+//     cross-project link to C's requirement, which it names with no title
+//     or type, and refuses an artifact that is not a requirement with a 400.
 //
 // Nondeterminism, and how the fixture avoids it. latest_results is a Go map
 // keyed by random test-case ids, so the steps that read P's coverage or
@@ -397,16 +399,16 @@ func vvCoverageReportImpact(tr *tour, viewer *tourActor) {
 		tr.step("the impact of the passing requirement, "+d.title, o, "GET /api/v1/projects/{id}/impact",
 			at("id", "{{p}}"), query(d.query))
 	}
-	tr.step("the design item's impact upstream: a path two links long", o, "GET /api/v1/projects/{id}/impact",
+	tr.step("the design item's impact: refused, impact starts from a requirement", o, "GET /api/v1/projects/{id}/impact",
 		at("id", "{{p}}"), query("artifact={{d1}}&direction=upstream"))
-	tr.step("the first user need's impact downstream: a path two links long", o,
+	tr.step("the first user need's impact: refused, impact starts from a requirement", o,
 		"GET /api/v1/projects/{id}/impact", at("id", "{{p}}"), query("artifact={{un1}}&direction=downstream"))
 	tr.step("the refined requirement's impact downstream: C's requirement, with no title or type", o,
 		"GET /api/v1/projects/{id}/impact", at("id", "{{p}}"), query("artifact={{r_nocase}}&direction=downstream"),
 		note("the export holds the cross-project link but not the far artifact, so the walk reaches it and names "+
 			"only its id"))
 	tr.step("an artifact id with spaces around it: trimmed", o, "GET /api/v1/projects/{id}/impact",
-		at("id", "{{p}}"), query("artifact=%20{{tc_pass}}%20&direction=upstream"))
+		at("id", "{{p}}"), query("artifact=%20{{r_pass}}%20&direction=upstream"))
 	tr.step("the impact from B1", o, "GET /api/v1/projects/{id}/impact", at("id", "{{p}}"),
 		query("artifact={{r_pass}}&baseline_id={{b1}}"))
 	tr.step("the impact with no artifact", o, "GET /api/v1/projects/{id}/impact", at("id", "{{p}}"),
@@ -420,7 +422,7 @@ func vvCoverageReportImpact(tr *tour, viewer *tourActor) {
 	tr.step("the impact from another project's baseline", o, "GET /api/v1/projects/{id}/impact",
 		at("id", "{{p}}"), query("artifact={{r_pass}}&baseline_id={{eb}}"))
 	tr.step("the viewer reads an impact", viewer, "GET /api/v1/projects/{id}/impact", at("id", "{{p}}"),
-		query("artifact={{h1}}"))
+		query("artifact={{r_pass}}&direction=downstream"))
 	tr.step("the impact in a project that does not exist", o, "GET /api/v1/projects/{id}/impact",
 		at("id", "{{phantom}}"), query("artifact={{r_pass}}"))
 }
