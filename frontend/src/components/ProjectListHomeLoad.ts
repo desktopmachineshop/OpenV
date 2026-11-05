@@ -9,7 +9,7 @@ import {
   type Project,
   type Proposal,
 } from '../api/client';
-import { buildTodo, describeEvent, percent, type ActivityItem, type TodoItem } from './ProjectListHomeData';
+import { buildTodo, coverageFigures, describeEvent, percent, type ActivityItem, type TodoItem } from './ProjectListHomeData';
 import type { ProjectFigures } from './ProjectListFigures';
 
 // The workspace Home on the Projects page (the Home design, redesign-pages):
@@ -27,6 +27,7 @@ import type { ProjectFigures } from './ProjectListFigures';
 
 export interface WorkspaceTodo extends TodoItem {
   project: string;
+  projectId: string;
 }
 
 export interface WorkspaceHomeData {
@@ -54,7 +55,7 @@ const loadProject = async (p: Project, comments: DomainEvent[]) => {
   ]);
   const rawCov = settled(coverage);
   const cov = rawCov && Array.isArray(rawCov.entries) ? rawCov : rawCov ? { ...rawCov, entries: [] } : null;
-  const summary = cov?.summary;
+  const summary = coverageFigures(cov);
   const open = list(runs).filter((r) => r.status === 'in-progress').slice(0, 3);
   const failingAny = (cov?.entries || []).some((e) => Object.values(e.latest_results || {}).includes('fail'));
   const raw = settled(review);
@@ -73,15 +74,15 @@ const loadProject = async (p: Project, comments: DomainEvent[]) => {
     coverage: cov,
     comments,
     byId: new Map(artifacts.map((a) => [a.id, a])),
-  }).map((t) => ({ ...t, project: p.name }));
+  }).map((t) => ({ ...t, project: p.name, projectId: p.id }));
   return {
     todo,
     summary,
     figures: {
       count: Number.isFinite(total) ? total : null,
-      traced: percent(summary?.covered, summary?.total),
+      traced: percent(summary?.traced, summary?.total),
       verified: percent(summary?.verified, summary?.total),
-      failing: summary ? summary.fail || 0 : null,
+      failing: summary ? summary.failing : null,
     },
   };
 };
@@ -123,8 +124,8 @@ export const loadWorkspaceHome = async (projects: Project[]): Promise<WorkspaceH
       }
       if (l.summary?.total) {
         reqs += l.summary.total;
-        covered += l.summary.covered || 0;
-        verified += l.summary.verified || 0;
+        covered += l.summary.traced;
+        verified += l.summary.verified;
       }
       out.totals.failing += l.figures.failing || 0;
     });

@@ -13,7 +13,7 @@ import {
   refStyle,
 } from '../components/ui';
 import { baselineAuthor, baselineDate } from '../utils/baselines';
-import { wordDiff } from '../utils/baselinesDiff';
+import { WordDiff } from '../components/ArtifactWordDiff';
 import { CHANGE_TONE, type ChangeRow } from './BaselinesPageData';
 
 export const LIVE = 'live';
@@ -242,45 +242,7 @@ export const ChangeTable: React.FC<{
     </section>
   );
 
-const Diff: React.FC<{ before: string; after: string }> = ({ before, after }) => (
-  <p
-    style={{
-      margin: 0,
-      fontSize: 14,
-      lineHeight: 1.7,
-      color: 'var(--text)',
-      whiteSpace: 'pre-wrap',
-    }}
-  >
-    {wordDiff(before, after).map((p, i) =>
-      p.kind === 'same' ? (
-        <span key={i}>{p.text}</span>
-      ) : p.kind === 'del' ? (
-        <del
-          key={i}
-          style={{
-            background: 'var(--tint-red)',
-            color: 'var(--danger-strong)',
-          }}
-        >
-          {p.text}
-        </del>
-      ) : (
-        <ins
-          key={i}
-          style={{
-            background: 'var(--tint-green)',
-            color: 'var(--success-text)',
-            textDecoration: 'none',
-            borderBottom: '1px solid var(--tint-green-border)',
-          }}
-        >
-          {p.text}
-        </ins>
-      )
-    )}
-  </p>
-);
+const Diff = WordDiff;
 
 /** The selected change's text, before and after, with the live links it left suspect. */
 export const TextChange: React.FC<{

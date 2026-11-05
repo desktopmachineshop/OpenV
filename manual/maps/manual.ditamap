@@ -125,6 +125,7 @@
   </topicref>
   <topicref href="../topics/project-pages/index.dita">
     <topicref href="../topics/project-pages/home.dita"/>
+    <topicref href="../topics/project-pages/activity-log.dita"/>
     <topicref href="../topics/project-pages/design.dita"/>
     <topicref href="../topics/project-pages/tests.dita"/>
     <topicref href="../topics/project-pages/baselines-page.dita"/>

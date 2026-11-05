@@ -13,6 +13,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 - **A Table with the document's structure, and a Tree you can see.** On the requirements page, **Table** now nests every artifact under its heading or parent, with a caret to fold each branch and every column, status and priority included, on the headings too. A single **fold all / unfold all** button replaces the **Depth** picker. **Tree** is now a diagram: the project drawn left to right as connected boxes, coloured by type or by status with a key, that you can fold, pan, zoom and walk with the keyboard; click a box to open the artifact. The **Layers** view is gone, and links to it open the Tree.
 
+### Maintenance updates
+
+- **Act on what needs you from Home.** On Home and a project's Summary, a suspect link in **Needs you** now has **✓** to confirm that it still holds and **✗** to remove it (after you confirm), right there; the line leaves the list and the count drops. Clicking any line opens the artifact it names, the button on each line says what it does (**Review**, **Open**, **Continue**), and **Review all** in the panel's header opens the review queue.
+- **Activity opens what it describes.** Each event in Home's **Activity** and a project's audit trail is now a link to its artifact, the link's source artifact, the board, the agent run, the test run, the baseline, or the artifact with its notes open for a comment.
+- **A readable Activity log.** A project's **Activity** page now reads as sentences grouped by day, in the same words as Home: who did it (a person, an agent, a runner or the system, with no IDs), what they did and the artifact by its reference and title, as a link. Opening an event shows its detail: a status change as two status chips, an edit as a word-by-word diff of what changed, a link from one end to the other, a board move, a test result or an agent run's status, time and cost. The raw event is behind **Show raw event**.
+- The **Projects** panel on Home has a **+ New project** button in its header.
+
+### Bug fixes
+
+- The **Projects** list on Home showed "No requirements to trace yet" for every project, and the workspace's traced and verified figures stayed blank. Each project now shows its **Traced** and **Verified** bars, and a project's Summary its traced and verified share.
+- The top bar no longer cuts the workspace name short on a computer when there is room for it ("Desktop Machin…"). The workspace and project names take the room the bar has and shorten, with the full name on hover, only when it runs out; a phone keeps its narrower name.
+
 ## 0.27.5 — 2026-11-05
 
 ### Maintenance updates

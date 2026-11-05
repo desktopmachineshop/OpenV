@@ -6,6 +6,17 @@
 // member can see.
 import type { Artifact, CoverageReport, DomainEvent, ReviewQueue, TestResult, TestRun } from '../api/client';
 
+// The audit trail's wording lives in activityEvents, shared with the
+// project's Activity log (#734); it is re-exported here for the Homes.
+export {
+  describeEvent,
+  eventTarget,
+  whenLabel,
+  VERBS,
+  type ActivityItem,
+  type ActivityTone,
+} from './activityEvents';
+
 export type TodoKind = 'approve' | 'suspect' | 'test run' | 'failing' | 'comment';
 
 export interface TodoItem {
@@ -14,34 +25,58 @@ export interface TodoItem {
   ref: string;
   title: string;
   meta: string;
+  /** The row's own action, a link: its label says what it does ("Review", "Continue", "Open"). */
   action: string;
   to: string;
-}
-
-export type ActivityTone = 'ok' | 'bad' | 'warn' | 'agent' | 'info';
-
-export interface ActivityItem {
-  id: string;
-  who: string;
-  what: string;
-  ref: string;
-  when: string;
-  tone: ActivityTone;
+  /** Where the row itself opens: the artifact it names (a link's source), or the run. */
+  open: string;
+  /** A suspect link's id: the row confirms or removes it in place (#719). */
+  linkId?: string;
 }
 
 export const percent = (part: number | undefined, total: number | undefined): number | null =>
   total ? Math.round(((part || 0) / total) * 100) : null;
 
-/** "10:42" today, "Yesterday 17:20", or "12 Oct" before that. */
-export const whenLabel = (iso: string, now: Date = new Date()): string => {
-  const t = new Date(iso);
-  if (Number.isNaN(t.getTime())) return '';
-  const time = t.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const days = Math.round((day(now) - day(t)) / 86400000);
-  if (days === 0) return time;
-  if (days === 1) return `Yesterday ${time}`;
-  return t.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+/** A project's requirements by their verification coverage, from its coverage report. */
+export interface CoverageFigures {
+  /** Requirements in the project. */
+  total: number;
+  /** Requirements with something behind them: a test case, or a manual attestation. */
+  traced: number;
+  /** Requirements whose evidence passes, or that are verified by hand. */
+  verified: number;
+  /** Requirements whose latest evidence fails. */
+  failing: number;
+}
+
+// Rollups that mean nothing is behind a requirement yet (vv/coverage.go).
+const UNTRACED = new Set(['uncovered', 'method-missing']);
+const VERIFIED = new Set(['pass', 'verified-manually']);
+
+/**
+ * The coverage report's summary counts requirements by ROLLUP (rollup ->
+ * count, internal/domain/vv/coverage.go), not by covered and verified
+ * totals: read as {total, covered, verified}, every project looked as if it
+ * had no requirements (#720). Null without a report.
+ */
+export const coverageFigures = (report: Pick<CoverageReport, 'summary' | 'entries'> | null | undefined): CoverageFigures | null => {
+  if (!report) return null;
+  const counts: Record<string, number> = {};
+  const summary = report.summary && typeof report.summary === 'object' ? report.summary : null;
+  if (summary && Object.keys(summary).length > 0) {
+    for (const [rollup, n] of Object.entries(summary)) counts[rollup] = (counts[rollup] || 0) + (Number(n) || 0);
+  } else {
+    for (const e of Array.isArray(report.entries) ? report.entries : []) counts[e.rollup] = (counts[e.rollup] || 0) + 1;
+  }
+  let total = 0;
+  let traced = 0;
+  let verified = 0;
+  for (const [rollup, n] of Object.entries(counts)) {
+    total += n;
+    if (!UNTRACED.has(rollup)) traced += n;
+    if (VERIFIED.has(rollup)) verified += n;
+  }
+  return { total, traced, verified, failing: counts.fail || 0 };
 };
 
 /** How long ago, briefly: "5m", "2h", "3d". */
@@ -52,59 +87,6 @@ export const agoLabel = (iso: string, now: Date = new Date()): string => {
   if (min < 60) return `${min}m`;
   const h = Math.round(min / 60);
   return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
-};
-
-const VERBS: Record<string, string> = {
-  'artifact.created': 'created',
-  'artifact.updated': 'edited',
-  'artifact.deleted': 'deleted',
-  'artifact.restored': 'restored',
-  'link.created': 'linked',
-  'link.updated': 'changed a link of',
-  'link.deleted': 'removed a link of',
-  'baseline.captured': 'captured baseline',
-  'baseline.deleted': 'deleted baseline',
-  'project.review_round_started': 'started a review round',
-  'chatter.created': 'commented on',
-  'workitem.created': 'added to the board',
-  'workitem.moved': 'moved on the board',
-  'workitem.updated': 'updated on the board',
-  'agentrun.finished': 'finished a run',
-  'agentrun.successors_skipped': 'skipped the next steps of a run',
-  'proposal.created': 'proposed a change to',
-  'project.member_added': 'added a member',
-  'project.member_role_changed': "changed a member's role",
-  'project.member_removed': 'removed a member',
-};
-
-/** One line of the audit trail: who did what to which thing, and its dot. */
-export const describeEvent = (e: DomainEvent, now?: Date): ActivityItem => {
-  const p = e.payload || {};
-  const agent = e.actor_kind === 'agent';
-  let what = VERBS[e.event_type] || e.event_type;
-  let tone: ActivityTone = agent ? 'agent' : 'info';
-  if (e.event_type === 'artifact.status_changed') {
-    what = p.to === 'approved' ? 'approved' : p.to === 'in_review' ? 'sent for review' : `moved to ${String(p.to || '').replace('_', ' ')}`;
-    if (p.to === 'approved') tone = 'ok';
-  } else if (e.event_type === 'testrun.recorded') {
-    what = `recorded ${p.status || 'a result'} on`;
-    tone = p.status === 'fail' ? 'bad' : p.status === 'pass' ? 'ok' : p.status === 'blocked' ? 'warn' : tone;
-  } else if (e.event_type === 'agentrun.finished') {
-    tone = p.status === 'succeeded' ? 'agent' : 'bad';
-  } else if (e.event_type === 'artifact.deleted' || e.event_type === 'link.deleted') {
-    tone = 'warn';
-  } else if (e.event_type.startsWith('proposal.')) {
-    tone = 'agent';
-  }
-  const ref = e.entity_name || p.title || p.name || '';
-  return {
-    id: e.id,
-    who: e.actor_name || (agent ? 'Agent' : e.actor === 'system' ? 'System' : 'Someone'),
-    what,
-    ref: e.event_type === 'project.review_round_started' || e.event_type.startsWith('project.member') ? '' : ref,
-    when: whenLabel(e.created_at, now),
-    tone,
-  };
 };
 
 interface TodoSources {
@@ -134,6 +116,7 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
       meta: `In review · ${agoLabel(a.updated_at, now)}`,
       action: 'Review',
       to: open(a.id),
+      open: open(a.id),
     });
   }
   for (const l of review?.suspect_links || []) {
@@ -144,8 +127,10 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
       ref: refOf(byId, l.from_id) || l.from_title,
       title: `${l.type} ${to ? `${to} ` : ''}${l.to_title}`,
       meta: 'An end changed after linking · confirm or remove the link',
-      action: 'Confirm',
+      action: 'Review',
       to: `${base}/review`,
+      open: open(l.from_id),
+      linkId: l.id,
     });
   }
   for (const { run, results } of runs) {
@@ -159,6 +144,7 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
       meta: `${Math.max(0, testCases - done)} of ${testCases} test cases left · started ${agoLabel(run.started_at, now)} ago`,
       action: 'Continue',
       to: `${base}/vv/runs/${run.id}`,
+      open: `${base}/vv/runs/${run.id}`,
     });
   }
   const failing = new Map<string, string[]>();
@@ -177,6 +163,7 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
       meta: `Last result fail · verifies ${reqs.map((r) => refOf(byId, r) || 'a requirement').join(', ')}`,
       action: 'Open',
       to: open(tc),
+      open: open(tc),
     });
   }
   for (const c of comments) {
@@ -188,8 +175,9 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
       ref: a?.ref || '',
       title: a?.title || c.entity_name || '',
       meta: `${c.actor_name || 'Someone'}: ${String(c.payload?.message || '')}`,
-      action: 'Reply',
-      to: open(id),
+      action: 'Open',
+      to: `${open(id)}&notes=1`,
+      open: `${open(id)}&notes=1`,
     });
   }
   return items;

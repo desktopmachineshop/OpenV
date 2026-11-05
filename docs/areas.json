@@ -445,6 +445,7 @@
         "cmd/server/wire_realtime.go",
         "frontend/src/api/**/notifications*",
         "frontend/src/components/NotificationBell*",
+        "frontend/src/components/activityEvents*",
         "frontend/src/push/**",
         "frontend/src/views/ActivityLog*",
         "internal/api/domain_event_*.go",
