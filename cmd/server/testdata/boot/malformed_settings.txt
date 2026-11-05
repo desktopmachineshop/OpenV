@@ -183,7 +183,6 @@ log level=INFO msg="seeds: created default agent \"reviewer\" for org <uuid>"
 log level=INFO msg="seeds: created default agent \"test-case-author\" for org <uuid>"
 log level=INFO msg="seeds: created default agent \"requirements-copilot\" for org <uuid>"
 log level=INFO msg="seeds: created default agent \"requirements-interviewer\" for org <uuid>"
-log level=INFO msg="seeds: created default team \"Founder's Dev Team\" for org <uuid>"
 log level=INFO msg="http request" method=POST path=/api/v1/auth/register status=200 duration=<duration>
 
 == probe project: POST /api/v1/projects (the project the export probes use)
