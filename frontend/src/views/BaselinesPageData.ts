@@ -69,12 +69,23 @@ export const changeRows = (diff: BaselineDiff, refs: Map<string, string>): Chang
   ];
 };
 
-export const filterRows = (rows: ChangeRow[], filter: ChangeFilter): ChangeRow[] =>
-  filter === 'all'
-    ? rows
+/**
+ * A change whose only difference is its review status (a bulk approval
+ * moves hundreds of artifacts from draft to approved at once).
+ */
+export const isStatusOnly = (r: ChangeRow): boolean => {
+  const m = r.modified;
+  return !!m && m.status_changed && !m.title_changed && !m.body_changed && !m.type_changed && !m.parent_changed;
+};
+
+export const filterRows = (rows: ChangeRow[], filter: ChangeFilter, hideStatusOnly = false): ChangeRow[] => {
+  const kept = hideStatusOnly ? rows.filter((r) => !isStatusOnly(r)) : rows;
+  return filter === 'all'
+    ? kept
     : filter === 'links'
-      ? rows.filter((r) => r.kind === 'link added' || r.kind === 'link removed')
-      : rows.filter((r) => r.modified && (r.modified.body_changed || r.modified.title_changed));
+      ? kept.filter((r) => r.kind === 'link added' || r.kind === 'link removed')
+      : kept.filter((r) => r.modified && (r.modified.body_changed || r.modified.title_changed));
+};
 
 /** References by artifact id from both sides, the newer side winning. */
 export const refMap = (...sides: (Artifact[] | undefined)[]): Map<string, string> => {
