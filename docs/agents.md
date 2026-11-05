@@ -1067,7 +1067,7 @@ Crews — graphs of agents and people with `delegates-to`, `hands-off-to` and
 `reviews` edges — were removed (issue 732), with the Crew Builder, the
 `/api/v1/crews` and `/api/v1/teams` routes, the `delegate_to_agent` MCP tool
 and the orchestration that followed a finished crew run. An agent run is a
-single run. Migration 0068 moved each automation and board card that named a
+single run. Migration 0069 moved each automation and board card that named a
 crew onto the crew's entry agent, or (an automation) switched it off and (a
 card) left it unassigned. The `agent_teams*` tables and the `team_id` and
 `team_node_id` columns stay, unread, until a later migration drops them.

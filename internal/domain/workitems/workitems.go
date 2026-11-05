@@ -30,7 +30,7 @@ const (
 	AssigneeUser  = "user"
 	AssigneeAgent = "agent"
 	// AssigneeTeam was a crew ("team" was a crew's wire name). Crews are
-	// gone (issue 732): no card may be assigned to one, and migration 0068
+	// gone (issue 732): no card may be assigned to one, and migration 0069
 	// moved the cards that were onto the crew's entry agent or left them
 	// unassigned. Kept for the rows a later read may still meet.
 	AssigneeTeam = "team"

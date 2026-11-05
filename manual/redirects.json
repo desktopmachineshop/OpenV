@@ -57,6 +57,7 @@
   "/manual/board#moving-cards": "topics/board/moving-cards",
   "/manual/board#to-dos-the-same-work-by-person": "topics/board/to-dos-the-same-work-by-person",
   "/manual/agents": "topics/agents/index",
+  "/manual/agents#the-agent-hierarchy": "topics/agents/the-agent-hierarchy",
   "/manual/agents#the-agent-list": "topics/agents/the-agent-list",
   "/manual/agents#launching-a-run": "topics/agents/launching-a-run",
   "/manual/agents#the-agent-editor": "topics/agents/the-agent-editor",
@@ -129,10 +130,10 @@
   "/manual/troubleshooting#whose-ai-subscription-pays-for-a-run": "topics/troubleshooting/whose-ai-subscription-pays-for-a-run",
   "/manual/troubleshooting#is-openv-free-what-happens-to-my-data-if-that-changes": "topics/troubleshooting/is-openv-free-what-happens-to-my-data-if-that-changes",
   "/manual/troubleshooting#how-do-i-back-up-a-project": "topics/troubleshooting/how-do-i-back-up-a-project",
-  "/manual/crews": "topics/agents/index",
-  "/manual/crews#managing-crews": "topics/agents/index",
-  "/manual/crews#the-canvas": "topics/agents/index",
-  "/manual/crews#adding-nodes": "topics/agents/index",
-  "/manual/crews#connecting-nodes": "topics/agents/index",
-  "/manual/crews#crews-elsewhere-in-the-app": "topics/agents/index"
+  "/manual/crews": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#managing-crews": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#the-canvas": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#adding-nodes": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#connecting-nodes": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#crews-elsewhere-in-the-app": "topics/agents/the-agent-hierarchy"
 }

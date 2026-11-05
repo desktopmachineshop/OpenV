@@ -226,7 +226,7 @@ func TestSchedulerPrompt(t *testing.T) {
 // TestSchedulerTargets pins whom a scheduled run goes to, and what happens
 // when there is no one: the automation's agent, and last_run_at is stamped
 // after the launch; an automation with no agent, or an empty agent id (as a
-// crew automation migration 0068 switched off has), launches nothing, logs one
+// crew automation migration 0069 switched off has), launches nothing, logs one
 // line, and stays claimed (next_run_at advanced), so the occurrence is
 // skipped, not retried, but leaves last_run_at unset, since nothing ran (bug
 // 74 of issue #379, decided under Q35: the claim stamped it before the target

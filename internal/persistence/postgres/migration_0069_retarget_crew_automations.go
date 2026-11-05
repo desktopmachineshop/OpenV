@@ -2,7 +2,7 @@ package postgres
 
 import "database/sql"
 
-// 0068: crews are gone (issue 732), so nothing may target one any more.
+// 0069: crews are gone (issue 732), so nothing may target one any more.
 //
 //   - An automation that targets a crew now targets the agent of the crew's
 //     entry node, when the crew has one, and no longer names the crew. One
@@ -16,7 +16,7 @@ import "database/sql"
 // team_id and team_node_id columns are left in place: dropping them cannot
 // be undone, so a later migration does it once this has shipped. A run that
 // was a crew's keeps its team_id; it reads as a plain run.
-func m0068RetargetCrewAutomations(tx *sql.Tx) error {
+func m0069RetargetCrewAutomations(tx *sql.Tx) error {
 	for _, stmt := range []string{
 		`UPDATE automations a
 			SET agent_id = n.agent_id, team_id = NULL, updated_at = NOW()

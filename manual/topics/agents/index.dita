@@ -5,7 +5,6 @@
   <shortdesc>Agents are AI workers that operate inside your projects — drafting requirements, reviewing for testability, running interviews, doing V&amp;V chores. The <b>Agents</b> page in the project menu lists them and hosts the editor.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="agents"/>
-    <resourceid appname="openv-web" appid="crew"/>
   </prolog>
   <conbody/>
 </concept>

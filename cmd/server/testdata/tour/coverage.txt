@@ -59,6 +59,7 @@ GET /api/v1/agent-runs/{id}: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
 GET /api/v1/agent-runs/{id}/logs: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/agent-runs/{id}/stream: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/agent-runs/{id}/tree: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/agent-stats: s5e (errors only)
 GET /api/v1/agents: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/agents/{slug}: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/agents/{slug}/raw: s5d, s5e; 2xx or 3xx in s5d, s5e
@@ -317,6 +318,7 @@ POST /oauth/register: s5d, s5e; 2xx or 3xx in s5d
 POST /oauth/revoke: s5d, s5e; 2xx or 3xx in s5d, s5e
 POST /oauth/token: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/admin/users/{id}/admin: s5c, s5e; 2xx or 3xx in s5c
+PUT /api/v1/agent-arrangement: s5e (errors only)
 PUT /api/v1/agents/{slug}: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/agents/{slug}/raw: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/artifacts/{id}: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
@@ -357,4 +359,4 @@ PUT /api/v1/shared-products/{id}/vote: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 346 of 346 routes reached (100.0%), 334 with a 2xx or 3xx answer (96.5%); the floor is 90%, 312 routes
+the tour: 348 of 348 routes reached (100.0%), 334 with a 2xx or 3xx answer (96.0%); the floor is 90%, 314 routes

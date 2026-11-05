@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5d/orchestration_budget.json",
   "test": "TestTourS5dOrchestrationBudget",
-  "about": "Crew orchestration and the workspace budget: delegation and the parent's poll (with I2's delegate/{id} overlap), hand-offs to agents and to a person when a crew run finishes, refused to a person who cannot open the project, the run tree, the guided copilot's and the interviewer's replies over the worker wire, and Q9's refusals of every launch path once the workspace is over its monthly budget, with the skipped successors of a crew run recorded.",
+  "about": "Run orchestration and the workspace budget: a single run's finish and its tree, the guided copilot's and the interviewer's replies over the worker wire, and Q9's refusals of every launch path once the workspace is over its monthly budget.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5dOrchestrationBudget$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -48,27 +48,15 @@
       "email": "tour-member@example.com",
       "account_name": "Tour Member",
       "workspace": "<member.workspace>",
-      "about": "m, a plain member of W with no role in P until the owner makes m a viewer of it before the over-budget finish: the human node of crew C, to whom its Lead's hand-off is refused, and then made, and a refusal of the run tree"
+      "about": "m, a plain member of W with no role in P: a refusal of the run tree"
     },
     {
       "name": "box",
       "about": "a worker key of W, as a workspace runner sends it (worker id tour-box)"
     },
     {
-      "name": "lead",
-      "about": "the token of lead, C's run at its entry node Lead"
-    },
-    {
-      "name": "solo",
-      "about": "the token of solo, C2's run, whose node delegates to nobody"
-    },
-    {
       "name": "plain",
-      "about": "the token of plain, a run launched outside any crew"
-    },
-    {
-      "name": "child",
-      "about": "the token of child, lead's delegated run at Analyst"
+      "about": "the token of plain"
     },
     {
       "name": "copilot",
@@ -91,10 +79,6 @@
       "about": "the token of failed"
     },
     {
-      "name": "lead2",
-      "about": "the token of lead2, C's second run, claimed before the budget"
-    },
-    {
       "name": "anonymous",
       "about": "no session cookie"
     }
@@ -108,7 +92,7 @@
   "steps": [
     {
       "n": 1,
-      "title": "the box key claims C's run: a crew run's claim bytes, with team_id and team_node_id",
+      "title": "the box key claims plain: a run's claim bytes",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
       "request": {
@@ -126,15 +110,15 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent.lead>\",\"org_id\":\"<w>\",\"slug\":\"tour-lead\",\"name\":\"Tour Lead\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You plan and delegate.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-lead.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<lead>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.lead>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan the release of P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 1>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<lead.token>\"}"
+        "{\"agent\":{\"id\":\"<agent.worker>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<plain>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 1>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<plain.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "agent": {
-          "id": "<agent.lead>",
+          "id": "<agent.worker>",
           "org_id": "<w>",
-          "slug": "tour-lead",
-          "name": "Tour Lead",
+          "slug": "tour-worker",
+          "name": "Tour Worker",
           "description": "An agent of the S5d tour.",
           "provider": "claude-code",
           "model": "",
@@ -147,9 +131,13 @@
           "max_turns": 50,
           "timeout_seconds": 1800,
           "config": {},
-          "system_prompt": "You plan and delegate.",
+          "system_prompt": "You answer in one line.",
           "locked": false,
-          "file_path": "<tmp>/data/agents/<w>/tour-lead.md",
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
+          "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
           "created_at": "<time@before step 1>",
@@ -159,17 +147,15 @@
           "mode": "user-account"
         },
         "run": {
-          "id": "<lead>",
+          "id": "<plain>",
           "org_id": "<w>",
-          "agent_id": "<agent.lead>",
+          "agent_id": "<agent.worker>",
           "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.lead>",
-          "work_item_id": "<lead.card>",
+          "work_item_id": "<uuid:1>",
           "status": "claimed",
           "cancel_requested": false,
           "priority": 0,
-          "prompt": "Plan the release of P.",
+          "prompt": "Summarise P.",
           "worker_id": "tour-box",
           "heartbeat_at": "<time@step 1>",
           "final_text": "",
@@ -182,20 +168,20 @@
           "launched_by": "<owner>",
           "created_at": "<time@before step 1>",
           "agent_content_hash": "<hex64:1>",
-          "agent_name": "Tour Lead",
+          "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
         },
-        "run_token": "<lead.token>"
+        "run_token": "<plain.token>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
         {
           "type": "workitem.moved",
-          "actor": "agent:<lead>",
+          "actor": "agent:<plain>",
           "project": "<p>",
-          "entity": "<lead.card>",
+          "entity": "<uuid:1>",
           "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
+            "assignee_id": "string \"<agent.worker>\"",
             "assignee_type": "string \"agent\"",
             "column": "string \"in-progress\""
           }
@@ -203,116 +189,17 @@
       ]
     },
     {
-      "n": 21,
-      "title": "the box key claims: the child, priority 10, before spent, an older run of priority 0",
-      "actor": "box",
-      "route": "POST /api/v1/agent-runs/claim",
-      "request": {
-        "method": "POST",
-        "path": "/api/v1/agent-runs/claim",
-        "headers": [
-          "Content-Type: application/json"
-        ],
-        "body": "{\"hosted\":false,\"min_priority\":0,\"providers\":[\"claude-code\"],\"worker_id\":\"tour-box\"}"
-      },
-      "notes": [
-        "the child's claim bytes carry priority 10, parent_run_id and team_node_id, and no launched_by"
-      ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"agent\":{\"id\":\"<agent.analyst>\",\"org_id\":\"<w>\",\"slug\":\"tour-analyst\",\"name\":\"Tour Analyst\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You analyse what you are given.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-analyst.md\",\"content_hash\":\"<hex64:2>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<child>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.analyst>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.analyst>\",\"parent_run_id\":\"<lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":10,\"prompt\":\"Analyse P's test gaps.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 21>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Analyst\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<child.token>\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "agent": {
-          "id": "<agent.analyst>",
-          "org_id": "<w>",
-          "slug": "tour-analyst",
-          "name": "Tour Analyst",
-          "description": "An agent of the S5d tour.",
-          "provider": "claude-code",
-          "model": "",
-          "effort": "",
-          "allowed_tools": [
-            "get_artifact"
-          ],
-          "write_mode": "direct",
-          "repo_access": false,
-          "max_turns": 50,
-          "timeout_seconds": 1800,
-          "config": {},
-          "system_prompt": "You analyse what you are given.",
-          "locked": false,
-          "file_path": "<tmp>/data/agents/<w>/tour-analyst.md",
-          "content_hash": "<hex64:2>",
-          "synced_at": "<time@before step 1>",
-          "created_at": "<time@before step 1>",
-          "updated_at": "<time@before step 1>"
-        },
-        "auth": {
-          "mode": "user-account"
-        },
-        "run": {
-          "id": "<child>",
-          "org_id": "<w>",
-          "agent_id": "<agent.analyst>",
-          "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.analyst>",
-          "parent_run_id": "<lead>",
-          "work_item_id": "<lead.card>",
-          "status": "claimed",
-          "cancel_requested": false,
-          "priority": 10,
-          "prompt": "Analyse P's test gaps.",
-          "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 21>",
-          "final_text": "",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "created_at": "<time@step 10>",
-          "agent_content_hash": "<hex64:2>",
-          "agent_name": "Tour Analyst",
-          "agent_provider": "claude-code"
-        },
-        "run_token": "<child.token>"
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.moved",
-          "actor": "agent:<child>",
-          "project": "<p>",
-          "entity": "<lead.card>",
-          "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
-            "assignee_type": "string \"agent\"",
-            "column": "string \"in-progress\""
-          }
-        }
-      ]
-    },
-    {
-      "n": 22,
-      "title": "the box key finishes child with its answer",
+      "n": 2,
+      "title": "the box key finishes plain: no other run is launched, since an agent run is a single run",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
       "request": {
         "method": "POST",
-        "path": "/api/v1/agent-runs/<child>/finish",
+        "path": "/api/v1/agent-runs/<plain>/finish",
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"status\":\"succeeded\",\"final_text\":\"P lacks two tests.\"}"
+        "body": "{\"status\":\"succeeded\",\"final_text\":\"P is on track.\"}"
       },
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -321,107 +208,24 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<child>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.analyst>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.analyst>\",\"parent_run_id\":\"<lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":10,\"prompt\":\"Analyse P's test gaps.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 22>\",\"started_at\":\"<time@before step 22>\",\"finished_at\":\"<time@step 22>\",\"final_text\":\"P lacks two tests.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Analyst\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<plain>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 2>\",\"started_at\":\"<time@before step 2>\",\"finished_at\":\"<time@step 2>\",\"final_text\":\"P is on track.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<child>",
+        "id": "<plain>",
         "org_id": "<w>",
-        "agent_id": "<agent.analyst>",
+        "agent_id": "<agent.worker>",
         "project_id": "<p>",
-        "team_id": "<c>",
-        "team_node_id": "<node.analyst>",
-        "parent_run_id": "<lead>",
-        "work_item_id": "<lead.card>",
-        "status": "succeeded",
-        "cancel_requested": false,
-        "priority": 10,
-        "prompt": "Analyse P's test gaps.",
-        "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 22>",
-        "started_at": "<time@before step 22>",
-        "finished_at": "<time@step 22>",
-        "final_text": "P lacks two tests.",
-        "error": "",
-        "attempt_count": 1,
-        "max_attempts": 3,
-        "tokens_in": 0,
-        "tokens_out": 0,
-        "artifacts_touched": [],
-        "created_at": "<time@step 10>",
-        "agent_content_hash": "<hex64:2>",
-        "agent_name": "Tour Analyst",
-        "agent_provider": "claude-code"
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.moved",
-          "actor": "agent:<child>",
-          "project": "<p>",
-          "entity": "<lead.card>",
-          "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
-            "assignee_type": "string \"agent\"",
-            "column": "string \"done\""
-          }
-        },
-        {
-          "type": "agentrun.finished",
-          "actor": "agent:<child>",
-          "project": "<p>",
-          "entity": "<child>",
-          "payload": {
-            "agent_id": "string \"<agent.analyst>\"",
-            "launched_by": "string \"\"",
-            "status": "string \"succeeded\""
-          }
-        }
-      ]
-    },
-    {
-      "n": 24,
-      "title": "the box key finishes lead: Checker's and Critic's runs are launched inside the request, and the hand-off to m, who has no role in P, is refused",
-      "actor": "box",
-      "route": "POST /api/v1/agent-runs/{id}/finish",
-      "request": {
-        "method": "POST",
-        "path": "/api/v1/agent-runs/<lead>/finish",
-        "headers": [
-          "Content-Type: application/json"
-        ],
-        "body": "{\"status\":\"succeeded\",\"final_text\":\"Plan: add the two tests, then ship.\"}"
-      },
-      "notes": [
-        "hands-off-to edges first, then reviews, each in the order the edges were made; each successor inherits lead's card and moves it back to To Do as itself; m could not open a card in P, so none is made"
-      ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"id\":\"<lead>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.lead>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan the release of P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 2>\",\"started_at\":\"<time@before step 2>\",\"finished_at\":\"<time@step 24>\",\"final_text\":\"Plan: add the two tests, then ship.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "id": "<lead>",
-        "org_id": "<w>",
-        "agent_id": "<agent.lead>",
-        "project_id": "<p>",
-        "team_id": "<c>",
-        "team_node_id": "<node.lead>",
-        "work_item_id": "<lead.card>",
+        "work_item_id": "<uuid:1>",
         "status": "succeeded",
         "cancel_requested": false,
         "priority": 0,
-        "prompt": "Plan the release of P.",
+        "prompt": "Summarise P.",
         "worker_id": "tour-box",
         "heartbeat_at": "<time@before step 2>",
         "started_at": "<time@before step 2>",
-        "finished_at": "<time@step 24>",
-        "final_text": "Plan: add the two tests, then ship.",
+        "finished_at": "<time@step 2>",
+        "final_text": "P is on track.",
         "error": "",
         "attempt_count": 1,
         "max_attempts": 3,
@@ -431,51 +235,29 @@
         "launched_by": "<owner>",
         "created_at": "<time@before step 1>",
         "agent_content_hash": "<hex64:1>",
-        "agent_name": "Tour Lead",
+        "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": [
         {
           "type": "workitem.moved",
-          "actor": "agent:<lead>",
+          "actor": "agent:<plain>",
           "project": "<p>",
-          "entity": "<lead.card>",
+          "entity": "<uuid:1>",
           "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
+            "assignee_id": "string \"<agent.worker>\"",
             "assignee_type": "string \"agent\"",
             "column": "string \"done\""
           }
         },
         {
-          "type": "workitem.moved",
-          "actor": "agent:<checker>",
-          "project": "<p>",
-          "entity": "<lead.card>",
-          "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
-            "assignee_type": "string \"agent\"",
-            "column": "string \"todo\""
-          }
-        },
-        {
-          "type": "workitem.moved",
-          "actor": "agent:<critic>",
-          "project": "<p>",
-          "entity": "<lead.card>",
-          "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
-            "assignee_type": "string \"agent\"",
-            "column": "string \"todo\""
-          }
-        },
-        {
           "type": "agentrun.finished",
-          "actor": "agent:<lead>",
+          "actor": "agent:<plain>",
           "project": "<p>",
-          "entity": "<lead>",
+          "entity": "<plain>",
           "payload": {
-            "agent_id": "string \"<agent.lead>\"",
+            "agent_id": "string \"<agent.worker>\"",
             "launched_by": "string \"<owner>\"",
             "status": "string \"succeeded\""
           }
@@ -483,319 +265,15 @@
       ]
     },
     {
-      "n": 25,
-      "title": "lead's log: the refused hand-off, noted at its end, since m has no role in P (REQ-23)",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/agent-runs/{id}/logs",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/agent-runs/<lead>/logs"
-      },
-      "notes": [
-        "the tour sent no log for lead, so the note is its first entry"
-      ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "[{\"run_id\":\"<lead>\",\"seq\":1,\"kind\":\"marker\",\"payload\":{\"edge_type\":\"hands-off-to\",\"marker\":\"handoff_refused\",\"message\":\"Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.\",\"team_node_id\":\"<node.m>\",\"user_id\":\"<member>\"},\"created_at\":\"<time@step 24>\"}]"
-      ],
-      "trailing_newline": true,
-      "parsed": [
-        {
-          "run_id": "<lead>",
-          "seq": 1,
-          "kind": "marker",
-          "payload": {
-            "edge_type": "hands-off-to",
-            "marker": "handoff_refused",
-            "message": "Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.",
-            "team_node_id": "<node.m>",
-            "user_id": "<member>"
-          },
-          "created_at": "<time@step 24>"
-        }
-      ],
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
-      "n": 26,
-      "title": "m reads lead's card: P's guard, since m has no role in P and the refused hand-off granted none",
-      "actor": "member",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/work-items/{id}",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/work-items/<lead.card>"
-      },
-      "status": 404,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 32,
-      "kind": "json",
-      "body": [
-        "{\"error\":\"work item not found\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "error": "work item not found"
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
-      "n": 27,
-      "title": "lead's card: its activity records the refused hand-off to Member M",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/work-items/{id}",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/work-items/<lead.card>"
-      },
-      "notes": [
-        "the child's and the successors' moves are logged on it as theirs"
-      ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"activity\":[{\"id\":\"<uuid:1>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"assigned\",\"actor\":\"agent:<lead>\",\"content\":\"assigned to agent:<agent.lead>\",\"payload\":{\"assignee_id\":\"<agent.lead>\",\"assignee_type\":\"agent\"},\"created_at\":\"<time@before step 1>\"},{\"id\":\"<uuid:2>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<lead>\",\"content\":\"Run queued\",\"payload\":{\"run_id\":\"<lead>\"},\"created_at\":\"<time@before step 1>\"},{\"id\":\"<uuid:3>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@step 1>\"},{\"id\":\"<uuid:4>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@before step 2>\"},{\"id\":\"<uuid:5>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<lead>\",\"content\":\"Run started\",\"payload\":{\"run_id\":\"<lead>\"},\"created_at\":\"<time@before step 2>\"},{\"id\":\"<uuid:6>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 10>\"},{\"id\":\"<uuid:7>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@step 21>\"},{\"id\":\"<uuid:8>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to in-progress\",\"payload\":{\"column\":\"in-progress\",\"sort_order\":0},\"created_at\":\"<time@before step 22>\"},{\"id\":\"<uuid:9>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-started\",\"actor\":\"agent:<child>\",\"content\":\"Run started\",\"payload\":{\"run_id\":\"<child>\"},\"created_at\":\"<time@before step 22>\"},{\"id\":\"<uuid:10>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<child>\",\"content\":\"moved to done\",\"payload\":{\"column\":\"done\",\"sort_order\":0},\"created_at\":\"<time@step 22>\"},{\"id\":\"<uuid:11>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<child>\",\"content\":\"P lacks two tests.\",\"payload\":{\"run_id\":\"<child>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 22>\"},{\"id\":\"<uuid:12>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<lead>\",\"content\":\"moved to done\",\"payload\":{\"column\":\"done\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:13>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-finished\",\"actor\":\"agent:<lead>\",\"content\":\"Plan: add the two tests, then ship.\",\"payload\":{\"run_id\":\"<lead>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:14>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<checker>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:15>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"run-failed\",\"actor\":\"agent:<lead>\",\"content\":\"Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.\",\"payload\":{\"edge_type\":\"hands-off-to\",\"run_id\":\"<lead>\",\"team_node_id\":\"<node.m>\"},\"created_at\":\"<time@step 24>\"},{\"id\":\"<uuid:16>\",\"work_item_id\":\"<lead.card>\",\"kind\":\"moved\",\"actor\":\"agent:<critic>\",\"content\":\"moved to todo\",\"payload\":{\"column\":\"todo\",\"sort_order\":0},\"created_at\":\"<time@step 24>\"}],\"item\":{\"id\":\"<lead.card>\",\"project_id\":\"<p>\",\"title\":\"Agent run: Tour Lead\",\"description\":\"Plan the release of P.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<agent.lead>\",\"artifact_ids\":[],\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "activity": [
-          {
-            "id": "<uuid:1>",
-            "work_item_id": "<lead.card>",
-            "kind": "assigned",
-            "actor": "agent:<lead>",
-            "content": "assigned to agent:<agent.lead>",
-            "payload": {
-              "assignee_id": "<agent.lead>",
-              "assignee_type": "agent"
-            },
-            "created_at": "<time@before step 1>"
-          },
-          {
-            "id": "<uuid:2>",
-            "work_item_id": "<lead.card>",
-            "kind": "run-started",
-            "actor": "agent:<lead>",
-            "content": "Run queued",
-            "payload": {
-              "run_id": "<lead>"
-            },
-            "created_at": "<time@before step 1>"
-          },
-          {
-            "id": "<uuid:3>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<lead>",
-            "content": "moved to in-progress",
-            "payload": {
-              "column": "in-progress",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 1>"
-          },
-          {
-            "id": "<uuid:4>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<lead>",
-            "content": "moved to in-progress",
-            "payload": {
-              "column": "in-progress",
-              "sort_order": 0
-            },
-            "created_at": "<time@before step 2>"
-          },
-          {
-            "id": "<uuid:5>",
-            "work_item_id": "<lead.card>",
-            "kind": "run-started",
-            "actor": "agent:<lead>",
-            "content": "Run started",
-            "payload": {
-              "run_id": "<lead>"
-            },
-            "created_at": "<time@before step 2>"
-          },
-          {
-            "id": "<uuid:6>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<child>",
-            "content": "moved to todo",
-            "payload": {
-              "column": "todo",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 10>"
-          },
-          {
-            "id": "<uuid:7>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<child>",
-            "content": "moved to in-progress",
-            "payload": {
-              "column": "in-progress",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 21>"
-          },
-          {
-            "id": "<uuid:8>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<child>",
-            "content": "moved to in-progress",
-            "payload": {
-              "column": "in-progress",
-              "sort_order": 0
-            },
-            "created_at": "<time@before step 22>"
-          },
-          {
-            "id": "<uuid:9>",
-            "work_item_id": "<lead.card>",
-            "kind": "run-started",
-            "actor": "agent:<child>",
-            "content": "Run started",
-            "payload": {
-              "run_id": "<child>"
-            },
-            "created_at": "<time@before step 22>"
-          },
-          {
-            "id": "<uuid:10>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<child>",
-            "content": "moved to done",
-            "payload": {
-              "column": "done",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 22>"
-          },
-          {
-            "id": "<uuid:11>",
-            "work_item_id": "<lead.card>",
-            "kind": "run-finished",
-            "actor": "agent:<child>",
-            "content": "P lacks two tests.",
-            "payload": {
-              "run_id": "<child>",
-              "status": "succeeded"
-            },
-            "created_at": "<time@step 22>"
-          },
-          {
-            "id": "<uuid:12>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<lead>",
-            "content": "moved to done",
-            "payload": {
-              "column": "done",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 24>"
-          },
-          {
-            "id": "<uuid:13>",
-            "work_item_id": "<lead.card>",
-            "kind": "run-finished",
-            "actor": "agent:<lead>",
-            "content": "Plan: add the two tests, then ship.",
-            "payload": {
-              "run_id": "<lead>",
-              "status": "succeeded"
-            },
-            "created_at": "<time@step 24>"
-          },
-          {
-            "id": "<uuid:14>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<checker>",
-            "content": "moved to todo",
-            "payload": {
-              "column": "todo",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 24>"
-          },
-          {
-            "id": "<uuid:15>",
-            "work_item_id": "<lead.card>",
-            "kind": "run-failed",
-            "actor": "agent:<lead>",
-            "content": "Hand-off to Member M refused: Member M has no role in this project and could not open the card. Give them a role in the project to hand work to them.",
-            "payload": {
-              "edge_type": "hands-off-to",
-              "run_id": "<lead>",
-              "team_node_id": "<node.m>"
-            },
-            "created_at": "<time@step 24>"
-          },
-          {
-            "id": "<uuid:16>",
-            "work_item_id": "<lead.card>",
-            "kind": "moved",
-            "actor": "agent:<critic>",
-            "content": "moved to todo",
-            "payload": {
-              "column": "todo",
-              "sort_order": 0
-            },
-            "created_at": "<time@step 24>"
-          }
-        ],
-        "item": {
-          "id": "<lead.card>",
-          "project_id": "<p>",
-          "title": "Agent run: Tour Lead",
-          "description": "Plan the release of P.",
-          "column": "todo",
-          "sort_order": 0,
-          "assignee_type": "agent",
-          "assignee_id": "<agent.lead>",
-          "artifact_ids": [],
-          "created_at": "<time@before step 1>",
-          "updated_at": "<time@step 24>"
-        }
-      },
-      "gzip": {
-        "content_encoding": "gzip",
-        "content_type": null,
-        "vary": "Accept-Encoding"
-      }
-    },
-    {
-      "n": 28,
-      "title": "lead's tree: lead, then its children by created_at (child, Checker's, Critic's)",
+      "n": 3,
+      "title": "plain's tree: plain alone",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/agent-runs/{id}/tree",
       "request": {
         "method": "GET",
-        "path": "/api/v1/agent-runs/<lead>/tree"
+        "path": "/api/v1/agent-runs/<plain>/tree"
       },
-      "notes": [
-        "Checker's prompt is its edge's template rendered; Critic's is the reviews copy"
-      ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
@@ -803,27 +281,25 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<lead>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.lead>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan the release of P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 2>\",\"started_at\":\"<time@before step 2>\",\"finished_at\":\"<time@step 24>\",\"final_text\":\"Plan: add the two tests, then ship.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"},{\"id\":\"<child>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.analyst>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.analyst>\",\"parent_run_id\":\"<lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":10,\"prompt\":\"Analyse P's test gaps.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 22>\",\"started_at\":\"<time@before step 22>\",\"finished_at\":\"<time@step 22>\",\"final_text\":\"P lacks two tests.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Analyst\",\"agent_provider\":\"claude-code\"},{\"id\":\"<checker>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.checker>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.checker>\",\"parent_run_id\":\"<lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":10,\"prompt\":\"Continue after <lead>: Plan: add the two tests, then ship.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 24>\",\"agent_content_hash\":\"<hex64:3>\",\"agent_name\":\"Tour Checker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<critic>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.critic>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.critic>\",\"parent_run_id\":\"<lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":10,\"prompt\":\"You are reviewing the output of a teammate's run (run id <lead>). Their final report follows. Review it critically: check claims against the OpenV requirements database via your tools, and post your review as a comment.\\n\\n---\\nPlan: add the two tests, then ship.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 24>\",\"agent_content_hash\":\"<hex64:4>\",\"agent_name\":\"Tour Critic\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<plain>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 2>\",\"started_at\":\"<time@before step 2>\",\"finished_at\":\"<time@step 2>\",\"final_text\":\"P is on track.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<lead>",
+          "id": "<plain>",
           "org_id": "<w>",
-          "agent_id": "<agent.lead>",
+          "agent_id": "<agent.worker>",
           "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.lead>",
-          "work_item_id": "<lead.card>",
+          "work_item_id": "<uuid:1>",
           "status": "succeeded",
           "cancel_requested": false,
           "priority": 0,
-          "prompt": "Plan the release of P.",
+          "prompt": "Summarise P.",
           "worker_id": "tour-box",
           "heartbeat_at": "<time@before step 2>",
           "started_at": "<time@before step 2>",
-          "finished_at": "<time@step 24>",
-          "final_text": "Plan: add the two tests, then ship.",
+          "finished_at": "<time@step 2>",
+          "final_text": "P is on track.",
           "error": "",
           "attempt_count": 1,
           "max_attempts": 3,
@@ -833,157 +309,21 @@
           "launched_by": "<owner>",
           "created_at": "<time@before step 1>",
           "agent_content_hash": "<hex64:1>",
-          "agent_name": "Tour Lead",
-          "agent_provider": "claude-code"
-        },
-        {
-          "id": "<child>",
-          "org_id": "<w>",
-          "agent_id": "<agent.analyst>",
-          "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.analyst>",
-          "parent_run_id": "<lead>",
-          "work_item_id": "<lead.card>",
-          "status": "succeeded",
-          "cancel_requested": false,
-          "priority": 10,
-          "prompt": "Analyse P's test gaps.",
-          "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 22>",
-          "started_at": "<time@before step 22>",
-          "finished_at": "<time@step 22>",
-          "final_text": "P lacks two tests.",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "created_at": "<time@step 10>",
-          "agent_content_hash": "<hex64:2>",
-          "agent_name": "Tour Analyst",
-          "agent_provider": "claude-code"
-        },
-        {
-          "id": "<checker>",
-          "org_id": "<w>",
-          "agent_id": "<agent.checker>",
-          "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.checker>",
-          "parent_run_id": "<lead>",
-          "work_item_id": "<lead.card>",
-          "status": "queued",
-          "cancel_requested": false,
-          "priority": 10,
-          "prompt": "Continue after <lead>: Plan: add the two tests, then ship.",
-          "final_text": "",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "created_at": "<time@step 24>",
-          "agent_content_hash": "<hex64:3>",
-          "agent_name": "Tour Checker",
-          "agent_provider": "claude-code"
-        },
-        {
-          "id": "<critic>",
-          "org_id": "<w>",
-          "agent_id": "<agent.critic>",
-          "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.critic>",
-          "parent_run_id": "<lead>",
-          "work_item_id": "<lead.card>",
-          "status": "queued",
-          "cancel_requested": false,
-          "priority": 10,
-          "prompt": "You are reviewing the output of a teammate's run (run id <lead>). Their final report follows. Review it critically: check claims against the OpenV requirements database via your tools, and post your review as a comment.\n\n---\nPlan: add the two tests, then ship.",
-          "final_text": "",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "created_at": "<time@step 24>",
-          "agent_content_hash": "<hex64:4>",
-          "agent_name": "Tour Critic",
-          "agent_provider": "claude-code"
-        }
-      ],
-      "gzip": {
-        "content_encoding": "gzip",
-        "content_type": null,
-        "vary": "Accept-Encoding"
-      }
-    },
-    {
-      "n": 29,
-      "title": "child's tree: child alone",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/agent-runs/{id}/tree",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/agent-runs/<child>/tree"
-      },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "[{\"id\":\"<child>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.analyst>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.analyst>\",\"parent_run_id\":\"<lead>\",\"work_item_id\":\"<lead.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":10,\"prompt\":\"Analyse P's test gaps.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 22>\",\"started_at\":\"<time@before step 22>\",\"finished_at\":\"<time@step 22>\",\"final_text\":\"P lacks two tests.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Analyst\",\"agent_provider\":\"claude-code\"}]"
-      ],
-      "trailing_newline": true,
-      "parsed": [
-        {
-          "id": "<child>",
-          "org_id": "<w>",
-          "agent_id": "<agent.analyst>",
-          "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.analyst>",
-          "parent_run_id": "<lead>",
-          "work_item_id": "<lead.card>",
-          "status": "succeeded",
-          "cancel_requested": false,
-          "priority": 10,
-          "prompt": "Analyse P's test gaps.",
-          "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 22>",
-          "started_at": "<time@before step 22>",
-          "finished_at": "<time@step 22>",
-          "final_text": "P lacks two tests.",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "created_at": "<time@step 10>",
-          "agent_content_hash": "<hex64:2>",
-          "agent_name": "Tour Analyst",
+          "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 30,
-      "title": "m reads lead's tree: P's guard",
+      "n": 4,
+      "title": "m reads plain's tree: P's guard",
       "actor": "member",
       "acting_in": "<w>",
       "route": "GET /api/v1/agent-runs/{id}/tree",
       "request": {
         "method": "GET",
-        "path": "/api/v1/agent-runs/<lead>/tree"
+        "path": "/api/v1/agent-runs/<plain>/tree"
       },
       "status": 404,
       "content_type": "application/json",
@@ -1001,7 +341,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 31,
+      "n": 5,
       "title": "the tree of a run no one has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1026,13 +366,13 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 32,
-      "title": "the box key reads lead's tree: the handler's 401, a key is no user",
+      "n": 6,
+      "title": "the box key reads plain's tree: the handler's 401, a key is no user",
       "actor": "box",
       "route": "GET /api/v1/agent-runs/{id}/tree",
       "request": {
         "method": "GET",
-        "path": "/api/v1/agent-runs/<lead>/tree"
+        "path": "/api/v1/agent-runs/<plain>/tree"
       },
       "status": 401,
       "content_type": "application/json",
@@ -1050,7 +390,31 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 34,
+      "n": 7,
+      "title": "plain's token, revoked by its finish: the middleware's 401",
+      "actor": "plain",
+      "route": "GET /api/v1/agent-runs/{id}/logs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/agent-runs/<plain>/logs"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 26,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid token\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid token"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 8,
       "title": "the box key claims: the copilot's run, priority 20, with guided_session_id",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -1069,7 +433,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent.copilot>\",\"org_id\":\"<w>\",\"slug\":\"requirements-copilot\",\"name\":\"Tour Copilot\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You ask one question.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/requirements-copilot.md\",\"content_hash\":\"<hex64:5>\",\"synced_at\":\"<time@before step 34>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 34>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<copilot>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.copilot>\",\"project_id\":\"<p>\",\"guided_session_id\":\"<s>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"<the copilot's prompt>\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 34>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 34>\",\"agent_content_hash\":\"<hex64:5>\",\"agent_name\":\"Tour Copilot\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<copilot.token>\"}"
+        "{\"agent\":{\"id\":\"<agent.copilot>\",\"org_id\":\"<w>\",\"slug\":\"requirements-copilot\",\"name\":\"Tour Copilot\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You ask one question.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/requirements-copilot.md\",\"content_hash\":\"<hex64:2>\",\"synced_at\":\"<time@before step 8>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 8>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<copilot>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.copilot>\",\"project_id\":\"<p>\",\"guided_session_id\":\"<s>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"<the copilot's prompt>\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 8>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Copilot\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<copilot.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1092,11 +456,15 @@
           "config": {},
           "system_prompt": "You ask one question.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/requirements-copilot.md",
-          "content_hash": "<hex64:5>",
-          "synced_at": "<time@before step 34>",
+          "content_hash": "<hex64:2>",
+          "synced_at": "<time@before step 8>",
           "created_at": "<time@before step 1>",
-          "updated_at": "<time@before step 34>"
+          "updated_at": "<time@before step 8>"
         },
         "auth": {
           "mode": "user-account"
@@ -1112,7 +480,7 @@
           "priority": 20,
           "prompt": "<the copilot's prompt>",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 34>",
+          "heartbeat_at": "<time@step 8>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -1121,8 +489,8 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 34>",
-          "agent_content_hash": "<hex64:5>",
+          "created_at": "<time@before step 8>",
+          "agent_content_hash": "<hex64:2>",
           "agent_name": "Tour Copilot",
           "agent_provider": "claude-code"
         },
@@ -1135,7 +503,7 @@
       "events": []
     },
     {
-      "n": 35,
+      "n": 9,
       "title": "the box key finishes copilot: its answer is delivered to S's chat",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1154,7 +522,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<copilot>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.copilot>\",\"project_id\":\"<p>\",\"guided_session_id\":\"<s>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"<the copilot's prompt>\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 35>\",\"started_at\":\"<time@before step 35>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"Who operates the mill?\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 34>\",\"agent_content_hash\":\"<hex64:5>\",\"agent_name\":\"Tour Copilot\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<copilot>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.copilot>\",\"project_id\":\"<p>\",\"guided_session_id\":\"<s>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"<the copilot's prompt>\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 9>\",\"started_at\":\"<time@before step 9>\",\"finished_at\":\"<time@step 9>\",\"final_text\":\"Who operates the mill?\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 8>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Copilot\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1168,9 +536,9 @@
         "priority": 20,
         "prompt": "<the copilot's prompt>",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 35>",
-        "started_at": "<time@before step 35>",
-        "finished_at": "<time@step 35>",
+        "heartbeat_at": "<time@before step 9>",
+        "started_at": "<time@before step 9>",
+        "finished_at": "<time@step 9>",
         "final_text": "Who operates the mill?",
         "error": "",
         "attempt_count": 1,
@@ -1179,8 +547,8 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@before step 34>",
-        "agent_content_hash": "<hex64:5>",
+        "created_at": "<time@before step 8>",
+        "agent_content_hash": "<hex64:2>",
         "agent_name": "Tour Copilot",
         "agent_provider": "claude-code"
       },
@@ -1203,7 +571,7 @@
       ]
     },
     {
-      "n": 36,
+      "n": 10,
       "title": "S's chat: the copilot's answer",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1222,22 +590,22 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:17>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 35>\"}]"
+        "[{\"id\":\"<uuid:2>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 9>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:17>",
+          "id": "<uuid:2>",
           "session_id": "<s>",
           "role": "assistant",
           "content": "Who operates the mill?",
-          "created_at": "<time@step 35>"
+          "created_at": "<time@step 9>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 37,
+      "n": 11,
       "title": "the box key finishes copilot2 as failed, retryable: the failure text is delivered, and a guided turn is not retried",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1256,7 +624,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<copilot2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.copilot>\",\"project_id\":\"<p>\",\"guided_session_id\":\"<s>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"<the copilot's prompt>\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 37>\",\"finished_at\":\"<time@step 37>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"provider_unavailable\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 37>\",\"agent_content_hash\":\"<hex64:5>\",\"agent_name\":\"Tour Copilot\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<copilot2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.copilot>\",\"project_id\":\"<p>\",\"guided_session_id\":\"<s>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"<the copilot's prompt>\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 11>\",\"finished_at\":\"<time@step 11>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"provider_unavailable\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 11>\",\"agent_content_hash\":\"<hex64:2>\",\"agent_name\":\"Tour Copilot\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1270,8 +638,8 @@
         "priority": 20,
         "prompt": "<the copilot's prompt>",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 37>",
-        "finished_at": "<time@step 37>",
+        "heartbeat_at": "<time@before step 11>",
+        "finished_at": "<time@step 11>",
         "final_text": "",
         "error": "the provider hung up",
         "error_class": "provider_unavailable",
@@ -1281,8 +649,8 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@before step 37>",
-        "agent_content_hash": "<hex64:5>",
+        "created_at": "<time@before step 11>",
+        "agent_content_hash": "<hex64:2>",
         "agent_name": "Tour Copilot",
         "agent_provider": "claude-code"
       },
@@ -1305,7 +673,7 @@
       ]
     },
     {
-      "n": 38,
+      "n": 12,
       "title": "S's chat: the answer, the message, the failure text",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1321,36 +689,36 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:17>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 35>\"},{\"id\":\"<uuid:18>\",\"session_id\":\"<s>\",\"role\":\"user\",\"content\":\"A machinist.\",\"created_at\":\"<time@before step 37>\"},{\"id\":\"<uuid:19>\",\"session_id\":\"<s>\",\"role\":\"system\",\"content\":\"The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.\",\"created_at\":\"<time@step 37>\"}]"
+        "[{\"id\":\"<uuid:2>\",\"session_id\":\"<s>\",\"role\":\"assistant\",\"content\":\"Who operates the mill?\",\"created_at\":\"<time@step 9>\"},{\"id\":\"<uuid:3>\",\"session_id\":\"<s>\",\"role\":\"user\",\"content\":\"A machinist.\",\"created_at\":\"<time@before step 11>\"},{\"id\":\"<uuid:4>\",\"session_id\":\"<s>\",\"role\":\"system\",\"content\":\"The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.\",\"created_at\":\"<time@step 11>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:17>",
+          "id": "<uuid:2>",
           "session_id": "<s>",
           "role": "assistant",
           "content": "Who operates the mill?",
-          "created_at": "<time@step 35>"
+          "created_at": "<time@step 9>"
         },
         {
-          "id": "<uuid:18>",
+          "id": "<uuid:3>",
           "session_id": "<s>",
           "role": "user",
           "content": "A machinist.",
-          "created_at": "<time@before step 37>"
+          "created_at": "<time@before step 11>"
         },
         {
-          "id": "<uuid:19>",
+          "id": "<uuid:4>",
           "session_id": "<s>",
           "role": "system",
           "content": "The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.",
-          "created_at": "<time@step 37>"
+          "created_at": "<time@step 11>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 39,
+      "n": 13,
       "title": "W's queued runs: spent alone, so copilot2's retryable failure queued no retry (a guided turn's failure is its session's to answer)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1367,7 +735,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<spent>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:20>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Estimate P's cost.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 2>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<spent>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:5>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Estimate P's cost.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 2>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1376,7 +744,7 @@
           "org_id": "<w>",
           "agent_id": "<agent.worker>",
           "project_id": "<p>",
-          "work_item_id": "<uuid:20>",
+          "work_item_id": "<uuid:5>",
           "status": "queued",
           "cancel_requested": false,
           "priority": 0,
@@ -1390,7 +758,7 @@
           "artifacts_touched": [],
           "launched_by": "<owner>",
           "created_at": "<time@before step 2>",
-          "agent_content_hash": "<hex64:6>",
+          "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
         }
@@ -1398,7 +766,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 40,
+      "n": 14,
       "title": "the box key claims: the interviewer's run, priority 20, with interview_session_id, the untrusted origin (REQ-91)",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -1417,7 +785,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent.worker>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:6>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<interviewer>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"interview_session_id\":\"<is>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"You are conducting a requirements-elicitation interview.\\n\\nInterview brief: Ask about night runs.\\nParticipant: Dana\\n\\nConversation so far:\\n[participant] I run the mill at night.\\n\\nRespond with your next message to the participant: one question at a time, plain language, natural conversation. When you learn a concrete need, record it with the record_candidate_need tool before replying.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 40>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 40>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<interviewer.token>\"}"
+        "{\"agent\":{\"id\":\"<agent.worker>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<interviewer>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"interview_session_id\":\"<is>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"You are conducting a requirements-elicitation interview.\\n\\nInterview brief: Ask about night runs.\\nParticipant: Dana\\n\\nConversation so far:\\n[participant] I run the mill at night.\\n\\nRespond with your next message to the participant: one question at a time, plain language, natural conversation. When you learn a concrete need, record it with the record_candidate_need tool before replying.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 14>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 14>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<interviewer.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1440,8 +808,12 @@
           "config": {},
           "system_prompt": "You answer in one line.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
-          "content_hash": "<hex64:6>",
+          "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
           "created_at": "<time@before step 1>",
           "updated_at": "<time@before step 1>"
@@ -1460,7 +832,7 @@
           "priority": 20,
           "prompt": "You are conducting a requirements-elicitation interview.\n\nInterview brief: Ask about night runs.\nParticipant: Dana\n\nConversation so far:\n[participant] I run the mill at night.\n\nRespond with your next message to the participant: one question at a time, plain language, natural conversation. When you learn a concrete need, record it with the record_candidate_need tool before replying.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 40>",
+          "heartbeat_at": "<time@step 14>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -1468,8 +840,8 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@before step 40>",
-          "agent_content_hash": "<hex64:6>",
+          "created_at": "<time@before step 14>",
+          "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
         },
@@ -1479,7 +851,7 @@
       "events": []
     },
     {
-      "n": 41,
+      "n": 15,
       "title": "the box key finishes interviewer: its answer is delivered to the transcript",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1498,7 +870,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<interviewer>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"interview_session_id\":\"<is>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"You are conducting a requirements-elicitation interview.\\n\\nInterview brief: Ask about night runs.\\nParticipant: Dana\\n\\nConversation so far:\\n[participant] I run the mill at night.\\n\\nRespond with your next message to the participant: one question at a time, plain language, natural conversation. When you learn a concrete need, record it with the record_candidate_need tool before replying.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 41>\",\"started_at\":\"<time@before step 41>\",\"finished_at\":\"<time@step 41>\",\"final_text\":\"What do you check before a night run?\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 40>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<interviewer>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"interview_session_id\":\"<is>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"You are conducting a requirements-elicitation interview.\\n\\nInterview brief: Ask about night runs.\\nParticipant: Dana\\n\\nConversation so far:\\n[participant] I run the mill at night.\\n\\nRespond with your next message to the participant: one question at a time, plain language, natural conversation. When you learn a concrete need, record it with the record_candidate_need tool before replying.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 15>\",\"started_at\":\"<time@before step 15>\",\"finished_at\":\"<time@step 15>\",\"final_text\":\"What do you check before a night run?\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 14>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1512,9 +884,9 @@
         "priority": 20,
         "prompt": "You are conducting a requirements-elicitation interview.\n\nInterview brief: Ask about night runs.\nParticipant: Dana\n\nConversation so far:\n[participant] I run the mill at night.\n\nRespond with your next message to the participant: one question at a time, plain language, natural conversation. When you learn a concrete need, record it with the record_candidate_need tool before replying.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 41>",
-        "started_at": "<time@before step 41>",
-        "finished_at": "<time@step 41>",
+        "heartbeat_at": "<time@before step 15>",
+        "started_at": "<time@before step 15>",
+        "finished_at": "<time@step 15>",
         "final_text": "What do you check before a night run?",
         "error": "",
         "attempt_count": 1,
@@ -1522,8 +894,8 @@
         "tokens_in": 0,
         "tokens_out": 0,
         "artifacts_touched": [],
-        "created_at": "<time@before step 40>",
-        "agent_content_hash": "<hex64:6>",
+        "created_at": "<time@before step 14>",
+        "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
       },
@@ -1543,7 +915,7 @@
       ]
     },
     {
-      "n": 42,
+      "n": 16,
       "title": "the session's transcript: the participant's message, the interviewer's answer",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1562,29 +934,29 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:21>\",\"session_id\":\"<is>\",\"role\":\"participant\",\"content\":\"I run the mill at night.\",\"created_at\":\"<time@before step 40>\"},{\"id\":\"<uuid:22>\",\"session_id\":\"<is>\",\"role\":\"assistant\",\"content\":\"What do you check before a night run?\",\"created_at\":\"<time@step 41>\"}]"
+        "[{\"id\":\"<uuid:6>\",\"session_id\":\"<is>\",\"role\":\"participant\",\"content\":\"I run the mill at night.\",\"created_at\":\"<time@before step 14>\"},{\"id\":\"<uuid:7>\",\"session_id\":\"<is>\",\"role\":\"assistant\",\"content\":\"What do you check before a night run?\",\"created_at\":\"<time@step 15>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:21>",
+          "id": "<uuid:6>",
           "session_id": "<is>",
           "role": "participant",
           "content": "I run the mill at night.",
-          "created_at": "<time@before step 40>"
+          "created_at": "<time@before step 14>"
         },
         {
-          "id": "<uuid:22>",
+          "id": "<uuid:7>",
           "session_id": "<is>",
           "role": "assistant",
           "content": "What do you check before a night run?",
-          "created_at": "<time@step 41>"
+          "created_at": "<time@step 15>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 43,
+      "n": 17,
       "title": "launch tour-worker over budget: 402 (Q9)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1614,7 +986,7 @@
       "events": []
     },
     {
-      "n": 44,
+      "n": 18,
       "title": "draft test cases over budget: 402 (Q9)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1647,7 +1019,7 @@
       "events": []
     },
     {
-      "n": 45,
+      "n": 19,
       "title": "run the automation now over budget: 400 (Q9)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1673,7 +1045,7 @@
       "events": []
     },
     {
-      "n": 47,
+      "n": 20,
       "title": "launch an agent on the test run over budget: 400 (Q9)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1706,8 +1078,8 @@
       "events": []
     },
     {
-      "n": 49,
-      "title": "retry the failed run over budget: 500, beyond Q9's six",
+      "n": 21,
+      "title": "retry the failed run over budget: 500, beyond Q9's",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/agent-runs/{id}/retry",
@@ -1732,162 +1104,7 @@
       "events": []
     },
     {
-      "n": 50,
-      "title": "the box key finishes lead2 over budget: 200, no agent successor is launched, an event names them and the budget (REQ-76), and m, now a viewer of P, still gets a card",
-      "actor": "box",
-      "route": "POST /api/v1/agent-runs/{id}/finish",
-      "request": {
-        "method": "POST",
-        "path": "/api/v1/agent-runs/<lead2>/finish",
-        "headers": [
-          "Content-Type: application/json"
-        ],
-        "body": "{\"status\":\"succeeded\",\"final_text\":\"Plan: ship as is.\"}"
-      },
-      "notes": [
-        "the owner made m a viewer of P just before (setup: POST /api/v1/projects/{id}/members)"
-      ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"id\":\"<lead2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.lead>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.lead>\",\"work_item_id\":\"<lead2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan the next release of P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 43>\",\"finished_at\":\"<time@step 50>\",\"final_text\":\"Plan: ship as is.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 43>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "id": "<lead2>",
-        "org_id": "<w>",
-        "agent_id": "<agent.lead>",
-        "project_id": "<p>",
-        "team_id": "<c>",
-        "team_node_id": "<node.lead>",
-        "work_item_id": "<lead2.card>",
-        "status": "succeeded",
-        "cancel_requested": false,
-        "priority": 0,
-        "prompt": "Plan the next release of P.",
-        "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 43>",
-        "finished_at": "<time@step 50>",
-        "final_text": "Plan: ship as is.",
-        "error": "",
-        "attempt_count": 1,
-        "max_attempts": 3,
-        "tokens_in": 0,
-        "tokens_out": 0,
-        "artifacts_touched": [],
-        "launched_by": "<owner>",
-        "created_at": "<time@before step 43>",
-        "agent_content_hash": "<hex64:1>",
-        "agent_name": "Tour Lead",
-        "agent_provider": "claude-code"
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.moved",
-          "actor": "agent:<lead2>",
-          "project": "<p>",
-          "entity": "<lead2.card>",
-          "payload": {
-            "assignee_id": "string \"<agent.lead>\"",
-            "assignee_type": "string \"agent\"",
-            "column": "string \"done\""
-          }
-        },
-        {
-          "type": "workitem.created",
-          "actor": "agent:<lead2>",
-          "project": "<p>",
-          "entity": "<handoff2>",
-          "payload": {
-            "column": "string \"todo\"",
-            "title": "string \"Handoff from Lead\""
-          }
-        },
-        {
-          "type": "agentrun.successors_skipped",
-          "actor": "agent:<lead2>",
-          "project": "<p>",
-          "entity": "<lead2>",
-          "payload": {
-            "agent_id": "string \"<agent.lead>\"",
-            "reason": "string \"this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised\"",
-            "successors": "array[string] [\"Checker\",\"Critic\"]",
-            "team_id": "string \"<c>\"",
-            "team_node_ids": "array[string] [\"<node.checker>\",\"<node.critic>\"]"
-          }
-        },
-        {
-          "type": "agentrun.finished",
-          "actor": "agent:<lead2>",
-          "project": "<p>",
-          "entity": "<lead2>",
-          "payload": {
-            "agent_id": "string \"<agent.lead>\"",
-            "launched_by": "string \"<owner>\"",
-            "status": "string \"succeeded\""
-          }
-        }
-      ]
-    },
-    {
-      "n": 51,
-      "title": "lead2's tree: lead2 alone, no successor",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/agent-runs/{id}/tree",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/agent-runs/<lead2>/tree"
-      },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "[{\"id\":\"<lead2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.lead>\",\"project_id\":\"<p>\",\"team_id\":\"<c>\",\"team_node_id\":\"<node.lead>\",\"work_item_id\":\"<lead2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan the next release of P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 43>\",\"finished_at\":\"<time@step 50>\",\"final_text\":\"Plan: ship as is.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 43>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"}]"
-      ],
-      "trailing_newline": true,
-      "parsed": [
-        {
-          "id": "<lead2>",
-          "org_id": "<w>",
-          "agent_id": "<agent.lead>",
-          "project_id": "<p>",
-          "team_id": "<c>",
-          "team_node_id": "<node.lead>",
-          "work_item_id": "<lead2.card>",
-          "status": "succeeded",
-          "cancel_requested": false,
-          "priority": 0,
-          "prompt": "Plan the next release of P.",
-          "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 43>",
-          "finished_at": "<time@step 50>",
-          "final_text": "Plan: ship as is.",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "launched_by": "<owner>",
-          "created_at": "<time@before step 43>",
-          "agent_content_hash": "<hex64:1>",
-          "agent_name": "Tour Lead",
-          "agent_provider": "claude-code"
-        }
-      ],
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
-      "n": 52,
+      "n": 22,
       "title": "launch tour-worker with the budget cleared: 201",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1907,7 +1124,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<after>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<after.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, within budget.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<after>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<after.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, within budget.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 22>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1928,8 +1145,8 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 52>",
-        "agent_content_hash": "<hex64:6>",
+        "created_at": "<time@step 22>",
+        "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
       },
@@ -1948,7 +1165,7 @@
       ]
     },
     {
-      "n": 53,
+      "n": 23,
       "title": "run the automation now with the budget cleared: 201, so its 400 above was the guard's",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1964,7 +1181,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<after.auto>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"automation_id\":\"<auto>\",\"work_item_id\":\"<after.auto.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P nightly.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 53>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<after.auto>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"automation_id\":\"<auto>\",\"work_item_id\":\"<after.auto.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P nightly.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 23>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1986,8 +1203,8 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 53>",
-        "agent_content_hash": "<hex64:6>",
+        "created_at": "<time@step 23>",
+        "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
       },
@@ -2006,7 +1223,7 @@
       ]
     },
     {
-      "n": 55,
+      "n": 24,
       "title": "retry the failed run with the budget cleared: 201, so its 500 above was the guard's",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2022,7 +1239,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<after.retry>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<after.retry.card>\",\"retried_from_run_id\":\"<failed>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fail.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 55>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<after.retry>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent.worker>\",\"project_id\":\"<p>\",\"work_item_id\":\"<after.retry.card>\",\"retried_from_run_id\":\"<failed>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fail.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2044,8 +1261,8 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 55>",
-        "agent_content_hash": "<hex64:6>",
+        "created_at": "<time@step 24>",
+        "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
       },
@@ -2062,52 +1279,6 @@
           }
         }
       ]
-    },
-    {
-      "n": 56,
-      "title": "lead2's log: the note that Checker and Critic were not launched, and why (REQ-76)",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/agent-runs/{id}/logs",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/agent-runs/<lead2>/logs"
-      },
-      "notes": [
-        "the tour sent no log for lead2, so the note is its only entry"
-      ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "[{\"run_id\":\"<lead2>\",\"seq\":1,\"kind\":\"marker\",\"payload\":{\"marker\":\"successors_skipped\",\"message\":\"Checker and Critic were not launched: this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised\",\"reason\":\"this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised\",\"successors\":[\"Checker\",\"Critic\"],\"team_node_ids\":[\"<node.checker>\",\"<node.critic>\"]},\"created_at\":\"<time@step 50>\"}]"
-      ],
-      "trailing_newline": true,
-      "parsed": [
-        {
-          "run_id": "<lead2>",
-          "seq": 1,
-          "kind": "marker",
-          "payload": {
-            "marker": "successors_skipped",
-            "message": "Checker and Critic were not launched: this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised",
-            "reason": "this workspace has reached its $1.00 monthly budget ($5.00 spent); new runs are blocked until next month or the budget is raised",
-            "successors": [
-              "Checker",
-              "Critic"
-            ],
-            "team_node_ids": [
-              "<node.checker>",
-              "<node.critic>"
-            ]
-          },
-          "created_at": "<time@step 50>"
-        }
-      ],
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
     }
   ],
   "uploads": [],

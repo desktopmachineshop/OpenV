@@ -1,12 +1,15 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 229; members of exported objects: 302
+exports: 232; members of exported objects: 304
 
 interface AdminUser
 interface AdminWorkspace
 interface AgentDef
+interface AgentPlacement
 interface AgentRun
+interface AgentStats
+interface AgentStatsResponse
 interface AppNotification
 interface Artifact
 type      ArtifactStatus
@@ -187,6 +190,7 @@ const     agentRunsAPI
             .streamUrl
             .tree
 const     agentsAPI
+            .arrange
             .create
             .draftTestCases
             .get
@@ -195,6 +199,7 @@ const     agentsAPI
             .raw
             .remove
             .saveRaw
+            .stats
             .sync
             .update
 const     artifactAPI

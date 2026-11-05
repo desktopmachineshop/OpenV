@@ -32,7 +32,8 @@
     "help-activity",
     "target-releases",
     "compact-layout",
-    "redesign-pages"
+    "redesign-pages",
+    "agent-hierarchy"
   ],
   "event_types": [
     "artifact.created",

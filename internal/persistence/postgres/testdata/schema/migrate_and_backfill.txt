@@ -177,9 +177,14 @@ table agents rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   column org_id uuid NOT NULL
+  column parent_agent_id uuid
+  column group_name character varying(120)
+  column sort_order integer NOT NULL DEFAULT 0
+  constraint agents_parent_agent_id_fkey FOREIGN KEY (parent_agent_id) REFERENCES agents(id) ON DELETE SET NULL
   constraint agents_pkey PRIMARY KEY (id)
   index agents_pkey CREATE UNIQUE INDEX agents_pkey ON public.agents USING btree (id)
   index idx_agents_org_slug CREATE UNIQUE INDEX idx_agents_org_slug ON public.agents USING btree (org_id, slug)
+  index idx_agents_parent CREATE INDEX idx_agents_parent ON public.agents USING btree (parent_agent_id) WHERE (parent_agent_id IS NOT NULL)
   index idx_agents_slug_lookup CREATE INDEX idx_agents_slug_lookup ON public.agents USING btree (slug)
 table artifact_embeddings rows 0  @requires(vector)
   column artifact_id uuid NOT NULL  @requires(vector)
@@ -937,7 +942,7 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 67
+table schema_migrations rows 69
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1253,4 +1258,5 @@ ledger 0064 provider_login_purpose
 ledger 0065 connected_app_workspaces
 ledger 0066 user_identities
 ledger 0067 target_releases
-ledger 0068 retarget_crew_automations
+ledger 0069 retarget_crew_automations
+ledger 0070 agent_hierarchy

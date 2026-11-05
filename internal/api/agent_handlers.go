@@ -10,6 +10,7 @@ import "github.com/gorilla/mux"
 // routes, delegation among them, come before a run's {id}/... routes.
 func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	h.registerAgentDefinitionRoutes(router)
+	h.registerAgentHierarchyRoutes(router)
 	h.registerAgentRunLaunchRoutes(router)
 	h.registerWorkerDispatchRoutes(router)
 	h.registerAgentRunReadRoutes(router)

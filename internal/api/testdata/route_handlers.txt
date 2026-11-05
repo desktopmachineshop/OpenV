@@ -183,6 +183,8 @@ PUT /api/v1/agents/{slug} -> UpdateAgent
 DELETE /api/v1/agents/{slug} -> DeleteAgent
 GET /api/v1/agents/{slug}/raw -> GetAgentRaw
 PUT /api/v1/agents/{slug}/raw -> SaveAgentRaw
+GET /api/v1/agent-stats -> GetAgentStats
+PUT /api/v1/agent-arrangement -> ArrangeAgents
 POST /api/v1/agents/{slug}/runs -> LaunchAgentRun
 POST /api/v1/projects/{id}/draft-test-cases -> DraftTestCases
 GET /api/v1/agent-runs -> ListAgentRuns

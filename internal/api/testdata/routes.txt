@@ -47,6 +47,7 @@ GET /api/v1/agent-runs/{id}
 GET /api/v1/agent-runs/{id}/logs
 GET /api/v1/agent-runs/{id}/stream
 GET /api/v1/agent-runs/{id}/tree
+GET /api/v1/agent-stats
 GET /api/v1/agents
 GET /api/v1/agents/{slug}
 GET /api/v1/agents/{slug}/raw
@@ -305,6 +306,7 @@ POST /oauth/register
 POST /oauth/revoke
 POST /oauth/token
 PUT /api/v1/admin/users/{id}/admin
+PUT /api/v1/agent-arrangement
 PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw
 PUT /api/v1/artifacts/{id}

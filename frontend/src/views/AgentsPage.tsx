@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AgentDef, agentsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
+import { useFeature } from '../hooks/useFeature';
+import { AGENT_HIERARCHY_FEATURE } from '../features';
 import { AgentEditor } from '../components/agents/AgentEditor';
-import { ErrorBanner, Modal, useConfirm, Sheet, chipStyle, buttonStyle } from '../components/ui';
+import { LaunchRunModal } from '../components/agents/LaunchRunModal';
+import { ErrorBanner, useConfirm, Sheet, chipStyle, buttonStyle } from '../components/ui';
+import { AgentsHierarchyPage } from './AgentsHierarchyPage';
 
 const providerBadgeColor = (provider: string): string => {
   switch (provider) {
@@ -23,7 +27,12 @@ const providerBadgeColor = (provider: string): string => {
   }
 };
 
-export const AgentsPage: React.FC = () => {
+// The Agents page: with the agent-hierarchy feature, the hierarchy of cards
+// (AgentsHierarchyPage); without it, the list beside the editor.
+export const AgentsPage: React.FC = () =>
+  useFeature(AGENT_HIERARCHY_FEATURE) ? <AgentsHierarchyPage /> : <AgentsList />;
+
+export const AgentsList: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
@@ -31,7 +40,6 @@ export const AgentsPage: React.FC = () => {
   // takes the width and the editor opens as a full-screen sheet.
   const { isCompact } = useViewport();
   const activeOrgId = useAppStore((s) => s.activeOrgId);
-  const navigate = useNavigate();
   const confirm = useConfirm();
 
   const [agents, setAgents] = useState<AgentDef[]>([]);
@@ -40,10 +48,7 @@ export const AgentsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
 
-  // Launch modal
   const [launchAgent, setLaunchAgent] = useState<AgentDef | null>(null);
-  const [launchPrompt, setLaunchPrompt] = useState('');
-  const [launching, setLaunching] = useState(false);
 
   const load = useCallback(() => {
     agentsAPI
@@ -91,24 +96,6 @@ export const AgentsPage: React.FC = () => {
       load();
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to delete agent');
-    }
-  };
-
-  const handleLaunch = async () => {
-    if (!launchAgent || !launchPrompt.trim()) return;
-    setLaunching(true);
-    try {
-      await agentsAPI.launchRun(launchAgent.slug, {
-        project_id: projectId || undefined,
-        prompt: launchPrompt.trim(),
-      });
-      setLaunchAgent(null);
-      setLaunchPrompt('');
-      navigate(`/projects/${projectId}/agent-runs`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to launch run');
-    } finally {
-      setLaunching(false);
     }
   };
 
@@ -223,7 +210,6 @@ export const AgentsPage: React.FC = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setLaunchAgent(agent);
-                    setLaunchPrompt('');
                   }}
                 >
                   ▶ Launch run
@@ -262,39 +248,8 @@ export const AgentsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Launch modal */}
       {launchAgent && (
-        <Modal
-          title={`Launch run: ${launchAgent.name}`}
-          width={520}
-          onClose={() => setLaunchAgent(null)}
-        >
-            <div className="form-group" data-help-pane="agents.launch" data-help-key="agents.launch">
-              <label>Prompt</label>
-              <textarea
-                value={launchPrompt}
-                onChange={(e) => setLaunchPrompt(e.target.value)}
-                placeholder="What should this agent do?"
-                style={{ minHeight: 110, fontSize: 13 }}
-                autoFocus
-              />
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                Keep prompts lean — the agent fetches requirements itself via its OpenV tools.
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} data-help-pane="agents.launch" data-help-key="agents.launch">
-              <button className="button-secondary" onClick={() => setLaunchAgent(null)}>
-                Cancel
-              </button>
-              <button
-                className="button"
-                onClick={handleLaunch}
-                disabled={launching || !launchPrompt.trim()}
-              >
-                {launching ? 'Launching…' : 'Launch'}
-              </button>
-            </div>
-        </Modal>
+        <LaunchRunModal agent={launchAgent} projectId={projectId} onClose={() => setLaunchAgent(null)} onError={setError} />
       )}
     </div>
   );

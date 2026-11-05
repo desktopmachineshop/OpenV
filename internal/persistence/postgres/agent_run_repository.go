@@ -667,6 +667,46 @@ func (rep *AgentRunRepository) Usage(orgID string, since time.Time) ([]agentruns
 	return byAgent, byDay, dayRows.Err()
 }
 
+// AgentStats rolls up an org's runs per agent for the Agents page: of the
+// runs created at/after since, the open ones and the succeeded ones, and
+// their cost; and the pending proposals of the agent's runs whenever made.
+// projectID, when set, narrows it to that project's runs. An agent with none
+// of these is left out; the order is the agent id's.
+func (rep *AgentRunRepository) AgentStats(orgID, projectID string, since time.Time) ([]agentruns.AgentStats, error) {
+	rows, err := rep.db.Query(`
+		SELECT r.agent_id::text,
+			COUNT(*) FILTER (WHERE r.created_at >= $3 AND r.status IN ('queued', 'claimed', 'running', 'awaiting_approval')),
+			COUNT(*) FILTER (WHERE r.created_at >= $3 AND r.status = 'succeeded'),
+			COALESCE(SUM(r.cost_usd) FILTER (WHERE r.created_at >= $3), 0)::float8,
+			COALESCE(SUM(p.pending), 0)
+		FROM agent_runs r
+		LEFT JOIN (
+			SELECT run_id, COUNT(*) AS pending FROM agent_proposals WHERE status = 'pending' GROUP BY run_id
+		) p ON p.run_id = r.id
+		WHERE r.org_id = $1::uuid
+		  AND ($2::text = '' OR r.project_id::text = $2::text)
+		  AND (r.created_at >= $3 OR p.pending > 0)
+		GROUP BY r.agent_id
+		ORDER BY r.agent_id
+	`, orgID, projectID, since)
+	if malformedID(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []agentruns.AgentStats
+	for rows.Next() {
+		var st agentruns.AgentStats
+		if err := rows.Scan(&st.AgentID, &st.Open, &st.Done, &st.CostUSD, &st.PendingProposals); err != nil {
+			return nil, err
+		}
+		out = append(out, st)
+	}
+	return out, rows.Err()
+}
+
 // MonthlySpend sums an org's cost_usd over runs created at/after monthStart —
 // the workspace's month-to-date spend. NULL costs (runs not yet finished)
 // count as zero. It scopes on created_at, matching the Usage rollup's

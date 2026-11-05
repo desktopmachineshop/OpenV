@@ -333,6 +333,7 @@ const routes = [
   [/\/api\/v1\/links/, links],
   [/\/api\/v1\/notifications\/stream/, null],
   [/\/api\/v1\/notifications/, { notifications, unread: 1 }],
+  [/\/api\/v1\/agent-stats/, { days: 7, since: now, agents: [] }],
   [/\/api\/v1\/agents/, agents],
   [/\/api\/v1\/automations/, [automation]],
   // The log stream: aborted, not answered with JSON — WebKit reports a

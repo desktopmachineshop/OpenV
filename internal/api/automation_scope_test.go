@@ -59,7 +59,7 @@ func (r *scopeRepo) FindByID(id string) (*automations.Automation, error) {
 // agent-1; org-2 the agent agent-x. Automations:
 //   - au-p1: agent-1's, pinned to proj-1;
 //   - au-wide: agent-1's, for the whole workspace;
-//   - au-legacy: for the whole workspace, with no agent, as migration 0068
+//   - au-legacy: for the whole workspace, with no agent, as migration 0069
 //     leaves a crew's automation whose crew had no entry agent.
 //
 // plan is the workspace's plan: on Business, with no stable release turned

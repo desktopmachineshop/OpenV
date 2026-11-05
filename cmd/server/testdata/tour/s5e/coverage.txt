@@ -60,6 +60,7 @@ GET /api/v1/agent-runs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/logs: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/stream: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/tree: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/agent-stats: 400, 401; phantom_matrix (errors only)
 GET /api/v1/agents: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/agents/{slug}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agents/{slug}/raw: 200, 401, 404; phantom_matrix, real_id_reads
@@ -318,6 +319,7 @@ POST /oauth/register: 400; phantom_matrix (errors only)
 POST /oauth/revoke: 200; phantom_matrix
 POST /oauth/token: 400; phantom_matrix (errors only)
 PUT /api/v1/admin/users/{id}/admin: 400, 401, 403; phantom_matrix (errors only)
+PUT /api/v1/agent-arrangement: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/agents/{slug}: 400, 401, 403; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/agents/{slug}/raw: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/artifacts/{id}: 400, 401, 404; phantom_matrix, real_id_reads (errors only)
@@ -358,4 +360,4 @@ PUT /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors onl
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 345 of 346 routes reached (99.7%), 164 with a 2xx or 3xx answer (47.4%)
+s5e: 347 of 348 routes reached (99.7%), 164 with a 2xx or 3xx answer (47.1%)

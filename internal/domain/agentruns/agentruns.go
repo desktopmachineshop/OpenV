@@ -288,6 +288,18 @@ type AgentUsage struct {
 	CostUSD   float64 `json:"cost_usd"`
 }
 
+// AgentStats is one agent's live numbers on the Agents page (issue 733):
+// its runs created since the window's start that are still open (queued,
+// claimed, running or awaiting approval) and that succeeded, their cost, and
+// the proposals of its runs still waiting for review, however old.
+type AgentStats struct {
+	AgentID          string  `json:"agent_id"`
+	Open             int     `json:"open"`
+	Done             int     `json:"done"`
+	CostUSD          float64 `json:"cost_usd"`
+	PendingProposals int     `json:"pending_proposals"`
+}
+
 // DailyUsage aggregates one calendar day's runs in a usage window.
 type DailyUsage struct {
 	Day       string  `json:"day"` // YYYY-MM-DD (UTC)
@@ -431,6 +443,10 @@ type Repository interface {
 	// agent slug and by day (see UsageSummary; Days/Totals are the
 	// service's concern).
 	Usage(orgID string, since time.Time) ([]AgentUsage, []DailyUsage, error)
+	// AgentStats rolls up the org's runs per agent (AgentStats), narrowed to
+	// a project's when projectID is set; agents with nothing to show are
+	// left out.
+	AgentStats(orgID, projectID string, since time.Time) ([]AgentStats, error)
 	// MonthlySpend sums an org's cost_usd over runs created at/after
 	// monthStart (the current-month total; NULL costs count as zero). It
 	// shares the usage rollup's created_at bucketing so the figure matches
@@ -500,6 +516,9 @@ type Service interface {
 	QueueStats(orgID string) (QueueStats, error)
 	// Usage rolls up the org's run usage over the window starting at since.
 	Usage(orgID string, since time.Time) (*UsageSummary, error)
+	// AgentStats is every agent's numbers since the given time, in one call
+	// (the Agents page's cards), an agent with none left out; never nil.
+	AgentStats(orgID, projectID string, since time.Time) ([]AgentStats, error)
 	// MonthlySpend returns the org's month-to-date spend (SUM of cost_usd for
 	// runs created at/after monthStart).
 	MonthlySpend(orgID string, monthStart time.Time) (float64, error)

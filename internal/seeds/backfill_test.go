@@ -75,6 +75,9 @@ func (f *registryAgentService) SaveRawFile(orgID, slug, content string) (*agents
 func (f *registryAgentService) Delete(orgID, slug string) error { return nil }
 func (f *registryAgentService) SyncFromDisk(orgID string) error { return nil }
 func (f *registryAgentService) SyncAllFromDisk() error          { return nil }
+func (f *registryAgentService) Arrange(string, []agents.Placement) ([]*agents.Agent, error) {
+	return nil, nil
+}
 
 func seedDef(t *testing.T, slug string) agents.Definition {
 	t.Helper()

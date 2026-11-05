@@ -417,7 +417,7 @@
     "internal/runner:loginBroker.handlePTYLogin": 157,
     "internal/runner:startProc": 184,
     "internal/seeds:builtinProducts": 136,
-    "internal/seeds:defaultAgents": 133
+    "internal/seeds:defaultAgents": 138
   },
   "side_effect_vars": [
     "internal/domain/quality:conventionPatterns",

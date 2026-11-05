@@ -70,10 +70,7 @@ CHAPTER_KEYS = {
     'links': ['links'],
     'guided-wizard': ['guided'],
     'board': ['board'],
-    # crew: the Crew Builder's key, retired onto the Agents page that replaced
-    # it (rule 5 of docs/docs-maintenance.md); its crew.* children fall back
-    # to it.
-    'agents': ['agents', 'crew'],
+    'agents': ['agents'],
     'runs-runners': ['agent-runs'],
     'automations': ['automations'],
     'interviews': ['interviews'],
@@ -127,6 +124,10 @@ SECTION_KEYS = {
     ('board', 'driving-agents-from-the-board'): ['board.agents'],
     ('board', 'the-card-drawer'): ['board.card'],
     ('board', 'moving-cards'): ['board.move'],
+    # crew: the Crew Builder's key, retired onto the agent hierarchy that
+    # replaced it (rule 5 of docs/docs-maintenance.md); its crew.* children
+    # fall back to it.
+    ('agents', 'the-agent-hierarchy'): ['agents.hierarchy', 'crew'],
     ('agents', 'the-agent-list'): ['agents.list'],
     ('agents', 'launching-a-run'): ['agents.launch'],
     ('agents', 'the-agent-editor'): ['agents.editor'],
@@ -376,12 +377,12 @@ GENERATED = ('topics', 'maps', 'redirects.json')
 # Deep links of chapters the manual no longer has, to the topic that
 # replaced each: the Crews chapter went with crews, onto Agents.
 RETIRED_LINKS = {
-    '/manual/crews': 'topics/agents/index',
-    '/manual/crews#managing-crews': 'topics/agents/index',
-    '/manual/crews#the-canvas': 'topics/agents/index',
-    '/manual/crews#adding-nodes': 'topics/agents/index',
-    '/manual/crews#connecting-nodes': 'topics/agents/index',
-    '/manual/crews#crews-elsewhere-in-the-app': 'topics/agents/index',
+    '/manual/crews': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#managing-crews': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#the-canvas': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#adding-nodes': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#connecting-nodes': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#crews-elsewhere-in-the-app': 'topics/agents/the-agent-hierarchy',
 }
 
 

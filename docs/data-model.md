@@ -378,7 +378,7 @@ belong to an evidence bundle, which a result cites through
 Kanban cards: `project_id`, `title`, `description`, `board_column`
 (`backlog` | `todo` | `in-progress` | `review` | `done`, listed in that
 order), `sort_order`, `assignee_type` (`user` | `agent`; `team`, a
-crew's, was moved off by migration 0068) + `assignee_id`, `agent_run_id` (moving a card into an agent
+crew's, was moved off by migration 0069) + `assignee_id`, `agent_run_id` (moving a card into an agent
 column enqueues a run), `artifact_ids` JSONB, `due_date`. Activity is the
 card's feed (`kind`, `actor`, `content`, `payload`).
 

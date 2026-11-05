@@ -47,7 +47,7 @@ GET /api/v1/provider-api-keys: 200, 403; providers_repos_pool
 GET /api/v1/provider-logins/{id}: 200, 404; providers_repos_pool
 GET /api/v1/provider-logins/{id}/full: 200, 403, 404; providers_repos_pool
 GET /api/v1/provider-settings: 200; providers_repos_pool
-GET /api/v1/work-items/{id}: 200, 404; agents_automations, orchestration_budget
+GET /api/v1/work-items/{id}: 200; agents_automations
 GET /mcp: 405; connected_apps (errors only)
 GET /oauth/authorize: 302, 400; connected_apps
 POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; orchestration_budget, providers_repos_pool, worker_wire
@@ -95,4 +95,4 @@ PUT /api/v1/provider-settings: 200, 400, 401, 403; providers_repos_pool
 PUT /api/v1/repo-connections/{id}: 200, 400, 403, 404; providers_repos_pool
 PUT /api/v1/repo-connections/{id}/my-path: 200, 400, 401, 404; providers_repos_pool
 
-s5d: 83 of 346 routes reached (24.0%), 79 with a 2xx or 3xx answer (22.8%)
+s5d: 83 of 348 routes reached (23.9%), 79 with a 2xx or 3xx answer (22.7%)

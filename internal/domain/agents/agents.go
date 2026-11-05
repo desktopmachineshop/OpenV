@@ -133,12 +133,21 @@ type Agent struct {
 	// that brings untouched agents up to a new release skips it entirely.
 	// For a workspace that needs to be able to say this agent does not
 	// change unless we change it.
-	Locked      bool       `json:"locked"`
-	FilePath    string     `json:"file_path"`
-	ContentHash string     `json:"content_hash"`
-	SyncedAt    *time.Time `json:"synced_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	Locked bool `json:"locked"`
+	// The hierarchy (issue 733): where the agent sits on the Agents page.
+	// Display and arrangement only; no agent starts another. ParentAgentID
+	// is the agent it reports to, an agent of the same workspace, resolved
+	// from the slug its file names (ReportsTo); nil at the top. GroupName
+	// is its group ("" for none), SortOrder its place among its siblings.
+	ParentAgentID *string    `json:"parent_agent_id"`
+	ReportsTo     string     `json:"reports_to"`
+	GroupName     string     `json:"group_name"`
+	SortOrder     int        `json:"sort_order"`
+	FilePath      string     `json:"file_path"`
+	ContentHash   string     `json:"content_hash"`
+	SyncedAt      *time.Time `json:"synced_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // Definition is the editable content of an agent's markdown file:
@@ -159,8 +168,74 @@ type Definition struct {
 	// Locked travels in the frontmatter so the guarantee survives a file
 	// sync: an agent edited on disk stays locked without anyone having to
 	// remember to re-tick it.
-	Locked       bool   `json:"locked" yaml:"locked,omitempty"`
+	Locked bool `json:"locked" yaml:"locked,omitempty"`
+	// The hierarchy (issue 733), in the frontmatter so a file carries its
+	// place: reports_to names the parent agent by slug (a slug, not an id,
+	// so the file means the same in any workspace), group its group, and
+	// sort_order its place among its siblings.
+	ReportsTo    string `json:"reports_to" yaml:"reports_to,omitempty"`
+	GroupName    string `json:"group_name" yaml:"group,omitempty"`
+	SortOrder    int    `json:"sort_order" yaml:"sort_order,omitempty"`
 	SystemPrompt string `json:"system_prompt" yaml:"-"`
+}
+
+// MaxGroupNameLength caps an agent's group name.
+const MaxGroupNameLength = 120
+
+// ErrHierarchyCycle is returned for an arrangement in which an agent would
+// report, directly or through others, to itself.
+var ErrHierarchyCycle = errors.New("an agent cannot report to itself or to an agent that reports to it")
+
+// ErrUnknownParent is returned when reports_to names no agent of the
+// workspace.
+var ErrUnknownParent = errors.New("reports_to names no agent of this workspace")
+
+// Placement is one agent's place in the hierarchy, as the Agents page's
+// Edit mode arranges it (Service.Arrange).
+type Placement struct {
+	Slug      string `json:"slug"`
+	ReportsTo string `json:"reports_to"`
+	GroupName string `json:"group_name"`
+	SortOrder int    `json:"sort_order"`
+}
+
+// validateHierarchy checks and tidies a definition's place: a group name of
+// at most MaxGroupNameLength characters, spaces trimmed, and a reports_to
+// that is a slug and not the agent's own.
+func (d *Definition) validateHierarchy() error {
+	d.GroupName = strings.TrimSpace(d.GroupName)
+	if len([]rune(d.GroupName)) > MaxGroupNameLength {
+		return fmt.Errorf("group must be at most %d characters", MaxGroupNameLength)
+	}
+	d.ReportsTo = strings.TrimSpace(d.ReportsTo)
+	if d.ReportsTo == "" {
+		return nil
+	}
+	if !ValidSlug(d.ReportsTo) {
+		return errors.New("reports_to must be an agent's slug")
+	}
+	if d.ReportsTo == d.Slug {
+		return ErrHierarchyCycle
+	}
+	return nil
+}
+
+// HierarchyCycle reports whether the arrangement parents (slug -> the slug
+// it reports to, "" for none) holds a cycle, and names an agent on it.
+func HierarchyCycle(parents map[string]string) (string, bool) {
+	for start := range parents {
+		seen := map[string]bool{start: true}
+		for at := parents[start]; at != ""; at = parents[at] {
+			if at == start {
+				return start, true
+			}
+			if seen[at] {
+				break // a cycle that does not pass through start: found from one of its own
+			}
+			seen[at] = true
+		}
+	}
+	return "", false
 }
 
 // Validate checks a definition a person is saving now for required fields and
@@ -241,7 +316,7 @@ func (d *Definition) validate(requireTools bool) error {
 	if d.TimeoutSeconds <= 0 {
 		d.TimeoutSeconds = 1800
 	}
-	return nil
+	return d.validateHierarchy()
 }
 
 // Repository defines persistence for the agent registry. Slugs are unique
@@ -280,6 +355,12 @@ type Service interface {
 	SyncFromDisk(orgID string) error
 	// SyncAllFromDisk walks every org subdirectory and syncs each one.
 	SyncAllFromDisk() error
+	// Arrange places agents of the org in the hierarchy: each placement's
+	// reports_to, group and sort order are written to its file and its row.
+	// The whole arrangement is checked before anything is written: an
+	// unknown agent is ErrNotFound, an unknown parent ErrUnknownParent, and
+	// a cycle ErrHierarchyCycle. It answers the org's agents.
+	Arrange(orgID string, placements []Placement) ([]*Agent, error)
 }
 
 // NonEmptyTools drops blank entries from a tool list, so an allowlist of

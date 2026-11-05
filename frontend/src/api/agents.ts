@@ -6,7 +6,9 @@
 import { API_BASE_URL, client } from './http';
 import type {
   AgentDef,
+  AgentPlacement,
   AgentRun,
+  AgentStatsResponse,
   Automation,
   BulkProposalOutcome,
   Proposal,
@@ -30,6 +32,11 @@ export const agentsAPI = {
   saveRaw: (slug: string, content: string) =>
     client.put<AgentDef>(`/api/v1/agents/${slug}/raw`, { content }),
   sync: () => client.post<AgentDef[]>('/api/v1/agents/sync'),
+  // Every agent's numbers over the last 7 days in a project, in one call.
+  stats: (projectId: string) =>
+    client.get<AgentStatsResponse>('/api/v1/agent-stats', { params: { project_id: projectId } }),
+  // Places agents in the hierarchy; answers the workspace's agents.
+  arrange: (agents: AgentPlacement[]) => client.put<AgentDef[]>('/api/v1/agent-arrangement', { agents }),
   launchRun: (slug: string, payload: { project_id?: string; prompt: string; work_item_id?: string }) =>
     client.post<AgentRun>(`/api/v1/agents/${slug}/runs`, payload),
   // Launch the seeded test-case-author agent to draft test cases (and verifies

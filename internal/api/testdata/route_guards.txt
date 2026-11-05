@@ -53,6 +53,7 @@ GET /api/v1/agent-runs/{id}: session, run:viewer
 GET /api/v1/agent-runs/{id}/logs: session, run:viewer
 GET /api/v1/agent-runs/{id}/stream: session, run:viewer
 GET /api/v1/agent-runs/{id}/tree: session, run:viewer
+GET /api/v1/agent-stats: session, project-visible
 GET /api/v1/agents: session
 GET /api/v1/agents/{slug}: session
 GET /api/v1/agents/{slug}/raw: session
@@ -311,6 +312,7 @@ POST /oauth/register: -
 POST /oauth/revoke: -
 POST /oauth/token: -
 PUT /api/v1/admin/users/{id}/admin: platform-admin
+PUT /api/v1/agent-arrangement: org:admin
 PUT /api/v1/agents/{slug}: org:admin
 PUT /api/v1/agents/{slug}/raw: org:admin
 PUT /api/v1/artifacts/{id}: project:editor

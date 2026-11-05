@@ -52,6 +52,8 @@ func defaultAgents() []seedAgent {
 		{
 			def: agents.Definition{
 				Slug:         "requirements-analyst",
+				ReportsTo:    "chief-of-staff",
+				GroupName:    "Requirements",
 				Name:         "Requirements Analyst",
 				Provider:     "claude-code",
 				Description:  "Drafts and refines user needs and requirements.",
@@ -62,6 +64,9 @@ func defaultAgents() []seedAgent {
 		{
 			def: agents.Definition{
 				Slug:         "vv-engineer",
+				ReportsTo:    "chief-of-staff",
+				GroupName:    "Verification",
+				SortOrder:    1,
 				Name:         "V&V Engineer",
 				Provider:     "claude-code",
 				Description:  "Drafts test cases and closes verification coverage gaps.",
@@ -72,6 +77,9 @@ func defaultAgents() []seedAgent {
 		{
 			def: agents.Definition{
 				Slug:         "developer",
+				ReportsTo:    "chief-of-staff",
+				GroupName:    "Engineering",
+				SortOrder:    2,
 				Name:         "Developer",
 				Provider:     "claude-code",
 				RepoAccess:   true,
@@ -83,6 +91,8 @@ func defaultAgents() []seedAgent {
 		{
 			def: agents.Definition{
 				Slug:         "reviewer",
+				ReportsTo:    "developer",
+				GroupName:    "Engineering",
 				Name:         "Reviewer",
 				Provider:     "claude-code",
 				Description:  "Reviews the Developer's output against the requirements.",
@@ -93,6 +103,8 @@ func defaultAgents() []seedAgent {
 		{
 			def: agents.Definition{
 				Slug:      TestCaseAuthorSlug,
+				ReportsTo: "vv-engineer",
+				GroupName: "Verification",
 				Name:      "Test Case Author",
 				Provider:  "claude-code",
 				WriteMode: agents.WriteModeProposal,
@@ -114,9 +126,12 @@ Everything you create is a proposal: a human reviews and approves your test case
 		},
 		{
 			def: agents.Definition{
-				Slug:     "requirements-copilot",
-				Name:     "V&V Assistant",
-				Provider: "claude-code",
+				Slug:      "requirements-copilot",
+				ReportsTo: "vv-engineer",
+				GroupName: "Verification",
+				SortOrder: 1,
+				Name:      "V&V Assistant",
+				Provider:  "claude-code",
 				// Chat turns should feel snappy; low effort suffices for
 				// conversational review of wizard entries.
 				Effort:      "low",
@@ -139,6 +154,8 @@ You can search the web and read pages you find. Use it when a claim has an autho
 		{
 			def: agents.Definition{
 				Slug:        agents.InterviewerSlug,
+				ReportsTo:   "requirements-analyst",
+				GroupName:   "Requirements",
 				Name:        "Requirements Interviewer",
 				Provider:    "claude-code",
 				WriteMode:   agents.WriteModeDirect,
@@ -303,6 +320,37 @@ func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definit
 	return true, nil
 }
 
+// adoptSeedPlace gives a seeded agent that has no place in the hierarchy
+// (issue 733) the seed's: its reports_to, group and sort order. The
+// hierarchy is new, so an agent with none of the three was never arranged,
+// and one a person has placed keeps its place. A locked agent is left as it
+// is, and a parent the workspace no longer has (a seeded lead deleted) is
+// left out, the agent staying at the top of its group.
+func adoptSeedPlace(orgID string, want agents.Definition, agentService agents.Service) error {
+	if want.ReportsTo == "" && want.GroupName == "" && want.SortOrder == 0 {
+		return nil
+	}
+	existing, err := agentService.GetBySlug(orgID, want.Slug)
+	if err != nil || existing == nil {
+		return err
+	}
+	if existing.Locked || existing.ReportsTo != "" || existing.ParentAgentID != nil || existing.GroupName != "" ||
+		existing.SortOrder != 0 {
+		return nil
+	}
+	def := definitionOf(existing)
+	def.ReportsTo, def.GroupName, def.SortOrder = want.ReportsTo, want.GroupName, want.SortOrder
+	if def.ReportsTo != "" {
+		if parent, err := agentService.GetBySlug(orgID, def.ReportsTo); err != nil || parent == nil {
+			def.ReportsTo = ""
+		}
+	}
+	if _, err := agentService.SaveDefinition(orgID, &def); err != nil {
+		return fmt.Errorf("failed to place seeded agent %s: %w", want.Slug, err)
+	}
+	return nil
+}
+
 // backfillAllowedTools gives an agent provisioned before allowlists were
 // mandatory (REQ-91) one, so it can still run. There is no schema migration
 // behind this: it is a startup reconcile, and it only ever fires on a row that
@@ -350,6 +398,9 @@ func definitionOf(a *agents.Agent) agents.Definition {
 		TimeoutSeconds: a.TimeoutSeconds,
 		Config:         a.Config,
 		Locked:         a.Locked,
+		ReportsTo:      a.ReportsTo,
+		GroupName:      a.GroupName,
+		SortOrder:      a.SortOrder,
 		SystemPrompt:   a.SystemPrompt,
 	}
 }
@@ -453,6 +504,9 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service) error {
 			}
 			if adopted {
 				log.Printf("seeds: brought agent %q up to the current seed in org %s", seed.def.Slug, orgID)
+			}
+			if err := adoptSeedPlace(orgID, seed.def, agentService); err != nil {
+				return err
 			}
 		}
 	}

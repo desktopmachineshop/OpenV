@@ -21,6 +21,36 @@ export interface AgentDef {
   timeout_seconds: number;
   system_prompt: string;
   file_path: string;
+  /** The hierarchy (issue 733): the agent it reports to (null at the top),
+   *  that agent's slug, its group ('' for none) and its place among its
+   *  siblings. Display and arrangement only. */
+  parent_agent_id?: string | null;
+  reports_to?: string;
+  group_name?: string;
+  sort_order?: number;
+}
+
+/** One agent's numbers on the Agents page (GET /agent-stats). */
+export interface AgentStats {
+  agent_id: string;
+  open: number;
+  done: number;
+  cost_usd: number;
+  pending_proposals: number;
+}
+
+export interface AgentStatsResponse {
+  days: number;
+  since: string;
+  agents: AgentStats[];
+}
+
+/** An agent's place, as PUT /agent-arrangement takes it. */
+export interface AgentPlacement {
+  slug: string;
+  reports_to: string;
+  group_name: string;
+  sort_order: number;
 }
 
 export interface AgentRun {

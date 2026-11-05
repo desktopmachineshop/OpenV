@@ -545,7 +545,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 15>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run1.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 15>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run1.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -568,6 +568,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -2198,7 +2202,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 61>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run2.again.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 61>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run2.again.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2221,6 +2225,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -3096,7 +3104,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:2>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:2>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3119,6 +3127,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -3288,7 +3300,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"ANTHROPIC_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:3>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"ANTHROPIC_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:3>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3311,6 +3323,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -3383,7 +3399,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"GOOGLE_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:4>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"GOOGLE_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:4>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3406,6 +3422,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -3478,7 +3498,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:5>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:5>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3501,6 +3521,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -3572,7 +3596,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<repo.agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-repo\",\"name\":\"Tour Repo\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":true,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-repo.md\",\"content_hash\":\"<hex64:6>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:7>\"}"
+        "{\"agent\":{\"id\":\"<repo.agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-repo\",\"name\":\"Tour Repo\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":true,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-repo.md\",\"content_hash\":\"<hex64:6>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:7>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3595,6 +3619,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-repo.md",
           "content_hash": "<hex64:6>",
           "synced_at": "<time@before step 1>",
@@ -3688,7 +3716,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<admin.agent>\",\"org_id\":\"<admin.workspace>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<admin.workspace>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 88>\",\"created_at\":\"<time@before step 88>\",\"updated_at\":\"<time@before step 88>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_a>\",\"org_id\":\"<admin.workspace>\",\"agent_id\":\"<admin.agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise the platform.\",\"worker_id\":\"tour-legacy\",\"heartbeat_at\":\"<time@step 88>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<admin>\",\"created_at\":\"<time@before step 88>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:8>\"}"
+        "{\"agent\":{\"id\":\"<admin.agent>\",\"org_id\":\"<admin.workspace>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<admin.workspace>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 88>\",\"created_at\":\"<time@before step 88>\",\"updated_at\":\"<time@before step 88>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_a>\",\"org_id\":\"<admin.workspace>\",\"agent_id\":\"<admin.agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise the platform.\",\"worker_id\":\"tour-legacy\",\"heartbeat_at\":\"<time@step 88>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<admin>\",\"created_at\":\"<time@before step 88>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:8>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3711,6 +3739,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<admin.workspace>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 88>",
@@ -4628,7 +4660,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_o>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:5>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for whoever can.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 105>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 102>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:9>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_o>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:5>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for whoever can.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 105>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 102>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:9>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4651,6 +4683,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -4779,7 +4815,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_n>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W for whoever can.\",\"worker_id\":\"tour-own\",\"heartbeat_at\":\"<time@step 108>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 107>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:10>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_n>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W for whoever can.\",\"worker_id\":\"tour-own\",\"heartbeat_at\":\"<time@step 108>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 107>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:10>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4802,6 +4838,10 @@
           "config": {},
           "system_prompt": "You answer in one line \u0026 in plain text, never in \u003chtml\u003e.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-worker.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",

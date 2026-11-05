@@ -258,6 +258,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     summary:
       'Agent definitions — provider, model, write mode, tools, and system prompt — plus a launch button for one-off runs.',
     tips: [
+      'The cards show who leads, the groups beneath and who reports to whom, with each agent\'s open and done runs, cost and proposals to approve over 7 days. Click a card for its runs; Edit (admins) arranges the hierarchy.',
       'Keep launch prompts lean — the agent fetches requirement content itself through its OpenV tools; name the work instead of pasting text.',
       'Prefer proposal write mode: every agent write waits for your approval on the Runs page before it lands.',
       'Set Model to provider default to inherit the workspace-wide default (Workspace settings → AI Providers).',

@@ -142,6 +142,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       timeout_seconds: Number(form.timeout_seconds) || 0,
       allowed_tools: allowedTools,
       system_prompt: form.system_prompt,
+      // The agent's place in the hierarchy travels unchanged: the Agents
+      // page's Edit mode arranges it, and a save here must not undo that.
+      reports_to: agent?.reports_to || '',
+      group_name: agent?.group_name || '',
+      sort_order: agent?.sort_order ?? 0,
     };
     try {
       if (isNew) {

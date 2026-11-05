@@ -164,7 +164,7 @@ func (s *Scheduler) switchOff(a *automations.Automation, now time.Time, why erro
 
 // ResolveTarget resolves an automation's agent target. An automation
 // targets an agent only: crews, which an automation could once target, are
-// gone (issue 732), and migration 0068 moved their automations onto the
+// gone (issue 732), and migration 0069 moved their automations onto the
 // crew's entry agent or switched them off.
 func ResolveTarget(a *automations.Automation) (agentID string, err error) {
 	if a.AgentID != nil && *a.AgentID != "" {

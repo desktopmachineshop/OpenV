@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 305
-  axios instance calls: 295 (DELETE 35, GET 122, HEAD 1, POST 97, PUT 40)
+call sites: 307
+  axios instance calls: 297 (DELETE 35, GET 123, HEAD 1, POST 97, PUT 41)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 304; server routes reached: 304
+distinct METHOD PATH lines below: 306; server routes reached: 306
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
@@ -14,6 +14,7 @@ GET     /api/v1/admin/users                                               adminA
 PUT     /api/v1/admin/users/{id}/admin                                    adminAPI.setAdmin
 POST    /api/v1/admin/users/{id}/password-reset                           adminAPI.issuePasswordReset
 GET     /api/v1/admin/workspaces                                          adminAPI.workspaces
+PUT     /api/v1/agent-arrangement                                         agentsAPI.arrange
 GET     /api/v1/agent-runs                                                agentRunsAPI.list
 GET     /api/v1/agent-runs/{id}                                           agentRunsAPI.get
 POST    /api/v1/agent-runs/{id}/cancel                                    agentRunsAPI.cancel
@@ -21,6 +22,7 @@ GET     /api/v1/agent-runs/{id}/logs                                      agentR
 POST    /api/v1/agent-runs/{id}/retry                                     agentRunsAPI.retry
 GET     /api/v1/agent-runs/{id}/stream                                    agentRunsAPI.streamUrl (url)
 GET     /api/v1/agent-runs/{id}/tree                                      agentRunsAPI.tree
+GET     /api/v1/agent-stats                                               agentsAPI.stats
 GET     /api/v1/agents                                                    agentsAPI.list
 POST    /api/v1/agents                                                    agentsAPI.create
 POST    /api/v1/agents/sync                                               agentsAPI.sync

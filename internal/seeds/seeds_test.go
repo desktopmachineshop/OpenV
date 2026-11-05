@@ -89,6 +89,9 @@ func (f *fakeAgentService) SaveRawFile(orgID, slug, content string) (*agents.Age
 func (f *fakeAgentService) Delete(orgID, slug string) error { return nil }
 func (f *fakeAgentService) SyncFromDisk(orgID string) error { return nil }
 func (f *fakeAgentService) SyncAllFromDisk() error          { return nil }
+func (f *fakeAgentService) Arrange(string, []agents.Placement) ([]*agents.Agent, error) {
+	return nil, nil
+}
 
 // currentCopilotSeed is the seed as it ships today — what an untouched
 // workspace should catch up to.
