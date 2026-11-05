@@ -85,7 +85,7 @@ POST /api/v1/templates: 201, 400, 500; projects_templates
 POST /api/v1/templates/{id}/projects: 201, 400, 401, 404; projects_templates
 PUT /api/v1/artifacts/{id}: 200, 400, 403, 404; artifacts_attributes, links_managed_edits
 PUT /api/v1/artifacts/{id}/status: 200, 400, 403, 404, 409; review_chatter_search
-PUT /api/v1/attachments/{id}: 200, 400, 404, 500; attachments
+PUT /api/v1/attachments/{id}: 200, 400, 404; attachments
 PUT /api/v1/attribute-definitions/{id}: 200, 400, 403, 404; artifacts_attributes
 PUT /api/v1/links/{id}: 200, 400, 404; links_managed_edits
 PUT /api/v1/links/{id}/confirm: 200, 404; links_managed_edits
