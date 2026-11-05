@@ -9,13 +9,18 @@ interface ProposalReviewPanelProps {
   onCountChange?: (count: number) => void;
   /** Opens the run a proposal came from. */
   onOpenRun?: (runId: string) => void;
+  /** When set, only the proposals of these runs (one agent's, from the
+   *  Agents page) are listed and counted. */
+  onlyRuns?: Set<string>;
 }
 
 export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
   projectId,
   onCountChange,
   onOpenRun,
+  onlyRuns,
 }) => {
+  const onlyKey = onlyRuns ? [...onlyRuns].sort().join(',') : null;
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -54,7 +59,8 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
     proposalsAPI
       .list({ project_id: projectId, status: 'pending' })
       .then((res) => {
-        const list = res.data || [];
+        const all = res.data || [];
+        const list = onlyRuns ? all.filter((p) => onlyRuns.has(p.run_id)) : all;
         setProposals(list);
         // Prune selections for proposals no longer pending (reviewed here or
         // elsewhere) so select-all and the selected count stay honest.
@@ -71,7 +77,7 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
         setError(err.response?.data?.error || err.message || 'Failed to load proposals')
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, onlyKey]);
 
   useEffect(() => {
     load();

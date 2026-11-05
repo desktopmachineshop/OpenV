@@ -1,5 +1,5 @@
 // Who hears of a run's changes: the Subscribers registered at wiring (the
-// SSE hub and the crew and kanban hooks), and the event bus, which carries
+// SSE hub and the kanban hooks), and the event bus, which carries
 // RunFinished for every terminal status.
 
 package agentruns
@@ -7,7 +7,7 @@ package agentruns
 import "github.com/openv/requirements-platform/internal/domain/events"
 
 // Subscriber is notified on run lifecycle changes and appended logs
-// (used by the SSE hub and by team/kanban follow-up hooks).
+// (used by the SSE hub and by the kanban follow-up hooks).
 type Subscriber interface {
 	RunLogsAppended(run *Run, entries []LogEntry)
 	RunStatusChanged(run *Run)

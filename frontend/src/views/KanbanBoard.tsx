@@ -8,8 +8,6 @@ import {
   Artifact,
   artifactAPI,
   authAPI,
-  Crew,
-  crewsAPI,
   User,
   WorkItem,
   workItemsAPI,
@@ -27,7 +25,7 @@ const LIVE_STATUSES = ['queued', 'claimed', 'running'];
 interface ComposerState {
   title: string;
   description: string;
-  assignee: string; // '', 'me', 'agent:<id>', 'team:<id>'
+  assignee: string; // '', 'me', 'agent:<id>'
   artifactIds: string[];
   expanded: boolean;
 }
@@ -49,7 +47,6 @@ export const KanbanBoard: React.FC = () => {
 
   const [items, setItems] = useState<WorkItem[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
-  const [crews, setCrews] = useState<Crew[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
   const [runsByWorkItem, setRunsByWorkItem] = useState<Record<string, AgentRun>>({});
@@ -92,7 +89,6 @@ export const KanbanBoard: React.FC = () => {
   // Static-ish caches
   useEffect(() => {
     agentsAPI.list().then((res) => setAgents(res.data || [])).catch(() => setAgents([]));
-    crewsAPI.list(projectId).then((res) => setCrews(res.data || [])).catch(() => setCrews([]));
     authAPI.listUsers().then((res) => setUsers(res.data || [])).catch(() => setUsers([]));
     if (projectId) {
       artifactAPI
@@ -147,14 +143,6 @@ export const KanbanBoard: React.FC = () => {
     return m;
   }, [agents]);
 
-  const crewById = useMemo(() => {
-    const m: Record<string, Crew> = {};
-    crews.forEach((c) => {
-      m[c.id] = c;
-    });
-    return m;
-  }, [crews]);
-
   const userById = useMemo(() => {
     const m: Record<string, User> = {};
     users.forEach((u) => {
@@ -182,7 +170,7 @@ export const KanbanBoard: React.FC = () => {
   };
 
   const isDragDisabled = (item: WorkItem): boolean =>
-    (item.assignee_type === 'agent' || item.assignee_type === 'team') && isRunLive(item);
+    item.assignee_type === 'agent' && isRunLive(item);
 
   const handleDrop = async (columnKey: string) => {
     const id = dragItemId.current;
@@ -223,9 +211,6 @@ export const KanbanBoard: React.FC = () => {
     } else if (c.assignee.startsWith('agent:')) {
       assignee_type = 'agent';
       assignee_id = c.assignee.slice(6);
-    } else if (c.assignee.startsWith('team:')) {
-      assignee_type = 'team';
-      assignee_id = c.assignee.slice(5);
     }
     // Wire format unchanged: artifact_ids stays a string[] of artifact ids.
     const artifact_ids = c.artifactIds;
@@ -256,19 +241,6 @@ export const KanbanBoard: React.FC = () => {
         >
           <span role="img" aria-label="agent">🤖</span>
           {agent?.name || 'agent'}
-        </span>
-      );
-    }
-    // assignee_type 'team' is the wire value for crews (unchanged JSON).
-    if (item.assignee_type === 'team') {
-      const crew = crewById[item.assignee_id];
-      return (
-        <span
-          title={`Crew: ${crew?.name || item.assignee_id}`}
-          style={{ ...chipStyle('info'), fontWeight: 600 }}
-        >
-          <span role="img" aria-label="crew">👥</span>
-          {crew?.name || 'crew'}
         </span>
       );
     }
@@ -519,13 +491,6 @@ export const KanbanBoard: React.FC = () => {
                       {agents.map((a) => (
                         <option key={a.id} value={`agent:${a.id}`}>
                           🤖 {a.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Crews">
-                      {crews.map((c) => (
-                        <option key={c.id} value={`team:${c.id}`}>
-                          👥 {c.name}
                         </option>
                       ))}
                     </optgroup>

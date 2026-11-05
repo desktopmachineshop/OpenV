@@ -37,7 +37,6 @@ import { FLOATING_ASSISTANT_FEATURE } from './components/wizard/assistantStore';
 // dependencies stay out of the main bundle:
 //   - ModuleView pulls in react-markdown/remark-gfm (via ArtifactDetails)
 //   - ManualView pulls in react-markdown/remark-gfm
-//   - CrewBuilder pulls in cytoscape (via CrewCanvas)
 //   - TestRunView and TraceabilityMatrix pull in ag-grid
 const ModuleView = lazy(() =>
   import('./views/ModuleView').then((m) => ({ default: m.ModuleView }))
@@ -49,9 +48,6 @@ const WhatsNew = lazy(() => import('./views/WhatsNew').then((m) => ({ default: m
 const OAuthConsent = lazy(() => import('./views/OAuthConsent').then((m) => ({ default: m.OAuthConsent })));
 const PlatformAdmin = lazy(() =>
   import('./views/PlatformAdmin').then((m) => ({ default: m.PlatformAdmin }))
-);
-const CrewBuilder = lazy(() =>
-  import('./views/CrewBuilder').then((m) => ({ default: m.CrewBuilder }))
 );
 const TestRunView = lazy(() =>
   import('./views/TestRunView').then((m) => ({ default: m.TestRunView }))
@@ -319,11 +315,12 @@ function App() {
           <Route path="review" element={<ReviewQueue />} />
           <Route path="board" element={<KanbanBoard />} />
           <Route path="todos" element={<TodoList />} />
-          <Route path="crew" element={<CrewBuilder />} />
-          <Route path="crew/network" element={<CrewBuilder />} />
-          {/* Legacy "team" URLs redirect to the renamed "crew" routes. */}
-          <Route path="team" element={<Navigate to="../crew" replace />} />
-          <Route path="team/network" element={<Navigate to="../crew/network" replace />} />
+          {/* Crews and the Crew Builder are gone: their old URLs, and the
+              older "team" ones, land on the Agents page. */}
+          <Route path="crew" element={<Navigate to="../agents" replace />} />
+          <Route path="crew/network" element={<Navigate to="../agents" replace />} />
+          <Route path="team" element={<Navigate to="../agents" replace />} />
+          <Route path="team/network" element={<Navigate to="../agents" replace />} />
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="agent-runs" element={<AgentRunsPage />} />
           <Route path="agents" element={<AgentsPage />} />

@@ -3,7 +3,7 @@ const content = `
 # Kanban board
 
 The **Board** is a kanban view of the project's work items. Its special trick:
-cards can be assigned to AI agents or crews, and dragging an agent's card to
+cards can be assigned to AI agents, and dragging an agent's card to
 **To Do** kicks off an agent run.
 
 ## Columns
@@ -16,7 +16,7 @@ count and has a **+ Add card** composer at the bottom.
 The composer takes:
 
 - **Title** (required) and an optional description.
-- **Assignee** — Unassigned, *Me*, any **🤖 agent**, or any **👥 crew**.
+- **Assignee** — Unassigned, *Me*, or any **🤖 agent**.
 - **Artifact IDs** — optional comma-separated artifact IDs to attach the
   relevant requirements to the card.
 
@@ -28,8 +28,7 @@ The composer takes:
 - When **you** move a card assigned to an **agent** into **To Do**, an
   **agent run** is enqueued for that card (skipped if a live run is already
   attached). Only human moves trigger this — the automatic card moves that
-  track run progress don't. Crew-assigned cards don't launch from the board;
-  launch crews from the Crew page or an automation.
+  track run progress don't.
 - A **pulsing blue dot** on a card means a run is live (queued, claimed, or
   running). While a run is live the card is **locked** — it can't be dragged
   until the run finishes.
@@ -49,12 +48,12 @@ Click a card to open its drawer:
 ## Moving cards
 
 Drag any unlocked card between columns or within a column. Human-assigned and
-unassigned cards behave like a normal kanban; only agent/crew cards with live
+unassigned cards behave like a normal kanban; only agent cards with live
 runs are locked.
 
-Work items can also be **created by crews**: when a crew edge hands work off
-to (or requests review from) a *person* who can open the project, a board card
-assigned to that person appears automatically — see *Crews*.
+A card that was assigned to a crew, before crews were removed, is now
+assigned to the crew's first (entry) agent, or is unassigned if the crew had
+none.
 
 ## To-dos: the same work, by person
 

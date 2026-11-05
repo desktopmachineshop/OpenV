@@ -270,7 +270,6 @@ func phantomMatrixScopedRows(named scopedID, path func(string) []tourOpt) []phan
 		{"GET /api/v1/proposals", "project_id=%s"},
 		{"GET /api/v1/agent-runs", "project_id=%s"},
 		{"GET /api/v1/automations", "project_id=%s"},
-		{"GET /api/v1/crews", "project_id=%s"},
 	} {
 		out = append(out, phantomMatrixScopedRow{r.route, []tourOpt{query(fmt.Sprintf(r.query, named.query))}, true})
 	}
@@ -293,10 +292,6 @@ func phantomMatrixScopedRows(named scopedID, path func(string) []tourOpt) []phan
 		{"POST /api/v1/automations", []tourOpt{jsonBody(`{"project_id":"` + id + `","agent_id":"` + id + `",` +
 			`"kind":"manual","name":"Tour"}`)}},
 		{"POST /api/v1/chatter", []tourOpt{jsonBody(`{"artifact_id":"` + id + `","body":"Tour"}`)}},
-		{"POST /api/v1/crews", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
-		{"POST /api/v1/teams", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
-		{"POST /api/v1/crews/import", []tourOpt{query("project_id=" + named.query), jsonBody(`{}`)}},
-		{"POST /api/v1/teams/import", []tourOpt{query("project_id=" + named.query), jsonBody(`{}`)}},
 		{"POST /api/v1/guided-sessions", []tourOpt{jsonBody(`{"project_id":"` + id + `"}`)}},
 		{"POST /api/v1/proposals/bulk", []tourOpt{jsonBody(`{"action":"approve","ids":["` + id + `"]}`)}},
 		{"POST /api/v1/templates", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},

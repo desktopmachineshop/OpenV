@@ -46,7 +46,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -101,7 +100,6 @@ type app struct {
 	proposalRepo         *postgres.ProposalRepository
 	repoConnRepo         *postgres.RepoConnectionRepository
 	providerRepo         *postgres.ProviderSettingRepository
-	teamRepo             *postgres.TeamRepository
 	orgRepo              *postgres.OrgRepository
 	invitationRepo       *postgres.InvitationRepository
 	workerKeyRepo        *postgres.WorkerKeyRepository
@@ -157,7 +155,6 @@ type app struct {
 	providerKeyService   *providers.DefaultKeyService
 	loginService         *providers.DefaultLoginService
 	providerTokenService *usertokens.DefaultService
-	teamService          *teams.DefaultService
 	proposalService      *proposals.DefaultService
 	proposalAppliers     proposals.Appliers
 	metricsCollector     *metrics.Metrics

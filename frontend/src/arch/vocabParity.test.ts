@@ -406,20 +406,6 @@ function casesOf(file: string, name: string): Items {
   return withAt(body, out);
 }
 
-/** The string literals a function compares something with (=== and !==). */
-function comparedIn(file: string, name: string): Items {
-  const body = functionBody(file, name);
-  const out: Items = new Map();
-  walk(body, (node) => {
-    if (!ts.isBinaryExpression(node) || !isEquality(node.operatorToken.kind)) return;
-    for (const side of [node.left, node.right]) {
-      const lit = literalText(unwrap(side));
-      if (lit !== null) out.set(lit, { fields: {}, at: at(side) });
-    }
-  });
-  return out;
-}
-
 const isEquality = (k: ts.SyntaxKind) =>
   k === ts.SyntaxKind.EqualsEqualsEqualsToken ||
   k === ts.SyntaxKind.ExclamationEqualsEqualsToken ||
@@ -778,13 +764,6 @@ const COPIES: Copy[] = [
     kind: 'uses',
     where: 'components/UserSettingsPanel.tsx CLI_PROVIDERS',
     read: () => objectsOf('components/UserSettingsPanel.tsx', 'CLI_PROVIDERS', 'key'),
-  },
-  {
-    id: 'CrewCanvas providerColor',
-    vocabulary: 'providers',
-    kind: 'uses',
-    where: 'components/crews/CrewCanvas.tsx providerColor (compared literals)',
-    read: () => comparedIn('components/crews/CrewCanvas.tsx', 'providerColor'),
   },
   {
     // The picker's accept list: every extension that is not an image, plus

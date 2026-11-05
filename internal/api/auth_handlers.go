@@ -67,7 +67,7 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 }
 
 // provisionPersonalWorkspace ensures a new user's personal org exists and is
-// seeded with default agents/crew. Failures are non-fatal (retried on next
+// seeded with default agents. Failures are non-fatal (retried on next
 // login via the middleware's personal-org fallback).
 func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 	if h.OrgService == nil {

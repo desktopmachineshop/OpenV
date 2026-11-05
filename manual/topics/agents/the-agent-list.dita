@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-agent-list">
   <title>The agent list</title>
-  <shortdesc>Each agent card shows:</shortdesc>
+  <shortdesc>Where the page shows a list instead of the hierarchy (a workspace on the stable channel until its stable release has the hierarchy), each agent card shows:</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="agents.list"/>
   </prolog>

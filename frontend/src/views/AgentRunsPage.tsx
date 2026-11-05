@@ -53,6 +53,9 @@ export const AgentRunsPage: React.FC = () => {
   const error = raised?.projectId === projectId ? raised.message : '';
 
   const selectedRunId = searchParams.get('run');
+  // ?agent=<id>: one agent's runs and proposals, as a card of the Agents
+  // page opens them.
+  const agentFilter = searchParams.get('agent');
   useCloseRunOnSwitch(projectId);
   // A phone shows the three columns that identify a run; the rest is in the
   // detail. A compact viewport opens that detail as a sheet over the list.
@@ -60,11 +63,12 @@ export const AgentRunsPage: React.FC = () => {
 
   useEffect(() => {
     if (!projectId) return;
-    const query: { project_id: string; status?: string; limit: number } = {
+    const query: { project_id: string; status?: string; agent_id?: string; limit: number } = {
       project_id: projectId,
       limit: RUNS_POLL_LIMIT,
     };
     if (statusFilter !== 'all') query.status = statusFilter;
+    if (agentFilter) query.agent_id = agentFilter;
     // A switch of project or workspace, or another filter, starts a new
     // poll: what the old one still has on its way is dropped (pollGuard).
     const runsGuard = pollGuard();
@@ -102,7 +106,7 @@ export const AgentRunsPage: React.FC = () => {
       statusGuard.close();
       window.clearInterval(timer);
     };
-  }, [projectId, statusFilter, activeOrgId]);
+  }, [projectId, statusFilter, activeOrgId, agentFilter]);
 
   // Auto-prompt the Agent Connector the first time runs are queued with no
   // runner online (covers every launch path — they all land on this page).
@@ -118,6 +122,15 @@ export const AgentRunsPage: React.FC = () => {
       setShowConnect(true);
     }
   }, [workerStatus]);
+
+  const clearAgent = () =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('agent');
+      return next;
+    });
+  const agentRuns = agentFilter && runs ? new Set(runs.map((r) => r.id)) : undefined;
+  const agentName = runs?.find((r) => r.agent_id === agentFilter)?.agent_name;
 
   const selectRun = (runId: string | null) => {
     setSearchParams((prev) => {
@@ -150,6 +163,19 @@ export const AgentRunsPage: React.FC = () => {
         >
           Pending approvals ({pendingCount})
         </button>
+        {agentFilter && (
+          <span className="run-agent-filter" style={chipStyle('agent', 'md')}>
+            Runs of {agentName || 'one agent'}
+            <button
+              type="button"
+              aria-label="Show every agent's runs"
+              onClick={clearAgent}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0 0 0 4px' }}
+            >
+              ×
+            </button>
+          </span>
+        )}
         <div style={{ flex: 1 }} />
         <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
       </div>
@@ -218,7 +244,12 @@ export const AgentRunsPage: React.FC = () => {
         )}
 
       {showProposals && projectId && (
-        <ProposalReviewPanel projectId={projectId} onCountChange={setPendingCount} onOpenRun={(id) => selectRun(id)} />
+        <ProposalReviewPanel
+          projectId={projectId}
+          onCountChange={setPendingCount}
+          onOpenRun={(id) => selectRun(id)}
+          onlyRuns={agentRuns}
+        />
       )}
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>

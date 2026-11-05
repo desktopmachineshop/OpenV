@@ -53,7 +53,6 @@
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
       "internal/domain/targetreleases",
-      "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/usermetrics",
       "internal/domain/users",
@@ -86,7 +85,6 @@
       "internal/domain/baselines",
       "internal/domain/chatter",
       "internal/domain/connectedapps",
-      "internal/domain/crewtemplates",
       "internal/domain/downloads",
       "internal/domain/embeddings",
       "internal/domain/events",
@@ -119,7 +117,6 @@
       "internal/domain/sharelinks",
       "internal/domain/snapshot",
       "internal/domain/targetreleases",
-      "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/traceability",
       "internal/domain/usermetrics",
@@ -139,7 +136,6 @@
       "internal/domain/agentruns",
       "internal/domain/automations",
       "internal/domain/events",
-      "internal/domain/teams",
       "internal/scheduler"
     ],
     "internal/billing": [
@@ -179,10 +175,6 @@
     ],
     "internal/domain/connectedapps": [
       "internal/domain/tokens"
-    ],
-    "internal/domain/crewtemplates": [
-      "internal/domain/agents",
-      "internal/domain/teams"
     ],
     "internal/domain/downloads": [
       "internal/domain/artifacts",
@@ -310,12 +302,10 @@
     ],
     "internal/orchestration": [
       "internal/domain/agentruns",
-      "internal/domain/automations",
       "internal/domain/events",
       "internal/domain/guided",
       "internal/domain/interviews",
       "internal/domain/projects",
-      "internal/domain/teams",
       "internal/domain/workitems"
     ],
     "internal/persistence/postgres": [
@@ -353,7 +343,6 @@
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
       "internal/domain/targetreleases",
-      "internal/domain/teams",
       "internal/domain/templates",
       "internal/domain/usermetrics",
       "internal/domain/users",
@@ -372,13 +361,11 @@
     ],
     "internal/scheduler": [
       "internal/domain/agentruns",
-      "internal/domain/automations",
-      "internal/domain/teams"
+      "internal/domain/automations"
     ],
     "internal/seeds": [
       "internal/domain/agents",
       "internal/domain/sharedproducts",
-      "internal/domain/teams",
       "internal/mcp",
       "internal/mcp/toolnames"
     ]
@@ -432,9 +419,8 @@
     "internal/runner:loginBroker.handleLogin": 155,
     "internal/runner:loginBroker.handlePTYLogin": 157,
     "internal/runner:startProc": 184,
-    "internal/seeds:EnsureOrgDefaults": 117,
     "internal/seeds:builtinProducts": 136,
-    "internal/seeds:defaultAgents": 144
+    "internal/seeds:defaultAgents": 138
   },
   "side_effect_vars": [
     "internal/domain/quality:conventionPatterns",
@@ -482,5 +468,5 @@
     "internal/api:uploadIsRasterImage",
     "internal/api:writeAddOrInviteOutcome"
   ],
-  "api_spec_undocumented_routes": 33
+  "api_spec_undocumented_routes": 16
 }

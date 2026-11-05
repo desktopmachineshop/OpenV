@@ -50,6 +50,7 @@ export const FEATURE_KEYS = [
   'requirements-tree',
   'floating-assistant',
   'chip-search',
+  'agent-hierarchy',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

@@ -123,4 +123,6 @@ var migrations = []Migration{
 	{Version: 66, Name: "user_identities", Run: m0066UserIdentities},
 	{Version: 67, Name: "target_releases", Run: m0067TargetReleases},
 	{Version: 68, Name: "saved_searches", Run: m0068SavedSearches},
+	{Version: 69, Name: "retarget_crew_automations", Run: m0069RetargetCrewAutomations},
+	{Version: 70, Name: "agent_hierarchy", Run: m0070AgentHierarchy},
 }

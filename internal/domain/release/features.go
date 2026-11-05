@@ -70,6 +70,7 @@ var Registry = []Feature{
 	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
 	{Key: FeatureFloatingAssistant, ShippedIn: "0.28.0", Summary: "The V&V Assistant floats over every project page and the workspace Home, keeps one conversation as you move around, and starts drafting tests for the V&V dashboard's gaps; an artifact's history and comments sit in its own pane"},
 	{Key: FeatureChipSearch, ShippedIn: "0.28.0", Summary: "One search bar with a chip for each filter: filter, group and save searches on the requirements list, and filter the top-bar search by project, type, status and owner"},
+	{Key: FeatureAgentHierarchy, ShippedIn: "0.28.0", Summary: "The Agents page shows your agents as a hierarchy of cards: a lead at the top, groups of specialists beneath it, and each card's runs, cost and proposals to approve over the last 7 days; Edit arranges who reports to whom"},
 }
 
 // Feature keys the code gates on.
@@ -247,6 +248,10 @@ const (
 	// retires the Notes side panel. Frontend only; without it the page keeps
 	// its Notes panel with the History and V&V Assistant tabs.
 	FeatureFloatingAssistant = "floating-assistant"
+	// FeatureAgentHierarchy gates the Agents page's hierarchy of cards and
+	// its Edit mode (PUT /agent-arrangement). Without it the page keeps its
+	// list; the agents' reports_to, group and sort order are kept either way.
+	FeatureAgentHierarchy = "agent-hierarchy"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

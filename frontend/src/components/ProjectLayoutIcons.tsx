@@ -25,7 +25,6 @@ const PAGE_ICONS: Record<string, string> = {
   board: 'M3 3h4v14H3zM8 3h4v9H8zM13 3h4v11h-4z',
   todos: 'M3 5l1.5 1.5L7 4M3 11l1.5 1.5L7 10M9 5h8M9 11h8M9 16h8M4 16h1',
   agents: 'M10 3l1.5 4.5L16 9l-4.5 1.5L10 15l-1.5-4.5L4 9l4.5-1.5z',
-  crew: 'M7 7m-2.5 0a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0M2 17a5 5 0 0110 0M14 8a2 2 0 100-4M14 11a4 4 0 014 4',
   automations: 'M11 2L4 11h5l-1 7 7-9h-5z',
   'agent-runs': 'M6 4l10 6-10 6z',
   activity: 'M2 10h4l2-5 4 10 2-5h4',

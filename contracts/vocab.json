@@ -212,7 +212,8 @@
     "redesign-pages",
     "requirements-tree",
     "floating-assistant",
-    "chip-search"
+    "chip-search",
+    "agent-hierarchy"
   ],
   "event_types": [
     "artifact.created",

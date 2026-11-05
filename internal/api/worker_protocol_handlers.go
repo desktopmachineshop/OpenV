@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -17,19 +15,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/release"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/workerproto"
 )
 
-// registerWorkerDispatchRoutes wires a worker claiming a run, and a running
-// agent delegating to a child and polling the child's status.
-// registerAgentRoutes calls it before a run's {id} routes, so that
-// GET /api/v1/agent-runs/delegate/{id} goes on shadowing the {id}/tree,
-// {id}/logs and {id}/stream reads (route_overlaps.txt).
+// registerWorkerDispatchRoutes wires a worker claiming a run. A running
+// agent delegating to a crew delegate went with crews (issue 732).
+// registerAgentRoutes calls it before a run's {id} routes.
 func (h *Handler) registerWorkerDispatchRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/agent-runs/claim", h.ClaimAgentRun).Methods("POST")
-	router.HandleFunc("/api/v1/agent-runs/delegate", h.DelegateRun).Methods("POST")
-	router.HandleFunc("/api/v1/agent-runs/delegate/{id}", h.DelegateStatus).Methods("GET")
 }
 
 // registerWorkerLogRoutes wires a worker appending to a run's logs.
@@ -320,113 +313,4 @@ func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSONBare(w, run)
-}
-
-// DelegateRun lets a running team agent invoke one of its delegates-to
-// children. Run-token auth only; targets are restricted server-side to the
-// caller's delegation children.
-func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
-	run := CurrentRun(r)
-	if run == nil {
-		writeJSONError(w, http.StatusForbidden, "delegation requires an agent run token")
-		return
-	}
-	if run.TeamNodeID == nil {
-		writeJSONError(w, http.StatusBadRequest, "this run is not part of a team; delegation is unavailable")
-		return
-	}
-	var req struct {
-		RoleLabel string `json:"role_label"`
-		Prompt    string `json:"prompt"`
-	}
-	if !decodeJSON(w, r, &req) {
-		return
-	}
-	// Validate the one caller-supplied Launch input up front so the only
-	// Launch failures left are internal ones (org/agent/team are resolved
-	// server-side).
-	if strings.TrimSpace(req.Prompt) == "" {
-		writeJSONError(w, http.StatusBadRequest, "prompt is required")
-		return
-	}
-
-	children, err := h.TeamService.ResolveDelegates(*run.TeamNodeID)
-	if err != nil {
-		// The run's crew node was removed after the run launched (the run
-		// keeps its id, with no foreign key): the node routes' answer.
-		if errors.Is(err, teams.ErrNodeNotFound) {
-			writeJSONError(w, http.StatusNotFound, "team node not found")
-			return
-		}
-		respondInternal(w, r, "failed to resolve delegates", err)
-		return
-	}
-	var target *teamNodeRef
-	for _, child := range children {
-		if strings.EqualFold(child.Label, req.RoleLabel) {
-			target = &teamNodeRef{ID: child.ID, AgentID: child.AgentID}
-			break
-		}
-	}
-	if target == nil {
-		labels := make([]string, 0, len(children))
-		for _, child := range children {
-			labels = append(labels, child.Label)
-		}
-		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("no delegate named %q; available delegates: %s", req.RoleLabel, strings.Join(labels, ", ")))
-		return
-	}
-
-	parentID := run.ID
-	child, _, err := h.RunService.Launch(agentruns.LaunchRequest{
-		OrgID:       run.OrgID,
-		AgentID:     target.AgentID,
-		ProjectID:   run.ProjectID,
-		TeamID:      run.TeamID,
-		TeamNodeID:  &target.ID,
-		ParentRunID: &parentID,
-		WorkItemID:  run.WorkItemID,
-		Priority:    agentruns.PriorityChild,
-		Prompt:      req.Prompt,
-	})
-	if err != nil {
-		writeLaunchError(w, r, launchErrsDelegate, err)
-		return
-	}
-	writeJSONBareStatus(w, http.StatusCreated, map[string]string{"run_id": child.ID, "status": child.Status})
-}
-
-type teamNodeRef struct {
-	ID      string
-	AgentID string
-}
-
-// DelegateStatus lets a parent run poll its child run's status/result.
-func (h *Handler) DelegateStatus(w http.ResponseWriter, r *http.Request) {
-	run := CurrentRun(r)
-	if run == nil {
-		writeJSONError(w, http.StatusForbidden, "delegation requires an agent run token")
-		return
-	}
-	child, err := h.RunService.Get(mux.Vars(r)["id"])
-	if err != nil {
-		respondError(w, r, http.StatusNotFound, "agent run not found", err)
-		return
-	}
-	if child.ParentRunID == nil || *child.ParentRunID != run.ID {
-		// A run outside the caller's project, of its workspace or another,
-		// is one no row has (I3); one of its own project is not its child.
-		if child.OrgID != run.OrgID || !sameProject(child.ProjectID, run.ProjectID) {
-			writeJSONError(w, http.StatusNotFound, "agent run not found")
-			return
-		}
-		writeJSONError(w, http.StatusForbidden, "not your delegated run")
-		return
-	}
-	writeJSONBare(w, map[string]interface{}{
-		"run_id":     child.ID,
-		"status":     child.Status,
-		"final_text": child.FinalText,
-		"error":      child.Error,
-	})
 }

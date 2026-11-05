@@ -1,6 +1,6 @@
 // The types api/agents.ts sends and receives.
 // Agents and their runs, automations, proposals, repository
-// connections, AI provider settings and sign-ins, and crews.
+// connections, and AI provider settings and sign-ins.
 // Code outside src/api imports these from api/client, which re-exports
 // this module (refactor plan F1, K12).
 
@@ -21,6 +21,36 @@ export interface AgentDef {
   timeout_seconds: number;
   system_prompt: string;
   file_path: string;
+  /** The hierarchy (issue 733): the agent it reports to (null at the top),
+   *  that agent's slug, its group ('' for none) and its place among its
+   *  siblings. Display and arrangement only. */
+  parent_agent_id?: string | null;
+  reports_to?: string;
+  group_name?: string;
+  sort_order?: number;
+}
+
+/** One agent's numbers on the Agents page (GET /agent-stats). */
+export interface AgentStats {
+  agent_id: string;
+  open: number;
+  done: number;
+  cost_usd: number;
+  pending_proposals: number;
+}
+
+export interface AgentStatsResponse {
+  days: number;
+  since: string;
+  agents: AgentStats[];
+}
+
+/** An agent's place, as PUT /agent-arrangement takes it. */
+export interface AgentPlacement {
+  slug: string;
+  reports_to: string;
+  group_name: string;
+  sort_order: number;
 }
 
 export interface AgentRun {
@@ -31,8 +61,6 @@ export interface AgentRun {
   agent_provider?: string;
   project_id?: string | null;
   automation_id?: string | null;
-  team_id?: string | null;
-  team_node_id?: string | null;
   parent_run_id?: string | null;
   work_item_id?: string | null;
   // Provenance: set when this run was re-enqueued from a terminal run via
@@ -84,7 +112,6 @@ export interface Automation {
   id: string;
   name: string;
   agent_id?: string | null;
-  team_id?: string | null;
   project_id?: string | null;
   kind: 'manual' | 'scheduled' | 'triggered';
   enabled: boolean;
@@ -163,90 +190,6 @@ export interface ProviderAPIKeys {
   /** An operator's own deployment: the app names the key variables there,
    *  and only there. */
   self_hosted?: boolean;
-}
-
-export interface Crew {
-  id: string;
-  name: string;
-  description: string;
-  project_id?: string | null;
-  entry_node_id?: string | null;
-  is_default: boolean;
-}
-
-// Note: JSON field names (team_id etc.) are unchanged on the wire — only the
-// UI/API naming moved from "team" to "crew".
-export interface CrewNode {
-  id: string;
-  team_id: string;
-  agent_id: string | null;
-  user_id?: string | null;
-  node_type: 'agent' | 'human';
-  label: string;
-  department: string;
-  position: Record<string, any>;
-  user_name?: string;
-  user_avatar_url?: string;
-}
-
-export interface CrewEdge {
-  id: string;
-  team_id: string;
-  from_node_id: string;
-  to_node_id: string;
-  edge_type: 'delegates-to' | 'hands-off-to' | 'reviews';
-  config: Record<string, any>;
-}
-
-export interface CrewGraph {
-  team: Crew;
-  nodes: CrewNode[];
-  edges: CrewEdge[];
-}
-
-// Portable, org-independent crew document. Nodes reference agents by slug so
-// the importing workspace resolves them to its own agents. See
-// internal/domain/crewtemplates.
-export interface PortableCrewNode {
-  key: string;
-  agent_slug: string;
-  label: string;
-  department?: string;
-  position?: Record<string, any>;
-}
-
-export interface PortableCrewEdge {
-  from: string;
-  to: string;
-  edge_type: string;
-  config?: Record<string, any>;
-}
-
-export interface PortableCrew {
-  kind: string;
-  version: string;
-  name: string;
-  description?: string;
-  entry_node_key?: string;
-  nodes: PortableCrewNode[];
-  edges: PortableCrewEdge[];
-  exported_at?: string;
-}
-
-// Built-in crew preset served by GET /api/v1/crew-templates.
-export interface CrewTemplate {
-  key: string;
-  name: string;
-  description: string;
-  is_builtin: boolean;
-  crew: PortableCrew;
-}
-
-// Result of importing a crew: the created crew plus any non-fatal warnings
-// (e.g. agent slugs missing in the target workspace).
-export interface CrewImportResult {
-  team: Crew;
-  warnings?: string[];
 }
 
 export interface BulkProposalOutcome {
