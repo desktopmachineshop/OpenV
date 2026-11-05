@@ -12,14 +12,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/providers/usertokens"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
 // agents builds the agent engine: the agent and run services with their
-// routing and retry policies, automations, repositories, providers, crews and
-// proposals, and seeds each workspace's default agents and crew.
+// routing and retry policies, automations, repositories, providers and
+// proposals, and seeds each workspace's default agents.
 func (a *app) agents() {
 	// Agent engine services.
 	// The file sync backfills a definition that carries no allowlist (REQ-91),
@@ -66,12 +65,6 @@ func (a *app) agents() {
 	a.loginService = providers.NewLoginService(postgres.NewProviderLoginRepository(a.db))
 	// Members' own subscription tokens share the sealer: off with it.
 	a.providerTokenService = usertokens.NewDefaultService(postgres.NewProviderTokenRepository(a.db), keySealer)
-	a.teamService = teams.NewDefaultService(a.teamRepo)
-	// Human crew members must belong to the crew's workspace.
-	a.teamService.SetMemberValidator(func(orgID, userID string) bool {
-		ok, err := a.orgService.IsMember(orgID, userID)
-		return err == nil && ok
-	})
 
 	// Proposal appliers execute approved agent writes via the real services,
 	// as the HTTP handlers write: events, link-snapshot auto-versioning. They
@@ -91,21 +84,20 @@ func (a *app) agents() {
 	// When a run's last proposal is reviewed, finalize the run: an
 	// awaiting_approval run leaves that absorbing state for succeeded (or
 	// failed if any approved write failed to apply), publishing RunFinished so
-	// crew successors, the notifier and automation triggers fire on the real
-	// outcome. Covers single + bulk review and the applier path alike.
+	// the notifier and automation triggers fire on the real outcome. Covers single + bulk review and the applier path alike.
 	a.proposalService.OnResolved(func(runID string) {
 		if _, err := a.runService.FinalizeIfResolved(runID); err != nil {
 			slog.Error("proposal resolution: failed to finalize run", "run_id", runID, "error", err)
 		}
 	})
 
-	// Seed default agents + crew into every workspace missing them.
+	// Seed default agents into every workspace missing them.
 	if orgIDs, err := a.orgService.ListAll(); err != nil {
 		slog.Warn("failed to list organizations for seeding", "error", err)
 	} else {
 		for _, orgID := range orgIDs {
-			if err := seeds.EnsureOrgDefaults(orgID, a.agentService, a.teamService); err != nil {
-				slog.Warn("failed to seed default agents/team", "org_id", orgID, "error", err)
+			if err := seeds.EnsureOrgDefaults(orgID, a.agentService); err != nil {
+				slog.Warn("failed to seed default agents", "org_id", orgID, "error", err)
 			}
 		}
 	}

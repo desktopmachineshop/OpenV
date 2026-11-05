@@ -27,7 +27,7 @@ the server serves the same tools at `${PUBLIC_URL}/mcp` over MCP's Streamable
 HTTP transport, and the client connects with OAuth (discovery, dynamic
 registration, PKCE, a consent page where the member picks the workspace and
 read only or read and write). Each tool call runs as that member, held to
-that workspace; `delegate_to_agent` is not offered, since it needs a run.
+that workspace.
 The member sees and revokes these under **Settings → Connected apps**.
 `docs/api-spec.md` ("Connected apps") has the protocol (REQ-44).
 
@@ -165,7 +165,7 @@ runner you hold a lease on counts as your runner here: runs you launch prefer
 whichever of your runners is online.
 
 **Ownerless runs** — launched by the system rather than a member: board
-triggers, automations, delegations between agents — are claimable
+triggers, automations — are claimable
 immediately, first come first served, by every workspace or hosted runner,
 and by the personal runner of every member who could see the run: one with
 a role in its project, or an admin of the workspace. A personal runner never
@@ -1061,29 +1061,16 @@ in `examples/openv-ai-context/project.json` specifies this feature in
 OpenV's own terms — import it and run `get_project_map` to watch the
 feature describe itself.
 
-## Crews and the org chart
+## Crews (removed)
 
-Agents can be grouped into **crews** (formerly "teams") with a simple
-org-chart graph: a lead agent can delegate work to member agents, and
-orchestration hooks route follow-up runs along the graph's edges
-(`delegates-to`, `hands-off-to`, `reviews`). Crews can also contain **human
-members** — hand-offs to a human create a card on the project board instead
-of launching a run. The card goes only to an admin of the project's
-workspace, or a member of the workspace with a role in the project; someone
-who has left the workspace is refused even if they kept a role in the
-project. A hand-off to anyone else is refused, with the reason noted at the
-end of the run's log and on its card, and grants no access. When the
-workspace's budget refuses the agent successors of a finished run, none is
-launched; the run publishes `agentrun.successors_skipped` and keeps a note
-naming them and the budget. Use crews when a task naturally splits (e.g. one
-agent drafts requirements, another reviews for testability).
-
-The canonical API is `/api/v1/crews` (with `/crew-nodes`, `/crew-edges`); the
-old `/api/v1/teams` (and `/team-nodes`, `/team-edges`) paths remain as
-deprecated aliases of the same handlers (`registerCrewRoutes`,
-`internal/api/crew_handlers.go`).
-Crews pinned to a project require project editor rights to modify;
-workspace-wide crews require workspace admin.
+Crews — graphs of agents and people with `delegates-to`, `hands-off-to` and
+`reviews` edges — were removed (issue 732), with the Crew Builder, the
+`/api/v1/crews` and `/api/v1/teams` routes, the `delegate_to_agent` MCP tool
+and the orchestration that followed a finished crew run. An agent run is a
+single run. Migration 0069 moved each automation and board card that named a
+crew onto the crew's entry agent, or (an automation) switched it off and (a
+card) left it unassigned. The `agent_teams*` tables and the `team_id` and
+`team_node_id` columns stay, unread, until a later migration drops them.
 
 ## Automations
 

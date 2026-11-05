@@ -2,9 +2,9 @@
 # Regenerate: npx vitest run src/arch -u
 
 <Route> elements: 46
-  rendering a lazy() component: 23
+  rendering a lazy() component: 21
   rendering an eagerly imported component: 21
-  redirects only: 2
+  redirects only: 4
 index routes: 1
 
 ## App.tsx side-effect imports and imports of eager route components, in order
@@ -36,7 +36,6 @@ index routes: 1
   WhatsNew            ./views/WhatsNew#WhatsNew
   OAuthConsent        ./views/OAuthConsent#OAuthConsent
   PlatformAdmin       ./views/PlatformAdmin#PlatformAdmin
-  CrewBuilder         ./views/CrewBuilder#CrewBuilder
   TestRunView         ./views/TestRunView#TestRunView
   TraceabilityMatrix  ./views/TraceabilityMatrix#TraceabilityMatrix
   FloatingAssistant   ./components/wizard/FloatingAssistant#FloatingAssistant
@@ -84,10 +83,10 @@ index routes: 1
     review                         <ReviewQueue>  [lazy ./views/ReviewQueue#ReviewQueue]
     board                          <KanbanBoard>  [eager ./views/KanbanBoard#KanbanBoard]
     todos                          <TodoList>  [eager ./views/TodoList#TodoList]
-    crew                           <CrewBuilder>  [lazy ./views/CrewBuilder#CrewBuilder]
-    crew/network                   <CrewBuilder>  [lazy ./views/CrewBuilder#CrewBuilder]
-    team                           redirect to="../crew" replace (relative)
-    team/network                   redirect to="../crew/network" replace (relative)
+    crew                           redirect to="../agents" replace (relative)
+    crew/network                   redirect to="../agents" replace (relative)
+    team                           redirect to="../agents" replace (relative)
+    team/network                   redirect to="../agents" replace (relative)
     automations                    <AutomationsPage>  [eager ./views/AutomationsPage#AutomationsPage]
     agent-runs                     <AgentRunsPage>  [eager ./views/AgentRunsPage#AgentRunsPage]
     agents                         <AgentsPage>  [eager ./views/AgentsPage#AgentsPage]

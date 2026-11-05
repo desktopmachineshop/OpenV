@@ -16,7 +16,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -57,29 +56,25 @@ func (r *scopeRepo) FindByID(id string) (*automations.Automation, error) {
 // scopeFixture is workspace org-1, whose admin is "admin" and whose member
 // "editor" edits its projects proj-1 and proj-2; workspace org-2, which
 // "admin" also administers, with project proj-x. org-1 holds the agent
-// agent-1, the crew crew-wide (pinned to no project), crew-1 (pinned to
-// proj-1) and crew-2 (pinned to proj-2); org-2 the agent agent-x and the
-// crew crew-x. Automations:
+// agent-1; org-2 the agent agent-x. Automations:
 //   - au-p1: agent-1's, pinned to proj-1;
 //   - au-wide: agent-1's, for the whole workspace;
-//   - au-legacy: for the whole workspace, of crew-1, as one saved before
-//     where an automation may run was checked.
+//   - au-legacy: for the whole workspace, with no agent, as migration 0069
+//     leaves a crew's automation whose crew had no entry agent.
 //
 // plan is the workspace's plan: on Business, with no stable release turned
 // on, the stable channel has no gated feature yet.
 func scopeFixture(t *testing.T, plan string) (*Handler, *scopeRepo) {
 	t.Helper()
 	proj1, proj2, agent1 := "proj-1", "proj-2", "agent-1"
-	crew1 := "crew-1"
 	repo := &scopeRepo{byID: map[string]*automations.Automation{}}
-	seed := func(id string, project, agent, team *string) {
-		repo.byID[id] = &automations.Automation{ID: id, OrgID: "org-1", Name: id, AgentID: agent, TeamID: team,
+	seed := func(id string, project, agent *string) {
+		repo.byID[id] = &automations.Automation{ID: id, OrgID: "org-1", Name: id, AgentID: agent,
 			ProjectID: project, Kind: automations.KindManual, Enabled: true, EventFilter: map[string]interface{}{}}
 	}
-	seed("au-p1", &proj1, &agent1, nil)
-	seed("au-wide", nil, &agent1, nil)
-	seed("au-legacy", nil, nil, &crew1)
-	pinned := func(id string) *string { return &id }
+	seed("au-p1", &proj1, &agent1)
+	seed("au-wide", nil, &agent1)
+	seed("au-legacy", nil, nil)
 	h := newTestHandler(t, func(h *Handler) {
 		h.AutomationService = automations.NewDefaultService(repo)
 		h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
@@ -98,12 +93,6 @@ func scopeFixture(t *testing.T, plan string) (*Handler, *scopeRepo) {
 		h.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 			agent1:    {ID: agent1, OrgID: "org-1"},
 			"agent-x": {ID: "agent-x", OrgID: "org-2"},
-		}}
-		h.TeamService = &fakeCrewGraphs{graphs: map[string]*teams.TeamGraph{
-			"crew-wide": {Team: &teams.Team{ID: "crew-wide", OrgID: "org-1"}},
-			crew1:       {Team: &teams.Team{ID: crew1, OrgID: "org-1", ProjectID: pinned(proj1)}},
-			"crew-2":    {Team: &teams.Team{ID: "crew-2", OrgID: "org-1", ProjectID: pinned(proj2)}},
-			"crew-x":    {Team: &teams.Team{ID: "crew-x", OrgID: "org-2"}},
 		}}
 	})
 	return h, repo
@@ -134,7 +123,7 @@ func scopeOfStored(t *testing.T, repo *scopeRepo, id string) string {
 	if a == nil {
 		t.Fatalf("no automation %s is stored", id)
 	}
-	return fmt.Sprintf("project %s, agent %s, crew %s", orDash(a.ProjectID), orDash(a.AgentID), orDash(a.TeamID))
+	return fmt.Sprintf("project %s, agent %s", orDash(a.ProjectID), orDash(a.AgentID))
 }
 
 func orDash(s *string) string {
@@ -170,54 +159,40 @@ func TestMovingAnAutomationToAnotherScope(t *testing.T) {
 	}{
 		{name: "an admin moves a project's automation to the whole workspace",
 			user: "admin", id: "au-p1", body: `{"project_id":""}`, status: http.StatusOK,
-			stored: "project -, agent agent-1, crew -"},
+			stored: "project -, agent agent-1"},
 		{name: "a project editor may not: the workspace admin guard of where it goes",
 			user: "editor", id: "au-p1", body: `{"project_id":""}`, status: http.StatusForbidden,
-			stored: "project proj-1, agent agent-1, crew -"},
+			stored: "project proj-1, agent agent-1"},
 		{name: "an admin moves a whole-workspace automation to a project",
 			user: "admin", id: "au-wide", body: `{"project_id":"proj-2"}`, status: http.StatusOK,
-			stored: "project proj-2, agent agent-1, crew -"},
+			stored: "project proj-2, agent agent-1"},
 		{name: "a project editor may not move a whole-workspace one: the admin guard of where it is",
 			user: "editor", id: "au-wide", body: `{"project_id":"proj-1"}`, status: http.StatusForbidden,
-			stored: "project -, agent agent-1, crew -"},
+			stored: "project -, agent agent-1"},
 		{name: "an editor of both projects moves an automation between them",
 			user: "editor", id: "au-p1", body: `{"project_id":"proj-2"}`, status: http.StatusOK,
-			stored: "project proj-2, agent agent-1, crew -"},
+			stored: "project proj-2, agent agent-1"},
 		{name: "not to a project the caller cannot reach: as one no row has",
 			user: "editor", id: "au-p1", body: `{"project_id":"proj-x"}`, status: http.StatusNotFound,
-			errText: "project not found", stored: "project proj-1, agent agent-1, crew -"},
+			errText: "project not found", stored: "project proj-1, agent agent-1"},
 		{name: "not to another workspace's project, even one the caller administers",
 			user: "admin", id: "au-p1", body: `{"project_id":"proj-x"}`, status: http.StatusBadRequest,
-			errText: "project does not belong to this workspace", stored: "project proj-1, agent agent-1, crew -"},
+			errText: "project does not belong to this workspace", stored: "project proj-1, agent agent-1"},
 		{name: "the scope it has already, named, is no move",
 			user: "editor", id: "au-p1", body: `{"project_id":"proj-1","name":"Renamed"}`, status: http.StatusOK,
-			stored: "project proj-1, agent agent-1, crew -"},
+			stored: "project proj-1, agent agent-1"},
 		{name: "a null project_id leaves the scope as it is",
 			user: "admin", id: "au-wide", body: `{"project_id":null}`, status: http.StatusOK,
-			stored: "project -, agent agent-1, crew -"},
-		{name: "not with a crew pinned to a project, to the whole workspace",
-			user: "admin", id: "au-p1", body: `{"project_id":"","agent_id":"","team_id":"crew-1"}`,
-			status: http.StatusBadRequest, errText: "a crew pinned to a project cannot run an automation for the whole workspace",
-			stored: "project proj-1, agent agent-1, crew -"},
-		{name: "with the workspace's crew, to the whole workspace",
-			user: "admin", id: "au-p1", body: `{"project_id":"","agent_id":"","team_id":"crew-wide"}`,
-			status: http.StatusOK, stored: "project -, agent -, crew crew-wide"},
-		{name: "a pinned crew moves with its project's automation to that project",
-			user: "admin", id: "au-legacy", body: `{"project_id":"proj-1"}`, status: http.StatusOK,
-			stored: "project proj-1, agent -, crew crew-1"},
-		{name: "but not to another project",
-			user: "admin", id: "au-legacy", body: `{"project_id":"proj-2"}`, status: http.StatusBadRequest,
-			errText: "the crew is pinned to another project", stored: "project -, agent -, crew crew-1"},
-		{name: "retargeting a whole-workspace automation to a crew pinned to a project",
-			user: "admin", id: "au-wide", body: `{"agent_id":"","team_id":"crew-1"}`, status: http.StatusBadRequest,
-			errText: "a crew pinned to a project cannot run an automation for the whole workspace",
-			stored:  "project -, agent agent-1, crew -"},
+			stored: "project -, agent agent-1"},
 		{name: "retargeting a project's automation to another workspace's agent",
 			user: "editor", id: "au-p1", body: `{"agent_id":"agent-x"}`, status: http.StatusBadRequest,
-			errText: "agent not found", stored: "project proj-1, agent agent-1, crew -"},
-		{name: "an edit that neither moves nor retargets an automation saved before the check is not refused",
-			user: "admin", id: "au-legacy", body: `{"name":"Renamed","team_id":"crew-1"}`, status: http.StatusOK,
-			stored: "project -, agent -, crew crew-1"},
+			errText: "agent not found", stored: "project proj-1, agent agent-1"},
+		{name: "an automation left with no agent takes one",
+			user: "admin", id: "au-legacy", body: `{"agent_id":"agent-1"}`, status: http.StatusOK,
+			stored: "project -, agent agent-1"},
+		{name: "but is not saved without one: crews are no target",
+			user: "admin", id: "au-legacy", body: `{"name":"Renamed","team_id":"crew-1"}`, status: http.StatusBadRequest,
+			errText: "agent_id is required", stored: "project -, agent -"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -238,7 +213,7 @@ func TestMovingAnAutomationToAnotherScope(t *testing.T) {
 func TestMovingAnAutomationWaitsForTheFeature(t *testing.T) {
 	h, repo := scopeFixture(t, orgs.PlanBusiness)
 	wantAnswer(t, sendAutomation(h, "admin", "au-p1", `{"project_id":""}`), http.StatusForbidden, featureGateMessage)
-	if got, want := scopeOfStored(t, repo, "au-p1"), "project proj-1, agent agent-1, crew -"; got != want {
+	if got, want := scopeOfStored(t, repo, "au-p1"), "project proj-1, agent agent-1"; got != want {
 		t.Errorf("stored %s, want %s, unmoved", got, want)
 	}
 	wantAnswer(t, sendAutomation(h, "admin", "au-wide", `{"project_id":null,"name":"Renamed"}`), http.StatusOK, "")
@@ -248,9 +223,9 @@ func TestMovingAnAutomationWaitsForTheFeature(t *testing.T) {
 
 // TestWhereAnAutomationMayRun pins the create side: a whole-workspace
 // automation's target must be one its workspace can launch in any of its
-// projects, an agent of the workspace or a crew pinned to no project; a
-// project's may also have a crew pinned to that project. An agent or crew of
-// another workspace answers as one no row has.
+// projects, an agent of the workspace. An agent of another workspace answers
+// as one no row has. A crew is no target: a team_id is ignored, and an
+// automation naming only one is refused for want of an agent.
 func TestWhereAnAutomationMayRun(t *testing.T) {
 	cases := []struct {
 		name, user, body string
@@ -258,34 +233,22 @@ func TestWhereAnAutomationMayRun(t *testing.T) {
 		errText          string
 	}{
 		{"the whole workspace, the workspace's agent", "admin", `{"agent_id":"agent-1"}`, http.StatusCreated, ""},
-		{"the whole workspace, a crew pinned to no project", "admin", `{"team_id":"crew-wide"}`, http.StatusCreated, ""},
-		{"the whole workspace, a crew pinned to a project", "admin", `{"team_id":"crew-1"}`, http.StatusBadRequest,
-			"a crew pinned to a project cannot run an automation for the whole workspace"},
+		{"the whole workspace, a crew", "admin", `{"team_id":"crew-wide"}`, http.StatusBadRequest,
+			"agent_id is required"},
 		{"the whole workspace, an empty project_id", "admin", `{"agent_id":"agent-1","project_id":""}`,
 			http.StatusCreated, ""},
 		{"the whole workspace, as a project editor: the workspace admin guard first", "editor",
-			`{"team_id":"crew-1"}`, http.StatusForbidden, ""},
+			`{"agent_id":"agent-1"}`, http.StatusForbidden, ""},
 		{"the whole workspace, another workspace's agent", "admin", `{"agent_id":"agent-x"}`, http.StatusBadRequest,
 			"agent not found"},
 		{"the whole workspace, an agent no row has", "admin", `{"agent_id":"agent-gone"}`, http.StatusBadRequest,
 			"agent not found"},
-		{"the whole workspace, another workspace's crew", "admin", `{"team_id":"crew-x"}`, http.StatusBadRequest,
-			"crew not found"},
-		{"the whole workspace, a crew no row has", "admin", `{"team_id":"crew-gone"}`, http.StatusBadRequest,
-			"crew not found"},
-		{"a project, a crew pinned to it", "editor", `{"team_id":"crew-1","project_id":"proj-1"}`, http.StatusCreated, ""},
-		{"a project, a crew pinned to no project", "editor", `{"team_id":"crew-wide","project_id":"proj-1"}`,
-			http.StatusCreated, ""},
-		{"a project, a crew pinned to another project", "editor", `{"team_id":"crew-2","project_id":"proj-1"}`,
-			http.StatusBadRequest, "the crew is pinned to another project"},
 		{"a project, another workspace's agent", "editor", `{"agent_id":"agent-x","project_id":"proj-1"}`,
 			http.StatusBadRequest, "agent not found"},
 		{"another workspace's project its admin reaches", "admin", `{"agent_id":"agent-1","project_id":"proj-x"}`,
 			http.StatusBadRequest, "project does not belong to this workspace"},
 		{"no target: the service's own refusal", "admin", `{}`, http.StatusBadRequest,
-			"exactly one of agent_id or team_id must be set"},
-		{"two targets: the service's own refusal", "admin", `{"agent_id":"agent-x","team_id":"crew-x"}`,
-			http.StatusBadRequest, "exactly one of agent_id or team_id must be set"},
+			"agent_id is required"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

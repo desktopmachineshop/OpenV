@@ -9,7 +9,7 @@ interface SheetProps {
 
 /**
  * Full-screen sheet for a side pane that has no room beside the main pane
- * on a compact viewport (an agent editor, a run's detail, a crew node's
+ * on a compact viewport (an agent editor, a run's detail, a card's
  * settings). The pane keeps its own close button; the sheet only adds the
  * surface, the Escape key and the safe-area padding.
  */

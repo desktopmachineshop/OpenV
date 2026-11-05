@@ -19,7 +19,7 @@ func NewAutomationRepository(db *sql.DB) *AutomationRepository {
 }
 
 const automationColumns = `
-	id, COALESCE(org_id::text, ''), name, COALESCE(agent_id::text, ''), COALESCE(team_id::text, ''), COALESCE(project_id::text, ''),
+	id, COALESCE(org_id::text, ''), name, COALESCE(agent_id::text, ''), COALESCE(project_id::text, ''),
 	kind, enabled, prompt_template, cron_expr, catch_up, next_run_at, last_run_at,
 	event_type, event_filter, cooldown_seconds, max_runs_per_hour,
 	COALESCE(created_by::text, ''), created_at, updated_at`
@@ -30,7 +30,7 @@ type automationScanner interface {
 
 func scanAutomation(s automationScanner) (*automations.Automation, error) {
 	a := new(automations.Automation)
-	var agentID, teamID, projectID, createdBy string
+	var agentID, projectID, createdBy string
 	var nextRun, lastRun sql.NullTime
 	var eventFilter []byte
 
@@ -39,7 +39,6 @@ func scanAutomation(s automationScanner) (*automations.Automation, error) {
 		&a.OrgID,
 		&a.Name,
 		&agentID,
-		&teamID,
 		&projectID,
 		&a.Kind,
 		&a.Enabled,
@@ -62,9 +61,6 @@ func scanAutomation(s automationScanner) (*automations.Automation, error) {
 
 	if agentID != "" {
 		a.AgentID = &agentID
-	}
-	if teamID != "" {
-		a.TeamID = &teamID
 	}
 	if projectID != "" {
 		a.ProjectID = &projectID
@@ -104,14 +100,14 @@ func (r *AutomationRepository) Save(a *automations.Automation) error {
 	}
 	_, err = r.db.Exec(`
 		INSERT INTO automations (
-			id, org_id, name, agent_id, team_id, project_id, kind, enabled,
+			id, org_id, name, agent_id, project_id, kind, enabled,
 			prompt_template, cron_expr, catch_up, next_run_at, last_run_at,
 			event_type, event_filter, cooldown_seconds, max_runs_per_hour,
 			created_by, created_at, updated_at
 		)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`,
-		a.ID, a.OrgID, a.Name, a.AgentID, a.TeamID, a.ProjectID, a.Kind, a.Enabled,
+		a.ID, a.OrgID, a.Name, a.AgentID, a.ProjectID, a.Kind, a.Enabled,
 		a.PromptTemplate, a.CronExpr, a.CatchUp, a.NextRunAt, a.LastRunAt,
 		a.EventType, eventFilter, a.CooldownSeconds, a.MaxRunsPerHour,
 		a.CreatedBy, a.CreatedAt, a.UpdatedAt,
@@ -127,13 +123,13 @@ func (r *AutomationRepository) Update(a *automations.Automation) error {
 	}
 	_, err = r.db.Exec(`
 		UPDATE automations SET
-			name = $2, agent_id = $3, team_id = $4, project_id = $5, kind = $6, enabled = $7,
-			prompt_template = $8, cron_expr = $9, catch_up = $10, next_run_at = $11, last_run_at = $12,
-			event_type = $13, event_filter = $14, cooldown_seconds = $15, max_runs_per_hour = $16,
-			updated_at = $17
+			name = $2, agent_id = $3, project_id = $4, kind = $5, enabled = $6,
+			prompt_template = $7, cron_expr = $8, catch_up = $9, next_run_at = $10, last_run_at = $11,
+			event_type = $12, event_filter = $13, cooldown_seconds = $14, max_runs_per_hour = $15,
+			updated_at = $16
 		WHERE id = $1
 	`,
-		a.ID, a.Name, a.AgentID, a.TeamID, a.ProjectID, a.Kind, a.Enabled,
+		a.ID, a.Name, a.AgentID, a.ProjectID, a.Kind, a.Enabled,
 		a.PromptTemplate, a.CronExpr, a.CatchUp, a.NextRunAt, a.LastRunAt,
 		a.EventType, eventFilter, a.CooldownSeconds, a.MaxRunsPerHour,
 		a.UpdatedAt,

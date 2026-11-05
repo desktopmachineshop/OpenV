@@ -23,7 +23,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/reports"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
@@ -45,8 +44,7 @@ import (
 // and two baselines, one that kept the definitions and one taken before
 // baselines kept them. Project C, "Formats supplier", refines P's first
 // requirement, so P's export lists a linked artifact and its V&V status
-// flows down from C's passing test (REQ-145, REQ-146). A crew of two agents
-// and a person is the crew export's fixture.
+// flows down from C's passing test (REQ-145, REQ-146).
 //
 // The clock is pinned: every time the fixture holds is a fixed time in June
 // 2025, and every time the server reads its own clock for (a filename's
@@ -72,7 +70,6 @@ var (
 	s9C        = s9ID(12)
 	s9B1       = s9ID(601) // the baseline that kept the definitions
 	s9B0       = s9ID(602) // a baseline taken before baselines kept them
-	s9Crew     = s9ID(801)
 	s9Admin    = s9ID(901)
 	s9Heading1 = s9ID(101)
 	s9Req1     = s9ID(104)
@@ -120,7 +117,6 @@ type s9Data struct {
 	latest      map[string]map[string]*vv.TestResult
 	runs        map[string][]*vv.TestRun
 	baselines   map[string]*baselines.Baseline
-	crews       map[string]*teams.TeamGraph
 	agents      map[string]*agents.Agent
 }
 
@@ -282,24 +278,6 @@ func newS9Data(t *testing.T) *s9Data {
 		s9ID(811): {ID: s9ID(811), OrgID: s9Org, Slug: "lead-reviewer", Name: "Lead reviewer"},
 		s9ID(812): {ID: s9ID(812), OrgID: s9Org, Slug: "checker", Name: "Checker"},
 	}
-	d.crews = map[string]*teams.TeamGraph{
-		s9Crew: {
-			Team: &teams.Team{ID: s9Crew, OrgID: s9Org, Name: "Review crew: \"S9\"", Description: "Reads, then checks.",
-				EntryNodeID: s9Ptr(s9ID(821)), CreatedAt: s9At(100), UpdatedAt: s9At(101)},
-			Nodes: []*teams.Node{
-				{ID: s9ID(821), TeamID: s9Crew, NodeType: teams.NodeAgent, AgentID: s9ID(811), Label: "Lead",
-					Department: "Review", Position: map[string]interface{}{"org": map[string]interface{}{"x": 10, "y": 20}}},
-				{ID: s9ID(822), TeamID: s9Crew, NodeType: teams.NodeAgent, AgentID: s9ID(812), Label: "Lead",
-					Position: map[string]interface{}{}},
-				{ID: s9ID(823), TeamID: s9Crew, NodeType: teams.NodeHuman, UserID: s9Ptr(s9Admin), Label: "Approver"},
-			},
-			Edges: []*teams.Edge{
-				{ID: s9ID(831), TeamID: s9Crew, FromNodeID: s9ID(821), ToNodeID: s9ID(822), EdgeType: "delegates",
-					Config: map[string]interface{}{"max": 2}},
-				{ID: s9ID(832), TeamID: s9Crew, FromNodeID: s9ID(822), ToNodeID: s9ID(823), EdgeType: "reports_to"},
-			},
-		},
-	}
 	return d
 }
 
@@ -439,18 +417,6 @@ func (s *s9VV) ListRuns(projectID string) ([]*vv.TestRun, error) {
 	return s.d.runs[projectID], nil
 }
 
-type s9Teams struct {
-	teams.Service
-	d *s9Data
-}
-
-func (s *s9Teams) GetTeam(id string) (*teams.TeamGraph, error) {
-	if g, ok := s.d.crews[id]; ok {
-		return g, nil
-	}
-	return nil, fmt.Errorf("team %s not found", id)
-}
-
 type s9Agents struct {
 	agents.Service
 	d *s9Data
@@ -526,7 +492,6 @@ func newS9Fixture(t *testing.T) *s9Fixture {
 	withBaselineService(baselineSvc)(h)
 	withReportService(reportSvc)(h)
 	withDownloadService(downloadSvc)(h)
-	withTeamService(&s9Teams{d: d})(h)
 	withAgentService(&s9Agents{d: d})(h)
 	router := mux.NewRouter()
 	h.RegisterRoutes(router)

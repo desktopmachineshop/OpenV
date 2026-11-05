@@ -555,7 +555,7 @@
     },
     {
       "n": 14,
-      "title": "create in review with an assignee_type the board does not know: 400, which names the three it takes",
+      "title": "create in review with an assignee_type the board does not know: 400, which names the two it takes",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/work-items",
       "request": {
@@ -573,21 +573,21 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 63,
+      "content_length": 57,
       "kind": "json",
       "body": [
-        "{\"error\":\"invalid assignee_type: must be user, agent or team\"}"
+        "{\"error\":\"invalid assignee_type: must be user or agent\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "invalid assignee_type: must be user, agent or team"
+        "error": "invalid assignee_type: must be user or agent"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 15,
-      "title": "create in in-progress, assigned to a team id no crew has: 404 team not found, as the crew routes answer it",
+      "title": "create in in-progress, assigned to a crew: 400, the board takes no crew since crews went",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/work-items",
       "request": {
@@ -599,20 +599,20 @@
         "body": "{\"title\":\"Write the timing script\",\"column\":\"in-progress\",\"assignee_type\":\"team\",\"assignee_id\":\"<phantom>\"}"
       },
       "notes": [
-        "\"team\" is a crew's wire name; the crew is looked up after the source note, and one the caller may not know of answers the same, while one of another workspace that the caller may know of answers 400 team belongs to a different workspace"
+        "\"team\" was a crew's wire name"
       ],
-      "status": 404,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 27,
+      "content_length": 57,
       "kind": "json",
       "body": [
-        "{\"error\":\"team not found\"}"
+        "{\"error\":\"invalid assignee_type: must be user or agent\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "team not found"
+        "error": "invalid assignee_type: must be user or agent"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -636,7 +636,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<crew>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
+        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -691,8 +691,8 @@
           "description": "",
           "column": "in-progress",
           "sort_order": 0,
-          "assignee_type": "team",
-          "assignee_id": "<crew>",
+          "assignee_type": "agent",
+          "assignee_id": "<developer>",
           "artifact_ids": [],
           "created_by": "<owner>",
           "created_at": "<time@before step 16>",
@@ -747,7 +747,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<crew>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
+        "[{\"id\":\"<w_first>\",\"project_id\":\"<p>\",\"title\":\"Draft the \\u003climits\\u003e \\u0026 margins\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer\",\"description\":\"Raised from the note on R1.\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<owner>\",\"artifact_ids\":[\"<r1>\"],\"due_date\":\"2026-01-15T08:30:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 12>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -802,8 +802,8 @@
           "description": "",
           "column": "in-progress",
           "sort_order": 0,
-          "assignee_type": "team",
-          "assignee_id": "<crew>",
+          "assignee_type": "agent",
+          "assignee_id": "<developer>",
           "artifact_ids": [],
           "created_by": "<owner>",
           "created_at": "<time@before step 16>",
@@ -2668,7 +2668,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<w_worker>\",\"project_id\":\"<p>\",\"title\":\"Triage the nightly failures\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_at\":\"<time@step 46>\",\"updated_at\":\"<time@step 46>\"},{\"id\":\"<w_barrier>\",\"project_id\":\"<p>\",\"title\":\"Barrier item\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 53>\",\"updated_at\":\"<time@before step 53>\"},{\"id\":\"<w_agent>\",\"project_id\":\"<p>\",\"title\":\"Add the retry\",\"description\":\"Retry once after a timeout.\",\"column\":\"todo\",\"sort_order\":2,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[\"<r1>\"],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<w_direct>\",\"project_id\":\"<p>\",\"title\":\"Tune the pool\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":4,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"team\",\"assignee_id\":\"<crew>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_claimed>\",\"project_id\":\"<p>\",\"title\":\"Implement the timeout\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 47>\",\"updated_at\":\"<time@before step 47>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"review\",\"sort_order\":5,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 37>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer at 2 s\",\"description\":\"Handed to the viewer.\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<viewer>\",\"artifact_ids\":[],\"due_date\":\"2026-02-01T00:00:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 38>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
+        "[{\"id\":\"<w_worker>\",\"project_id\":\"<p>\",\"title\":\"Triage the nightly failures\",\"description\":\"\",\"column\":\"backlog\",\"sort_order\":1,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_at\":\"<time@step 46>\",\"updated_at\":\"<time@step 46>\"},{\"id\":\"<w_barrier>\",\"project_id\":\"<p>\",\"title\":\"Barrier item\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 53>\",\"updated_at\":\"<time@before step 53>\"},{\"id\":\"<w_agent>\",\"project_id\":\"<p>\",\"title\":\"Add the retry\",\"description\":\"Retry once after a timeout.\",\"column\":\"todo\",\"sort_order\":2,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[\"<r1>\"],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 49>\"},{\"id\":\"<w_direct>\",\"project_id\":\"<p>\",\"title\":\"Tune the pool\",\"description\":\"\",\"column\":\"todo\",\"sort_order\":4,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<w_progress>\",\"project_id\":\"<p>\",\"title\":\"Write the timing script\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_claimed>\",\"project_id\":\"<p>\",\"title\":\"Implement the timeout\",\"description\":\"\",\"column\":\"in-progress\",\"sort_order\":0,\"assignee_type\":\"agent\",\"assignee_id\":\"<developer>\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 47>\",\"updated_at\":\"<time@before step 47>\"},{\"id\":\"<w_review>\",\"project_id\":\"<p>\",\"title\":\"Check the wording\",\"description\":\"\",\"column\":\"review\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 16>\",\"updated_at\":\"<time@before step 16>\"},{\"id\":\"<w_second>\",\"project_id\":\"<p>\",\"title\":\"Review the margins\",\"description\":\"Second in the backlog.\",\"column\":\"review\",\"sort_order\":5,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 37>\"},{\"id\":\"<w_note>\",\"project_id\":\"<p>\",\"title\":\"Load test the answer at 2 s\",\"description\":\"Handed to the viewer.\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"assignee_id\":\"<viewer>\",\"artifact_ids\":[],\"due_date\":\"2026-02-01T00:00:00Z\",\"source_chatter_id\":\"<note_p>\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 12>\",\"updated_at\":\"<time@step 38>\"},{\"id\":\"<w_done>\",\"project_id\":\"<p>\",\"title\":\"Close the old ticket\",\"description\":\"\",\"column\":\"done\",\"sort_order\":0,\"assignee_type\":\"user\",\"artifact_ids\":[],\"created_by\":\"<owner>\",\"created_at\":\"<time@step 13>\",\"updated_at\":\"<time@step 13>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2735,8 +2735,8 @@
           "description": "",
           "column": "in-progress",
           "sort_order": 0,
-          "assignee_type": "team",
-          "assignee_id": "<crew>",
+          "assignee_type": "agent",
+          "assignee_id": "<developer>",
           "artifact_ids": [],
           "created_by": "<owner>",
           "created_at": "<time@before step 16>",

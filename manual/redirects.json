@@ -58,6 +58,7 @@
   "/manual/board#moving-cards": "topics/board/moving-cards",
   "/manual/board#to-dos-the-same-work-by-person": "topics/board/to-dos-the-same-work-by-person",
   "/manual/agents": "topics/agents/index",
+  "/manual/agents#the-agent-hierarchy": "topics/agents/the-agent-hierarchy",
   "/manual/agents#the-agent-list": "topics/agents/the-agent-list",
   "/manual/agents#launching-a-run": "topics/agents/launching-a-run",
   "/manual/agents#the-agent-editor": "topics/agents/the-agent-editor",
@@ -65,12 +66,6 @@
   "/manual/agents#write-mode-proposal-vs-direct": "topics/agents/write-mode-proposal-vs-direct",
   "/manual/agents#repository-access": "topics/agents/repository-access",
   "/manual/agents#default-model-providers": "topics/agents/default-model-providers",
-  "/manual/crews": "topics/crews/index",
-  "/manual/crews#managing-crews": "topics/crews/managing-crews",
-  "/manual/crews#the-canvas": "topics/crews/the-canvas",
-  "/manual/crews#adding-nodes": "topics/crews/adding-nodes",
-  "/manual/crews#connecting-nodes": "topics/crews/connecting-nodes",
-  "/manual/crews#crews-elsewhere-in-the-app": "topics/crews/crews-elsewhere-in-the-app",
   "/manual/runs-runners": "topics/runs-runners/index",
   "/manual/runs-runners#the-runs-page": "topics/runs-runners/the-runs-page",
   "/manual/runs-runners#runs-with-no-project-workspace-runs": "topics/runs-runners/runs-with-no-project-workspace-runs",
@@ -136,5 +131,11 @@
   "/manual/troubleshooting#where-does-an-agents-change-actually-land": "topics/troubleshooting/where-does-an-agents-change-actually-land",
   "/manual/troubleshooting#whose-ai-subscription-pays-for-a-run": "topics/troubleshooting/whose-ai-subscription-pays-for-a-run",
   "/manual/troubleshooting#is-openv-free-what-happens-to-my-data-if-that-changes": "topics/troubleshooting/is-openv-free-what-happens-to-my-data-if-that-changes",
-  "/manual/troubleshooting#how-do-i-back-up-a-project": "topics/troubleshooting/how-do-i-back-up-a-project"
+  "/manual/troubleshooting#how-do-i-back-up-a-project": "topics/troubleshooting/how-do-i-back-up-a-project",
+  "/manual/crews": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#managing-crews": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#the-canvas": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#adding-nodes": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#connecting-nodes": "topics/agents/the-agent-hierarchy",
+  "/manual/crews#crews-elsewhere-in-the-app": "topics/agents/the-agent-hierarchy"
 }

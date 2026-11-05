@@ -213,6 +213,7 @@
     "requirements-tree",
     "floating-assistant",
     "chip-search",
+    "agent-hierarchy",
     "impact-picker"
   ],
   "event_types": [

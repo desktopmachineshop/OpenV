@@ -177,9 +177,14 @@ table agents rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   column org_id uuid
+  column parent_agent_id uuid
+  column group_name character varying(120)
+  column sort_order integer NOT NULL DEFAULT 0
+  constraint agents_parent_agent_id_fkey FOREIGN KEY (parent_agent_id) REFERENCES agents(id) ON DELETE SET NULL
   constraint agents_pkey PRIMARY KEY (id)
   index agents_pkey CREATE UNIQUE INDEX agents_pkey ON public.agents USING btree (id)
   index idx_agents_org_slug CREATE UNIQUE INDEX idx_agents_org_slug ON public.agents USING btree (org_id, slug)
+  index idx_agents_parent CREATE INDEX idx_agents_parent ON public.agents USING btree (parent_agent_id) WHERE (parent_agent_id IS NOT NULL)
   index idx_agents_slug_lookup CREATE INDEX idx_agents_slug_lookup ON public.agents USING btree (slug)
 table artifact_embeddings rows 0  @requires(vector)
   column artifact_id uuid NOT NULL  @requires(vector)
@@ -952,7 +957,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 68
+table schema_migrations rows 70
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1269,3 +1274,5 @@ ledger 0065 connected_app_workspaces
 ledger 0066 user_identities
 ledger 0067 target_releases
 ledger 0068 saved_searches
+ledger 0069 retarget_crew_automations
+ledger 0070 agent_hierarchy

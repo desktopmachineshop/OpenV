@@ -167,9 +167,6 @@ export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelec
             >
               <td style={cell}>
                 🤖 {run.agent_name || run.agent_id}
-                {run.team_id && (
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>(crew)</span>
-                )}
               </td>
               <td style={cell}>
                 <span

@@ -121,7 +121,7 @@ func TestTriggerMatcherKeepsWorkspacesApart(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			runs := &fakeRunService{}
-			m := NewTriggerMatcher(repo, runs, nil)
+			m := NewTriggerMatcher(repo, runs)
 			repo.marked = nil
 			m.handle(tc.event)
 

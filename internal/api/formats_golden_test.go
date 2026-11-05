@@ -35,8 +35,8 @@ import (
 // options and the six downloads, of the live project, of a baseline, and
 // narrowed by a selection, and the figures bundled with the JSON; the
 // legacy report in both formats, live and from a baseline; the V&V report,
-// live and from a baseline, whose filename is not quoted (pinned here);
-// and a crew's export, GET /crews/{id}/export. The test also fails when a
+// and live and from a baseline, whose filename is not quoted (pinned here).
+// The test also fails when a
 // download format (downloads.Formats) or an export format (an
 // exports.ExportFormat constant) has no case, or when a route of the
 // inventory (testdata/routes.txt) that ends in export, report or download,
@@ -98,8 +98,6 @@ func TestFormatsGolden(t *testing.T) {
 
 		{"vv_report", p + "/vv/report"},
 		{"vv_report_baseline", p + "/vv/report?baseline_id=" + s9B1},
-
-		{"crew_export", "/api/v1/crews/" + s9Crew + "/export"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -168,8 +166,6 @@ var s9FormatRoutesExempt = map[string]string{
 	"GET /api/v1/evidence-files/{id}/download": "an evidence file's bytes as stored (S5b pins it)",
 	"GET /api/v1/public/connector/download":    "the Agent Connector binary (S5c pins the answer)",
 	"HEAD /api/v1/public/connector/download":   "the Agent Connector binary's headers (S5c)",
-	"GET /api/v1/teams/{id}/export": "the deprecated alias of GET /api/v1/crews/{id}/export, bound to the same " +
-		"handler (S2's route_handlers.txt)",
 }
 
 // s9ExportsDir is the export service's package, whose ExportFormat
@@ -269,7 +265,7 @@ func (f *s9Fixture) get(t *testing.T, path string) s9Answer {
 // s9ShowIDs names the fixture's ids in a request path, so a golden reads
 // /projects/<P>/download/pdf?baseline_id=<B1>.
 func s9ShowIDs(path string) string {
-	return strings.NewReplacer(s9P, "<P>", s9C, "<C>", s9B1, "<B1>", s9B0, "<B0>", s9Crew, "<crew>",
+	return strings.NewReplacer(s9P, "<P>", s9C, "<C>", s9B1, "<B1>", s9B0, "<B0>",
 		s9Heading1, "<HDG-1>").Replace(path)
 }
 

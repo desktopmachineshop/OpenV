@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // The agent registry's round trip (refactor plan S15b, OpenV REQ-23),
@@ -43,7 +42,8 @@ func rtAgentNames(list []*agents.Agent) []string {
 // by slug (#379 bug 88: they read as no agent and no error), and an empty
 // workspace finds none, not even an agent a database from before workspaces
 // left with none.
-// Delete takes the crew nodes that place the agent.
+// Delete takes the rows of the old crew tables (agent_team_nodes, kept until
+// a later migration drops them) that place the agent.
 func TestAgentRepositoryRoundTrip(t *testing.T) {
 	db := rtDB(t)
 	repo := NewAgentRepository(db)
@@ -186,23 +186,19 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		crews := NewTeamRepository(db)
-		crew := &teams.Team{ID: uuid.New().String(), OrgID: orgID, Name: "Crew", CreatedAt: rtAt(0), UpdatedAt: rtAt(0)}
-		node := &teams.Node{ID: uuid.New().String(), TeamID: crew.ID, AgentID: saved.ID, Label: "Drafter", CreatedAt: rtAt(0)}
-		if err := crews.SaveTeam(crew); err != nil {
-			t.Fatal(err)
-		}
-		if err := crews.SaveNode(node); err != nil {
-			t.Fatal(err)
-		}
+		crewID, nodeID := uuid.New().String(), uuid.New().String()
+		rtSeed(t, db, `INSERT INTO agent_teams (id, org_id, name) VALUES ($1, $2, 'Crew')`, crewID, orgID)
+		rtSeed(t, db, `INSERT INTO agent_team_nodes (id, team_id, agent_id, label) VALUES ($1, $2, $3, 'Drafter')`,
+			nodeID, crewID, saved.ID)
 		if err := repo.Delete(saved.ID); err != nil {
 			t.Fatalf("Delete: %v", err)
 		}
 		if found, err := repo.FindByID(saved.ID); found != nil || err != agents.ErrNotFound {
 			t.Errorf("FindByID after Delete: %v, %v; want nil, agents.ErrNotFound", found, err)
 		}
-		if found, err := crews.FindNodeByID(node.ID); found != nil || err != teams.ErrNodeNotFound {
-			t.Errorf("a crew node placing a deleted agent: %v, %v; want it gone with the agent", found, err)
+		var left int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM agent_team_nodes WHERE id = $1`, nodeID).Scan(&left); err != nil || left != 0 {
+			t.Errorf("a crew node placing a deleted agent: %d rows, %v; want it gone with the agent", left, err)
 		}
 		if err := repo.Delete(saved.ID); err != nil {
 			t.Errorf("Delete of an agent no row has: %v, want no error", err)

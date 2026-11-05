@@ -4,9 +4,6 @@ DELETE /api/v1/attachments/{id}
 DELETE /api/v1/attribute-definitions/{id}
 DELETE /api/v1/automations/{id}
 DELETE /api/v1/baselines/{id}
-DELETE /api/v1/crew-edges/{id}
-DELETE /api/v1/crew-nodes/{id}
-DELETE /api/v1/crews/{id}
 DELETE /api/v1/evidence-bundles/{id}
 DELETE /api/v1/evidence-files/{id}
 DELETE /api/v1/links/{id}
@@ -35,9 +32,6 @@ DELETE /api/v1/repo-connections/{id}
 DELETE /api/v1/share-links/{id}
 DELETE /api/v1/shared-products/{id}
 DELETE /api/v1/shared-products/{id}/vote
-DELETE /api/v1/team-edges/{id}
-DELETE /api/v1/team-nodes/{id}
-DELETE /api/v1/teams/{id}
 DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/work-items/{id}
@@ -50,11 +44,11 @@ GET /api/v1/admin/metrics/visitors
 GET /api/v1/admin/users
 GET /api/v1/admin/workspaces
 GET /api/v1/agent-runs
-GET /api/v1/agent-runs/delegate/{id}
 GET /api/v1/agent-runs/{id}
 GET /api/v1/agent-runs/{id}/logs
 GET /api/v1/agent-runs/{id}/stream
 GET /api/v1/agent-runs/{id}/tree
+GET /api/v1/agent-stats
 GET /api/v1/agents
 GET /api/v1/agents/{slug}
 GET /api/v1/agents/{slug}/raw
@@ -81,10 +75,6 @@ GET /api/v1/automations/{id}
 GET /api/v1/baselines/{id}
 GET /api/v1/baselines/{id}/diff
 GET /api/v1/chatter
-GET /api/v1/crew-templates
-GET /api/v1/crews
-GET /api/v1/crews/{id}
-GET /api/v1/crews/{id}/export
 GET /api/v1/events
 GET /api/v1/evidence-bundles/{id}
 GET /api/v1/evidence-files/{id}/download
@@ -190,9 +180,6 @@ GET /api/v1/public/share/{token}/preview.png
 GET /api/v1/release
 GET /api/v1/search
 GET /api/v1/shared-products
-GET /api/v1/teams
-GET /api/v1/teams/{id}
-GET /api/v1/teams/{id}/export
 GET /api/v1/templates
 GET /api/v1/test-results/{id}/citations
 GET /api/v1/test-runs/{id}
@@ -207,7 +194,6 @@ GET /oauth/authorize
 HEAD /api/v1/public/connector/download
 POST /api/v1/admin/users/{id}/password-reset
 POST /api/v1/agent-runs/claim
-POST /api/v1/agent-runs/delegate
 POST /api/v1/agent-runs/{id}/cancel
 POST /api/v1/agent-runs/{id}/finish
 POST /api/v1/agent-runs/{id}/logs
@@ -239,12 +225,6 @@ POST /api/v1/auth/verify-email/resend
 POST /api/v1/automations
 POST /api/v1/automations/{id}/run-now
 POST /api/v1/chatter
-POST /api/v1/crews
-POST /api/v1/crews/import
-POST /api/v1/crews/{id}/clone
-POST /api/v1/crews/{id}/edges
-POST /api/v1/crews/{id}/nodes
-POST /api/v1/crews/{id}/runs
 POST /api/v1/evidence-bundles/{id}/files
 POST /api/v1/guided-sessions
 POST /api/v1/guided-sessions/{id}/abandon
@@ -317,12 +297,6 @@ POST /api/v1/runner-pool/nodes/{id}/heartbeat
 POST /api/v1/runner-pool/nodes/{id}/release
 POST /api/v1/shared-products
 POST /api/v1/shared-products/{id}/report
-POST /api/v1/teams
-POST /api/v1/teams/import
-POST /api/v1/teams/{id}/clone
-POST /api/v1/teams/{id}/edges
-POST /api/v1/teams/{id}/nodes
-POST /api/v1/teams/{id}/runs
 POST /api/v1/templates
 POST /api/v1/templates/{id}/projects
 POST /api/v1/test-results/{id}/citations
@@ -335,6 +309,7 @@ POST /oauth/register
 POST /oauth/revoke
 POST /oauth/token
 PUT /api/v1/admin/users/{id}/admin
+PUT /api/v1/agent-arrangement
 PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw
 PUT /api/v1/artifacts/{id}
@@ -342,9 +317,6 @@ PUT /api/v1/artifacts/{id}/status
 PUT /api/v1/attachments/{id}
 PUT /api/v1/attribute-definitions/{id}
 PUT /api/v1/automations/{id}
-PUT /api/v1/crew-edges/{id}
-PUT /api/v1/crew-nodes/{id}
-PUT /api/v1/crews/{id}
 PUT /api/v1/evidence-bundles/{id}
 PUT /api/v1/guided-sessions/{id}/step
 PUT /api/v1/interviews/{id}/persona
@@ -375,8 +347,5 @@ PUT /api/v1/provider-settings
 PUT /api/v1/repo-connections/{id}
 PUT /api/v1/repo-connections/{id}/my-path
 PUT /api/v1/shared-products/{id}/vote
-PUT /api/v1/team-edges/{id}
-PUT /api/v1/team-nodes/{id}
-PUT /api/v1/teams/{id}
 PUT /api/v1/test-runs/{id}
 PUT /api/v1/work-items/{id}

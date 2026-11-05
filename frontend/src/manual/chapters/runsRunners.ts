@@ -15,7 +15,7 @@ queued · running · awaiting_approval · succeeded · failed · timed_out ·
 cancelled
 
 - Click a run to open the **detail panel**: the prompt, live progress/log,
-  results, and links to related runs (e.g. crew delegations).
+  results, and links to related runs (e.g. a retry of a failed run).
 - The **Status** dropdown filters the list.
 - A queued run may show **"reserved for launcher's runner"** — it's waiting
   briefly for the launcher's personal runner before other runners may claim it.
@@ -199,7 +199,7 @@ To stop it altogether, choose **Disconnect**; it stops working at once.
   a cloud runner you hold — the run is **reserved for your runner** for a grace
   period (default 60 seconds). If it isn't claimed in time, hosted/workspace
   runners take over.
-- **Ownerless runs** (automations, board triggers, crew delegations) are
+- **Ownerless runs** (automations, board triggers) are
   claimable immediately, first come first served, by every workspace or
   hosted runner, and by the personal runner of every member who could see
   the run: one with a role in its project, or a workspace admin. A personal

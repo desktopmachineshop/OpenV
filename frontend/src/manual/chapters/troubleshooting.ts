@@ -56,7 +56,7 @@ switch the baseline selector back to **Live** to edit. Completed or aborted
 
 ## A board card won't drag
 
-A card assigned to an agent or crew is locked while its run is live (pulsing
+A card assigned to an agent is locked while its run is live (pulsing
 blue dot). Wait for the run to finish, or cancel it from the Runs page.
 
 ## An interview link stopped working

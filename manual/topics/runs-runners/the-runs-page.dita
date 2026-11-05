@@ -9,7 +9,7 @@
     <p><b>Runs</b> in the project menu lists agent runs with status, start time, duration, token usage, and cost. Statuses:</p>
     <p>queued · running · awaiting_approval · succeeded · failed · timed_out · cancelled</p>
     <ul>
-      <li>Click a run to open the <b>detail panel</b>: the prompt, live progress/log, results, and links to related runs (e.g. crew delegations).</li>
+      <li>Click a run to open the <b>detail panel</b>: the prompt, live progress/log, results, and links to related runs (e.g. a retry of a failed run).</li>
       <li>The <b>Status</b> dropdown filters the list.</li>
       <li>A queued run may show <b>"reserved for launcher's runner"</b> — it's waiting briefly for the launcher's personal runner before other runners may claim it.</li>
     </ul>

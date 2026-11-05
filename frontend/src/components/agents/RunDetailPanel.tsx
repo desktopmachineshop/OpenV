@@ -13,9 +13,9 @@ const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 // deliberately excluded — retrying success invites duplicate side effects).
 const RETRYABLE_STATUSES = ['failed', 'timed_out', 'cancelled'];
 
-// A finished crew run's log can still grow: the server appends its notes (a
-// hand-off refused, successors the budget did not launch) just after the
-// terminal status, on the stream this panel closes at that status. So a
+// A finished run's log can still grow: the server may append a note just
+// after the terminal status (crew runs from before crews went carry such
+// notes: a hand-off refused, successors the budget did not launch), on the stream this panel closes at that status. So a
 // terminal status catches the log up at once, and once more this long after,
 // for a note the server was still writing.
 const FINISHED_LOG_SETTLE_MS = 2000;
@@ -141,8 +141,8 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       );
     case 'marker':
       // A notice about the run rather than its agent's output: the worker's
-      // own (events it dropped) or a note the server keeps on a finished
-      // crew run (a hand-off refused, successors the budget did not launch).
+      // own (events it dropped) or a note the server kept on a finished run
+      // (an old crew run's: a hand-off refused, successors not launched).
       // Its message says it in words.
       return (
         <div

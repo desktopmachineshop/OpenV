@@ -145,8 +145,6 @@ type Run struct {
 	ProjectID          *string `json:"project_id,omitempty"`
 	AutomationID       *string `json:"automation_id,omitempty"`
 	TriggerEventID     *string `json:"trigger_event_id,omitempty"`
-	TeamID             *string `json:"team_id,omitempty"`
-	TeamNodeID         *string `json:"team_node_id,omitempty"`
 	ParentRunID        *string `json:"parent_run_id,omitempty"`
 	WorkItemID         *string `json:"work_item_id,omitempty"`
 	InterviewSessionID *string `json:"interview_session_id,omitempty"`
@@ -251,8 +249,6 @@ type LaunchRequest struct {
 	ProjectID          *string
 	AutomationID       *string
 	TriggerEventID     *string
-	TeamID             *string
-	TeamNodeID         *string
 	ParentRunID        *string
 	WorkItemID         *string
 	InterviewSessionID *string
@@ -290,6 +286,18 @@ type AgentUsage struct {
 	TokensIn  int64   `json:"tokens_in"`
 	TokensOut int64   `json:"tokens_out"`
 	CostUSD   float64 `json:"cost_usd"`
+}
+
+// AgentStats is one agent's live numbers on the Agents page (issue 733):
+// its runs created since the window's start that are still open (queued,
+// claimed, running or awaiting approval) and that succeeded, their cost, and
+// the proposals of its runs still waiting for review, however old.
+type AgentStats struct {
+	AgentID          string  `json:"agent_id"`
+	Open             int     `json:"open"`
+	Done             int     `json:"done"`
+	CostUSD          float64 `json:"cost_usd"`
+	PendingProposals int     `json:"pending_proposals"`
 }
 
 // DailyUsage aggregates one calendar day's runs in a usage window.
@@ -435,6 +443,10 @@ type Repository interface {
 	// agent slug and by day (see UsageSummary; Days/Totals are the
 	// service's concern).
 	Usage(orgID string, since time.Time) ([]AgentUsage, []DailyUsage, error)
+	// AgentStats rolls up the org's runs per agent (AgentStats), narrowed to
+	// a project's when projectID is set; agents with nothing to show are
+	// left out.
+	AgentStats(orgID, projectID string, since time.Time) ([]AgentStats, error)
 	// MonthlySpend sums an org's cost_usd over runs created at/after
 	// monthStart (the current-month total; NULL costs count as zero). It
 	// shares the usage rollup's created_at bucketing so the figure matches
@@ -499,16 +511,14 @@ type Service interface {
 	// its log, whose payload carries the note's marker, message and detail,
 	// sent to the log's subscribers as a worker's batch is.
 	NoteRun(runID, marker, message string, detail map[string]interface{}) error
-	// SuccessorsSkipped records that a finished crew run's agent successors
-	// were not launched because the workspace's budget refused them: a note
-	// on the run and a RunSuccessorsSkipped event, each naming the skipped
-	// successors and the budget.
-	SuccessorsSkipped(run *Run, skipped []Successor, refusal error) error
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
 	// Usage rolls up the org's run usage over the window starting at since.
 	Usage(orgID string, since time.Time) (*UsageSummary, error)
+	// AgentStats is every agent's numbers since the given time, in one call
+	// (the Agents page's cards), an agent with none left out; never nil.
+	AgentStats(orgID, projectID string, since time.Time) ([]AgentStats, error)
 	// MonthlySpend returns the org's month-to-date spend (SUM of cost_usd for
 	// runs created at/after monthStart).
 	MonthlySpend(orgID string, monthStart time.Time) (float64, error)

@@ -34,7 +34,7 @@ The notification and event types themselves are domain packages
 | `internal/events/bus.go` | `DefaultBus`: stores each event, then calls every subscriber in subscription order on one dispatch goroutine |
 | `internal/scheduler/scheduler.go` | `Scheduler`: due automations; catch-up inside `Start`, and a claim before each run |
 | `internal/automation/triggers.go` | `TriggerMatcher`: launches the automations whose event filter matches |
-| `internal/orchestration/hooks.go` | `Hooks`: run status to the board, crew follow-ups and hand-offs, interview sessions |
+| `internal/orchestration/hooks.go` | `Hooks`: run status to the board, interview and guided sessions |
 | `internal/billing/**` | the subscription service, its Stripe client (`internal/billing/stripe/`), the price catalogue, checkout, seats and the reconcile loop |
 | `cmd/openv-vapid/**` | prints a VAPID key pair for web push (`make vapid-keys`) |
 

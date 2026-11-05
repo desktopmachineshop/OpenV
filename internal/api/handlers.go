@@ -45,7 +45,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/savedsearches"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -114,7 +113,6 @@ type HandlerDeps struct {
 	LoginService       providers.LoginService
 	// ProviderTokenService holds members' own provider sign-in tokens.
 	ProviderTokenService usertokens.Service
-	TeamService          teams.Service
 	OrgService           orgs.Service
 	OrgTeamService       orgs.TeamService
 	WorkerKeyService     workerkeys.Service
@@ -144,7 +142,7 @@ type HandlerDeps struct {
 	// what /api/v1/me/push/config reports as enabled=false.
 	VAPID       notify.VAPIDConfig
 	Provisioner hosting.Provisioner
-	// OrgSeeder provisions default agents/crew for a new workspace.
+	// OrgSeeder provisions default agents for a new workspace.
 	OrgSeeder func(orgID string) error
 	// PublicAPIURL is the externally-reachable API base (connector config).
 	PublicAPIURL string

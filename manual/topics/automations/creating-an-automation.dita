@@ -10,7 +10,7 @@
     <ol>
       <li>Name it.</li>
       <li>A workspace admin chooses what it <b>covers</b>: this project or the whole workspace.</li>
-      <li>Choose the <b>target</b> — a single agent or a crew.</li>
+      <li>Choose the <b>agent</b> it runs.</li>
       <li>Pick the kind and its schedule/event settings.</li>
       <li>Write the <b>prompt template</b> — the prompt each run starts with. Keep it lean; the agent fetches artifact content itself at run time.</li>
     </ol>

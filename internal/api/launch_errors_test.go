@@ -1,31 +1,27 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // Refactor plan X3c (docs/plans/codebase-refactor.md §6.7, quirk Q9):
-// characterization of the six launch routes' answers to a failed launch,
-// which X3c names as the tables launchErrs402, launchErrs400 and
-// launchErrsDelegate. Each route is driven up to its run service's Launch,
+// characterization of the launch routes' answers to a failed launch, which
+// X3c names as the tables launchErrs402 and launchErrs400 (the crew launch
+// and the delegate route went with crews, issue 732). Each route is driven up to its run service's Launch,
 // which answers one of three errors: the budget guard's refusal and an
 // invalid run status transition, each wrapped the way the agentruns package
 // wraps them ("%w: detail"), and a plain error with the shape of a database
 // failure. A row pins the status, the headers and the body byte for byte,
 // and that the route reached Launch once. The S5d tour pins the budget
 // answers against a real run service; this table adds the other two errors,
-// so DelegateRun's 409 for a transition and every route's answer to an
-// error it does not name are pinned too. What a route logs is not asserted.
+// so every route's answer to an error it does not name is pinned too. What a route logs is not asserted.
 
 var (
 	// launchErrBudget is the budget guard's refusal as DefaultService.Launch
@@ -79,46 +75,16 @@ func launchErrorsDraft(t *testing.T, err error) (*httptest.ResponseRecorder, int
 	return w, len(runs.launchReqs)
 }
 
-// launchErrorDelegates is a crew whose every node delegates to Analyst.
-type launchErrorDelegates struct{ teams.Service }
-
-func (launchErrorDelegates) ResolveDelegates(nodeID string) ([]*teams.Node, error) {
-	return []*teams.Node{{ID: "node-analyst", TeamID: "crew-1", NodeType: teams.NodeAgent, AgentID: "agent-analyst",
-		Label: "Analyst"}}, nil
-}
-
-// launchErrorsDelegate delegates to Analyst with the token of a run on the
-// lead node of crew-1.
-func launchErrorsDelegate(t *testing.T, err error) (*httptest.ResponseRecorder, int) {
-	runs := &fakeRunService{launchErr: err}
-	h := newTestHandler(t, func(h *Handler) {
-		h.RunService = runs
-		h.TeamService = launchErrorDelegates{}
-	})
-	node, team, project := "node-lead", "crew-1", "proj-1"
-	run := &agentruns.Run{ID: "run-lead", OrgID: "org-1", AgentID: "agent-lead", ProjectID: &project, TeamID: &team,
-		TeamNodeID: &node, Status: agentruns.StatusRunning}
-	r := httptest.NewRequest(http.MethodPost, "/api/v1/agent-runs/delegate",
-		strings.NewReader(`{"role_label":"Analyst","prompt":"Analyse P."}`))
-	r = r.WithContext(context.WithValue(r.Context(), ctxRun, run))
-	w := httptest.NewRecorder()
-	h.DelegateRun(w, r)
-	return w, len(runs.launchReqs)
-}
-
 func TestLaunchErrorAnswers(t *testing.T) {
 	const (
 		budget     = `{"error":"workspace monthly budget exceeded: this workspace has reached its $1.00 monthly budget ($5.00 spent)"}` + "\n"
 		transition = `{"error":"invalid run status transition: run already finished"}` + "\n"
 		plain      = `{"error":"pq: relation \"agent_runs\" does not exist"}` + "\n"
-		delegation = `{"error":"failed to launch delegated run"}` + "\n"
 	)
 	launchAgent := launchErrorsAsEditor(launchRoute{name: "POST /api/v1/agents/{slug}/runs", handle: (*Handler).LaunchAgentRun,
 		vars: map[string]string{"slug": "helper"}, body: `{"project_id":"proj-1","prompt":"Summarise the project."}`})
 	runNow := launchErrorsAsEditor(launchRoute{name: "POST /api/v1/automations/{id}/run-now", handle: (*Handler).RunAutomationNow,
 		vars: map[string]string{"id": "auto-1"}})
-	crewLaunch := launchErrorsAsEditor(launchRoute{name: "POST /api/v1/crews/{id}/runs", handle: (*Handler).LaunchTeamRun,
-		vars: map[string]string{"id": "crew-1"}, body: `{"project_id":"proj-1","prompt":"Summarise as a crew."}`})
 	testRunAgent := launchErrorsAsEditor(launchRoute{name: "POST /api/v1/test-runs/{id}/agent-run", handle: (*Handler).LaunchTestRunAgent,
 		vars: map[string]string{"id": "trun-1"}, body: `{"agent_slug":"helper"}`})
 
@@ -141,18 +107,9 @@ func TestLaunchErrorAnswers(t *testing.T) {
 		{"RunAutomationNow", runNow, launchErrBudget, http.StatusBadRequest, budget},
 		{"RunAutomationNow", runNow, launchErrTransition, http.StatusBadRequest, transition},
 		{"RunAutomationNow", runNow, launchErrPlain, http.StatusBadRequest, plain},
-		{"LaunchTeamRun", crewLaunch, launchErrBudget, http.StatusBadRequest, budget},
-		{"LaunchTeamRun", crewLaunch, launchErrTransition, http.StatusBadRequest, transition},
-		{"LaunchTeamRun", crewLaunch, launchErrPlain, http.StatusBadRequest, plain},
 		{"LaunchTestRunAgent", testRunAgent, launchErrBudget, http.StatusBadRequest, budget},
 		{"LaunchTestRunAgent", testRunAgent, launchErrTransition, http.StatusBadRequest, transition},
 		{"LaunchTestRunAgent", testRunAgent, launchErrPlain, http.StatusBadRequest, plain},
-		// launchErrsDelegate: a transition is a 409 with its text; anything
-		// else, an over-budget refusal included, a 500 whose text reaches
-		// only the log.
-		{"DelegateRun", launchErrorsDelegate, launchErrBudget, http.StatusInternalServerError, delegation},
-		{"DelegateRun", launchErrorsDelegate, launchErrTransition, http.StatusConflict, transition},
-		{"DelegateRun", launchErrorsDelegate, launchErrPlain, http.StatusInternalServerError, delegation},
 	}
 	for _, tc := range cases {
 		t.Run(tc.route+", "+launchErrName(tc.err), func(t *testing.T) {

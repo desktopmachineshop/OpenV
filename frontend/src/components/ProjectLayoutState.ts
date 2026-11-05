@@ -69,7 +69,7 @@ export const useProjectShell = (projectId: string | undefined): ProjectShellStat
   // first requests may still carry the previous workspace's X-Org-ID header.
   // That is harmless for project-keyed endpoints — the backend authorizes
   // those against the project itself and ignores the header — but any fetch
-  // of an org-scoped resource (agents, agent runs, automations, crews, org
+  // of an org-scoped resource (agents, agent runs, automations, org
   // teams, events) must include activeOrgId in its effect deps so it refetches
   // once the switch lands (issues #99/#111/#112).
   useEffect(() => {

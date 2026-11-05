@@ -233,6 +233,9 @@ func (s *FileService) SaveDefinition(orgID string, def *Definition) (*Agent, err
 	if err != nil {
 		return nil, err
 	}
+	if err := s.checkPlace(orgID, def.Slug, def.ReportsTo); err != nil {
+		return nil, err
+	}
 	if err := os.MkdirAll(s.orgDir(orgID), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create org agents directory: %w", err)
 	}
@@ -270,6 +273,9 @@ func (s *FileService) SaveRawFile(orgID, slug string, content string) (*Agent, e
 	}
 	if def.Slug != slug {
 		return nil, fmt.Errorf("frontmatter slug %q does not match agent %q", def.Slug, slug)
+	}
+	if err := s.checkPlace(orgID, def.Slug, def.ReportsTo); err != nil {
+		return nil, err
 	}
 	if err := os.MkdirAll(s.orgDir(orgID), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create org agents directory: %w", err)
@@ -378,6 +384,11 @@ func (s *FileService) SyncFromDisk(orgID string) error {
 			errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 		}
 	}
+	// A file may name a parent synced after it: link every agent to the
+	// agent its file reports to now that all of them have rows.
+	if err := s.relink(orgID); err != nil {
+		errs = append(errs, fmt.Sprintf("hierarchy: %v", err))
+	}
 	if len(errs) > 0 {
 		return fmt.Errorf("agent sync completed with errors: %s", strings.Join(errs, "; "))
 	}
@@ -448,6 +459,9 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		existing.TimeoutSeconds = def.TimeoutSeconds
 		existing.Config = def.Config
 		existing.Locked = def.Locked
+		existing.GroupName = def.GroupName
+		existing.SortOrder = def.SortOrder
+		existing.ParentAgentID, existing.ReportsTo = s.parentOf(orgID, def.ReportsTo, existing.ID)
 		existing.SystemPrompt = def.SystemPrompt
 		existing.FilePath = path
 		existing.ContentHash = hash
@@ -459,8 +473,10 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		return existing, nil
 	}
 
+	id := uuid.New().String()
+	parentID, reportsTo := s.parentOf(orgID, def.ReportsTo, id)
 	agent := &Agent{
-		ID:             uuid.New().String(),
+		ID:             id,
 		OrgID:          orgID,
 		Slug:           def.Slug,
 		Name:           def.Name,
@@ -475,6 +491,10 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		TimeoutSeconds: def.TimeoutSeconds,
 		Config:         def.Config,
 		Locked:         def.Locked,
+		ParentAgentID:  parentID,
+		ReportsTo:      reportsTo,
+		GroupName:      def.GroupName,
+		SortOrder:      def.SortOrder,
 		SystemPrompt:   def.SystemPrompt,
 		FilePath:       path,
 		ContentHash:    hash,
@@ -485,5 +505,236 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 	if err := s.repo.Save(agent); err != nil {
 		return nil, err
 	}
+	// Agents whose files already report to this slug (a parent created
+	// after its children, or recreated) are linked to it now.
+	if err := s.linkReports(orgID, def.Slug); err != nil {
+		log.Printf("agents: could not link the agents that report to %q: %v", def.Slug, err)
+	}
 	return agent, nil
+}
+
+// parentOf resolves the slug a definition reports to into the agent of the
+// same workspace that has it: its id and slug, or nil and "" when there is
+// none (yet), or when it is the agent itself.
+func (s *FileService) parentOf(orgID, reportsTo, selfID string) (*string, string) {
+	if reportsTo == "" {
+		return nil, ""
+	}
+	parent, err := s.repo.FindBySlug(orgID, reportsTo)
+	if err != nil || parent == nil || parent.ID == selfID {
+		return nil, ""
+	}
+	id := parent.ID
+	return &id, parent.Slug
+}
+
+// placesOf reads the arrangement the org's agents have now: slug -> the slug
+// each reports to ("" for none).
+func (s *FileService) placesOf(orgID string) (map[string]string, []*Agent, error) {
+	list, err := s.repo.List(orgID)
+	if err != nil {
+		return nil, nil, err
+	}
+	byID := make(map[string]*Agent, len(list))
+	for _, a := range list {
+		byID[a.ID] = a
+	}
+	parents := make(map[string]string, len(list))
+	for _, a := range list {
+		parents[a.Slug] = ""
+		if a.ParentAgentID != nil {
+			if p := byID[*a.ParentAgentID]; p != nil {
+				parents[a.Slug] = p.Slug
+			}
+		}
+	}
+	return parents, list, nil
+}
+
+// checkPlace refuses a save that would put the agent slug under a parent
+// the workspace does not have, or under an agent that reports to it.
+func (s *FileService) checkPlace(orgID, slug, reportsTo string) error {
+	if reportsTo == "" {
+		return nil
+	}
+	if reportsTo == slug {
+		return ErrHierarchyCycle
+	}
+	parents, _, err := s.placesOf(orgID)
+	if err != nil {
+		return err
+	}
+	if _, ok := parents[reportsTo]; !ok {
+		return ErrUnknownParent
+	}
+	parents[slug] = reportsTo
+	if _, cycle := HierarchyCycle(parents); cycle {
+		return ErrHierarchyCycle
+	}
+	return nil
+}
+
+// relink sets each agent's parent from the reports_to its file names, for
+// the files of the org's directory. A file that names a slug no agent has
+// leaves its agent at the top; one that would close a cycle (files edited by
+// hand) leaves the agent at the top too, and is logged.
+func (s *FileService) relink(orgID string) error {
+	entries, err := os.ReadDir(s.orgDir(orgID))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	want := map[string]string{}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(s.orgDir(orgID), entry.Name()))
+		if err != nil {
+			continue
+		}
+		def, _, err := parseSyncedFile(string(data), s.seedTools)
+		if err != nil {
+			continue
+		}
+		want[def.Slug] = def.ReportsTo
+	}
+	_, list, err := s.placesOf(orgID)
+	if err != nil {
+		return err
+	}
+	bySlug := make(map[string]*Agent, len(list))
+	for _, a := range list {
+		bySlug[a.Slug] = a
+	}
+	parents := make(map[string]string, len(list))
+	for _, a := range list {
+		if p := want[a.Slug]; p != "" && bySlug[p] != nil && p != a.Slug {
+			parents[a.Slug] = p
+		} else {
+			parents[a.Slug] = ""
+		}
+	}
+	for {
+		at, cycle := HierarchyCycle(parents)
+		if !cycle {
+			break
+		}
+		log.Printf("agents: %q reports to an agent below it; leaving it at the top until its reports_to is fixed", at)
+		parents[at] = ""
+	}
+	for _, a := range list {
+		var parentID *string
+		if p := parents[a.Slug]; p != "" {
+			id := bySlug[p].ID
+			parentID = &id
+		}
+		if sameParent(a.ParentAgentID, parentID) {
+			continue
+		}
+		a.ParentAgentID = parentID
+		a.ReportsTo = parents[a.Slug]
+		if err := s.repo.Update(a); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// linkReports relinks the org's hierarchy when a file names slug as the
+// agent it reports to, and reads nothing more when none does.
+func (s *FileService) linkReports(orgID, slug string) error {
+	entries, err := os.ReadDir(s.orgDir(orgID))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(s.orgDir(orgID), entry.Name()))
+		if err != nil {
+			continue
+		}
+		if def, _, err := parseSyncedFile(string(data), s.seedTools); err == nil && def.ReportsTo == slug {
+			return s.relink(orgID)
+		}
+	}
+	return nil
+}
+
+func sameParent(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+// Arrange places agents in the hierarchy (Service.Arrange). The arrangement
+// is checked whole, so an exchange (A under B, B where A was) is one valid
+// change rather than a cycle half-way through.
+func (s *FileService) Arrange(orgID string, placements []Placement) ([]*Agent, error) {
+	if orgID == "" {
+		return nil, ErrWorkspaceRequired
+	}
+	parents, list, err := s.placesOf(orgID)
+	if err != nil {
+		return nil, err
+	}
+	bySlug := make(map[string]*Agent, len(list))
+	for _, a := range list {
+		bySlug[a.Slug] = a
+	}
+	defs := make([]*Definition, 0, len(placements))
+	for _, p := range placements {
+		agent := bySlug[p.Slug]
+		if agent == nil {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, p.Slug)
+		}
+		raw, err := s.RawFile(orgID, p.Slug)
+		if err != nil {
+			return nil, err
+		}
+		def, _, err := parseSyncedFile(raw, s.seedTools)
+		if err != nil {
+			return nil, err
+		}
+		def.ReportsTo, def.GroupName, def.SortOrder = p.ReportsTo, p.GroupName, p.SortOrder
+		if err := def.validateHierarchy(); err != nil {
+			return nil, err
+		}
+		if def.ReportsTo != "" && bySlug[def.ReportsTo] == nil {
+			return nil, ErrUnknownParent
+		}
+		parents[def.Slug] = def.ReportsTo
+		defs = append(defs, def)
+	}
+	if _, cycle := HierarchyCycle(parents); cycle {
+		return nil, ErrHierarchyCycle
+	}
+	for _, def := range defs {
+		content, err := SerializeFile(def)
+		if err != nil {
+			return nil, err
+		}
+		path, err := s.filePath(orgID, def.Slug)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			return nil, fmt.Errorf("failed to write agent file: %w", err)
+		}
+		if _, err := s.syncOne(orgID, def, path, content); err != nil {
+			return nil, err
+		}
+	}
+	if err := s.relink(orgID); err != nil {
+		return nil, err
+	}
+	return s.repo.List(orgID)
 }
