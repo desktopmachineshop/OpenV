@@ -602,8 +602,8 @@ class DataTest(unittest.TestCase):
         self.assertEqual(rg.guard_code_step("internal/runner/wire_golden_test.go"), "S7")
 
     def test_s15b_repository_round_trips(self):
-        # S15b pins the team, work item, project, agent and member
-        # repositories with no golden: its five round-trip files and the
+        # S15b pins the work item, project, agent and member repositories
+        # (the team one went with crews) with no golden: its round-trip files and the
         # helpers they share are its guard code, so M12's class A and B
         # commits and X13's class E ones may not relax them. The package's
         # earlier tests beside them (the board order, the malformed-id and
@@ -612,7 +612,7 @@ class DataTest(unittest.TestCase):
         # no golden entry: the golden list keeps 22.
         mine = ["internal/persistence/postgres/repository_roundtrip_helpers_test.go"] + [
             f"internal/persistence/postgres/{r}_repository_roundtrip_test.go"
-            for r in ("team", "workitem", "project", "agent", "member")]
+            for r in ("workitem", "project", "agent", "member")]
         files = subprocess.run(["git", "ls-files", "internal/persistence/postgres"], cwd=REPO,
                                capture_output=True, text=True, check=True).stdout.split()
         self.assertEqual(sorted(f for f in files if rg.guard_code_step(f) == "S15b"), sorted(mine))
@@ -3540,11 +3540,11 @@ class CeilingTest(RepoTest):
             with self.subTest(name=name):
                 self.assertIsNone(rg.read_literal(text, name, "count")[1], f"{name} holds an entry the guard cannot read")
         files = rg.parse_allowlist(text, "FILE_CEILINGS", "count")
-        self.assertEqual(len(files), 15)  # the requirements redesign brought ArtifactList within budget
+        self.assertEqual(len(files), 14)  # the requirements redesign brought ArtifactList within budget; crews took CrewBuilder
         self.assertNotIn("api/client.ts", files)  # F1 made it a barrel within budget
         self.assertEqual(files["views/Login.tsx"], 708 + 70)
         components = rg.parse_allowlist(text, "COMPONENT_CEILINGS", "count")
-        self.assertEqual(len(components), 38)  # #379 bug 168 moved AgentRunsPage's table out; the requirements redesign brought ArtifactHeader and ArtifactList within budget
+        self.assertEqual(len(components), 36)  # #379 bug 168 moved AgentRunsPage's table out; the requirements redesign brought ArtifactHeader and ArtifactList within budget; crews took CrewBuilder and CrewCanvas
         self.assertEqual(components["ModuleView"], 1187 + 118)  # F7 moved the panes out, X16a the data and baseline hooks, X16b resize, ordering and panel mode
 
 
