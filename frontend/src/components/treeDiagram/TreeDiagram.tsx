@@ -159,6 +159,9 @@ export function TreeDiagram<T>(p: TreeDiagramProps<T>): React.ReactElement {
           borderRadius: 6,
           cursor: 'grab',
           touchAction: 'none',
+          // A drag pans: it must not select the boxes' text on its way.
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
         }}
       >
         <div

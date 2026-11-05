@@ -8,6 +8,7 @@ interface ListChipSearchProps {
   searchValue: SearchValue;
   setSearchValue: (next: SearchValue) => void;
   chipQuickCounts: Record<string, number>;
+  chipOptionCounts?: Record<string, Record<string, number>>;
   phone: boolean;
   /** A baseline is read-only and belongs to no saved search. */
   canSave: boolean;
@@ -30,6 +31,7 @@ export const ListChipSearch: React.FC<ListChipSearchProps> = (p) => {
       phone={p.phone}
       saved={p.canSave ? saved : undefined}
       quickCounts={p.chipQuickCounts}
+      optionCounts={p.chipOptionCounts}
       align="right"
       helpKey="requirements.search"
     />

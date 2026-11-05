@@ -9,6 +9,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **The requirements search bar stays put.** The type tabs beside the chip search bar came and went with the results, so the bar jumped around as you typed; they are gone, and filtering by type is under **Filters → Type** in the bar's panel, with a count beside each type. The bar now spans the width of the list, and its panel no longer opens off the edge of the screen.
+- **Panning the Tree no longer selects text.** Dragging the requirements Tree diagram to pan it used to highlight the text of every box it passed over; it now just moves the diagram.
+
 ## 0.28.0 — 2026-11-05
 
 Stable channel release since 2026-11-05.

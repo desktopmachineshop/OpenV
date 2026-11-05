@@ -97,7 +97,8 @@ const FoldAllButton: React.FC<{ folded: boolean; onClick: () => void; phone: boo
   );
 };
 
-// The bar over the list: the type tabs, the project search and its filters,
+// The bar over the list: the type tabs (not with the chip search bar, whose
+// Type filter takes their place), the project search and its filters,
 // the tree's depth, and the Table / Tree / Layers switch (with the Table and
 // Tree views, Table / Tree and a fold-all button in place of the depth). A phone gets the
 // search with the create button, then one scrolling row of chips: the views
@@ -251,6 +252,43 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
     );
   }
 
+  const tail = (
+    <>
+      {depth}
+      <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 4px' }} />
+      <div role="group" aria-label="View" style={{ display: 'flex', flex: 'none', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }} data-help-key="requirements.views">
+        {views.map(({ view, label }, i) => (
+          <button key={view} type="button" aria-pressed={p.view === view} onClick={() => p.setView(view)} style={segment(p.view === view, i === 0, false)}>
+            {label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
+  // With the chip search bar, the types are its Type filter (with their
+  // counts in the panel), so no tabs sit beside it: a row of tabs that came
+  // and went with the results moved the bar under the pointer. The bar takes
+  // the row's width.
+  if (p.chipSearch) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 20px',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0, display: 'flex' }}>{p.chipSearch}</div>
+        {tail}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -294,24 +332,10 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
       </div>
       <div style={{ flexGrow: 1 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', flex: '0 1 auto', minWidth: 0 }}>
-        {p.chipSearch ? (
-          <div style={{ flex: '1 1 360px', minWidth: 220, maxWidth: 560, display: 'flex' }}>{p.chipSearch}</div>
-        ) : (
-          <>
-            {search}
-            {filterButton}
-            {activeChip}
-          </>
-        )}
-        {depth}
-        <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 4px' }} />
-        <div role="group" aria-label="View" style={{ display: 'flex', flex: 'none', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }} data-help-key="requirements.views">
-          {views.map(({ view, label }, i) => (
-            <button key={view} type="button" aria-pressed={p.view === view} onClick={() => p.setView(view)} style={segment(p.view === view, i === 0, false)}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {search}
+        {filterButton}
+        {activeChip}
+        {tail}
       </div>
     </div>
   );

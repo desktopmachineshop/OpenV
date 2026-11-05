@@ -28,6 +28,8 @@ export interface ChipSearchProps {
   saved?: SavedSearchesController;
   /** A count beside each quick filter in the panel. */
   quickCounts?: Record<string, number>;
+  /** A count beside each value of a field in the panel, by field key then value. */
+  optionCounts?: Record<string, Record<string, number>>;
   /** Which edge of the bar the panel lines up with. */
   align?: 'left' | 'right';
   /**
@@ -276,6 +278,7 @@ export const ChipSearch: React.FC<ChipSearchProps> = (p) => {
           }}
           saved={p.saved}
           quickCounts={p.quickCounts}
+          optionCounts={p.optionCounts}
           loaded={loaded}
           phone={!!p.phone}
           align={p.align ?? 'right'}

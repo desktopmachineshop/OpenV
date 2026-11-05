@@ -90,7 +90,7 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
           ? facts.get(artifact.id).vv.status === 'fail'
           : facts.get(artifact.id).suspect > 0;
   const filteredArtifacts = chipSearched.filter(
-    (artifact) => (!typeTab || artifact.type === typeTab) && (chipSearch || quickMatch(artifact, quick))
+    (artifact) => (chipSearch || !typeTab || artifact.type === typeTab) && (chipSearch || quickMatch(artifact, quick))
   );
   const typeCounts = Array.from(
     chipSearched.reduce((m, a) => m.set(a.type, (m.get(a.type) || 0) + 1), new Map<string, number>())
@@ -109,6 +109,18 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
     failing: searched.filter((a) => quickMatch(a, 'failing')).length,
     suspect: searched.filter((a) => quickMatch(a, 'suspect')).length,
   };
+  // The Type filter's counts in the chip search panel, which stand in for the
+  // type tabs: how many of each type the other chips leave, so ticking one
+  // type does not zero the rest.
+  const withoutTypes: SearchValue = { ...searchValue, chips: searchValue.chips.filter((c) => !(c.kind === 'filter' && c.field === 'type')) };
+  const chipOptionCounts: Record<string, Record<string, number>> = chipSearch
+    ? {
+        type: filterItems(searched, withoutTypes, searchSchema, accessors).reduce<Record<string, number>>((m, a) => {
+          m[a.type] = (m[a.type] || 0) + 1;
+          return m;
+        }, {}),
+      }
+    : {};
   const chipQuickCounts: Record<string, number> = chipSearch
     ? { ...quickCounts, mine: searched.filter((a) => accessors.quickMatch!(a, 'mine')).length }
     : quickCounts;
@@ -154,6 +166,7 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
     searchValue,
     setSearchValue,
     chipQuickCounts,
+    chipOptionCounts,
     tableGroups,
     groupedBy,
   };

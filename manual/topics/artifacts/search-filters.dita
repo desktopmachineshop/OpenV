@@ -15,7 +15,7 @@
       <p><b>Typing suggests chips.</b> Type <b>dav</b> and the bar offers <i>Owner: Dave</i>, <i>Search Owner for: dav</i>, <i>Search Title for: dav</i> and so on. Pick one with the arrow keys and <b>Enter</b>, or click it, and it becomes a chip.</p>
       <p><b>The caret</b> at the right of the bar opens a panel with three columns:</p>
       <ul>
-        <li><b>Filters</b> — the quick filters (<b>Mine</b>, <b>In review</b>, <b>Failing</b>, <b>Suspect</b>, each with how many it would show), then <b>Status</b>, <b>Type</b>, <b>Priority</b>, <b>Created</b> and <b>Updated</b>, each opening its values (for the dates: today, this week, this month, this quarter, this year). Ticking two values of one field shows either. <b>Custom filter…</b> builds a condition on any field or attribute: <i>contains</i> or <i>is</i> a value.</li>
+        <li><b>Filters</b> — the quick filters (<b>Mine</b>, <b>In review</b>, <b>Failing</b>, <b>Suspect</b>, each with how many it would show), then <b>Status</b>, <b>Type</b>, <b>Priority</b>, <b>Created</b> and <b>Updated</b>, each opening its values (for the dates: today, this week, this month, this quarter, this year). On the requirements list, each <b>Type</b> shows how many artifacts of that type the other chips leave. Ticking two values of one field shows either. <b>Custom filter…</b> builds a condition on any field or attribute: <i>contains</i> or <i>is</i> a value.</li>
         <li><b>Group by</b> — <b>Status</b>, <b>Type</b>, <b>Priority</b>, <b>Owner</b> or <b>Heading</b>, and <b>Custom group</b> for any attribute. The table then lists its rows under one heading per value; within a group, the rows keep their place in the hierarchy, and each group folds on its own. Two groupings combine ("Draft · Requirement"). Each grouping is a chip too.</li>
         <li><b>Favourites</b> — your saved searches. <b>Save current search</b> names the chips and text in the bar; tick <b>Share with the workspace</b> to list it for everyone in the workspace. Saved searches are kept with your account, so they follow you to every device. Choosing one puts it in the bar as a single chip; <b>×</b> beside one of your own deletes it.</li>
       </ul>
@@ -24,7 +24,7 @@
     </section>
     <section id="the-lists-bar">
       <title>The list's bar</title>
-      <p>The list's bar narrows the project you are in. Its text matches the ref, title, body, type and attributes. The type tabs beside it still narrow what the bar leaves, and count what each type holds.</p>
+      <p>The list's bar narrows the project you are in, and spans the width of the list. Its text matches the ref, title, body, type and attributes. It takes the place of the type tabs: filter by type from <b>Filters → Type</b> in the panel, where each type shows its count. The panel stays inside the window, however narrow the list.</p>
     </section>
     <section id="the-top-bars-chips">
       <title>The top bar's chips</title>
