@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { buttonStyle } from '../ui/buttonStyles';
 import { ChipSearchFilters } from './ChipSearchFilters';
 import { check, columnHeading, divider, menuItem, smallInput, stepMenuFocus } from './chipSearchStyles';
@@ -12,6 +12,7 @@ interface MenuProps {
   onClose: () => void;
   saved?: SavedSearchesController;
   quickCounts?: Record<string, number>;
+  optionCounts?: Record<string, Record<string, number>>;
   loaded: Record<string, SearchOption[]>;
   phone: boolean;
   align: 'left' | 'right';
@@ -27,6 +28,24 @@ export const ChipSearchMenu: React.FC<MenuProps> = (p) => {
     // Focus the first item, so the keyboard lands in the menu it opened.
     ref.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus();
   }, []);
+  // Lined up with one edge of the bar, a panel wider than the space on that
+  // side would run off the screen (or under the menu rail): slide it back
+  // inside the window, 8px from its edges.
+  useLayoutEffect(() => {
+    if (p.phone) return;
+    const place = () => {
+      const el = ref.current;
+      if (!el) return;
+      el.style.transform = '';
+      const r = el.getBoundingClientRect();
+      const room = window.innerWidth - 8;
+      const shift = r.left < 8 ? 8 - r.left : r.right > room ? Math.max(room - r.right, 8 - r.left) : 0;
+      el.style.transform = shift ? `translateX(${Math.round(shift)}px)` : '';
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [p.phone]);
   const showGroups = (p.schema.groupBy?.length ?? 0) > 0 || (p.schema.customGroups?.length ?? 0) > 0;
   const showSaved = !!p.schema.savedScope && !!p.saved;
   const columns = 1 + (showGroups ? 1 : 0) + (showSaved ? 1 : 0);
@@ -88,7 +107,7 @@ export const ChipSearchMenu: React.FC<MenuProps> = (p) => {
           textAlign: 'left',
         }}
       >
-        <ChipSearchFilters schema={p.schema} value={p.value} onChange={p.onChange} quickCounts={p.quickCounts} loaded={p.loaded} />
+        <ChipSearchFilters schema={p.schema} value={p.value} onChange={p.onChange} quickCounts={p.quickCounts} optionCounts={p.optionCounts} loaded={p.loaded} />
         {showGroups && <GroupColumn schema={p.schema} value={p.value} onChange={p.onChange} />}
         {showSaved && p.saved && <SavedColumn saved={p.saved} value={p.value} onChange={p.onChange} />}
       </div>

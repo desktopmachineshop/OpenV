@@ -42,6 +42,7 @@ const Harness: React.FC<{ initial?: SearchValue; saved?: SavedSearchesController
       placeholder="Search…"
       saved={saved}
       quickCounts={{ mine: 3 }}
+      optionCounts={{ status: { draft: 5 } }}
     />
   );
 };
@@ -153,6 +154,20 @@ describe('ChipSearch', () => {
     key(document.activeElement ?? caret, 'Escape');
     expect(container.querySelector('[role="menu"]')).toBeNull();
     expect(document.activeElement).toBe(caret);
+  });
+
+  it('counts each value of a field, and keeps the panel inside the window', () => {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return (this.classList.contains('ov-chip-search-menu') ? { left: -120, right: 570, top: 0, bottom: 0, width: 690, height: 0 } : { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 }) as DOMRect;
+    });
+    render(<Harness />);
+    click(byLabel('Filters, group by and saved searches'));
+    const panel = container.querySelector('.ov-chip-search-menu') as HTMLElement;
+    expect(panel.style.transform).toBe('translateX(128px)');
+    click(byText('menuitem', 'Status'));
+    expect(byText('menuitemcheckbox', 'Draft')?.textContent).toContain('5');
+    expect(byText('menuitemcheckbox', 'In review')?.textContent).toContain('0');
+    rect.mockRestore();
   });
 
   it('saves the current search under a name', async () => {

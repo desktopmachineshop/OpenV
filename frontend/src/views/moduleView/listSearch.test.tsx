@@ -114,6 +114,8 @@ describe('useListView with the chip search', () => {
     ]);
     expect(out.groupedBy).toBe('Owner');
     expect(out.chipQuickCounts.mine).toBe(2);
+    // The Type filter's counts stand in for the type tabs, and ignore the type chip.
+    expect(out.chipOptionCounts.type).toEqual({ heading: 1, requirement: 2, 'test-case': 1 });
 
     act(() => root.render(<Probe params="qf=mine&qf=in_review" />));
     expect(out.filteredArtifacts.map((a) => a.id)).toEqual(['req-1']);

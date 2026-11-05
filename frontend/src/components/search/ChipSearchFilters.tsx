@@ -19,6 +19,7 @@ interface FiltersProps {
   value: SearchValue;
   onChange: (next: SearchValue) => void;
   quickCounts?: Record<string, number>;
+  optionCounts?: Record<string, Record<string, number>>;
   /** Options loaded by a field's loadOptions, by field key. */
   loaded: Record<string, SearchOption[]>;
 }
@@ -26,7 +27,7 @@ interface FiltersProps {
 // The panel's Filters column: the quick filters, then each enum and date
 // facet as a sub-menu that opens in place, then Custom filter… for a
 // condition on any field.
-export const ChipSearchFilters: React.FC<FiltersProps> = ({ schema, value, onChange, quickCounts, loaded }) => {
+export const ChipSearchFilters: React.FC<FiltersProps> = ({ schema, value, onChange, quickCounts, optionCounts, loaded }) => {
   const [open, setOpen] = useState<string>('');
   const [custom, setCustom] = useState(false);
   const menuFields = schema.fields.filter((f) => f.inMenu ?? (f.type === 'enum' || f.type === 'date'));
@@ -87,7 +88,8 @@ export const ChipSearchFilters: React.FC<FiltersProps> = ({ schema, value, onCha
                       style={menuItem(on)}
                     >
                       <span style={check(on)} aria-hidden="true">{on ? '✓' : ''}</span>
-                      {field.type === 'date' ? `${field.label}: ${o.label}` : o.label}
+                      <span style={{ flex: 1 }}>{field.type === 'date' ? `${field.label}: ${o.label}` : o.label}</span>
+                      {optionCounts?.[field.key] && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{optionCounts[field.key][o.value] ?? 0}</span>}
                     </button>
                   );
                 })}

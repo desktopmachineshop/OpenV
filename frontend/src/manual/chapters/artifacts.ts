@@ -22,8 +22,10 @@ an editor, version history, image attachments, comments, and baselines.
 The view has two parts side by side:
 
 - **The list** — every artifact in the project, as a **table** or a **tree**
-  diagram (see below). Above it sit the type tabs, the project search and
-  its filters, and a line of figures for what is in view.
+  diagram (see below). Above it sit the project search and its filters
+  (with the chip search bar, the bar alone, across the list's width; without
+  it, the type tabs and the search box), and a line of figures for what is
+  in view.
 - **The detail panel** — on the right, the selected artifact: its status,
   quality and priority, its text, its place in the trace and its tests (see
   *The detail panel*). Drag its left edge to make it wider; the width is
@@ -45,8 +47,10 @@ this page, with the artifact and link types.
 
 The **Table / Tree** switch above the list changes how the project is drawn;
 the choice stays in the page's address (\`?view=\`), so a link or a reload
-keeps it. The **type tabs** (*All*, *Requirement*, *Test Case*, …) show one
-type at a time in either, with a count beside each.
+keeps it. To show one type at a time in either, open the search bar's
+caret and tick a value under **Filters → Type**, which counts each type
+beside it. (Without the chip search bar, the **type tabs** — *All*,
+*Requirement*, *Test Case*, … — do the same.)
 
 - **Table** — the document's hierarchy, one dense row per artifact, every
   artifact nested under the heading or parent it sits in, with guide lines
@@ -273,7 +277,9 @@ arrow keys and **Enter**, or click it, and it becomes a chip.
 - **Filters** — the quick filters (**Mine**, **In review**, **Failing**,
   **Suspect**, each with how many it would show), then **Status**, **Type**,
   **Priority**, **Created** and **Updated**, each opening its values (for the
-  dates: today, this week, this month, this quarter, this year). Ticking two
+  dates: today, this week, this month, this quarter, this year). On the
+  requirements list, each **Type** shows how many artifacts of that type the
+  other chips leave. Ticking two
   values of one field shows either. **Custom filter…** builds a condition on
   any field or attribute: *contains* or *is* a value.
 - **Group by** — **Status**, **Type**, **Priority**, **Owner** or **Heading**,
@@ -298,9 +304,11 @@ search included.
 
 ### The list's bar
 
-The list's bar narrows the project you are in. Its text matches the ref,
-title, body, type and attributes. The type tabs beside it still narrow what
-the bar leaves, and count what each type holds.
+The list's bar narrows the project you are in, and spans the width of the
+list. Its text matches the ref, title, body, type and attributes. It takes
+the place of the type tabs: filter by type from **Filters → Type** in the
+panel, where each type shows its count. The panel stays inside the window,
+however narrow the list.
 
 ### The top bar's chips
 
