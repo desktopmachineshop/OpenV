@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.28.1 — 2026-11-05
+
 ### Bug fixes
 
 - **The top-bar search is a box to find and open an artifact.** It no longer carries filter chips, which looked like they would filter the page but only changed its drop-down. Type a title, some text or a ref such as *REQ-12* and pick a result to open it, in any project you can see; to filter the page you are on, use the search bar above the requirements list.
