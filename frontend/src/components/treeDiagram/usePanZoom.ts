@@ -82,6 +82,8 @@ export function usePanZoom(width: number, height: number) {
   const onPointerDown = (e: ReactPointerEvent) => {
     // A press on a box or a button is a click, not a pan.
     if ((e.target as HTMLElement).closest('[role="treeitem"], button')) return;
+    // Drop a selection a click elsewhere left, so the pan drags nothing.
+    window.getSelection?.()?.removeAllRanges();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   };
