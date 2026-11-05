@@ -17,6 +17,7 @@ DELETE /api/v1/me/avatar: session
 DELETE /api/v1/me/connected-apps/{id}: session
 DELETE /api/v1/me/provider-tokens/{provider}: session
 DELETE /api/v1/me/push-subscriptions: session
+DELETE /api/v1/me/saved-searches/{id}: session
 DELETE /api/v1/notifications/cleared: session
 DELETE /api/v1/org-teams/{id}: org:admin
 DELETE /api/v1/org-teams/{id}/members/{userId}: org:admin
@@ -98,6 +99,7 @@ GET /api/v1/me/notification-prefs: session
 GET /api/v1/me/provider-tokens/{provider}: session
 GET /api/v1/me/push-subscriptions: session
 GET /api/v1/me/push/config: session
+GET /api/v1/me/saved-searches: session
 GET /api/v1/meta/artifact-types: -
 GET /api/v1/meta/attribute-definitions: project:viewer, org:member
 GET /api/v1/meta/link-types: -
@@ -243,6 +245,7 @@ POST /api/v1/interviews/{id}/invites: no-proposal-run, project:editor
 POST /api/v1/links: project-visible, project-visible, project:editor, project:editor|project:viewer, project:editor
 POST /api/v1/me/avatar: session
 POST /api/v1/me/push-subscriptions: session
+POST /api/v1/me/saved-searches: session
 POST /api/v1/notifications/clear: session
 POST /api/v1/notifications/read: session
 POST /api/v1/notifications/read-all: session

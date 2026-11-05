@@ -68,6 +68,7 @@ release_schedule scope org_id cascade from organizations
 repo_connections scope project_id cascade from projects
 runner_pool_nodes scope - not reached
 runner_sessions scope org_id cascade from organizations
+saved_searches scope org_id cascade from organizations
 schema_migrations scope - not reached
 sessions scope - not reached
 shared_product_reports scope - not reached

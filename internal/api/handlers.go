@@ -44,6 +44,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -123,6 +124,9 @@ type HandlerDeps struct {
 	// PushSubService stores per-device web push subscriptions (REQ-109).
 	// nil leaves the endpoints answering "not available".
 	PushSubService pushsubs.Service
+	// SavedSearchService stores members' saved searches (issue #722).
+	// nil answers an empty list and refuses to save.
+	SavedSearchService savedsearches.Service
 	// UserMetricsService records daily user activity and answers the
 	// platform admin's user dashboard. nil records nothing.
 	UserMetricsService usermetrics.Service

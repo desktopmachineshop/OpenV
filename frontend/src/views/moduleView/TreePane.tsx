@@ -9,7 +9,7 @@ import { KpiStrip } from './KpiStrip';
 import { LayersView } from './LayersView';
 import { LevelDrill } from './LevelDrill';
 import type { RequirementsView } from './ListToolbar';
-import { TableView } from './TableView';
+import { TableGroup, TableView } from './TableView';
 import { TreeDiagramView } from './TreeDiagramView';
 import type { FoldTrigger } from './useFoldAll';
 import type { Artifact, Setter } from './shared';
@@ -58,6 +58,9 @@ interface TreePaneProps {
   handleArtifactContextMenu: (action: ArtifactContextAction, artifact: Artifact) => void;
   clipboard: Artifact | null;
   qualityScores: Record<string, QualityRowInfo>;
+  /** The chip search bar's group-by, which the table draws its rows under (issue #722). */
+  tableGroups?: TableGroup[];
+  groupedBy?: string;
 }
 
 export const TreePane: React.FC<TreePaneProps> = (p) => {
@@ -107,6 +110,8 @@ export const TreePane: React.FC<TreePaneProps> = (p) => {
           onReorder={p.handleReorderArtifact}
           onContextMenuAction={p.handleArtifactContextMenu}
           phone={p.phone}
+          groups={p.tableGroups}
+          groupedBy={p.groupedBy}
         />
       );
     }
@@ -162,6 +167,7 @@ export const TreePane: React.FC<TreePaneProps> = (p) => {
         hideHeading
         facts={p.facts}
         compact={outline}
+        groups={p.view === 'table' ? p.tableGroups : undefined}
       />
     );
   };

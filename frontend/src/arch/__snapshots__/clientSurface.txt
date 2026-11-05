@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 232; members of exported objects: 304
+exports: 235; members of exported objects: 307
 
 interface AdminUser
 interface AdminWorkspace
@@ -139,6 +139,8 @@ interface RunnerPoolLoad
 type      RunnerPoolStatus
 interface RunnerSession
 interface RunnerSessionPayload
+interface SavedSearch
+interface SearchFacets
 interface SearchHit
 type      SearchMode
 interface SearchResponse
@@ -492,6 +494,10 @@ const     resolveAvatarUrl
 const     reviewAPI
             .get
             .startRound
+const     savedSearchAPI
+            .create
+            .delete
+            .list
 const     searchAPI
             .global
 const     shareLinkAPI

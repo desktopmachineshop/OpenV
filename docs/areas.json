@@ -166,6 +166,7 @@
         "frontend/src/components/kanban/**",
         "frontend/src/components/treeDiagram/**",
         "frontend/src/components/note*",
+        "frontend/src/components/search/**",
         "frontend/src/config/**",
         "frontend/src/utils/artifact*",
         "frontend/src/utils/pendingLinks*",
@@ -204,6 +205,7 @@
         "internal/domain/products/**",
         "internal/domain/projects/**",
         "internal/domain/quality/**",
+        "internal/domain/savedsearches/**",
         "internal/domain/settings/**",
         "internal/domain/traceability/**",
         "internal/domain/workitems/**",
@@ -221,6 +223,7 @@
         "internal/persistence/postgres/link_*.go",
         "internal/persistence/postgres/product_profile_*.go",
         "internal/persistence/postgres/project_*.go",
+        "internal/persistence/postgres/saved_search_*.go",
         "internal/persistence/postgres/settings_*.go",
         "internal/persistence/postgres/workitem_*.go"
       ]

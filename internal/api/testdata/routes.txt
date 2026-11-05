@@ -11,6 +11,7 @@ DELETE /api/v1/me/avatar
 DELETE /api/v1/me/connected-apps/{id}
 DELETE /api/v1/me/provider-tokens/{provider}
 DELETE /api/v1/me/push-subscriptions
+DELETE /api/v1/me/saved-searches/{id}
 DELETE /api/v1/notifications/cleared
 DELETE /api/v1/org-teams/{id}
 DELETE /api/v1/org-teams/{id}/members/{userId}
@@ -92,6 +93,7 @@ GET /api/v1/me/notification-prefs
 GET /api/v1/me/provider-tokens/{provider}
 GET /api/v1/me/push-subscriptions
 GET /api/v1/me/push/config
+GET /api/v1/me/saved-searches
 GET /api/v1/meta/artifact-types
 GET /api/v1/meta/attribute-definitions
 GET /api/v1/meta/link-types
@@ -237,6 +239,7 @@ POST /api/v1/interviews/{id}/invites
 POST /api/v1/links
 POST /api/v1/me/avatar
 POST /api/v1/me/push-subscriptions
+POST /api/v1/me/saved-searches
 POST /api/v1/notifications/clear
 POST /api/v1/notifications/read
 POST /api/v1/notifications/read-all

@@ -34,6 +34,7 @@
     "compact-layout",
     "redesign-pages",
     "requirements-tree",
+    "chip-search",
     "agent-hierarchy"
   ],
   "event_types": [

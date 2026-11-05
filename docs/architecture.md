@@ -202,6 +202,7 @@ the area that owns them; the area guide of
 | | `internal/domain/products` | the product profile |
 | | `internal/domain/projects` | projects and their settings |
 | | `internal/domain/quality` | the rule-based linter over a requirement's wording |
+| | `internal/domain/savedsearches` | a member's saved searches, the named chip sets of a page's search bar |
 | | `internal/domain/settings` | workspace and project preferences: the quality rule set, reference parties |
 | | `internal/domain/traceability` | the link write service the four link-write paths share |
 | | `internal/domain/workitems` | the kanban work items |

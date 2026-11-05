@@ -23,6 +23,7 @@ DELETE /api/v1/me/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/me/connected-apps/{id}: s5d, s5e; 2xx or 3xx in s5d
 DELETE /api/v1/me/provider-tokens/{provider}: s5e (errors only)
 DELETE /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/me/saved-searches/{id}: s5a, s5e; 2xx or 3xx in s5a
 DELETE /api/v1/notifications/cleared: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/org-teams/{id}: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/org-teams/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
@@ -104,6 +105,7 @@ GET /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/provider-tokens/{provider}: s5e; 2xx or 3xx in s5e
 GET /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/push/config: s5c, s5e; 2xx or 3xx in s5c, s5e
+GET /api/v1/me/saved-searches: s5a, s5e; 2xx or 3xx in s5a
 GET /api/v1/meta/artifact-types: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/meta/attribute-definitions: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/meta/link-types: s5a, s5e; 2xx or 3xx in s5a, s5e
@@ -249,6 +251,7 @@ POST /api/v1/interviews/{id}/invites: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/links: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d
 POST /api/v1/me/avatar: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/me/push-subscriptions: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/me/saved-searches: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/notifications/clear: s5c, s5e; 2xx or 3xx in s5c, s5e
 POST /api/v1/notifications/read: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/notifications/read-all: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -359,4 +362,4 @@ PUT /api/v1/shared-products/{id}/vote: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 348 of 348 routes reached (100.0%), 334 with a 2xx or 3xx answer (96.0%); the floor is 90%, 314 routes
+the tour: 351 of 351 routes reached (100.0%), 337 with a 2xx or 3xx answer (96.0%); the floor is 90%, 316 routes

@@ -17,6 +17,8 @@ import type {
   QualityScore,
   ReviewQueue,
   ReviewRoundResult,
+  SavedSearch,
+  SearchFacets,
   SearchMode,
   SearchResponse,
 } from './types/artifacts';
@@ -170,15 +172,39 @@ export const qualityAPI = {
     client.get<QualityScore>(`/api/v1/artifacts/${artifactId}/quality`),
 };
 
+// A facet list as GET /api/v1/search reads it: comma-separated.
+const facetParam = (values?: string[]) => (values && values.length ? values.join(',') : undefined);
+
 export const searchAPI = {
-  global: (q: string, opts?: { limit?: number; mode?: SearchMode }) =>
-    client.get<SearchResponse>('/api/v1/search', {
+  global: (q: string, opts?: { limit?: number; mode?: SearchMode } & SearchFacets) => {
+    const facets: Record<string, string> = {};
+    const set = (key: string, value: string | undefined) => {
+      if (value) facets[key] = value;
+    };
+    set('project', facetParam(opts?.projects));
+    set('type', facetParam(opts?.types));
+    set('status', facetParam(opts?.statuses));
+    set('owner', facetParam(opts?.owners));
+    if (opts?.facets) facets.facets = '1';
+    return client.get<SearchResponse>('/api/v1/search', {
       params: {
         q,
         ...(opts?.limit ? { limit: opts.limit } : {}),
         ...(opts?.mode ? { mode: opts.mode } : {}),
+        ...facets,
       },
-    }),
+    });
+  },
+};
+
+// A member's saved searches (issue #722): per user, active workspace and
+// scope. Saving under a name already used replaces that search.
+export const savedSearchAPI = {
+  list: (scope: string) =>
+    client.get<{ saved_searches: SavedSearch[] }>('/api/v1/me/saved-searches', { params: { scope } }),
+  create: (body: { scope: string; name: string; value: Record<string, unknown>; shared?: boolean }) =>
+    client.post<SavedSearch>('/api/v1/me/saved-searches', body),
+  delete: (id: string) => client.delete(`/api/v1/me/saved-searches/${id}`),
 };
 
 export const duplicatesAPI = {
