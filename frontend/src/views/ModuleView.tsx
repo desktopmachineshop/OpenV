@@ -34,6 +34,8 @@ import { ListToolbar } from './moduleView/ListToolbar';
 import { useListView } from './moduleView/useListView';
 import { useFoldAll } from './moduleView/useFoldAll';
 import { REQUIREMENTS_TREE_FEATURE } from './moduleView/requirementsViews';
+import { ListChipSearch } from './moduleView/ListChipSearch';
+import { filterSummary } from './moduleView/filterSummary';
 import { PhoneActionBar } from './moduleView/PhoneActionBar';
 import { useCoverage } from './moduleView/useCoverage';
 import { useBaselineView } from './moduleView/useBaselineView';
@@ -683,7 +685,7 @@ export const ModuleView: React.FC = () => {
   const searched = activeArtifacts.filter(
     (artifact) => matchesSearch(artifact, searchText, searchExact) && matchesFieldFilters(artifact, filterRows, filterLogic, getFieldValue)
   );
-  const { view, setView, typeTab, setTypeTab, quick, setQuick, facts, filteredArtifacts, typeCounts, figures, quickCounts } =
+  const { view, setView, typeTab, setTypeTab, quick, setQuick, facts, filteredArtifacts, typeCounts, figures, quickCounts, ...chips } =
     useListView({
       searched,
       artifacts: activeArtifacts,
@@ -767,26 +769,6 @@ export const ModuleView: React.FC = () => {
     steppingOn && viewport.coarsePointer && readingOrder.length > 1 && !isEditing,
     (direction) => stepToArtifact(direction === 'next' ? 1 : -1)
   );
-
-  const buildFilterSummary = (): string => {
-    const parts: string[] = [];
-
-    if (searchText.trim()) {
-      parts.push(searchExact ? `Exact search: "${searchText.trim()}"` : `Search: "${searchText.trim()}"`);
-    }
-
-    const activeRows = filterRows.filter((row) => row.value.trim() !== '');
-    if (activeRows.length > 0) {
-      const rowSummaries = activeRows.map((row) => `${row.field} ${row.comparator} "${row.value.trim()}"`);
-      parts.push(`Filters (${filterLogic.toUpperCase()}): ${rowSummaries.join(filterLogic === 'and' ? ' + ' : ' | ')}`);
-    }
-
-    if (parts.length === 0) {
-      return 'No filters applied';
-    }
-
-    return parts.join(' • ');
-  };
 
   useEffect(() => {
     const saved = window.localStorage.getItem('artifactFilterPresets');
@@ -960,14 +942,16 @@ export const ModuleView: React.FC = () => {
         setIsCreating={setIsCreating}
         setPendingCreateContext={setPendingCreateContext}
         setPendingCreatePlacement={setPendingCreatePlacement}
-        showFilterPanel={showFilterPanel}
+        showFilterPanel={!chips.chipSearch && showFilterPanel}
+        tableGroups={chips.tableGroups}
+        groupedBy={chips.groupedBy}
         toolbar={
           <ListToolbar
             phone={stacked}
             view={view}
             setView={setView}
             typeCounts={typeCounts}
-            total={searched.length}
+            total={chips.chipSearched.length}
             typeTab={typeTab}
             setTypeTab={setTypeTab}
             quick={quick}
@@ -975,7 +959,7 @@ export const ModuleView: React.FC = () => {
             quickCounts={quickCounts}
             searchText={searchText}
             setSearchText={setSearchText}
-            filterSummary={buildFilterSummary()}
+            filterSummary={filterSummary(searchText, searchExact, filterRows, filterLogic)}
             filtersActive={filtersActive}
             clearFilters={clearFilters}
             showFilterPanel={showFilterPanel}
@@ -985,6 +969,7 @@ export const ModuleView: React.FC = () => {
             folded={fold.folded}
             toggleFold={fold.toggleFold}
             newButton={stacked ? newButton : undefined}
+            chipSearch={chips.chipSearch ? <ListChipSearch {...chips} phone={stacked} canSave={!isBaselineView} /> : undefined}
           />
         }
         filterPanel={

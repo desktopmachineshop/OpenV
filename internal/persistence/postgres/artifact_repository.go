@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -453,12 +454,14 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 		args = append(args, artifacts.NormalizeRef(query))
 	}
 
+	facetPredicate, facetColumns, args := searchFacetSQL(opts, args)
+
 	sqlQuery := `
-		SELECT id, project_id, type, title, body, COALESCE(ref, '')
+		SELECT id, project_id, type, title, body, COALESCE(ref, '')` + facetColumns + `
 		FROM artifacts
 		WHERE valid_to IS NULL
 		AND project_id = ANY($1)
-		AND (` + refPredicate + `title ILIKE $2 OR body ILIKE $2)
+		AND (` + refPredicate + `title ILIKE $2 OR body ILIKE $2)` + facetPredicate + `
 		ORDER BY ` + refRanking + `(title ILIKE $2) DESC, updated_at DESC
 		LIMIT $3
 	`
@@ -476,7 +479,11 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 	for rows.Next() {
 		hit := new(artifacts.SearchHit)
 		var body string
-		if err := rows.Scan(&hit.ArtifactID, &hit.ProjectID, &hit.Type, &hit.Title, &body, &hit.Ref); err != nil {
+		dest := []interface{}{&hit.ArtifactID, &hit.ProjectID, &hit.Type, &hit.Title, &body, &hit.Ref}
+		if opts.Facets {
+			dest = append(dest, &hit.Status, &hit.Owner)
+		}
+		if err := rows.Scan(dest...); err != nil {
 			return nil, err
 		}
 		if !opts.MatchRefs {
@@ -489,6 +496,39 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 	}
 
 	return hits, rows.Err()
+}
+
+// searchStatusExpr is an artifact's review status as statusOf reads it on the
+// client: the column, else the legacy attribute mirror, else draft.
+const searchStatusExpr = `COALESCE(NULLIF(status, ''), attributes->>'status', 'draft')`
+
+// searchFacetSQL is SearchInProjects' share of the chip search bar (issue
+// #722): the predicate narrowing by type, review status and owner, each bound
+// as one more array parameter after args, and the columns carrying a hit's
+// status and owner back. Without facets both are empty, so a search without
+// them is the statement it always was.
+func searchFacetSQL(opts artifacts.SearchOptions, args []interface{}) (predicate, columns string, out []interface{}) {
+	facet := func(expr, op string, values []string) {
+		if len(values) == 0 {
+			return
+		}
+		args = append(args, pq.Array(values))
+		predicate += fmt.Sprintf("\n\t\tAND %s %s ANY($%d)", expr, op, len(args))
+	}
+	facet("type", "=", opts.Types)
+	facet(searchStatusExpr, "=", opts.Statuses)
+	// An owner matches as a substring without regard to case: "dav" finds
+	// "Dave Smith" and "dave@example.com", as the owner field holds a name or
+	// an address, whichever the editor offered.
+	owners := make([]string, 0, len(opts.Owners))
+	for _, o := range opts.Owners {
+		owners = append(owners, artifacts.LikePattern(strings.ToLower(strings.TrimSpace(o))))
+	}
+	facet("LOWER(COALESCE(attributes->>'owner', ''))", "LIKE", owners)
+	if opts.Facets {
+		columns = ", " + searchStatusExpr + ", COALESCE(attributes->>'owner', '')"
+	}
+	return predicate, columns, args
 }
 
 // FindVersionsByID retrieves all versions of an artifact (including

@@ -69,6 +69,7 @@ var Registry = []Feature{
 	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
 	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
 	{Key: FeatureFloatingAssistant, ShippedIn: "0.28.0", Summary: "The V&V Assistant floats over every project page and the workspace Home, keeps one conversation as you move around, and starts drafting tests for the V&V dashboard's gaps; an artifact's history and comments sit in its own pane"},
+	{Key: FeatureChipSearch, ShippedIn: "0.28.0", Summary: "One search bar with a chip for each filter: filter, group and save searches on the requirements list, and filter the top-bar search by project, type, status and owner"},
 }
 
 // Feature keys the code gates on.
@@ -148,6 +149,14 @@ const (
 	// as the API already lists them to every member: a gate on reading would
 	// hide what an admin on another channel, or a preview, has made.
 	FeatureWorkspaceAutomations = "workspace-automations"
+	// FeatureChipSearch is the chip search bar (issue #722): the requirements
+	// list's filters, grouping and saved searches as chips in one bar, and
+	// the top-bar search's project, type, status and owner chips. It gates
+	// the BARS, SAVING a search (POST /me/saved-searches) and the facet
+	// parameters of GET /search. Listing and deleting saved searches are not
+	// gated, so a member can always see and remove what they saved, and a
+	// search without facets answers exactly as before.
+	FeatureChipSearch = "chip-search"
 	// FeatureWorkspaceRuns is the workspace Runs page (/org/runs): the runs
 	// with no project (a whole-workspace automation's, an invented
 	// product's, and those a project's delete left behind) beside the run

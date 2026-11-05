@@ -41,6 +41,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
@@ -140,6 +141,7 @@ type app struct {
 	settingsService      *settings.DefaultService
 	attributeService     *attributes.DefaultService
 	targetReleaseService *targetreleases.DefaultService
+	savedSearchService   *savedsearches.DefaultService
 	sharedProductService *sharedproducts.DefaultService
 	vvService            *vv.DefaultService
 	evidenceService      *evidence.DefaultService

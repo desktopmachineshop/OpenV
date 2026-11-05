@@ -5,6 +5,7 @@ import { ArtifactTreeNode, ancestorIds, buildHierarchy } from '../utils/artifact
 import type { FactsIndex } from '../utils/artifactFacts';
 import { ArtifactActionsMenu, ArtifactContextAction, ArtifactMenuAnchor, siblingNeighbors } from './ArtifactActionsMenu';
 import { ArtifactTreeRow, TREE_COLUMNS } from './ArtifactTreeRow';
+import { ArtifactListGroup, ArtifactRowGroup } from './ArtifactListGroup';
 import { useViewport } from '../hooks/useViewport';
 
 export type { ArtifactContextAction } from './ArtifactActionsMenu';
@@ -48,6 +49,8 @@ interface ArtifactListProps {
   facts?: FactsIndex;
   /** Narrow (a phone, a slim column): one line per row, no columns. */
   compact?: boolean;
+  /** The chip search bar's group-by: the rows under a heading per group, each its own hierarchy. */
+  groups?: ArtifactRowGroup[];
 }
 
 const parentIdsOf = (nodes: ArtifactTreeNode[], maxDepth = Infinity, depth = 0, ids: string[] = []): string[] => {
@@ -77,6 +80,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   hideHeading = false,
   facts,
   compact = false,
+  groups,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -86,6 +90,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   const [dropTarget, setDropTarget] = useState<{ id: string; zone: DropZone } | null>(null);
   const hasInitialized = useRef(false);
   const hierarchy = useMemo(() => buildHierarchy(artifacts), [artifacts]);
+  const grouped = useMemo(() => groups?.map((g) => ({ ...g, nodes: buildHierarchy(g.rows) })), [groups]);
   const columns = !!facts && !compact;
   // A touch screen has no right-click: every row's ⋯ button is a fingertip
   // wide, and the menu's Move to… does what a drop does (REQ-106). Rows keep
@@ -324,7 +329,13 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 <span />
               </div>
             )}
-            {hierarchy.map((node) => renderArtifact(node, 0, []))}
+            {grouped
+              ? grouped.map((g) => (
+                  <ArtifactListGroup key={g.key || 'none'} label={g.label} count={g.rows.length} compact={compact}>
+                    {g.nodes.map((node) => renderArtifact(node, 0, []))}
+                  </ArtifactListGroup>
+                ))
+              : hierarchy.map((node) => renderArtifact(node, 0, []))}
           </div>
         </div>
       )}
