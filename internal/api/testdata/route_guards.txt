@@ -10,9 +10,6 @@ DELETE /api/v1/attachments/{id}: project:editor
 DELETE /api/v1/attribute-definitions/{id}: scoped-write
 DELETE /api/v1/automations/{id}: session, scoped-write
 DELETE /api/v1/baselines/{id}: project:owner
-DELETE /api/v1/crew-edges/{id}: session, scoped-write
-DELETE /api/v1/crew-nodes/{id}: session, scoped-write
-DELETE /api/v1/crews/{id}: session, scoped-write
 DELETE /api/v1/evidence-bundles/{id}: project:editor
 DELETE /api/v1/evidence-files/{id}: project:editor
 DELETE /api/v1/links/{id}: project:editor, project:editor|project:viewer
@@ -20,6 +17,7 @@ DELETE /api/v1/me/avatar: session
 DELETE /api/v1/me/connected-apps/{id}: session
 DELETE /api/v1/me/provider-tokens/{provider}: session
 DELETE /api/v1/me/push-subscriptions: session
+DELETE /api/v1/me/saved-searches/{id}: session
 DELETE /api/v1/notifications/cleared: session
 DELETE /api/v1/org-teams/{id}: org:admin
 DELETE /api/v1/org-teams/{id}/members/{userId}: org:admin
@@ -40,9 +38,6 @@ DELETE /api/v1/repo-connections/{id}: project:owner
 DELETE /api/v1/share-links/{id}: project:owner
 DELETE /api/v1/shared-products/{id}: platform-admin
 DELETE /api/v1/shared-products/{id}/vote: session
-DELETE /api/v1/team-edges/{id}: session, scoped-write
-DELETE /api/v1/team-nodes/{id}: session, scoped-write
-DELETE /api/v1/teams/{id}: session, scoped-write
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/todos/{id}: project:editor
@@ -56,11 +51,11 @@ GET /api/v1/admin/metrics/visitors: platform-admin
 GET /api/v1/admin/users: platform-admin
 GET /api/v1/admin/workspaces: platform-admin
 GET /api/v1/agent-runs: session, project:viewer
-GET /api/v1/agent-runs/delegate/{id}: -
 GET /api/v1/agent-runs/{id}: session, run:viewer
 GET /api/v1/agent-runs/{id}/logs: session, run:viewer
 GET /api/v1/agent-runs/{id}/stream: session, run:viewer
 GET /api/v1/agent-runs/{id}/tree: session, run:viewer
+GET /api/v1/agent-stats: session, project-visible
 GET /api/v1/agents: session
 GET /api/v1/agents/{slug}: session
 GET /api/v1/agents/{slug}/raw: session
@@ -87,10 +82,6 @@ GET /api/v1/automations/{id}: session, org:member
 GET /api/v1/baselines/{id}: project:viewer
 GET /api/v1/baselines/{id}/diff: project:viewer
 GET /api/v1/chatter: project:viewer
-GET /api/v1/crew-templates: session
-GET /api/v1/crews: session
-GET /api/v1/crews/{id}: session, org:member
-GET /api/v1/crews/{id}/export: session, org:member
 GET /api/v1/events: session, project:viewer
 GET /api/v1/evidence-bundles/{id}: project:viewer
 GET /api/v1/evidence-files/{id}/download: project:viewer
@@ -109,6 +100,7 @@ GET /api/v1/me/notification-prefs: session
 GET /api/v1/me/provider-tokens/{provider}: session
 GET /api/v1/me/push-subscriptions: session
 GET /api/v1/me/push/config: session
+GET /api/v1/me/saved-searches: session
 GET /api/v1/meta/artifact-types: -
 GET /api/v1/meta/attribute-definitions: project:viewer, org:member
 GET /api/v1/meta/link-types: -
@@ -196,9 +188,6 @@ GET /api/v1/public/share/{token}/preview.png: -
 GET /api/v1/release: session
 GET /api/v1/search: session
 GET /api/v1/shared-products: -
-GET /api/v1/teams: session
-GET /api/v1/teams/{id}: session, org:member
-GET /api/v1/teams/{id}/export: session, org:member
 GET /api/v1/templates: -
 GET /api/v1/test-results/{id}/citations: project:viewer
 GET /api/v1/test-runs/{id}: project:viewer
@@ -215,7 +204,6 @@ GET /oauth/authorize: -
 HEAD /api/v1/public/connector/download: -
 POST /api/v1/admin/users/{id}/password-reset: platform-admin
 POST /api/v1/agent-runs/claim: worker
-POST /api/v1/agent-runs/delegate: -
 POST /api/v1/agent-runs/{id}/cancel: session, run:editor
 POST /api/v1/agent-runs/{id}/finish: worker, worker-run
 POST /api/v1/agent-runs/{id}/logs: worker, worker-run
@@ -247,12 +235,6 @@ POST /api/v1/auth/verify-email/resend: json-body
 POST /api/v1/automations: session, scoped-write
 POST /api/v1/automations/{id}/run-now: no-proposal-run, session, scoped-write
 POST /api/v1/chatter: project:reviewer
-POST /api/v1/crews: session, project-visible, project:editor, org:admin
-POST /api/v1/crews/import: session, project-visible, project:editor, org:admin
-POST /api/v1/crews/{id}/clone: session, scoped-write, project-visible, project:editor, org:admin
-POST /api/v1/crews/{id}/edges: session, scoped-write
-POST /api/v1/crews/{id}/nodes: session, scoped-write
-POST /api/v1/crews/{id}/runs: no-proposal-run, crew-visible, project:editor, org:admin, project:editor
 POST /api/v1/evidence-bundles/{id}/files: project:editor
 POST /api/v1/guided-sessions: project:editor
 POST /api/v1/guided-sessions/{id}/abandon: project:editor
@@ -267,6 +249,7 @@ POST /api/v1/interviews/{id}/invites: no-proposal-run, project:editor
 POST /api/v1/links: project-visible, project-visible, project:editor, project:editor|project:viewer, project:editor
 POST /api/v1/me/avatar: session
 POST /api/v1/me/push-subscriptions: session
+POST /api/v1/me/saved-searches: session
 POST /api/v1/notifications/clear: session
 POST /api/v1/notifications/read: session
 POST /api/v1/notifications/read-all: session
@@ -305,7 +288,7 @@ POST /api/v1/projects/{id}/review-round: project:editor
 POST /api/v1/projects/{id}/share-links: project:owner
 POST /api/v1/projects/{id}/test-runs: project:editor
 POST /api/v1/projects/{id}/todos: project:editor
-POST /api/v1/projects/{id}/work-items: project:editor, crew-visible
+POST /api/v1/projects/{id}/work-items: project:editor
 POST /api/v1/proposals/bulk: session, project:editor, project-visible
 POST /api/v1/proposals/{id}/approve: project:editor
 POST /api/v1/proposals/{id}/reject: project:editor
@@ -325,12 +308,6 @@ POST /api/v1/runner-pool/nodes/{id}/heartbeat: pool-node, runner-sessions
 POST /api/v1/runner-pool/nodes/{id}/release: pool-node, runner-sessions
 POST /api/v1/shared-products: session, org:member
 POST /api/v1/shared-products/{id}/report: session
-POST /api/v1/teams: session, project-visible, project:editor, org:admin
-POST /api/v1/teams/import: session, project-visible, project:editor, org:admin
-POST /api/v1/teams/{id}/clone: session, scoped-write, project-visible, project:editor, org:admin
-POST /api/v1/teams/{id}/edges: session, scoped-write
-POST /api/v1/teams/{id}/nodes: session, scoped-write
-POST /api/v1/teams/{id}/runs: no-proposal-run, crew-visible, project:editor, org:admin, project:editor
 POST /api/v1/templates: project:editor
 POST /api/v1/templates/{id}/projects: project-create
 POST /api/v1/test-results/{id}/citations: project:editor, project:viewer
@@ -346,6 +323,7 @@ POST /oauth/register: -
 POST /oauth/revoke: -
 POST /oauth/token: -
 PUT /api/v1/admin/users/{id}/admin: platform-admin
+PUT /api/v1/agent-arrangement: org:admin
 PUT /api/v1/agents/{slug}: org:admin
 PUT /api/v1/agents/{slug}/raw: org:admin
 PUT /api/v1/artifacts/{id}: project:editor
@@ -353,9 +331,6 @@ PUT /api/v1/artifacts/{id}/status: project:editor
 PUT /api/v1/attachments/{id}: project:editor
 PUT /api/v1/attribute-definitions/{id}: scoped-write
 PUT /api/v1/automations/{id}: session, scoped-write, scoped-write
-PUT /api/v1/crew-edges/{id}: session, scoped-write
-PUT /api/v1/crew-nodes/{id}: session, scoped-write
-PUT /api/v1/crews/{id}: session, scoped-write
 PUT /api/v1/evidence-bundles/{id}: project:editor
 PUT /api/v1/guided-sessions/{id}/step: project:editor
 PUT /api/v1/interviews/{id}/persona: project:editor, project-visible
@@ -386,9 +361,6 @@ PUT /api/v1/provider-settings: org:admin
 PUT /api/v1/repo-connections/{id}: project:owner
 PUT /api/v1/repo-connections/{id}/my-path: session, project:viewer
 PUT /api/v1/shared-products/{id}/vote: session
-PUT /api/v1/team-edges/{id}: session, scoped-write
-PUT /api/v1/team-nodes/{id}: session, scoped-write
-PUT /api/v1/teams/{id}: session, scoped-write
 PUT /api/v1/test-runs/{id}: project:editor
 PUT /api/v1/todos/{id}: project:editor
-PUT /api/v1/work-items/{id}: project:editor, crew-visible
+PUT /api/v1/work-items/{id}: project:editor

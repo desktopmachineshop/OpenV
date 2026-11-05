@@ -1,21 +1,16 @@
 // Agents and their runs, automations, proposals, repository
-// connections, AI provider settings and sign-ins, and crews.
+// connections, and AI provider settings and sign-ins.
 // Code outside src/api imports these from api/client, which re-exports
 // this module (refactor plan F1, K12).
 
-import { API_BASE_URL, client, downloadBlob } from './http';
+import { API_BASE_URL, client } from './http';
 import type {
   AgentDef,
+  AgentPlacement,
   AgentRun,
+  AgentStatsResponse,
   Automation,
   BulkProposalOutcome,
-  Crew,
-  CrewEdge,
-  CrewGraph,
-  CrewImportResult,
-  CrewNode,
-  CrewTemplate,
-  PortableCrew,
   Proposal,
   ProviderAPIKeys,
   ProviderLogin,
@@ -37,6 +32,11 @@ export const agentsAPI = {
   saveRaw: (slug: string, content: string) =>
     client.put<AgentDef>(`/api/v1/agents/${slug}/raw`, { content }),
   sync: () => client.post<AgentDef[]>('/api/v1/agents/sync'),
+  // Every agent's numbers over the last 7 days in a project, in one call.
+  stats: (projectId: string) =>
+    client.get<AgentStatsResponse>('/api/v1/agent-stats', { params: { project_id: projectId } }),
+  // Places agents in the hierarchy; answers the workspace's agents.
+  arrange: (agents: AgentPlacement[]) => client.put<AgentDef[]>('/api/v1/agent-arrangement', { agents }),
   launchRun: (slug: string, payload: { project_id?: string; prompt: string; work_item_id?: string }) =>
     client.post<AgentRun>(`/api/v1/agents/${slug}/runs`, payload),
   // Launch the seeded test-case-author agent to draft test cases (and verifies
@@ -145,62 +145,4 @@ export const providerTokensAPI = {
   save: (provider: string, token: string) =>
     client.put<ProviderTokenStatus>(`/api/v1/me/provider-tokens/${provider}`, { token }),
   remove: (provider: string) => client.delete(`/api/v1/me/provider-tokens/${provider}`),
-};
-
-export const crewsAPI = {
-  list: (projectId?: string) =>
-    client.get<Crew[]>('/api/v1/crews', { params: projectId ? { project_id: projectId } : {} }),
-  get: (id: string) => client.get<CrewGraph>(`/api/v1/crews/${id}`),
-  create: (payload: { name: string; description?: string; project_id?: string | null }) =>
-    client.post<Crew>('/api/v1/crews', payload),
-  update: (id: string, payload: { name?: string; description?: string; entry_node_id?: string }) =>
-    client.put<Crew>(`/api/v1/crews/${id}`, payload),
-  remove: (id: string) => client.delete(`/api/v1/crews/${id}`),
-  clone: (id: string, name: string, projectId?: string | null) =>
-    client.post<Crew>(`/api/v1/crews/${id}/clone`, { name, project_id: projectId }),
-  addNode: (
-    crewId: string,
-    payload: {
-      node_type: 'agent' | 'human';
-      agent_id?: string;
-      user_id?: string;
-      label: string;
-      department?: string;
-      position?: Record<string, any>;
-    }
-  ) => client.post<CrewNode>(`/api/v1/crews/${crewId}/nodes`, payload),
-  updateNode: (
-    nodeId: string,
-    payload: {
-      label?: string;
-      agent_id?: string;
-      user_id?: string;
-      department?: string;
-      position?: Record<string, any>;
-    }
-  ) => client.put<CrewNode>(`/api/v1/crew-nodes/${nodeId}`, payload),
-  removeNode: (nodeId: string) => client.delete(`/api/v1/crew-nodes/${nodeId}`),
-  addEdge: (crewId: string, payload: { from_node_id: string; to_node_id: string; edge_type: string; config?: Record<string, any> }) =>
-    client.post<CrewEdge>(`/api/v1/crews/${crewId}/edges`, payload),
-  updateEdge: (edgeId: string, config: Record<string, any>) =>
-    client.put<CrewEdge>(`/api/v1/crew-edges/${edgeId}`, { config }),
-  removeEdge: (edgeId: string) => client.delete(`/api/v1/crew-edges/${edgeId}`),
-  launchRun: (crewId: string, payload: { project_id?: string; prompt: string }) =>
-    client.post<AgentRun>(`/api/v1/crews/${crewId}/runs`, payload),
-  // Downloads the crew as a portable JSON document (agents referenced by slug).
-  exportDownload: (id: string, name?: string) =>
-    downloadBlob(`/api/v1/crews/${id}/export`, `${name || 'crew'}.crew.json`),
-  // Creates a crew in the active workspace from a portable document. Pin it to
-  // a project by passing projectId.
-  import: (doc: PortableCrew, projectId?: string | null) =>
-    client.post<CrewImportResult>(
-      `/api/v1/crews/import${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''}`,
-      doc
-    ),
-};
-
-// Built-in crew presets (GET /api/v1/crew-templates). Import a chosen preset's
-// `crew` through crewsAPI.import.
-export const crewTemplatesAPI = {
-  list: () => client.get<CrewTemplate[]>('/api/v1/crew-templates'),
 };

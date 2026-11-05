@@ -14,11 +14,11 @@ Each package belongs to one area of `docs/areas.json` through its
 
 | Area | Packages |
 |---|---|
-| requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `settings/`, `todos/`, `traceability/`, `workitems/` |
+| requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `savedsearches/`, `settings/`, `todos/`, `traceability/`, `workitems/` |
 | verification | `evidence/`, `vv/` |
 | documents | `attachments/`, `baselines/`, `downloads/`, `exports/`, `reports/`, `snapshot/`, `templates/` |
 | tenancy-identity | `invitations/`, `members/`, `orgs/`, `tokens/`, `users/` |
-| agent-suite | `agentruns/`, `agents/`, `automations/`, `crewtemplates/`, `guided/`, `interviews/`, `proposals/`, `providers/`, `repoconns/`, `teams/` |
+| agent-suite | `agentruns/`, `agents/`, `automations/`, `guided/`, `interviews/`, `proposals/`, `providers/`, `repoconns/` |
 | runner-fleet | `hostedworkers/`, `runnersessions/`, `workerkeys/` |
 | events-notifications | `events/`, `notifications/`, `pushsubs/` |
 | community | `sharedproducts/`, `sharelinks/` |
@@ -44,7 +44,7 @@ Billing has no domain package: it is `internal/billing` (see
 | `exports/testdata/import_fields.txt` | S9: every export field, carried or dropped by the import |
 
 The glossary in `docs/areas.json` maps the UI's words to these names
-(workspace = `orgs`, crew = `teams`, runner key = `workerkeys`).
+(workspace = `orgs`, runner key = `workerkeys`; crews, `teams` in the code, are removed).
 
 ## Invariants (plan §3) that bind here
 

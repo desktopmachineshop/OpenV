@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-agent-hierarchy">
+  <title>The agent hierarchy</title>
+  <shortdesc>The Agents page shows the workspace's agents as a hierarchy of cards: who leads, which group each specialist is in, and who reports to whom. It is a picture of how the work is divided; no agent starts another, and each run is a run of one agent.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents.hierarchy"/>
+    <resourceid appname="openv-web" appid="crew"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>The top card</b> is the lead: an agent in no group that reports to no one. Below the top cards, a line totals everything on the page.</li>
+      <li><b>One column per group</b>, each with a coloured marker and a summary line that totals the group's numbers. A group's colour comes from its name, so it is the same for everyone and on every visit.</li>
+      <li>Inside a column, the group's <b>lead</b> comes first and the agents that report to it are <b>indented beneath it</b>, joined by a guide line in the group's colour; nesting can go deeper. An agent with no group of its own sits in the group of the agent it reports to.</li>
+    </ul>
+    <p>Each card has a coloured top border and a chip for its group, and shows its <b>live numbers over the last 7 days</b>: <b>open</b> runs (queued, running or waiting for approval), <b>done</b> runs, their <b>cost</b>, and the proposals of its runs waiting <b>to approve</b>. The numbers refresh while the page is open.</p>
+    <ul>
+      <li><b>Click a card</b> to open the Runs page filtered to that agent: its runs, and the proposals waiting from them. The chip at the top of the Runs page clears the filter.</li>
+      <li><b>Mission and tools</b> opens the agent's description, provider and model, write mode and allowed tools on the card.</li>
+      <li><b>▶ Launch</b> starts a run; <b>Edit agent</b> opens the editor.</li>
+    </ul>
+    <section id="arranging-the-hierarchy">
+      <title>Arranging the hierarchy</title>
+      <p>A workspace admin clicks <b>Edit</b> (top right) to arrange the cards. Each card then shows:</p>
+      <ul>
+        <li><b>Reports to</b> — the agent it sits under, or <i>No one</i> to put it at the top. An agent cannot report to itself or to an agent below it.</li>
+        <li><b>Group</b> — type a group's name, pick an existing one, or clear it so the agent takes the group of the agent it reports to.</li>
+        <li><b>↑ ↓</b> — move it among the agents beside it.</li>
+      </ul>
+      <p>Each change is saved at once, to the agent's definition file (<codeph>reports_to</codeph>, <codeph>group</codeph> and <codeph>sort_order</codeph> in its frontmatter). Click <b>Done</b> to leave Edit mode. The default agents arrive already arranged: the Chief of Staff on top, with Requirements, Verification and Engineering groups beneath it.</p>
+      <p>On a phone the groups stack in one column; tap a group's header to fold it.</p>
+      <p>Crews, the graphs of agents the Crew page used to build, have been removed; the hierarchy is how agents are arranged now.</p>
+    </section>
+  </conbody>
+</concept>

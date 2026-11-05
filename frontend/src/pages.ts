@@ -207,14 +207,6 @@ export const PAGES: readonly Page[] = [
   },
   {
     scope: 'project',
-    path: 'crew',
-    load: 'lazy',
-    public: false,
-    help: { topic: 'crew' },
-    nav: { group: 'Agents', label: 'Crew' },
-  },
-  {
-    scope: 'project',
     path: 'automations',
     load: 'eager',
     public: false,
@@ -248,7 +240,8 @@ export const PAGES: readonly Page[] = [
 
   { scope: 'project', path: 'baselines/:baselineId/compare', load: 'lazy', public: false, help: { topic: 'baselines' } },
   { scope: 'project', path: 'vv/runs/:runId', load: 'lazy', public: false, help: { topic: 'vv' } },
-  { scope: 'project', path: 'crew/network', load: 'lazy', public: false, help: { topic: 'crew' } },
+  { scope: 'project', path: 'crew', load: 'redirect', public: false, help: NOT_WRITTEN },
+  { scope: 'project', path: 'crew/network', load: 'redirect', public: false, help: NOT_WRITTEN },
   { scope: 'project', path: 'team', load: 'redirect', public: false, help: NOT_WRITTEN },
   { scope: 'project', path: 'team/network', load: 'redirect', public: false, help: NOT_WRITTEN },
 

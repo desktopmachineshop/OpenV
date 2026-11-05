@@ -177,9 +177,14 @@ table agents rows 0
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
   column org_id uuid NOT NULL
+  column parent_agent_id uuid
+  column group_name character varying(120)
+  column sort_order integer NOT NULL DEFAULT 0
+  constraint agents_parent_agent_id_fkey FOREIGN KEY (parent_agent_id) REFERENCES agents(id) ON DELETE SET NULL
   constraint agents_pkey PRIMARY KEY (id)
   index agents_pkey CREATE UNIQUE INDEX agents_pkey ON public.agents USING btree (id)
   index idx_agents_org_slug CREATE UNIQUE INDEX idx_agents_org_slug ON public.agents USING btree (org_id, slug)
+  index idx_agents_parent CREATE INDEX idx_agents_parent ON public.agents USING btree (parent_agent_id) WHERE (parent_agent_id IS NOT NULL)
   index idx_agents_slug_lookup CREATE INDEX idx_agents_slug_lookup ON public.agents USING btree (slug)
 table artifact_embeddings rows 0  @requires(vector)
   column artifact_id uuid NOT NULL  @requires(vector)
@@ -937,7 +942,22 @@ table runner_sessions rows 0
   index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
   index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
   index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
-table schema_migrations rows 68
+table saved_searches rows 0
+  column id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column scope character varying(64) NOT NULL
+  column name character varying(120) NOT NULL
+  column value jsonb NOT NULL DEFAULT '{}'::jsonb
+  column shared boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint saved_searches_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint saved_searches_pkey PRIMARY KEY (id)
+  constraint saved_searches_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
+  index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
+  index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
+table schema_migrations rows 70
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1078,34 +1098,6 @@ table test_runs rows 0
   constraint test_runs_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index idx_test_runs_project_id CREATE INDEX idx_test_runs_project_id ON public.test_runs USING btree (project_id)
   index test_runs_pkey CREATE UNIQUE INDEX test_runs_pkey ON public.test_runs USING btree (id)
-table todos rows 0
-  column id uuid NOT NULL
-  column org_id uuid NOT NULL
-  column project_id uuid
-  column text character varying(4000) NOT NULL
-  column done boolean NOT NULL DEFAULT false
-  column done_at timestamp without time zone
-  column done_note character varying(32) NOT NULL DEFAULT ''::character varying
-  column assignee_id uuid
-  column due_date timestamp with time zone
-  column source_artifact_id uuid
-  column source_chatter_id uuid
-  column promoted_work_item_id uuid
-  column created_by uuid
-  column created_at timestamp without time zone NOT NULL DEFAULT now()
-  column updated_at timestamp without time zone NOT NULL DEFAULT now()
-  constraint todos_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
-  constraint todos_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-  constraint todos_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
-  constraint todos_pkey PRIMARY KEY (id)
-  constraint todos_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-  constraint todos_promoted_work_item_id_fkey FOREIGN KEY (promoted_work_item_id) REFERENCES work_items(id) ON DELETE SET NULL
-  constraint todos_source_chatter_id_fkey FOREIGN KEY (source_chatter_id) REFERENCES chatter(id) ON DELETE SET NULL
-  index idx_todos_org_assignee CREATE INDEX idx_todos_org_assignee ON public.todos USING btree (org_id, assignee_id)
-  index idx_todos_org_created_by CREATE INDEX idx_todos_org_created_by ON public.todos USING btree (org_id, created_by) WHERE (project_id IS NULL)
-  index idx_todos_project CREATE INDEX idx_todos_project ON public.todos USING btree (project_id)
-  index idx_todos_source_chatter CREATE INDEX idx_todos_source_chatter ON public.todos USING btree (source_chatter_id)
-  index todos_pkey CREATE UNIQUE INDEX todos_pkey ON public.todos USING btree (id)
 table user_activity_days rows 0
   column user_id uuid NOT NULL
   column day date NOT NULL
@@ -1281,4 +1273,6 @@ ledger 0064 provider_login_purpose
 ledger 0065 connected_app_workspaces
 ledger 0066 user_identities
 ledger 0067 target_releases
-ledger 0071 todos
+ledger 0068 saved_searches
+ledger 0069 retarget_crew_automations
+ledger 0070 agent_hierarchy

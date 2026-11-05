@@ -5,8 +5,6 @@ import {
   agentsAPI,
   Automation,
   automationsAPI,
-  Crew,
-  crewsAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, Modal, SegmentedControl, useConfirm, chipStyle, toneForColor, buttonStyle } from '../components/ui';
@@ -19,7 +17,6 @@ import {
   automationPayload,
   coversProject,
   CRON_PRESETS,
-  crewsForScope,
   emptyForm,
   FormState,
   kindColor,
@@ -61,7 +58,6 @@ export const AutomationsPage: React.FC = () => {
 
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
-  const [crews, setCrews] = useState<Crew[]>([]);
   const [error, setError] = useState('');
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -78,14 +74,13 @@ export const AutomationsPage: React.FC = () => {
     // activeOrgId: the list is scoped by the X-Org-ID header the API client
     // injects, so refetch when the active workspace changes (e.g.
     // ProjectLayout's cross-org deep-link sync, issue #99). The effect below
-    // also re-runs via this callback, refreshing agents and crews too.
+    // also re-runs via this callback, refreshing the agents too.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, activeOrgId]);
 
   useEffect(() => {
     load();
     agentsAPI.list().then((res) => setAgents(res.data || [])).catch(() => setAgents([]));
-    crewsAPI.list(projectId || undefined).then((res) => setCrews(res.data || [])).catch(() => setCrews([]));
   }, [load, projectId]);
 
   const agentName = useMemo(() => {
@@ -95,14 +90,6 @@ export const AutomationsPage: React.FC = () => {
     });
     return (id: string) => m[id] || id;
   }, [agents]);
-
-  const crewName = useMemo(() => {
-    const m: Record<string, string> = {};
-    crews.forEach((c) => {
-      m[c.id] = c.name;
-    });
-    return (id: string) => m[id] || id;
-  }, [crews]);
 
   const set = (update: Partial<FormState>) =>
     setForm((f) => (f ? { ...f, ...update } : f));
@@ -166,22 +153,17 @@ export const AutomationsPage: React.FC = () => {
   };
 
   const targetLabel = (a: Automation): string => {
-    if (a.team_id) return `👥 ${crewName(a.team_id)}`;
     if (a.agent_id) return `🤖 ${agentName(a.agent_id)}`;
-    return '—';
+    // An automation of a crew whose crew had no entry agent was switched off
+    // when crews went: it waits for an agent.
+    return 'No agent: choose one';
   };
 
   // A whole-workspace automation is its workspace admins' to change; the
   // rest of the workspace sees it listed.
   const writable = (a: Automation): boolean => Boolean(a.project_id) || isAdmin;
 
-  // A whole-workspace automation cannot keep a crew made in one project.
-  const setScope = (scope: AutomationScope) =>
-    setForm((f) => {
-      if (!f) return f;
-      const keeps = crewsForScope(crews, scope).some((c) => c.id === f.team_id);
-      return { ...f, scope, team_id: keeps ? f.team_id : '' };
-    });
+  const setScope = (scope: AutomationScope) => setForm((f) => (f ? { ...f, scope } : f));
 
   const scheduleLabel = (a: Automation): string => {
     if (a.kind === 'scheduled') return a.cron_expr || '—';
@@ -349,37 +331,19 @@ export const AutomationsPage: React.FC = () => {
           <ScopeField scope={form.scope} canChoose={canChooseScope} onChange={setScope} />
 
           <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
-            <label>Target</label>
-            <div style={{ marginBottom: 8 }}>
-              <SegmentedControl
-                aria-label="Automation target"
-                options={[
-                  { value: 'agent', label: 'Agent' },
-                  { value: 'team', label: 'Crew' },
-                ]}
-                value={form.targetKind}
-                onChange={(targetKind) => set({ targetKind })}
-              />
-            </div>
-            {form.targetKind === 'agent' ? (
-              <select value={form.agent_id} onChange={(e) => set({ agent_id: e.target.value })}>
-                <option value="">Choose agent…</option>
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select value={form.team_id} onChange={(e) => set({ team_id: e.target.value })}>
-                <option value="">Choose crew…</option>
-                {crewsForScope(crews, form.scope).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <label>Agent</label>
+            <select
+              aria-label="Automation agent"
+              value={form.agent_id}
+              onChange={(e) => set({ agent_id: e.target.value })}
+            >
+              <option value="">Choose agent…</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group" data-help-pane="automations.create" data-help-key="automations.kinds">

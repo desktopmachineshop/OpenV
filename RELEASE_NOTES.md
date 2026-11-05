@@ -12,6 +12,26 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 ### New features
 
 - **A Table with the document's structure, and a Tree you can see.** On the requirements page, **Table** now nests every artifact under its heading or parent, with a caret to fold each branch and every column, status and priority included, on the headings too. A single **fold all / unfold all** button replaces the **Depth** picker. **Tree** is now a diagram: the project drawn left to right as connected boxes, coloured by type or by status with a key, that you can fold, pan, zoom and walk with the keyboard; click a box to open the artifact. The **Layers** view is gone, and links to it open the Tree.
+- **One search bar, with a chip for each filter.** The requirements list's search box, **Filter** panel and quick filters are now one bar: each filter shows as a chip you can remove on its own, typing offers chips such as *Search Owner for: dav*, and the caret opens filters (Mine, In review, Failing, Suspect, status, type, priority, dates and a custom filter), **Group by** (status, type, priority, owner, heading or any attribute, which groups the table under a heading per value) and your saved searches. Save a search to keep it with your account on every device, or share it with the workspace, and share a filtered list by its link. The top-bar search gets chips for project, type, status and owner, and its results are grouped by kind.
+- **The V&V Assistant on every page.** An **✦ Assistant** button sits in the
+  bottom corner of every project page and the workspace Home. It opens a chat
+  panel over the page that you can resize, expand, move to the other corner
+  and minimise again, and the conversation stays with you as you move between
+  pages. A *Looking at:* line shows what the assistant is told you are
+  reading (the open requirement, or the page), and **✕** stops sending it.
+  **Alt+A** (Option+A on a Mac) opens it, and **Esc** minimises it. On a
+  phone it opens as a sheet from the bottom. If the assistant can't run for
+  you, the panel says why and how to fix it.
+- **Draft tests from the V&V dashboard.** The *Top gaps* card's **Draft
+  tests** opens the assistant and starts drafting test cases straight away
+  for the gaps the card shows. Each gap row also has a **✦** that does the
+  same for that one gap. What the assistant drafts arrives as suggestions for
+  you to review and add.
+- **History in the requirement pane.** A requirement's comments and recorded
+  changes now sit in a **History** section at the foot of its pane, with the
+  box for adding a comment. The separate Notes panel and its mode button are
+  gone, so the requirement gets the width back.
+- **The Agents page shows your agents as a hierarchy.** A lead sits at the top and each group of specialists has its own column, with the agents that report to a lead nested beneath it on a line in the group's colour. Every card shows its open and done runs, what they cost and the proposals waiting for approval over the last 7 days, and the group headers add them up. Click a card to see that agent's runs and proposals, or open **Mission and tools** to read what it does. Workspace admins click **Edit** to choose who each agent reports to and its group, and to move it up or down. The default agents arrive already arranged. On a phone the groups stack and fold.
 - **To-dos of their own, off the board.** A to-do is now one paragraph to just do and tick off, kept apart from board cards. A project's **To-dos** page is its to-do list: type one and press Enter, choose who has it and a due date if you like, tick it off, and the completed ones fold away under **Completed**. **My to-dos**, in the workspace menu, gathers yours across every project, with personal to-dos only you see, and your open ones also show in Home's **Needs you**. **+ Add to-do** and `@@name` on a note now raise a to-do rather than a card, and the note shows whether it is open or done. When a to-do grows, **Promote to board task** makes a card of it and ticks the to-do off. The board shows only cards; to-dos raised from notes before keep their cards. Agents can list, add and tick to-dos too.
 
 ### Maintenance updates
@@ -20,6 +40,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Activity opens what it describes.** Each event in Home's **Activity** and a project's audit trail is now a link to its artifact, the link's source artifact, the board, the agent run, the test run, the baseline, or the artifact with its notes open for a comment.
 - **A readable Activity log.** A project's **Activity** page now reads as sentences grouped by day, in the same words as Home: who did it (a person, an agent, a runner or the system, with no IDs), what they did and the artifact by its reference and title, as a link. Opening an event shows its detail: a status change as two status chips, an edit as a word-by-word diff of what changed, a link from one end to the other, a board move, a test result or an agent run's status, time and cost. The raw event is behind **Show raw event**.
 - The **Projects** panel on Home has a **+ New project** button in its header.
+- **Crews and the Crew Builder are gone.** The **Crew** page has left the project menu, and its old links open the **Agents** page. An agent run is now a single run: nothing hands work on to another agent or a person when it finishes, and agents can no longer delegate to a crew's specialists. An automation that ran a crew now runs the crew's first agent; one whose crew had no first agent is switched off and says **No agent: choose one** until you pick one. A board card assigned to a crew is now assigned to the crew's first agent, or left unassigned. Past crew runs stay in the run history as ordinary runs.
 
 ### Bug fixes
 

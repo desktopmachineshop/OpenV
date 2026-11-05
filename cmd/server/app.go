@@ -41,11 +41,11 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 	"github.com/openv/requirements-platform/internal/domain/todos"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
@@ -102,7 +102,6 @@ type app struct {
 	proposalRepo         *postgres.ProposalRepository
 	repoConnRepo         *postgres.RepoConnectionRepository
 	providerRepo         *postgres.ProviderSettingRepository
-	teamRepo             *postgres.TeamRepository
 	orgRepo              *postgres.OrgRepository
 	invitationRepo       *postgres.InvitationRepository
 	workerKeyRepo        *postgres.WorkerKeyRepository
@@ -142,6 +141,7 @@ type app struct {
 	settingsService      *settings.DefaultService
 	attributeService     *attributes.DefaultService
 	targetReleaseService *targetreleases.DefaultService
+	savedSearchService   *savedsearches.DefaultService
 	sharedProductService *sharedproducts.DefaultService
 	vvService            *vv.DefaultService
 	evidenceService      *evidence.DefaultService
@@ -158,7 +158,6 @@ type app struct {
 	providerKeyService   *providers.DefaultKeyService
 	loginService         *providers.DefaultLoginService
 	providerTokenService *usertokens.DefaultService
-	teamService          *teams.DefaultService
 	proposalService      *proposals.DefaultService
 	proposalAppliers     proposals.Appliers
 	metricsCollector     *metrics.Metrics

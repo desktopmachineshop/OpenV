@@ -17,13 +17,12 @@ const (
 	KindTriggered = "triggered"
 )
 
-// Automation launches an agent or a team on a schedule, on an event, or manually.
+// Automation launches an agent on a schedule, on an event, or manually.
 type Automation struct {
 	ID              string                 `json:"id"`
 	OrgID           string                 `json:"org_id"`
 	Name            string                 `json:"name"`
 	AgentID         *string                `json:"agent_id,omitempty"`
-	TeamID          *string                `json:"team_id,omitempty"`
 	ProjectID       *string                `json:"project_id,omitempty"`
 	Kind            string                 `json:"kind"`
 	Enabled         bool                   `json:"enabled"`
@@ -49,7 +48,6 @@ type CreateAutomationRequest struct {
 	OrgID           string                 `json:"-"`
 	Name            string                 `json:"name"`
 	AgentID         *string                `json:"agent_id,omitempty"`
-	TeamID          *string                `json:"team_id,omitempty"`
 	ProjectID       *string                `json:"project_id,omitempty"`
 	Kind            string                 `json:"kind"`
 	Enabled         *bool                  `json:"enabled,omitempty"` // nil defaults to true
@@ -64,13 +62,12 @@ type CreateAutomationRequest struct {
 }
 
 // UpdateAutomationRequest carries the editable fields; nil fields are left unchanged.
-// AgentID/TeamID set to the empty string clear the target. ProjectID moves
+// AgentID set to the empty string clears the target. ProjectID moves
 // the automation to another scope: a project, or, set to the empty string,
 // the whole workspace (JSON null leaves the scope as it is).
 type UpdateAutomationRequest struct {
 	Name            *string                `json:"name,omitempty"`
 	AgentID         *string                `json:"agent_id,omitempty"`
-	TeamID          *string                `json:"team_id,omitempty"`
 	ProjectID       *string                `json:"project_id,omitempty"`
 	Enabled         *bool                  `json:"enabled,omitempty"`
 	PromptTemplate  *string                `json:"prompt_template,omitempty"`
@@ -168,12 +165,11 @@ func scope(projectID *string) *string {
 	return &v
 }
 
-// validateTarget ensures exactly one of AgentID/TeamID is set.
+// validateTarget ensures the automation names the agent it launches. Crews
+// are gone (#732): an agent is the only target.
 func validateTarget(a *Automation) error {
-	hasAgent := a.AgentID != nil && *a.AgentID != ""
-	hasTeam := a.TeamID != nil && *a.TeamID != ""
-	if hasAgent == hasTeam {
-		return errors.New("exactly one of agent_id or team_id must be set")
+	if a.AgentID == nil || *a.AgentID == "" {
+		return errors.New("agent_id is required")
 	}
 	return nil
 }
@@ -198,7 +194,6 @@ func (s *DefaultService) Create(req CreateAutomationRequest) (*Automation, error
 		OrgID:           req.OrgID,
 		Name:            req.Name,
 		AgentID:         req.AgentID,
-		TeamID:          req.TeamID,
 		ProjectID:       scope(req.ProjectID),
 		Kind:            req.Kind,
 		Enabled:         true,
@@ -293,14 +288,6 @@ func (s *DefaultService) Update(id string, req UpdateAutomationRequest) (*Automa
 		} else {
 			v := *req.AgentID
 			a.AgentID = &v
-		}
-	}
-	if req.TeamID != nil {
-		if *req.TeamID == "" {
-			a.TeamID = nil
-		} else {
-			v := *req.TeamID
-			a.TeamID = &v
 		}
 	}
 	if req.ProjectID != nil {

@@ -6,15 +6,15 @@
     <resourceid appname="openv-web" appid="requirements.history"/>
   </prolog>
   <conbody>
-    <p>The <b>History</b> tab in the right-hand Notes panel is the artifact's record: what OpenV wrote down each time the artifact changed, and what people have said about it, newest first. A new version, a status move, a link added or removed, a figure replaced, a test result recorded — each leaves an entry, alongside the notes members write themselves.</p>
+    <p><b>History</b> is the last section of the artifact's detail panel, below its links and figures. It is the artifact's record: what OpenV wrote down each time the artifact changed, and what people have said about it, newest first. A new version, a status move, a link added or removed, a figure replaced, a test result recorded — each leaves an entry, alongside the notes members write themselves.</p>
     <p>Three buttons above the list decide what you are reading:</p>
     <ul>
       <li><b>All</b> — the whole record, changes and comments interleaved.</li>
       <li><b>Changes</b> — only what OpenV recorded. This is the audit trail: who changed what, and when.</li>
       <li><b>Comments</b> — only what people wrote. This is the review discussion.</li>
     </ul>
-    <p>The panel opens on <b>Comments</b>, which is what most people come to it for; the recorded changes are the backdrop.</p>
-    <p>Add a comment in the box at the foot of the panel. Use it for review discussion rather than editing the requirement text itself — the text is the requirement, the comment is what you think of it. Writing one while reading <b>Changes</b> switches you back to <b>Comments</b>, so you can see what you just added.</p>
+    <p>It opens on <b>Comments</b>, which is what most people come to it for; the recorded changes are the backdrop.</p>
+    <p>Add a comment in the box under the <b>History</b> heading. Use it for review discussion rather than editing the requirement text itself — the text is the requirement, the comment is what you think of it. Writing one while reading <b>Changes</b> switches you back to <b>Comments</b>, so you can see what you just added.</p>
     <section id="tagging-inside-a-comment">
       <title>Tagging inside a comment</title>
       <p>A comment can name people and point at things, with the same two-marker convention the descriptions use.</p>

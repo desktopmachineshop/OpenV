@@ -48,6 +48,9 @@ export const FEATURE_KEYS = [
   'compact-layout',
   'redesign-pages',
   'requirements-tree',
+  'floating-assistant',
+  'chip-search',
+  'agent-hierarchy',
   'todos',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];

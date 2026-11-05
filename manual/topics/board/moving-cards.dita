@@ -2,11 +2,11 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="moving-cards">
   <title>Moving cards</title>
-  <shortdesc>Drag any unlocked card between columns or within a column. Human-assigned and unassigned cards behave like a normal kanban; only agent/crew cards with live runs are locked.</shortdesc>
+  <shortdesc>Drag any unlocked card between columns or within a column. Human-assigned and unassigned cards behave like a normal kanban; only agent cards with live runs are locked.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="board.move"/>
   </prolog>
   <conbody>
-    <p>Work items can also be <b>created by crews</b>: when a crew edge hands work off to (or requests review from) a <i>person</i> who can open the project, a board card assigned to that person appears automatically — see <i>Crews</i>.</p>
+    <p>A card that was assigned to a crew, before crews were removed, is now assigned to the crew's first (entry) agent, or is unassigned if the crew had none.</p>
   </conbody>
 </concept>

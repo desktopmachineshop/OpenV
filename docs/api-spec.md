@@ -74,16 +74,14 @@ Runs with
 (HTTP 202 with a proposal receipt) instead of being applied, and launch no
 run: every route that sets one going, or arms one, answers them `403`
 `proposal-mode agent runs cannot launch agent runs` before any lookup
-(`POST /agents/{slug}/runs`, `/crews/{id}/runs` and `/teams/{id}/runs`,
-`/test-runs/{id}/agent-run`, `/agent-runs/{id}/retry`,
+(`POST /agents/{slug}/runs`, `/test-runs/{id}/agent-run`, `/agent-runs/{id}/retry`,
 `/automations/{id}/run-now`, a guided session's chat message, kickoff and
 nudge, and `/projects/{id}/interviews` and `/interviews/{id}/invites`,
 since an interview names the interviewer whose run each message its
 invite's participant posts launches), and `/projects/{id}/draft-test-cases`
-`403` `proposal-mode agent runs cannot draft test cases` (REQ-21, REQ-75),
-while `POST /agent-runs/delegate` still starts the delegates a crew's design
-gives a proposal-mode crew agent. A run another run's token launches records
-the launching run as its `parent_run_id`, as a delegation does, so the
+`403` `proposal-mode agent runs cannot draft test cases` (REQ-21, REQ-75).
+A run another run's token launches records
+the launching run as its `parent_run_id`, so the
 launching run's `/agent-runs/{id}/tree` lists it to a reader who could open
 it by itself: the tree leaves out a run below its root that its reader
 could not open, such as the unscoped run a project's run launched, which
@@ -106,7 +104,7 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
 - **Personal runner keys** — one per member (`worker_keys.user_id` set);
   minted via `/orgs/{id}/my-runner-key` or the Agent Connector pairing flow.
   A personal key claims the runs its owner launched and the ownerless ones
-  (board, automation, delegation) its owner could see: any of the
+  (board, automation) its owner could see: any of the
   workspace's for a workspace admin, otherwise those in a project the owner
   holds a role in; an ownerless run with no project, which only workspace
   admins see, is left to them and to workspace keys. A run a key launches
@@ -216,7 +214,7 @@ workspaces, which the member can change later without connecting again.
   the member has left, or whose channel has not reached `remote-mcp`, is
   left out; a grant left with none answers `403`. A read-only grant is offered
   only the read-only tools, and its requests are refused anything but a
-  `GET`. `delegate_to_agent`, which needs an agent run, is not offered.
+  `GET`.
 - **The member's list.** `GET /api/v1/me/connected-apps` lists the member's
   live grants (app, workspaces, scope, when made and last used);
   `PUT /api/v1/me/connected-apps/{id}/workspaces` changes the workspaces one
@@ -268,17 +266,8 @@ Enforced per-handler via `internal/api/authz.go`:
   only where its holder would, reads included; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
   unscoped runs (any other member gets the run's `404`, below).
-- **Crew writes**: project-pinned crews need project editor; workspace-wide
-  crews need org admin. Automations follow the same split. A crew's pin
-  (`project_id` on create, import and clone) must name a project of the
-  crew's workspace (`400` otherwise), and a clone is checked where the copy
-  lands as a new crew is. A pinned crew launched with no `project_id` runs
-  in its pinned project. Only a caller who may know of a crew launches it: a
-  member, a worker key or an agent run of its workspace (an agent run a
-  pinned crew only in the pinned project, the one project it reaches), or a
-  caller who reaches its pinned project; anyone else, an editor of the
-  target project who is no member of the crew's workspace among them, gets
-  `404` `team not found`, as for a crew no row has.
+- **Automation writes**: project-pinned automations need project editor;
+  workspace-wide ones need org admin.
 - **Existence hiding** (I3, OpenV REQ-17): a resource the caller cannot
   reach at all answers exactly as one that does not exist, the same status
   and the same message. A project where the caller has no role (and is no
@@ -287,32 +276,27 @@ Enforced per-handler via `internal/api/authz.go`:
   run answer `404` `project not found`; a
   workspace the caller is no member of (a deleted one to its former members
   included) answers `404` `workspace not found`; a resource looked up by its
-  own id (a baseline, a run, a crew, a work item...) whose project or
+  own id (a baseline, a run, a work item...) whose project or
   workspace the caller cannot reach answers that resource's own not-found,
   as an id no row has does (`404` `baseline not found`, `agent run not
-  found`, `team not found`...); what a body names in a project or
+  found`...); what a body names in a project or
   workspace the caller cannot reach answers as what does not exist: a
-  link's endpoint, a crew's pin, a flow-down parent and an interview's
+  link's endpoint, a flow-down parent and an interview's
   persona the `400` of one no row has (`source artifact not found`, `target
   artifact not found`, `project not found`, `parent project not found`,
-  `persona artifact not found`), and a people-team granted a project and
-  a work item's crew assignee the `404` `team not found`, while one the
-  caller does reach in another workspace or project is refused as such
-  (`400`; a crew assignee `team belongs to a different workspace`). A
+  `persona artifact not found`), and a people-team granted a project the
+  `404` `team not found`, while one the caller does reach in another
+  workspace or project is refused as such (`400`). A
   result's `test_case_id` outside its run's project answers `404`
   `artifact not found`, as one no row has, whether or not the caller
   reaches it, and before its type is read: a run verifies its own
   project's test cases. An artifact's update and restore, which look the
   artifact up before their guard, answer an artifact the caller cannot
-  reach, as one no row has, `404` `artifact not found`, and a crew's
-  launch, and a work item assigned to a crew, answer a caller who may not
-  know of the crew (*Crew writes*) `404` `team not found`. A worker key or
+  reach, as one no row has, `404` `artifact not found`. A worker key or
   run token, which
   has no session, gets the workspace guard's `401`, but one of another
   workspace, at a route that looks its resource up first (a people-team, a
-  workspace-wide attribute definition), gets that resource's not-found; and
-  a run token polling a run outside its project (`GET
-  /agent-runs/delegate/{id}`) gets `404` `agent run not found`. A caller who
+  workspace-wide attribute definition), gets that resource's not-found. A caller who
   reaches the project or workspace but lacks the role a route needs gets
   `403`, except at a run with no project, which only its launcher and the
   workspace's admins may read: a member who is neither gets `404` `agent
@@ -331,8 +315,7 @@ Enforced per-handler via `internal/api/authz.go`:
   the guard or the id sits in the query or the body, an id no row has
   answers `404` too: an artifact's update and restore and a result's
   `test_case_id` `artifact not found`, a download's or its options'
-  `baseline_id` and a test run's `baseline_id` `baseline not found`, and a
-  work item's crew assignee (`assignee_type` `team`) `team not found`. A
+  `baseline_id` and a test run's `baseline_id` `baseline not found`. A
   body field stored as a reference without a lookup (a work item's
   person's or agent's `assignee_id`, a launch's `work_item_id`...) still
   passes the database's refusal through as a `400` (quirk Q19), and `POST
@@ -468,7 +451,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can); an agent run's token, its own project alone | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
 | PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth` (`400` `agent_auth must be "user-account" or "api-key"` for any other value), `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `403` with the remedy on a workspace whose channel has not received `flow-down`, whenever the key is sent; `400` for a parent in another workspace, the project itself or one of its descendants, and `400` `parent project not found` for one no row has or the caller cannot reach) | editor |
-| DELETE | `/api/v1/projects/{id}` | Delete project and, in one transaction, all that belongs to it alone: every version of its artifacts with their chatter, attachment records and links (those to and from other projects' artifacts too), work items, crews, test runs, baselines, evidence, interviews, guided sessions, project attribute definitions, automations, proposals, share links, members and team grants. Its agent runs stay, with no project, for the workspace's usage; a queued one is cancelled and a claimed or running one asked to stop, as `POST /api/v1/agent-runs/{id}/cancel` does, one awaiting approval is cancelled (its proposals go with the project), and each one's run token is refused from then on. They stop naming what the delete removes (the card, guided or interview session, automation, crew and crew node of the project); what they name outside it stays. Its activity-log events stay; its child projects are detached to the top level. Once the delete has committed, the stored files of its attachments (every version) and evidence are removed from the uploads directory; one that cannot be removed is logged and does not fail the delete | owner |
+| DELETE | `/api/v1/projects/{id}` | Delete project and, in one transaction, all that belongs to it alone: every version of its artifacts with their chatter, attachment records and links (those to and from other projects' artifacts too), work items, test runs, baselines, evidence, interviews, guided sessions, project attribute definitions, automations, proposals, share links, members and team grants. Its agent runs stay, with no project, for the workspace's usage; a queued one is cancelled and a claimed or running one asked to stop, as `POST /api/v1/agent-runs/{id}/cancel` does, one awaiting approval is cancelled (its proposals go with the project), and each one's run token is refused from then on. They stop naming what the delete removes (the card, guided or interview session and automation of the project); what they name outside it stays. Its activity-log events stay; its child projects are detached to the top level. Once the delete has committed, the stored files of its attachments (every version) and evidence are removed from the uploads directory; one that cannot be removed is logged and does not fail the delete | owner |
 | GET | `/api/v1/projects/{id}/children` | The projects filed under this one | viewer |
 | GET | `/api/v1/projects/{id}/linked-artifacts` | The far end of every link crossing out of the project: `[{id, project_id, project_name, ref, type, title, status}]`, so a parent requirement a local one refines, or the child requirements refining a local one, can be named without rights on those projects | viewer |
 | GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
@@ -863,6 +846,22 @@ answers with the same `id` and `created_at` that `GET
 A push service that answers 404 or 410 deletes the subscription server-side;
 any other failure stamps `failed_at` and keeps the row, which a later
 successful send clears.
+
+### Search and saved searches
+
+The workspace-wide artifact search, and a member's saved searches: the
+named chip sets a page's search bar puts back (issue #722). A saved search
+belongs to the caller, their active workspace and a `scope`, the key a page
+stores them under (1 to 64 of `A-Z a-z 0-9 . _ : -`, such as
+`requirements` or `global-search`). `value` is the bar's state, a JSON
+object the frontend writes and reads back (at most 16 KB).
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/search` | `?q=&limit=&mode=keyword\|semantic\|hybrid` → `{mode_used, hits: [{artifact_id, project_id, project_name, type, title, snippet, ref?, score?}]}` across the projects the caller can read in the active workspace. With the `chip-search` feature, `project`, `type`, `status` and `owner` (each repeated or comma-separated) narrow the hits (an owner as a substring, without regard to case), a search of those alone needs no `q`, and `facets=1` adds each hit's `status` and `owner`; a faceted search runs the keyword path whatever `mode` asks | user |
+| GET | `/api/v1/me/saved-searches` | `?scope=` (required: `400`) → `{saved_searches: [{id, user_id, org_id, scope, name, value, shared, created_at}]}`: the caller's own in the active workspace, then those other members shared, each by name | user |
+| POST | `/api/v1/me/saved-searches` | `{scope, name, value, shared?}` → 201 with the stored row. Saving under a name the caller already used in the scope replaces its value and sharing, keeping its `id`. `400` for a bad scope, a blank or over-120-character name, a value that is not an object or no active workspace; `409` past 100 in a scope; `403` before the workspace has `chip-search` | user |
+| DELETE | `/api/v1/me/saved-searches/{id}` | Delete one of the caller's own → 204; `404` for any other id, another member's shared one included | user |
 
 ### Meta
 
@@ -1259,10 +1258,10 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/work-items` | Create card `{title, description?, column?, assignee_type?, assignee_id?, artifact_ids?, due_date?, source_chatter_id?}` → `201`; `title` is required and `column` is one of the board's columns, `backlog` by default (`400` otherwise). `source_chatter_id` raises it from a note (that note must be in the same project, else 400). `assignee_type` is `user` (the default), `agent` or `team` (a crew), else 400 `invalid assignee_type: must be user, agent or team`; a crew's `assignee_id` must name a crew the caller may know of (*Crew writes*), else 404 `team not found`, and one of the project's workspace, else 400 `team belongs to a different workspace` | editor |
+| POST | `/api/v1/projects/{id}/work-items` | Create card `{title, description?, column?, assignee_type?, assignee_id?, artifact_ids?, due_date?, source_chatter_id?}` → `201`; `title` is required and `column` is one of the board's columns, `backlog` by default (`400` otherwise). `source_chatter_id` raises it from a note (that note must be in the same project, else 400). `assignee_type` is `user` (the default) or `agent`, else 400 `invalid assignee_type: must be user or agent` (`team`, a crew's, is refused since crews were removed) | editor |
 | GET | `/api/v1/projects/{id}/work-items` | List board: the columns in the order the board flows in (`backlog`, `todo`, `in-progress`, `review`, `done`), then `sort_order`, then `created_at` | viewer |
 | GET | `/api/v1/work-items/{id}` | Card + activity: `{item, activity}` | viewer |
-| PUT | `/api/v1/work-items/{id}` | Edit card `{title, description, assignee_type, assignee_id, artifact_ids, due_date}`: `title` is required (`400`), `description` and `due_date` are replaced by what is sent (left out, they are cleared) and `artifact_ids` is kept when left out. `assignee_type` and a crew's `assignee_id` are checked as on create; an omitted `assignee_type` keeps the card's, and the `assignee_id` sent is checked against it. An update replaces `assignee_id` (omitted, it clears it), and one that re-sends the card's own assignee, the same type and id, is not checked again | editor |
+| PUT | `/api/v1/work-items/{id}` | Edit card `{title, description, assignee_type, assignee_id, artifact_ids, due_date}`: `title` is required (`400`), `description` and `due_date` are replaced by what is sent (left out, they are cleared) and `artifact_ids` is kept when left out. `assignee_type` is checked as on create; an omitted `assignee_type` keeps the card's. An update replaces `assignee_id` (omitted, it clears it) | editor |
 | DELETE | `/api/v1/work-items/{id}` | Delete card → `204` | editor |
 | POST | `/api/v1/work-items/{id}/move` | Move card `{column, sort_order}` (agent columns can enqueue runs); `400` for a column the board does not have | editor |
 | POST | `/api/v1/work-items/{id}/comments` | Comment on card `{content}` → `201` with the activity entry | viewer |
@@ -1354,8 +1353,10 @@ when the next `message` arrives.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/agents` | List workspace agents | user |
-| POST | `/api/v1/agents` | Create agent (writes the markdown file) from a definition `{slug, name, provider, allowed_tools, description?, model?, effort?, write_mode?, repo_access?, max_turns?, timeout_seconds?, config?, locked?, system_prompt?}` → `201`. `slug` (lowercase letters, digits and hyphens), `name`, `provider` and `allowed_tools` are required (`400`); `write_mode` is `proposal` (the default) or `direct`; `409` for a slug the workspace already has; `403` with the remedy for a provider the workspace's channel has not received (`antigravity-cli`) | org admin |
+| POST | `/api/v1/agents` | Create agent (writes the markdown file) from a definition `{slug, name, provider, allowed_tools, description?, model?, effort?, write_mode?, repo_access?, max_turns?, timeout_seconds?, config?, locked?, reports_to?, group_name?, sort_order?, system_prompt?}` → `201`. `reports_to` (the slug of the agent it reports to, an agent of the same workspace), `group_name` (at most 120 characters) and `sort_order` place it in the hierarchy the Agents page shows; an agent answers them with `parent_agent_id` (that agent's id, or null). A `reports_to` no agent of the workspace has, or one that would make an agent report to itself through others, is a `400`. `slug` (lowercase letters, digits and hyphens), `name`, `provider` and `allowed_tools` are required (`400`); `write_mode` is `proposal` (the default) or `direct`; `409` for a slug the workspace already has; `403` with the remedy for a provider the workspace's channel has not received (`antigravity-cli`) | org admin |
 | POST | `/api/v1/agents/sync` | Re-sync agent files → registry | org admin |
+| GET | `/api/v1/agent-stats` | Every agent's numbers over the last 7 days in a project `?project_id=` (required, `400` without): `{days, since, agents: [{agent_id, open, done, cost_usd, pending_proposals}]}`: of its runs created in the window, those still open (queued, claimed, running, awaiting approval) and those that succeeded, their cost, and the pending proposals of its runs whenever made; an agent with none is left out. A project the caller cannot read is `404` `project not found` | viewer |
+| PUT | `/api/v1/agent-arrangement` | Arrange the hierarchy `{agents: [{slug, reports_to, group_name, sort_order}]}` → the workspace's agents, each placement written to the agent's file. The whole arrangement is checked first: `404` `agent not found` for a slug the workspace has no agent of, `400` for a parent it does not have or a cycle; `403` with the feature gate's message before a stable-channel workspace has `agent-hierarchy` | org admin |
 | GET | `/api/v1/agents/{slug}` | Agent details | user |
 | PUT | `/api/v1/agents/{slug}` | Update agent with a definition as above (`400` when the body's `slug` is not the URL's; `403` as for create) | org admin |
 | DELETE | `/api/v1/agents/{slug}` | Delete agent → `204`; `404` for a slug no agent of the workspace has, a deleted one's among them | org admin |
@@ -1407,8 +1408,6 @@ the vendor CLI can express.
 |---|---|---|---|
 | GET | `/api/v1/agent-runs` | List runs, newest first (`?project_id=&agent_id=&status=&parent_id=&limit=&project=none`; project-scoped: viewer, the project's runs whatever workspace the caller acts in; workspace-wide: org admin, members see their own). `project=none` keeps the workspace-wide listing's runs that have no project (a whole-workspace automation's, one launched outside any project, one its project's delete left behind), for the workspace Runs page: an org admin gets them all, a member the ones they launched, as `GET /agent-runs/{id}` lets each read them. `400` for any other `project` value, or `project=none` beside `project_id` | user |
 | POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run `{worker_id, providers, hosted, min_priority}` (a personal key: its owner's, and the ownerless ones its owner could see), never one whose cancel was requested. `204` when there is none, and when the run claimed was asked to stop before its token was issued (a project's delete, say): it is handed back, which ends it cancelled | worker |
-| POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent `{role_label, prompt}` → `201 {run_id, status}`; `400` for a blank `prompt`, for a run that is not part of a crew and for a `role_label` that names no delegate of its node, `403` for anything but a run token, `404` when the run's crew node was removed after it launched | run |
-| GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status: `403` `not your delegated run` for another run of the caller's project, `404` `agent run not found` for a run outside it, as for one no row has | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree, less each run below the root the caller could not open by itself and the runs below it | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/logs` | Run log entries: the worker's, then any note the server keeps on the finished run (`kind` `marker`, below) | launcher / viewer |
@@ -1442,71 +1441,35 @@ as its worker was reporting it finished: a finish keeps the cancel.
 A claimed or running run whose worker has sent nothing (logs, heartbeat)
 for two minutes is ended by the stale-run reaper: failed, with `error`
 `worker lost (heartbeat timeout)` and `error_class` `worker_error`, which
-is retried automatically while the run has attempts left (a crew,
+is retried automatically while the run has attempts left (an
 automation or session run excepted). A run whose cancel was requested ends
 `cancelled` instead, with no error, as its worker reporting it cancelled
 would have ended it; its launcher gets no "Agent run failed" notification
 for it.
 
-When a crew run succeeds (for one awaiting approval, once it is finalised),
-each `hands-off-to` and `reviews` edge of its crew node starts what it leads
-to: an agent's run, or, for a person, a card on the run's project board
-assigned to them. That card goes only to an admin of the project's
-workspace, or a member of it with a role in the project, directly or
-through a people team. That is stricter than what the person's own session
-opens: a platform admin who is neither, and someone who has left the
-workspace but kept a role in the project, are refused too. Anyone refused
-is granted nothing: no card is made, and the run keeps a note saying why,
-which its card's activity repeats (`run-failed`) (REQ-23, REQ-81). The
-reason names the rule that refused: a member of the workspace with no role
-in the project "has no role in this project", to be given one, and anyone
-outside the workspace, such as a former member who kept a role in the
-project, "is no longer a member of this workspace", to be added back to it
-with a role in the project; a check that fails says the person's access
-"could not be checked".
-When the workspace's budget refuses the agent successors
-(`OPENV_BUDGET_ENFORCE`), none is launched: the run publishes
-`agentrun.successors_skipped`, with `agent_id`, `team_id`, `successors` (the
-skipped nodes' labels), `team_node_ids` and `reason` (the budget refusal,
-which names the budget and the month's spend), and keeps a note saying the
-same (REQ-76); a person's hand-off, which starts no run, is still made. A
-note is an entry the server appends at the end of the finished run's log,
-`kind` `marker`, whose payload carries `marker` (`handoff_refused` or
-`successors_skipped`), `message`, the sentence the run panel shows, and the
-detail: `team_node_id`, `user_id` and `edge_type` for a refused hand-off,
-`successors`, `team_node_ids` and `reason` for skipped successors.
+An agent run is a single run: when it finishes, nothing else is started.
+Crews, whose runs once handed work on to other agents and to people, were
+removed (issue 732); a run that was a crew's keeps its history and reads as
+a plain run. A note is an entry the server appends at the end of a finished
+run's log, `kind` `marker`, whose payload carries `marker`, `message`, the
+sentence the run panel shows, and its detail; the crew runs of older
+releases carry them (`handoff_refused`, `successors_skipped`).
 
-### Crews (agent org charts) — canonical
-
-| Method | Path | Purpose | Auth |
-|---|---|---|---|
-| GET | `/api/v1/crews` | List crews (`?project_id=` narrows to a project's) | user |
-| POST | `/api/v1/crews` | Create crew `{name, description?, project_id?}` → `201`; `project_id` pins it to a project of the workspace | editor (project-pinned) / org admin |
-| GET | `/api/v1/crews/{id}` | Crew graph (nodes + edges) | org member |
-| PUT | `/api/v1/crews/{id}` | Update crew `{name?, description?, entry_node_id?}`; a key left out is left as it was | editor / org admin |
-| DELETE | `/api/v1/crews/{id}` | Delete crew → `204` | editor / org admin |
-| POST | `/api/v1/crews/{id}/clone` | Clone crew `{name?, project_id?}` → `201` (the source's write guard, then the copy's: `project_id` a project of the crew's workspace the caller edits, or none for an org admin) | editor / org admin |
-| POST | `/api/v1/crews/{id}/nodes` | Add node (agent or human) `{node_type, agent_id or user_id, label?, department?, position?}` → `201` | editor / org admin |
-| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node `{project_id?, prompt}` → `201` with the run (in the body's `project_id`, else in a pinned crew's project); `400` for a crew with no entry node; `400` for a project outside the crew's workspace; `404` `team not found` for a caller who may not know of the crew (*Crew writes*). A pin that no longer names a project of the crew's workspace counts as none, for launches and for every crew write. Refused `403` for a proposal-mode agent run | editor / org admin |
-| PUT | `/api/v1/crew-nodes/{id}` | Update node `{label?, agent_id?, user_id?, department?, position?}` | editor / org admin |
-| DELETE | `/api/v1/crew-nodes/{id}` | Remove node → `204` | editor / org admin |
-| POST | `/api/v1/crews/{id}/edges` | Add edge `{from_node_id, to_node_id, edge_type, config?}` (`delegates-to`, `hands-off-to`, `reviews`) → `201` | editor / org admin |
-| PUT | `/api/v1/crew-edges/{id}` | Update edge `{config}` | editor / org admin |
-| DELETE | `/api/v1/crew-edges/{id}` | Remove edge → `204` | editor / org admin |
-
-**Deprecated aliases** (same handlers, kept for compatibility — see
-`registerCrewRoutes` in `internal/api/crew_handlers.go`): `/api/v1/teams`, `/api/v1/teams/{id}`,
-`/api/v1/teams/{id}/clone|nodes|runs|edges`, `/api/v1/team-nodes/{id}`,
-`/api/v1/team-edges/{id}`. New integrations should use the `/crews` forms.
+The crew routes (`/api/v1/crews*`, `/api/v1/crew-nodes/*`,
+`/api/v1/crew-edges/*`, `/api/v1/crew-templates`, and their deprecated
+`/api/v1/teams*`, `/api/v1/team-nodes/*` and `/api/v1/team-edges/*`
+aliases) and the delegation routes (`/api/v1/agent-runs/delegate` and
+`/api/v1/agent-runs/delegate/{id}`) are gone, and answer `404`. People-teams
+(`/api/v1/orgs/{id}/teams`, `/api/v1/org-teams/*`) are unrelated and stay.
 
 ### Automations & proposals
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/automations` | List automations (`?project_id=` narrows to a project's) | user |
-| POST | `/api/v1/automations` | Create `{name, kind, agent_id or team_id, project_id?, prompt_template, enabled?, cron_expr?, catch_up?, event_type?, event_filter?, cooldown_seconds?, max_runs_per_hour?}` → `201`; `kind` is `manual`, `scheduled` (a cron schedule: `cron_expr`) or `triggered` (an event: `event_type`, `event_filter`); `400` for any other. `created_by` is the caller, whatever the body says. `project_id` pins it to a project of the workspace (`400` "project does not belong to this workspace" otherwise); absent, null or `""`, it covers the whole workspace. A triggered automation fires only on events of its own workspace, and of its own project when pinned to one; a workspace-wide one's run takes the event's project. The target must be the workspace's: an agent of it, or a crew of it pinned to no project or to the automation's own (`400` "agent not found", "crew not found", "the crew is pinned to another project", or, for a workspace-wide one, "a crew pinned to a project cannot run an automation for the whole workspace"). Cron expressions are read in UTC | editor (project-pinned) / org admin |
+| POST | `/api/v1/automations` | Create `{name, kind, agent_id, project_id?, prompt_template, enabled?, cron_expr?, catch_up?, event_type?, event_filter?, cooldown_seconds?, max_runs_per_hour?}` → `201`; `kind` is `manual`, `scheduled` (a cron schedule: `cron_expr`) or `triggered` (an event: `event_type`, `event_filter`); `400` for any other. `created_by` is the caller, whatever the body says. `project_id` pins it to a project of the workspace (`400` "project does not belong to this workspace" otherwise); absent, null or `""`, it covers the whole workspace. A triggered automation fires only on events of its own workspace, and of its own project when pinned to one; a workspace-wide one's run takes the event's project. The agent must be the workspace's (`400` "agent not found"), and is required (`400` "agent_id is required"); a `team_id`, a crew's, is ignored since crews were removed. Cron expressions are read in UTC | editor (project-pinned) / org admin |
 | GET | `/api/v1/automations/{id}` | Details | org member |
-| PUT | `/api/v1/automations/{id}` | Update (the same keys, all optional); null fields are left as they are. `project_id` moves it: to a project, or with `""` to the whole workspace, which takes the write rights of where it goes too and the `workspace-automations` feature (`403` with the feature gate's message before a stable-channel workspace has it). The target is checked as on create when the scope or the target changes | editor / org admin (and of the scope it moves to) |
+| PUT | `/api/v1/automations/{id}` | Update (the same keys, all optional); null fields are left as they are. `project_id` moves it: to a project, or with `""` to the whole workspace, which takes the write rights of where it goes too and the `workspace-automations` feature (`403` with the feature gate's message before a stable-channel workspace has it). The agent is checked as on create when the scope or the agent changes, and an automation left with no agent (one whose crew had none when crews were removed) is saved only once it has one | editor / org admin (and of the scope it moves to) |
 | DELETE | `/api/v1/automations/{id}` | Delete → `204` | editor / org admin |
 | POST | `/api/v1/automations/{id}/run-now` | Launch immediately → `201` with the run. Refused `403` for a proposal-mode agent run, `401` for any other run token | editor / org admin |
 | GET | `/api/v1/proposals` | List agent proposals, newest first, at most 500: `?project_id=` (viewer), or without it the active workspace's (org admin; anyone else `400` `project_id is required`); `status`, `run_id` narrow either | viewer (project) / org admin |

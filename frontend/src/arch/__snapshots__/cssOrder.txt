@@ -18,6 +18,7 @@
 ## Lazy modules (35), by path, and the stylesheets each adds, in cascade order
   components/admin/VisitorDashboard.tsx  (none)
   components/org/OrgBillingTab.tsx  (none)
+  components/wizard/FloatingAssistant.tsx  (none)
   site/Changelog.tsx  (none)
   site/CompareHub.tsx  (none)
   site/ComparePage.tsx  (none)
@@ -33,7 +34,6 @@
   views/ActivityLog.tsx  (none)
   views/BaselineCompare.tsx  (none)
   views/BaselinesPage.tsx  (none)
-  views/CrewBuilder.tsx  (none)
   views/DesignItems.tsx  (none)
   views/ImpactView.tsx  (none)
   views/Landing.tsx  (none)

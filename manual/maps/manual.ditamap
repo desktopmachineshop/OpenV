@@ -70,6 +70,7 @@
     <topicref href="../topics/board/to-dos-small-jobs-kept-off-the-board.dita"/>
   </topicref>
   <topicref href="../topics/agents/index.dita">
+    <topicref href="../topics/agents/the-agent-hierarchy.dita"/>
     <topicref href="../topics/agents/the-agent-list.dita"/>
     <topicref href="../topics/agents/launching-a-run.dita"/>
     <topicref href="../topics/agents/the-agent-editor.dita"/>
@@ -77,13 +78,6 @@
     <topicref href="../topics/agents/write-mode-proposal-vs-direct.dita"/>
     <topicref href="../topics/agents/repository-access.dita"/>
     <topicref href="../topics/agents/default-model-providers.dita"/>
-  </topicref>
-  <topicref href="../topics/crews/index.dita">
-    <topicref href="../topics/crews/managing-crews.dita"/>
-    <topicref href="../topics/crews/the-canvas.dita"/>
-    <topicref href="../topics/crews/adding-nodes.dita"/>
-    <topicref href="../topics/crews/connecting-nodes.dita"/>
-    <topicref href="../topics/crews/crews-elsewhere-in-the-app.dita"/>
   </topicref>
   <topicref href="../topics/runs-runners/index.dita">
     <topicref href="../topics/runs-runners/the-runs-page.dita"/>

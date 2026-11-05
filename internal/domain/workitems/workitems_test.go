@@ -33,13 +33,13 @@ func (m *memRepo) SaveActivity(*Activity) error                       { return n
 func (m *memRepo) MaxSortOrder(projectID, column string) (int, error) { return -1, nil }
 
 // TestAnUnknownAssigneeTypeIsRefused pins OpenV REQ-23's assignee types: a
-// person, an agent or a crew ("team"). Any other assignee_type used to be
+// person or an agent; a crew ("team") is refused since crews went. Any other assignee_type used to be
 // stored as sent, on a create and on an update; it is now refused with
 // ErrInvalidAssigneeType, which the API answers 400, and nothing is stored.
 // An empty assignee_type is still a person on a create and keeps the stored
 // one on an update.
 func TestAnUnknownAssigneeTypeIsRefused(t *testing.T) {
-	for _, assigneeType := range []string{"robot", "Team", "users", " "} {
+	for _, assigneeType := range []string{"robot", "Team", "users", " ", AssigneeTeam} {
 		t.Run("create "+assigneeType, func(t *testing.T) {
 			repo := &memRepo{items: map[string]*WorkItem{}}
 			_, err := NewDefaultService(repo, nil).Create(CreateWorkItemRequest{
@@ -67,7 +67,7 @@ func TestAnUnknownAssigneeTypeIsRefused(t *testing.T) {
 			}
 		})
 	}
-	for _, assigneeType := range []string{"", AssigneeUser, AssigneeAgent, AssigneeTeam} {
+	for _, assigneeType := range []string{"", AssigneeUser, AssigneeAgent} {
 		t.Run("accepts "+assigneeType, func(t *testing.T) {
 			repo := &memRepo{items: map[string]*WorkItem{}}
 			svc := NewDefaultService(repo, nil)

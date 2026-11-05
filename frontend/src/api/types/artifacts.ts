@@ -201,6 +201,34 @@ export interface SearchHit {
   ref?: string;
   // Semantic-similarity score (0..1); present only for semantic/hybrid hits.
   score?: number;
+  // The hit's review status and owner attribute, present when the search
+  // asked for facets (the chip search bar, issue #722).
+  status?: string;
+  owner?: string;
+}
+
+// What the chip search bar narrows GET /api/v1/search by (issue #722): each
+// list matches any of its values; facets asks for each hit's status and owner.
+export interface SearchFacets {
+  projects?: string[];
+  types?: string[];
+  statuses?: string[];
+  owners?: string[];
+  facets?: boolean;
+}
+
+// One of a member's saved searches (GET /api/v1/me/saved-searches): a named
+// set of search-bar chips, per user, workspace and scope. value is the bar's
+// own state, which the page that saved it reads back.
+export interface SavedSearch {
+  id: string;
+  user_id: string;
+  org_id: string;
+  scope: string;
+  name: string;
+  value: Record<string, unknown>;
+  shared: boolean;
+  created_at: string;
 }
 
 // Ranking path for GET /api/v1/search. 'keyword' is the original trigram match;

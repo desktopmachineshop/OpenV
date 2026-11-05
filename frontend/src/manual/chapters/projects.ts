@@ -171,7 +171,6 @@ Opening a project shows the project menu with its pages, grouped under
 | V&V | Coverage, gaps, test runs, PDF report |
 | Traceability | Traceability matrix grid |
 | Board | Kanban board with human and agent assignees |
-| Crew | Crew builder — org chart of agents and people |
 | Agents | Agent definitions and launcher |
 | Automations | Scheduled and event-triggered agent runs |
 | Runs | Agent run history and proposal review |

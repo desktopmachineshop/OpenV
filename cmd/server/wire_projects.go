@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
@@ -35,6 +36,9 @@ func (a *app) projects() {
 	// Target releases: the milestones a project plans its requirements for.
 	// A release an artifact still targets cannot be deleted.
 	a.targetReleaseService = targetreleases.NewDefaultService(a.targetReleaseRepo, a.targetReleaseRepo.CountTargeting)
+	// A member's saved searches: the named chip sets a page's search bar
+	// puts back (issue #722).
+	a.savedSearchService = savedsearches.NewDefaultService(postgres.NewSavedSearchRepository(a.db))
 	// The community pool of joke demo products for the new-project wizard.
 	// Limits are env-tunable so a deployment can tighten them without a
 	// release; the defaults bound both abuse and storage cost.

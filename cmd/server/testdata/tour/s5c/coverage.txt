@@ -127,4 +127,4 @@ PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 409; billing, tiers_secure_runne
 PUT /api/v1/projects/{id}/members/{userId}: 204, 400, 403, 404; members_teams
 PUT /api/v1/projects/{id}/team-access: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
 
-s5c: 115 of 388 routes reached (29.6%), 111 with a 2xx or 3xx answer (28.6%)
+s5c: 115 of 351 routes reached (32.8%), 111 with a 2xx or 3xx answer (31.6%)

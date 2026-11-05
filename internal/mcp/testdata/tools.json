@@ -671,24 +671,6 @@
       ]
     },
     {
-      "name": "delegate_to_agent",
-      "read_only": false,
-      "description": "Delegate a task to one of this agent's team delegates by role label, then wait for the result (polls up to 30 minutes).",
-      "input_schema": {
-        "properties": {
-          "prompt": {"description": "Task prompt for the delegate", "type": "string"},
-          "role_label": {"description": "Delegate's role label in the team", "type": "string"}
-        },
-        "required": ["role_label", "prompt"],
-        "type": "object"
-      },
-      "calls": ["POST /api/v1/agent-runs/delegate", "GET /api/v1/agent-runs/delegate/{id}"],
-      "requests": [
-        "POST /api/v1/agent-runs/delegate {\"prompt\":\"Draft the test cases.\",\"role_label\":\"builder\"}",
-        "GET /api/v1/agent-runs/delegate/99999999-9999-4999-8999-999999999999"
-      ]
-    },
-    {
       "name": "list_todos",
       "read_only": true,
       "description": "List a project's to-dos: one-paragraph jobs to tick off, separate from the kanban board. Open ones come first, soonest due first, then the done ones. Set include_done to false to leave the done ones out.",

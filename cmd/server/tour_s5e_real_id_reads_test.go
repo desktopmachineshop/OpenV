@@ -41,7 +41,7 @@ import (
 //   - "a proposal-mode run's token": last, the writes a run could set work
 //     going with, with the token of a running proposal-mode run in P
 //     (realIdReadsReviewRunLaunches) standing in the run column: the draft of
-//     test cases, launches of an agent and of a crew in P, a test run's agent
+//     test cases, a launch of an agent in P, a test run's agent
 //     run, a retry, an automation's run-now, the assistant's chat message,
 //     kickoff and nudge, an interview in P and an invite to <interview>, which
 //     arm the interviewer's runs, a project and a project from the template.
@@ -135,8 +135,8 @@ func TestTourS5eRealIdReads(t *testing.T) {
 var realIdReadsSends = []string{
 	"section \"real ids, GET\": every GET route of routes.txt with a path variable, in its order, the variable " +
 		"filled with a real id: <w> for /orgs, <p> for /projects and /public/open-source/projects, <run> for " +
-		"/agent-runs (delegate/{id} too), tour-matrix for /agents, <a> for /artifacts, <attachment>, <automation>, " +
-		"<b1> for /baselines, <crew> for /crews and /teams, <bundle> for /evidence-bundles, <file> for " +
+		"/agent-runs, tour-matrix for /agents, <a> for /artifacts, <attachment>, <automation>, " +
+		"<b1> for /baselines, <bundle> for /evidence-bundles, <file> for " +
 		"/evidence-files, <guided> for /guided-sessions, <interview.session> for /interview-sessions, <interview> " +
 		"for /interviews, <link> for /links, <login> for /provider-logins, <invite.token> for /public/interviews, " +
 		"<share.token> for /public/share, <result> for /test-results, <test.run> for /test-runs, <owner> for " +
@@ -148,8 +148,8 @@ var realIdReadsSends = []string{
 		"and test case TC (<tc>); the link A derives-from N (<link>); a PNG attachment on A (<attachment>); baseline " +
 		"B1 (<b1>); a work item (<card>); a to-do (<todo>); test run <test.run> with TC's pass (<result>); evidence bundle <bundle> " +
 		"with a CSV (<file>) that <result> cites; interview <interview> and its invite (<invite.token>); target " +
-		"release MVP of P (<release>); guided session <guided>; a manual automation of tour-matrix pinned to P (<automation>); a workspace-wide crew " +
-		"(<crew>); a sign-in of claude-code on W's shared workers (<login>); a public share link of P " +
+		"release MVP of P (<release>); guided session <guided>; a manual automation of tour-matrix pinned to P (<automation>); " +
+		"a sign-in of claude-code on W's shared workers (<login>); a public share link of P " +
 		"(<share.token>); W's logo and the owner's picture; then the participant's first message on the invite, " +
 		"from an address of its own, which opens <interview.session> and queues an interviewer run",
 	"section \"real ids in the query, GET\": the list reads scoped by their query, with a real id there (the row " +
@@ -168,8 +168,7 @@ var realIdReadsSends = []string{
 		"acts in",
 	"section \"a proposal-mode run's token\", last: the run column is sent by <review.run.token>, the token of " +
 		"<review.run>, a run of the proposal-mode agent tour-matrix-review in P, launched by the owner, claimed by " +
-		"W's worker key and started, as setup after the creates, with a workspace-wide crew whose entry node is " +
-		"tour-matrix (<launch.crew>); the draft of test cases, the test run's agent run, the assistant's chat " +
+		"W's worker key and started, as setup after the creates; the draft of test cases, the test run's agent run, the assistant's chat " +
 		"message, kickoff and nudge (on <guided>), an interview in P and an invite to <interview> carry the body {, " +
 		"the retry (of <run>) and run-now (of <automation>) no body (either row shows none), the launches and " +
 		"creates a well-formed body (the row shows it)",
@@ -249,11 +248,9 @@ var realIdReadsLists = []struct{ route, count string }{
 	{"GET /api/v1/agent-runs", ""},
 	{"GET /api/v1/agents", ""},
 	{"GET /api/v1/automations", ""},
-	{"GET /api/v1/crews", ""},
 	{"GET /api/v1/events", ""},
 	{"GET /api/v1/orgs", "/orgs"},
 	{"GET /api/v1/projects", ""},
-	{"GET /api/v1/teams", ""},
 	{"GET /api/v1/users", ""},
 }
 
@@ -305,11 +302,11 @@ func realIdReadsReviewAgent() string {
 }
 
 // realIdReadsReviewRunLaunches makes, as setup, a running run of a
-// proposal-mode agent in P and a crew whose entry node is tour-matrix, then
+// proposal-mode agent in P, then
 // sends, with that run's token in the run column (rowAs), the writes a run
 // could set work going with: the draft of test cases (which refuses a
 // proposal-mode run in words of its own), a launch of tour-matrix in P, a
-// launch of the crew in P, a test run's agent run, a retry of <run> (running,
+// test run's agent run, a retry of <run> (running,
 // so 409 to a column that passes its guard), the run-now of <automation>, the
 // assistant's chat message, kickoff and nudge on <guided>, an interview in P
 // and an invite to <interview> (which arm the interviewer's runs, one for each
@@ -331,12 +328,6 @@ func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 			"claimed by W's worker key and started: the run column of the section \"a proposal-mode run's token\"")
 	tr.setup("start the run review.run, as a runner does", c.worker, "POST /api/v1/agent-runs/{id}/start",
 		at("id", "{{review.run}}"))
-	tr.setup("a workspace-wide crew to launch", o, "POST /api/v1/crews", jsonBody(`{"name":"Tour Matrix launch"}`)).
-		capture("launch.crew", "/id")
-	tr.setup("tour-matrix as its node", o, "POST /api/v1/crews/{id}/nodes", at("id", "{{launch.crew}}"),
-		jsonBody(`{"agent_id":"{{agent}}","label":"Matrix","department":"Tour"}`)).capture("launch.node", "/id")
-	tr.setup("the node is the crew's entry", o, "PUT /api/v1/crews/{id}", at("id", "{{launch.crew}}"),
-		jsonBody(`{"entry_node_id":"{{launch.node}}"}`))
 	m.leaveOutSetups()
 
 	m.section("a proposal-mode run's token", "The writes that set work going or create a project, with the token "+
@@ -347,8 +338,6 @@ func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 	m.rowAs("POST /api/v1/projects/{id}/draft-test-cases", stand, at("id", "{{p}}"), truncatedBody())
 	m.rowAs("POST /api/v1/agents/{slug}/runs", stand, at("slug", "tour-matrix"),
 		jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P again."}`))
-	m.rowAs("POST /api/v1/crews/{id}/runs", stand, at("id", "{{launch.crew}}"),
-		jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P as a crew."}`))
 	m.rowAs("POST /api/v1/test-runs/{id}/agent-run", stand, at("id", "{{test.run}}"), truncatedBody())
 	m.rowAs("POST /api/v1/agent-runs/{id}/retry", stand, at("id", "{{run}}"))
 	m.rowAs("POST /api/v1/automations/{id}/run-now", stand, at("id", "{{automation}}"))
@@ -382,8 +371,6 @@ var realIdReadsIDs = map[string]string{
 	"attachments":        "{{attachment}}",
 	"automations":        "{{automation}}",
 	"baselines":          "{{b1}}",
-	"crews":              "{{crew}}",
-	"teams":              "{{crew}}",
 	"evidence-bundles":   "{{bundle}}",
 	"evidence-files":     "{{file}}",
 	"guided-sessions":    "{{guided}}",
@@ -464,7 +451,6 @@ var realIdReadsQueries = []struct{ route, query, count string }{
 	{"GET /api/v1/proposals", "project_id={{p}}", ""},
 	{"GET /api/v1/search", "q=R1&project_id={{p}}", "/hits"},
 	{"GET /api/v1/automations", "project_id={{p}}", ""},
-	{"GET /api/v1/crews", "project_id={{p}}", ""},
 }
 
 // realIdReadsWrites are the writes sent to real ids with the body {, each
@@ -494,7 +480,6 @@ var realIdReadsWrites = map[string]string{
 	"PUT /api/v1/interviews/{id}/persona":    "",
 	"PUT /api/v1/attachments/{id}":           "",
 	"PUT /api/v1/automations/{id}":           "",
-	"PUT /api/v1/crews/{id}":                 "",
 	"PUT /api/v1/artifacts/{id}":             "",
 	"PUT /api/v1/links/{id}":                 "",
 	// Read for this area: the decode first, or a guard (and a lookup) and then
@@ -514,8 +499,6 @@ var realIdReadsWrites = map[string]string{
 	"POST /api/v1/guided-sessions/{id}/drafts":    "",
 	"POST /api/v1/guided-sessions/{id}/messages":  "",
 	"POST /api/v1/work-items/{id}/move":           "", // the card's lookup, editor
-	"POST /api/v1/crews/{id}/nodes":               "", // teamWriteChecked
-	"POST /api/v1/crews/{id}/edges":               "",
 	"PUT /api/v1/agents/{slug}":                   "", // admin of the active workspace
 	"POST /api/v1/agents/{slug}/runs":             "", // the agent's lookup, then the decode
 	"POST /api/v1/provider-logins/{id}/code":      "", // userLoginWriteChecked
@@ -578,8 +561,6 @@ func realIdReadsFixtures(tr *tour) {
 	tr.setup("a manual automation of tour-matrix in P", o, "POST /api/v1/automations",
 		jsonBody(`{"name":"Tour Matrix manual","kind":"manual","agent_id":"{{agent}}","project_id":"{{p}}",`+
 			`"prompt_template":"Summarise P."}`), expect(http.StatusCreated)).capture("automation", "/id")
-	tr.setup("a workspace-wide crew", o, "POST /api/v1/crews", jsonBody(`{"name":"Tour Matrix crew"}`)).
-		capture("crew", "/id")
 	tr.setup("a sign-in of claude-code on W's shared workers", o, "POST /api/v1/provider-logins",
 		jsonBody(`{"provider":"claude-code"}`)).capture("login", "/id")
 	share := tr.setup("a public share link of P", o, "POST /api/v1/projects/{id}/share-links", at("id", "{{p}}"),

@@ -19,7 +19,7 @@ an editor, version history, image attachments, comments, and baselines.
 
 ## The layout
 
-The view has two parts side by side, and a third you can call up:
+The view has two parts side by side:
 
 - **The list** — every artifact in the project, as a **table** or a **tree**
   diagram (see below). Above it sit the type tabs, the project search and
@@ -28,8 +28,11 @@ The view has two parts side by side, and a third you can call up:
   quality and priority, its text, its place in the trace and its tests (see
   *The detail panel*). Drag its left edge to make it wider; the width is
   remembered.
-- **Notes** — the **Chatter** panel at the far right: comments on the selected
-  artifact and the V&V Assistant (see *Making room*).
+
+The selected artifact's comments and recorded changes are its **History**, the
+last section of the detail panel (see *History*). The V&V Assistant floats over
+the page from the **✦ Assistant** button in the bottom corner (see *Guided
+definition & the V&V Assistant* → *The V&V Assistant on every page*).
 
 The header holds the baseline picker and the project actions — **Compare**,
 **Capture Baseline**, **Draft test cases**, **↓ Download** — with one blue
@@ -125,8 +128,8 @@ onwards*), version and when it last changed, then the review step it can take ne
   attributes, the figures and the full list of **traceability links**, where a
   link can be deleted.
 
-On a phone the artifact ends in a bar under your thumb: **Comment** opens the
-Notes pane, and the review step forward (**Submit for review**, **Approve**)
+On a phone the artifact ends in a bar under your thumb: **Comment** scrolls to
+its History, where the comment box is, and the review step forward (**Submit for review**, **Approve**)
 is the blue button beside it.
 
 ## Creating and organizing artifacts
@@ -175,7 +178,7 @@ use the ‹ / › buttons.)
 On a phone or tablet, swipe the document sideways: **left** for the next
 artifact, **right** for the one before. Scrolling up and down is never
 interrupted, and a table or code block wide enough to scroll keeps its own
-sideways swipe. The **Tree / Document / Notes** buttons still switch panes:
+sideways swipe. The **Tree / Document** buttons still switch panes:
 **Tree** holds the list in whichever view you chose.
 
 Wherever a step lands, the tree opens the sections above it so you can see where
@@ -221,22 +224,20 @@ rules, down to off.
 ## Making room
 
 The project menu takes only a narrow rail at the left of the page (see
-*Getting started* → *Finding your way around*). The **Notes** panel has three
-states, chosen from the button in its header:
+*Getting started* → *Finding your way around*). There is no third column: the
+artifact's History is part of the detail panel, and the V&V Assistant floats
+over the page and minimises back to its button, so the list and the detail
+panel share the whole width. Drag the detail panel's left edge to change how
+it is shared. The list fills the height of the page, so a taller window shows
+more of it rather than more empty space.
 
-- **Pinned** — always open, taking its width from the page.
-- **Auto-hide** — a thin strip at the edge; hovering it opens the panel over
-  the document, and moving away closes it. The document does not reflow.
-- **Hidden** — only the strip remains, which brings the panel back.
-
-The choice is remembered per person. Until you choose, the panel starts
-auto-hidden on anything narrower than a wide desktop (1680 pixels), so the
-list and the detail panel have the room. The list fills the height of the
-page, so a taller window shows more of it rather than more empty space.
+On a workspace still on an earlier release, the comments and the assistant are
+in a **Notes** panel at the far right instead, which is **Pinned**, **Auto-hide**
+(a strip at the edge that opens the panel over the document on hover) or
+**Hidden**, chosen from the button in its header.
 
 Nothing on the page is sized to the browser window, so the window itself never
-scrolls: the tree, the document, and the Notes panel each scroll inside their
-own column, and the toolbar takes a second row on a narrow window without
+scrolls: the tree and the document each scroll inside their own column, and the toolbar takes a second row on a narrow window without
 pushing anything off the bottom.
 
 ## Search & filters
@@ -253,16 +254,63 @@ ref beside the title, which is what tells two similarly named requirements
 apart. A longer ref that contains what you typed still appears below the exact
 match: **REQ-3** finds REQ-3 first and leaves REQ-30 further down.
 
-The list's box matches title, body, type, IDs and attributes. **Filter**
-beside it opens the filter panel, and while a search or a filter is on, a
-blue chip beside it says what it is; click the chip to clear them all:
+### The search bar
 
-- **Filter rows** — combine conditions on any field (Type, Title, Body,
-  Version, dates, …) with comparators like contains, equals, starts with,
-  greater than.
-- **Filter logic** — AND (all rows must match) or OR (any row).
-- **Presets** — name the current search + filters and save it; apply or delete
-  saved presets from the dropdown. Presets are stored in your browser.
+Both boxes are **search bars with chips**. Each filter you add shows as a
+small coloured chip inside the bar, such as **Status In review ×** or
+**Owner Dave ×**, so you can see at a glance what is narrowing the list.
+Click a chip's **×** to remove that filter alone. Whatever you type sits after
+the chips and searches as before; with the box empty, **Backspace** removes
+the last chip. Blue chips filter, purple chips group, and yellow chips are
+saved searches.
+
+**Typing suggests chips.** Type **dav** and the bar offers *Owner: Dave*,
+*Search Owner for: dav*, *Search Title for: dav* and so on. Pick one with the
+arrow keys and **Enter**, or click it, and it becomes a chip.
+
+**The caret** at the right of the bar opens a panel with three columns:
+
+- **Filters** — the quick filters (**Mine**, **In review**, **Failing**,
+  **Suspect**, each with how many it would show), then **Status**, **Type**,
+  **Priority**, **Created** and **Updated**, each opening its values (for the
+  dates: today, this week, this month, this quarter, this year). Ticking two
+  values of one field shows either. **Custom filter…** builds a condition on
+  any field or attribute: *contains* or *is* a value.
+- **Group by** — **Status**, **Type**, **Priority**, **Owner** or **Heading**,
+  and **Custom group** for any attribute. The table then lists its rows under
+  one heading per value; within a group, the rows keep their place in the
+  hierarchy, and each group folds on its own. Two groupings combine
+  ("Draft · Requirement"). Each grouping is a chip too.
+- **Favourites** — your saved searches. **Save current search** names the
+  chips and text in the bar; tick **Share with the workspace** to list it for
+  everyone in the workspace. Saved searches are kept with your account, so
+  they follow you to every device. Choosing one puts it in the bar as a
+  single chip; **×** beside one of your own deletes it.
+
+Different filters all apply together: **Status In review** and **Owner
+Dave** shows Dave's artifacts in review. The arrow keys move through the
+panel and **Escape** closes it. On a phone the chips scroll sideways and the
+panel opens as a sheet from the bottom of the screen.
+
+The chips are part of the page's address, so a filtered list can be
+bookmarked or shared: whoever opens the link sees the same chips, a saved
+search included.
+
+### The list's bar
+
+The list's bar narrows the project you are in. Its text matches the ref,
+title, body, type and attributes. The type tabs beside it still narrow what
+the bar leaves, and count what each type holds.
+
+### The top bar's chips
+
+In the top bar, the chips are **Project**, **Type**, **Status** and
+**Owner** (a part of a name or address is enough). Chips alone are a search:
+**Type Test case** with **Owner dana** lists Dana's test cases without any
+text. Typing a ref such as **REQ-12** still finds it first, and **Enter**
+opens it. The results drop down below the bar, grouped by kind
+(Requirements, Test Cases, …), each with its project, owner and status. The
+chips it offers for what you typed come after the results.
 
 ## Editing, versions & history
 
@@ -336,7 +384,7 @@ Two more buttons sit on every card:
   suspect flag on every link that touches it, because you have just vouched
   for the artifact its links were made from.
 - **Send back** asks what needs to change before it does anything. The comment
-  is required, and it is written in the same composer the notes panel uses —
+  is required, and it is written in the same composer the History uses —
   \`@name\` reaches a person, \`@@name\` raises them a to-do, \`#REQ-12\`
   cites — and it lands on the artifact's feed as an ordinary note. Then the
   artifact goes back to draft. Nobody gets work returned without being told
@@ -436,8 +484,8 @@ On the details view figures are read-only, with the viewer for a closer look.
 
 ## History
 
-The **History** tab in the right-hand Notes panel is the artifact's record: what
-OpenV wrote down each time the artifact changed, and what people have said about
+**History** is the last section of the artifact's detail panel, below its
+links and figures. It is the artifact's record: what OpenV wrote down each time the artifact changed, and what people have said about
 it, newest first. A new version, a status move, a link added or removed, a figure
 replaced, a test result recorded — each leaves an entry, alongside the notes
 members write themselves.
@@ -449,10 +497,10 @@ Three buttons above the list decide what you are reading:
   what, and when.
 - **Comments** — only what people wrote. This is the review discussion.
 
-The panel opens on **Comments**, which is what most people come to it for; the
+It opens on **Comments**, which is what most people come to it for; the
 recorded changes are the backdrop.
 
-Add a comment in the box at the foot of the panel. Use it for review discussion
+Add a comment in the box under the **History** heading. Use it for review discussion
 rather than editing the requirement text itself — the text is the requirement,
 the comment is what you think of it. Writing one while reading **Changes**
 switches you back to **Comments**, so you can see what you just added.

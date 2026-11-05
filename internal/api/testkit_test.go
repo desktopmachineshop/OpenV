@@ -22,7 +22,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/reports"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // newTestHandler builds the Handler a test drives: a zero Handler with each
@@ -74,10 +73,6 @@ func withReportService(s reports.Service) func(*Handler) {
 
 func withDownloadService(s downloads.Service) func(*Handler) {
 	return func(h *Handler) { h.DownloadService = s }
-}
-
-func withTeamService(s teams.Service) func(*Handler) {
-	return func(h *Handler) { h.TeamService = s }
 }
 
 func withAgentService(s agents.Service) func(*Handler) {

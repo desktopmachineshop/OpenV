@@ -151,7 +151,7 @@ func automationsStampInUTC(t *testing.T, db *sql.DB) {
 		// automation due as of the claim's now, through the claim.
 		ctx, cancel := context.WithCancel(context.Background())
 		start()
-		scheduler.New(repo, runService, nil).Start(ctx)
+		scheduler.New(repo, runService).Start(ctx)
 		after := time.Now()
 		cancel()
 
@@ -197,7 +197,7 @@ func automationsStampInUTC(t *testing.T, db *sql.DB) {
 		fires := save(t, &automations.Automation{Name: "Fires", Kind: automations.KindTriggered,
 			EventType: event, CooldownSeconds: 60, MaxRunsPerHour: 10})
 
-		automation.NewTriggerMatcher(repo, runService, nil).Start(bus)
+		automation.NewTriggerMatcher(repo, runService).Start(bus)
 		start()
 		bus.Publish(domainevents.New(event, "", uuid.New().String(), domainevents.ActorSystem,
 			map[string]interface{}{"title": "Clock"}).WithOrg(org))

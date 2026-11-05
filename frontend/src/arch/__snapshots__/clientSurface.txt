@@ -1,12 +1,15 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 243; members of exported objects: 327
+exports: 238; members of exported objects: 316
 
 interface AdminUser
 interface AdminWorkspace
 interface AgentDef
+interface AgentPlacement
 interface AgentRun
+interface AgentStats
+interface AgentStatsResponse
 interface AppNotification
 interface Artifact
 type      ArtifactStatus
@@ -33,12 +36,6 @@ interface ConnectedAppWorkspace
 interface ConnectorPairing
 interface CoverageEntry
 interface CoverageReport
-interface Crew
-interface CrewEdge
-interface CrewGraph
-interface CrewImportResult
-interface CrewNode
-interface CrewTemplate
 const     DEFAULT_MIN_PASSWORD_LENGTH
 interface DefaultWorkspace
 interface DomainEvent
@@ -100,9 +97,6 @@ interface OrgUsageSummary
 interface OrgUsageTotals
 const     PLANS
 interface Party
-interface PortableCrew
-interface PortableCrewEdge
-interface PortableCrewNode
 interface ProductProfile
 interface Project
 interface ProjectExport
@@ -145,6 +139,8 @@ interface RunnerPoolLoad
 type      RunnerPoolStatus
 interface RunnerSession
 interface RunnerSessionPayload
+interface SavedSearch
+interface SearchFacets
 interface SearchHit
 type      SearchMode
 interface SearchResponse
@@ -198,6 +194,7 @@ const     agentRunsAPI
             .streamUrl
             .tree
 const     agentsAPI
+            .arrange
             .create
             .draftTestCases
             .get
@@ -206,6 +203,7 @@ const     agentsAPI
             .raw
             .remove
             .saveRaw
+            .stats
             .sync
             .update
 const     artifactAPI
@@ -298,24 +296,6 @@ const     connectorAPI
             .downloadAvailable
             .downloadURL
             .startLink
-const     crewTemplatesAPI
-            .list
-const     crewsAPI
-            .addEdge
-            .addNode
-            .clone
-            .create
-            .exportDownload
-            .get
-            .import
-            .launchRun
-            .list
-            .remove
-            .removeEdge
-            .removeNode
-            .update
-            .updateEdge
-            .updateNode
 const     default
 const     defaultWorkspaceAPI
             .get
@@ -516,6 +496,10 @@ const     resolveAvatarUrl
 const     reviewAPI
             .get
             .startRound
+const     savedSearchAPI
+            .create
+            .delete
+            .list
 const     searchAPI
             .global
 const     shareLinkAPI

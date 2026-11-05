@@ -844,41 +844,6 @@
     },
     {
       "n": 16,
-      "title": "403 plan_read_only: org:admin, import a workspace-wide crew (no project_id: the workspace admin's guard, before the body is read)",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "POST /api/v1/crews/import",
-      "request": {
-        "method": "POST",
-        "path": "/api/v1/crews/import",
-        "headers": [
-          "Content-Type: application/json"
-        ],
-        "body": "{\"name\":\"Tour Over crew\"}"
-      },
-      "status": 403,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
-      "n": 17,
       "title": "always writable, beside the gate's refusals: org:member, m1 makes W its session's active workspace",
       "actor": "m1",
       "acting_in": "<w>",
@@ -897,7 +862,7 @@
       "events": []
     },
     {
-      "n": 18,
+      "n": 17,
       "title": "always writable, beside the gate's refusals: org:member, m1 revokes its own runner key",
       "actor": "m1",
       "acting_in": "<w>",
@@ -916,7 +881,7 @@
       "events": []
     },
     {
-      "n": 19,
+      "n": 18,
       "title": "always writable, beside the gate's refusals: org:member, m1 turns the stable preview on for itself: the single plan always runs nightly",
       "actor": "m1",
       "acting_in": "<w>",
@@ -946,7 +911,7 @@
       "events": []
     },
     {
-      "n": 20,
+      "n": 19,
       "title": "403 plan_read_only: org:member, m1 publishes a shared product (W is its active workspace)",
       "actor": "m1",
       "acting_in": "<w>",
@@ -981,7 +946,7 @@
       "events": []
     },
     {
-      "n": 21,
+      "n": 20,
       "title": "403 plan_read_only: org:member, m1 asks for a connector pairing code",
       "actor": "m1",
       "acting_in": "<w>",
@@ -1012,7 +977,7 @@
       "events": []
     },
     {
-      "n": 22,
+      "n": 21,
       "title": "always writable, beside the gate's refusals: runner-sessions, m1 ends its cloud runner lease: this deployment runs no transient runners",
       "actor": "m1",
       "acting_in": "<w>",
@@ -1038,7 +1003,7 @@
       "events": []
     },
     {
-      "n": 23,
+      "n": 22,
       "title": "403 plan_read_only: scoped-write, a workspace-wide attribute definition",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1073,7 +1038,7 @@
       "events": []
     },
     {
-      "n": 24,
+      "n": 23,
       "title": "403 plan_read_only: scoped-write, an automation pinned to P",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1108,7 +1073,7 @@
       "events": []
     },
     {
-      "n": 25,
+      "n": 24,
       "title": "always writable, beside the gate's refusals: run:editor, m1 cancels run2, which the owner launched in P (the project's ladder)",
       "actor": "m1",
       "acting_in": "<w>",
@@ -1124,7 +1089,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 25>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 24>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1137,7 +1102,7 @@
         "cancel_requested": true,
         "priority": 0,
         "prompt": "Summarise P again.",
-        "finished_at": "<time@step 25>",
+        "finished_at": "<time@step 24>",
         "final_text": "",
         "error": "",
         "attempt_count": 1,
@@ -1167,7 +1132,7 @@
       ]
     },
     {
-      "n": 26,
+      "n": 25,
       "title": "always writable: the owner cancels run2, which it launched and m1 has cancelled: the run as it is",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1183,7 +1148,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 25>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P again.\",\"finished_at\":\"<time@step 24>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1196,7 +1161,7 @@
         "cancel_requested": true,
         "priority": 0,
         "prompt": "Summarise P again.",
-        "finished_at": "<time@step 25>",
+        "finished_at": "<time@step 24>",
         "final_text": "",
         "error": "",
         "attempt_count": 1,
@@ -1214,7 +1179,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 26,
       "title": "mark every notification read: a session route, no workspace, no gate",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1245,7 +1210,7 @@
       "events": []
     },
     {
-      "n": 28,
+      "n": 27,
       "title": "403 plan_read_only: project-create, a project in W (the gate before the count)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1280,7 +1245,7 @@
       "events": []
     },
     {
-      "n": 29,
+      "n": 28,
       "title": "403 plan_read_only: project-create, a project from the default template",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1315,7 +1280,7 @@
       "events": []
     },
     {
-      "n": 30,
+      "n": 29,
       "title": "403 plan_read_only: unscoped-launch, m1 launches tour-over with no project",
       "actor": "m1",
       "acting_in": "<w>",
@@ -1350,7 +1315,7 @@
       "events": []
     },
     {
-      "n": 31,
+      "n": 30,
       "title": "W's worker key claims, not hosted: the worker wire asks no gate, and takes m1's run, the one queued",
       "actor": "k",
       "route": "POST /api/v1/agent-runs/claim",
@@ -1372,7 +1337,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-over\",\"name\":\"Tour Over\",\"description\":\"The S5e over-plan pass's agent.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"file_path\":\"<tmp>/data/agents/<w>/tour-over.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise W.\",\"worker_id\":\"tour-over\",\"heartbeat_at\":\"<time@step 31>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<m1>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run3.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-over\",\"name\":\"Tour Over\",\"description\":\"The S5e over-plan pass's agent.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-over.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise W.\",\"worker_id\":\"tour-over\",\"heartbeat_at\":\"<time@step 30>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<m1>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run3.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1395,6 +1360,10 @@
           "config": {},
           "system_prompt": "You answer in one line.",
           "locked": false,
+          "parent_agent_id": null,
+          "reports_to": "",
+          "group_name": "",
+          "sort_order": 0,
           "file_path": "<tmp>/data/agents/<w>/tour-over.md",
           "content_hash": "<hex64:1>",
           "synced_at": "<time@before step 1>",
@@ -1413,7 +1382,7 @@
           "priority": 0,
           "prompt": "Summarise W.",
           "worker_id": "tour-over",
-          "heartbeat_at": "<time@step 31>",
+          "heartbeat_at": "<time@step 30>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -1433,7 +1402,7 @@
       "events": []
     },
     {
-      "n": 32,
+      "n": 31,
       "title": "W's worker key pushes run1's log: the worker wire again",
       "actor": "k",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -1463,7 +1432,7 @@
       "events": []
     },
     {
-      "n": 33,
+      "n": 32,
       "title": "W's worker key claims as a hosted runner: the single plan does not include hosted automation",
       "actor": "k",
       "route": "POST /api/v1/agent-runs/claim",
@@ -1498,7 +1467,7 @@
       "events": []
     },
     {
-      "n": 34,
+      "n": 33,
       "title": "the same hosted claim on Business Lite, which includes hosted automation (REQ-176): 204, nothing queued",
       "actor": "k",
       "route": "POST /api/v1/agent-runs/claim",
@@ -1523,7 +1492,7 @@
       "events": []
     },
     {
-      "n": 35,
+      "n": 34,
       "title": "W's limits on Business Lite: still read-only, two seats there too",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1687,7 +1656,7 @@
       }
     },
     {
-      "n": 36,
+      "n": 35,
       "title": "REQ-113 on the read-only workspace: /export",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1706,7 +1675,7 @@
       "kind": "json",
       "body": [
         "{",
-        "  \"exported_at\": \"<time@step 36>\",",
+        "  \"exported_at\": \"<time@step 35>\",",
         "  \"version\": \"1.0\",",
         "  \"project_id\": \"<p>\",",
         "  \"project_name\": \"Tour Over P\",",
@@ -1741,8 +1710,8 @@
         "    \"constraints\": [],",
         "    \"success_metrics\": [],",
         "    \"settings\": {},",
-        "    \"created_at\": \"<time@step 36>\",",
-        "    \"updated_at\": \"<time@step 36>\"",
+        "    \"created_at\": \"<time@step 35>\",",
+        "    \"updated_at\": \"<time@step 35>\"",
         "  }",
         "}"
       ],
@@ -1750,7 +1719,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 37,
+      "n": 36,
       "title": "REQ-113 on the read-only workspace: /export?format=reqif",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2119,7 +2088,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 38,
+      "n": 37,
       "title": "REQ-113 on the read-only workspace: /download/json",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2138,7 +2107,7 @@
       "kind": "json",
       "body": [
         "{",
-        "  \"exported_at\": \"<time@step 38>\",",
+        "  \"exported_at\": \"<time@step 37>\",",
         "  \"version\": \"1.0\",",
         "  \"project_id\": \"<p>\",",
         "  \"project_name\": \"Tour Over P\",",
@@ -2173,8 +2142,8 @@
         "    \"constraints\": [],",
         "    \"success_metrics\": [],",
         "    \"settings\": {},",
-        "    \"created_at\": \"<time@step 36>\",",
-        "    \"updated_at\": \"<time@step 36>\"",
+        "    \"created_at\": \"<time@step 35>\",",
+        "    \"updated_at\": \"<time@step 35>\"",
         "  }",
         "}"
       ],
@@ -2182,7 +2151,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 39,
+      "n": 38,
       "title": "REQ-113 on the read-only workspace: /download/csv",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2233,7 +2202,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 40,
+      "n": 39,
       "title": "REQ-113 on the read-only workspace: /download/excel",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2946,7 +2915,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 41,
+      "n": 40,
       "title": "REQ-113 on the read-only workspace: /download/docx",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4592,7 +4561,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 42,
+      "n": 41,
       "title": "REQ-113 on the read-only workspace: /download/pdf",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4642,7 +4611,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 43,
+      "n": 42,
       "title": "REQ-113 on the read-only workspace: /download/reqif",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5010,7 +4979,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 44,
+      "n": 43,
       "title": "REQ-113 on the read-only workspace: /download/options",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5138,7 +5107,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 45,
+      "n": 44,
       "title": "REQ-113 on the read-only workspace: /report",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5181,7 +5150,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 46,
+      "n": 45,
       "title": "REQ-113 on the read-only workspace: /vv/report",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5218,7 +5187,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 47,
+      "n": 46,
       "title": "REQ-113 on the read-only workspace: /ai-map",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5246,7 +5215,7 @@
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"
     },
     {
-      "n": 48,
+      "n": 47,
       "title": "always writable: import P's JSON export into W",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5257,7 +5226,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "(what step 36 answered, byte for byte)"
+        "body": "(what step 35 answered, byte for byte)"
       },
       "status": 201,
       "content_type": "application/json",
@@ -5278,7 +5247,7 @@
       "events": []
     },
     {
-      "n": 49,
+      "n": 48,
       "title": "always writable: import P's ReqIF export into W",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5290,7 +5259,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "(what step 37 answered, byte for byte)"
+        "body": "(what step 36 answered, byte for byte)"
       },
       "status": 201,
       "content_type": "application/json",
@@ -5311,7 +5280,7 @@
       "events": []
     },
     {
-      "n": 50,
+      "n": 49,
       "title": "always writable: refresh W's billing, a hosted deployment with no payment provider",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5341,7 +5310,7 @@
       "events": []
     },
     {
-      "n": 51,
+      "n": 50,
       "title": "always writable: a checkout for W, a hosted deployment with no payment provider",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5375,7 +5344,7 @@
       "events": []
     },
     {
-      "n": 52,
+      "n": 51,
       "title": "always writable: a plan change for W, a hosted deployment with no payment provider",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5409,7 +5378,7 @@
       "events": []
     },
     {
-      "n": 53,
+      "n": 52,
       "title": "always writable: W's billing portal, a hosted deployment with no payment provider",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5439,7 +5408,7 @@
       "events": []
     },
     {
-      "n": 54,
+      "n": 53,
       "title": "always writable: delete project Q",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5458,7 +5427,7 @@
       "events": []
     },
     {
-      "n": 55,
+      "n": 54,
       "title": "always writable: revoke the invitation, one seat fewer",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5477,7 +5446,7 @@
       "events": []
     },
     {
-      "n": 56,
+      "n": 55,
       "title": "W's limits: three seats of two, still read-only",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5641,7 +5610,7 @@
       }
     },
     {
-      "n": 57,
+      "n": 56,
       "title": "always writable: remove m2, back to two seats",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5670,7 +5639,7 @@
       ]
     },
     {
-      "n": 58,
+      "n": 57,
       "title": "W's limits: under the plan, writable again",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5831,7 +5800,7 @@
       }
     },
     {
-      "n": 59,
+      "n": 58,
       "title": "rename W: writable again",
       "actor": "owner",
       "acting_in": "<w>",
@@ -5851,7 +5820,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Over Plan Renamed\",\"slug\":\"tour-over-plan-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 59>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Over Plan Renamed\",\"slug\":\"tour-over-plan-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 58>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -5866,7 +5835,7 @@
         },
         "created_by": "<owner>",
         "created_at": "<time@before step 1>",
-        "updated_at": "<time@step 59>",
+        "updated_at": "<time@step 58>",
         "has_logo": false,
         "release_channel": "nightly",
         "release_channel_locked": true,
@@ -5879,7 +5848,7 @@
       "events": []
     },
     {
-      "n": 60,
+      "n": 59,
       "title": "W's limits: 200 projects of 200, writable",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6043,7 +6012,7 @@
       }
     },
     {
-      "n": 61,
+      "n": 60,
       "title": "a new project past the 200 is refused limit_reached, the remedy the Billing tab",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6079,7 +6048,7 @@
       "events": []
     },
     {
-      "n": 62,
+      "n": 61,
       "title": "a project from the default template counts too: refused limit_reached",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6115,7 +6084,7 @@
       "events": []
     },
     {
-      "n": 63,
+      "n": 62,
       "title": "an import counts too: refused limit_reached",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6126,7 +6095,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "(what step 36 answered, byte for byte)"
+        "body": "(what step 35 answered, byte for byte)"
       },
       "status": 403,
       "content_type": "application/json",
@@ -6151,7 +6120,7 @@
       "events": []
     },
     {
-      "n": 64,
+      "n": 63,
       "title": "W's limits: 201 projects of 200, read-only, over max_projects",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6318,7 +6287,7 @@
       }
     },
     {
-      "n": 65,
+      "n": 64,
       "title": "rename P: 403 plan_read_only, naming Projects",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6353,7 +6322,7 @@
       "events": []
     },
     {
-      "n": 66,
+      "n": 65,
       "title": "a new project on the read-only workspace: 403 plan_read_only, the gate before the count",
       "actor": "owner",
       "acting_in": "<w>",
@@ -6388,7 +6357,7 @@
       "events": []
     },
     {
-      "n": 67,
+      "n": 66,
       "title": "delete W, over its plan again, from the owner's personal workspace: always writable",
       "actor": "owner",
       "route": "DELETE /api/v1/orgs/{id}",
@@ -6403,11 +6372,11 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"deleted_at\":\"<time@step 67>\",\"purge_after\":\"<time>\"}"
+        "{\"deleted_at\":\"<time@step 66>\",\"purge_after\":\"<time>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "deleted_at": "<time@step 67>",
+        "deleted_at": "<time@step 66>",
         "purge_after": "<time>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",

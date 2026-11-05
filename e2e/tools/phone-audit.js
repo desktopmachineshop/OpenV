@@ -117,7 +117,6 @@ const baseline = { id: 'b1', project_id: 'p1', name: 'Release candidate 1', crea
   created_by: 'u1', created_by_name: 'Sam Example' };
 const interview = { id: 'i1', project_id: 'p1', title: 'Lab manager interview', description: 'Safety and noise', status: 'open', invite_token: 'tok', created_at: now, updated_at: now };
 const automation = { id: 'au1', org_id: 'org1', project_id: 'p1', name: 'Nightly requirements lint', agent_id: 'a1', kind: 'cron', enabled: true, prompt_template: 'Lint everything', cron_expr: '0 2 * * *', catch_up: false, event_type: '', event_filter: {}, cooldown_seconds: 0, max_runs_per_hour: 0, created_at: now, updated_at: now };
-const crewTeam = { id: 't1', org_id: 'org1', name: "Founder's Dev Team", description: 'Analyst → Developer → Reviewer', nodes: [{ id: 'n1', team_id: 't1', kind: 'agent', agent_id: 'a1', label: 'Analyst', x: 80, y: 80 }, { id: 'n2', team_id: 't1', kind: 'agent', agent_id: 'a3', label: 'Developer', x: 320, y: 80 }], edges: [{ id: 'e1', team_id: 't1', from_node_id: 'n1', to_node_id: 'n2', type: 'handoff' }], created_at: now, updated_at: now };
 const usage = { window_days: 30, totals: { runs: 12, input_tokens: 240000, output_tokens: 18000, cost_usd: 3.4 }, month_to_date_usd: 3.4, monthly_budget_usd: 20, by_agent: [{ agent_id: 'a1', agent_name: 'Requirements Analyst', runs: 8, input_tokens: 180000, output_tokens: 12000, cost_usd: 2.6 }], by_day: [{ day: '2026-09-01', runs: 3, cost_usd: 0.9 }] };
 const coverageOld = { summary: { total_requirements: 3, verified: 1, covered: 2, uncovered: 1, coverage_pct: 66.7 }, requirements: [{ id: 'req-1', ref: 'REQ-1', title: 'Work envelope', status: 'verified', test_cases: [{ id: 'tc-1', ref: 'TC-1', title: 'Accuracy survey with a ballbar', last_result: 'pass' }] }, { id: 'req-2', ref: 'REQ-2', title: 'Positioning accuracy', status: 'uncovered', test_cases: [] }] };
 // The community pool behind the new-project wizard's random mode, with vote
@@ -334,10 +333,8 @@ const routes = [
   [/\/api\/v1\/links/, links],
   [/\/api\/v1\/notifications\/stream/, null],
   [/\/api\/v1\/notifications/, { notifications, unread: 1 }],
+  [/\/api\/v1\/agent-stats/, { days: 7, since: now, agents: [] }],
   [/\/api\/v1\/agents/, agents],
-  [/\/api\/v1\/teams\/t1/, crewTeam],
-  [/\/api\/v1\/teams/, [crewTeam]],
-  [/\/api\/v1\/crew-templates/, []],
   [/\/api\/v1\/automations/, [automation]],
   // The log stream: aborted, not answered with JSON — WebKit reports a
   // wrong-MIME EventSource as a page error, and the panel's polling
@@ -509,8 +506,6 @@ const SCREENS = [
   { tag: 'review', path: '/projects/p1/review' },
   { tag: 'board', path: '/projects/p1/board' },
   { tag: 'board-card', path: '/projects/p1/board', open: async (p) => { await press(p.getByText('Write the enclosure interlock').first()); } },
-  { tag: 'crew', path: '/projects/p1/crew' },
-  { tag: 'crew-network', path: '/projects/p1/crew/network' },
   { tag: 'automations', path: '/projects/p1/automations' },
   { tag: 'automations-new', path: '/projects/p1/automations', open: async (p) => { const b = p.getByRole('button', { name: /New automation|\+ New/i }).first(); if (await b.count()) await press(b); } },
   { tag: 'agent-runs', path: '/projects/p1/agent-runs' },
@@ -525,10 +520,13 @@ const SCREENS = [
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
-  // The notes panel's assistant beside the project, showing the three
-  // project-mode cards (edit, move, new artifact) with their buttons. On a
-  // phone the panel is a stacked pane reached from the pane strip.
+  // The assistant beside the project, showing the three project-mode cards
+  // (edit, move, new artifact) with their buttons: the floating panel (a
+  // bottom sheet on a phone) where the floating-assistant gate is on, else
+  // the Notes panel's tab, a stacked pane on a phone.
   { tag: 'notes-assistant', path: '/projects/p1/requirements', open: async (p) => {
+    const floating = p.getByRole('button', { name: 'Open the V&V Assistant' }).first();
+    if (await floating.count()) { await press(floating); await p.waitForTimeout(800); return; }
     const pane = p.getByRole('button', { name: /^Notes$/ }).first();
     if (await pane.count()) { await press(pane); await p.waitForTimeout(300); }
     const tab = p.getByRole('button', { name: 'V&V Assistant' }).first();

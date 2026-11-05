@@ -422,7 +422,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         <div className="card">
           <h3 style={{ marginBottom: 4 }}>Profile picture</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Shown beside your name in member lists and crews. PNG, JPG, GIF or WebP up to 2 MB.
+            Shown beside your name in member lists. PNG, JPG, GIF or WebP up to 2 MB.
           </p>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             <Avatar src={currentUser?.avatar_url} name={currentUser?.name || currentUser?.email} size={64} />

@@ -15,8 +15,7 @@ import (
 // The characterization of internal/automation's trigger matcher, refactor
 // plan step S11 (services-4; OpenV REQ-24, an automation launched on a
 // project event). It pins what the matcher does today, as cmd/server wires
-// it (automation.NewTriggerMatcher(automationRepo, runService,
-// teamService).Start(bus)): the event filter, the guards (the agent:
+// it (automation.NewTriggerMatcher(automationRepo, runService).Start(bus)): the event filter, the guards (the agent:
 // self-trigger skip, the cooldown and the hourly cap, in that order), the
 // prompt variables, and the run it launches and stamps. Workspace and
 // project scope are TestTriggerMatcherKeepsWorkspacesApart's, beside it.
@@ -90,7 +89,7 @@ func TestMatcherEventFilters(t *testing.T) {
 			a.EventFilter = filterJSON(t, tc.filter)
 			a.MaxRunsPerHour = 10
 			runs := newMatcherRuns()
-			NewTriggerMatcher(newMatcherRepo(a), runs, matcherTeams{}).handle(artifactEvent("user:u-1", tc.payload))
+			NewTriggerMatcher(newMatcherRepo(a), runs).handle(artifactEvent("user:u-1", tc.payload))
 			if fired := len(runs.requests()) == 1; fired != tc.fires || len(runs.requests()) > 1 {
 				t.Errorf("filter %s on payload %v: launched %d runs, want fired=%v", tc.filter, tc.payload,
 					len(runs.requests()), tc.fires)
@@ -143,7 +142,7 @@ func TestMatcherSelfTriggerSkip(t *testing.T) {
 			repo := newMatcherRepo(a)
 			runs := newMatcherRuns()
 			runs.byID = runsByID
-			NewTriggerMatcher(repo, runs, matcherTeams{}).handle(artifactEvent(tc.actor, nil))
+			NewTriggerMatcher(repo, runs).handle(artifactEvent(tc.actor, nil))
 			if fired := len(runs.requests()) == 1; fired != tc.fires {
 				t.Errorf("launched %d runs, want fired=%v", len(runs.requests()), tc.fires)
 			}
@@ -164,7 +163,7 @@ func TestMatcherSelfTriggerSkip(t *testing.T) {
 		repo := newMatcherRepo(a)
 		runs := newMatcherRuns()
 		runs.byID, runs.getErr = runsByID, errors.New("connection refused")
-		NewTriggerMatcher(repo, runs, matcherTeams{}).handle(artifactEvent("agent:run-sibling", nil))
+		NewTriggerMatcher(repo, runs).handle(artifactEvent("agent:run-sibling", nil))
 		if n := len(runs.requests()); n != 0 {
 			t.Errorf("launched %d runs, want none: a loop guard that cannot tell holds the automation back", n)
 		}
@@ -183,8 +182,7 @@ func TestMatcherSelfTriggerSkip(t *testing.T) {
 		captureSlog(t)
 		runs := newMatcherRuns()
 		runs.byID = runsByID
-		NewTriggerMatcher(newMatcherRepo(onArtifacts("au-1", "Own"), onArtifacts("au-2", "Other")), runs,
-			matcherTeams{}).handle(artifactEvent("agent:run-own", nil))
+		NewTriggerMatcher(newMatcherRepo(onArtifacts("au-1", "Own"), onArtifacts("au-2", "Other")), runs).handle(artifactEvent("agent:run-own", nil))
 		if got := launchLines(runs.requests()); len(got) != 1 || *runs.requests()[0].AutomationID != "au-2" {
 			t.Errorf("launched %q, want au-2's run alone", got)
 		}
@@ -221,7 +219,7 @@ func TestMatcherCooldown(t *testing.T) {
 			a := onArtifacts("au-1", "Cooling")
 			a.LastRunAt, a.CooldownSeconds, a.MaxRunsPerHour = tc.lastRun, tc.cooldown, 10
 			runs := newMatcherRuns()
-			NewTriggerMatcher(newMatcherRepo(a), runs, matcherTeams{}).handle(artifactEvent("user:u-1", nil))
+			NewTriggerMatcher(newMatcherRepo(a), runs).handle(artifactEvent("user:u-1", nil))
 			if fired := len(runs.requests()) == 1; fired != tc.fires {
 				t.Errorf("launched %d runs, want fired=%v", len(runs.requests()), tc.fires)
 			}
@@ -241,7 +239,7 @@ func TestMatcherCooldown(t *testing.T) {
 			a.CooldownSeconds = tc.cooldown
 			repo := newMatcherRepo(a)
 			runs := newMatcherRuns()
-			m := NewTriggerMatcher(repo, runs, matcherTeams{})
+			m := NewTriggerMatcher(repo, runs)
 			m.handle(artifactEvent("user:u-1", nil))
 			m.handle(artifactEvent("user:u-1", nil))
 			if n := len(runs.requests()); n != tc.fires {
@@ -291,7 +289,7 @@ func TestMatcherHourlyCap(t *testing.T) {
 			runs := newMatcherRuns()
 			runs.counts, runs.countErr = map[string]int{"au-1": tc.count}, tc.err
 			before := time.Now()
-			NewTriggerMatcher(newMatcherRepo(a), runs, matcherTeams{}).handle(artifactEvent("user:u-1", nil))
+			NewTriggerMatcher(newMatcherRepo(a), runs).handle(artifactEvent("user:u-1", nil))
 			after := time.Now()
 			if fired := len(runs.requests()) == 1; fired != tc.fires {
 				t.Errorf("launched %d runs, want fired=%v", len(runs.requests()), tc.fires)
@@ -355,7 +353,7 @@ func TestMatcherPromptVariables(t *testing.T) {
 			a := onArtifacts("au-1", `Pump "watch"`)
 			a.PromptTemplate = tc.template
 			runs := newMatcherRuns()
-			NewTriggerMatcher(newMatcherRepo(a), runs, matcherTeams{}).handle(artifactEvent("user:u-1", tc.payload))
+			NewTriggerMatcher(newMatcherRepo(a), runs).handle(artifactEvent("user:u-1", tc.payload))
 			reqs := runs.requests()
 			if len(reqs) != 1 {
 				t.Fatalf("launched %q, want one run", launchLines(reqs))
@@ -368,8 +366,7 @@ func TestMatcherPromptVariables(t *testing.T) {
 }
 
 // TestMatcherLaunch pins the run a firing launches and what follows: the
-// automation's workspace, its target (a crew's entry node's agent with the
-// crew and node), the automation's project or, for one of the whole
+// automation's workspace, its agent, the automation's project or, for one of the whole
 // workspace, the event's (none when the event has none), the automation,
 // the event as trigger, and no launcher or parent; then MarkRun stamps
 // last_run_at (now) and passes the automation's next_run_at back as it was
@@ -383,13 +380,13 @@ func TestMatcherLaunch(t *testing.T) {
 		pinned.ProjectID = strp("proj-1")
 		next := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
 		pinned.NextRunAt = &next
-		crew := onArtifacts("au-crew", "Crew")
-		crew.AgentID, crew.TeamID = nil, strp("crew-1")
-		repo := newMatcherRepo(crew, pinned, onArtifacts("au-all", "All"))
+		first := onArtifacts("au-first", "First")
+		first.ProjectID = strp("proj-1")
+		repo := newMatcherRepo(first, pinned, onArtifacts("au-all", "All"))
 		runs := newMatcherRuns()
 		e := artifactEvent("user:u-1", nil)
 		before := time.Now()
-		NewTriggerMatcher(repo, runs, matcherTeams{}).handle(e)
+		NewTriggerMatcher(repo, runs).handle(e)
 		after := time.Now()
 
 		prompt := func(name string) string {
@@ -397,9 +394,8 @@ func TestMatcherLaunch(t *testing.T) {
 				"Investigate via your OpenV tools and act per your instructions."
 		}
 		want := []string{
-			launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: "agent-entry", ProjectID: strp("proj-1"),
-				AutomationID: strp("au-crew"), TriggerEventID: &e.ID, TeamID: strp("crew-1"),
-				TeamNodeID: strp("node-entry"), Prompt: prompt("Crew")}),
+			launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: "agent-au-first", ProjectID: strp("proj-1"),
+				AutomationID: strp("au-first"), TriggerEventID: &e.ID, Prompt: prompt("First")}),
 			launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: "agent-au-pinned", ProjectID: strp("proj-1"),
 				AutomationID: strp("au-pinned"), TriggerEventID: &e.ID, Prompt: prompt("Pinned")}),
 			launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: "agent-au-all", ProjectID: strp("proj-1"),
@@ -409,8 +405,8 @@ func TestMatcherLaunch(t *testing.T) {
 			t.Fatalf("launched\n  %q\nwant\n  %q", got, want)
 		}
 		marks := repo.marksMade()
-		if len(marks) != 3 || marks[0].id != "au-crew" || marks[1].id != "au-pinned" || marks[2].id != "au-all" {
-			t.Fatalf("stamped %v, want au-crew, au-pinned and au-all in turn", marks)
+		if len(marks) != 3 || marks[0].id != "au-first" || marks[1].id != "au-pinned" || marks[2].id != "au-all" {
+			t.Fatalf("stamped %v, want au-first, au-pinned and au-all in turn", marks)
 		}
 		for _, m := range marks {
 			within(t, m.id+"'s last_run_at", m.lastRun, before, after)
@@ -430,7 +426,7 @@ func TestMatcherLaunch(t *testing.T) {
 		pinned.ProjectID = strp("proj-1")
 		runs := newMatcherRuns()
 		e := domainevents.New(domainevents.ArtifactCreated, "", "art-1", "user:u-1", nil).WithOrg("org-1")
-		NewTriggerMatcher(newMatcherRepo(pinned, onArtifacts("au-all", "All")), runs, matcherTeams{}).handle(e)
+		NewTriggerMatcher(newMatcherRepo(pinned, onArtifacts("au-all", "All")), runs).handle(e)
 		want := []string{launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: "agent-au-all",
 			AutomationID: strp("au-all"), TriggerEventID: &e.ID,
 			Prompt: `Automation "All" fired on event artifact.created (entity art-1). ` +
@@ -443,15 +439,13 @@ func TestMatcherLaunch(t *testing.T) {
 	failures := []struct {
 		name    string
 		setup   func(repo *matcherRepo, runs *matcherRuns)
-		crew    string
+		noAgent bool
 		launch  bool
 		stamped bool
 		logs    []string
 	}{
-		{name: "a crew with no entry node", crew: "crew-headless",
-			logs: []string{`level=WARN msg="triggers: automation target unresolvable" automation_id=au-1 error="team has no entry node"`}},
-		{name: "a crew no row has", crew: "crew-gone",
-			logs: []string{`level=WARN msg="triggers: automation target unresolvable" automation_id=au-1 error="team crew-gone not found"`}},
+		{name: "no agent", noAgent: true,
+			logs: []string{`level=WARN msg="triggers: automation target unresolvable" automation_id=au-1 error="automation has no agent target"`}},
 		{name: "a launch refused", setup: func(_ *matcherRepo, runs *matcherRuns) { runs.launchErr = errors.New("over budget") },
 			launch: true,
 			logs:   []string{`level=ERROR msg="triggers: failed to launch run for automation" automation_id=au-1 error="over budget"`}},
@@ -465,15 +459,15 @@ func TestMatcherLaunch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			logs := captureSlog(t)
 			a := onArtifacts("au-1", "Failing")
-			if tc.crew != "" {
-				a.AgentID, a.TeamID = nil, strp(tc.crew)
+			if tc.noAgent {
+				a.AgentID = nil
 			}
 			repo := newMatcherRepo(a)
 			runs := newMatcherRuns()
 			if tc.setup != nil {
 				tc.setup(repo, runs)
 			}
-			NewTriggerMatcher(repo, runs, matcherTeams{}).handle(artifactEvent("user:u-1", nil))
+			NewTriggerMatcher(repo, runs).handle(artifactEvent("user:u-1", nil))
 			if launched := len(runs.requests()) == 1; launched != tc.launch {
 				t.Errorf("launch attempts = %d, want one: %v", len(runs.requests()), tc.launch)
 			}
@@ -504,7 +498,7 @@ func TestMatcherSubscribesToTheBus(t *testing.T) {
 		}
 		return ""
 	})
-	NewTriggerMatcher(repo, runs, matcherTeams{}).Start(bus)
+	NewTriggerMatcher(repo, runs).Start(bus)
 	e := domainevents.New(domainevents.ArtifactCreated, "proj-1", "art-1", "user:u-1",
 		map[string]interface{}{"title": "Pump spec"})
 	bus.Publish(e)

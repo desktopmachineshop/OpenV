@@ -2,7 +2,7 @@
 const content = `
 # Automations
 
-Automations launch agent (or crew) runs without anyone clicking a button. Open
+Automations launch agent runs without anyone clicking a button. Open
 **Automations** in the project menu.
 
 ## What an automation covers
@@ -24,9 +24,10 @@ its project and the whole workspace. Every project's Automations page lists
 the whole workspace's automations beside its own, marked *Whole workspace*;
 other members see them there but cannot change them.
 
-A whole-workspace automation runs an agent, or one of the workspace's own
-crews such as its default crew; a crew made in one project runs only that
-project's automations.
+An automation runs one agent. Crews, which automations could once run, have
+been removed: an automation that ran a crew now runs the crew's first (entry)
+agent, and one whose crew had no such agent was switched off and shows
+*No agent: choose one* until someone picks an agent for it.
 
 ## Kinds of automation
 
@@ -72,7 +73,7 @@ automations from running away:
 1. Name it.
 2. A workspace admin chooses what it **covers**: this project or the whole
    workspace.
-3. Choose the **target** — a single agent or a crew.
+3. Choose the **agent** it runs.
 4. Pick the kind and its schedule/event settings.
 5. Write the **prompt template** — the prompt each run starts with. Keep it
    lean; the agent fetches artifact content itself at run time.

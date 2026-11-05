@@ -80,7 +80,7 @@ live. A new file joins an area through a glob in `areas.json`.
 | `verification` | verification methods, test runs and results, coverage and gaps, the matrix, change impact, evidence bundles |
 | `documents` | exports and imports, downloads, PDF, Word and V&V reports, baselines and their comparison, templates, attachments and figures |
 | `tenancy-identity` | accounts, sign-in, sessions, verification and resets, workspaces, members, people-teams, invitations, plan limits, project access, `authz.go` |
-| `agent-suite` | agents, runs and orchestration, crews, automations, proposals, providers, repository connections, the guided wizard, interviews, the AI map, the MCP server's core |
+| `agent-suite` | agents, runs and orchestration, automations, proposals, providers, repository connections, the guided wizard, interviews, the AI map, the MCP server's core |
 | `runner-fleet` | the runner and its worker protocol, runner keys, hosted runners, the transient pool, the Agent Connector |
 | `events-notifications` | the event bus and domain events, the activity log, the SSE hub, notifications by app, mail and web push, announcements |
 | `community` | share links, the open-source showcase, the community pool of demo products |
@@ -177,7 +177,7 @@ the area that owns them; the area guide of
 | `internal/notify` | the notifier, mail, web push, the release announcer, the stable scheduler, the budget and minutes monitors |
 | `internal/scheduler` | the cron automations that are due, with catch-up at start |
 | `internal/automation` | the trigger matcher: launches the automations whose event filter matches |
-| `internal/orchestration` | the run hooks: board moves, crew follow-ups and hand-offs, interview sessions |
+| `internal/orchestration` | the run hooks: board moves, interview and guided sessions |
 | `internal/billing` | the subscription mirror: the entitlement each workspace gets from the provider's view, and its HTTP routes as an `ext` module |
 | `internal/billing/stripe` | the Stripe client behind `billing.Provider` |
 | `internal/billing/boot` | billing's `ext.Factory`, building it as stage billing does, for a program that registers it as a module (`docs/extending.md`) |
@@ -202,6 +202,7 @@ the area that owns them; the area guide of
 | | `internal/domain/products` | the product profile |
 | | `internal/domain/projects` | projects and their settings |
 | | `internal/domain/quality` | the rule-based linter over a requirement's wording |
+| | `internal/domain/savedsearches` | a member's saved searches, the named chip sets of a page's search bar |
 | | `internal/domain/settings` | workspace and project preferences: the quality rule set, reference parties |
 | | `internal/domain/traceability` | the link write service the four link-write paths share |
 | | `internal/domain/todos` | to-dos: one paragraph to tick off, a project's or a person's own, and promoting one to a board task |
@@ -227,14 +228,12 @@ the area that owns them; the area guide of
 | | `internal/domain/agents` | agent definitions |
 | | `internal/domain/automations` | automation rules |
 | | `internal/domain/connectedapps` | AI clients a member connects to a workspace over the remote MCP endpoint: OAuth clients, consents, codes and tokens |
-| | `internal/domain/crewtemplates` | a crew as a portable document |
 | | `internal/domain/guided` | guided sessions |
 | | `internal/domain/interviews` | interviews and their invites |
 | | `internal/domain/proposals` | agent proposals and their review |
 | | `internal/domain/providers` | provider settings and sign-ins, the known providers |
 | | `internal/domain/providers/usertokens` | a member's own stored provider sign-in token (a Claude subscription token), sealed under the server's secrets key |
 | | `internal/domain/repoconns` | repository connections |
-| | `internal/domain/teams` | crews (the code says team) |
 | runner-fleet | `internal/domain/hostedworkers` | a workspace's hosted runner |
 | | `internal/domain/runnersessions` | the transient pool and its leases |
 | | `internal/domain/workerkeys` | runner keys |
@@ -282,7 +281,7 @@ Each stage is a method in a `wire_*.go` file and wires one concern:
 | `core` | `wire_core.go` | artifacts, links, embeddings, projects, attachments, baselines, chatter, exports, reports, downloads, templates |
 | `workspace`, `runners` | `wire_workspace.go` | users, members, workspaces and the tiers, invitations, runner keys, hosted runners, the transient pool; the legacy key |
 | `projects` | `wire_projects.go` | attributes, V&V and evidence, work items, the product profile, project settings, guided sessions, interviews, share links, the community pool |
-| `agents` | `wire_agents.go` | agents, runs and their retry policy, automations, repository connections, providers and their sign-ins, crews, proposals and their appliers |
+| `agents` | `wire_agents.go` | agents, runs and their retry policy, automations, repository connections, providers and their sign-ins, proposals and their appliers |
 | `realtime` | `wire_realtime.go` | the metrics collector, the SSE hub and the orchestration hooks, subscribed to runs and the bus |
 | `notify`, `release` | `wire_notify.go` | mail, sign-up verification, the session and registration policies, notifications, web push, the minutes monitor; the running release, its announcer and the stable scheduler |
 | `jobs` | `wire_jobs.go` | the budget guard, trigger matcher, scheduler, workspace purge and reaper loops |
@@ -790,7 +789,7 @@ an `org_id` column on `projects`, `agents`, `agent_teams`, `automations`,
   100% when `OPENV_BUDGET_ENFORCE=true`).
 - **org_members** — `admin` / `member` roles.
 - **org_teams / org_team_members** — people-teams within a workspace (distinct
-  from agent "crews").
+  from the removed agent "crews").
 - **project_members** and **project_team_access** — direct and people-team
   grants of the project role ladder (`owner`/`editor`/`viewer`); a user's
   effective role is the highest of the two.
@@ -1031,16 +1030,14 @@ its `handlers` stage hands the proposal service after `api.NewHandler`
 (`cmd/server/wire_http.go`), so validation and eventing behave exactly as
 for human edits, and the appliers need no handler.
 
-### Crews (agent org charts)
-Agents can be arranged in **crews** — org charts with a typed edge set
-(`delegates-to`, `hands-off-to`, `reviews`; the DB tables keep the historical
-`agent_team*` prefix, and `/api/v1/teams*` routes remain as deprecated
-aliases). Orchestration hooks route follow-up runs along the graph (a lead
-delegates to members), enabling multi-step flows like draft-then-review. Crews
-are either project-pinned or workspace-wide.
+### Crews (removed)
+Crews, graphs of agents with hand-off and delegation edges, were removed
+(issue 732): an agent run is a single run, and automations target agents
+only. The `agent_team*` tables remain in the schema, unread, until a later
+migration drops them.
 
 ### Automations
-Unattended launch rules (`automations`) fire a run of an agent or crew. Three
+Unattended launch rules (`automations`) fire a run of an agent. Three
 kinds: `manual` (run-now), `scheduled` (cron, with catch-up), and `triggered`
 (matched against the persisted `domain_events` stream, with per-rule cooldown
 and hourly caps). Kanban cards can also enqueue runs by moving into an agent

@@ -113,8 +113,6 @@ export interface WireRun {
   project_id?: string;
   automation_id?: string;
   trigger_event_id?: string;
-  team_id?: string;
-  team_node_id?: string;
   parent_run_id?: string;
   work_item_id?: string;
   interview_session_id?: string;
@@ -169,6 +167,10 @@ export interface WireAgent {
   config: Record<string, unknown> | null;
   system_prompt: string;
   locked: boolean;
+  parent_agent_id: string | null;
+  reports_to: string;
+  group_name: string;
+  sort_order: number;
   file_path: string;
   content_hash: string;
   synced_at?: string;

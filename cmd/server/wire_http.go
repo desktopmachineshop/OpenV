@@ -90,6 +90,7 @@ func (a *app) handlers() {
 		ChatterService:       a.chatterService,
 		AttributeService:     a.attributeService,
 		TargetReleaseService: a.targetReleaseService,
+		SavedSearchService:   a.savedSearchService,
 		SharedProductService: a.sharedProductService,
 		EmbeddingService:     a.embeddingService,
 		UploadsDir:           a.uploadsDir,
@@ -133,9 +134,8 @@ func (a *app) handlers() {
 		VAPID:                a.vapid,
 		Provisioner:          a.provisioner,
 		OrgSeeder: func(orgID string) error {
-			return seeds.EnsureOrgDefaults(orgID, a.agentService, a.teamService)
+			return seeds.EnsureOrgDefaults(orgID, a.agentService)
 		},
-		TeamService:       a.teamService,
 		Bus:               a.bus,
 		EventRepo:         a.eventRepo,
 		SSEHub:            a.sseHub,

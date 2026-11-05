@@ -74,7 +74,7 @@ test('navigates through the drawer, which closes on arrival', async () => {
   await expectNoHorizontalScroll(page);
 });
 
-test('the requirements module stacks into tree, document and notes panes', async () => {
+test('the requirements module stacks into tree and document panes, with History in the document', async () => {
   const panes = page.getByRole('tablist', { name: 'Requirements panes' });
   await expect(panes).toBeVisible();
   await expect(panes.getByRole('tab', { name: 'Tree' })).toHaveAttribute('aria-selected', 'true');
@@ -94,9 +94,10 @@ test('the requirements module stacks into tree, document and notes panes', async
   await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
   await expectNoHorizontalScroll(page);
 
-  // Notes are a pane of their own rather than a third column.
-  await panes.getByRole('tab', { name: 'Notes' }).click();
-  await expect(page.getByRole('heading', { name: /Notes/ })).toBeVisible();
+  // The artifact's comments and changes are its History, at the foot of the
+  // document, rather than a Notes pane of their own (#725).
+  await expect(panes.getByRole('tab', { name: 'Notes' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'History' })).toBeVisible();
   await expectNoHorizontalScroll(page);
 
   // And back to the tree, which kept its state.

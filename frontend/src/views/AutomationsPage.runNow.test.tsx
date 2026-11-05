@@ -55,7 +55,6 @@ vi.mock('../api/client', async (orig) =>
       runNow: (id: string) => ok(id === 'au-ws' ? run('run-ws', null) : run('run-p1', 'p1')),
     },
     agentsAPI: { list: () => ok([{ id: 'agent-1', name: 'Greeter' }]) },
-    crewsAPI: { list: () => ok([]) },
     agentRunsAPI: {
       get: (id: string) => ok(run(id, id === 'run-ws' ? null : 'p1')),
       tree: () => ok([]),

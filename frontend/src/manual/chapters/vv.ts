@@ -45,8 +45,18 @@ verification method, without a test case, and so on — each with the reason.
 **All** opens the full list, grouped by kind of gap (for example
 requirements without a verification method, or without any verifying test).
 An empty list means full coverage. When agents have proposals waiting, the
-card says how many and links to them; otherwise it points you to the agents
-that can draft test cases.
+card says how many and links to them.
+
+Otherwise the card ends in **Draft tests**. It opens the V&V Assistant over the
+page and starts at once: the assistant is given the gaps the card shows (all of
+them while **All** is open), each by reference, title and kind of gap, and the
+chat says so — *Drafting test cases for 5 gaps: REQ-153, REQ-88, …*. It replies
+with test cases, each with a *verifies* link, as suggestion cards you review
+and add. Pointing at a gap row shows a **✦** at its end (on a touch screen it
+is always there), which does the same for that one gap. If no runner is
+online, the chat says so and how to connect one; your request is kept and
+answered when one connects. On a workspace still on an earlier release, the
+card points you to the agents that can draft test cases instead.
 
 **Unverified (demonstration, analysis, inspection)** is the section for
 requirements whose method is not *test*: nothing links a test case to them,

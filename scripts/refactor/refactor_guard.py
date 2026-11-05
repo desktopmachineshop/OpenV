@@ -402,7 +402,6 @@ GUARD_CODE = [
     # (workitem_repository_test.go's board order, the malformed-id and
     # time-zone tests) are not S15b's.
     ("S15b", ["internal/persistence/postgres/repository_roundtrip_helpers_test.go",
-              "internal/persistence/postgres/team_repository_roundtrip_test.go",
               "internal/persistence/postgres/workitem_repository_roundtrip_test.go",
               "internal/persistence/postgres/project_repository_roundtrip_test.go",
               "internal/persistence/postgres/agent_repository_roundtrip_test.go",

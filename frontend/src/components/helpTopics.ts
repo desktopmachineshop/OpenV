@@ -250,29 +250,16 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Assign a card to an agent (🤖) and drag it to To Do to kick off an agent run.',
       "A pulsing blue dot means a live run — the card is locked until the run finishes (cancel it from the Runs page if needed).",
       'Attach requirements by listing artifact IDs in the card composer; they show as links in the card drawer.',
-      "Crew-assigned cards don't launch from the board — run crews from the Crew page or an automation.",
       "The agent's progress and comments land on the card's activity feed.",
     ],
     chapter: { slug: 'board', title: 'Kanban board' },
-  },
-  crew: {
-    title: 'Crew',
-    summary:
-      'A crew is a group of agents (and optionally people) arranged in an org-chart graph — for work that naturally splits into draft, review, and sign-off.',
-    tips: [
-      'Click Connect, then the source and target nodes, to add a delegates-to, hands-off-to, or reviews edge.',
-      'Hands-off or review edges pointing at a person create a board card assigned to them when the work arrives.',
-      'Drag nodes to arrange them — positions are saved per view (Org Chart and Network).',
-      '▶ Run crew launches with a prompt and takes you to the Runs page to follow along.',
-      "Start from default crew clones the workspace's default crew as a starting point.",
-    ],
-    chapter: { slug: 'crews', title: 'Crews' },
   },
   agents: {
     title: 'Agents',
     summary:
       'Agent definitions — provider, model, write mode, tools, and system prompt — plus a launch button for one-off runs.',
     tips: [
+      'The cards show who leads, the groups beneath and who reports to whom, with each agent\'s open and done runs, cost and proposals to approve over 7 days. Click a card for its runs; Edit (admins) arranges the hierarchy.',
       'Keep launch prompts lean — the agent fetches requirement content itself through its OpenV tools; name the work instead of pasting text.',
       'Prefer proposal write mode: every agent write waits for your approval on the Runs page before it lands.',
       'Set Model to provider default to inherit the workspace-wide default (Workspace settings → AI Providers).',
@@ -289,7 +276,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Runs stuck at queued mean no runner is online — pair the Agent Connector, or ask an admin to provision the hosted runner.',
       'Pending approvals at the top opens proposal review — approve or reject each proposed change before it is applied.',
       'Your personal runner claims the runs you launched, never a teammate\'s. Ownerless runs (automations, board triggers) go to workspace and hosted runners, and to the personal runner of each member with a role in the run\'s project or of a workspace admin; one with no project goes only to an admin\'s runner or the shared runners.',
-      'Click a run for its prompt, live log, results, and related runs such as crew delegations.',
+      'Click a run for its prompt, live log, results, and related runs such as its retries.',
       '"Reserved for launcher\'s runner" means a queued run is briefly waiting for that person\'s personal runner before others may claim it.',
     ],
     chapter: { slug: 'runs-runners', title: 'Runs & runners' },
@@ -297,7 +284,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   automations: {
     title: 'Automations',
     summary:
-      'Launch agent or crew runs without anyone clicking a button — manually, on a cron schedule, or triggered by project events.',
+      'Launch agent runs without anyone clicking a button — manually, on a cron schedule, or triggered by project events.',
     tips: [
       'Triggered automations listen to project events (artifact.created, workitem.moved, …) and can filter on the event payload.',
       'Use the cooldown and max-runs-per-hour safety valves to keep triggered automations from running away.',
@@ -328,7 +315,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     tips: [
       'Workspace membership gets someone into the workspace; project access is granted per project, in its Settings → Access.',
       'Members are told when they are added, removed or change role, and every other admin hears about arrivals and departures.',
-      'Teams group people for project access; they are not crews, which are graphs of AI agents.',
+      'Teams group people for project access; agents are arranged on a project\'s Agents page.',
       'AI Providers (admin only) sets the default model and the API keys runs use; Runners is where workspace runners are paired.',
     ],
     chapter: { slug: 'org-settings', title: 'Workspace settings & teams' },
@@ -388,7 +375,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Adding a member by email requires that they already have an OpenV account — no invite emails are sent.',
       'The Agents tab picks run auth: user account (the launcher\'s own CLI sign-in) or the workspace API key.',
       'Repositories connect here; each member sets their own local checkout path for their runner.',
-      'Teams (groups of people, for access) are not crews (graphs of AI agents that execute work).',
+      'Teams are groups of people, for project access; they have nothing to do with agents.',
     ],
     chapter: { slug: 'org-settings', title: 'Workspace settings & teams' },
   },
@@ -397,7 +384,8 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
 // Resolve the help topic from the current pathname. Inside ProjectLayout the
 // path is /projects/:projectId/<module>/…, so key off the segment after the
 // project id (vv/runs/:runId and baselines/:id/compare resolve via their
-// first segment; team/* redirects to crew/* before this ever renders).
+// first segment; crew/* and team/* redirect to agents before this ever
+// renders).
 export const helpTopicForPath = (pathname: string): HelpTopic => {
   const segments = pathname.split('/').filter(Boolean);
   // /projects with no id is the project list, which has no module segment of

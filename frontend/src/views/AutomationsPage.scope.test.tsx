@@ -43,19 +43,12 @@ vi.mock('../api/client', async (orig) =>
           automation('au-p1', 'Review new requirements', { project_id: 'p1' }),
           automation('au-p2', 'Another project', { project_id: 'p2' }),
           automation('au-ws', 'Welcome the newcomer', { project_id: null, kind: 'triggered', event_type: 'org.member_added' }),
-          automation('au-crew', 'Crew review', { project_id: 'p1', agent_id: null, team_id: 'crew-p1' }),
+          automation('au-orphan', 'Crew review', { project_id: 'p1', agent_id: null, enabled: false }),
         ]),
       create: (payload) => ok({ ...payload, id: 'au-new' }),
       update: (id, payload) => ok({ ...payload, id }),
     },
     agentsAPI: { list: () => ok([{ id: 'agent-1', name: 'Greeter' }]) },
-    crewsAPI: {
-      list: () =>
-        ok([
-          { id: 'crew-p1', name: 'Project crew', description: '', project_id: 'p1', is_default: false },
-          { id: 'crew-ws', name: 'Default crew', description: '', project_id: null, is_default: true },
-        ]),
-    },
   })
 );
 
@@ -118,8 +111,8 @@ const setName = async (name: string) => {
 
 const scopeControl = () => document.body.querySelector('[aria-label="Automation scope"]');
 
-const crewOptions = (): string[] =>
-  Array.from(byText<HTMLLabelElement>('label', 'Target').parentElement!.querySelectorAll('select option'))
+const agentOptions = (): string[] =>
+  Array.from(byText<HTMLLabelElement>('label', 'Agent').parentElement!.querySelectorAll('select option'))
     .map((o) => (o as HTMLOptionElement).value)
     .filter(Boolean);
 
@@ -196,29 +189,27 @@ describe('AutomationsPage scope', () => {
     expect(scopeControl()).toBeNull();
   });
 
-  it('lets an admin make an automation for the whole workspace, with a crew of the whole workspace', async () => {
+  it('lets an admin make an automation for the whole workspace, of an agent: crews are no target', async () => {
     await mount('admin', true);
     await click(byText('button', 'New automation'));
     expect(scopeControl()).not.toBeNull();
+    expect(document.body.querySelector('[aria-label="Automation target"]')).toBeNull();
     await setName('Greet');
-    await click(byText('[aria-label="Automation target"] *', 'Crew'));
-    expect(crewOptions()).toEqual(['crew-p1', 'crew-ws']);
-    await choose('Target', 'crew-p1');
+    expect(agentOptions()).toEqual(['agent-1']);
+    await choose('Agent', 'agent-1');
     await click(byText('[aria-label="Automation scope"] *', 'Whole workspace'));
-    // The project's crew cannot run it, and is let go.
-    expect(crewOptions()).toEqual(['crew-ws']);
-    await choose('Target', 'crew-ws');
     await click(byText('button', 'Create automation'));
 
     const payload = vi.mocked(automationsAPI.create).mock.calls[0][0];
-    expect(payload).toMatchObject({ name: 'Greet', project_id: null, agent_id: null, team_id: 'crew-ws' });
+    expect(payload).toMatchObject({ name: 'Greet', project_id: null, agent_id: 'agent-1' });
+    expect(payload).not.toHaveProperty('team_id');
   });
 
   it("makes a new automation the project's by default", async () => {
     await mount('admin', true);
     await click(byText('button', 'New automation'));
     await setName('Review');
-    await choose('Target', 'agent-1');
+    await choose('Agent', 'agent-1');
     await click(byText('button', 'Create automation'));
     expect(vi.mocked(automationsAPI.create).mock.calls[0][0]).toMatchObject({ project_id: 'p1', agent_id: 'agent-1' });
   });
@@ -253,12 +244,14 @@ describe('AutomationsPage scope', () => {
     expect(vi.mocked(automationsAPI.update).mock.calls[0][1]).not.toHaveProperty('project_id');
   });
 
-  it('switches an automation from a crew to an agent, clearing the crew', async () => {
+  it('gives an automation its crew left with no agent one, and says it has none', async () => {
     await mount('member', false);
+    expect(rowOf('Crew review').textContent).toContain('No agent: choose one');
     await click(byText('span', 'Crew review'));
-    await click(byText('[aria-label="Automation target"] *', 'Agent'));
-    await choose('Target', 'agent-1');
+    await choose('Agent', 'agent-1');
     await click(byText('button', 'Save changes'));
-    expect(vi.mocked(automationsAPI.update).mock.calls[0][1]).toMatchObject({ agent_id: 'agent-1', team_id: '' });
+    const body = vi.mocked(automationsAPI.update).mock.calls[0][1];
+    expect(body).toMatchObject({ agent_id: 'agent-1' });
+    expect(body).not.toHaveProperty('team_id');
   });
 });
