@@ -38,7 +38,8 @@
     "chip-search",
     "agent-hierarchy",
     "impact-picker",
-    "todos"
+    "todos",
+    "editor-pickers"
   ],
   "event_types": [
     "artifact.created",

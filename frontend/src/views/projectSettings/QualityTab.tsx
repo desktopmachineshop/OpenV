@@ -1,5 +1,6 @@
 import React from 'react';
 import { QualityRulesEditor, QualityRulesHeld } from '../../components/QualityRulesEditor';
+import { ArtifactPriorityDetectionSetting } from '../../components/ArtifactPriorityDetectionSetting';
 import { Setter } from './shared';
 
 // The Quality rules tab of project settings.
@@ -34,5 +35,6 @@ export const QualityTab: React.FC<QualityTabProps> = ({ projectId, canEditRules,
         setHeld={setQualityRules}
       />
     )}
+    {projectId && <ArtifactPriorityDetectionSetting projectId={projectId} canEdit={canEditRules} flash={flash} />}
   </div>
 );

@@ -148,6 +148,7 @@ GET /api/v1/projects/{id}/interviews: project:viewer
 GET /api/v1/projects/{id}/linked-artifacts: project:viewer
 GET /api/v1/projects/{id}/members: project:viewer
 GET /api/v1/projects/{id}/parties: project:viewer
+GET /api/v1/projects/{id}/priority-detection: project:viewer
 GET /api/v1/projects/{id}/profile: project:viewer
 GET /api/v1/projects/{id}/quality: project:viewer
 GET /api/v1/projects/{id}/quality-rules: project:viewer
@@ -351,6 +352,7 @@ PUT /api/v1/orgs/{id}/quality-rules: org:admin
 PUT /api/v1/projects/{id}: project:editor, project-visible
 PUT /api/v1/projects/{id}/members/{userId}: project:owner
 PUT /api/v1/projects/{id}/parties: project:editor
+PUT /api/v1/projects/{id}/priority-detection: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
 PUT /api/v1/projects/{id}/release-order: project:editor

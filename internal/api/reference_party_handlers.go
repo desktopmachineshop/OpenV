@@ -15,6 +15,8 @@ import (
 func (h *Handler) registerReferencePartyRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/parties", h.GetProjectParties).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/parties", h.UpdateProjectParties).Methods("PUT")
+	router.HandleFunc("/api/v1/projects/{id}/priority-detection", h.GetProjectPriorityDetection).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/priority-detection", h.UpdateProjectPriorityDetection).Methods("PUT")
 }
 
 // partiesResponse is the effective list: the workspace's own company first,
@@ -82,4 +84,48 @@ func (h *Handler) UpdateProjectParties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSONOK(w, partiesResponse{Parties: parties})
+}
+
+// priorityDetectionBody is the project's priority-detection switch:
+// {"enabled": true} fills a requirement's priority from its text.
+type priorityDetectionBody struct {
+	Enabled bool `json:"enabled"`
+}
+
+// GetProjectPriorityDetection answers whether the editor fills a
+// requirement's priority from its shall, should or may.
+func (h *Handler) GetProjectPriorityDetection(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+	on, err := h.SettingsService.ProjectPriorityDetection(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to load priority detection", err)
+		return
+	}
+	writeJSONOK(w, priorityDetectionBody{Enabled: on})
+}
+
+// UpdateProjectPriorityDetection turns the switch on or off; an editor may,
+// as an editor may change the project's quality rules.
+func (h *Handler) UpdateProjectPriorityDetection(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if !h.projectFeatureEnabled(r, projectID, release.FeatureEditorPickers) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
+	var req priorityDetectionBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	on, err := h.SettingsService.SetProjectPriorityDetection(projectID, req.Enabled)
+	if err != nil {
+		respondInternal(w, r, "failed to save priority detection", err)
+		return
+	}
+	writeJSONOK(w, priorityDetectionBody{Enabled: on})
 }

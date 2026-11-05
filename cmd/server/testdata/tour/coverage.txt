@@ -154,6 +154,7 @@ GET /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/linked-artifacts: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/members: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/projects/{id}/priority-detection: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/quality: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b, s5e
@@ -357,6 +358,7 @@ PUT /api/v1/orgs/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a
 PUT /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/priority-detection: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/release-order: s5b, s5e; 2xx or 3xx in s5b
@@ -371,4 +373,4 @@ PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 360 of 360 routes reached (100.0%), 346 with a 2xx or 3xx answer (96.1%); the floor is 90%, 324 routes
+the tour: 362 of 362 routes reached (100.0%), 348 with a 2xx or 3xx answer (96.1%); the floor is 90%, 326 routes

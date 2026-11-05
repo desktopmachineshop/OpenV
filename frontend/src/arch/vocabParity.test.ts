@@ -412,54 +412,6 @@ const isEquality = (k: ts.SyntaxKind) =>
   k === ts.SyntaxKind.EqualsEqualsToken ||
   k === ts.SyntaxKind.ExclamationEqualsToken;
 
-/** A JSX string attribute's text; undefined when absent, null when not a string literal. */
-function jsxAttr(el: ts.JsxOpeningLikeElement, name: string): string | null | undefined {
-  for (const a of el.attributes.properties) {
-    if (ts.isJsxAttribute(a) && a.name.getText() === name && a.initializer) {
-      return ts.isStringLiteral(a.initializer) ? a.initializer.text : null;
-    }
-  }
-  return undefined;
-}
-
-function selectsIn(sf: ts.SourceFile, id: string): ts.JsxElement[] {
-  const out: ts.JsxElement[] = [];
-  walk(sf, (node) => {
-    if (ts.isJsxElement(node) && node.openingElement.tagName.getText() === 'select' && jsxAttr(node.openingElement, 'id') === id) {
-      out.push(node);
-    }
-  });
-  return out;
-}
-
-/**
- * The <option value="...">Label</option>s of the <select id={id}> in a file,
- * or, once moved, of the one such <select> in the production sources.
- */
-function selectOptions(file: string, id: string): Items {
-  const home = path.join(SRC, file);
-  let selects = fs.existsSync(home) && file.endsWith('.tsx') ? selectsIn(sourceOf(home), id) : [];
-  if (selects.length === 0) {
-    allSources ??= productionSources();
-    selects = allSources.filter((f) => f.endsWith('.tsx')).flatMap((f) => selectsIn(sourceOf(f), id));
-  }
-  if (selects.length !== 1) {
-    throw new EvalError(`${selects.length} <select id="${id}"> elements (${selects.map(at).join(', ')}), expected 1 in ${file}`);
-  }
-  const out: [string, Fields][] = [];
-  for (const child of selects[0].children) {
-    if (!ts.isJsxElement(child) || child.openingElement.tagName.getText() !== 'option') continue;
-    const value = jsxAttr(child.openingElement, 'value') ?? fail(child, 'has no literal value');
-    const label = child.children
-      .map((c) => (ts.isJsxText(c) ? c.text : fail(c, 'is not plain text')))
-      .join('')
-      .trim();
-    out.push([value, { label }]);
-  }
-  noDuplicates(selects[0], out.map(([k]) => k));
-  return withAt(selects[0], out);
-}
-
 // ---------------------------------------------------------------------------
 // Scans: vocabularies the code uses rather than declares.
 // ---------------------------------------------------------------------------
@@ -613,14 +565,6 @@ const COPIES: Copy[] = [
     ordered: true,
     where: 'components/wizard/suggestionDrafts.ts ARTIFACT_TYPES',
     read: () => listOf('components/wizard/suggestionDrafts.ts', 'ARTIFACT_TYPES'),
-  },
-  {
-    // The type picker shows the catalogue's own labels.
-    id: 'ArtifactEditor type options',
-    vocabulary: 'artifact_types',
-    kind: 'mirror',
-    where: 'components/ArtifactEditor.tsx <select id="type">',
-    read: () => selectOptions('components/ArtifactEditor.tsx', 'type'),
   },
   {
     // Per-view labels are UI copy (refactor plan X4 keeps them as named
