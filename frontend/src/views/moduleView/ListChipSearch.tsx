@@ -26,7 +26,7 @@ export const ListChipSearch: React.FC<ListChipSearchProps> = (p) => {
       value={p.searchValue}
       onChange={p.setSearchValue}
       ariaLabel="Search this project"
-      placeholder="Search, or pick filters…"
+      placeholder="Search..."
       phone={p.phone}
       saved={p.canSave ? saved : undefined}
       quickCounts={p.chipQuickCounts}
